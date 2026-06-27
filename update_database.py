@@ -63,7 +63,6 @@ def create_players_table(connection: sqlite3.Connection) -> None:
             defense INTEGER,
             physical INTEGER,
             goalkeeping INTEGER,
-            age_at_mint INTEGER,
             player_seasons INTEGER,
             overall_prog_all INTEGER,
             pace_prog_all INTEGER,
@@ -173,7 +172,6 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         "defense": "INTEGER",
         "physical": "INTEGER",
         "goalkeeping": "INTEGER",
-        "age_at_mint": "INTEGER",
         "player_seasons": "INTEGER",
         "overall_prog_all": "INTEGER",
         "pace_prog_all": "INTEGER",
@@ -198,9 +196,9 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         existing_columns.remove("seasons")
         existing_columns.add("player_seasons")
 
-    for column_name, column_type in expected_columns.items():
-        if column_name not in existing_columns:
-            connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
+    if "player_seasons" not in existing_columns:
+        connection.execute("ALTER TABLE players ADD COLUMN player_seasons INTEGER")
+        existing_columns.add("player_seasons")
 
     if "age_at_mint" in existing_columns:
         connection.execute(
@@ -212,6 +210,12 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
                 AND age_at_mint IS NOT NULL
             """
         )
+        connection.execute("ALTER TABLE players DROP COLUMN age_at_mint")
+        existing_columns.remove("age_at_mint")
+
+    for column_name, column_type in expected_columns.items():
+        if column_name not in existing_columns:
+            connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
 
 
 def get_wallets(
@@ -510,10 +514,7 @@ def insert_players(
             defense = excluded.defense,
             physical = excluded.physical,
             goalkeeping = excluded.goalkeeping,
-            player_seasons = CASE
-                WHEN players.age_at_mint IS NOT NULL AND excluded.age IS NOT NULL THEN excluded.age - players.age_at_mint + 1
-                ELSE players.player_seasons
-            END
+            player_seasons = players.player_seasons
         """,
         rows,
     )
@@ -791,12 +792,25 @@ def parse_args() -> argparse.Namespace:
         "--seasons",
         choices=["yes", "no"],
         default="no",
-        help="Use Flow to populate missing age_at_mint values and calculate player_seasons after the main refresh.",
+        help="Use Flow to calculate missing player_seasons after the main refresh.",
     )
     return parser.parse_args()
 
 
+def format_duration(seconds: float) -> str:
+    total_seconds = int(round(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
 def main() -> int:
+    started_at = time.monotonic()
     args = parse_args()
 
     try:
@@ -806,14 +820,22 @@ def main() -> int:
             total_players = refresh_players(connection, args.limit, args.wallet, args.workers)
 
             if args.seasons == "yes":
-                total_seasons = populate_flow_static_fields(connection, args.limit, args.wallet, False)
+                total_seasons = populate_flow_static_fields(
+                    connection,
+                    args.limit,
+                    args.wallet,
+                    False,
+                    args.workers,
+                )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")
 
         print(f"Player refresh complete: saved {total_players} players.")
         print(f"Database file: {DATABASE_PATH}")
+        print(f"Total time: {format_duration(time.monotonic() - started_at)}")
         return 0
     except Exception as error:
         print(f"Player refresh failed: {error}", file=sys.stderr)
+        print(f"Total time before failure: {format_duration(time.monotonic() - started_at)}")
         return 1
 
 

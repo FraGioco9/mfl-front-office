@@ -36,6 +36,8 @@ Populate player seasons from Flow after the normal database refresh:
 python update_database.py --seasons yes
 ```
 
+The player seasons step uses the same `--workers` value as the wallet and progression refreshes.
+
 Skip player seasons:
 
 ```powershell

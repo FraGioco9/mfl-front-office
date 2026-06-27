@@ -4,6 +4,7 @@ import json
 import sqlite3
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -68,7 +69,6 @@ def ensure_flow_static_columns(connection: sqlite3.Connection) -> None:
         for row in connection.execute("PRAGMA table_info(players)").fetchall()
     }
     expected_columns = {
-        "age_at_mint": "INTEGER",
         "player_seasons": "INTEGER",
     }
 
@@ -77,9 +77,25 @@ def ensure_flow_static_columns(connection: sqlite3.Connection) -> None:
         existing_columns.remove("seasons")
         existing_columns.add("player_seasons")
 
+    if "player_seasons" not in existing_columns:
+        connection.execute("ALTER TABLE players ADD COLUMN player_seasons INTEGER")
+        existing_columns.add("player_seasons")
+
     for column_name, column_type in expected_columns.items():
         if column_name not in existing_columns:
             connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
+
+    if "age_at_mint" in existing_columns:
+        connection.execute(
+            """
+            UPDATE players
+            SET player_seasons = age - age_at_mint + 1
+            WHERE player_seasons IS NULL
+                AND age IS NOT NULL
+                AND age_at_mint IS NOT NULL
+            """
+        )
+        connection.execute("ALTER TABLE players DROP COLUMN age_at_mint")
 
 
 def get_wallets_to_process(
@@ -215,7 +231,6 @@ def update_flow_static_fields(
             player["height"],
             player["ageAtMint"],
             player["ageAtMint"],
-            player["ageAtMint"],
             player["playerId"],
         )
         for player in players
@@ -229,7 +244,6 @@ def update_flow_static_fields(
             name = ?,
             preferred_foot = ?,
             height = ?,
-            age_at_mint = ?,
             player_seasons = CASE
                 WHEN age IS NOT NULL AND ? IS NOT NULL THEN age - ? + 1
                 ELSE NULL
@@ -247,10 +261,32 @@ def populate_flow_static_fields(
     limit: int | None,
     wallet_address: str | None,
     force: bool,
+    workers: int = 100,
 ) -> int:
     ensure_flow_static_columns(connection)
     wallets = get_wallets_to_process(connection, limit, wallet_address, force)
     total_updated = 0
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_wallet = {
+                executor.submit(fetch_wallet_flow_static_players, current_wallet_address): current_wallet_address
+                for current_wallet_address in wallets
+            }
+
+            for index, future in enumerate(as_completed(future_to_wallet), start=1):
+                current_wallet_address = future_to_wallet[future]
+                players = future.result()
+                updated_count = update_flow_static_fields(connection, players, force)
+                connection.commit()
+
+                total_updated += updated_count
+                print(
+                    f"{index}/{len(wallets)} {current_wallet_address}: "
+                    f"read {len(players)} players, updated {updated_count}"
+                )
+
+        return total_updated
 
     for index, current_wallet_address in enumerate(wallets, start=1):
         players = fetch_wallet_flow_static_players(current_wallet_address)
@@ -285,12 +321,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Update static Flow fields even when age_at_mint is already filled.",
+        help="Update static Flow fields even when player_seasons is already filled.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=100,
+        help="Number of wallets to fetch from Flow at the same time.",
     )
     return parser.parse_args()
 
 
+def format_duration(seconds: float) -> str:
+    total_seconds = int(round(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
 def main() -> int:
+    started_at = time.monotonic()
     args = parse_args()
 
     try:
@@ -300,13 +355,16 @@ def main() -> int:
                 args.limit,
                 args.wallet,
                 args.force,
+                args.workers,
             )
 
         print(f"Flow static field population complete: updated {total_updated} players.")
         print(f"Database file: {DATABASE_PATH}")
+        print(f"Total time: {format_duration(time.monotonic() - started_at)}")
         return 0
     except Exception as error:
         print(f"Flow static field population failed: {error}", file=sys.stderr)
+        print(f"Total time before failure: {format_duration(time.monotonic() - started_at)}")
         return 1
 
 
