@@ -44,3 +44,15 @@ python populate_seasons_from_flow.py
 - `populate_seasons_from_flow.py` - one-time Flow helper for seasons.
 - `refresh_wallets_only.py` - optional wallet-only refresh helper.
 - `mfl_progression.db` - local database, ignored by Git.
+
+## Run Manually From GitHub
+
+After pushing this repository to GitHub, open:
+
+```text
+https://github.com/FraGioco9/mfl-progression/actions
+```
+
+Choose **Manual database refresh**, click **Run workflow**, fill in the options, then click the green **Run workflow** button.
+
+When the run finishes, open the finished run and download the `mfl_progression_database` artifact. That download contains `mfl_progression.db`.

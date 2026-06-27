@@ -1,0 +1,65 @@
+name: Manual database refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of leaderboard wallets to refresh. Leave empty for all wallets."
+        required: false
+        default: ""
+      wallet:
+        description: "Single wallet address to refresh. Leave empty to use leaderboard wallets."
+        required: false
+        default: ""
+      workers:
+        description: "Number of workers to use."
+        required: false
+        default: "100"
+      populate_seasons:
+        description: "Also run the Flow seasons helper after the main refresh."
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run database refresh
+        shell: bash
+        run: |
+          COMMAND=(python update_database.py --workers "${{ inputs.workers }}")
+
+          if [ -n "${{ inputs.limit }}" ]; then
+            COMMAND+=(--limit "${{ inputs.limit }}")
+          fi
+
+          if [ -n "${{ inputs.wallet }}" ]; then
+            COMMAND+=(--wallet "${{ inputs.wallet }}")
+          fi
+
+          "${COMMAND[@]}"
+
+      - name: Populate seasons from Flow
+        if: inputs.populate_seasons == 'yes'
+        run: python populate_seasons_from_flow.py
+
+      - name: Upload database
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl_progression_database
+          path: mfl_progression.db
+          if-no-files-found: error
