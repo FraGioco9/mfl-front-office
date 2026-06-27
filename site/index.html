@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MFL Progression</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>MFL Progression</h1>
+        <p id="statusText">Loading player table...</p>
+      </div>
+      <div class="stats" aria-label="Database stats">
+        <div>
+          <span id="totalPlayers">-</span>
+          <label>players</label>
+        </div>
+        <div>
+          <span id="visiblePlayers">-</span>
+          <label>shown</label>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="Table controls">
+        <label class="field">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="Name, wallet, nationality, position">
+        </label>
+        <label class="field compact">
+          <span>Rows</span>
+          <select id="pageSizeSelect">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+          </select>
+        </label>
+        <button id="clearButton" type="button">Clear</button>
+        <button id="downloadButton" type="button">Download CSV</button>
+      </section>
+
+      <section class="tableShell" aria-label="Players table">
+        <div class="tableScroller">
+          <table>
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="emptyState" hidden>No players match the current search.</div>
+      </section>
+
+      <nav class="pager" aria-label="Pagination">
+        <button id="prevButton" type="button">Previous</button>
+        <span id="pageText">Page 1</span>
+        <button id="nextButton" type="button">Next</button>
+      </nav>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

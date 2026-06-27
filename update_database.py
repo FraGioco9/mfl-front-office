@@ -824,7 +824,7 @@ def main() -> int:
                     connection,
                     args.limit,
                     args.wallet,
-                    False,
+                    True,
                     args.workers,
                 )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")

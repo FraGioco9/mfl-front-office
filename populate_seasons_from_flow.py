@@ -3,7 +3,9 @@ import base64
 import json
 import sqlite3
 import sys
+import threading
 import time
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,12 @@ DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 FLOW_SCRIPT_URL = "https://rest-mainnet.onflow.org/v1/scripts?block_height=sealed"
 REQUEST_TIMEOUT_SECONDS = 120
 SLEEP_SECONDS_BETWEEN_WALLETS = 0.15
+FLOW_REQUESTS_PER_SECOND_LIMIT = 80
+MAX_FLOW_REQUEST_RETRIES = 3
+FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
+FLOW_RETRY_DELAY_SECONDS = 90.0
+FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
+FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
 
 CADENCE_SCRIPT = """
@@ -136,6 +144,23 @@ def encode_cadence_argument(argument: dict[str, str]) -> str:
     return base64.b64encode(argument_json.encode("utf-8")).decode("utf-8")
 
 
+def wait_for_flow_rate_limit() -> None:
+    while True:
+        with FLOW_RATE_LIMIT_LOCK:
+            now = time.monotonic()
+
+            while FLOW_REQUEST_TIMESTAMPS and now - FLOW_REQUEST_TIMESTAMPS[0] >= 1.0:
+                FLOW_REQUEST_TIMESTAMPS.popleft()
+
+            if len(FLOW_REQUEST_TIMESTAMPS) < FLOW_REQUESTS_PER_SECOND_LIMIT:
+                FLOW_REQUEST_TIMESTAMPS.append(now)
+                return
+
+            sleep_seconds = 1.0 - (now - FLOW_REQUEST_TIMESTAMPS[0])
+
+        time.sleep(max(sleep_seconds, 0.01))
+
+
 def execute_flow_script(wallet_address: str) -> dict[str, Any]:
     body = json.dumps(
         {
@@ -161,16 +186,35 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
         },
     )
 
-    try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            encoded_response = json.loads(response.read().decode("utf-8"))
-    except HTTPError as error:
-        error_body = error.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
-    except URLError as error:
-        raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
-    except json.JSONDecodeError as error:
-        raise RuntimeError("Flow API response was not valid JSON") from error
+    for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
+        try:
+            wait_for_flow_rate_limit()
+
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                encoded_response = json.loads(response.read().decode("utf-8"))
+                break
+        except HTTPError as error:
+            error_body = error.read().decode("utf-8", errors="replace")
+
+            if error.code not in FLOW_RETRY_STATUS_CODES or attempt == MAX_FLOW_REQUEST_RETRIES:
+                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
+
+            print(
+                f"Flow API returned {error.code}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
+                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+            )
+            time.sleep(FLOW_RETRY_DELAY_SECONDS)
+        except URLError as error:
+            if attempt == MAX_FLOW_REQUEST_RETRIES:
+                raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
+
+            print(
+                f"Flow API connection failed; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
+                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+            )
+            time.sleep(FLOW_RETRY_DELAY_SECONDS)
+        except json.JSONDecodeError as error:
+            raise RuntimeError("Flow API response was not valid JSON") from error
 
     decoded_response = base64.b64decode(encoded_response).decode("utf-8")
     return json.loads(decoded_response)

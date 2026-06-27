@@ -36,7 +36,7 @@ Populate player seasons from Flow after the normal database refresh:
 python update_database.py --seasons yes
 ```
 
-The player seasons step uses the same `--workers` value as the wallet and progression refreshes.
+The player seasons step uses the same `--workers` value as the wallet and progression refreshes. It also limits Flow requests so it stays below Flow's 100-per-second limit.
 
 Skip player seasons:
 
@@ -48,6 +48,8 @@ python update_database.py --seasons no
 
 - `update_database.py` - main refresh script.
 - `populate_seasons_from_flow.py` - one-time Flow helper for player seasons.
+- `export_for_website.py` - exports the database into static website data files.
+- `site/` - free GitHub Pages table website.
 - `refresh_wallets_only.py` - optional wallet-only refresh helper.
 - `mfl_progression.db` - local database, ignored by Git.
 
@@ -62,3 +64,9 @@ https://github.com/FraGioco9/mfl-progression/actions
 Choose **Manual database refresh**, click **Run workflow**, fill in the options, then click the green **Run workflow** button.
 
 When the run finishes, open the finished run and download the `mfl_progression_database` artifact. That download contains `mfl_progression.db`.
+
+The same run also publishes the website. After GitHub Pages is enabled, open:
+
+```text
+https://fragioco9.github.io/mfl-progression/
+```

@@ -24,6 +24,15 @@ on:
           - "yes"
         default: "no"
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -53,9 +62,23 @@ jobs:
 
           "${COMMAND[@]}"
 
+      - name: Export website data
+        run: python export_for_website.py
+
       - name: Upload database
         uses: actions/upload-artifact@v4
         with:
           name: mfl_progression_database
           path: mfl_progression.db
           if-no-files-found: error
+
+      - name: Set up GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish website
+        uses: actions/deploy-pages@v4
