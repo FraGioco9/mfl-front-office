@@ -10,6 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from populate_seasons_from_flow import populate_flow_static_fields
+
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 LEADERBOARD_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
@@ -62,7 +64,7 @@ def create_players_table(connection: sqlite3.Connection) -> None:
             physical INTEGER,
             goalkeeping INTEGER,
             age_at_mint INTEGER,
-            seasons INTEGER,
+            player_seasons INTEGER,
             overall_prog_all INTEGER,
             pace_prog_all INTEGER,
             shooting_prog_all INTEGER,
@@ -172,7 +174,7 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         "physical": "INTEGER",
         "goalkeeping": "INTEGER",
         "age_at_mint": "INTEGER",
-        "seasons": "INTEGER",
+        "player_seasons": "INTEGER",
         "overall_prog_all": "INTEGER",
         "pace_prog_all": "INTEGER",
         "shooting_prog_all": "INTEGER",
@@ -191,6 +193,11 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         "goalkeeping_prog_current_season": "INTEGER",
     }
 
+    if "seasons" in existing_columns and "player_seasons" not in existing_columns:
+        connection.execute("ALTER TABLE players RENAME COLUMN seasons TO player_seasons")
+        existing_columns.remove("seasons")
+        existing_columns.add("player_seasons")
+
     for column_name, column_type in expected_columns.items():
         if column_name not in existing_columns:
             connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
@@ -199,8 +206,8 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         connection.execute(
             """
             UPDATE players
-            SET seasons = age - age_at_mint + 1
-            WHERE seasons IS NULL
+            SET player_seasons = age - age_at_mint + 1
+            WHERE player_seasons IS NULL
                 AND age IS NOT NULL
                 AND age_at_mint IS NOT NULL
             """
@@ -482,7 +489,7 @@ def insert_players(
             defense,
             physical,
             goalkeeping,
-            seasons
+            player_seasons
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(player_id) DO UPDATE SET
@@ -503,9 +510,9 @@ def insert_players(
             defense = excluded.defense,
             physical = excluded.physical,
             goalkeeping = excluded.goalkeeping,
-            seasons = CASE
+            player_seasons = CASE
                 WHEN players.age_at_mint IS NOT NULL AND excluded.age IS NOT NULL THEN excluded.age - players.age_at_mint + 1
-                ELSE players.seasons
+                ELSE players.player_seasons
             END
         """,
         rows,
@@ -780,6 +787,12 @@ def parse_args() -> argparse.Namespace:
         default=100,
         help="Number of wallets/progression batches to fetch at the same time.",
     )
+    parser.add_argument(
+        "--seasons",
+        choices=["yes", "no"],
+        default="no",
+        help="Use Flow to populate missing age_at_mint values and calculate player_seasons after the main refresh.",
+    )
     return parser.parse_args()
 
 
@@ -791,6 +804,10 @@ def main() -> int:
             saved_wallets = refresh_wallets(connection)
             print(f"Wallet refresh complete: saved {saved_wallets} wallets.")
             total_players = refresh_players(connection, args.limit, args.wallet, args.workers)
+
+            if args.seasons == "yes":
+                total_seasons = populate_flow_static_fields(connection, args.limit, args.wallet, False)
+                print(f"Player seasons refresh complete: updated {total_seasons} players.")
 
         print(f"Player refresh complete: saved {total_players} players.")
         print(f"Database file: {DATABASE_PATH}")

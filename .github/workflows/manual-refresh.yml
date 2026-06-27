@@ -15,8 +15,8 @@ on:
         description: "Number of workers to use."
         required: false
         default: "100"
-      populate_seasons:
-        description: "Also run the Flow seasons helper after the main refresh."
+      seasons:
+        description: "Also populate player_seasons from Flow after the main refresh."
         required: true
         type: choice
         options:
@@ -41,7 +41,7 @@ jobs:
       - name: Run database refresh
         shell: bash
         run: |
-          COMMAND=(python update_database.py --workers "${{ inputs.workers }}")
+          COMMAND=(python update_database.py --workers "${{ inputs.workers }}" --seasons "${{ inputs.seasons }}")
 
           if [ -n "${{ inputs.limit }}" ]; then
             COMMAND+=(--limit "${{ inputs.limit }}")
@@ -52,10 +52,6 @@ jobs:
           fi
 
           "${COMMAND[@]}"
-
-      - name: Populate seasons from Flow
-        if: inputs.populate_seasons == 'yes'
-        run: python populate_seasons_from_flow.py
 
       - name: Upload database
         uses: actions/upload-artifact@v4

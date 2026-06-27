@@ -69,8 +69,13 @@ def ensure_flow_static_columns(connection: sqlite3.Connection) -> None:
     }
     expected_columns = {
         "age_at_mint": "INTEGER",
-        "seasons": "INTEGER",
+        "player_seasons": "INTEGER",
     }
+
+    if "seasons" in existing_columns and "player_seasons" not in existing_columns:
+        connection.execute("ALTER TABLE players RENAME COLUMN seasons TO player_seasons")
+        existing_columns.remove("seasons")
+        existing_columns.add("player_seasons")
 
     for column_name, column_type in expected_columns.items():
         if column_name not in existing_columns:
@@ -90,7 +95,7 @@ def get_wallets_to_process(
     parameters: list[Any] = []
 
     if not force:
-        where_sql = "WHERE seasons IS NULL"
+        where_sql = "WHERE player_seasons IS NULL"
 
     limit_sql = ""
     if limit is not None:
@@ -201,7 +206,7 @@ def update_flow_static_fields(
     if force:
         where_sql = ""
     else:
-        where_sql = "AND seasons IS NULL"
+        where_sql = "AND player_seasons IS NULL"
 
     rows = [
         (
@@ -225,7 +230,7 @@ def update_flow_static_fields(
             preferred_foot = ?,
             height = ?,
             age_at_mint = ?,
-            seasons = CASE
+            player_seasons = CASE
                 WHEN age IS NOT NULL AND ? IS NOT NULL THEN age - ? + 1
                 ELSE NULL
             END

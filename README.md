@@ -30,18 +30,22 @@ Set worker count:
 python update_database.py --workers 20
 ```
 
-## One-Time Seasons Population
-
-To populate `age_at_mint` from Flow and calculate `seasons`:
+Populate player seasons from Flow after the normal database refresh:
 
 ```powershell
-python populate_seasons_from_flow.py
+python update_database.py --seasons yes
+```
+
+Skip player seasons:
+
+```powershell
+python update_database.py --seasons no
 ```
 
 ## Files
 
 - `update_database.py` - main refresh script.
-- `populate_seasons_from_flow.py` - one-time Flow helper for seasons.
+- `populate_seasons_from_flow.py` - one-time Flow helper for player seasons.
 - `refresh_wallets_only.py` - optional wallet-only refresh helper.
 - `mfl_progression.db` - local database, ignored by Git.
 
