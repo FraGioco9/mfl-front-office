@@ -107,7 +107,7 @@ function formatStatValue(row, statColumn) {
     return String(value);
   }
 
-  const progression = getValue(row, progressionColumn) || 0;
+  const progression = Number(getValue(row, progressionColumn) || 0);
 
   if (progression === 0) {
     return String(value);
@@ -274,8 +274,6 @@ function downloadCsv() {
 function setView(viewName) {
   state.view = viewName;
   state.page = 1;
-  state.sortKey = "overall";
-  state.sortDirection = "desc";
 
   viewButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === viewName);
