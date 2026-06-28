@@ -235,11 +235,39 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1260px;
+  min-width: 1460px;
 }
 
-col {
-  width: 7.143%;
+.col-id {
+  width: 74px;
+}
+
+.col-name {
+  width: 260px;
+}
+
+.col-nationality {
+  width: 170px;
+}
+
+.col-age {
+  width: 70px;
+}
+
+.col-positions {
+  width: 160px;
+}
+
+.col-seasons {
+  width: 90px;
+}
+
+.col-stat {
+  width: 105px;
+}
+
+.col-link {
+  width: 70px;
 }
 
 th,
