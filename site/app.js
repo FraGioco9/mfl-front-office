@@ -179,9 +179,11 @@ function buildHeader() {
           state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
         } else if (state.sortDirection === "desc") {
           state.sortDirection = "asc";
+        } else if (column === "overall") {
+          state.sortDirection = "desc";
         } else {
           state.sortKey = "overall";
-          state.sortDirection = "asc";
+          state.sortDirection = "desc";
         }
 
         state.page = 1;
