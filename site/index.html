@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=17">
+    <link rel="stylesheet" href="styles.css?v=18">
   </head>
   <body>
     <header class="topbar">
@@ -50,8 +50,9 @@
       </section>
 
       <section class="controlsBar" aria-label="Table controls">
-        <button id="openFiltersButton" type="button">Filters</button>
+        <button id="openFiltersButton" type="button">🔎 Filters</button>
         <span id="filterSummary">1 active</span>
+        <button id="downloadButton" type="button">⬇ Download CSV</button>
         <label class="field compact">
           <span>Rows</span>
           <select id="pageSizeSelect">
@@ -61,7 +62,6 @@
             <option value="250">250</option>
           </select>
         </label>
-        <button id="downloadButton" type="button">Download CSV</button>
       </section>
 
       <section class="tableShell" aria-label="Players table">
@@ -104,7 +104,16 @@
           <button id="closeFiltersButton" class="iconButton" type="button" aria-label="Close filters">x</button>
         </header>
 
-        <div id="columnFilters" class="columnFilters"></div>
+        <section class="filterBuilder">
+          <div class="addFilterRow">
+            <button id="showAddFilterButton" class="iconButton" type="button" aria-label="Add filter">+</button>
+            <select id="addFilterSelect" hidden>
+              <option value="">Select filter...</option>
+            </select>
+          </div>
+
+          <div id="filterRules" class="filterRules"></div>
+        </section>
 
         <footer class="filtersFooter">
           <button id="clearFiltersButton" type="button">Clear</button>
@@ -113,6 +122,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
   </body>
 </html>

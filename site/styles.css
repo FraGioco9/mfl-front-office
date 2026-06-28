@@ -163,7 +163,7 @@ main {
 
 .controlsBar {
   display: grid;
-  grid-template-columns: auto auto 120px auto;
+  grid-template-columns: auto auto auto 120px;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
@@ -275,12 +275,47 @@ button:disabled {
   padding: 0;
 }
 
-.columnFilters {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.filterBuilder {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   overflow: auto;
   padding: 16px 18px 18px;
+}
+
+.addFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addFilterRow select {
+  width: min(320px, 100%);
+}
+
+.filterRules {
+  display: grid;
+  gap: 10px;
+}
+
+.filterRule {
+  display: grid;
+  grid-template-columns: 88px minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 1.2fr) 40px;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ruleColumn {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connectorSelect:disabled {
+  opacity: 0;
 }
 
 .tableShell {
@@ -463,7 +498,7 @@ td a {
     gap: 10px;
   }
 
-  .columnFilters {
+  .filterRule {
     grid-template-columns: 1fr;
   }
 

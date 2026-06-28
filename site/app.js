@@ -45,7 +45,7 @@ const columnLabels = {
   player_link: "Link",
 };
 
-const numberColumns = new Set(["player_id", "age", "player_seasons", ...statColumns]);
+const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 
 const statusText = document.querySelector("#statusText");
@@ -58,7 +58,9 @@ const filtersModal = document.querySelector("#filtersModal");
 const closeFiltersButton = document.querySelector("#closeFiltersButton");
 const applyFiltersButton = document.querySelector("#applyFiltersButton");
 const clearFiltersButton = document.querySelector("#clearFiltersButton");
-const columnFilters = document.querySelector("#columnFilters");
+const showAddFilterButton = document.querySelector("#showAddFilterButton");
+const addFilterSelect = document.querySelector("#addFilterSelect");
+const filterRules = document.querySelector("#filterRules");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
 const newMintsInput = document.querySelector("#newMintsInput");
@@ -104,6 +106,10 @@ function formatCount(value) {
 
 function filterLabel(column) {
   return columnLabels[column] || column.replaceAll("_", " ");
+}
+
+function isNumericColumn(column) {
+  return numberColumns.has(column) || column.endsWith("_all") || column.endsWith("_current_season");
 }
 
 function getValue(row, column) {
@@ -280,8 +286,10 @@ function activeFilterCount() {
     count += 1;
   }
 
-  for (const input of columnFilters.querySelectorAll("[data-filter-column]")) {
-    if (input.value.trim()) {
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    const valueInput = rule.querySelector("[data-filter-value]");
+
+    if (valueInput && valueInput.value.trim()) {
       count += 1;
     }
   }
@@ -294,32 +302,107 @@ function updateFilterSummary() {
   filterSummary.textContent = `${count} active`;
 }
 
-function buildColumnFilters() {
+function populateAddFilterSelect() {
   const fragment = document.createDocumentFragment();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select filter...";
+  fragment.appendChild(placeholder);
 
   state.columns.forEach((column) => {
-    const label = document.createElement("label");
-    label.className = "field";
-
-    const labelText = document.createElement("span");
-    labelText.textContent = filterLabel(column);
-
-    const input = document.createElement("input");
-    input.type = "search";
-    input.placeholder = filterLabel(column);
-    input.dataset.filterColumn = column;
-
-    label.appendChild(labelText);
-    label.appendChild(input);
-    fragment.appendChild(label);
+    const option = document.createElement("option");
+    option.value = column;
+    option.textContent = filterLabel(column);
+    fragment.appendChild(option);
   });
 
-  columnFilters.replaceChildren(fragment);
+  addFilterSelect.replaceChildren(fragment);
+}
+
+function buildOperatorSelect(column) {
+  const select = document.createElement("select");
+  select.dataset.filterOperator = "true";
+  const operators = isNumericColumn(column)
+    ? [
+        ["=", "is"],
+        ["!=", "is not"],
+        ["<", "under"],
+        ["<=", "at most"],
+        [">", "over"],
+        [">=", "at least"],
+      ]
+    : [
+        ["contains", "contains"],
+        ["not_contains", "does not contain"],
+        ["=", "is"],
+        ["!=", "is not"],
+      ];
+
+  operators.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+
+  return select;
+}
+
+function addFilterRule(column) {
+  const rule = document.createElement("div");
+  rule.className = "filterRule";
+  rule.dataset.filterColumn = column;
+
+  const connector = document.createElement("select");
+  connector.dataset.filterConnector = "true";
+  connector.innerHTML = '<option value="and">And</option><option value="or">Or</option>';
+  connector.className = "connectorSelect";
+
+  const label = document.createElement("span");
+  label.className = "ruleColumn";
+  label.textContent = filterLabel(column);
+
+  const operator = buildOperatorSelect(column);
+
+  const value = document.createElement("input");
+  value.type = "search";
+  value.placeholder = "Value";
+  value.dataset.filterValue = "true";
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "iconButton";
+  remove.textContent = "x";
+  remove.setAttribute("aria-label", `Remove ${filterLabel(column)} filter`);
+  remove.addEventListener("click", () => {
+    rule.remove();
+    refreshRuleConnectors();
+    updateFilterSummary();
+  });
+
+  rule.appendChild(connector);
+  rule.appendChild(label);
+  rule.appendChild(operator);
+  rule.appendChild(value);
+  rule.appendChild(remove);
+  filterRules.appendChild(rule);
+  refreshRuleConnectors();
+  value.focus();
+}
+
+function refreshRuleConnectors() {
+  const rules = Array.from(filterRules.querySelectorAll(".filterRule"));
+
+  rules.forEach((rule, index) => {
+    const connector = rule.querySelector("[data-filter-connector]");
+    connector.disabled = index === 0;
+    connector.style.visibility = index === 0 ? "hidden" : "visible";
+  });
 }
 
 function openFilters() {
   filtersModal.hidden = false;
-  const firstInput = columnFilters.querySelector("input");
+  const firstInput = filterRules.querySelector("input") || addFilterSelect;
 
   if (firstInput) {
     firstInput.focus();
@@ -331,13 +414,90 @@ function closeFilters() {
   openFiltersButton.focus();
 }
 
-function applyFilters() {
-  const columnFilterInputs = Array.from(columnFilters.querySelectorAll("[data-filter-column]"))
-    .map((input) => ({
-      index: state.columns.indexOf(input.dataset.filterColumn),
-      query: input.value.trim().toLowerCase(),
+function readFilterRules() {
+  return Array.from(filterRules.querySelectorAll(".filterRule"))
+    .map((rule, index) => ({
+      column: rule.dataset.filterColumn,
+      connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+      operator: rule.querySelector("[data-filter-operator]").value,
+      value: rule.querySelector("[data-filter-value]").value.trim(),
     }))
-    .filter((filter) => filter.query);
+    .filter((rule) => rule.value);
+}
+
+function ruleMatches(row, rule) {
+  const rawValue = getValue(row, rule.column);
+  const filterValue = rule.value;
+
+  if (isNumericColumn(rule.column)) {
+    const rowNumber = Number(rawValue);
+    const filterNumber = Number(filterValue);
+
+    if (!Number.isFinite(rowNumber) || !Number.isFinite(filterNumber)) {
+      return false;
+    }
+
+    if (rule.operator === "=") {
+      return rowNumber === filterNumber;
+    }
+    if (rule.operator === "!=") {
+      return rowNumber !== filterNumber;
+    }
+    if (rule.operator === "<") {
+      return rowNumber < filterNumber;
+    }
+    if (rule.operator === "<=") {
+      return rowNumber <= filterNumber;
+    }
+    if (rule.operator === ">") {
+      return rowNumber > filterNumber;
+    }
+    if (rule.operator === ">=") {
+      return rowNumber >= filterNumber;
+    }
+  }
+
+  const rowText = String(rawValue ?? "").toLowerCase();
+  const filterText = filterValue.toLowerCase();
+
+  if (rule.operator === "contains") {
+    return rowText.includes(filterText);
+  }
+  if (rule.operator === "not_contains") {
+    return !rowText.includes(filterText);
+  }
+  if (rule.operator === "=") {
+    return rowText === filterText;
+  }
+  if (rule.operator === "!=") {
+    return rowText !== filterText;
+  }
+
+  return false;
+}
+
+function rowMatchesRules(row, rules) {
+  if (!rules.length) {
+    return true;
+  }
+
+  let result = ruleMatches(row, rules[0]);
+
+  for (let index = 1; index < rules.length; index += 1) {
+    const current = ruleMatches(row, rules[index]);
+
+    if (rules[index].connector === "or") {
+      result = result || current;
+    } else {
+      result = result && current;
+    }
+  }
+
+  return result;
+}
+
+function applyFilters() {
+  const rules = readFilterRules();
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
@@ -354,10 +514,8 @@ function applyFilters() {
       return false;
     }
 
-    for (const filter of columnFilterInputs) {
-      if (!String(row[filter.index] ?? "").toLowerCase().includes(filter.query)) {
-        return false;
-      }
+    if (!rowMatchesRules(row, rules)) {
+      return false;
     }
 
     return true;
@@ -476,7 +634,7 @@ async function loadData() {
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
-    buildColumnFilters();
+    populateAddFilterSelect();
     buildHeader();
     applyFilters();
   } catch (error) {
@@ -515,6 +673,25 @@ newMintsInput.addEventListener("change", () => {
 openFiltersButton.addEventListener("click", openFilters);
 closeFiltersButton.addEventListener("click", closeFilters);
 
+showAddFilterButton.addEventListener("click", () => {
+  addFilterSelect.hidden = !addFilterSelect.hidden;
+
+  if (!addFilterSelect.hidden) {
+    addFilterSelect.focus();
+  }
+});
+
+addFilterSelect.addEventListener("change", () => {
+  if (!addFilterSelect.value) {
+    return;
+  }
+
+  addFilterRule(addFilterSelect.value);
+  addFilterSelect.value = "";
+  addFilterSelect.hidden = true;
+  updateFilterSummary();
+});
+
 filtersModal.addEventListener("click", (event) => {
   if (event.target === filtersModal) {
     closeFilters();
@@ -537,10 +714,7 @@ clearFiltersButton.addEventListener("click", () => {
   hideRetiredInput.checked = false;
   hideRetiringInput.checked = false;
   newMintsInput.checked = false;
-
-  for (const input of columnFilters.querySelectorAll("[data-filter-column]")) {
-    input.value = "";
-  }
+  filterRules.replaceChildren();
 
   state.page = 1;
   applyFilters();
