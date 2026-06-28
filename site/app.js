@@ -170,7 +170,7 @@ function retirementMarker(row) {
   if ([1, 2, 3].includes(retirementYears)) {
     return {
       emoji: "⏳",
-      label: `${retirementYears} retirement year${retirementYears === 1 ? "" : "s"} left`,
+      label: `${retirementYears} year${retirementYears === 1 ? "" : "s"} left`,
     };
   }
 
