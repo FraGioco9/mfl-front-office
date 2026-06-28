@@ -46,6 +46,7 @@ const columnLabels = {
 };
 
 const numberColumns = new Set(["player_id", "age", "player_seasons", ...statColumns]);
+const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 const searchColumns = ["name", "wallet_name", "wallet_address", "nationality", "positions"];
 
 const statusText = document.querySelector("#statusText");
@@ -129,17 +130,7 @@ function formatCellValue(row, column) {
 }
 
 function sortableValue(row, column) {
-  if (column === linkColumn) {
-    return getValue(row, "player_id");
-  }
-
-  const value = getValue(row, column);
-
-  if (!statColumns.includes(column) || state.view === "attributes") {
-    return value;
-  }
-
-  return getValue(row, getProgressionColumn(column)) || 0;
+  return getValue(row, column);
 }
 
 function buildHeader() {
@@ -148,18 +139,33 @@ function buildHeader() {
   views[state.view].columns.forEach((column) => {
     const cell = document.createElement("th");
     const isSorted = state.sortKey === column;
-    cell.textContent = `${columnLabels[column]}${isSorted ? (state.sortDirection === "asc" ? " ^" : " v") : ""}`;
-    cell.addEventListener("click", () => {
-      if (state.sortKey === column) {
-        state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
-      } else {
-        state.sortKey = column;
-        state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
+    const label = document.createElement("span");
+    label.textContent = columnLabels[column];
+    cell.appendChild(label);
+
+    if (sortableColumns.has(column)) {
+      cell.classList.add("sortable");
+
+      if (isSorted) {
+        const arrow = document.createElement("span");
+        arrow.className = `sortArrow ${state.sortDirection}`;
+        arrow.setAttribute("aria-hidden", "true");
+        cell.appendChild(arrow);
       }
 
-      state.page = 1;
-      applyFilters();
-    });
+      cell.addEventListener("click", () => {
+        if (state.sortKey === column) {
+          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = column;
+          state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
+        }
+
+        state.page = 1;
+        applyFilters();
+      });
+    }
+
     headerRow.appendChild(cell);
   });
 

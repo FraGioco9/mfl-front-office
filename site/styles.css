@@ -207,7 +207,35 @@ th {
   color: #33414c;
   font-size: 12px;
   text-transform: uppercase;
+  cursor: default;
+}
+
+th.sortable {
   cursor: pointer;
+}
+
+th.sortable:hover {
+  background: #e1eaf1;
+}
+
+.sortArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.sortArrow.asc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid #33414c;
+}
+
+.sortArrow.desc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid #33414c;
 }
 
 tbody tr:hover {
