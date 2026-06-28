@@ -47,13 +47,14 @@ const columnLabels = {
 
 const numberColumns = new Set(["player_id", "age", "player_seasons", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
-const searchColumns = ["name", "wallet_name", "wallet_address", "nationality", "positions"];
 
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
 const themeButton = document.querySelector("#themeButton");
-const searchInput = document.querySelector("#searchInput");
+const nameFilterInput = document.querySelector("#nameFilterInput");
+const nationalityFilterInput = document.querySelector("#nationalityFilterInput");
+const positionFilterInput = document.querySelector("#positionFilterInput");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
@@ -237,8 +238,12 @@ function compareRows(a, b) {
 }
 
 function applyFilters() {
-  const query = searchInput.value.trim().toLowerCase();
-  const searchIndexes = searchColumns.map((column) => state.columns.indexOf(column));
+  const nameQuery = nameFilterInput.value.trim().toLowerCase();
+  const nationalityQuery = nationalityFilterInput.value.trim().toLowerCase();
+  const positionQuery = positionFilterInput.value.trim().toLowerCase();
+  const nameIndex = state.columns.indexOf("name");
+  const nationalityIndex = state.columns.indexOf("nationality");
+  const positionsIndex = state.columns.indexOf("positions");
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
@@ -251,11 +256,19 @@ function applyFilters() {
       return false;
     }
 
-    if (!query) {
-      return true;
+    if (nameQuery && !String(row[nameIndex] ?? "").toLowerCase().includes(nameQuery)) {
+      return false;
     }
 
-    return searchIndexes.some((index) => String(row[index] ?? "").toLowerCase().includes(query));
+    if (nationalityQuery && !String(row[nationalityIndex] ?? "").toLowerCase().includes(nationalityQuery)) {
+      return false;
+    }
+
+    if (positionQuery && !String(row[positionsIndex] ?? "").toLowerCase().includes(positionQuery)) {
+      return false;
+    }
+
+    return true;
   });
 
   state.filteredRows.sort(compareRows);
@@ -370,10 +383,12 @@ viewButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-searchInput.addEventListener("input", () => {
-  state.page = 1;
-  applyFilters();
-});
+for (const input of [nameFilterInput, nationalityFilterInput, positionFilterInput]) {
+  input.addEventListener("input", () => {
+    state.page = 1;
+    applyFilters();
+  });
+}
 
 hideRetiredInput.addEventListener("change", () => {
   state.page = 1;
@@ -392,7 +407,9 @@ pageSizeSelect.addEventListener("change", () => {
 });
 
 clearButton.addEventListener("click", () => {
-  searchInput.value = "";
+  nameFilterInput.value = "";
+  nationalityFilterInput.value = "";
+  positionFilterInput.value = "";
   state.page = 1;
   applyFilters();
 });

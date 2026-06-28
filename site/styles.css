@@ -161,12 +161,13 @@ main {
   padding: 0;
 }
 
-.toolbar {
+.filterSection {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 120px auto auto;
+  grid-template-columns: minmax(190px, 1fr) minmax(170px, 0.75fr) minmax(150px, 0.6fr) 120px auto auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
+  padding-top: 2px;
 }
 
 .field {
@@ -372,7 +373,7 @@ td a {
     padding: 14px;
   }
 
-  .toolbar {
+  .filterSection {
     grid-template-columns: 1fr;
   }
 
@@ -387,7 +388,7 @@ td a {
     gap: 10px;
   }
 
-  .toolbar button {
+  .filterSection button {
     width: 100%;
   }
 }

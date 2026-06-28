@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
   </head>
   <body>
     <header class="topbar">
@@ -45,10 +45,18 @@
         </label>
       </section>
 
-      <section class="toolbar" aria-label="Table controls">
+      <section class="filterSection" aria-label="Filters">
         <label class="field">
-          <span>Search</span>
-          <input id="searchInput" type="search" placeholder="Name, wallet, nationality, position">
+          <span>Name</span>
+          <input id="nameFilterInput" type="search" placeholder="Player name">
+        </label>
+        <label class="field">
+          <span>Nationality</span>
+          <input id="nationalityFilterInput" type="search" placeholder="Nationality">
+        </label>
+        <label class="field">
+          <span>Position</span>
+          <input id="positionFilterInput" type="search" placeholder="Position">
         </label>
         <label class="field compact">
           <span>Rows</span>
@@ -86,7 +94,7 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
-        <div id="emptyState" class="emptyState" hidden>No players match the current search.</div>
+        <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
       </section>
 
       <nav class="pager" aria-label="Pagination">
@@ -96,6 +104,6 @@
       </nav>
     </main>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>
