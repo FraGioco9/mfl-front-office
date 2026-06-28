@@ -162,6 +162,7 @@ function buildHeader() {
         }
 
         state.page = 1;
+        buildHeader();
         applyFilters();
       });
     }
