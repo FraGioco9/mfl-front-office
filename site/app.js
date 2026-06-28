@@ -497,6 +497,21 @@ pageSizeSelect.addEventListener("change", () => {
   renderTable();
 });
 
+hideRetiredInput.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
+
+hideRetiringInput.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
+
+newMintsInput.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
+
 openFiltersButton.addEventListener("click", openFilters);
 closeFiltersButton.addEventListener("click", closeFilters);
 

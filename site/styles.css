@@ -140,6 +140,27 @@ main {
   color: #ffffff;
 }
 
+.quickFilters {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.quickFilters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.quickFilters input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 .controlsBar {
   display: grid;
   grid-template-columns: auto auto 120px auto;
@@ -251,27 +272,6 @@ button:disabled {
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
-  padding: 0;
-}
-
-.modalQuickFilters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 18px;
-  padding: 16px 18px 4px;
-}
-
-.modalQuickFilters label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text);
-  font-weight: 700;
-}
-
-.modalQuickFilters input {
-  width: 16px;
-  height: 16px;
   padding: 0;
 }
 
@@ -455,6 +455,12 @@ td a {
   .views {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .quickFilters {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .columnFilters {
