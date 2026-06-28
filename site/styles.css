@@ -51,11 +51,12 @@ select {
 }
 
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 28px;
+  padding: 24px 76px 24px 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -78,9 +79,20 @@ p {
 }
 
 .themeButton {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .stats {
@@ -319,7 +331,7 @@ td a {
   .topbar {
     align-items: stretch;
     flex-direction: column;
-    padding: 20px;
+    padding: 20px 70px 20px 20px;
   }
 
   .headerControls {

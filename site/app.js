@@ -69,12 +69,26 @@ const viewButtons = document.querySelectorAll(".viewButton");
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  themeButton.textContent = theme === "dark" ? "Light Mode" : "Night Mode";
-  localStorage.setItem("mfl-theme", theme);
+  themeButton.textContent = theme === "dark" ? "☀️" : "🌙";
+  themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to night mode");
+  themeButton.title = theme === "dark" ? "Light mode" : "Night mode";
+
+  try {
+    localStorage.setItem("mfl-theme", theme);
+  } catch {
+    // Theme still changes for this page even if the browser blocks storage.
+  }
 }
 
 function loadTheme() {
-  const savedTheme = localStorage.getItem("mfl-theme");
+  let savedTheme = null;
+
+  try {
+    savedTheme = localStorage.getItem("mfl-theme");
+  } catch {
+    savedTheme = null;
+  }
+
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
 }
