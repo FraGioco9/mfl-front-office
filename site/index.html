@@ -31,10 +31,16 @@
         <button class="viewButton" type="button" data-view="all">All Time</button>
       </section>
 
-      <label class="retiredFilter">
-        <input id="hideRetiredInput" type="checkbox" checked>
-        <span>Hide retired players</span>
-      </label>
+      <section class="quickFilters" aria-label="Quick filters">
+        <label>
+          <input id="hideRetiredInput" type="checkbox" checked>
+          <span>Hide retired players</span>
+        </label>
+        <label>
+          <input id="newMintsInput" type="checkbox">
+          <span>Only new mints</span>
+        </label>
+      </section>
 
       <section class="toolbar" aria-label="Table controls">
         <label class="field">
@@ -57,6 +63,21 @@
       <section class="tableShell" aria-label="Players table">
         <div class="tableScroller">
           <table>
+            <colgroup>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+            </colgroup>
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
           </table>

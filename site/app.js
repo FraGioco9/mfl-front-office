@@ -51,6 +51,7 @@ const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
 const searchInput = document.querySelector("#searchInput");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
+const newMintsInput = document.querySelector("#newMintsInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
 const clearButton = document.querySelector("#clearButton");
 const downloadButton = document.querySelector("#downloadButton");
@@ -128,7 +129,7 @@ function sortableValue(row, column) {
     return value;
   }
 
-  return (value || 0) + (getValue(row, getProgressionColumn(column)) || 0);
+  return getValue(row, getProgressionColumn(column)) || 0;
 }
 
 function buildHeader() {
@@ -171,9 +172,14 @@ function applyFilters() {
   const query = searchInput.value.trim().toLowerCase();
   const searchIndexes = searchColumns.map((column) => state.columns.indexOf(column));
   const retirementIndex = state.columns.indexOf("retirement_years");
+  const seasonsIndex = state.columns.indexOf("player_seasons");
 
   state.filteredRows = state.rows.filter((row) => {
     if (hideRetiredInput.checked && row[retirementIndex] === 0) {
+      return false;
+    }
+
+    if (newMintsInput.checked && row[seasonsIndex] !== 1) {
       return false;
     }
 
@@ -293,6 +299,11 @@ searchInput.addEventListener("input", () => {
 });
 
 hideRetiredInput.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
+
+newMintsInput.addEventListener("change", () => {
   state.page = 1;
   applyFilters();
 });

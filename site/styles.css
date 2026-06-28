@@ -90,17 +90,22 @@ main {
   color: #ffffff;
 }
 
-.retiredFilter {
+.quickFilters {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.quickFilters label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: fit-content;
-  margin-bottom: 14px;
   color: #26323d;
   font-weight: 700;
 }
 
-.retiredFilter input {
+.quickFilters input {
   width: 16px;
   height: 16px;
   padding: 0;
@@ -175,7 +180,12 @@ button:disabled {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   min-width: 1180px;
+}
+
+col {
+  width: 7.692%;
 }
 
 th,
@@ -185,6 +195,8 @@ td {
   text-align: left;
   white-space: nowrap;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th {
@@ -245,6 +257,12 @@ tbody tr:hover {
   .views {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .quickFilters {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .toolbar button {
