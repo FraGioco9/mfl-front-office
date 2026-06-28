@@ -4,7 +4,7 @@ const state = {
   filteredRows: [],
   page: 1,
   pageSize: 100,
-  view: "attributes",
+  view: "current",
   sortKey: "overall",
   sortDirection: "desc",
 };
@@ -137,7 +137,7 @@ function buildHeader() {
   views[state.view].columns.forEach((column) => {
     const cell = document.createElement("th");
     const isSorted = state.sortKey === column;
-    cell.textContent = `${columnLabels[column]}${isSorted ? (state.sortDirection === "asc" ? " ↑" : " ↓") : ""}`;
+    cell.textContent = `${columnLabels[column]}${isSorted ? (state.sortDirection === "asc" ? " ^" : " v") : ""}`;
     cell.addEventListener("click", () => {
       if (state.sortKey === column) {
         state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";

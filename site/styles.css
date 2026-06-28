@@ -75,7 +75,7 @@ main {
 .views {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .viewButton {
@@ -90,9 +90,25 @@ main {
   color: #ffffff;
 }
 
+.retiredFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-bottom: 14px;
+  color: #26323d;
+  font-weight: 700;
+}
+
+.retiredFilter input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 145px 120px auto auto;
+  grid-template-columns: minmax(260px, 1fr) 120px auto auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
@@ -108,21 +124,6 @@ main {
   font-weight: 700;
   color: #4e5a65;
   text-transform: uppercase;
-}
-
-.toggleField {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  color: #26323d;
-  font-weight: 700;
-}
-
-.toggleField input {
-  width: 18px;
-  height: 18px;
-  padding: 0;
 }
 
 input,
