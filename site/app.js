@@ -157,6 +157,26 @@ function formatCellValue(row, column) {
   return formatPlainValue(getValue(row, column), column);
 }
 
+function retirementMarker(row) {
+  const retirementYears = getValue(row, "retirement_years");
+
+  if (retirementYears === 0) {
+    return {
+      emoji: "🏁",
+      label: "Retired",
+    };
+  }
+
+  if ([1, 2, 3].includes(retirementYears)) {
+    return {
+      emoji: "⏳",
+      label: `${retirementYears} retirement year${retirementYears === 1 ? "" : "s"} left`,
+    };
+  }
+
+  return null;
+}
+
 function sortableValue(row, column) {
   if (column === "overall" && state.view !== "attributes") {
     return [
@@ -289,7 +309,21 @@ function renderTable() {
     views[state.view].columns.forEach((column) => {
       const cell = document.createElement("td");
 
-      if (column === linkColumn) {
+      if (column === "name") {
+        const nameText = document.createElement("span");
+        nameText.textContent = formatCellValue(row, column);
+        cell.appendChild(nameText);
+
+        const marker = retirementMarker(row);
+        if (marker) {
+          const markerElement = document.createElement("span");
+          markerElement.className = "retirementMarker";
+          markerElement.textContent = marker.emoji;
+          markerElement.title = marker.label;
+          markerElement.setAttribute("aria-label", marker.label);
+          cell.appendChild(markerElement);
+        }
+      } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);
         link.target = "_blank";
