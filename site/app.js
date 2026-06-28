@@ -130,6 +130,13 @@ function formatCellValue(row, column) {
 }
 
 function sortableValue(row, column) {
+  if (column === "overall" && state.view !== "attributes") {
+    return [
+      getValue(row, getProgressionColumn("overall")) || 0,
+      getValue(row, "overall") || 0,
+    ];
+  }
+
   return getValue(row, column);
 }
 
@@ -154,11 +161,14 @@ function buildHeader() {
       }
 
       cell.addEventListener("click", () => {
-        if (state.sortKey === column) {
-          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
-        } else {
+        if (state.sortKey !== column) {
           state.sortKey = column;
           state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
+        } else if (state.sortDirection === "desc") {
+          state.sortDirection = "asc";
+        } else {
+          state.sortKey = "overall";
+          state.sortDirection = "asc";
         }
 
         state.page = 1;
@@ -177,6 +187,18 @@ function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
   const aValue = sortableValue(a, state.sortKey);
   const bValue = sortableValue(b, state.sortKey);
+
+  if (Array.isArray(aValue) && Array.isArray(bValue)) {
+    for (let index = 0; index < aValue.length; index += 1) {
+      const comparison = ((aValue[index] ?? -Infinity) - (bValue[index] ?? -Infinity)) * direction;
+
+      if (comparison !== 0) {
+        return comparison;
+      }
+    }
+
+    return 0;
+  }
 
   if (numberColumns.has(state.sortKey)) {
     return (((aValue ?? -Infinity) - (bValue ?? -Infinity)) || 0) * direction;
