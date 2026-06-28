@@ -3,80 +3,54 @@ const state = {
   rows: [],
   filteredRows: [],
   page: 1,
-  pageSize: 50,
-  sortColumn: "overall",
+  pageSize: 100,
+  view: "attributes",
+  sortKey: "overall",
   sortDirection: "desc",
-  loaded: false,
+};
+
+const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
+const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
+
+const views = {
+  attributes: {
+    columns: [...baseColumns, ...statColumns],
+    progressionSuffix: null,
+  },
+  current: {
+    columns: [...baseColumns, ...statColumns],
+    progressionSuffix: "prog_current_season",
+  },
+  all: {
+    columns: [...baseColumns, ...statColumns],
+    progressionSuffix: "prog_all",
+  },
 };
 
 const columnLabels = {
   player_id: "ID",
-  wallet_address: "Wallet",
-  wallet_name: "Wallet Name",
   name: "Name",
-  positions: "Positions",
-  age: "Age",
   nationality: "Nationality",
-  preferred_foot: "Foot",
-  height: "Height",
-  retirement_years: "Retirement",
-  player_seasons: "Player Seasons",
-  overall_prog_all: "Overall All",
-  pace_prog_all: "Pace All",
-  shooting_prog_all: "Shooting All",
-  passing_prog_all: "Passing All",
-  dribbling_prog_all: "Dribbling All",
-  defense_prog_all: "Defense All",
-  physical_prog_all: "Physical All",
-  goalkeeping_prog_all: "Goalkeeping All",
-  overall_prog_current_season: "Overall Current",
-  pace_prog_current_season: "Pace Current",
-  shooting_prog_current_season: "Shooting Current",
-  passing_prog_current_season: "Passing Current",
-  dribbling_prog_current_season: "Dribbling Current",
-  defense_prog_current_season: "Defense Current",
-  physical_prog_current_season: "Physical Current",
-  goalkeeping_prog_current_season: "Goalkeeping Current",
+  age: "Age",
+  positions: "Positions",
+  player_seasons: "Seasons",
+  overall: "Overall",
+  pace: "Pace",
+  shooting: "Shooting",
+  passing: "Passing",
+  dribbling: "Dribbling",
+  defense: "Defense",
+  physical: "Physical",
 };
 
-const numberColumns = new Set([
-  "player_id",
-  "age",
-  "height",
-  "retirement_years",
-  "overall",
-  "pace",
-  "shooting",
-  "passing",
-  "dribbling",
-  "defense",
-  "physical",
-  "goalkeeping",
-  "player_seasons",
-  "overall_prog_all",
-  "pace_prog_all",
-  "shooting_prog_all",
-  "passing_prog_all",
-  "dribbling_prog_all",
-  "defense_prog_all",
-  "physical_prog_all",
-  "goalkeeping_prog_all",
-  "overall_prog_current_season",
-  "pace_prog_current_season",
-  "shooting_prog_current_season",
-  "passing_prog_current_season",
-  "dribbling_prog_current_season",
-  "defense_prog_current_season",
-  "physical_prog_current_season",
-  "goalkeeping_prog_current_season",
-]);
-
+const numberColumns = new Set(["player_id", "age", "player_seasons", ...statColumns]);
 const searchColumns = ["name", "wallet_name", "wallet_address", "nationality", "positions"];
 
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
 const searchInput = document.querySelector("#searchInput");
+const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
 const clearButton = document.querySelector("#clearButton");
 const downloadButton = document.querySelector("#downloadButton");
@@ -86,42 +60,89 @@ const emptyState = document.querySelector("#emptyState");
 const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
+const viewButtons = document.querySelectorAll(".viewButton");
 
-function formatNumber(value) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
-  if (typeof value === "number") {
-    return new Intl.NumberFormat().format(value);
-  }
-
-  return String(value);
-}
-
-function rowToObject(row) {
-  const object = {};
-  state.columns.forEach((column, index) => {
-    object[column] = row[index];
-  });
-  return object;
+function formatCount(value) {
+  return new Intl.NumberFormat().format(value);
 }
 
 function getValue(row, column) {
   return row[state.columns.indexOf(column)];
 }
 
+function getProgressionColumn(statColumn) {
+  const suffix = views[state.view].progressionSuffix;
+  return suffix ? `${statColumn}_${suffix}` : null;
+}
+
+function formatPlainValue(value, column) {
+  if (value === null || value === undefined || value === "") {
+    return "NULL";
+  }
+
+  if (column === "player_id") {
+    return String(value);
+  }
+
+  if (typeof value === "number") {
+    return formatCount(value);
+  }
+
+  return String(value);
+}
+
+function formatStatValue(row, statColumn) {
+  const value = getValue(row, statColumn);
+  const progressionColumn = getProgressionColumn(statColumn);
+
+  if (value === null || value === undefined || value === "") {
+    return "NULL";
+  }
+
+  if (!progressionColumn) {
+    return String(value);
+  }
+
+  const progression = getValue(row, progressionColumn) || 0;
+
+  if (progression === 0) {
+    return String(value);
+  }
+
+  const sign = progression > 0 ? "+" : "";
+  return `${value} (${sign}${progression})`;
+}
+
+function formatCellValue(row, column) {
+  if (statColumns.includes(column)) {
+    return formatStatValue(row, column);
+  }
+
+  return formatPlainValue(getValue(row, column), column);
+}
+
+function sortableValue(row, column) {
+  const value = getValue(row, column);
+
+  if (!statColumns.includes(column) || state.view === "attributes") {
+    return value;
+  }
+
+  return (value || 0) + (getValue(row, getProgressionColumn(column)) || 0);
+}
+
 function buildHeader() {
   const headerRow = document.createElement("tr");
 
-  state.columns.forEach((column) => {
+  views[state.view].columns.forEach((column) => {
     const cell = document.createElement("th");
-    cell.textContent = columnLabels[column] || column.replaceAll("_", " ");
+    const isSorted = state.sortKey === column;
+    cell.textContent = `${columnLabels[column]}${isSorted ? (state.sortDirection === "asc" ? " ↑" : " ↓") : ""}`;
     cell.addEventListener("click", () => {
-      if (state.sortColumn === column) {
+      if (state.sortKey === column) {
         state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
       } else {
-        state.sortColumn = column;
+        state.sortKey = column;
         state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
       }
 
@@ -135,12 +156,11 @@ function buildHeader() {
 }
 
 function compareRows(a, b) {
-  const column = state.sortColumn;
   const direction = state.sortDirection === "asc" ? 1 : -1;
-  const aValue = getValue(a, column);
-  const bValue = getValue(b, column);
+  const aValue = sortableValue(a, state.sortKey);
+  const bValue = sortableValue(b, state.sortKey);
 
-  if (numberColumns.has(column)) {
+  if (numberColumns.has(state.sortKey)) {
     return (((aValue ?? -Infinity) - (bValue ?? -Infinity)) || 0) * direction;
   }
 
@@ -150,14 +170,19 @@ function compareRows(a, b) {
 function applyFilters() {
   const query = searchInput.value.trim().toLowerCase();
   const searchIndexes = searchColumns.map((column) => state.columns.indexOf(column));
+  const retirementIndex = state.columns.indexOf("retirement_years");
 
-  if (!query) {
-    state.filteredRows = [...state.rows];
-  } else {
-    state.filteredRows = state.rows.filter((row) => {
-      return searchIndexes.some((index) => String(row[index] ?? "").toLowerCase().includes(query));
-    });
-  }
+  state.filteredRows = state.rows.filter((row) => {
+    if (hideRetiredInput.checked && row[retirementIndex] === 0) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return searchIndexes.some((index) => String(row[index] ?? "").toLowerCase().includes(query));
+  });
 
   state.filteredRows.sort(compareRows);
   renderTable();
@@ -174,9 +199,9 @@ function renderTable() {
   pageRows.forEach((row) => {
     const tableRow = document.createElement("tr");
 
-    row.forEach((value) => {
+    views[state.view].columns.forEach((column) => {
       const cell = document.createElement("td");
-      cell.textContent = formatNumber(value);
+      cell.textContent = formatCellValue(row, column);
       tableRow.appendChild(cell);
     });
 
@@ -185,8 +210,8 @@ function renderTable() {
 
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
-  totalPlayers.textContent = formatNumber(state.rows.length);
-  visiblePlayers.textContent = formatNumber(state.filteredRows.length);
+  totalPlayers.textContent = formatCount(state.rows.length);
+  visiblePlayers.textContent = formatCount(state.filteredRows.length);
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
@@ -198,18 +223,33 @@ function csvEscape(value) {
 }
 
 function downloadCsv() {
+  const visibleColumns = views[state.view].columns;
   const csvRows = [
-    state.columns.map(csvEscape).join(","),
-    ...state.filteredRows.map((row) => row.map(csvEscape).join(",")),
+    visibleColumns.map((column) => csvEscape(columnLabels[column] || column)).join(","),
+    ...state.filteredRows.map((row) => visibleColumns.map((column) => csvEscape(formatCellValue(row, column))).join(",")),
   ];
   const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
   link.href = url;
-  link.download = "mfl_players.csv";
+  link.download = `mfl_players_${state.view}.csv`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function setView(viewName) {
+  state.view = viewName;
+  state.page = 1;
+  state.sortKey = "overall";
+  state.sortDirection = "desc";
+
+  viewButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === viewName);
+  });
+
+  buildHeader();
+  applyFilters();
 }
 
 async function loadData() {
@@ -222,7 +262,7 @@ async function loadData() {
 
     const manifest = await manifestResponse.json();
     state.columns = manifest.columns;
-    totalPlayers.textContent = formatNumber(manifest.row_count);
+    totalPlayers.textContent = formatCount(manifest.row_count);
 
     for (let index = 0; index < manifest.chunks.length; index += 1) {
       const chunkInfo = manifest.chunks[index];
@@ -232,7 +272,6 @@ async function loadData() {
       state.rows.push(...chunk.rows);
     }
 
-    state.loaded = true;
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
     buildHeader();
     applyFilters();
@@ -244,7 +283,16 @@ async function loadData() {
   }
 }
 
+viewButtons.forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.view));
+});
+
 searchInput.addEventListener("input", () => {
+  state.page = 1;
+  applyFilters();
+});
+
+hideRetiredInput.addEventListener("change", () => {
   state.page = 1;
   applyFilters();
 });

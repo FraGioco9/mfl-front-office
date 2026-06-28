@@ -25,17 +25,27 @@
     </header>
 
     <main>
+      <section class="views" aria-label="Table views">
+        <button class="viewButton active" type="button" data-view="attributes">Attributes</button>
+        <button class="viewButton" type="button" data-view="current">Current Season</button>
+        <button class="viewButton" type="button" data-view="all">All Time</button>
+      </section>
+
       <section class="toolbar" aria-label="Table controls">
         <label class="field">
           <span>Search</span>
           <input id="searchInput" type="search" placeholder="Name, wallet, nationality, position">
         </label>
+        <label class="toggleField">
+          <input id="hideRetiredInput" type="checkbox" checked>
+          <span>Hide retired</span>
+        </label>
         <label class="field compact">
           <span>Rows</span>
           <select id="pageSizeSelect">
             <option value="25">25</option>
-            <option value="50" selected>50</option>
-            <option value="100">100</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
             <option value="250">250</option>
           </select>
         </label>

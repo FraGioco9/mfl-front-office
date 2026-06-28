@@ -290,7 +290,7 @@ def update_flow_static_fields(
             height = ?,
             player_seasons = CASE
                 WHEN age IS NOT NULL AND ? IS NOT NULL THEN age - ? + 1
-                ELSE NULL
+                ELSE player_seasons
             END
         WHERE player_id = ?
         {where_sql}
@@ -298,6 +298,41 @@ def update_flow_static_fields(
         rows,
     )
     return connection.total_changes - before_changes
+
+
+def get_database_player_count(connection: sqlite3.Connection, wallet_address: str) -> int:
+    return connection.execute(
+        """
+        SELECT COUNT(*)
+        FROM players
+        WHERE wallet_address = ?
+        """,
+        (wallet_address,),
+    ).fetchone()[0]
+
+
+def print_flow_wallet_status(
+    connection: sqlite3.Connection,
+    index: int,
+    total_wallets: int,
+    wallet_address: str,
+    players: list[dict[str, Any]],
+    updated_count: int,
+) -> None:
+    message = (
+        f"{index}/{total_wallets} {wallet_address}: "
+        f"read {len(players)} players, updated {updated_count}"
+    )
+
+    if not players:
+        database_player_count = get_database_player_count(connection, wallet_address)
+        if database_player_count:
+            message += (
+                f" (Flow public collection missing or empty; "
+                f"database has {database_player_count} players)"
+            )
+
+    print(message)
 
 
 def populate_flow_static_fields(
@@ -325,9 +360,13 @@ def populate_flow_static_fields(
                 connection.commit()
 
                 total_updated += updated_count
-                print(
-                    f"{index}/{len(wallets)} {current_wallet_address}: "
-                    f"read {len(players)} players, updated {updated_count}"
+                print_flow_wallet_status(
+                    connection,
+                    index,
+                    len(wallets),
+                    current_wallet_address,
+                    players,
+                    updated_count,
                 )
 
         return total_updated
@@ -338,9 +377,13 @@ def populate_flow_static_fields(
         connection.commit()
 
         total_updated += updated_count
-        print(
-            f"{index}/{len(wallets)} {current_wallet_address}: "
-            f"read {len(players)} players, updated {updated_count}"
+        print_flow_wallet_status(
+            connection,
+            index,
+            len(wallets),
+            current_wallet_address,
+            players,
+            updated_count,
         )
 
         if SLEEP_SECONDS_BETWEEN_WALLETS > 0:

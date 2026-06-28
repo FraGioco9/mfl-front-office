@@ -72,9 +72,27 @@ main {
   padding: 18px 28px 28px;
 }
 
+.views {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.viewButton {
+  border-color: #b9c3cf;
+  background: #ffffff;
+  color: #26323d;
+}
+
+.viewButton.active {
+  border-color: #1d5f8a;
+  background: #1d5f8a;
+  color: #ffffff;
+}
+
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 120px auto auto;
+  grid-template-columns: minmax(260px, 1fr) 145px 120px auto auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
@@ -90,6 +108,21 @@ main {
   font-weight: 700;
   color: #4e5a65;
   text-transform: uppercase;
+}
+
+.toggleField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  color: #26323d;
+  font-weight: 700;
+}
+
+.toggleField input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
 }
 
 input,
@@ -141,7 +174,7 @@ button:disabled {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 2500px;
+  min-width: 1180px;
 }
 
 th,
@@ -205,7 +238,12 @@ tbody tr:hover {
   }
 
   .toolbar {
-    grid-template-columns: 1fr 105px;
+    grid-template-columns: 1fr;
+  }
+
+  .views {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .toolbar button {
