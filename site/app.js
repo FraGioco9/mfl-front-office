@@ -52,14 +52,17 @@ const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
 const themeButton = document.querySelector("#themeButton");
-const nameFilterInput = document.querySelector("#nameFilterInput");
-const nationalityFilterInput = document.querySelector("#nationalityFilterInput");
-const positionFilterInput = document.querySelector("#positionFilterInput");
+const openFiltersButton = document.querySelector("#openFiltersButton");
+const filterSummary = document.querySelector("#filterSummary");
+const filtersModal = document.querySelector("#filtersModal");
+const closeFiltersButton = document.querySelector("#closeFiltersButton");
+const applyFiltersButton = document.querySelector("#applyFiltersButton");
+const clearFiltersButton = document.querySelector("#clearFiltersButton");
+const columnFilters = document.querySelector("#columnFilters");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
-const clearButton = document.querySelector("#clearButton");
 const downloadButton = document.querySelector("#downloadButton");
 const tableHead = document.querySelector("#tableHead");
 const tableBody = document.querySelector("#tableBody");
@@ -97,6 +100,10 @@ function loadTheme() {
 
 function formatCount(value) {
   return new Intl.NumberFormat().format(value);
+}
+
+function filterLabel(column) {
+  return columnLabels[column] || column.replaceAll("_", " ");
 }
 
 function getValue(row, column) {
@@ -258,13 +265,79 @@ function compareRows(a, b) {
   return String(aValue ?? "").localeCompare(String(bValue ?? "")) * direction;
 }
 
+function activeFilterCount() {
+  let count = 0;
+
+  if (hideRetiredInput.checked) {
+    count += 1;
+  }
+
+  if (hideRetiringInput.checked) {
+    count += 1;
+  }
+
+  if (newMintsInput.checked) {
+    count += 1;
+  }
+
+  for (const input of columnFilters.querySelectorAll("[data-filter-column]")) {
+    if (input.value.trim()) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function updateFilterSummary() {
+  const count = activeFilterCount();
+  filterSummary.textContent = `${count} active`;
+}
+
+function buildColumnFilters() {
+  const fragment = document.createDocumentFragment();
+
+  state.columns.forEach((column) => {
+    const label = document.createElement("label");
+    label.className = "field";
+
+    const labelText = document.createElement("span");
+    labelText.textContent = filterLabel(column);
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = filterLabel(column);
+    input.dataset.filterColumn = column;
+
+    label.appendChild(labelText);
+    label.appendChild(input);
+    fragment.appendChild(label);
+  });
+
+  columnFilters.replaceChildren(fragment);
+}
+
+function openFilters() {
+  filtersModal.hidden = false;
+  const firstInput = columnFilters.querySelector("input");
+
+  if (firstInput) {
+    firstInput.focus();
+  }
+}
+
+function closeFilters() {
+  filtersModal.hidden = true;
+  openFiltersButton.focus();
+}
+
 function applyFilters() {
-  const nameQuery = nameFilterInput.value.trim().toLowerCase();
-  const nationalityQuery = nationalityFilterInput.value.trim().toLowerCase();
-  const positionQuery = positionFilterInput.value.trim().toLowerCase();
-  const nameIndex = state.columns.indexOf("name");
-  const nationalityIndex = state.columns.indexOf("nationality");
-  const positionsIndex = state.columns.indexOf("positions");
+  const columnFilterInputs = Array.from(columnFilters.querySelectorAll("[data-filter-column]"))
+    .map((input) => ({
+      index: state.columns.indexOf(input.dataset.filterColumn),
+      query: input.value.trim().toLowerCase(),
+    }))
+    .filter((filter) => filter.query);
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
@@ -281,22 +354,17 @@ function applyFilters() {
       return false;
     }
 
-    if (nameQuery && !String(row[nameIndex] ?? "").toLowerCase().includes(nameQuery)) {
-      return false;
-    }
-
-    if (nationalityQuery && !String(row[nationalityIndex] ?? "").toLowerCase().includes(nationalityQuery)) {
-      return false;
-    }
-
-    if (positionQuery && !String(row[positionsIndex] ?? "").toLowerCase().includes(positionQuery)) {
-      return false;
+    for (const filter of columnFilterInputs) {
+      if (!String(row[filter.index] ?? "").toLowerCase().includes(filter.query)) {
+        return false;
+      }
     }
 
     return true;
   });
 
   state.filteredRows.sort(compareRows);
+  updateFilterSummary();
   renderTable();
 }
 
@@ -408,6 +476,7 @@ async function loadData() {
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
+    buildColumnFilters();
     buildHeader();
     applyFilters();
   } catch (error) {
@@ -422,38 +491,42 @@ viewButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-for (const input of [nameFilterInput, nationalityFilterInput, positionFilterInput]) {
-  input.addEventListener("input", () => {
-    state.page = 1;
-    applyFilters();
-  });
-}
-
-hideRetiredInput.addEventListener("change", () => {
-  state.page = 1;
-  applyFilters();
-});
-
-hideRetiringInput.addEventListener("change", () => {
-  state.page = 1;
-  applyFilters();
-});
-
-newMintsInput.addEventListener("change", () => {
-  state.page = 1;
-  applyFilters();
-});
-
 pageSizeSelect.addEventListener("change", () => {
   state.pageSize = Number(pageSizeSelect.value);
   state.page = 1;
   renderTable();
 });
 
-clearButton.addEventListener("click", () => {
-  nameFilterInput.value = "";
-  nationalityFilterInput.value = "";
-  positionFilterInput.value = "";
+openFiltersButton.addEventListener("click", openFilters);
+closeFiltersButton.addEventListener("click", closeFilters);
+
+filtersModal.addEventListener("click", (event) => {
+  if (event.target === filtersModal) {
+    closeFilters();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !filtersModal.hidden) {
+    closeFilters();
+  }
+});
+
+applyFiltersButton.addEventListener("click", () => {
+  state.page = 1;
+  applyFilters();
+  closeFilters();
+});
+
+clearFiltersButton.addEventListener("click", () => {
+  hideRetiredInput.checked = false;
+  hideRetiringInput.checked = false;
+  newMintsInput.checked = false;
+
+  for (const input of columnFilters.querySelectorAll("[data-filter-column]")) {
+    input.value = "";
+  }
+
   state.page = 1;
   applyFilters();
 });

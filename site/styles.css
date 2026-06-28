@@ -140,30 +140,9 @@ main {
   color: #ffffff;
 }
 
-.quickFilters {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 14px;
-}
-
-.quickFilters label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text);
-  font-weight: 700;
-}
-
-.quickFilters input {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-}
-
-.filterSection {
+.controlsBar {
   display: grid;
-  grid-template-columns: minmax(190px, 1fr) minmax(170px, 0.75fr) minmax(150px, 0.6fr) 120px auto auto;
+  grid-template-columns: auto auto 120px auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
@@ -213,10 +192,95 @@ button:disabled {
   opacity: 0.45;
 }
 
-#clearButton {
+#filterSummary {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modalBackdrop[hidden] {
+  display: none;
+}
+
+.filtersDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  max-height: min(820px, 92vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.filtersHeader,
+.filtersFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filtersFooter {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.filtersHeader h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.iconButton {
+  width: 36px;
+  height: 36px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
+  padding: 0;
+}
+
+.modalQuickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  padding: 16px 18px 4px;
+}
+
+.modalQuickFilters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.modalQuickFilters input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.columnFilters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  overflow: auto;
+  padding: 16px 18px 18px;
 }
 
 .tableShell {
@@ -384,7 +448,7 @@ td a {
     padding: 14px;
   }
 
-  .filterSection {
+  .controlsBar {
     grid-template-columns: 1fr;
   }
 
@@ -393,13 +457,11 @@ td a {
     grid-template-columns: 1fr;
   }
 
-  .quickFilters {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
+  .columnFilters {
+    grid-template-columns: 1fr;
   }
 
-  .filterSection button {
+  .controlsBar button {
     width: 100%;
   }
 }

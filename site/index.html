@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=16">
   </head>
   <body>
     <header class="topbar">
@@ -34,34 +34,9 @@
         <button class="viewButton" type="button" data-view="all">All Time</button>
       </section>
 
-      <section class="quickFilters" aria-label="Quick filters">
-        <label>
-          <input id="hideRetiredInput" type="checkbox" checked>
-          <span>Hide retired players</span>
-        </label>
-        <label>
-          <input id="hideRetiringInput" type="checkbox">
-          <span>Hide retiring players</span>
-        </label>
-        <label>
-          <input id="newMintsInput" type="checkbox">
-          <span>Only new mints</span>
-        </label>
-      </section>
-
-      <section class="filterSection" aria-label="Filters">
-        <label class="field">
-          <span>Name</span>
-          <input id="nameFilterInput" type="search" placeholder="Player name">
-        </label>
-        <label class="field">
-          <span>Nationality</span>
-          <input id="nationalityFilterInput" type="search" placeholder="Nationality">
-        </label>
-        <label class="field">
-          <span>Position</span>
-          <input id="positionFilterInput" type="search" placeholder="Position">
-        </label>
+      <section class="controlsBar" aria-label="Table controls">
+        <button id="openFiltersButton" type="button">Filters</button>
+        <span id="filterSummary">1 active</span>
         <label class="field compact">
           <span>Rows</span>
           <select id="pageSizeSelect">
@@ -71,7 +46,6 @@
             <option value="250">250</option>
           </select>
         </label>
-        <button id="clearButton" type="button">Clear</button>
         <button id="downloadButton" type="button">Download CSV</button>
       </section>
 
@@ -108,6 +82,37 @@
       </nav>
     </main>
 
-    <script src="app.js?v=15"></script>
+    <div id="filtersModal" class="modalBackdrop" hidden>
+      <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
+        <header class="filtersHeader">
+          <h2 id="filtersTitle">Filters</h2>
+          <button id="closeFiltersButton" class="iconButton" type="button" aria-label="Close filters">x</button>
+        </header>
+
+        <section class="modalQuickFilters" aria-label="Quick filters">
+          <label>
+            <input id="hideRetiredInput" type="checkbox" checked>
+            <span>Hide retired players</span>
+          </label>
+          <label>
+            <input id="hideRetiringInput" type="checkbox">
+            <span>Hide retiring players</span>
+          </label>
+          <label>
+            <input id="newMintsInput" type="checkbox">
+            <span>Only new mints</span>
+          </label>
+        </section>
+
+        <div id="columnFilters" class="columnFilters"></div>
+
+        <footer class="filtersFooter">
+          <button id="clearFiltersButton" type="button">Clear</button>
+          <button id="applyFiltersButton" type="button">Apply Filters</button>
+        </footer>
+      </section>
+    </div>
+
+    <script src="app.js?v=16"></script>
   </body>
 </html>
