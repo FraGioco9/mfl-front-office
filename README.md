@@ -61,9 +61,13 @@ After pushing this repository to GitHub, open:
 https://github.com/FraGioco9/mfl-progression/actions
 ```
 
-Choose **Manual database refresh**, click **Run workflow**, fill in the options, then click the green **Run workflow** button.
+Choose one of the manual workflows:
 
-When the run finishes, open the finished run and download the `mfl_progression_database` artifact. That download contains `mfl_progression.db`.
+- **Manual database refresh** refreshes the database only and uploads `mfl_progression_database`.
+- **Manual site update** updates only the website using the latest successful database artifact.
+- **Manual database and site update** refreshes the database, exports website data, and publishes the website.
+
+When a database run finishes, open the finished run and download the `mfl_progression_database` artifact if you want a copy. That download contains `mfl_progression.db`.
 
 The same run also publishes the website. After GitHub Pages is enabled, open:
 
