@@ -56,6 +56,7 @@ const nameFilterInput = document.querySelector("#nameFilterInput");
 const nationalityFilterInput = document.querySelector("#nationalityFilterInput");
 const positionFilterInput = document.querySelector("#positionFilterInput");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
+const hideRetiringInput = document.querySelector("#hideRetiringInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
 const clearButton = document.querySelector("#clearButton");
@@ -272,6 +273,10 @@ function applyFilters() {
       return false;
     }
 
+    if (hideRetiringInput.checked && [1, 2, 3].includes(row[retirementIndex])) {
+      return false;
+    }
+
     if (newMintsInput.checked && row[seasonsIndex] !== 1) {
       return false;
     }
@@ -425,6 +430,11 @@ for (const input of [nameFilterInput, nationalityFilterInput, positionFilterInpu
 }
 
 hideRetiredInput.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
+
+hideRetiringInput.addEventListener("change", () => {
   state.page = 1;
   applyFilters();
 });
