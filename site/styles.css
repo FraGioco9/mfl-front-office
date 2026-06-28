@@ -181,11 +181,11 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1180px;
+  min-width: 1260px;
 }
 
 col {
-  width: 7.692%;
+  width: 7.143%;
 }
 
 th,
@@ -212,6 +212,12 @@ th {
 
 tbody tr:hover {
   background: #f4f8fb;
+}
+
+td a {
+  color: #1d5f8a;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .emptyState {

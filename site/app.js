@@ -11,18 +11,19 @@ const state = {
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
+const linkColumn = "player_link";
 
 const views = {
   attributes: {
-    columns: [...baseColumns, ...statColumns],
+    columns: [...baseColumns, ...statColumns, linkColumn],
     progressionSuffix: null,
   },
   current: {
-    columns: [...baseColumns, ...statColumns],
+    columns: [...baseColumns, ...statColumns, linkColumn],
     progressionSuffix: "prog_current_season",
   },
   all: {
-    columns: [...baseColumns, ...statColumns],
+    columns: [...baseColumns, ...statColumns, linkColumn],
     progressionSuffix: "prog_all",
   },
 };
@@ -41,6 +42,7 @@ const columnLabels = {
   dribbling: "Dribbling",
   defense: "Defense",
   physical: "Physical",
+  player_link: "Link",
 };
 
 const numberColumns = new Set(["player_id", "age", "player_seasons", ...statColumns]);
@@ -115,6 +117,10 @@ function formatStatValue(row, statColumn) {
 }
 
 function formatCellValue(row, column) {
+  if (column === linkColumn) {
+    return `https://app.playmfl.com/players/${getValue(row, "player_id")}`;
+  }
+
   if (statColumns.includes(column)) {
     return formatStatValue(row, column);
   }
@@ -123,6 +129,10 @@ function formatCellValue(row, column) {
 }
 
 function sortableValue(row, column) {
+  if (column === linkColumn) {
+    return getValue(row, "player_id");
+  }
+
   const value = getValue(row, column);
 
   if (!statColumns.includes(column) || state.view === "attributes") {
@@ -207,7 +217,18 @@ function renderTable() {
 
     views[state.view].columns.forEach((column) => {
       const cell = document.createElement("td");
-      cell.textContent = formatCellValue(row, column);
+
+      if (column === linkColumn) {
+        const link = document.createElement("a");
+        link.href = formatCellValue(row, column);
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Link";
+        cell.appendChild(link);
+      } else {
+        cell.textContent = formatCellValue(row, column);
+      }
+
       tableRow.appendChild(cell);
     });
 
