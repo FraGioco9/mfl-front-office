@@ -52,6 +52,7 @@ const searchColumns = ["name", "wallet_name", "wallet_address", "nationality", "
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
+const themeButton = document.querySelector("#themeButton");
 const searchInput = document.querySelector("#searchInput");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const newMintsInput = document.querySelector("#newMintsInput");
@@ -65,6 +66,18 @@ const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeButton.textContent = theme === "dark" ? "Light Mode" : "Night Mode";
+  localStorage.setItem("mfl-theme", theme);
+}
+
+function loadTheme() {
+  const savedTheme = localStorage.getItem("mfl-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
+}
 
 function formatCount(value) {
   return new Intl.NumberFormat().format(value);
@@ -380,4 +393,10 @@ nextButton.addEventListener("click", () => {
   renderTable();
 });
 
+themeButton.addEventListener("click", () => {
+  const currentTheme = document.documentElement.dataset.theme || "light";
+  applyTheme(currentTheme === "dark" ? "light" : "dark");
+});
+
+loadTheme();
 loadData();
