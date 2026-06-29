@@ -249,10 +249,11 @@ function showLogin() {
   document.body.classList.add("auth");
   loadingScreen.hidden = true;
   loginScreen.hidden = false;
-  accountMenu.hidden = true;
+  accountMenu.hidden = !auth.required;
+  updateAccountState();
   updateMenuVisibility();
   closeAccountMenu();
-  loginEmail.focus();
+  window.setTimeout(() => loginEmail.focus(), 0);
 }
 
 function showAppShell() {
