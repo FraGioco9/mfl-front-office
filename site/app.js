@@ -295,18 +295,6 @@ function compareRows(a, b) {
 function activeFilterCount() {
   let count = 0;
 
-  if (hideRetiredInput.checked) {
-    count += 1;
-  }
-
-  if (hideRetiringInput.checked) {
-    count += 1;
-  }
-
-  if (newMintsInput.checked) {
-    count += 1;
-  }
-
   for (const rule of filterRules.querySelectorAll(".filterRule")) {
     const valueInput = rule.querySelector("[data-filter-value]");
 
