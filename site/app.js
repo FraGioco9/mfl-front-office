@@ -366,6 +366,7 @@ function toggleAccountMenu() {
 function toggleMenu() {
   state.menuOpen = !state.menuOpen;
   updateMenuVisibility();
+  saveTableState();
 }
 
 function pageFromUrl() {
@@ -557,6 +558,7 @@ function currentTableState() {
   return {
     pages: state.tablePageStates,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+    menuOpen: state.menuOpen,
   };
 }
 
@@ -580,6 +582,7 @@ async function loadCloudTableState() {
 
   auth.savedTableState = data?.table_state || null;
   restoreWatchlistState(auth.savedTableState);
+  restoreMenuState(auth.savedTableState);
 }
 
 function queueCloudTableStateSave(savedState) {
@@ -612,6 +615,12 @@ function restoreWatchlistState(savedState) {
   state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
 }
 
+function restoreMenuState(savedState) {
+  if (typeof savedState?.menuOpen === "boolean") {
+    state.menuOpen = savedState.menuOpen;
+  }
+}
+
 function restoreTablePageStates(savedState) {
   if (savedState?.pages) {
     state.tablePageStates = { ...savedState.pages };
@@ -626,6 +635,7 @@ function loadSavedTableState() {
   if (auth.savedTableState) {
     restoreTablePageStates(auth.savedTableState);
     restoreWatchlistState(auth.savedTableState);
+    restoreMenuState(auth.savedTableState);
     return auth.savedTableState;
   }
 
@@ -633,6 +643,7 @@ function loadSavedTableState() {
     const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
     restoreTablePageStates(savedState);
     restoreWatchlistState(savedState);
+    restoreMenuState(savedState);
     return savedState;
   } catch {
     return null;
