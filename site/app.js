@@ -17,6 +17,8 @@ const state = {
   toastTimer: null,
   menuOpen: true,
   playerAttributeView: "attributes",
+  searchRenderTimer: null,
+  searchIndex: [],
 };
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
@@ -495,6 +497,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const playerPageActive = pageName === "player";
 
   if ((tablePage || playerPageActive) && !state.dataLoaded) {
+    state.currentPage = pageName;
+    homePage.hidden = true;
+    progressionPage.hidden = true;
+    playerPage.hidden = true;
+    changelogPage.hidden = true;
     const loaded = await ensureProgressionData();
 
     if (!loaded) {
@@ -967,6 +974,15 @@ function rowByPlayerId(playerId) {
   return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;
 }
 
+function buildSearchIndex() {
+  state.searchIndex = state.rows.map((row) => ({
+    row,
+    id: String(getValue(row, "player_id") || "").toLowerCase(),
+    name: String(getValue(row, "name") || "").toLowerCase(),
+    overall: Number(statDisplayValue(row, "overall") || 0),
+  }));
+}
+
 function openPlayerPage(playerId) {
   setPage("player", true, { playerId: String(playerId) });
 }
@@ -1069,7 +1085,7 @@ function playerAttributeColumns(row) {
     return ["overall", "goalkeeping"].filter((column) => column === "overall" || state.columns.includes(column));
   }
 
-  return statColumns;
+  return ["overall", "pace", "dribbling", "shooting", "defense", "passing", "physical"];
 }
 
 function playerAttributeValueHtml(row, column, viewName) {
@@ -1098,7 +1114,8 @@ function renderPlayerAttributePanel(row) {
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
     const featured = column === "overall" ? " featured" : "";
-    return `<div class="playerAttributeCard${featured}"><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
+    const fullWidth = column === "overall" || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
+    return `<div class="playerAttributeCard${featured}${fullWidth}"><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
   }).join("");
 }
 
@@ -1181,7 +1198,7 @@ async function openSearch() {
   }
   searchModal.hidden = false;
   playerSearchInput.value = "";
-  renderSearchResults();
+  renderSearchResultsNow();
   window.setTimeout(() => playerSearchInput.focus(), 0);
 }
 
@@ -1189,15 +1206,40 @@ function closeSearch() {
   searchModal.hidden = true;
 }
 
-function renderSearchResults() {
+function bestSearchResults(query) {
+  const bestRows = [];
+
+  if (!state.searchIndex.length && state.rows.length) {
+    buildSearchIndex();
+  }
+
+  state.searchIndex.forEach((entry) => {
+    if (!entry.id.includes(query) && !entry.name.includes(query)) {
+      return;
+    }
+
+    const insertAt = bestRows.findIndex((candidate) => entry.overall > candidate.overall);
+
+    if (insertAt === -1) {
+      if (bestRows.length < 12) {
+        bestRows.push(entry);
+      }
+      return;
+    }
+
+    bestRows.splice(insertAt, 0, entry);
+
+    if (bestRows.length > 12) {
+      bestRows.pop();
+    }
+  });
+
+  return bestRows.map((entry) => entry.row);
+}
+
+function renderSearchResultsNow() {
   const query = playerSearchInput.value.trim().toLowerCase();
-  const results = query
-    ? state.rows.filter((row) => {
-      const id = String(getValue(row, "player_id") || "").toLowerCase();
-      const name = String(getValue(row, "name") || "").toLowerCase();
-      return id.includes(query) || name.includes(query);
-    }).sort((a, b) => Number(statDisplayValue(b, "overall") || 0) - Number(statDisplayValue(a, "overall") || 0)).slice(0, 12)
-    : [];
+  const results = query ? bestSearchResults(query) : [];
 
   if (!query) {
     playerSearchResults.innerHTML = '<div class="searchHint">Type a player ID or name.</div>';
@@ -1224,6 +1266,11 @@ function renderSearchResults() {
     fragment.appendChild(button);
   });
   playerSearchResults.replaceChildren(fragment);
+}
+
+function renderSearchResults() {
+  window.clearTimeout(state.searchRenderTimer);
+  state.searchRenderTimer = window.setTimeout(renderSearchResultsNow, 80);
 }
 
 function sortableValue(row, column) {
@@ -2053,6 +2100,7 @@ async function loadData() {
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
+    buildSearchIndex();
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();

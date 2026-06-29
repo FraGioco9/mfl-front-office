@@ -197,7 +197,9 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 220px;
   height: 40px;
+  justify-content: center;
   border-color: var(--border-strong);
   background: var(--surface-muted);
   color: var(--text);
@@ -337,7 +339,7 @@ p {
 
 .stats div {
   min-width: 116px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
@@ -360,7 +362,7 @@ p {
 .appShell {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
-  min-height: calc(100vh - 126px);
+  min-height: calc(100vh - 138px);
   transition: grid-template-columns 180ms ease;
 }
 
@@ -499,7 +501,7 @@ p {
   justify-items: center;
   gap: 10px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 245px);
+  min-height: calc(100vh - 270px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -507,8 +509,8 @@ p {
 
 .homeIntro p {
   max-width: 700px;
-  font-size: 20px;
-  line-height: 1.25;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
 .homeStats {
@@ -610,7 +612,7 @@ p {
 }
 main {
   min-width: 0;
-  padding: 12px 28px 18px;
+  padding: 8px 28px 12px;
 }
 
 .views {
@@ -1234,7 +1236,7 @@ td a {
 .searchDialog {
   display: flex;
   flex-direction: column;
-  width: min(680px, 100%);
+  width: min(760px, 100%);
   max-height: min(640px, 88vh);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1280,14 +1282,14 @@ td a {
 
 .playerPage {
   max-width: 1120px;
-  min-height: calc(100vh - 190px);
+  min-height: calc(100vh - 220px);
   margin: 0 auto;
 }
 
 .playerDetail {
   display: grid;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .playerHero,
@@ -1334,11 +1336,12 @@ td a {
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--primary);
+  color: var(--text-soft);
   cursor: pointer;
 }
 
 .playerIdButton:hover {
+  color: var(--text-soft);
   text-decoration: underline;
 }
 
@@ -1387,6 +1390,14 @@ td a {
   background: color-mix(in srgb, var(--primary) 10%, var(--surface));
 }
 
+.playerAttributeCard.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.playerAttributeCard.featured {
+  min-height: 82px;
+}
+
 .playerAttributeCard.featured strong {
   color: var(--primary);
   font-size: 28px;
@@ -1398,12 +1409,12 @@ td a {
 
 .playerGrid {
   display: grid;
-  grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 1.2fr);
-  gap: 10px;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(340px, 1.25fr);
+  gap: 8px;
 }
 
 .playerPanel {
-  padding: 12px;
+  padding: 10px;
 }
 
 .detailGrid,
@@ -1418,18 +1429,26 @@ td a {
 }
 
 .attributeGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .detailGrid div,
 .playerAttributeCard {
   display: grid;
   gap: 2px;
-  min-height: 54px;
-  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
+}
+
+.detailGrid div {
+  min-height: 48px;
+  padding: 7px 9px;
+}
+
+.playerAttributeCard {
+  min-height: 68px;
+  padding: 10px 12px;
 }
 
 .detailGrid span,
@@ -1443,8 +1462,8 @@ td a {
 .pitch {
   display: grid;
   place-items: center;
-  min-height: 180px;
-  margin-top: 12px;
+  min-height: 146px;
+  margin-top: 8px;
   border: 2px solid #ffffff;
   border-radius: 8px;
   background: linear-gradient(90deg, #2d8f57 0 50%, #27824f 50% 100%);
@@ -1475,6 +1494,6 @@ td a {
   }
 
   .attributeGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
