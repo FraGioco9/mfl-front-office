@@ -124,6 +124,7 @@ const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
 const addToWatchlistButton = document.querySelector("#addToWatchlistButton");
+const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton");
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -1523,6 +1524,16 @@ function addSelectedToWatchlist() {
   showToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} added to watchlist.`);
 }
 
+
+function openSelectedPlayerLinks() {
+  if (!state.selectedPlayerIds.size) {
+    return;
+  }
+
+  state.selectedPlayerIds.forEach((playerId) => {
+    window.open(`https://app.playmfl.com/players/${playerId}`, "_blank", "noopener,noreferrer");
+  });
+}
 function renderTable() {
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -1725,6 +1736,7 @@ clearFiltersButton.addEventListener("click", () => {
 
 clearSelectionButton.addEventListener("click", clearSelection);
 addToWatchlistButton.addEventListener("click", addSelectedToWatchlist);
+openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);
 
 
 prevButton.addEventListener("click", () => {
