@@ -108,7 +108,6 @@ const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
-const downloadButton = document.querySelector("#downloadButton");
 const tableHead = document.querySelector("#tableHead");
 const tableBody = document.querySelector("#tableBody");
 const emptyState = document.querySelector("#emptyState");
@@ -1342,21 +1341,6 @@ function csvEscape(value) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-function downloadCsv() {
-  const visibleColumns = views[state.view].columns;
-  const csvRows = [
-    visibleColumns.map((column) => csvEscape(columnLabels[column] || column)).join(","),
-    ...state.filteredRows.map((row) => visibleColumns.map((column) => csvEscape(formatCellValue(row, column))).join(",")),
-  ];
-  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `mfl_players_${state.view}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function setView(viewName) {
   state.view = viewName;
@@ -1493,7 +1477,6 @@ clearFiltersButton.addEventListener("click", () => {
   clearAdvancedFilters();
 });
 
-downloadButton.addEventListener("click", downloadCsv);
 
 prevButton.addEventListener("click", () => {
   state.page -= 1;

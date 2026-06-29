@@ -476,7 +476,7 @@ main {
 
 .controlsBar {
   display: grid;
-  grid-template-columns: max-content max-content auto max-content 120px;
+  grid-template-columns: max-content max-content auto 120px;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
