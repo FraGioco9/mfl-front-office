@@ -9,6 +9,7 @@ const state = {
   sortDirection: "desc",
   currentPage: "home",
   manifest: null,
+  menuOpen: true,
 };
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
@@ -78,6 +79,8 @@ const totalWallets = document.querySelector("#totalWallets");
 const homePlayers = document.querySelector("#homePlayers");
 const homeWallets = document.querySelector("#homeWallets");
 const homeLoginButton = document.querySelector("#homeLoginButton");
+const appShell = document.querySelector("#appShell");
+const menuButton = document.querySelector("#menuButton");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
@@ -162,11 +165,19 @@ function finishLoading() {
   loadingScreen.hidden = true;
 }
 
+function updateMenuVisibility() {
+  const loggedIn = Boolean(auth.session);
+  menuButton.hidden = !loggedIn;
+  sidebar.hidden = !loggedIn || !state.menuOpen;
+  appShell.classList.toggle("menuClosed", !loggedIn || !state.menuOpen);
+  menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
+}
+
 function showHomeShell() {
   document.body.classList.remove("loading", "auth");
   loadingScreen.hidden = true;
   loginScreen.hidden = true;
-  sidebar.hidden = !auth.session;
+  updateMenuVisibility();
   accountMenu.hidden = !auth.required || !auth.session;
   homeLoginButton.hidden = !auth.required || Boolean(auth.session);
   if (auth.session) {
@@ -181,6 +192,7 @@ function showLogin() {
   loadingScreen.hidden = true;
   loginScreen.hidden = false;
   accountMenu.hidden = true;
+  updateMenuVisibility();
   closeAccountMenu();
   loginEmail.focus();
 }
@@ -338,6 +350,11 @@ function toggleAccountMenu() {
   } else {
     closeAccountMenu();
   }
+}
+
+function toggleMenu() {
+  state.menuOpen = !state.menuOpen;
+  updateMenuVisibility();
 }
 
 function setPage(pageName) {
@@ -1458,6 +1475,7 @@ themeButton.addEventListener("click", () => {
 });
 
 homeLoginButton.addEventListener("click", showLogin);
+menuButton.addEventListener("click", toggleMenu);
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => setPage(button.dataset.page));
@@ -1482,3 +1500,4 @@ async function startApp() {
   }
 }
 startApp();
+

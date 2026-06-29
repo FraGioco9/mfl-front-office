@@ -243,6 +243,18 @@ p {
   margin-top: 2px;
 }
 
+.menuButton {
+  width: fit-content;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.menuButton[hidden] {
+  display: none;
+}
+
 .themeButton {
   display: inline-flex;
   align-items: center;
@@ -290,6 +302,14 @@ p {
   min-height: calc(100vh - 93px);
 }
 
+.appShell.menuClosed {
+  grid-template-columns: 1fr;
+}
+
+.appShell.menuClosed main {
+  grid-column: 1;
+}
+
 .sidebar {
   width: 190px;
   padding: 18px 14px;
@@ -322,16 +342,14 @@ p {
 
 .homePage {
   display: grid;
-  align-content: start;
+  align-content: center;
+  justify-items: center;
   gap: 22px;
-  max-width: 780px;
-  padding-top: 20px;
-}
-
-.homeIntro h2 {
-  margin: 0;
-  font-size: 34px;
-  line-height: 1.1;
+  width: min(780px, 100%);
+  min-height: calc(100vh - 150px);
+  margin: 0 auto;
+  padding-top: 0;
+  text-align: center;
 }
 
 .homeIntro p {
@@ -343,6 +361,7 @@ p {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 14px;
+  width: min(480px, 100%);
 }
 
 .homeStats div {
@@ -805,3 +824,4 @@ td a {
     width: 100%;
   }
 }
+
