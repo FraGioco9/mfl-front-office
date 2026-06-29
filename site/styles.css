@@ -131,7 +131,7 @@ body.auth .loadingScreen {
 }
 
 .loginPanel h1 {
-  font-size: 38px;
+  font-size: 40px;
 }
 
 .loginPanel p {
@@ -1293,8 +1293,9 @@ td a {
   display: grid;
   gap: 8px;
   min-height: 0;
-  height: 346px;
-  max-height: 346px;
+  height: 390px;
+  max-height: 390px;
+  grid-auto-rows: 72px;
   align-content: start;
   overflow: auto;
 }
@@ -1312,7 +1313,7 @@ td a {
 .searchResult {
   display: grid;
   gap: 3px;
-  height: auto;
+  min-height: 72px;
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text);
@@ -1420,32 +1421,8 @@ td a {
   color: #172026;
 }
 
-.playerIdButton {
-  appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  outline: 0;
-  height: auto;
-  min-height: 0;
-  line-height: 1;
-  padding: 0;
+.playerIdText {
   color: var(--text-soft);
-  cursor: pointer;
-}
-
-.playerIdButton:hover,
-.playerIdButton:focus,
-.playerIdButton:focus-visible,
-.playerIdButton:active {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  outline: 0;
-  color: var(--text-soft);
-  text-decoration: underline;
-  transform: none;
 }
 
 .flagText {
@@ -1493,12 +1470,19 @@ td a {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1.05;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
+
+.playerAttributeCard .attributeValueText {
+  color: #ffffff;
+  font-size: inherit;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
 .playerAttributeCard.featured {
   border: 2px solid var(--rarity-color);
   background: color-mix(in srgb, var(--rarity-color) 18%, var(--surface-muted));
@@ -1509,12 +1493,13 @@ td a {
   grid-column: 1 / -1;
 }
 
+
 .playerAttributeCard.featured {
   min-height: 82px;
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 38px;
+  font-size: 40px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
@@ -1532,12 +1517,25 @@ td a {
 
 .playerGrid {
   display: grid;
-  grid-template-columns: minmax(360px, 1.25fr) minmax(230px, 0.75fr);
+  grid-template-columns: minmax(460px, 1.55fr) minmax(220px, 0.45fr);
   gap: 8px;
 }
 
 .playerPanel {
   padding: 10px;
+}
+
+.playerInfoPanel {
+  min-height: 405px;
+}
+
+.pitchPanel {
+  display: grid;
+  justify-items: center;
+}
+
+.pitchPanel h3 {
+  justify-self: stretch;
 }
 
 .detailGrid,
@@ -1549,6 +1547,11 @@ td a {
 
 .detailGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.playerInfoPanel .detailGrid {
+  min-height: 342px;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
 }
 
 .attributeGrid {
@@ -1565,8 +1568,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 48px;
-  padding: 7px 9px;
+  min-height: 68px;
+  padding: 11px 12px;
 }
 
 .detailGrid strong {
@@ -1593,10 +1596,10 @@ td a {
   align-content: space-between;
   gap: 7px;
   position: relative;
-  width: min(220px, 100%);
-  min-height: 340px;
+  width: 204px;
+  min-height: 316px;
   margin: 8px auto 0;
-  padding: 14px 12px;
+  padding: 12px 8px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
@@ -1615,7 +1618,7 @@ td a {
 
 .pitchPositionSlot {
   display: grid;
-  min-width: 52px;
+  min-width: 48px;
   place-items: center;
 }
 
@@ -1623,11 +1626,11 @@ td a {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 2px;
+  gap: 3px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  color: #102014;
+  color: #000000;
   font-weight: 800;
   line-height: 0.9;
   text-align: center;
@@ -1657,7 +1660,7 @@ td a {
 
 .pitchPositionCircle.some {
   background: #ff5722;
-  color: #ffffff;
+  color: #000000;
 }
 
 .pitchPositionBlank {
