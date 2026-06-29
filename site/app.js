@@ -980,9 +980,6 @@ applyFiltersButton.addEventListener("click", () => {
 });
 
 clearFiltersButton.addEventListener("click", () => {
-  hideRetiredInput.checked = false;
-  hideRetiringInput.checked = false;
-  newMintsInput.checked = false;
   filterRules.replaceChildren();
 
   state.page = 1;
