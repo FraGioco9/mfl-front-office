@@ -163,11 +163,16 @@ main {
 
 .controlsBar {
   display: grid;
-  grid-template-columns: auto auto auto 120px;
+  grid-template-columns: max-content auto max-content 120px;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
   padding-top: 2px;
+}
+
+.compactButton {
+  width: fit-content;
+  padding: 0 10px;
 }
 
 .field {
