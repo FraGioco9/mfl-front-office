@@ -30,6 +30,7 @@ const views = {
 
 const columnLabels = {
   player_id: "ID",
+  wallet_name: "Wallet Name",
   name: "Name",
   nationality: "Nationality",
   age: "Age",
@@ -49,6 +50,7 @@ const numberColumns = new Set(["player_id", "age", "height", "retirement_years",
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
@@ -176,22 +178,7 @@ function uniqueColumnValues(column) {
 }
 
 function uniquePositions() {
-  const values = new Set();
-  const positionsIndex = state.columns.indexOf("positions");
-
-  if (positionsIndex < 0) {
-    return [];
-  }
-
-  state.rows.forEach((row) => {
-    String(row[positionsIndex] || "")
-      .split(",")
-      .map((position) => position.trim())
-      .filter(Boolean)
-      .forEach((position) => values.add(position));
-  });
-
-  return Array.from(values).sort((a, b) => a.localeCompare(b));
+  return POSITION_ORDER;
 }
 
 function availableFilterColumns() {
