@@ -1525,14 +1525,60 @@ function addSelectedToWatchlist() {
 }
 
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function openSelectedPlayerLinks() {
   if (!state.selectedPlayerIds.size) {
     return;
   }
 
-  state.selectedPlayerIds.forEach((playerId) => {
-    window.open(`https://app.playmfl.com/players/${playerId}`, "_blank", "noopener,noreferrer");
+  const links = Array.from(state.selectedPlayerIds).map((playerId) => {
+    const safePlayerId = encodeURIComponent(playerId);
+    const url = `https://app.playmfl.com/players/${safePlayerId}`;
+    return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(playerId)}</a></li>`;
   });
+
+  const linksPage = window.open("", "_blank");
+
+  if (!linksPage) {
+    showToast("Your browser blocked the links page.");
+    return;
+  }
+
+  linksPage.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selected player links</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 28px; color: #172026; }
+    h1 { margin: 0 0 12px; font-size: 24px; }
+    p { margin: 0 0 18px; color: #5f6b76; }
+    ol { display: grid; gap: 8px; padding-left: 24px; }
+    a { color: #1d5f8a; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Selected player links</h1>
+  <p>${links.length} player${links.length === 1 ? "" : "s"}</p>
+  <ol>${links.join("")}</ol>
+</body>
+</html>`);
+  linksPage.document.close();
+
+  try {
+    window.focus();
+  } catch {
+    // Browsers decide whether focus can return to the original tab.
+  }
 }
 function renderTable() {
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
