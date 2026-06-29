@@ -962,10 +962,23 @@ td a {
   display: inline-flex;
 }
 
+.selectionSummary {
+  display: grid;
+  align-items: center;
+  min-width: 96px;
+}
+
 .selectionBar span {
   font-size: 14px;
   font-weight: 700;
+  line-height: 18px;
   white-space: nowrap;
+}
+
+.selectionActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .selectionBar button {
@@ -977,6 +990,33 @@ td a {
   font-size: 13px;
 }
 
+.selectionBar .textButton {
+  width: fit-content;
+  height: auto;
+  border: 0;
+  background: transparent;
+  color: #1d5f8a;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.selectionBar .textButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: #12364f;
+}
+
+:root[data-theme="dark"] .selectionBar .textButton {
+  color: #9fd4f5;
+}
+
+:root[data-theme="dark"] .selectionBar .textButton:hover:not(:disabled) {
+  color: #e8f5ff;
+}
 
 .toastMessage {
   position: fixed;
