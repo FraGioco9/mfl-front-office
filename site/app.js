@@ -257,6 +257,11 @@ function hasSavedSupabaseSession() {
 }
 
 function setHomeLoginRestoringIfNeeded() {
+  if (pageFromUrl() === "changelog") {
+    hideHomeLoginButton();
+    return;
+  }
+
   if (hasSavedSupabaseSession()) {
     setHomeLoginSigningIn();
   } else {
@@ -1471,6 +1476,7 @@ function rememberSearchResult(playerId) {
 function renderSearchResultsNow() {
   const query = playerSearchInput.value.trim().toLowerCase();
   const results = query ? bestSearchResults(query) : recentSearchRows();
+  playerSearchResults.classList.toggle("recentSearchResults", !query);
 
   if (!results.length) {
     playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players found." : "Recent players will appear here."}</div>`;
@@ -2528,12 +2534,18 @@ signOutButton.addEventListener("click", handleAccountAction);
 
 async function startApp() {
   loadTheme();
+  const initialPage = pageFromUrl();
+
+  if (initialPage === "changelog") {
+    await setPage("changelog", false);
+  }
+
   setHomeLoginRestoringIfNeeded();
   await loadSummary();
 
   if (await setupAuth()) {
     showAppShell();
-    await showHomeShell(pageFromUrl(), false);
+    await showHomeShell(initialPage, false);
   }
 }
 startApp();

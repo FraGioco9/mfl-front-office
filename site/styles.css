@@ -131,7 +131,7 @@ body.auth .loadingScreen {
 }
 
 .loginPanel h1 {
-  font-size: 36px;
+  font-size: 38px;
 }
 
 .loginPanel p {
@@ -378,7 +378,7 @@ p {
   display: block;
   margin-top: 2px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
@@ -889,7 +889,7 @@ table {
 }
 
 .col-nationality {
-  width: 118px;
+  width: 112px;
 }
 
 .col-age {
@@ -946,7 +946,7 @@ th {
   z-index: 1;
   background: var(--header-bg);
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   cursor: default;
 }
@@ -963,7 +963,7 @@ th.sortable:hover {
   display: inline-block;
   width: 0;
   height: 0;
-  margin-left: 6px;
+  margin-left: 3px;
   vertical-align: middle;
 }
 
@@ -1275,8 +1275,8 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: min(520px, calc(100vh - 64px));
-  max-height: min(520px, calc(100vh - 64px));
+  height: 520px;
+  max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -1297,6 +1297,16 @@ td a {
   max-height: 346px;
   align-content: start;
   overflow: auto;
+}
+
+.searchResults.recentSearchResults {
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  align-content: stretch;
+}
+
+.searchResults.recentSearchResults .searchResult {
+  height: 100%;
+  align-content: center;
 }
 
 .searchResult {
@@ -1483,7 +1493,7 @@ td a {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 26px;
+  font-size: 30px;
   line-height: 1.05;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
@@ -1504,7 +1514,7 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 36px;
+  font-size: 38px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
@@ -1568,7 +1578,6 @@ td a {
 .playerAttributeCard {
   min-height: 68px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--rarity-color) 12%, var(--surface-muted));
 }
 
 .detailGrid span,
@@ -1584,8 +1593,9 @@ td a {
   align-content: space-between;
   gap: 7px;
   position: relative;
+  width: min(220px, 100%);
   min-height: 340px;
-  margin-top: 8px;
+  margin: 8px auto 0;
   padding: 14px 12px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.8);
@@ -1613,7 +1623,7 @@ td a {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 0;
+  gap: 2px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1628,7 +1638,7 @@ td a {
 }
 
 .pitchPositionCircle small {
-  margin-top: -2px;
+  margin-top: 0;
   font-size: 9px;
   font-weight: 800;
 }
