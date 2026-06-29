@@ -427,9 +427,9 @@ p {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 22px;
+  gap: 16px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 150px);
+  min-height: calc(100vh - 139px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -437,8 +437,8 @@ p {
 
 .homeIntro p {
   max-width: 700px;
-  font-size: 24px;
-  line-height: 1.35;
+  font-size: 22px;
+  line-height: 1.3;
 }
 
 .homeStats {
@@ -449,7 +449,7 @@ p {
 }
 
 .homeStats div {
-  padding: 18px 20px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -457,7 +457,7 @@ p {
 
 .homeStats span {
   display: block;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
 }
 
