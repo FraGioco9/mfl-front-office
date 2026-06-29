@@ -11,19 +11,20 @@ const state = {
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
+const agentColumn = "wallet_name";
 const linkColumn = "player_link";
 
 const views = {
   attributes: {
-    columns: [...baseColumns, ...statColumns, linkColumn],
+    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
     progressionSuffix: null,
   },
   current: {
-    columns: [...baseColumns, ...statColumns, linkColumn],
+    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
     progressionSuffix: "prog_current_season",
   },
   all: {
-    columns: [...baseColumns, ...statColumns, linkColumn],
+    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
     progressionSuffix: "prog_all",
   },
 };
@@ -43,7 +44,7 @@ const columnLabels = {
   dribbling: "Dribbling",
   defense: "Defense",
   physical: "Physical",
-  player_link: "Link",
+  player_link: "",
 };
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
