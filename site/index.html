@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=65">
+    <link rel="stylesheet" href="styles.css?v=66">
   </head>
-  <body class="loading">
-    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
+  <body>
+    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
       <div class="loadingBox">
         <div id="loadingText" class="loadingText">Preparing data...</div>
         <div class="loadingBar" aria-hidden="true">
@@ -36,7 +36,7 @@
     <header class="topbar">
       <div>
         <h1>MFL Front Office</h1>
-        <p id="statusText">Club management workspace</p>
+        <p id="statusText" hidden>Club management workspace</p>
       </div>
       <div class="headerControls">
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
@@ -198,7 +198,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=65"></script>
+    <script src="app.js?v=66"></script>
   </body>
 </html>
 
