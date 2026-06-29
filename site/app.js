@@ -1548,45 +1548,20 @@ function openSelectedPlayerLinks() {
     return;
   }
 
-  const links = Array.from(state.selectedPlayerIds).map((playerId) => {
+  const playerIds = Array.from(state.selectedPlayerIds);
+  let openedCount = 0;
+
+  playerIds.forEach((playerId) => {
     const safePlayerId = encodeURIComponent(playerId);
-    const url = `https://app.playmfl.com/players/${safePlayerId}`;
-    return `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(playerId)}</a></li>`;
+    const playerWindow = window.open(`https://app.playmfl.com/players/${safePlayerId}`, "_blank", "noopener,noreferrer");
+
+    if (playerWindow) {
+      openedCount += 1;
+    }
   });
 
-  const linksPage = window.open("", "_blank");
-
-  if (!linksPage) {
-    showToast("Your browser blocked the links page.");
-    return;
-  }
-
-  linksPage.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Selected player links</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 28px; color: #172026; }
-    h1 { margin: 0 0 12px; font-size: 24px; }
-    p { margin: 0 0 18px; color: #5f6b76; }
-    ol { display: grid; gap: 8px; padding-left: 24px; }
-    a { color: #1d5f8a; font-weight: 700; }
-  </style>
-</head>
-<body>
-  <h1>Selected player links</h1>
-  <p>${links.length} player${links.length === 1 ? "" : "s"}</p>
-  <ol>${links.join("")}</ol>
-</body>
-</html>`);
-  linksPage.document.close();
-
-  try {
-    window.focus();
-  } catch {
-    // Browsers decide whether focus can return to the original tab.
+  if (openedCount < playerIds.length) {
+    showToast("Allow pop-ups for this site, then click Open links again.");
   }
 }
 function renderTable() {
@@ -1841,4 +1816,5 @@ async function startApp() {
   }
 }
 startApp();
+
 
