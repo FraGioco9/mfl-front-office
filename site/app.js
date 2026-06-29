@@ -96,7 +96,6 @@ const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
 const playerPage = document.querySelector("#playerPage");
 const playerDetail = document.querySelector("#playerDetail");
-const backToPlayersButton = document.querySelector("#backToPlayersButton");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
 const brandLinks = document.querySelectorAll(".brandLink");
@@ -247,8 +246,14 @@ function syncHomeLoginButton() {
 }
 
 function showHomeShell(pageName = "home", updateUrl = true) {
-  document.body.classList.remove("loading", "auth");
-  loadingScreen.hidden = true;
+  const needsDataFirst = ["progression", "watchlist", "player"].includes(pageName) && !state.dataLoaded;
+
+  if (!needsDataFirst) {
+    document.body.classList.remove("loading");
+    loadingScreen.hidden = true;
+  }
+
+  document.body.classList.remove("auth");
   loginScreen.hidden = true;
   updateMenuVisibility();
   accountMenu.hidden = !auth.required;
@@ -1057,7 +1062,23 @@ function countryFlagHtml(nationality) {
     return '<span class="flagText" aria-hidden="true">-</span>';
   }
 
-  return `<img class="flagImage" src="https://flagcdn.com/24x18/${code.toLowerCase()}.png" alt="">`;
+  const codepoints = code
+    .toUpperCase()
+    .split("")
+    .map((character) => (127397 + character.charCodeAt(0)).toString(16))
+    .join("-");
+  return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="">`;
+}
+
+function rarityColorForOverall(overall) {
+  const value = Number(overall || 0);
+
+  if (value >= 95) return "#00ffe9";
+  if (value >= 85) return "#fa53ff";
+  if (value >= 75) return "#0077ff";
+  if (value >= 65) return "#71ff30";
+  if (value >= 55) return "#ecd17f";
+  return "#bebebe";
 }
 
 function playerPositions(row) {
@@ -1119,8 +1140,9 @@ function renderPlayerAttributePanel(row) {
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
     const featured = column === "overall" ? " featured" : "";
-    const fullWidth = column === "overall" || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
-    return `<div class="playerAttributeCard${featured}${fullWidth}"><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
+    const fullWidth = (!playerIsGoalkeeper(row) && column === "overall") || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
+    const rarityStyle = column === "overall" ? ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"` : "";
+    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
   }).join("");
 }
 
@@ -2272,7 +2294,6 @@ brandLinks.forEach((link) => {
 openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
 playerSearchInput.addEventListener("input", renderSearchResults);
-backToPlayersButton.addEventListener("click", () => setPage("progression"));
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {

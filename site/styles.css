@@ -197,7 +197,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 300px;
+  min-width: 380px;
   height: 40px;
   justify-content: center;
   border-color: var(--border-strong);
@@ -209,6 +209,12 @@ p {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 700;
+}
+
+.searchButton .searchEmoji {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
 }
 
 .accountMenu {
@@ -1051,6 +1057,8 @@ td a {
   }
 
   .searchButton {
+    min-width: 0;
+    width: 100%;
     justify-content: center;
   }
 
@@ -1236,7 +1244,7 @@ td a {
 .searchDialog {
   display: flex;
   flex-direction: column;
-  width: min(840px, 100%);
+  width: min(920px, 100%);
   max-height: min(640px, 88vh);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1289,7 +1297,7 @@ td a {
 .playerDetail {
   display: grid;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .playerHero,
@@ -1304,12 +1312,16 @@ td a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 12px 10px;
+  padding: 6px 12px 10px;
 }
 
 .playerHero h2,
 .playerPanel h3 {
   margin: 0;
+}
+
+.playerHero h2 {
+  margin-top: 0;
 }
 
 .playerHero p {
@@ -1325,12 +1337,24 @@ td a {
 }
 
 .playerWatchlistButton {
-  min-width: 138px;
+  min-width: 154px;
 }
 
 .playerWatchlistButton.active {
   border-color: #d69e00;
   background: #d69e00;
+  color: #172026;
+}
+
+.playerWatchlistButton.active:hover {
+  border-color: #e7b923;
+  background: #e7b923;
+  color: #172026;
+}
+
+.playerWatchlistButton::first-letter {
+  font-size: 1.45em;
+  line-height: 0;
 }
 
 .playerIdButton {
@@ -1339,6 +1363,9 @@ td a {
   background: transparent;
   box-shadow: none;
   outline: 0;
+  height: auto;
+  min-height: 0;
+  line-height: 1;
   padding: 0;
   color: var(--text-soft);
   cursor: pointer;
@@ -1361,8 +1388,8 @@ td a {
 }
 
 .flagImage {
-  width: 24px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 2px;
   object-fit: cover;
   vertical-align: -3px;
@@ -1404,8 +1431,9 @@ td a {
 }
 
 .playerAttributeCard.featured {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border-color: var(--rarity-color);
+  background: var(--rarity-color);
+  color: #111820;
 }
 
 .playerAttributeCard.fullWidth {
@@ -1417,7 +1445,7 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  color: var(--primary);
+  color: #111820;
   font-size: 28px;
 }
 

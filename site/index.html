@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=90">
+    <link rel="stylesheet" href="styles.css?v=91">
   </head>
   <body>
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -37,7 +37,7 @@
       <div>
         <h1><a class="brandLink" href="/home" data-page="home">MFL Front Office</a></h1>
       </div>
-      <button id="openSearchButton" class="searchButton" type="button">Search <span>Ctrl K</span></button>
+      <button id="openSearchButton" class="searchButton" type="button"><span class="searchEmoji" aria-hidden="true">&#128269;</span> Search <span>Ctrl K</span></button>
       <div class="headerControls">
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
@@ -175,7 +175,6 @@
         </section>
 
         <section id="playerPage" class="pageView playerPage" hidden>
-          <button id="backToPlayersButton" class="compactButton" type="button">Back to players</button>
           <div id="playerDetail" class="playerDetail"></div>
         </section>
 
@@ -183,6 +182,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v91</span><p>Add rarity colors and polish player pages</p></li>
               <li><span>v90</span><p>Fix sorting and player header details</p></li>
               <li><span>v89</span><p>Improve player page refresh and layouts</p></li>
               <li><span>v88</span><p>Refine player pages and search</p></li>
@@ -290,7 +290,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v90</a>
+      <a href="/changelog">MFL Front Office v91</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -333,6 +333,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=90"></script>
+    <script src="app.js?v=91"></script>
   </body>
 </html>
