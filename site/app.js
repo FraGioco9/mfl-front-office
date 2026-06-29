@@ -1298,7 +1298,7 @@ function applyFilters() {
 
 function updateSelectionBar() {
   const selectedCount = state.selectedPlayerIds.size;
-  selectionBar.hidden = selectedCount === 0;
+  selectionBar.classList.toggle("visible", selectedCount > 0);
   selectionCount.textContent = `${selectedCount} selected`;
 }
 

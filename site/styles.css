@@ -892,34 +892,53 @@ td a {
 .selectionBar {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: 22px;
   z-index: 30;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 7px 9px;
-  border: 1px solid var(--border-strong);
+  gap: 12px;
+  min-height: 50px;
+  padding: 10px 14px;
+  border: 1px solid #7db8de;
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
-  transform: translateX(-50%);
+  background: #d9efff;
+  color: #12364f;
+  box-shadow: 0 16px 42px rgba(28, 95, 138, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(0.96);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+:root[data-theme="dark"] .selectionBar {
+  border-color: #5ba7d8;
+  background: #12364f;
+  color: #e8f5ff;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34);
+}
+
+.selectionBar.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
 }
 
 .selectionBar[hidden] {
-  display: none;
+  display: inline-flex;
 }
 
 .selectionBar span {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .selectionBar button {
-  height: 28px;
-  padding: 0 8px;
-  font-size: 12px;
+  height: 34px;
+  padding: 0 11px;
+  border-color: #1d5f8a;
+  background: #1d5f8a;
+  color: #ffffff;
+  font-size: 13px;
 }
 
