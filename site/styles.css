@@ -194,21 +194,34 @@ p {
 }
 
 .searchButton {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 8px;
-  min-width: 380px;
+  gap: 12px;
+  min-width: 420px;
   height: 40px;
-  justify-content: center;
   border-color: var(--border-strong);
   background: var(--surface-muted);
   color: var(--text);
+  text-align: left;
 }
 
 .searchButton span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 700;
+}
+
+.searchLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.searchShortcut {
+  justify-self: end;
 }
 
 .searchButton .searchEmoji {
@@ -1059,7 +1072,6 @@ td a {
   .searchButton {
     min-width: 0;
     width: 100%;
-    justify-content: center;
   }
 
   .stats {
@@ -1261,7 +1273,9 @@ td a {
 .searchResults {
   display: grid;
   gap: 8px;
+  min-height: 288px;
   max-height: 420px;
+  align-content: start;
   overflow: auto;
 }
 
@@ -1340,6 +1354,20 @@ td a {
   min-width: 154px;
 }
 
+.playerWatchlistButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.watchlistButtonStar {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.45em;
+  line-height: 1;
+}
+
 .playerWatchlistButton.active {
   border-color: #d69e00;
   background: #d69e00;
@@ -1350,11 +1378,6 @@ td a {
   border-color: #e7b923;
   background: #e7b923;
   color: #172026;
-}
-
-.playerWatchlistButton::first-letter {
-  font-size: 1.45em;
-  line-height: 0;
 }
 
 .playerIdButton {
@@ -1391,8 +1414,9 @@ td a {
   width: 22px;
   height: 22px;
   border-radius: 2px;
-  object-fit: cover;
-  vertical-align: -3px;
+  object-fit: contain;
+  vertical-align: -5px;
+  flex: 0 0 auto;
 }
 
 .playerPanelHeader {
@@ -1424,16 +1448,16 @@ td a {
 
 .playerAttributeCard strong {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
   font-size: 20px;
   line-height: 1.1;
 }
 
 .playerAttributeCard.featured {
-  border-color: var(--rarity-color);
-  background: var(--rarity-color);
-  color: #111820;
+  border: 2px solid var(--rarity-color);
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .playerAttributeCard.fullWidth {
@@ -1445,8 +1469,16 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  color: #111820;
   font-size: 28px;
+}
+
+.playerAttributeCard.featured .attributeValueText {
+  width: fit-content;
+  border-radius: 6px;
+  background: var(--rarity-color);
+  color: #ffffff;
+  padding: 2px 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .attributesPanel {
@@ -1490,6 +1522,12 @@ td a {
 .detailGrid div {
   min-height: 48px;
   padding: 7px 9px;
+}
+
+.detailGrid strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .playerAttributeCard {

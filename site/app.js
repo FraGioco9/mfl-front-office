@@ -19,6 +19,7 @@ const state = {
   playerAttributeView: "attributes",
   searchRenderTimer: null,
   searchIndex: [],
+  recentSearchPlayerIds: [],
 };
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
@@ -685,6 +686,7 @@ function currentTableState() {
     pages: state.tablePageStates,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
     menuOpen: state.menuOpen,
+    recentSearchPlayerIds: state.recentSearchPlayerIds,
   };
 }
 
@@ -709,6 +711,7 @@ async function loadCloudTableState() {
   auth.savedTableState = data?.table_state || null;
   restoreWatchlistState(auth.savedTableState);
   restoreMenuState(auth.savedTableState);
+  restoreRecentSearchState(auth.savedTableState);
 }
 
 function queueCloudTableStateSave(savedState) {
@@ -747,6 +750,11 @@ function restoreMenuState(savedState) {
   }
 }
 
+function restoreRecentSearchState(savedState) {
+  const ids = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
+  state.recentSearchPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
+}
+
 function restoreTablePageStates(savedState) {
   if (savedState?.pages) {
     state.tablePageStates = { ...savedState.pages };
@@ -762,6 +770,7 @@ function loadSavedTableState() {
     restoreTablePageStates(auth.savedTableState);
     restoreWatchlistState(auth.savedTableState);
     restoreMenuState(auth.savedTableState);
+    restoreRecentSearchState(auth.savedTableState);
     return auth.savedTableState;
   }
 
@@ -770,6 +779,7 @@ function loadSavedTableState() {
     restoreTablePageStates(savedState);
     restoreWatchlistState(savedState);
     restoreMenuState(savedState);
+    restoreRecentSearchState(savedState);
     return savedState;
   } catch {
     return null;
@@ -855,6 +865,16 @@ function formatPlainValue(value, column) {
   }
 
   return String(value);
+}
+
+function formatFootedness(value) {
+  const text = formatPlainValue(value, "preferred_foot");
+
+  if (text === "NULL") {
+    return text;
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
 function formatStatValue(row, statColumn) {
@@ -1142,7 +1162,7 @@ function renderPlayerAttributePanel(row) {
     const featured = column === "overall" ? " featured" : "";
     const fullWidth = (!playerIsGoalkeeper(row) && column === "overall") || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
     const rarityStyle = column === "overall" ? ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"` : "";
-    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
+    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText">${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
   }).join("");
 }
 
@@ -1173,7 +1193,7 @@ function renderPlayerPage(playerId) {
     ["Nationality", `${countryFlagHtml(nationality)} ${escapeHtml(nationality)}`],
     ["Age", escapeHtml(formatCellValue(row, "age"))],
     ["Height", escapeHtml(heightLabel)],
-    ["Foot", escapeHtml(formatCellValue(row, "preferred_foot"))],
+    ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
@@ -1202,7 +1222,7 @@ function renderPlayerPage(playerId) {
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const star = createWatchlistStar(id, playerName);
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
-  watchButton.textContent = `${star.textContent} ${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
   playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
@@ -1264,17 +1284,24 @@ function bestSearchResults(query) {
   return bestRows.map((entry) => entry.row);
 }
 
+function recentSearchRows() {
+  return state.recentSearchPlayerIds
+    .map((playerId) => rowByPlayerId(playerId))
+    .filter(Boolean);
+}
+
+function rememberSearchResult(playerId) {
+  const key = String(playerId);
+  state.recentSearchPlayerIds = [key, ...state.recentSearchPlayerIds.filter((id) => id !== key)].slice(0, 5);
+  saveTableState();
+}
+
 function renderSearchResultsNow() {
   const query = playerSearchInput.value.trim().toLowerCase();
-  const results = query ? bestSearchResults(query) : [];
-
-  if (!query) {
-    playerSearchResults.innerHTML = '<div class="searchHint">Type a player ID or name.</div>';
-    return;
-  }
+  const results = query ? bestSearchResults(query) : recentSearchRows();
 
   if (!results.length) {
-    playerSearchResults.innerHTML = '<div class="searchHint">No players found.</div>';
+    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players found." : "Recent players will appear here."}</div>`;
     return;
   }
 
@@ -1287,6 +1314,7 @@ function renderSearchResultsNow() {
     const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
     button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; ${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
+      rememberSearchResult(id);
       closeSearch();
       openPlayerPage(id);
     });
