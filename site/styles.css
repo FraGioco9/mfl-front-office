@@ -666,7 +666,11 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1121px;
+  min-width: 1157px;
+}
+
+.col-select {
+  width: 36px;
 }
 
 .col-id {
@@ -760,6 +764,17 @@ th.sortable:hover {
 
 tbody tr:hover {
   background: var(--row-hover);
+}
+
+.selectionCell {
+  text-align: center;
+}
+
+.selectionCell input {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  vertical-align: middle;
 }
 
 td a {
@@ -871,5 +886,40 @@ td a {
   .controlsBar button {
     width: 100%;
   }
+}
+
+
+.selectionBar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+  transform: translateX(-50%);
+}
+
+.selectionBar[hidden] {
+  display: none;
+}
+
+.selectionBar span {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.selectionBar button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 

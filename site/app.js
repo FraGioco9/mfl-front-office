@@ -11,6 +11,7 @@ const state = {
   manifest: null,
   dataLoaded: false,
   dataLoadPromise: null,
+  selectedPlayerIds: new Set(),
   menuOpen: true,
 };
 
@@ -115,6 +116,10 @@ const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
+const selectionBar = document.querySelector("#selectionBar");
+const selectionCount = document.querySelector("#selectionCount");
+const clearSelectionButton = document.querySelector("#clearSelectionButton");
+const addToWatchlistButton = document.querySelector("#addToWatchlistButton");
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -730,6 +735,9 @@ function sortableValue(row, column) {
 
 function buildHeader() {
   const headerRow = document.createElement("tr");
+  const selectionHeader = document.createElement("th");
+  selectionHeader.className = "selectionCell";
+  headerRow.appendChild(selectionHeader);
 
   views[state.view].columns.forEach((column) => {
     const cell = document.createElement("th");
@@ -1288,6 +1296,46 @@ function applyFilters() {
   renderTable();
 }
 
+function updateSelectionBar() {
+  const selectedCount = state.selectedPlayerIds.size;
+  selectionBar.hidden = selectedCount === 0;
+  selectionCount.textContent = `${selectedCount} selected`;
+}
+
+function setPlayerSelected(playerId, selected) {
+  const key = String(playerId);
+
+  if (selected) {
+    state.selectedPlayerIds.add(key);
+  } else {
+    state.selectedPlayerIds.delete(key);
+  }
+
+  updateSelectionBar();
+}
+
+function clearSelection() {
+  state.selectedPlayerIds.clear();
+  renderTable();
+  updateSelectionBar();
+}
+
+function addSelectedToWatchlist() {
+  if (!state.selectedPlayerIds.size) {
+    return;
+  }
+
+  try {
+    const savedIds = JSON.parse(localStorage.getItem("mfl-watchlist-player-ids") || "[]");
+    const watchlistIds = new Set(savedIds.map((playerId) => String(playerId)));
+
+    state.selectedPlayerIds.forEach((playerId) => watchlistIds.add(playerId));
+    localStorage.setItem("mfl-watchlist-player-ids", JSON.stringify(Array.from(watchlistIds)));
+  } catch {
+    // The visible selection still works if browser storage is unavailable.
+  }
+}
+
 function renderTable() {
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -1298,6 +1346,17 @@ function renderTable() {
 
   pageRows.forEach((row) => {
     const tableRow = document.createElement("tr");
+    const selectionCell = document.createElement("td");
+    const selectionInput = document.createElement("input");
+    const playerId = getValue(row, "player_id");
+
+    selectionCell.className = "selectionCell";
+    selectionInput.type = "checkbox";
+    selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
+    selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
+    selectionInput.addEventListener("change", () => setPlayerSelected(playerId, selectionInput.checked));
+    selectionCell.appendChild(selectionInput);
+    tableRow.appendChild(selectionCell);
 
     views[state.view].columns.forEach((column) => {
       const cell = document.createElement("td");
@@ -1334,6 +1393,7 @@ function renderTable() {
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
+  updateSelectionBar();
 }
 
 function csvEscape(value) {
@@ -1476,6 +1536,9 @@ applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 clearFiltersButton.addEventListener("click", () => {
   clearAdvancedFilters();
 });
+
+clearSelectionButton.addEventListener("click", clearSelection);
+addToWatchlistButton.addEventListener("click", addSelectedToWatchlist);
 
 
 prevButton.addEventListener("click", () => {

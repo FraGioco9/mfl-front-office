@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=55">
+    <link rel="stylesheet" href="styles.css?v=56">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -130,6 +130,7 @@
             <div class="tableScroller">
               <table>
                 <colgroup>
+                  <col class="col-select">
                   <col class="col-id">
                   <col class="col-name">
                   <col class="col-nationality">
@@ -158,6 +159,12 @@
             <span id="pageText">Page 1</span>
             <button id="nextButton" type="button">Next</button>
           </nav>
+
+          <div id="selectionBar" class="selectionBar" hidden>
+            <span id="selectionCount">0 selected</span>
+            <button id="clearSelectionButton" type="button">Clear selection</button>
+            <button id="addToWatchlistButton" type="button">Add to watchlist</button>
+          </div>
         </section>
       </main>
     </div>
@@ -188,7 +195,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=55"></script>
+    <script src="app.js?v=56"></script>
   </body>
 </html>
 
