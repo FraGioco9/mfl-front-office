@@ -99,8 +99,8 @@ const POSITION_FAMILIARITY = {
   CDM: { CB: "some", CM: "fair", CAM: "some" },
   CM: { CDM: "fair", CAM: "fair", RM: "some", LM: "some" },
   CAM: { CDM: "some", CM: "fair", CF: "fair" },
-  RM: { RB: "some", RWB: "some", CAM: "some", LM: "some", RW: "fair" },
-  LM: { LB: "some", LWB: "some", CAM: "some", RM: "some", LW: "fair" },
+  RM: { RB: "some", RWB: "some", CM: "some", LM: "some", RW: "fair" },
+  LM: { LB: "some", LWB: "some", CM: "some", RM: "some", LW: "fair" },
   RW: { RWB: "some", RM: "fair", LW: "some" },
   LW: { LWB: "some", LM: "fair", RW: "some" },
   CF: { CAM: "fair", ST: "fair" },
@@ -1163,16 +1163,22 @@ function createWatchlistStar(playerId, labelText = "player") {
 
 function countryCodeForNationality(nationality) {
   const countryCodes = {
-    ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT", BELGIUM: "BE", BRAZIL: "BR",
-    CANADA: "CA", CHILE: "CL", COLOMBIA: "CO", CROATIA: "HR", DENMARK: "DK",
-    ENGLAND: "GB", FINLAND: "FI", FRANCE: "FR", GERMANY: "DE", GHANA: "GH",
-    ITALY: "IT", JAPAN: "JP", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL",
-    NIGERIA: "NG", NORWAY: "NO", POLAND: "PL", PORTUGAL: "PT", SCOTLAND: "GB",
-    SENEGAL: "SN", SERBIA: "RS", SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH",
-    TURKEY: "TR", UKRAINE: "UA", UNITED_STATES: "US", UNITED_KINGDOM: "GB", URUGUAY: "UY",
-    USA: "US", UNITED_STATES_OF_AMERICA: "US", KOREA_REPUBLIC: "KR", SOUTH_KOREA: "KR",
-    CZECH_REPUBLIC: "CZ", CZECHIA: "CZ", IVORY_COAST: "CI", COTE_D_IVOIRE: "CI",
-    WALES: "GB"
+    ALBANIA: "AL", ALGERIA: "DZ", ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT",
+    BELGIUM: "BE", BOSNIA_AND_HERZEGOVINA: "BA", BRAZIL: "BR", CAMEROON: "CM",
+    CANADA: "CA", CAPE_VERDE_ISLANDS: "CV", CHILE: "CL", COLOMBIA: "CO", CONGO_DR: "CD",
+    COSTA_RICA: "CR", COTE_D_IVOIRE: "CI", CROATIA: "HR", CURACAO: "CW", CZECH_REPUBLIC: "CZ",
+    CZECHIA: "CZ", DENMARK: "DK", ECUADOR: "EC", EGYPT: "EG",
+    ENGLAND: "1f3f4-e0067-e0062-e0065-e006e-e0067-e007f", FINLAND: "FI", FRANCE: "FR",
+    GEORGIA: "GE", GERMANY: "DE", GHANA: "GH", HAITI: "HT", HUNGARY: "HU", IRAN: "IR",
+    IRAQ: "IQ", ITALY: "IT", IVORY_COAST: "CI", JAPAN: "JP", JORDAN: "JO",
+    KOREA_REPUBLIC: "KR", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL", NEW_ZEALAND: "NZ",
+    NIGERIA: "NG", NORWAY: "NO", PANAMA: "PA", PARAGUAY: "PY", PERU: "PE", POLAND: "PL",
+    PORTUGAL: "PT", QATAR: "QA", REPUBLIC_OF_IRELAND: "IE", ROMANIA: "RO", RUSSIA: "RU",
+    SAUDI_ARABIA: "SA", SCOTLAND: "1f3f4-e0067-e0062-e0073-e0063-e0074-e007f", SENEGAL: "SN",
+    SERBIA: "RS", SLOVAKIA: "SK", SLOVENIA: "SI", SOUTH_AFRICA: "ZA", SOUTH_KOREA: "KR",
+    SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH", TUNISIA: "TN", TURKEY: "TR", UKRAINE: "UA",
+    UNITED_KINGDOM: "GB", UNITED_STATES: "US", UNITED_STATES_OF_AMERICA: "US", URUGUAY: "UY",
+    USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e007f"
   };
   const countryKey = String(nationality || "")
     .toUpperCase()
@@ -1189,11 +1195,13 @@ function countryFlagHtml(nationality) {
     return '<span class="flagText" aria-hidden="true">-</span>';
   }
 
-  const codepoints = code
-    .toUpperCase()
-    .split("")
-    .map((character) => (127397 + character.charCodeAt(0)).toString(16))
-    .join("-");
+  const codepoints = code.includes("-")
+    ? code
+    : code
+      .toUpperCase()
+      .split("")
+      .map((character) => (127397 + character.charCodeAt(0)).toString(16))
+      .join("-");
   return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="">`;
 }
 
@@ -1247,14 +1255,15 @@ function positionRating(row, position, familiarity) {
 }
 
 function renderPitch(row) {
-  return PITCH_ROWS.map((pitchRow) => `
-    <div class="pitchRow" style="--pitch-columns: ${pitchRow.length}">
+  const pitchLines = `<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span>`;
+  return pitchLines + PITCH_ROWS.map((pitchRow) => `
+    <div class="pitchRow pitchRow${pitchRow.length}" style="--pitch-columns: ${pitchRow.length}">
       ${pitchRow.map((position) => {
         const familiarity = familiarityForPosition(row, position);
         const rating = positionRating(row, position, familiarity);
         const content = familiarity
           ? `<span class="pitchPositionCircle ${familiarity}" title="${position} ${rating}"><strong>${rating}</strong><small>${position}</small></span>`
-          : `<span class="pitchPositionEmpty"><small>${position}</small></span>`;
+          : `<span class="pitchPositionBlank" aria-hidden="true"></span>`;
         return `<div class="pitchPositionSlot">${content}</div>`;
       }).join("")}
     </div>`).join("");
@@ -1320,7 +1329,7 @@ function renderPlayerAttributePanel(row) {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
     const featured = column === "overall" ? " featured" : "";
     const fullWidth = (!playerIsGoalkeeper(row) && column === "overall") || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
-    const rarityStyle = column === "overall" ? ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"` : "";
+    const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
     return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText">${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
   }).join("");
 }

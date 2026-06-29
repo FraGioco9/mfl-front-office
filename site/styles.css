@@ -63,7 +63,9 @@ body.auth .loadingScreen {
   inset: 0;
   z-index: 100;
   display: grid;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
+  gap: 0;
   padding: 24px;
   background: var(--page-bg);
 }
@@ -106,7 +108,9 @@ body.auth .loadingScreen {
 .loginScreen {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
+  gap: 0;
   padding: 24px;
   background: var(--page-bg);
 }
@@ -127,7 +131,7 @@ body.auth .loadingScreen {
 }
 
 .loginPanel h1 {
-  font-size: 28px;
+  font-size: 36px;
 }
 
 .loginPanel p {
@@ -341,8 +345,8 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -1270,9 +1274,9 @@ td a {
 .searchDialog {
   display: flex;
   flex-direction: column;
-  width: min(920px, 100%);
-  min-height: 430px;
-  max-height: min(640px, 88vh);
+  width: min(960px, calc(100vw - 32px));
+  height: min(520px, calc(100vh - 64px));
+  max-height: min(520px, calc(100vh - 64px));
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -1288,8 +1292,9 @@ td a {
 .searchResults {
   display: grid;
   gap: 8px;
-  min-height: 288px;
-  max-height: 420px;
+  min-height: 0;
+  height: 346px;
+  max-height: 346px;
   align-content: start;
   overflow: auto;
 }
@@ -1407,6 +1412,7 @@ td a {
 
 .playerIdButton {
   appearance: none;
+  -webkit-tap-highlight-color: transparent;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -1421,13 +1427,15 @@ td a {
 
 .playerIdButton:hover,
 .playerIdButton:focus,
-.playerIdButton:focus-visible {
+.playerIdButton:focus-visible,
+.playerIdButton:active {
   border: 0;
   background: transparent;
   box-shadow: none;
   outline: 0;
   color: var(--text-soft);
   text-decoration: underline;
+  transform: none;
 }
 
 .flagText {
@@ -1475,8 +1483,10 @@ td a {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 20px;
-  line-height: 1.1;
+  font-size: 26px;
+  line-height: 1.05;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .playerAttributeCard.featured {
@@ -1494,15 +1504,15 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 28px;
+  font-size: 36px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
   width: fit-content;
   border-radius: 6px;
-  background: var(--rarity-color);
+  background: transparent;
   color: #ffffff;
-  padding: 2px 8px;
+  padding: 0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
@@ -1558,6 +1568,7 @@ td a {
 .playerAttributeCard {
   min-height: 68px;
   padding: 10px 12px;
+  background: color-mix(in srgb, var(--rarity-color) 12%, var(--surface-muted));
 }
 
 .detailGrid span,
@@ -1572,9 +1583,11 @@ td a {
   display: grid;
   align-content: space-between;
   gap: 7px;
-  min-height: 430px;
+  position: relative;
+  min-height: 340px;
   margin-top: 8px;
-  padding: 12px 10px;
+  padding: 14px 12px;
+  overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   background: linear-gradient(180deg, #2d8f57 0 50%, #27824f 50% 100%);
@@ -1582,6 +1595,8 @@ td a {
 }
 
 .pitchRow {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(var(--pitch-columns), minmax(0, 1fr));
   gap: 6px;
@@ -1594,16 +1609,17 @@ td a {
   place-items: center;
 }
 
-.pitchPositionCircle,
-.pitchPositionEmpty {
+.pitchPositionCircle {
   display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
+  align-content: center;
+  justify-items: center;
+  gap: 0;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   color: #102014;
   font-weight: 800;
-  line-height: 1;
+  line-height: 0.9;
   text-align: center;
 }
 
@@ -1611,8 +1627,8 @@ td a {
   font-size: 15px;
 }
 
-.pitchPositionCircle small,
-.pitchPositionEmpty small {
+.pitchPositionCircle small {
+  margin-top: -2px;
   font-size: 9px;
   font-weight: 800;
 }
@@ -1634,9 +1650,75 @@ td a {
   color: #ffffff;
 }
 
-.pitchPositionEmpty {
-  border: 1px dashed rgba(255, 255, 255, 0.45);
-  color: rgba(255, 255, 255, 0.72);
+.pitchPositionBlank {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+
+.pitch::before,
+.pitch::after {
+  position: absolute;
+  left: 50%;
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.pitch::before {
+  top: 50%;
+  width: 74px;
+  height: 74px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch::after {
+  top: 50%;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.56);
+}
+
+.pitchLine {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.pitchBoxTop,
+.pitchBoxBottom {
+  width: 44%;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.pitchBoxTop {
+  top: 0;
+  border-top: 0;
+}
+
+.pitchBoxBottom {
+  bottom: 0;
+  border-bottom: 0;
+}
+
+.pitchGoalTop,
+.pitchGoalBottom {
+  width: 22%;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+}
+
+.pitchGoalTop {
+  top: 0;
+  border-top: 0;
+}
+
+.pitchGoalBottom {
+  bottom: 0;
+  border-bottom: 0;
 }
 
 @media (max-width: 900px) {
