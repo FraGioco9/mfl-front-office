@@ -763,7 +763,14 @@ function sortableValue(row, column) {
 function buildHeader() {
   const headerRow = document.createElement("tr");
   const selectionHeader = document.createElement("th");
+  const selectVisibleInput = document.createElement("input");
+
   selectionHeader.className = "selectionCell";
+  selectVisibleInput.id = "selectVisiblePlayersInput";
+  selectVisibleInput.type = "checkbox";
+  selectVisibleInput.setAttribute("aria-label", "Select visible players");
+  selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
+  selectionHeader.appendChild(selectVisibleInput);
   headerRow.appendChild(selectionHeader);
 
   views[state.view].columns.forEach((column) => {
@@ -1331,10 +1338,48 @@ function applyFilters() {
   renderTable();
 }
 
+function currentPageRows() {
+  const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+  const currentPage = Math.min(state.page, totalPages);
+  const start = (currentPage - 1) * state.pageSize;
+  return state.filteredRows.slice(start, start + state.pageSize);
+}
+
+function updateSelectionHeader(pageRows = currentPageRows()) {
+  const selectVisibleInput = document.querySelector("#selectVisiblePlayersInput");
+
+  if (!selectVisibleInput) {
+    return;
+  }
+
+  const visibleIds = pageRows.map((row) => String(getValue(row, "player_id")));
+  const selectedVisibleCount = visibleIds.filter((playerId) => state.selectedPlayerIds.has(playerId)).length;
+
+  selectVisibleInput.disabled = visibleIds.length === 0;
+  selectVisibleInput.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  selectVisibleInput.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+}
+
 function updateSelectionBar() {
   const selectedCount = state.selectedPlayerIds.size;
   selectionBar.classList.toggle("visible", selectedCount > 0);
   selectionCount.textContent = `${selectedCount} selected`;
+  addToWatchlistButton.textContent = state.currentPage === "watchlist" ? "Remove from watchlist" : "Add to watchlist";
+  updateSelectionHeader();
+}
+
+function setVisiblePlayersSelected(selected) {
+  currentPageRows().forEach((row) => {
+    const playerId = String(getValue(row, "player_id"));
+
+    if (selected) {
+      state.selectedPlayerIds.add(playerId);
+    } else {
+      state.selectedPlayerIds.delete(playerId);
+    }
+  });
+
+  renderTable();
 }
 
 function setPlayerSelected(playerId, selected) {
@@ -1360,20 +1405,24 @@ function addSelectedToWatchlist() {
     return;
   }
 
+  if (state.currentPage === "watchlist") {
+    state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.delete(String(playerId)));
+    state.selectedPlayerIds.clear();
+    saveTableState();
+    applyFilters();
+    return;
+  }
+
   state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
   saveTableState();
-
-  if (state.currentPage === "watchlist") {
-    applyFilters();
-  }
+  updateSelectionBar();
 }
 
 function renderTable() {
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
   state.page = Math.min(state.page, totalPages);
 
-  const start = (state.page - 1) * state.pageSize;
-  const pageRows = state.filteredRows.slice(start, start + state.pageSize);
+  const pageRows = currentPageRows();
   const fragment = document.createDocumentFragment();
 
   pageRows.forEach((row) => {
