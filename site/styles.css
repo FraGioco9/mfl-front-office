@@ -1001,7 +1001,7 @@ td a {
   font-weight: 700;
   line-height: 16px;
   text-align: left;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .selectionBar .textButton:hover:not(:disabled) {
