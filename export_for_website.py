@@ -72,6 +72,7 @@ def export_players(chunk_size: int, output_path: Path) -> dict[str, Any]:
     connection.row_factory = sqlite3.Row
 
     total_players = connection.execute("SELECT COUNT(*) FROM players").fetchone()[0]
+    total_wallets = connection.execute("SELECT COUNT(*) FROM wallets").fetchone()[0]
     chunk_files = []
     offset = 0
     chunk_number = 1
@@ -119,6 +120,7 @@ def export_players(chunk_size: int, output_path: Path) -> dict[str, Any]:
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "row_count": total_players,
+        "wallet_count": total_wallets,
         "chunk_size": chunk_size,
         "columns": PLAYER_COLUMNS,
         "chunks": chunk_files,

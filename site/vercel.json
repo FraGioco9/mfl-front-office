@@ -2,6 +2,9 @@
   "functions": {
     "api/data.js": {
       "includeFiles": "api/data-files/**"
+    },
+    "api/summary.js": {
+      "includeFiles": "api/data-files/manifest.json"
     }
   }
 }

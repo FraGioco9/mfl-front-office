@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=49">
+    <link rel="stylesheet" href="styles.css?v=50">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -36,18 +36,18 @@
     <header class="topbar">
       <div>
         <h1>MFL Front Office</h1>
-        <p id="statusText">Loading player table...</p>
+        <p id="statusText">Club management workspace</p>
       </div>
       <div class="headerControls">
-        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">🌙</button>
+        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
           <div>
             <span id="totalPlayers">-</span>
             <label>players</label>
           </div>
           <div>
-            <span id="visiblePlayers">-</span>
-            <label>shown</label>
+            <span id="totalWallets">-</span>
+            <label>wallets</label>
           </div>
         </div>
         <div id="accountMenu" class="accountMenu" hidden>
@@ -60,77 +60,106 @@
       </div>
     </header>
 
-    <main>
-      <section class="views" aria-label="Table views">
-        <button class="viewButton" type="button" data-view="attributes">Attributes</button>
-        <button class="viewButton active" type="button" data-view="current">Current Season</button>
-        <button class="viewButton" type="button" data-view="all">All Time</button>
-      </section>
+    <div class="appShell">
+      <aside id="sidebar" class="sidebar" hidden>
+        <button class="navButton active" type="button" data-page="home">Homepage</button>
+        <button class="navButton" type="button" data-page="progression">Progression</button>
+      </aside>
 
-      <section class="quickFilters" aria-label="Quick filters">
-        <label>
-          <input id="hideRetiredInput" type="checkbox" checked>
-          <span>Hide retired players</span>
-        </label>
-        <label>
-          <input id="hideRetiringInput" type="checkbox">
-          <span>Hide retiring players</span>
-        </label>
-        <label>
-          <input id="newMintsInput" type="checkbox">
-          <span>Only new mints</span>
-        </label>
-      </section>
+      <main>
+        <section id="homePage" class="pageView homePage">
+          <div class="homeIntro">
+            <h2>MFL Front Office</h2>
+            <p>Manage scouting, progression, and roster decisions from one private workspace.</p>
+          </div>
 
-      <section class="controlsBar" aria-label="Table controls">
-        <button id="openFiltersButton" class="compactButton" type="button">🔎 Filters</button>
-        <button id="quickClearFiltersButton" class="compactButton" type="button">&#129529; Clear</button>
-        <span id="filterSummary">0 active</span>
-        <button id="downloadButton" class="compactButton" type="button">💾 Download CSV</button>
-        <label class="field compact">
-          <span>Rows</span>
-          <select id="pageSizeSelect">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="250">250</option>
-          </select>
-        </label>
-      </section>
+          <section class="homeStats" aria-label="Tracked database summary">
+            <div>
+              <span id="homePlayers">-</span>
+              <label>players tracked</label>
+            </div>
+            <div>
+              <span id="homeWallets">-</span>
+              <label>wallets tracked</label>
+            </div>
+          </section>
 
-      <section class="tableShell" aria-label="Players table">
-        <div class="tableScroller">
-          <table>
-            <colgroup>
-              <col class="col-id">
-              <col class="col-name">
-              <col class="col-nationality">
-              <col class="col-age">
-              <col class="col-positions">
-              <col class="col-seasons">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-stat">
-              <col class="col-agent">
-              <col class="col-link">
-            </colgroup>
-            <thead id="tableHead"></thead>
-            <tbody id="tableBody"></tbody>
-          </table>
-        </div>
-        <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
-      </section>
+          <button id="homeLoginButton" class="homeLoginButton" type="button">Sign In</button>
+        </section>
 
-      <nav class="pager" aria-label="Pagination">
-        <button id="prevButton" type="button">Previous</button>
-        <span id="pageText">Page 1</span>
-        <button id="nextButton" type="button">Next</button>
-      </nav>
-    </main>
+        <section id="progressionPage" class="pageView progressionPage" hidden>
+          <section class="views" aria-label="Table views">
+            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton active" type="button" data-view="current">Current Season</button>
+            <button class="viewButton" type="button" data-view="all">All Time</button>
+          </section>
+
+          <section class="quickFilters" aria-label="Quick filters">
+            <label>
+              <input id="hideRetiredInput" type="checkbox" checked>
+              <span>Hide retired players</span>
+            </label>
+            <label>
+              <input id="hideRetiringInput" type="checkbox">
+              <span>Hide retiring players</span>
+            </label>
+            <label>
+              <input id="newMintsInput" type="checkbox">
+              <span>Only new mints</span>
+            </label>
+          </section>
+
+          <section class="controlsBar" aria-label="Table controls">
+            <button id="openFiltersButton" class="compactButton" type="button">&#128269; Filters</button>
+            <button id="quickClearFiltersButton" class="compactButton" type="button">&#129529; Clear</button>
+            <span id="filterSummary">0 active</span>
+            <button id="downloadButton" class="compactButton" type="button">&#128190; Download CSV</button>
+            <label class="field compact">
+              <span>Rows</span>
+              <select id="pageSizeSelect">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="tableShell" aria-label="Players table">
+            <div class="tableScroller">
+              <table>
+                <colgroup>
+                  <col class="col-id">
+                  <col class="col-name">
+                  <col class="col-nationality">
+                  <col class="col-age">
+                  <col class="col-positions">
+                  <col class="col-seasons">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-stat">
+                  <col class="col-agent">
+                  <col class="col-link">
+                </colgroup>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+            <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
+          </section>
+
+          <nav class="pager" aria-label="Pagination">
+            <button id="prevButton" type="button">Previous</button>
+            <span id="pageText">Page 1</span>
+            <button id="nextButton" type="button">Next</button>
+          </nav>
+        </section>
+      </main>
+    </div>
 
     <div id="filtersModal" class="modalBackdrop" hidden>
       <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
@@ -158,6 +187,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=49"></script>
+    <script src="app.js?v=50"></script>
   </body>
 </html>

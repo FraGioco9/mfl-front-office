@@ -7,6 +7,8 @@ const state = {
   view: "current",
   sortKey: "overall",
   sortDirection: "desc",
+  currentPage: "home",
+  manifest: null,
 };
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
@@ -72,7 +74,14 @@ const loginButton = document.querySelector("#loginButton");
 const loginError = document.querySelector("#loginError");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
-const visiblePlayers = document.querySelector("#visiblePlayers");
+const totalWallets = document.querySelector("#totalWallets");
+const homePlayers = document.querySelector("#homePlayers");
+const homeWallets = document.querySelector("#homeWallets");
+const homeLoginButton = document.querySelector("#homeLoginButton");
+const sidebar = document.querySelector("#sidebar");
+const homePage = document.querySelector("#homePage");
+const progressionPage = document.querySelector("#progressionPage");
+const navButtons = document.querySelectorAll(".navButton");
 const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
@@ -153,6 +162,19 @@ function finishLoading() {
   loadingScreen.hidden = true;
 }
 
+function showHomeShell() {
+  document.body.classList.remove("loading", "auth");
+  loadingScreen.hidden = true;
+  loginScreen.hidden = true;
+  sidebar.hidden = !auth.session;
+  accountMenu.hidden = !auth.required || !auth.session;
+  homeLoginButton.hidden = !auth.required || Boolean(auth.session);
+  if (auth.session) {
+    accountEmail.textContent = accountName();
+  }
+  setPage("home");
+}
+
 function showLogin() {
   document.body.classList.remove("loading");
   document.body.classList.add("auth");
@@ -205,7 +227,7 @@ async function setupAuth() {
   auth.session = data.session;
 
   if (!auth.session) {
-    showLogin();
+    showHomeShell();
     return false;
   }
 
@@ -284,6 +306,7 @@ async function signIn(event) {
   showAppShell();
   showLoading();
   await loadData();
+  showHomeShell();
 }
 
 async function signOut() {
@@ -316,6 +339,55 @@ function toggleAccountMenu() {
     closeAccountMenu();
   }
 }
+
+function setPage(pageName) {
+  state.currentPage = pageName;
+  homePage.hidden = pageName !== "home";
+  progressionPage.hidden = pageName !== "progression";
+
+  navButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.page === pageName);
+  });
+
+  if (pageName === "progression" && state.rows.length) {
+    renderTable();
+  }
+}
+
+function updateSummaryCounts(playerCount, walletCount) {
+  const players = Number(playerCount || 0);
+  const wallets = Number(walletCount || 0);
+  totalPlayers.textContent = players ? formatCount(players) : "-";
+  totalWallets.textContent = wallets ? formatCount(wallets) : "-";
+  homePlayers.textContent = players ? formatCount(players) : "-";
+  homeWallets.textContent = wallets ? formatCount(wallets) : "-";
+}
+
+async function loadSummary() {
+  try {
+    const response = await fetch("/api/summary", { cache: "no-store" });
+
+    if (response.ok) {
+      const summary = await response.json();
+      updateSummaryCounts(summary.playerCount, summary.walletCount);
+      return;
+    }
+  } catch {
+    // Fall back to the static manifest when running without Vercel functions.
+  }
+
+  try {
+    const response = await fetch("data/manifest.json", { cache: "no-store" });
+
+    if (response.ok) {
+      const manifest = await response.json();
+      updateSummaryCounts(manifest.row_count, manifest.wallet_count);
+    }
+  } catch {
+    // Counts stay blank until the data files are available.
+  }
+}
+
 
 function saveTableState() {
   const savedState = currentTableState();
@@ -1211,7 +1283,6 @@ function renderTable() {
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
   totalPlayers.textContent = formatCount(state.rows.length);
-  visiblePlayers.textContent = formatCount(state.filteredRows.length);
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
@@ -1260,8 +1331,9 @@ async function loadData() {
     state.page = 1;
     updateLoadingProgress(0, 0);
     const manifest = await fetchDataFile("manifest.json");
+    state.manifest = manifest;
     state.columns = manifest.columns;
-    totalPlayers.textContent = formatCount(manifest.row_count);
+    updateSummaryCounts(manifest.row_count, manifest.wallet_count);
     updateLoadingProgress(0, manifest.chunks.length);
     await paintLoadingProgress();
 
@@ -1385,6 +1457,12 @@ themeButton.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
+homeLoginButton.addEventListener("click", showLogin);
+
+navButtons.forEach((button) => {
+  button.addEventListener("click", () => setPage(button.dataset.page));
+});
+
 loginForm.addEventListener("submit", signIn);
 accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -1394,11 +1472,13 @@ signOutButton.addEventListener("click", signOut);
 
 async function startApp() {
   loadTheme();
+  await loadSummary();
 
   if (await setupAuth()) {
     showAppShell();
+    showLoading();
     await loadData();
+    showHomeShell();
   }
 }
-
 startApp();

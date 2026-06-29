@@ -46,9 +46,11 @@ body {
 
 body.loading .topbar,
 body.loading main,
+body.loading .sidebar,
 body.loading .modalBackdrop,
 body.auth .topbar,
 body.auth main,
+body.auth .sidebar,
 body.auth .modalBackdrop,
 body.auth .loadingScreen {
   display: none;
@@ -282,6 +284,92 @@ p {
   text-transform: uppercase;
 }
 
+.appShell {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  min-height: calc(100vh - 93px);
+}
+
+.sidebar {
+  width: 190px;
+  padding: 18px 14px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar[hidden] {
+  display: none;
+}
+
+.navButton {
+  width: 100%;
+  margin-bottom: 8px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.navButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.pageView[hidden] {
+  display: none;
+}
+
+.homePage {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  max-width: 780px;
+  padding-top: 20px;
+}
+
+.homeIntro h2 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.homeIntro p {
+  max-width: 620px;
+  font-size: 16px;
+}
+
+.homeStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.homeStats div {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.homeStats span {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.homeStats label {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.homeLoginButton {
+  width: fit-content;
+}
 main {
   padding: 18px 28px 28px;
 }
@@ -668,6 +756,26 @@ td a {
   .stats {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .appShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+
+  .navButton {
+    width: auto;
+    margin-bottom: 0;
+    white-space: nowrap;
   }
 
   main {
