@@ -165,6 +165,20 @@ Project -> Settings -> Environment Variables
 
 Add both variables for **Production**.
 
+`SUPABASE_URL` must be the exact Supabase Project URL from:
+
+```text
+Supabase -> Project Settings -> API -> Project URL
+```
+
+It should look like this:
+
+```text
+https://your-project-ref.supabase.co
+```
+
+Do not use the Supabase dashboard URL, and do not include quotes or extra path text.
+
 In Supabase, create the users who are allowed to access the table:
 
 ```text

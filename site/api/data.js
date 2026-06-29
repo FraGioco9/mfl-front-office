@@ -4,8 +4,8 @@ const path = require("node:path");
 const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json)$/;
 
 async function verifySupabaseToken(token) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return false;

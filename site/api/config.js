@@ -1,6 +1,6 @@
 module.exports = function handler(request, response) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
 
   response.setHeader("Cache-Control", "no-store");
 
