@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=86">
+    <link rel="stylesheet" href="styles.css?v=87">
   </head>
   <body>
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -35,9 +35,10 @@
 
     <header class="topbar">
       <div>
-        <h1>MFL Front Office</h1>
+        <h1><a class="brandLink" href="/home" data-page="home">MFL Front Office</a></h1>
       </div>
       <div class="headerControls">
+        <button id="openSearchButton" class="searchButton" type="button">Search <span>Ctrl K</span></button>
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
           <div>
@@ -173,10 +174,16 @@
           </div>
         </section>
 
+        <section id="playerPage" class="pageView playerPage" hidden>
+          <button id="backToPlayersButton" class="compactButton" type="button">Back to players</button>
+          <div id="playerDetail" class="playerDetail"></div>
+        </section>
+
         <section id="changelogPage" class="pageView changelogPage" hidden>
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v87</span><p>Add player pages and global search</p></li>
               <li><span>v86</span><p>Move update date to footer</p></li>
               <li><span>v85</span><p>Add changelog page</p></li>
               <li><span>v84</span><p>Stack footer items</p></li>
@@ -280,9 +287,23 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v86</a>
+      <a href="/changelog">MFL Front Office v87</a>
       <span id="statusText">Updated -</span>
     </footer>
+
+
+    <div id="searchModal" class="modalBackdrop" hidden>
+      <section class="searchDialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+        <header class="filtersHeader">
+          <h2 id="searchTitle">Search Players</h2>
+          <button id="closeSearchButton" class="iconButton" type="button" aria-label="Close search">x</button>
+        </header>
+        <div class="searchBody">
+          <input id="playerSearchInput" type="search" placeholder="Search by player ID or name" autocomplete="off">
+          <div id="playerSearchResults" class="searchResults"></div>
+        </div>
+      </section>
+    </div>
     <div id="filtersModal" class="modalBackdrop" hidden>
       <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
         <header class="filtersHeader">
@@ -309,7 +330,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=86"></script>
+    <script src="app.js?v=87"></script>
   </body>
 </html>
-

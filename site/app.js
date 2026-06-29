@@ -91,8 +91,17 @@ const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
+const playerPage = document.querySelector("#playerPage");
+const playerDetail = document.querySelector("#playerDetail");
+const backToPlayersButton = document.querySelector("#backToPlayersButton");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
+const brandLinks = document.querySelectorAll(".brandLink");
+const openSearchButton = document.querySelector("#openSearchButton");
+const searchModal = document.querySelector("#searchModal");
+const closeSearchButton = document.querySelector("#closeSearchButton");
+const playerSearchInput = document.querySelector("#playerSearchInput");
+const playerSearchResults = document.querySelector("#playerSearchResults");
 const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
@@ -438,8 +447,18 @@ function toggleMenu() {
   saveTableState();
 }
 
+function playerIdFromUrl() {
+  const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function pageFromUrl() {
   const pageName = window.location.pathname.replace(/^\//, "");
+
+  if (playerIdFromUrl()) {
+    return "player";
+  }
+
   return ["home", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
 }
 
@@ -464,7 +483,7 @@ async function ensureProgressionData() {
   return state.dataLoadPromise;
 }
 
-async function setPage(pageName, updateHash = true) {
+async function setPage(pageName, updateHash = true, options = {}) {
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
     state.tablePageStates[previousTablePage] = currentTablePageState();
@@ -472,8 +491,9 @@ async function setPage(pageName, updateHash = true) {
   }
 
   const tablePage = pageName === "progression" || pageName === "watchlist";
+  const playerPageActive = pageName === "player";
 
-  if (tablePage && !state.dataLoaded) {
+  if ((tablePage || playerPageActive) && !state.dataLoaded) {
     const loaded = await ensureProgressionData();
 
     if (!loaded) {
@@ -484,6 +504,7 @@ async function setPage(pageName, updateHash = true) {
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
+  playerPage.hidden = !playerPageActive;
   changelogPage.hidden = pageName !== "changelog";
   tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : "Progression";
   if (tablePage) {
@@ -497,6 +518,17 @@ async function setPage(pageName, updateHash = true) {
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
+
+  if (playerPageActive) {
+    const playerId = options.playerId || playerIdFromUrl();
+    renderPlayerPage(playerId);
+
+    if (updateHash && playerId && window.location.pathname !== `/players/${encodeURIComponent(playerId)}`) {
+      window.history.pushState({}, "", `/players/${encodeURIComponent(playerId)}`);
+    }
+
+    return;
+  }
 
   if (updateHash && window.location.pathname !== `/${pageName}`) {
     window.history.pushState({}, "", `/${pageName}`);
@@ -787,7 +819,8 @@ function availableFilterColumns() {
 }
 
 function getValue(row, column) {
-  return row[state.columns.indexOf(column)];
+  const index = state.columns.indexOf(column);
+  return index >= 0 ? row[index] : null;
 }
 
 function getProgressionColumn(statColumn) {
@@ -922,6 +955,224 @@ function appendNameMarker(cell, marker, className) {
   markerElement.title = marker.label;
   markerElement.setAttribute("aria-label", marker.label);
   cell.appendChild(markerElement);
+}
+
+function playerRoute(playerId) {
+  return `/players/${encodeURIComponent(playerId)}`;
+}
+
+function rowByPlayerId(playerId) {
+  const key = String(playerId);
+  return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;
+}
+
+function openPlayerPage(playerId) {
+  setPage("player", true, { playerId: String(playerId) });
+}
+
+function toggleWatchlistPlayer(playerId, rerender = false) {
+  const key = String(playerId);
+  const playerName = rowByPlayerId(key) ? formatCellValue(rowByPlayerId(key), "name") : `Player ${key}`;
+  const added = !state.watchlistPlayerIds.has(key);
+
+  if (added) {
+    state.watchlistPlayerIds.add(key);
+  } else {
+    state.watchlistPlayerIds.delete(key);
+  }
+
+  saveTableState();
+  showToast(`${playerName} ${added ? "added to" : "removed from"} watchlist.`);
+
+  if (state.currentPage === "watchlist") {
+    applyFilters();
+  } else if (rerender) {
+    renderTable();
+  }
+
+  if (state.currentPage === "player") {
+    renderPlayerPage(key);
+  }
+}
+
+function createWatchlistStar(playerId, labelText = "player") {
+  const key = String(playerId);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "watchlistStar";
+  button.classList.toggle("active", state.watchlistPlayerIds.has(key));
+  button.textContent = state.watchlistPlayerIds.has(key) ? "\u2605" : "\u2606";
+  button.title = state.watchlistPlayerIds.has(key) ? "Remove from watchlist" : "Add to watchlist";
+  button.setAttribute("aria-label", `${button.title}: ${labelText}`);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleWatchlistPlayer(key, true);
+  });
+  return button;
+}
+
+function countryFlag(nationality) {
+  const countryCodes = {
+    ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT", BELGIUM: "BE", BRAZIL: "BR",
+    CANADA: "CA", CHILE: "CL", COLOMBIA: "CO", CROATIA: "HR", DENMARK: "DK",
+    ENGLAND: "GB", FINLAND: "FI", FRANCE: "FR", GERMANY: "DE", GHANA: "GH",
+    ITALY: "IT", JAPAN: "JP", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL",
+    NIGERIA: "NG", NORWAY: "NO", POLAND: "PL", PORTUGAL: "PT", SCOTLAND: "GB",
+    SENEGAL: "SN", SERBIA: "RS", SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH",
+    TURKEY: "TR", UKRAINE: "UA", UNITED_STATES: "US", UNITED_KINGDOM: "GB", URUGUAY: "UY",
+    WALES: "GB"
+  };
+  const code = countryCodes[String(nationality || "").toUpperCase()];
+
+  if (!code) {
+    return "\uD83C\uDFF3\uFE0F";
+  }
+
+  return code
+    .toUpperCase()
+    .replace(/./g, (character) => String.fromCodePoint(127397 + character.charCodeAt(0)));
+}
+
+function playerPositions(row) {
+  return String(getValue(row, "positions") || "")
+    .split(",")
+    .map((position) => position.trim())
+    .filter(Boolean);
+}
+
+function playerIsGoalkeeper(row) {
+  return playerPositions(row)[0] === "GK";
+}
+
+function statDisplayValue(row, statColumn) {
+  if (statColumn === "overall" && playerIsGoalkeeper(row)) {
+    const goalkeeping = getValue(row, "goalkeeping");
+    if (goalkeeping !== null && goalkeeping !== undefined && goalkeeping !== "") {
+      return goalkeeping;
+    }
+  }
+  return getValue(row, statColumn);
+}
+
+function playerProgressionText(row, statColumn, suffix) {
+  const value = Number(getValue(row, `${statColumn}_${suffix}`) || 0);
+  return `${value > 0 ? "+" : ""}${value}`;
+}
+
+function renderPlayerPage(playerId) {
+  const row = rowByPlayerId(playerId);
+
+  if (!row) {
+    playerDetail.innerHTML = `<div class="emptyState">Player ${escapeHtml(playerId || "")} was not found.</div>`;
+    return;
+  }
+
+  const playerName = formatCellValue(row, "name");
+  const id = formatCellValue(row, "player_id");
+  const nationality = formatCellValue(row, "nationality");
+  const positions = playerPositions(row);
+  const statCards = [...statColumns, "goalkeeping"].filter((column) => state.columns.includes(column)).map((column) => {
+    const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
+    const value = column === "overall" ? statDisplayValue(row, column) : getValue(row, column);
+    return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatPlainValue(value, column))}</strong></div>`;
+  }).join("");
+  const infoCards = [
+    ["ID", id],
+    ["Nationality", `${countryFlag(nationality)} ${nationality}`],
+    ["Age", formatCellValue(row, "age")],
+    ["Height", formatCellValue(row, "height")],
+    ["Foot", formatCellValue(row, "preferred_foot")],
+    ["Seasons", formatCellValue(row, "player_seasons")],
+    ["Agent", formatCellValue(row, "wallet_name")],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+  const positionChips = positions.map((position) => `<span>${escapeHtml(position)}</span>`).join("") || "<span>No positions</span>";
+  const progressCards = statColumns.map((column) => `
+    <div>
+      <span>${escapeHtml(columnLabels[column])}</span>
+      <strong>${escapeHtml(playerProgressionText(row, column, "prog_current_season"))}</strong>
+      <small>Current season</small>
+      <strong>${escapeHtml(playerProgressionText(row, column, "prog_all"))}</strong>
+      <small>All time</small>
+    </div>`).join("");
+
+  playerDetail.innerHTML = `
+    <section class="playerHero">
+      <div>
+        <div class="playerEyebrow">Player ${escapeHtml(id)}</div>
+        <h2>${escapeHtml(playerName)}</h2>
+        <p>${countryFlag(nationality)} ${escapeHtml(nationality)} &middot; ${escapeHtml(positions.join(", ") || "No positions")}</p>
+      </div>
+      <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
+    </section>
+    <section class="playerGrid">
+      <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
+      <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"><div class="pitchBox">${positionChips}</div></div></div>
+      <div class="playerPanel attributesPanel"><h3>Attributes</h3><div class="attributeGrid">${statCards}</div></div>
+      <div class="playerPanel progressionPanel"><h3>Progression</h3><div class="progressionGrid">${progressCards}</div></div>
+    </section>`;
+
+  const watchButton = playerDetail.querySelector("#playerWatchlistButton");
+  const star = createWatchlistStar(id, playerName);
+  watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
+  watchButton.textContent = `${star.textContent} ${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}`;
+  watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
+}
+
+async function openSearch() {
+  if (auth.required && !auth.session) {
+    showLogin();
+    return;
+  }
+
+  const loaded = await ensureProgressionData();
+  if (!loaded) {
+    return;
+  }
+  searchModal.hidden = false;
+  playerSearchInput.value = "";
+  renderSearchResults();
+  window.setTimeout(() => playerSearchInput.focus(), 0);
+}
+
+function closeSearch() {
+  searchModal.hidden = true;
+}
+
+function renderSearchResults() {
+  const query = playerSearchInput.value.trim().toLowerCase();
+  const results = query
+    ? state.rows.filter((row) => {
+      const id = String(getValue(row, "player_id") || "").toLowerCase();
+      const name = String(getValue(row, "name") || "").toLowerCase();
+      return id.includes(query) || name.includes(query);
+    }).slice(0, 12)
+    : [];
+
+  if (!query) {
+    playerSearchResults.innerHTML = '<div class="searchHint">Type a player ID or name.</div>';
+    return;
+  }
+
+  if (!results.length) {
+    playerSearchResults.innerHTML = '<div class="searchHint">No players found.</div>';
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  results.forEach((row) => {
+    const id = String(getValue(row, "player_id"));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "searchResult";
+    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
+    button.addEventListener("click", () => {
+      closeSearch();
+      openPlayerPage(id);
+    });
+    fragment.appendChild(button);
+  });
+  playerSearchResults.replaceChildren(fragment);
 }
 
 function sortableValue(row, column) {
@@ -1665,9 +1916,20 @@ function renderTable() {
       const cell = document.createElement("td");
 
       if (column === "name") {
-        const nameText = document.createElement("span");
-        nameText.textContent = formatCellValue(row, column);
-        cell.appendChild(nameText);
+        const nameWrap = document.createElement("div");
+        const star = createWatchlistStar(playerId, formatCellValue(row, column));
+        const nameLink = document.createElement("a");
+        nameWrap.className = "playerNameCell";
+        nameLink.href = playerRoute(playerId);
+        nameLink.className = "playerNameLink";
+        nameLink.textContent = formatCellValue(row, column);
+        nameLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          openPlayerPage(playerId);
+        });
+        nameWrap.appendChild(star);
+        nameWrap.appendChild(nameLink);
+        cell.appendChild(nameWrap);
 
         appendNameMarker(cell, retirementMarker(row), "retirementMarker");
         appendNameMarker(cell, newMintMarker(row), "newMintMarker");
@@ -1818,7 +2080,12 @@ filtersModal.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !filtersModal.hidden) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    openSearch();
+  } else if (event.key === "Escape" && !searchModal.hidden) {
+    closeSearch();
+  } else if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
@@ -1831,6 +2098,12 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("click", (event) => {
   if (!accountMenu.hidden && !accountMenu.contains(event.target)) {
     closeAccountMenu();
+  }
+});
+
+searchModal.addEventListener("click", (event) => {
+  if (event.target === searchModal) {
+    closeSearch();
   }
 });
 
@@ -1862,6 +2135,16 @@ themeButton.addEventListener("click", () => {
 
 homeLoginButton.addEventListener("click", showLogin);
 menuButton.addEventListener("click", toggleMenu);
+brandLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    setPage("home");
+  });
+});
+openSearchButton.addEventListener("click", openSearch);
+closeSearchButton.addEventListener("click", closeSearch);
+playerSearchInput.addEventListener("input", renderSearchResults);
+backToPlayersButton.addEventListener("click", () => setPage("progression"));
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
@@ -1892,4 +2175,3 @@ async function startApp() {
   }
 }
 startApp();
-

@@ -23,6 +23,10 @@
     {
       "source": "/changelog",
       "destination": "/"
+    },
+    {
+      "source": "/players/:id",
+      "destination": "/"
     }
   ]
 }

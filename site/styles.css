@@ -161,7 +161,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 28px;
+  padding: 18px 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -170,6 +170,15 @@ h1 {
   margin: 0;
   font-size: 28px;
   line-height: 1.1;
+}
+
+.brandLink {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brandLink:hover {
+  color: var(--primary);
 }
 
 p {
@@ -181,6 +190,22 @@ p {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.searchButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.searchButton span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .accountMenu {
@@ -334,7 +359,7 @@ p {
 .appShell {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
-  min-height: calc(100vh - 121px);
+  min-height: calc(100vh - 133px);
   transition: grid-template-columns 180ms ease;
 }
 
@@ -473,7 +498,7 @@ p {
   justify-items: center;
   gap: 10px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 184px);
+  min-height: calc(100vh - 220px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -935,6 +960,43 @@ td a {
   text-decoration: underline;
 }
 
+.playerNameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 132px;
+  vertical-align: middle;
+}
+
+.playerNameLink {
+  color: var(--text);
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerNameLink:hover {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.watchlistStar {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.watchlistStar.active {
+  color: #d69e00;
+}
+
 .progressionValue.positive {
   color: #16803c;
   font-weight: 700;
@@ -1164,3 +1226,190 @@ td a {
   transform: translate(-50%, 0);
 }
 
+
+
+.searchDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(640px, 88vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.searchBody {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.searchResults {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.searchResult {
+  display: grid;
+  gap: 3px;
+  height: auto;
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.searchResult:hover {
+  border-color: var(--primary);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.searchResult span,
+.searchHint {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.playerPage {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.playerDetail {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.playerHero,
+.playerPanel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.playerHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+}
+
+.playerHero h2,
+.playerPanel h3 {
+  margin: 0;
+}
+
+.playerHero p {
+  margin-top: 6px;
+}
+
+.playerEyebrow {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.playerWatchlistButton {
+  min-width: 138px;
+}
+
+.playerWatchlistButton.active {
+  border-color: #d69e00;
+  background: #d69e00;
+}
+
+.playerGrid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 14px;
+}
+
+.playerPanel {
+  padding: 16px;
+}
+
+.detailGrid,
+.attributeGrid,
+.progressionGrid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.detailGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.attributeGrid,
+.progressionGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.detailGrid div,
+.attributeGrid div,
+.progressionGrid div {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.detailGrid span,
+.attributeGrid span,
+.progressionGrid span,
+.progressionGrid small {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pitch {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  margin-top: 12px;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #2d8f57 0 50%, #27824f 50% 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.pitchBox {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 260px;
+}
+
+.pitchBox span {
+  min-width: 42px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #155734;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .playerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .attributeGrid,
+  .progressionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
