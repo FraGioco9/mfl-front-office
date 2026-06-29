@@ -448,27 +448,29 @@ function updateSummaryCounts(playerCount, walletCount) {
 }
 
 async function loadSummary() {
-  try {
-    const response = await fetch("/api/summary", { cache: "no-store" });
+  const sources = [
+    { url: "/summary.json", type: "summary" },
+    { url: "/api/summary", type: "summary" },
+    { url: "/data/manifest.json", type: "manifest" },
+  ];
 
-    if (response.ok) {
-      const summary = await response.json();
-      updateSummaryCounts(summary.playerCount, summary.walletCount);
+  for (const source of sources) {
+    try {
+      const response = await fetch(source.url, { cache: "no-store" });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const data = await response.json();
+      updateSummaryCounts(
+        source.type === "manifest" ? data.row_count : data.playerCount,
+        source.type === "manifest" ? data.wallet_count : data.walletCount,
+      );
       return;
+    } catch {
+      // Try the next public summary source.
     }
-  } catch {
-    // Fall back to the static manifest when running without Vercel functions.
-  }
-
-  try {
-    const response = await fetch("data/manifest.json", { cache: "no-store" });
-
-    if (response.ok) {
-      const manifest = await response.json();
-      updateSummaryCounts(manifest.row_count, manifest.wallet_count);
-    }
-  } catch {
-    // Counts stay blank until the data files are available.
   }
 }
 

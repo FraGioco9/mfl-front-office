@@ -8,7 +8,8 @@ from typing import Any
 
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
-SITE_DATA_PATH = Path(__file__).with_name("site") / "data"
+SITE_PATH = Path(__file__).with_name("site")
+SITE_DATA_PATH = SITE_PATH / "data"
 DEFAULT_CHUNK_SIZE = 10000
 
 PLAYER_COLUMNS = [
@@ -129,6 +130,15 @@ def export_players(chunk_size: int, output_path: Path) -> dict[str, Any]:
     with (output_path / "manifest.json").open("w", encoding="utf-8") as file:
         json.dump(manifest, file, indent=2)
 
+    public_summary = {
+        "playerCount": total_players,
+        "walletCount": total_wallets,
+        "generatedAt": manifest["generated_at"],
+    }
+
+    with (SITE_PATH / "summary.json").open("w", encoding="utf-8") as file:
+        json.dump(public_summary, file, separators=(",", ":"))
+
     return manifest
 
 
@@ -165,3 +175,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
