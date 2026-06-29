@@ -9,6 +9,8 @@ const state = {
   sortDirection: "desc",
   currentPage: "home",
   manifest: null,
+  dataLoaded: false,
+  dataLoadPromise: null,
   menuOpen: true,
 };
 
@@ -319,8 +321,6 @@ async function signIn(event) {
   await loadCloudTableState();
   loginPassword.value = "";
   showAppShell();
-  showLoading();
-  await loadData();
   showHomeShell();
 }
 
@@ -360,7 +360,36 @@ function toggleMenu() {
   updateMenuVisibility();
 }
 
-function setPage(pageName) {
+async function ensureProgressionData() {
+  if (state.dataLoaded) {
+    return true;
+  }
+
+  if (!state.dataLoadPromise) {
+    showLoading();
+    state.dataLoadPromise = loadData()
+      .then((loaded) => {
+        state.dataLoaded = Boolean(loaded);
+        return state.dataLoaded;
+      })
+      .catch(() => false)
+      .finally(() => {
+        state.dataLoadPromise = null;
+      });
+  }
+
+  return state.dataLoadPromise;
+}
+
+async function setPage(pageName) {
+  if (pageName === "progression" && !state.dataLoaded) {
+    const loaded = await ensureProgressionData();
+
+    if (!loaded) {
+      return;
+    }
+  }
+
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = pageName !== "progression";
@@ -1370,7 +1399,9 @@ async function loadData() {
     restoreSavedTableState();
     buildHeader();
     applyFilters();
+    state.dataLoaded = true;
     finishLoading();
+    return true;
   } catch (error) {
     const message = error.message === "Login required."
       ? "Login required."
@@ -1380,6 +1411,8 @@ async function loadData() {
     emptyState.hidden = false;
     emptyState.textContent = message;
     showLoadingError(message);
+
+    return false;
   }
 }
 
@@ -1481,7 +1514,7 @@ homeLoginButton.addEventListener("click", showLogin);
 menuButton.addEventListener("click", toggleMenu);
 
 navButtons.forEach((button) => {
-  button.addEventListener("click", () => setPage(button.dataset.page));
+  button.addEventListener("click", () => { setPage(button.dataset.page); });
 });
 
 loginForm.addEventListener("submit", signIn);
@@ -1497,8 +1530,6 @@ async function startApp() {
 
   if (await setupAuth()) {
     showAppShell();
-    showLoading();
-    await loadData();
     showHomeShell();
   }
 }

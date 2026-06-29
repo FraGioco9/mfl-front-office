@@ -390,15 +390,6 @@ p {
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
-  transform: translateX(-95px);
-}
-
-.appShell.menuClosed .homePage {
-  transform: translateX(-35px);
-}
-
-.menuRail[hidden] + main .homePage {
-  transform: none;
 }
 
 .homeIntro p {
