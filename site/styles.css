@@ -228,9 +228,13 @@ p {
   cursor: pointer;
 }
 
+.accountDropdown #signOutButton {
+  color: #b42318;
+}
+
 .accountDropdown button.accountDropdownItem:hover {
-  background: var(--surface);
-  color: var(--text);
+  background: #b42318;
+  color: #ffffff;
 }
 
 .accountDropdownItem + .accountDropdownItem {
