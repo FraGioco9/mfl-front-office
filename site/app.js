@@ -496,6 +496,7 @@ function buildOperatorSelect(column) {
       [">=", "at least"],
       ["<=", "at most"],
       ["between", "is between"],
+      ["=", "is"],
     ];
   } else {
     operators = [["contains", "contains"]];
