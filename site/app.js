@@ -328,6 +328,30 @@ function retirementMarker(row) {
   return null;
 }
 
+function newMintMarker(row) {
+  if (getValue(row, "player_seasons") !== 1) {
+    return null;
+  }
+
+  return {
+    emoji: "\u{1F195}",
+    label: "New mint",
+  };
+}
+
+function appendNameMarker(cell, marker, className) {
+  if (!marker) {
+    return;
+  }
+
+  const markerElement = document.createElement("span");
+  markerElement.className = className;
+  markerElement.textContent = marker.emoji;
+  markerElement.title = marker.label;
+  markerElement.setAttribute("aria-label", marker.label);
+  cell.appendChild(markerElement);
+}
+
 function sortableValue(row, column) {
   if (column === "overall" && state.view !== "attributes") {
     return [
@@ -843,15 +867,8 @@ function renderTable() {
         nameText.textContent = formatCellValue(row, column);
         cell.appendChild(nameText);
 
-        const marker = retirementMarker(row);
-        if (marker) {
-          const markerElement = document.createElement("span");
-          markerElement.className = "retirementMarker";
-          markerElement.textContent = marker.emoji;
-          markerElement.title = marker.label;
-          markerElement.setAttribute("aria-label", marker.label);
-          cell.appendChild(markerElement);
-        }
+        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
+        appendNameMarker(cell, newMintMarker(row), "newMintMarker");
       } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);
