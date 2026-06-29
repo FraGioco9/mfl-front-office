@@ -19,6 +19,10 @@
     {
       "source": "/watchlist",
       "destination": "/"
+    },
+    {
+      "source": "/changelog",
+      "destination": "/"
     }
   ]
 }

@@ -91,6 +91,7 @@ const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
+const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
 const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
@@ -301,7 +302,7 @@ async function setupAuth() {
   syncHomeLoginButton();
 
   if (!auth.session) {
-    showHomeShell();
+    await showHomeShell(pageFromUrl(), false);
     return false;
   }
 
@@ -439,7 +440,7 @@ function toggleMenu() {
 
 function pageFromUrl() {
   const pageName = window.location.pathname.replace(/^\//, "");
-  return ["home", "progression", "watchlist"].includes(pageName) ? pageName : "home";
+  return ["home", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
 }
 
 async function ensureProgressionData() {
@@ -483,6 +484,7 @@ async function setPage(pageName, updateHash = true) {
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
+  changelogPage.hidden = pageName !== "changelog";
   tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : "Progression";
   if (tablePage) {
     restoreSavedTableState(pageName);
