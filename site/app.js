@@ -31,7 +31,7 @@ const views = {
 
 const columnLabels = {
   player_id: "ID",
-  wallet_name: "Wallet Name",
+  wallet_name: "Agent",
   name: "Name",
   nationality: "Nationality",
   age: "Age",
