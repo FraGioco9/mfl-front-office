@@ -751,6 +751,12 @@ function clearAdvancedFilters() {
   applyFilters();
 }
 
+function applyAdvancedFilters() {
+  state.page = 1;
+  applyFilters();
+  closeFilters();
+}
+
 function readRuleValues(rule) {
   const inputs = Array.from(rule.querySelectorAll("[data-filter-value]"));
 
@@ -1102,14 +1108,13 @@ filtersModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
+  } else if (event.key === "Enter" && !filtersModal.hidden) {
+    event.preventDefault();
+    applyAdvancedFilters();
   }
 });
 
-applyFiltersButton.addEventListener("click", () => {
-  state.page = 1;
-  applyFilters();
-  closeFilters();
-});
+applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
 clearFiltersButton.addEventListener("click", () => {
   clearAdvancedFilters();
