@@ -1548,18 +1548,27 @@ function openSelectedPlayerLinks() {
     return;
   }
 
-  const popUpCheck = window.open("about:blank", "_blank");
+  const playerUrls = Array.from(state.selectedPlayerIds).map((playerId) => {
+    const safePlayerId = encodeURIComponent(playerId);
+    return `https://app.playmfl.com/players/${safePlayerId}`;
+  });
+  const reservedTabs = [];
 
-  if (!popUpCheck) {
-    showToast("Allow pop-ups for this site, then click Open links again.");
-    return;
+  for (const playerUrl of playerUrls) {
+    const reservedTab = window.open("about:blank", "_blank");
+
+    if (!reservedTab) {
+      reservedTabs.forEach((tab) => tab.close());
+      showToast("Allow pop-ups for this site, then click Open links again.");
+      return;
+    }
+
+    reservedTabs.push(reservedTab);
   }
 
-  popUpCheck.close();
-
-  Array.from(state.selectedPlayerIds).forEach((playerId) => {
-    const safePlayerId = encodeURIComponent(playerId);
-    window.open(`https://app.playmfl.com/players/${safePlayerId}`, "_blank", "noopener,noreferrer");
+  reservedTabs.forEach((tab, index) => {
+    tab.opener = null;
+    tab.location.href = playerUrls[index];
   });
 }
 function renderTable() {
@@ -1813,6 +1822,7 @@ async function startApp() {
   }
 }
 startApp();
+
 
 
 
