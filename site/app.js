@@ -790,6 +790,14 @@ function formatCellValue(row, column) {
     return formatStatValue(row, column);
   }
 
+  if (column === agentColumn) {
+    const walletName = getValue(row, agentColumn);
+
+    if (walletName === null || walletName === undefined || walletName === "" || String(walletName).toUpperCase() === "NULL") {
+      return formatPlainValue(getValue(row, "wallet_address"), "wallet_address");
+    }
+  }
+
   return formatPlainValue(getValue(row, column), column);
 }
 
