@@ -47,6 +47,7 @@ const columnLabels = {
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
+const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "nationality", ...statColumns];
 
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
@@ -105,11 +106,31 @@ function formatCount(value) {
 }
 
 function filterLabel(column) {
+  if (column.endsWith("_prog_current_season")) {
+    return `${filterLabel(column.replace("_prog_current_season", ""))} Progression`;
+  }
+
+  if (column.endsWith("_prog_all")) {
+    return `${filterLabel(column.replace("_prog_all", ""))} Progression`;
+  }
+
   return columnLabels[column] || column.replaceAll("_", " ");
 }
 
 function isNumericColumn(column) {
   return numberColumns.has(column) || column.endsWith("_all") || column.endsWith("_current_season");
+}
+
+function availableFilterColumns() {
+  const columns = [...baseFilterColumns];
+
+  if (state.view === "current") {
+    columns.push(...statColumns.map((column) => `${column}_prog_current_season`));
+  } else if (state.view === "all") {
+    columns.push(...statColumns.map((column) => `${column}_prog_all`));
+  }
+
+  return columns.filter((column) => state.columns.includes(column));
 }
 
 function getValue(row, column) {
@@ -309,7 +330,7 @@ function populateAddFilterSelect() {
   placeholder.textContent = "Select filter...";
   fragment.appendChild(placeholder);
 
-  state.columns.forEach((column) => {
+  availableFilterColumns().forEach((column) => {
     const option = document.createElement("option");
     option.value = column;
     option.textContent = filterLabel(column);
@@ -324,12 +345,8 @@ function buildOperatorSelect(column) {
   select.dataset.filterOperator = "true";
   const operators = isNumericColumn(column)
     ? [
-        ["=", "is"],
-        ["!=", "is not"],
-        ["<", "under"],
-        ["<=", "at most"],
-        [">", "over"],
         [">=", "at least"],
+        ["<=", "at most"],
       ]
     : [
         ["contains", "contains"],
@@ -348,6 +365,27 @@ function buildOperatorSelect(column) {
   return select;
 }
 
+function buildColumnSelect(selectedColumn) {
+  const select = document.createElement("select");
+  select.dataset.filterColumnSelect = "true";
+
+  availableFilterColumns().forEach((column) => {
+    const option = document.createElement("option");
+    option.value = column;
+    option.textContent = filterLabel(column);
+    option.selected = column === selectedColumn;
+    select.appendChild(option);
+  });
+
+  return select;
+}
+
+function replaceOperatorSelect(rule, column) {
+  const oldOperator = rule.querySelector("[data-filter-operator]");
+  const newOperator = buildOperatorSelect(column);
+  oldOperator.replaceWith(newOperator);
+}
+
 function addFilterRule(column) {
   const rule = document.createElement("div");
   rule.className = "filterRule";
@@ -358,9 +396,11 @@ function addFilterRule(column) {
   connector.innerHTML = '<option value="and">And</option><option value="or">Or</option>';
   connector.className = "connectorSelect";
 
-  const label = document.createElement("span");
-  label.className = "ruleColumn";
-  label.textContent = filterLabel(column);
+  const columnSelect = buildColumnSelect(column);
+  columnSelect.addEventListener("change", () => {
+    rule.dataset.filterColumn = columnSelect.value;
+    replaceOperatorSelect(rule, columnSelect.value);
+  });
 
   const operator = buildOperatorSelect(column);
 
@@ -381,7 +421,7 @@ function addFilterRule(column) {
   });
 
   rule.appendChild(connector);
-  rule.appendChild(label);
+  rule.appendChild(columnSelect);
   rule.appendChild(operator);
   rule.appendChild(value);
   rule.appendChild(remove);
@@ -398,6 +438,32 @@ function refreshRuleConnectors() {
     connector.disabled = index === 0;
     connector.style.visibility = index === 0 ? "hidden" : "visible";
   });
+}
+
+function removeUnavailableFilterRules() {
+  const allowedColumns = new Set(availableFilterColumns());
+
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    if (!allowedColumns.has(rule.dataset.filterColumn)) {
+      rule.remove();
+    }
+  }
+
+  refreshRuleConnectors();
+}
+
+function refreshRuleColumnSelects() {
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    const oldSelect = rule.querySelector("[data-filter-column-select]");
+    const newSelect = buildColumnSelect(rule.dataset.filterColumn);
+
+    newSelect.addEventListener("change", () => {
+      rule.dataset.filterColumn = newSelect.value;
+      replaceOperatorSelect(rule, newSelect.value);
+    });
+
+    oldSelect.replaceWith(newSelect);
+  }
 }
 
 function openFilters() {
@@ -604,6 +670,9 @@ function downloadCsv() {
 function setView(viewName) {
   state.view = viewName;
   state.page = 1;
+  removeUnavailableFilterRules();
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
 
   viewButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === viewName);

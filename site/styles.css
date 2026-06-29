@@ -306,14 +306,6 @@ button:disabled {
   min-height: 44px;
 }
 
-.ruleColumn {
-  overflow: hidden;
-  color: var(--text);
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .connectorSelect:disabled {
   opacity: 0;
 }
