@@ -6,5 +6,19 @@
     "api/summary.js": {
       "includeFiles": "api/data-files/manifest.json"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/home",
+      "destination": "/"
+    },
+    {
+      "source": "/progression",
+      "destination": "/"
+    },
+    {
+      "source": "/watchlist",
+      "destination": "/"
+    }
+  ]
 }

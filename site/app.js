@@ -368,8 +368,8 @@ function toggleMenu() {
   updateMenuVisibility();
 }
 
-function pageFromHash() {
-  const pageName = window.location.hash.replace(/^#\/?/, "");
+function pageFromUrl() {
+  const pageName = window.location.pathname.replace(/^\//, "");
   return ["home", "progression", "watchlist"].includes(pageName) ? pageName : "home";
 }
 
@@ -427,8 +427,8 @@ async function setPage(pageName, updateHash = true) {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
 
-  if (updateHash && window.location.hash !== `#/${pageName}`) {
-    window.location.hash = `/${pageName}`;
+  if (updateHash && window.location.pathname !== `/${pageName}`) {
+    window.history.pushState({}, "", `/${pageName}`);
   }
 
   if (tablePage && state.rows.length) {
@@ -1731,8 +1731,8 @@ navButtons.forEach((button) => {
   });
 });
 
-window.addEventListener("hashchange", () => {
-  setPage(pageFromHash(), false);
+window.addEventListener("popstate", () => {
+  setPage(pageFromUrl(), false);
 });
 
 loginForm.addEventListener("submit", signIn);
@@ -1749,7 +1749,7 @@ async function startApp() {
   if (await setupAuth()) {
     showAppShell();
     showHomeShell();
-    await setPage(pageFromHash(), false);
+    await setPage(pageFromUrl(), false);
   }
 }
 startApp();
