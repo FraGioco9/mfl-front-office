@@ -1,6 +1,6 @@
-# MFL Progression Database
+# MFL Front Office
 
-Scripts for refreshing MFL wallet, player, and progression data into a local SQLite database.
+Management and scouting tools for MFL, backed by scripts that refresh wallet, player, and progression data into a local SQLite database.
 
 ## Main Command
 
@@ -49,7 +49,7 @@ python update_database.py --seasons no
 - `update_database.py` - main refresh script.
 - `populate_seasons_from_flow.py` - one-time Flow helper for player seasons.
 - `export_for_website.py` - exports the database into static website data files.
-- `site/` - free GitHub Pages table website.
+- `site/` - MFL Front Office table website.
 - `refresh_wallets_only.py` - optional wallet-only refresh helper.
 - `mfl_progression.db` - local database, ignored by Git.
 
@@ -70,7 +70,7 @@ Choose one of the manual workflows:
 
 When a database run finishes, open the finished run and download the `mfl_progression_database` artifact if you want a copy. That download contains `mfl_progression.db`.
 
-The same run also publishes the website. After GitHub Pages is enabled, open:
+The same run also publishes MFL Front Office. After GitHub Pages is enabled, open:
 
 ```text
 https://fragioco9.github.io/mfl-progression/
