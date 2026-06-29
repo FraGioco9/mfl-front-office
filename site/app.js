@@ -1339,6 +1339,14 @@ function renderPlayerAttributePanel(row) {
   }).join("");
 }
 
+async function copyPlayerId(id) {
+  try {
+    await navigator.clipboard.writeText(String(id));
+    showToast(`Player ID ${id} copied.`);
+  } catch {
+    showToast("Could not copy player ID.");
+  }
+}
 function renderPlayerPage(playerId) {
   const row = rowByPlayerId(playerId);
 
@@ -1371,7 +1379,7 @@ function renderPlayerPage(playerId) {
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div>
-        <div class="playerEyebrow playerIdText">ID #${escapeHtml(id)}</div>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button">ID #${escapeHtml(id)}</button>
         <h2>${escapeHtml(playerName)}</h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
@@ -1381,9 +1389,11 @@ function renderPlayerPage(playerId) {
       </div>
     </section>
     <section class="playerGrid">
-      <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
+      <div class="playerStack">
+        <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
+        <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(row)}</div></div>
+      </div>
       <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(row)}</div></div>
-      <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(row)}</div></div>
     </section>`;
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
@@ -1392,6 +1402,7 @@ function renderPlayerPage(playerId) {
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
   playerDetail.querySelector("#openPlayerExternalButton").addEventListener("click", () => window.open(formatCellValue(row, linkColumn), "_blank", "noopener,noreferrer"));
+  playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
       state.playerAttributeView = button.dataset.playerAttributeView;
