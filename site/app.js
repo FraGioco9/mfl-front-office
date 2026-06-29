@@ -194,6 +194,22 @@ function setHomeLoginSigningIn() {
   homeLoginButton.innerHTML = '<span class="buttonGear" aria-hidden="true">&#9881;</span><span class="homeLoginButtonText">Signing in</span>';
 }
 
+function hasSavedSupabaseSession() {
+  try {
+    return Object.keys(localStorage).some((key) => key.startsWith("sb-") && key.endsWith("-auth-token"));
+  } catch {
+    return false;
+  }
+}
+
+function setHomeLoginRestoringIfNeeded() {
+  if (hasSavedSupabaseSession()) {
+    setHomeLoginSigningIn();
+  } else {
+    setHomeLoginReady();
+  }
+}
+
 function setHomeLoginReady() {
   homeLoginButton.hidden = false;
   homeLoginButton.disabled = false;
@@ -255,7 +271,7 @@ function showLoading() {
 }
 
 async function setupAuth() {
-  setHomeLoginSigningIn();
+  setHomeLoginRestoringIfNeeded();
   let configResponse;
 
   try {
@@ -1864,7 +1880,7 @@ signOutButton.addEventListener("click", handleAccountAction);
 
 async function startApp() {
   loadTheme();
-  setHomeLoginSigningIn();
+  setHomeLoginRestoringIfNeeded();
   await loadSummary();
 
   if (await setupAuth()) {
