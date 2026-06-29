@@ -57,6 +57,8 @@ const auth = {
   required: false,
   client: null,
   session: null,
+  savedTableState: null,
+  saveTimer: null,
 };
 
 const loadingScreen = document.querySelector("#loadingScreen");
@@ -207,6 +209,7 @@ async function setupAuth() {
     return false;
   }
 
+  await loadCloudTableState();
   return true;
 }
 
@@ -276,6 +279,7 @@ async function signIn(event) {
   }
 
   auth.session = data.session;
+  await loadCloudTableState();
   loginPassword.value = "";
   showAppShell();
   showLoading();
@@ -314,6 +318,18 @@ function toggleAccountMenu() {
 }
 
 function saveTableState() {
+  const savedState = currentTableState();
+
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
+  } catch {
+    // Filtering still works for this page even if the browser blocks storage.
+  }
+
+  queueCloudTableStateSave(savedState);
+}
+
+function currentTableState() {
   const rules = Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => {
     const values = readRuleValues(rule);
 
@@ -326,7 +342,7 @@ function saveTableState() {
     };
   });
 
-  const savedState = {
+  return {
     hideRetired: hideRetiredInput.checked,
     hideRetiring: hideRetiringInput.checked,
     newMints: newMintsInput.checked,
@@ -336,15 +352,59 @@ function saveTableState() {
     sortDirection: state.sortDirection,
     rules,
   };
+}
 
-  try {
-    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
-  } catch {
-    // Filtering still works for this page even if the browser blocks storage.
+async function loadCloudTableState() {
+  if (!auth.required || !auth.client || !auth.session?.user?.id) {
+    auth.savedTableState = null;
+    return;
+  }
+
+  const { data, error } = await auth.client
+    .from("user_preferences")
+    .select("table_state")
+    .eq("user_id", auth.session.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Could not load Supabase table preferences.", error);
+    auth.savedTableState = null;
+    return;
+  }
+
+  auth.savedTableState = data?.table_state || null;
+}
+
+function queueCloudTableStateSave(savedState) {
+  if (!auth.required || !auth.client || !auth.session?.user?.id) {
+    return;
+  }
+
+  window.clearTimeout(auth.saveTimer);
+  auth.saveTimer = window.setTimeout(() => {
+    saveCloudTableState(savedState);
+  }, 600);
+}
+
+async function saveCloudTableState(savedState) {
+  const { error } = await auth.client
+    .from("user_preferences")
+    .upsert({
+      user_id: auth.session.user.id,
+      table_state: savedState,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.warn("Could not save Supabase table preferences.", error);
   }
 }
 
 function loadSavedTableState() {
+  if (auth.savedTableState) {
+    return auth.savedTableState;
+  }
+
   try {
     return JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
   } catch {

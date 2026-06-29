@@ -185,6 +185,20 @@ In Supabase, create the users who are allowed to access the table:
 Authentication -> Users -> Add user
 ```
 
+To make filters follow the logged-in account across devices, run the SQL in:
+
+```text
+supabase_user_preferences.sql
+```
+
+In Supabase, open:
+
+```text
+SQL Editor -> New query
+```
+
+Paste the SQL from that file and click **Run**.
+
 ### 6. Publish to Vercel
 
 In GitHub Actions, run:
