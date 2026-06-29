@@ -430,6 +430,16 @@ td a {
   text-decoration: underline;
 }
 
+.progressionValue.positive {
+  color: #16803c;
+  font-weight: 700;
+}
+
+.progressionValue.negative {
+  color: #b42318;
+  font-weight: 700;
+}
+
 .retirementMarker {
   display: inline-block;
   margin-left: 7px;

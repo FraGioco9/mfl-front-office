@@ -180,6 +180,33 @@ function formatStatValue(row, statColumn) {
   return `${value} (${sign}${progression})`;
 }
 
+function appendStatValue(cell, row, statColumn) {
+  const value = getValue(row, statColumn);
+  const progressionColumn = getProgressionColumn(statColumn);
+
+  if (value === null || value === undefined || value === "") {
+    cell.textContent = "NULL";
+    return;
+  }
+
+  cell.append(String(value));
+
+  if (!progressionColumn) {
+    return;
+  }
+
+  const progression = Number(getValue(row, progressionColumn) || 0);
+
+  if (progression === 0) {
+    return;
+  }
+
+  const progressionElement = document.createElement("span");
+  progressionElement.className = progression > 0 ? "progressionValue positive" : "progressionValue negative";
+  progressionElement.textContent = ` (${progression > 0 ? "+" : ""}${progression})`;
+  cell.appendChild(progressionElement);
+}
+
 function formatCellValue(row, column) {
   if (column === linkColumn) {
     return `https://app.playmfl.com/players/${getValue(row, "player_id")}`;
@@ -615,6 +642,8 @@ function renderTable() {
         link.rel = "noopener noreferrer";
         link.textContent = "Link";
         cell.appendChild(link);
+      } else if (statColumns.includes(column)) {
+        appendStatValue(cell, row, column);
       } else {
         cell.textContent = formatCellValue(row, column);
       }
