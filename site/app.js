@@ -13,6 +13,8 @@ const state = {
   dataLoadPromise: null,
   selectedPlayerIds: new Set(),
   watchlistPlayerIds: new Set(),
+  tablePageStates: {},
+  toastTimer: null,
   menuOpen: true,
 };
 
@@ -393,6 +395,12 @@ async function ensureProgressionData() {
 }
 
 async function setPage(pageName, updateHash = true) {
+  const previousTablePage = tablePageKey();
+  if (previousTablePage) {
+    state.tablePageStates[previousTablePage] = currentTablePageState();
+    saveTableState();
+  }
+
   const tablePage = pageName === "progression" || pageName === "watchlist";
 
   if (tablePage && !state.dataLoaded) {
@@ -407,6 +415,10 @@ async function setPage(pageName, updateHash = true) {
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
   tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : "Progression";
+  if (tablePage) {
+    restoreSavedTableState(pageName);
+    buildHeader();
+  }
   emptyState.textContent = pageName === "watchlist"
     ? "No players in your watchlist yet."
     : "No players match the current filters.";
@@ -459,9 +471,46 @@ async function loadSummary() {
   }
 }
 
+function tablePageKey(pageName = state.currentPage) {
+  return pageName === "progression" || pageName === "watchlist" ? pageName : null;
+}
 
+function defaultTablePageState() {
+  return {
+    hideRetired: true,
+    hideRetiring: false,
+    newMints: false,
+    pageSize: 100,
+    view: "current",
+    sortKey: "overall",
+    sortDirection: "desc",
+    rules: [],
+    selectedPlayerIds: [],
+  };
+}
+
+function showToast(message) {
+  let toast = document.querySelector("#toastMessage");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toastMessage";
+    toast.className = "toastMessage";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("visible");
+  window.clearTimeout(state.toastTimer);
+  state.toastTimer = window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 2200);
+}
 function saveTableState() {
   const savedState = currentTableState();
+  auth.savedTableState = savedState;
 
   try {
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
@@ -472,7 +521,7 @@ function saveTableState() {
   queueCloudTableStateSave(savedState);
 }
 
-function currentTableState() {
+function currentTablePageState() {
   const rules = Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => {
     const values = readRuleValues(rule);
 
@@ -494,6 +543,19 @@ function currentTableState() {
     sortKey: state.sortKey,
     sortDirection: state.sortDirection,
     rules,
+    selectedPlayerIds: Array.from(state.selectedPlayerIds),
+  };
+}
+
+function currentTableState() {
+  const pageKey = tablePageKey();
+
+  if (pageKey) {
+    state.tablePageStates[pageKey] = currentTablePageState();
+  }
+
+  return {
+    pages: state.tablePageStates,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
   };
 }
@@ -550,13 +612,26 @@ function restoreWatchlistState(savedState) {
   state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
 }
 
+function restoreTablePageStates(savedState) {
+  if (savedState?.pages) {
+    state.tablePageStates = { ...savedState.pages };
+  } else if (savedState) {
+    state.tablePageStates = { progression: { ...savedState } };
+  } else {
+    state.tablePageStates = {};
+  }
+}
+
 function loadSavedTableState() {
   if (auth.savedTableState) {
+    restoreTablePageStates(auth.savedTableState);
+    restoreWatchlistState(auth.savedTableState);
     return auth.savedTableState;
   }
 
   try {
     const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+    restoreTablePageStates(savedState);
     restoreWatchlistState(savedState);
     return savedState;
   } catch {
@@ -1087,12 +1162,11 @@ function refreshRuleColumnSelects() {
   }
 }
 
-function restoreSavedTableState() {
-  const savedState = loadSavedTableState();
-
-  if (!savedState) {
-    return;
-  }
+function restoreSavedTableState(pageName = tablePageKey() || "progression") {
+  const savedRoot = loadSavedTableState();
+  const savedState = savedRoot?.pages?.[pageName]
+    || (pageName === "progression" && !savedRoot?.pages ? savedRoot : null)
+    || defaultTablePageState();
 
   if (savedState.view && views[savedState.view]) {
     state.view = savedState.view;
@@ -1117,6 +1191,7 @@ function restoreSavedTableState() {
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
   newMintsInput.checked = Boolean(savedState.newMints);
+  state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
 
   const allowedColumns = new Set(availableFilterColumns());
   filterRules.replaceChildren();
@@ -1380,6 +1455,7 @@ function setVisiblePlayersSelected(selected) {
   });
 
   renderTable();
+  saveTableState();
 }
 
 function setPlayerSelected(playerId, selected) {
@@ -1392,16 +1468,20 @@ function setPlayerSelected(playerId, selected) {
   }
 
   updateSelectionBar();
+  saveTableState();
 }
 
 function clearSelection() {
   state.selectedPlayerIds.clear();
   renderTable();
   updateSelectionBar();
+  saveTableState();
 }
 
 function addSelectedToWatchlist() {
-  if (!state.selectedPlayerIds.size) {
+  const selectedCount = state.selectedPlayerIds.size;
+
+  if (!selectedCount) {
     return;
   }
 
@@ -1410,12 +1490,16 @@ function addSelectedToWatchlist() {
     state.selectedPlayerIds.clear();
     saveTableState();
     applyFilters();
+    showToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from watchlist.`);
     return;
   }
 
   state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  state.selectedPlayerIds.clear();
   saveTableState();
+  renderTable();
   updateSelectionBar();
+  showToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} added to watchlist.`);
 }
 
 function renderTable() {

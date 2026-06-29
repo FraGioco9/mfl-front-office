@@ -960,3 +960,34 @@ td a {
   font-size: 13px;
 }
 
+
+.toastMessage {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  z-index: 35;
+  padding: 10px 14px;
+  border: 1px solid #7db8de;
+  border-radius: 8px;
+  background: #d9efff;
+  color: #12364f;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 14px 36px rgba(28, 95, 138, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 14px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+:root[data-theme="dark"] .toastMessage {
+  border-color: #5ba7d8;
+  background: #12364f;
+  color: #e8f5ff;
+}
+
+.toastMessage.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
