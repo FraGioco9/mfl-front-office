@@ -179,6 +179,40 @@ p {
   gap: 14px;
 }
 
+.accountMenu {
+  position: relative;
+}
+
+.accountDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 130px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+
+.accountDropdown[hidden],
+.accountMenu[hidden] {
+  display: none;
+}
+
+.accountDropdown button {
+  width: 100%;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.accountDropdown button:hover {
+  color: #ffffff;
+}
+
 .themeButton {
   display: inline-flex;
   align-items: center;

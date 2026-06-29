@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=40">
+    <link rel="stylesheet" href="styles.css?v=41">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -39,7 +39,12 @@
         <p id="statusText">Loading player table...</p>
       </div>
       <div class="headerControls">
-        <button id="signOutButton" class="compactButton" type="button" hidden>Sign Out</button>
+        <div id="accountMenu" class="accountMenu" hidden>
+          <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">Account</button>
+          <div id="accountDropdown" class="accountDropdown" hidden>
+            <button id="signOutButton" type="button">Sign Out</button>
+          </div>
+        </div>
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">🌙</button>
         <div class="stats" aria-label="Database stats">
           <div>
@@ -152,6 +157,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=40"></script>
+    <script src="app.js?v=41"></script>
   </body>
 </html>

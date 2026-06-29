@@ -71,6 +71,9 @@ const loginError = document.querySelector("#loginError");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
+const accountMenu = document.querySelector("#accountMenu");
+const accountButton = document.querySelector("#accountButton");
+const accountDropdown = document.querySelector("#accountDropdown");
 const signOutButton = document.querySelector("#signOutButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
@@ -152,14 +155,15 @@ function showLogin() {
   document.body.classList.add("auth");
   loadingScreen.hidden = true;
   loginScreen.hidden = false;
-  signOutButton.hidden = true;
+  accountMenu.hidden = true;
+  closeAccountMenu();
   loginEmail.focus();
 }
 
 function showAppShell() {
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
-  signOutButton.hidden = !auth.required;
+  accountMenu.hidden = !auth.required;
 }
 
 function showLoading() {
@@ -282,6 +286,24 @@ async function signOut() {
   }
 
   window.location.reload();
+}
+
+function openAccountMenu() {
+  accountDropdown.hidden = false;
+  accountButton.setAttribute("aria-expanded", "true");
+}
+
+function closeAccountMenu() {
+  accountDropdown.hidden = true;
+  accountButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleAccountMenu() {
+  if (accountDropdown.hidden) {
+    openAccountMenu();
+  } else {
+    closeAccountMenu();
+  }
 }
 
 function saveTableState() {
@@ -1259,9 +1281,17 @@ filtersModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
+  } else if (event.key === "Escape" && !accountDropdown.hidden) {
+    closeAccountMenu();
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!accountMenu.hidden && !accountMenu.contains(event.target)) {
+    closeAccountMenu();
   }
 });
 
@@ -1289,6 +1319,10 @@ themeButton.addEventListener("click", () => {
 });
 
 loginForm.addEventListener("submit", signIn);
+accountButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleAccountMenu();
+});
 signOutButton.addEventListener("click", signOut);
 
 async function startApp() {
