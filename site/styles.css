@@ -236,8 +236,17 @@ p {
   color: #b42318;
 }
 
+.accountDropdown #signOutButton.signInAction {
+  color: #16803c;
+}
+
 .accountDropdown button.accountDropdownItem:hover {
   background: #b42318;
+  color: #ffffff;
+}
+
+.accountDropdown button.accountDropdownItem.signInAction:hover {
+  background: #16803c;
   color: #ffffff;
 }
 
@@ -463,7 +472,41 @@ p {
 }
 
 .homeLoginButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: fit-content;
+}
+
+.homeLoginButton.signingIn {
+  border-color: #8bbfdf;
+  background: #bfe2f7;
+  color: #12364f;
+  cursor: wait;
+  opacity: 1;
+}
+
+:root[data-theme="dark"] .homeLoginButton.signingIn {
+  border-color: #4d8db8;
+  background: #245371;
+  color: #e8f5ff;
+}
+
+.buttonGear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 main {
   min-width: 0;

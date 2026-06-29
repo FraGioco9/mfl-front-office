@@ -187,16 +187,30 @@ function updateMenuVisibility() {
   menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
 }
 
+function setHomeLoginSigningIn() {
+  homeLoginButton.hidden = false;
+  homeLoginButton.disabled = true;
+  homeLoginButton.classList.add("signingIn");
+  homeLoginButton.innerHTML = '<span class="buttonGear" aria-hidden="true">&#9881;</span><span class="homeLoginButtonText">Signing in</span>';
+}
+
+function setHomeLoginReady() {
+  homeLoginButton.disabled = false;
+  homeLoginButton.classList.remove("signingIn");
+  homeLoginButton.textContent = "Sign In";
+}
+
 function showHomeShell(pageName = "home", updateUrl = true) {
   document.body.classList.remove("loading", "auth");
   loadingScreen.hidden = true;
   loginScreen.hidden = true;
   updateMenuVisibility();
-  accountMenu.hidden = !auth.required || !auth.session;
+  accountMenu.hidden = !auth.required;
   homeLoginButton.hidden = !auth.required || Boolean(auth.session);
-  if (auth.session) {
-    accountEmail.textContent = accountName();
+  if (auth.required && !auth.session) {
+    setHomeLoginReady();
   }
+  updateAccountState();
   return setPage(pageName, updateUrl);
 }
 
@@ -215,7 +229,7 @@ function showAppShell() {
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
   accountMenu.hidden = !auth.required;
-  accountEmail.textContent = accountName();
+  updateAccountState();
 }
 
 function showLoading() {
@@ -226,6 +240,7 @@ function showLoading() {
 }
 
 async function setupAuth() {
+  setHomeLoginSigningIn();
   let configResponse;
 
   try {
@@ -343,7 +358,25 @@ async function signOut() {
 
 function accountName() {
   const email = auth.session?.user?.email || "";
-  return email.split("@")[0] || "Account";
+  return email.split("@")[0] || "Guest";
+}
+
+function updateAccountState() {
+  const signedIn = Boolean(auth.session);
+  accountEmail.textContent = accountName();
+  signOutButton.textContent = signedIn ? "Sign Out" : "Sign In";
+  signOutButton.classList.toggle("signInAction", !signedIn);
+}
+
+function handleAccountAction() {
+  closeAccountMenu();
+
+  if (auth.session) {
+    signOut();
+    return;
+  }
+
+  showLogin();
 }
 
 function openAccountMenu() {
@@ -1810,10 +1843,11 @@ accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleAccountMenu();
 });
-signOutButton.addEventListener("click", signOut);
+signOutButton.addEventListener("click", handleAccountAction);
 
 async function startApp() {
   loadTheme();
+  setHomeLoginSigningIn();
   await loadSummary();
 
   if (await setupAuth()) {
@@ -1822,13 +1856,4 @@ async function startApp() {
   }
 }
 startApp();
-
-
-
-
-
-
-
-
-
 
