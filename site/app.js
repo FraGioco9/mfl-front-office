@@ -237,7 +237,16 @@ async function fetchDataFile(fileName) {
   }
 
   if (!response.ok) {
-    throw new Error("Protected website data could not be loaded.");
+    let message = "Protected website data could not be loaded.";
+
+    try {
+      const body = await response.json();
+      message = body.error || message;
+    } catch {
+      // Keep the default message if the API did not return JSON.
+    }
+
+    throw new Error(message);
   }
 
   return response.json();
@@ -1182,11 +1191,14 @@ async function loadData() {
     applyFilters();
     finishLoading();
   } catch (error) {
-    statusText.textContent = "No website data found yet. Run the GitHub workflow to publish the table.";
+    const message = error.message === "Login required."
+      ? "Login required."
+      : error.message || "No website data found yet. Run the GitHub workflow to publish the table.";
+    statusText.textContent = message;
     tableBody.replaceChildren();
     emptyState.hidden = false;
-    emptyState.textContent = error.message;
-    showLoadingError("No website data found yet. Run the GitHub workflow to publish the table.");
+    emptyState.textContent = message;
+    showLoadingError(message);
   }
 }
 

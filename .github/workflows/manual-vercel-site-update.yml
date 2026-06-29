@@ -57,6 +57,8 @@ jobs:
           mkdir -p site/api/data-files
           mv site/data/*.json site/api/data-files/
           rmdir site/data
+          test -f site/api/data-files/manifest.json
+          ls site/api/data-files | head
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
