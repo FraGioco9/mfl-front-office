@@ -22,7 +22,8 @@ const state = {
   recentSearchPlayerIds: [],
 };
 
-const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
+const flagColumn = "nationality_flag";
+const baseColumns = ["player_id", flagColumn, "name", "nationality", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
 const agentColumn = "wallet_name";
 const linkColumn = "player_link";
@@ -44,6 +45,7 @@ const views = {
 
 const columnLabels = {
   player_id: "ID",
+  nationality_flag: "",
   wallet_name: "Agent",
   name: "Name",
   nationality: "Nationality",
@@ -64,7 +66,46 @@ const numberColumns = new Set(["player_id", "age", "height", "retirement_years",
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+const DATA_CACHE_NAME = "mfl-front-office-data-v1";
+const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
+const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
+const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
+const POSITION_GROUP_WEIGHTS = {
+  ST: { passing: 10, shooting: 46, defense: 0, dribbling: 29, pace: 10, physical: 5, goalkeeping: 0 },
+  CF: { passing: 24, shooting: 23, defense: 0, dribbling: 40, pace: 13, physical: 0, goalkeeping: 0 },
+  LW: { passing: 24, shooting: 23, defense: 0, dribbling: 40, pace: 13, physical: 0, goalkeeping: 0 },
+  RW: { passing: 24, shooting: 23, defense: 0, dribbling: 40, pace: 13, physical: 0, goalkeeping: 0 },
+  CAM: { passing: 34, shooting: 21, defense: 0, dribbling: 38, pace: 7, physical: 0, goalkeeping: 0 },
+  CM: { passing: 43, shooting: 12, defense: 10, dribbling: 29, pace: 0, physical: 6, goalkeeping: 0 },
+  LM: { passing: 43, shooting: 12, defense: 10, dribbling: 29, pace: 0, physical: 6, goalkeeping: 0 },
+  RM: { passing: 43, shooting: 12, defense: 10, dribbling: 29, pace: 0, physical: 6, goalkeeping: 0 },
+  CDM: { passing: 28, shooting: 0, defense: 40, dribbling: 17, pace: 0, physical: 15, goalkeeping: 0 },
+  LWB: { passing: 19, shooting: 0, defense: 44, dribbling: 17, pace: 10, physical: 10, goalkeeping: 0 },
+  RWB: { passing: 19, shooting: 0, defense: 44, dribbling: 17, pace: 10, physical: 10, goalkeeping: 0 },
+  LB: { passing: 19, shooting: 0, defense: 44, dribbling: 17, pace: 10, physical: 10, goalkeeping: 0 },
+  RB: { passing: 19, shooting: 0, defense: 44, dribbling: 17, pace: 10, physical: 10, goalkeeping: 0 },
+  CB: { passing: 5, shooting: 0, defense: 64, dribbling: 9, pace: 2, physical: 20, goalkeeping: 0 },
+  GK: { passing: 0, shooting: 0, defense: 0, dribbling: 0, pace: 0, physical: 0, goalkeeping: 100 },
+};
+const FAMILIARITY_PENALTIES = { primary: 0, secondary: -1, fair: -5, some: -8 };
+const POSITION_FAMILIARITY = {
+  GK: {},
+  CB: { RB: "some", LB: "some", CDM: "some" },
+  RB: { CB: "some", LB: "some", RWB: "fair", RM: "some" },
+  LB: { CB: "some", RB: "some", LWB: "fair", LM: "some" },
+  RWB: { RB: "fair", RM: "some", RW: "some" },
+  LWB: { LB: "fair", LM: "some", LW: "some" },
+  CDM: { CB: "some", CM: "fair", CAM: "some" },
+  CM: { CDM: "fair", CAM: "fair", RM: "some", LM: "some" },
+  CAM: { CDM: "some", CM: "fair", CF: "fair" },
+  RM: { RB: "some", RWB: "some", CAM: "some", LM: "some", RW: "fair" },
+  LM: { LB: "some", LWB: "some", CAM: "some", RM: "some", LW: "fair" },
+  RW: { RWB: "some", RM: "fair", LW: "some" },
+  LW: { LWB: "some", LM: "fair", RW: "some" },
+  CF: { CAM: "fair", ST: "fair" },
+  ST: { CF: "fair" },
+};
 
 const auth = {
   required: false,
@@ -338,20 +379,56 @@ function authHeaders() {
   };
 }
 
-async function fetchDataFile(fileName) {
-  if (!auth.required) {
-    const response = await fetch(`data/${fileName}`, { cache: "no-store" });
+function dataFileUrl(fileName) {
+  return auth.required ? `/api/data?file=${encodeURIComponent(fileName)}` : `data/${fileName}`;
+}
 
-    if (!response.ok) {
-      throw new Error("No exported data found yet.");
-    }
+function cacheRequestForDataFile(fileName) {
+  return new Request(`/data-cache/${fileName}`);
+}
 
-    return response.json();
+async function readCachedDataFile(fileName) {
+  if (!("caches" in window)) {
+    return null;
   }
 
-  const response = await fetch(`/api/data?file=${encodeURIComponent(fileName)}`, {
-    cache: "no-store",
-    headers: authHeaders(),
+  const cache = await caches.open(DATA_CACHE_NAME);
+  const response = await cache.match(cacheRequestForDataFile(fileName));
+  return response ? response.json() : null;
+}
+
+async function writeCachedDataFile(fileName, data) {
+  if (!("caches" in window)) {
+    return;
+  }
+
+  const cache = await caches.open(DATA_CACHE_NAME);
+  await cache.put(
+    cacheRequestForDataFile(fileName),
+    new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } }),
+  );
+}
+
+async function clearDataCache() {
+  if ("caches" in window) {
+    await caches.delete(DATA_CACHE_NAME);
+  }
+}
+
+async function fetchDataFile(fileName, options = {}) {
+  const { useCache = false, writeCache = false } = options;
+
+  if (useCache) {
+    const cached = await readCachedDataFile(fileName);
+
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const response = await fetch(dataFileUrl(fileName), {
+    cache: fileName === "manifest.json" ? "no-store" : "default",
+    headers: auth.required ? authHeaders() : {},
   });
 
   if (response.status === 401) {
@@ -361,7 +438,7 @@ async function fetchDataFile(fileName) {
   }
 
   if (!response.ok) {
-    let message = "Protected website data could not be loaded.";
+    let message = auth.required ? "Protected website data could not be loaded." : "No exported data found yet.";
 
     try {
       const body = await response.json();
@@ -373,7 +450,13 @@ async function fetchDataFile(fileName) {
     throw new Error(message);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  if (writeCache) {
+    await writeCachedDataFile(fileName, data);
+  }
+
+  return data;
 }
 
 async function signIn(event) {
@@ -877,6 +960,22 @@ function formatFootedness(value) {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
+function formatNationality(value) {
+  const text = formatPlainValue(value, "nationality");
+
+  if (text === "NULL") {
+    return text;
+  }
+
+  return text
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function formatStatValue(row, statColumn) {
   const value = getValue(row, statColumn);
   const progressionColumn = getProgressionColumn(statColumn);
@@ -929,6 +1028,14 @@ function appendStatValue(cell, row, statColumn) {
 function formatCellValue(row, column) {
   if (column === linkColumn) {
     return `https://app.playmfl.com/players/${getValue(row, "player_id")}`;
+  }
+
+  if (column === flagColumn) {
+    return "";
+  }
+
+  if (column === "nationality") {
+    return formatNationality(getValue(row, column));
   }
 
   if (statColumns.includes(column)) {
@@ -1101,6 +1208,58 @@ function rarityColorForOverall(overall) {
   return "#bebebe";
 }
 
+function playerPositionSet(row) {
+  return new Set(playerPositions(row));
+}
+
+function familiarityForPosition(row, position) {
+  const positions = playerPositions(row);
+  const primary = positions[0];
+
+  if (!primary) {
+    return null;
+  }
+
+  if (position === primary) {
+    return "primary";
+  }
+
+  if (positions.includes(position)) {
+    return "secondary";
+  }
+
+  return POSITION_FAMILIARITY[primary]?.[position] || null;
+}
+
+function positionRating(row, position, familiarity) {
+  const weights = POSITION_GROUP_WEIGHTS[position];
+
+  if (!weights || !familiarity) {
+    return null;
+  }
+
+  const penalty = FAMILIARITY_PENALTIES[familiarity] || 0;
+  const weighted = Object.entries(weights).reduce((total, [attribute, weight]) => {
+    const raw = Number(getValue(row, attribute) || 0);
+    return total + ((raw + penalty) * weight) / 100;
+  }, 0);
+  return Math.max(0, Math.round(weighted));
+}
+
+function renderPitch(row) {
+  return PITCH_ROWS.map((pitchRow) => `
+    <div class="pitchRow" style="--pitch-columns: ${pitchRow.length}">
+      ${pitchRow.map((position) => {
+        const familiarity = familiarityForPosition(row, position);
+        const rating = positionRating(row, position, familiarity);
+        const content = familiarity
+          ? `<span class="pitchPositionCircle ${familiarity}" title="${position} ${rating}"><strong>${rating}</strong><small>${position}</small></span>`
+          : `<span class="pitchPositionEmpty"><small>${position}</small></span>`;
+        return `<div class="pitchPositionSlot">${content}</div>`;
+      }).join("")}
+    </div>`).join("");
+}
+
 function playerPositions(row) {
   return String(getValue(row, "positions") || "")
     .split(",")
@@ -1186,18 +1345,18 @@ function renderPlayerPage(playerId) {
   const playerName = formatCellValue(row, "name");
   const id = formatCellValue(row, "player_id");
   const nationality = formatCellValue(row, "nationality");
+  const rawNationality = getValue(row, "nationality");
   const positions = playerPositions(row);
   const height = formatCellValue(row, "height");
   const heightLabel = height === "NULL" ? height : `${height} cm`;
   const infoCards = [
-    ["Nationality", `${countryFlagHtml(nationality)} ${escapeHtml(nationality)}`],
+    ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", escapeHtml(formatCellValue(row, "age"))],
     ["Height", escapeHtml(heightLabel)],
     ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
-  const positionChips = positions.map((position) => `<span>${escapeHtml(position)}</span>`).join("") || "<span>No positions</span>";
   const viewButtons = [
     ["attributes", "Attributes"],
     ["current", "Current Season"],
@@ -1211,11 +1370,14 @@ function renderPlayerPage(playerId) {
         <h2>${escapeHtml(playerName)}</h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
-      <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
+      <div class="playerHeroActions">
+        <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
+        <button id="openPlayerExternalButton" class="playerExternalButton" type="button">Open link</button>
+      </div>
     </section>
     <section class="playerGrid">
       <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
-      <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"><div class="pitchBox">${positionChips}</div></div></div>
+      <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(row)}</div></div>
       <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(row)}</div></div>
     </section>`;
 
@@ -1224,6 +1386,7 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
+  playerDetail.querySelector("#openPlayerExternalButton").addEventListener("click", () => window.open(formatCellValue(row, linkColumn), "_blank", "noopener,noreferrer"));
   playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2110,6 +2273,9 @@ function renderTable() {
 
         appendNameMarker(cell, retirementMarker(row), "retirementMarker");
         appendNameMarker(cell, newMintMarker(row), "newMintMarker");
+      } else if (column === flagColumn) {
+        cell.className = "flagCell";
+        cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);
@@ -2166,6 +2332,16 @@ async function loadData() {
     state.page = 1;
     updateLoadingProgress(0, 0);
     const manifest = await fetchDataFile("manifest.json");
+    const cacheVersion = `${manifest.generated_at || ""}:${manifest.row_count || 0}:${(manifest.chunks || []).map((chunk) => chunk.file).join("|")}`;
+    const cachedVersion = localStorage.getItem(DATA_CACHE_VERSION_KEY);
+    const useCachedChunks = cachedVersion === cacheVersion;
+
+    if (!useCachedChunks) {
+      await clearDataCache();
+      localStorage.setItem(DATA_CACHE_VERSION_KEY, cacheVersion);
+      localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(manifest));
+    }
+
     state.manifest = manifest;
     state.columns = manifest.columns;
     updateSummaryCounts(manifest.row_count, manifest.wallet_count);
@@ -2174,7 +2350,7 @@ async function loadData() {
 
     for (let index = 0; index < manifest.chunks.length; index += 1) {
       const chunkInfo = manifest.chunks[index];
-      const chunk = await fetchDataFile(chunkInfo.file);
+      const chunk = await fetchDataFile(chunkInfo.file, { useCache: useCachedChunks, writeCache: !useCachedChunks });
       state.rows.push(...chunk.rows);
       updateLoadingProgress(index + 1, manifest.chunks.length);
       await paintLoadingProgress();
