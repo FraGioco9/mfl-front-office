@@ -81,6 +81,7 @@ const homeWallets = document.querySelector("#homeWallets");
 const homeLoginButton = document.querySelector("#homeLoginButton");
 const appShell = document.querySelector("#appShell");
 const menuButton = document.querySelector("#menuButton");
+const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
@@ -166,10 +167,12 @@ function finishLoading() {
 }
 
 function updateMenuVisibility() {
-  const loggedIn = Boolean(auth.session);
+  const loggedIn = !auth.required || Boolean(auth.session);
+  menuRail.hidden = !loggedIn;
   menuButton.hidden = !loggedIn;
-  sidebar.hidden = !loggedIn || !state.menuOpen;
+  sidebar.hidden = !loggedIn;
   appShell.classList.toggle("menuClosed", !loggedIn || !state.menuOpen);
+  statusText.hidden = !loggedIn;
   menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
 }
 

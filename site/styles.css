@@ -46,10 +46,12 @@ body {
 
 body.loading .topbar,
 body.loading main,
+body.loading .menuRail,
 body.loading .sidebar,
 body.loading .modalBackdrop,
 body.auth .topbar,
 body.auth main,
+body.auth .menuRail,
 body.auth .sidebar,
 body.auth .modalBackdrop,
 body.auth .loadingScreen {
@@ -244,11 +246,16 @@ p {
 }
 
 .menuButton {
-  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .menuButton[hidden] {
@@ -298,27 +305,53 @@ p {
 
 .appShell {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: 190px minmax(0, 1fr);
   min-height: calc(100vh - 93px);
+  transition: grid-template-columns 180ms ease;
 }
 
 .appShell.menuClosed {
-  grid-template-columns: 1fr;
+  grid-template-columns: 70px minmax(0, 1fr);
 }
 
-.appShell.menuClosed main {
-  grid-column: 1;
-}
-
-.sidebar {
-  width: 190px;
+.menuRail {
+  overflow: hidden;
   padding: 18px 14px;
   border-right: 1px solid var(--border);
   background: var(--surface);
 }
 
+.menuRail[hidden] {
+  display: none;
+}
+
+.appShell.menuClosed .menuButton {
+  width: 42px;
+  padding: 0;
+}
+
+.appShell.menuClosed .menuText {
+  display: none;
+}
+
+.sidebar {
+  width: 162px;
+  margin-top: 12px;
+  max-height: 180px;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease;
+}
+
 .sidebar[hidden] {
   display: none;
+}
+
+.appShell.menuClosed .sidebar {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-12px);
 }
 
 .navButton {
@@ -353,8 +386,9 @@ p {
 }
 
 .homeIntro p {
-  max-width: 620px;
-  font-size: 16px;
+  max-width: 700px;
+  font-size: 24px;
+  line-height: 1.35;
 }
 
 .homeStats {
@@ -390,6 +424,7 @@ p {
   width: fit-content;
 }
 main {
+  min-width: 0;
   padding: 18px 28px 28px;
 }
 

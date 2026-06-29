@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=51">
+    <link rel="stylesheet" href="styles.css?v=52">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -39,7 +39,6 @@
         <p id="statusText">Club management workspace</p>
       </div>
       <div class="headerControls">
-        <button id="menuButton" class="menuButton" type="button" hidden aria-expanded="true" aria-controls="sidebar">&#9776; Menu</button>
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
           <div>
@@ -62,10 +61,13 @@
     </header>
 
     <div id="appShell" class="appShell">
-      <aside id="sidebar" class="sidebar" hidden>
-        <button class="navButton active" type="button" data-page="home">Homepage</button>
-        <button class="navButton" type="button" data-page="progression">Progression</button>
-      </aside>
+      <div id="menuRail" class="menuRail" hidden>
+        <button id="menuButton" class="menuButton" type="button" aria-expanded="true" aria-controls="sidebar"><span class="menuIcon">&#9776;</span><span class="menuText">Menu</span></button>
+        <aside id="sidebar" class="sidebar" hidden>
+          <button class="navButton active" type="button" data-page="home">Homepage</button>
+          <button class="navButton" type="button" data-page="progression">Progression</button>
+        </aside>
+      </div>
 
       <main>
         <section id="homePage" class="pageView homePage">
@@ -187,7 +189,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=51"></script>
+    <script src="app.js?v=52"></script>
   </body>
 </html>
 
