@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=87">
+    <link rel="stylesheet" href="styles.css?v=88">
   </head>
   <body>
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -37,8 +37,8 @@
       <div>
         <h1><a class="brandLink" href="/home" data-page="home">MFL Front Office</a></h1>
       </div>
+      <button id="openSearchButton" class="searchButton" type="button">Search <span>Ctrl K</span></button>
       <div class="headerControls">
-        <button id="openSearchButton" class="searchButton" type="button">Search <span>Ctrl K</span></button>
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
           <div>
@@ -183,6 +183,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v88</span><p>Refine player pages and search</p></li>
               <li><span>v87</span><p>Add player pages and global search</p></li>
               <li><span>v86</span><p>Move update date to footer</p></li>
               <li><span>v85</span><p>Add changelog page</p></li>
@@ -287,7 +288,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v87</a>
+      <a href="/changelog">MFL Front Office v88</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -330,6 +331,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=87"></script>
+    <script src="app.js?v=88"></script>
   </body>
 </html>

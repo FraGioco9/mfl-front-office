@@ -157,11 +157,11 @@ select {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
-  padding: 18px 28px;
+  padding: 14px 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -189,6 +189,7 @@ p {
 .headerControls {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 14px;
 }
 
@@ -359,7 +360,7 @@ p {
 .appShell {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
-  min-height: calc(100vh - 133px);
+  min-height: calc(100vh - 126px);
   transition: grid-template-columns 180ms ease;
 }
 
@@ -498,7 +499,7 @@ p {
   justify-items: center;
   gap: 10px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 220px);
+  min-height: calc(100vh - 245px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -609,7 +610,7 @@ p {
 }
 main {
   min-width: 0;
-  padding: 18px 28px 28px;
+  padding: 12px 28px 18px;
 }
 
 .views {
@@ -963,9 +964,8 @@ td a {
 .playerNameCell {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   min-width: 0;
-  max-width: 132px;
+  max-width: 150px;
   vertical-align: middle;
 }
 
@@ -1038,15 +1038,18 @@ td a {
 
 @media (max-width: 760px) {
   .topbar {
+    grid-template-columns: 1fr;
     align-items: stretch;
-    flex-direction: column;
-    padding: 20px;
+    padding: 16px;
   }
 
   .headerControls {
     align-items: center;
-    flex-direction: row;
     justify-content: space-between;
+  }
+
+  .searchButton {
+    justify-content: center;
   }
 
   .stats {
@@ -1277,13 +1280,14 @@ td a {
 
 .playerPage {
   max-width: 1120px;
+  min-height: calc(100vh - 190px);
   margin: 0 auto;
 }
 
 .playerDetail {
   display: grid;
-  gap: 14px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .playerHero,
@@ -1298,7 +1302,7 @@ td a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px;
+  padding: 12px 14px;
 }
 
 .playerHero h2,
@@ -1307,7 +1311,7 @@ td a {
 }
 
 .playerHero p {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .playerEyebrow {
@@ -1326,48 +1330,110 @@ td a {
   background: #d69e00;
 }
 
+.playerIdButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.playerIdButton:hover {
+  text-decoration: underline;
+}
+
+.flagText {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
+  font-weight: 400;
+}
+
+.playerPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.playerAttributeViews {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.playerAttributeViewButton {
+  height: 30px;
+  padding: 0 10px;
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.playerAttributeViewButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.playerAttributeCard strong {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.playerAttributeCard.featured {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+.playerAttributeCard.featured strong {
+  color: var(--primary);
+  font-size: 28px;
+}
+
+.attributesPanel {
+  grid-column: 1 / -1;
+}
+
 .playerGrid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
-  gap: 14px;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 1.2fr);
+  gap: 10px;
 }
 
 .playerPanel {
-  padding: 16px;
+  padding: 12px;
 }
 
 .detailGrid,
-.attributeGrid,
-.progressionGrid {
+.attributeGrid {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .detailGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.attributeGrid,
-.progressionGrid {
+.attributeGrid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .detailGrid div,
-.attributeGrid div,
-.progressionGrid div {
+.playerAttributeCard {
   display: grid;
   gap: 2px;
-  padding: 10px;
+  min-height: 54px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
 }
 
 .detailGrid span,
-.attributeGrid span,
-.progressionGrid span,
-.progressionGrid small {
+.playerAttributeCard span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 700;
@@ -1377,7 +1443,7 @@ td a {
 .pitch {
   display: grid;
   place-items: center;
-  min-height: 280px;
+  min-height: 180px;
   margin-top: 12px;
   border: 2px solid #ffffff;
   border-radius: 8px;
@@ -1408,8 +1474,7 @@ td a {
     grid-template-columns: 1fr;
   }
 
-  .attributeGrid,
-  .progressionGrid {
+  .attributeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

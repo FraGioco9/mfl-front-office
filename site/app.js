@@ -16,6 +16,7 @@ const state = {
   tablePageStates: {},
   toastTimer: null,
   menuOpen: true,
+  playerAttributeView: "attributes",
 };
 
 const baseColumns = ["player_id", "name", "nationality", "age", "positions", "player_seasons"];
@@ -1023,7 +1024,11 @@ function countryFlag(nationality) {
     TURKEY: "TR", UKRAINE: "UA", UNITED_STATES: "US", UNITED_KINGDOM: "GB", URUGUAY: "UY",
     WALES: "GB"
   };
-  const code = countryCodes[String(nationality || "").toUpperCase()];
+  const countryKey = String(nationality || "")
+    .toUpperCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
+  const code = countryCodes[countryKey];
 
   if (!code) {
     return "\uD83C\uDFF3\uFE0F";
@@ -1055,9 +1060,55 @@ function statDisplayValue(row, statColumn) {
   return getValue(row, statColumn);
 }
 
-function playerProgressionText(row, statColumn, suffix) {
-  const value = Number(getValue(row, `${statColumn}_${suffix}`) || 0);
-  return `${value > 0 ? "+" : ""}${value}`;
+function progressionValue(row, statColumn, suffix) {
+  return Number(getValue(row, `${statColumn}_${suffix}`) || 0);
+}
+
+function playerAttributeColumns(row) {
+  if (playerIsGoalkeeper(row)) {
+    return ["overall", "goalkeeping"].filter((column) => column === "overall" || state.columns.includes(column));
+  }
+
+  return statColumns;
+}
+
+function playerAttributeValueHtml(row, column, viewName) {
+  const value = column === "overall" ? statDisplayValue(row, column) : getValue(row, column);
+  const formattedValue = escapeHtml(formatPlainValue(value, column));
+
+  if (viewName === "attributes") {
+    return formattedValue;
+  }
+
+  const suffix = viewName === "current" ? "prog_current_season" : "prog_all";
+  const progression = progressionValue(row, column, suffix);
+
+  if (progression === 0) {
+    return formattedValue;
+  }
+
+  const className = progression > 0 ? "positive" : "negative";
+  return `${formattedValue} <span class="progressionValue ${className}">(${progression > 0 ? "+" : ""}${progression})</span>`;
+}
+
+function renderPlayerAttributePanel(row) {
+  const columns = playerAttributeColumns(row);
+  const viewName = state.playerAttributeView;
+
+  return columns.map((column) => {
+    const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
+    const featured = column === "overall" ? " featured" : "";
+    return `<div class="playerAttributeCard${featured}"><span>${escapeHtml(label)}</span><strong>${playerAttributeValueHtml(row, column, viewName)}</strong></div>`;
+  }).join("");
+}
+
+async function copyPlayerId(id) {
+  try {
+    await navigator.clipboard.writeText(String(id));
+    showToast(`Player ID ${id} copied.`);
+  } catch {
+    showToast("Could not copy player ID.");
+  }
 }
 
 function renderPlayerPage(playerId) {
@@ -1072,44 +1123,36 @@ function renderPlayerPage(playerId) {
   const id = formatCellValue(row, "player_id");
   const nationality = formatCellValue(row, "nationality");
   const positions = playerPositions(row);
-  const statCards = [...statColumns, "goalkeeping"].filter((column) => state.columns.includes(column)).map((column) => {
-    const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
-    const value = column === "overall" ? statDisplayValue(row, column) : getValue(row, column);
-    return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatPlainValue(value, column))}</strong></div>`;
-  }).join("");
+  const height = formatCellValue(row, "height");
+  const heightLabel = height === "NULL" ? height : `${height} cm`;
   const infoCards = [
-    ["ID", id],
-    ["Nationality", `${countryFlag(nationality)} ${nationality}`],
-    ["Age", formatCellValue(row, "age")],
-    ["Height", formatCellValue(row, "height")],
-    ["Foot", formatCellValue(row, "preferred_foot")],
-    ["Seasons", formatCellValue(row, "player_seasons")],
-    ["Agent", formatCellValue(row, "wallet_name")],
-  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+    ["Nationality", `<span class="flagText">${countryFlag(nationality)}</span> ${escapeHtml(nationality)}`],
+    ["Age", escapeHtml(formatCellValue(row, "age"))],
+    ["Height", escapeHtml(heightLabel)],
+    ["Foot", escapeHtml(formatCellValue(row, "preferred_foot"))],
+    ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
+    ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   const positionChips = positions.map((position) => `<span>${escapeHtml(position)}</span>`).join("") || "<span>No positions</span>";
-  const progressCards = statColumns.map((column) => `
-    <div>
-      <span>${escapeHtml(columnLabels[column])}</span>
-      <strong>${escapeHtml(playerProgressionText(row, column, "prog_current_season"))}</strong>
-      <small>Current season</small>
-      <strong>${escapeHtml(playerProgressionText(row, column, "prog_all"))}</strong>
-      <small>All time</small>
-    </div>`).join("");
+  const viewButtons = [
+    ["attributes", "Attributes"],
+    ["current", "Current Season"],
+    ["all", "All Time"],
+  ].map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`).join("");
 
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div>
-        <div class="playerEyebrow">Player ${escapeHtml(id)}</div>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdButton" type="button">ID #${escapeHtml(id)}</button>
         <h2>${escapeHtml(playerName)}</h2>
-        <p>${countryFlag(nationality)} ${escapeHtml(nationality)} &middot; ${escapeHtml(positions.join(", ") || "No positions")}</p>
+        <p><span class="flagText">${countryFlag(nationality)}</span> ${escapeHtml(nationality)} &middot; ${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
     </section>
     <section class="playerGrid">
       <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
       <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"><div class="pitchBox">${positionChips}</div></div></div>
-      <div class="playerPanel attributesPanel"><h3>Attributes</h3><div class="attributeGrid">${statCards}</div></div>
-      <div class="playerPanel progressionPanel"><h3>Progression</h3><div class="progressionGrid">${progressCards}</div></div>
+      <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(row)}</div></div>
     </section>`;
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
@@ -1117,6 +1160,13 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.textContent = `${star.textContent} ${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
+  playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
+  playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.playerAttributeView = button.dataset.playerAttributeView;
+      renderPlayerPage(id);
+    });
+  });
 }
 
 async function openSearch() {
@@ -1146,7 +1196,7 @@ function renderSearchResults() {
       const id = String(getValue(row, "player_id") || "").toLowerCase();
       const name = String(getValue(row, "name") || "").toLowerCase();
       return id.includes(query) || name.includes(query);
-    }).slice(0, 12)
+    }).sort((a, b) => Number(statDisplayValue(b, "overall") || 0) - Number(statDisplayValue(a, "overall") || 0)).slice(0, 12)
     : [];
 
   if (!query) {
@@ -1165,7 +1215,8 @@ function renderSearchResults() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "searchResult";
-    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
+    const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
+    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; ${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
       closeSearch();
       openPlayerPage(id);
@@ -1917,7 +1968,6 @@ function renderTable() {
 
       if (column === "name") {
         const nameWrap = document.createElement("div");
-        const star = createWatchlistStar(playerId, formatCellValue(row, column));
         const nameLink = document.createElement("a");
         nameWrap.className = "playerNameCell";
         nameLink.href = playerRoute(playerId);
@@ -1927,7 +1977,6 @@ function renderTable() {
           event.preventDefault();
           openPlayerPage(playerId);
         });
-        nameWrap.appendChild(star);
         nameWrap.appendChild(nameLink);
         cell.appendChild(nameWrap);
 
