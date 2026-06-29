@@ -156,6 +156,44 @@ function isNumericColumn(column) {
   return numberColumns.has(column) || column.endsWith("_all") || column.endsWith("_current_season");
 }
 
+function uniqueColumnValues(column) {
+  const values = new Set();
+  const columnIndex = state.columns.indexOf(column);
+
+  if (columnIndex < 0) {
+    return [];
+  }
+
+  state.rows.forEach((row) => {
+    const value = row[columnIndex];
+
+    if (value !== null && value !== undefined && value !== "") {
+      values.add(String(value));
+    }
+  });
+
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function uniquePositions() {
+  const values = new Set();
+  const positionsIndex = state.columns.indexOf("positions");
+
+  if (positionsIndex < 0) {
+    return [];
+  }
+
+  state.rows.forEach((row) => {
+    String(row[positionsIndex] || "")
+      .split(",")
+      .map((position) => position.trim())
+      .filter(Boolean)
+      .forEach((position) => values.add(position));
+  });
+
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
 function availableFilterColumns() {
   const columns = [...baseFilterColumns];
 
@@ -393,17 +431,28 @@ function populateAddFilterSelect() {
 function buildOperatorSelect(column) {
   const select = document.createElement("select");
   select.dataset.filterOperator = "true";
-  const operators = isNumericColumn(column)
-    ? [
-        [">=", "at least"],
-        ["<=", "at most"],
-      ]
-    : [
-        ["contains", "contains"],
-        ["not_contains", "does not contain"],
-        ["=", "is"],
-        ["!=", "is not"],
-      ];
+  let operators;
+
+  if (column === "positions") {
+    operators = [
+      ["primary_is", "primary is"],
+      ["can_play", "can play"],
+    ];
+  } else if (column === "nationality") {
+    operators = [["=", "is"]];
+    select.hidden = true;
+  } else if (column === "name" || column === "wallet_name") {
+    operators = [["contains", "contains"]];
+    select.hidden = true;
+  } else if (isNumericColumn(column)) {
+    operators = [
+      [">=", "at least"],
+      ["<=", "at most"],
+    ];
+  } else {
+    operators = [["contains", "contains"]];
+    select.hidden = true;
+  }
 
   operators.forEach(([value, label]) => {
     const option = document.createElement("option");
@@ -413,6 +462,35 @@ function buildOperatorSelect(column) {
   });
 
   return select;
+}
+
+function buildValueControl(column, savedValue = "") {
+  if (column === "nationality" || column === "positions") {
+    const select = document.createElement("select");
+    select.dataset.filterValue = "true";
+    const values = column === "nationality" ? uniqueColumnValues("nationality") : uniquePositions();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select...";
+    select.appendChild(placeholder);
+
+    values.forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      option.selected = value === savedValue;
+      select.appendChild(option);
+    });
+
+    return select;
+  }
+
+  const input = document.createElement("input");
+  input.type = isNumericColumn(column) ? "number" : "search";
+  input.placeholder = "Value";
+  input.dataset.filterValue = "true";
+  input.value = savedValue;
+  return input;
 }
 
 function buildColumnSelect(selectedColumn) {
@@ -436,6 +514,12 @@ function replaceOperatorSelect(rule, column) {
   oldOperator.replaceWith(newOperator);
 }
 
+function replaceValueControl(rule, column, savedValue = "") {
+  const oldValue = rule.querySelector("[data-filter-value]");
+  const newValue = buildValueControl(column, savedValue);
+  oldValue.replaceWith(newValue);
+}
+
 function addFilterRule(column, options = {}) {
   const rule = document.createElement("div");
   rule.className = "filterRule";
@@ -451,6 +535,7 @@ function addFilterRule(column, options = {}) {
   columnSelect.addEventListener("change", () => {
     rule.dataset.filterColumn = columnSelect.value;
     replaceOperatorSelect(rule, columnSelect.value);
+    replaceValueControl(rule, columnSelect.value);
   });
 
   const operator = buildOperatorSelect(column);
@@ -458,11 +543,7 @@ function addFilterRule(column, options = {}) {
     operator.value = options.operator;
   }
 
-  const value = document.createElement("input");
-  value.type = "search";
-  value.placeholder = "Value";
-  value.dataset.filterValue = "true";
-  value.value = options.value || "";
+  const value = buildValueControl(column, options.value || "");
 
   const remove = document.createElement("button");
   remove.type = "button";
@@ -518,6 +599,7 @@ function refreshRuleColumnSelects() {
     newSelect.addEventListener("change", () => {
       rule.dataset.filterColumn = newSelect.value;
       replaceOperatorSelect(rule, newSelect.value);
+      replaceValueControl(rule, newSelect.value);
     });
 
     oldSelect.replaceWith(newSelect);
@@ -598,6 +680,29 @@ function readFilterRules() {
 function ruleMatches(row, rule) {
   const rawValue = getValue(row, rule.column);
   const filterValue = rule.value;
+
+  if (rule.column === "positions") {
+    const positions = String(rawValue || "")
+      .split(",")
+      .map((position) => position.trim())
+      .filter(Boolean);
+
+    if (rule.operator === "primary_is") {
+      return positions[0] === filterValue;
+    }
+
+    if (rule.operator === "can_play") {
+      return positions.includes(filterValue);
+    }
+  }
+
+  if (rule.column === "nationality") {
+    return String(rawValue ?? "") === filterValue;
+  }
+
+  if (rule.column === "name" || rule.column === "wallet_name") {
+    return String(rawValue ?? "").toLowerCase().includes(filterValue.toLowerCase());
+  }
 
   if (isNumericColumn(rule.column)) {
     const rowNumber = Number(rawValue);

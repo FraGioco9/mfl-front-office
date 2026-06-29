@@ -305,10 +305,15 @@ button:disabled {
 
 .filterRule {
   display: grid;
-  grid-template-columns: 88px minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 1.2fr) 40px;
+  grid-template-columns: 88px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
   gap: 10px;
   align-items: center;
   min-height: 44px;
+}
+
+.filterRule select[hidden] {
+  display: block;
+  visibility: hidden;
 }
 
 .connectorSelect:disabled {
