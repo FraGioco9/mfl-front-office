@@ -4,9 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=27">
+    <link rel="stylesheet" href="styles.css?v=29">
   </head>
-  <body>
+  <body class="loading">
+    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
+      <div class="loadingBox">
+        <div id="loadingText" class="loadingText">Preparing data...</div>
+        <div class="loadingBar" aria-hidden="true">
+          <div id="loadingBarFill" class="loadingBarFill"></div>
+        </div>
+      </div>
+    </div>
+
     <header class="topbar">
       <div>
         <h1>MFL Progression</h1>
@@ -51,6 +60,7 @@
 
       <section class="controlsBar" aria-label="Table controls">
         <button id="openFiltersButton" class="compactButton" type="button">🔎 Filters</button>
+        <button id="quickClearFiltersButton" class="compactButton" type="button">&#10006; Clear</button>
         <span id="filterSummary">0 active</span>
         <button id="downloadButton" class="compactButton" type="button">💾 Download CSV</button>
         <label class="field compact">
@@ -122,6 +132,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=29"></script>
   </body>
 </html>

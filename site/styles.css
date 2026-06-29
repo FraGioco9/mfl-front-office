@@ -44,6 +44,57 @@ body {
   color: var(--text);
 }
 
+body.loading .topbar,
+body.loading main,
+body.loading .modalBackdrop {
+  display: none;
+}
+
+.loadingScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--page-bg);
+}
+
+.loadingScreen[hidden] {
+  display: none;
+}
+
+.loadingBox {
+  width: min(420px, 100%);
+}
+
+.loadingText {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.loadingBar {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.loadingBarFill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.loadingScreen.failed .loadingBarFill {
+  background: #b42318;
+}
+
 button,
 input,
 select {
@@ -163,7 +214,7 @@ main {
 
 .controlsBar {
   display: grid;
-  grid-template-columns: max-content auto max-content 120px;
+  grid-template-columns: max-content max-content auto max-content 120px;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;

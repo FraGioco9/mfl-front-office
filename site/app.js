@@ -48,15 +48,19 @@ const columnLabels = {
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
-const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "nationality", ...statColumns];
+const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 
+const loadingScreen = document.querySelector("#loadingScreen");
+const loadingText = document.querySelector("#loadingText");
+const loadingBarFill = document.querySelector("#loadingBarFill");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
+const quickClearFiltersButton = document.querySelector("#quickClearFiltersButton");
 const filterSummary = document.querySelector("#filterSummary");
 const filtersModal = document.querySelector("#filtersModal");
 const closeFiltersButton = document.querySelector("#closeFiltersButton");
@@ -102,6 +106,31 @@ function loadTheme() {
 
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
+}
+
+function updateLoadingProgress(loadedFiles, totalFiles) {
+  const percent = totalFiles > 0 ? Math.round((loadedFiles / totalFiles) * 100) : 0;
+  loadingBarFill.style.width = `${percent}%`;
+  loadingText.textContent = totalFiles > 0
+    ? `Loading data files ${loadedFiles}/${totalFiles}`
+    : "Preparing data...";
+}
+
+function paintLoadingProgress() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(resolve);
+  });
+}
+
+function showLoadingError(message) {
+  loadingBarFill.style.width = "100%";
+  loadingScreen.classList.add("failed");
+  loadingText.textContent = message;
+}
+
+function finishLoading() {
+  document.body.classList.remove("loading");
+  loadingScreen.hidden = true;
 }
 
 function saveTableState() {
@@ -653,6 +682,12 @@ function closeFilters() {
   openFiltersButton.focus();
 }
 
+function clearAdvancedFilters() {
+  filterRules.replaceChildren();
+  state.page = 1;
+  applyFilters();
+}
+
 function readFilterRules() {
   return Array.from(filterRules.querySelectorAll(".filterRule"))
     .map((rule, index) => ({
@@ -883,6 +918,7 @@ function setView(viewName) {
 
 async function loadData() {
   try {
+    updateLoadingProgress(0, 0);
     const manifestResponse = await fetch("data/manifest.json", { cache: "no-store" });
 
     if (!manifestResponse.ok) {
@@ -892,13 +928,16 @@ async function loadData() {
     const manifest = await manifestResponse.json();
     state.columns = manifest.columns;
     totalPlayers.textContent = formatCount(manifest.row_count);
+    updateLoadingProgress(0, manifest.chunks.length);
+    await paintLoadingProgress();
 
     for (let index = 0; index < manifest.chunks.length; index += 1) {
       const chunkInfo = manifest.chunks[index];
-      statusText.textContent = `Loading ${index + 1}/${manifest.chunks.length} data files...`;
       const response = await fetch(`data/${chunkInfo.file}`);
       const chunk = await response.json();
       state.rows.push(...chunk.rows);
+      updateLoadingProgress(index + 1, manifest.chunks.length);
+      await paintLoadingProgress();
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
@@ -906,11 +945,13 @@ async function loadData() {
     restoreSavedTableState();
     buildHeader();
     applyFilters();
+    finishLoading();
   } catch (error) {
     statusText.textContent = "No website data found yet. Run the GitHub workflow to publish the table.";
     tableBody.replaceChildren();
     emptyState.hidden = false;
     emptyState.textContent = error.message;
+    showLoadingError("No website data found yet. Run the GitHub workflow to publish the table.");
   }
 }
 
@@ -940,6 +981,7 @@ newMintsInput.addEventListener("change", () => {
 });
 
 openFiltersButton.addEventListener("click", openFilters);
+quickClearFiltersButton.addEventListener("click", clearAdvancedFilters);
 closeFiltersButton.addEventListener("click", closeFilters);
 
 showAddFilterButton.addEventListener("click", () => {
@@ -980,10 +1022,7 @@ applyFiltersButton.addEventListener("click", () => {
 });
 
 clearFiltersButton.addEventListener("click", () => {
-  filterRules.replaceChildren();
-
-  state.page = 1;
-  applyFilters();
+  clearAdvancedFilters();
 });
 
 downloadButton.addEventListener("click", downloadCsv);
