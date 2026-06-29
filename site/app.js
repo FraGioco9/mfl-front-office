@@ -12,6 +12,7 @@ const state = {
   dataLoaded: false,
   dataLoadPromise: null,
   selectedPlayerIds: new Set(),
+  watchlistPlayerIds: new Set(),
   menuOpen: true,
 };
 
@@ -116,6 +117,7 @@ const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
+const tablePageTitle = document.querySelector("#tablePageTitle");
 const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
@@ -364,6 +366,11 @@ function toggleMenu() {
   updateMenuVisibility();
 }
 
+function pageFromHash() {
+  const pageName = window.location.hash.replace(/^#\/?/, "");
+  return ["home", "progression", "watchlist"].includes(pageName) ? pageName : "home";
+}
+
 async function ensureProgressionData() {
   if (state.dataLoaded) {
     return true;
@@ -385,8 +392,10 @@ async function ensureProgressionData() {
   return state.dataLoadPromise;
 }
 
-async function setPage(pageName) {
-  if (pageName === "progression" && !state.dataLoaded) {
+async function setPage(pageName, updateHash = true) {
+  const tablePage = pageName === "progression" || pageName === "watchlist";
+
+  if (tablePage && !state.dataLoaded) {
     const loaded = await ensureProgressionData();
 
     if (!loaded) {
@@ -396,14 +405,23 @@ async function setPage(pageName) {
 
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
-  progressionPage.hidden = pageName !== "progression";
+  progressionPage.hidden = !tablePage;
+  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : "Progression";
+  emptyState.textContent = pageName === "watchlist"
+    ? "No players in your watchlist yet."
+    : "No players match the current filters.";
 
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
 
-  if (pageName === "progression" && state.rows.length) {
-    renderTable();
+  if (updateHash && window.location.hash !== `#/${pageName}`) {
+    window.location.hash = `/${pageName}`;
+  }
+
+  if (tablePage && state.rows.length) {
+    state.page = 1;
+    applyFilters();
   }
 }
 
@@ -476,6 +494,7 @@ function currentTableState() {
     sortKey: state.sortKey,
     sortDirection: state.sortDirection,
     rules,
+    watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
   };
 }
 
@@ -498,6 +517,7 @@ async function loadCloudTableState() {
   }
 
   auth.savedTableState = data?.table_state || null;
+  restoreWatchlistState(auth.savedTableState);
 }
 
 function queueCloudTableStateSave(savedState) {
@@ -525,13 +545,20 @@ async function saveCloudTableState(savedState) {
   }
 }
 
+function restoreWatchlistState(savedState) {
+  const ids = Array.isArray(savedState?.watchlistPlayerIds) ? savedState.watchlistPlayerIds : [];
+  state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
+}
+
 function loadSavedTableState() {
   if (auth.savedTableState) {
     return auth.savedTableState;
   }
 
   try {
-    return JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+    const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+    restoreWatchlistState(savedState);
+    return savedState;
   } catch {
     return null;
   }
@@ -1270,7 +1297,15 @@ function applyFilters() {
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
-  state.filteredRows = state.rows.filter((row) => {
+  const sourceRows = state.currentPage === "watchlist"
+    ? state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))))
+    : state.rows;
+
+  emptyState.textContent = state.currentPage === "watchlist"
+    ? (sourceRows.length ? "No watchlist players match the current filters." : "No players in your watchlist yet.")
+    : "No players match the current filters.";
+
+  state.filteredRows = sourceRows.filter((row) => {
     if (hideRetiredInput.checked && row[retirementIndex] === 0) {
       return false;
     }
@@ -1325,14 +1360,11 @@ function addSelectedToWatchlist() {
     return;
   }
 
-  try {
-    const savedIds = JSON.parse(localStorage.getItem("mfl-watchlist-player-ids") || "[]");
-    const watchlistIds = new Set(savedIds.map((playerId) => String(playerId)));
+  state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  saveTableState();
 
-    state.selectedPlayerIds.forEach((playerId) => watchlistIds.add(playerId));
-    localStorage.setItem("mfl-watchlist-player-ids", JSON.stringify(Array.from(watchlistIds)));
-  } catch {
-    // The visible selection still works if browser storage is unavailable.
+  if (state.currentPage === "watchlist") {
+    applyFilters();
   }
 }
 
@@ -1560,7 +1592,14 @@ homeLoginButton.addEventListener("click", showLogin);
 menuButton.addEventListener("click", toggleMenu);
 
 navButtons.forEach((button) => {
-  button.addEventListener("click", () => { setPage(button.dataset.page); });
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    setPage(button.dataset.page);
+  });
+});
+
+window.addEventListener("hashchange", () => {
+  setPage(pageFromHash(), false);
 });
 
 loginForm.addEventListener("submit", signIn);
@@ -1577,6 +1616,7 @@ async function startApp() {
   if (await setupAuth()) {
     showAppShell();
     showHomeShell();
+    await setPage(pageFromHash(), false);
   }
 }
 startApp();

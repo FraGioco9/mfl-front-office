@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <link rel="stylesheet" href="styles.css?v=57">
+    <link rel="stylesheet" href="styles.css?v=58">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -64,8 +64,9 @@
       <div id="menuRail" class="menuRail" hidden>
         <button id="menuButton" class="menuButton" type="button" aria-expanded="true" aria-controls="sidebar"><span class="menuIcon">&#9776;</span><span class="menuText">Menu</span></button>
         <aside id="sidebar" class="sidebar" hidden>
-          <button class="navButton active" type="button" data-page="home">Homepage</button>
-          <button class="navButton" type="button" data-page="progression">Progression</button>
+          <a class="navButton active" href="#/home" data-page="home">Homepage</a>
+          <a class="navButton" href="#/progression" data-page="progression">Progression</a>
+          <a class="navButton" href="#/watchlist" data-page="watchlist">Watchlist</a>
         </aside>
       </div>
 
@@ -90,6 +91,7 @@
         </section>
 
         <section id="progressionPage" class="pageView progressionPage" hidden>
+          <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
           <section class="views" aria-label="Table views">
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton active" type="button" data-view="current">Current Season</button>
@@ -195,7 +197,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=57"></script>
+    <script src="app.js?v=58"></script>
   </body>
 </html>
 
