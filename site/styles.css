@@ -53,6 +53,7 @@ body.auth main,
 body.auth .menuRail,
 body.auth .sidebar,
 body.auth .modalBackdrop,
+body.auth .siteFooter,
 body.auth .loadingScreen {
   display: none;
 }
@@ -333,7 +334,7 @@ p {
 .appShell {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
-  min-height: calc(100vh - 93px);
+  min-height: calc(100vh - 145px);
   transition: grid-template-columns 180ms ease;
 }
 
@@ -429,7 +430,7 @@ p {
   justify-items: center;
   gap: 16px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 139px);
+  min-height: calc(100vh - 191px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -510,6 +511,25 @@ p {
   to {
     transform: rotate(360deg);
   }
+}
+.siteFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  min-height: 52px;
+  padding: 10px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+  text-align: center;
+}
+
+.siteFooter span:first-child {
+  color: var(--text);
+  font-weight: 700;
 }
 main {
   min-width: 0;
@@ -940,7 +960,6 @@ td a {
     margin-bottom: 0;
     white-space: nowrap;
   }
-
   main {
     padding: 14px;
   }
