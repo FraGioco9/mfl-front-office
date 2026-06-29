@@ -727,6 +727,10 @@ function ruleMatches(row, rule) {
   const rawValue = getValue(row, rule.column);
   const filterValue = rule.value;
 
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return false;
+  }
+
   if (rule.column === "positions") {
     const positions = String(rawValue || "")
       .split(",")
