@@ -187,7 +187,7 @@ function updateMenuVisibility() {
   menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
 }
 
-function showHomeShell() {
+function showHomeShell(pageName = "home", updateUrl = true) {
   document.body.classList.remove("loading", "auth");
   loadingScreen.hidden = true;
   loginScreen.hidden = true;
@@ -197,7 +197,7 @@ function showHomeShell() {
   if (auth.session) {
     accountEmail.textContent = accountName();
   }
-  setPage("home");
+  return setPage(pageName, updateUrl);
 }
 
 function showLogin() {
@@ -1809,11 +1809,13 @@ async function startApp() {
 
   if (await setupAuth()) {
     showAppShell();
-    showHomeShell();
-    await setPage(pageFromUrl(), false);
+    await showHomeShell(pageFromUrl(), false);
   }
 }
 startApp();
+
+
+
 
 
 
