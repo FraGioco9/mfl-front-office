@@ -181,6 +181,7 @@ p {
 
 .accountMenu {
   position: relative;
+  width: 124px;
 }
 
 .accountDropdown {
@@ -188,11 +189,11 @@ p {
   top: calc(100% + 8px);
   right: 0;
   z-index: 20;
-  min-width: 130px;
+  width: 100%;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--surface-muted);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
 }
 
@@ -201,16 +202,40 @@ p {
   display: none;
 }
 
-.accountDropdown button {
+.accountMenu .compactButton,
+.accountDropdownItem {
   width: 100%;
-  border-color: var(--border-strong);
-  background: var(--surface);
-  color: var(--text);
-  text-align: left;
 }
 
-.accountDropdown button:hover {
+.accountDropdownItem {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountDropdown button.accountDropdownItem {
+  cursor: pointer;
+}
+
+.accountDropdown button.accountDropdownItem:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
   color: #ffffff;
+}
+
+.accountDropdownItem + .accountDropdownItem {
+  margin-top: 6px;
 }
 
 .themeButton {

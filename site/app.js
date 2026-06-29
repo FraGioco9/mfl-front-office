@@ -74,6 +74,7 @@ const visiblePlayers = document.querySelector("#visiblePlayers");
 const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
+const accountEmail = document.querySelector("#accountEmail");
 const signOutButton = document.querySelector("#signOutButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
@@ -164,6 +165,7 @@ function showAppShell() {
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
   accountMenu.hidden = !auth.required;
+  accountEmail.textContent = accountName();
 }
 
 function showLoading() {
@@ -286,6 +288,11 @@ async function signOut() {
   }
 
   window.location.reload();
+}
+
+function accountName() {
+  const email = auth.session?.user?.email || "";
+  return email.split("@")[0] || "Account";
 }
 
 function openAccountMenu() {
