@@ -134,12 +134,17 @@ function finishLoading() {
 }
 
 function saveTableState() {
-  const rules = Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => ({
-    column: rule.dataset.filterColumn,
-    connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
-    operator: rule.querySelector("[data-filter-operator]").value,
-    value: rule.querySelector("[data-filter-value]").value,
-  }));
+  const rules = Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => {
+    const values = readRuleValues(rule);
+
+    return {
+      column: rule.dataset.filterColumn,
+      connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+      operator: rule.querySelector("[data-filter-operator]").value,
+      value: values.value,
+      valueTo: values.valueTo,
+    };
+  });
 
   const savedState = {
     hideRetired: hideRetiredInput.checked,
@@ -436,9 +441,10 @@ function activeFilterCount() {
   let count = 0;
 
   for (const rule of filterRules.querySelectorAll(".filterRule")) {
-    const valueInput = rule.querySelector("[data-filter-value]");
+    const operator = rule.querySelector("[data-filter-operator]").value;
+    const values = readRuleValues(rule);
 
-    if (valueInput && valueInput.value.trim()) {
+    if ((operator === "between" && values.value && values.valueTo) || (operator !== "between" && values.value)) {
       count += 1;
     }
   }
@@ -488,6 +494,7 @@ function buildOperatorSelect(column) {
     operators = [
       [">=", "at least"],
       ["<=", "at most"],
+      ["between", "is between"],
     ];
   } else {
     operators = [["contains", "contains"]];
@@ -504,7 +511,25 @@ function buildOperatorSelect(column) {
   return select;
 }
 
-function buildValueControl(column, savedValue = "") {
+function buildNumberInput(value = "", placeholder = "Value") {
+  const input = document.createElement("input");
+  input.type = "number";
+  input.placeholder = placeholder;
+  input.dataset.filterValue = "true";
+  input.value = value;
+  return input;
+}
+
+function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
+  if (isNumericColumn(column) && operator === "between") {
+    const group = document.createElement("div");
+    group.className = "betweenValue";
+    group.dataset.filterValueGroup = "true";
+    group.appendChild(buildNumberInput(savedValue, "From"));
+    group.appendChild(buildNumberInput(savedValueTo, "To"));
+    return group;
+  }
+
   if (column === "nationality" || column === "positions") {
     const select = document.createElement("select");
     select.dataset.filterValue = "true";
@@ -551,12 +576,21 @@ function buildColumnSelect(selectedColumn) {
 function replaceOperatorSelect(rule, column) {
   const oldOperator = rule.querySelector("[data-filter-operator]");
   const newOperator = buildOperatorSelect(column);
+  newOperator.addEventListener("change", () => {
+    const values = readRuleValues(rule);
+    replaceValueControl(rule, column, values.value, values.valueTo);
+  });
   oldOperator.replaceWith(newOperator);
 }
 
-function replaceValueControl(rule, column, savedValue = "") {
-  const oldValue = rule.querySelector("[data-filter-value]");
-  const newValue = buildValueControl(column, savedValue);
+function valueControlElement(rule) {
+  return rule.querySelector("[data-filter-value-group]") || rule.querySelector("[data-filter-value]");
+}
+
+function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
+  const oldValue = valueControlElement(rule);
+  const operator = rule.querySelector("[data-filter-operator]").value;
+  const newValue = buildValueControl(column, savedValue, savedValueTo, operator);
   oldValue.replaceWith(newValue);
 }
 
@@ -582,8 +616,12 @@ function addFilterRule(column, options = {}) {
   if (options.operator) {
     operator.value = options.operator;
   }
+  operator.addEventListener("change", () => {
+    const values = readRuleValues(rule);
+    replaceValueControl(rule, column, values.value, values.valueTo);
+  });
 
-  const value = buildValueControl(column, options.value || "");
+  const value = buildValueControl(column, options.value || "", options.valueTo || "", operator.value);
 
   const remove = document.createElement("button");
   remove.type = "button";
@@ -605,7 +643,7 @@ function addFilterRule(column, options = {}) {
   refreshRuleConnectors();
 
   if (options.focus !== false) {
-    value.focus();
+    (value.querySelector("[data-filter-value]") || value).focus();
   }
 }
 
@@ -712,15 +750,29 @@ function clearAdvancedFilters() {
   applyFilters();
 }
 
+function readRuleValues(rule) {
+  const inputs = Array.from(rule.querySelectorAll("[data-filter-value]"));
+
+  return {
+    value: (inputs[0]?.value || "").trim(),
+    valueTo: (inputs[1]?.value || "").trim(),
+  };
+}
+
 function readFilterRules() {
   return Array.from(filterRules.querySelectorAll(".filterRule"))
-    .map((rule, index) => ({
-      column: rule.dataset.filterColumn,
-      connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
-      operator: rule.querySelector("[data-filter-operator]").value,
-      value: rule.querySelector("[data-filter-value]").value.trim(),
-    }))
-    .filter((rule) => rule.value);
+    .map((rule, index) => {
+      const values = readRuleValues(rule);
+
+      return {
+        column: rule.dataset.filterColumn,
+        connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+        operator: rule.querySelector("[data-filter-operator]").value,
+        value: values.value,
+        valueTo: values.valueTo,
+      };
+    })
+    .filter((rule) => rule.operator === "between" ? rule.value && rule.valueTo : rule.value);
 }
 
 function ruleMatches(row, rule) {
@@ -758,7 +810,23 @@ function ruleMatches(row, rule) {
     const rowNumber = Number(rawValue);
     const filterNumber = Number(filterValue);
 
-    if (!Number.isFinite(rowNumber) || !Number.isFinite(filterNumber)) {
+    if (!Number.isFinite(rowNumber)) {
+      return false;
+    }
+
+    if (rule.operator === "between") {
+      const filterNumberTo = Number(rule.valueTo);
+
+      if (!Number.isFinite(filterNumber) || !Number.isFinite(filterNumberTo)) {
+        return false;
+      }
+
+      const min = Math.min(filterNumber, filterNumberTo);
+      const max = Math.max(filterNumber, filterNumberTo);
+      return rowNumber >= min && rowNumber <= max;
+    }
+
+    if (!Number.isFinite(filterNumber)) {
       return false;
     }
 

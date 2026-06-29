@@ -367,6 +367,13 @@ button:disabled {
   visibility: hidden;
 }
 
+.betweenValue {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
 .connectorSelect:disabled {
   opacity: 0;
 }
