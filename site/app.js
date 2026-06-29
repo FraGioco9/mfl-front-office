@@ -1029,7 +1029,7 @@ function createWatchlistStar(playerId, labelText = "player") {
   return button;
 }
 
-function countryFlag(nationality) {
+function countryCodeForNationality(nationality) {
   const countryCodes = {
     ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT", BELGIUM: "BE", BRAZIL: "BR",
     CANADA: "CA", CHILE: "CL", COLOMBIA: "CO", CROATIA: "HR", DENMARK: "DK",
@@ -1038,21 +1038,26 @@ function countryFlag(nationality) {
     NIGERIA: "NG", NORWAY: "NO", POLAND: "PL", PORTUGAL: "PT", SCOTLAND: "GB",
     SENEGAL: "SN", SERBIA: "RS", SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH",
     TURKEY: "TR", UKRAINE: "UA", UNITED_STATES: "US", UNITED_KINGDOM: "GB", URUGUAY: "UY",
+    USA: "US", UNITED_STATES_OF_AMERICA: "US", KOREA_REPUBLIC: "KR", SOUTH_KOREA: "KR",
+    CZECH_REPUBLIC: "CZ", CZECHIA: "CZ", IVORY_COAST: "CI", COTE_D_IVOIRE: "CI",
     WALES: "GB"
   };
   const countryKey = String(nationality || "")
     .toUpperCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-  const code = countryCodes[countryKey];
+    .replaceAll("&", "AND")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return countryCodes[countryKey] || null;
+}
+
+function countryFlagHtml(nationality) {
+  const code = countryCodeForNationality(nationality);
 
   if (!code) {
-    return "\uD83C\uDFF3\uFE0F";
+    return '<span class="flagText" aria-hidden="true">-</span>';
   }
 
-  return code
-    .toUpperCase()
-    .replace(/./g, (character) => String.fromCodePoint(127397 + character.charCodeAt(0)));
+  return `<img class="flagImage" src="https://flagcdn.com/24x18/${code.toLowerCase()}.png" alt="">`;
 }
 
 function playerPositions(row) {
@@ -1143,7 +1148,7 @@ function renderPlayerPage(playerId) {
   const height = formatCellValue(row, "height");
   const heightLabel = height === "NULL" ? height : `${height} cm`;
   const infoCards = [
-    ["Nationality", `<span class="flagText">${countryFlag(nationality)}</span> ${escapeHtml(nationality)}`],
+    ["Nationality", `${countryFlagHtml(nationality)} ${escapeHtml(nationality)}`],
     ["Age", escapeHtml(formatCellValue(row, "age"))],
     ["Height", escapeHtml(heightLabel)],
     ["Foot", escapeHtml(formatCellValue(row, "preferred_foot"))],
@@ -1162,7 +1167,7 @@ function renderPlayerPage(playerId) {
       <div>
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdButton" type="button">ID #${escapeHtml(id)}</button>
         <h2>${escapeHtml(playerName)}</h2>
-        <p><span class="flagText">${countryFlag(nationality)}</span> ${escapeHtml(nationality)} &middot; ${escapeHtml(positions.join(", ") || "No positions")}</p>
+        <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
     </section>
@@ -1315,13 +1320,16 @@ function buildHeader() {
       }
 
       cell.addEventListener("click", () => {
+        const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
+        const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
+
         if (state.sortKey !== column) {
           state.sortKey = column;
-          state.sortDirection = numberColumns.has(column) ? "desc" : "asc";
-        } else if (state.sortDirection === "desc") {
-          state.sortDirection = "asc";
+          state.sortDirection = defaultDirection;
+        } else if (state.sortDirection === defaultDirection) {
+          state.sortDirection = reverseDirection;
         } else if (column === "overall") {
-          state.sortDirection = "desc";
+          state.sortDirection = defaultDirection;
         } else {
           state.sortKey = "overall";
           state.sortDirection = "desc";
@@ -1339,6 +1347,29 @@ function buildHeader() {
   tableHead.replaceChildren(headerRow);
 }
 
+function isMissingSortValue(value) {
+  return value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL";
+}
+
+function comparePrimitiveValues(aValue, bValue, direction, numeric = false) {
+  const aMissing = isMissingSortValue(aValue);
+  const bMissing = isMissingSortValue(bValue);
+
+  if (aMissing || bMissing) {
+    if (aMissing && bMissing) {
+      return 0;
+    }
+
+    return aMissing ? 1 : -1;
+  }
+
+  if (numeric) {
+    return ((Number(aValue) - Number(bValue)) || 0) * direction;
+  }
+
+  return String(aValue).localeCompare(String(bValue)) * direction;
+}
+
 function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
   const aValue = sortableValue(a, state.sortKey);
@@ -1346,7 +1377,7 @@ function compareRows(a, b) {
 
   if (Array.isArray(aValue) && Array.isArray(bValue)) {
     for (let index = 0; index < aValue.length; index += 1) {
-      const comparison = ((aValue[index] ?? -Infinity) - (bValue[index] ?? -Infinity)) * direction;
+      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);
 
       if (comparison !== 0) {
         return comparison;
@@ -1357,10 +1388,10 @@ function compareRows(a, b) {
   }
 
   if (numberColumns.has(state.sortKey)) {
-    return (((aValue ?? -Infinity) - (bValue ?? -Infinity)) || 0) * direction;
+    return comparePrimitiveValues(aValue, bValue, direction, true);
   }
 
-  return String(aValue ?? "").localeCompare(String(bValue ?? "")) * direction;
+  return comparePrimitiveValues(aValue, bValue, direction, false);
 }
 
 function activeFilterCount() {

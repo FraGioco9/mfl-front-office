@@ -197,7 +197,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 220px;
+  min-width: 300px;
   height: 40px;
   justify-content: center;
   border-color: var(--border-strong);
@@ -1236,7 +1236,7 @@ td a {
 .searchDialog {
   display: flex;
   flex-direction: column;
-  width: min(760px, 100%);
+  width: min(840px, 100%);
   max-height: min(640px, 88vh);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1304,7 +1304,7 @@ td a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 14px;
+  padding: 8px 12px 10px;
 }
 
 .playerHero h2,
@@ -1313,13 +1313,14 @@ td a {
 }
 
 .playerHero p {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .playerEyebrow {
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   text-transform: uppercase;
 }
 
@@ -1333,14 +1334,23 @@ td a {
 }
 
 .playerIdButton {
+  appearance: none;
   border: 0;
   background: transparent;
+  box-shadow: none;
+  outline: 0;
   padding: 0;
   color: var(--text-soft);
   cursor: pointer;
 }
 
-.playerIdButton:hover {
+.playerIdButton:hover,
+.playerIdButton:focus,
+.playerIdButton:focus-visible {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
   color: var(--text-soft);
   text-decoration: underline;
 }
@@ -1348,6 +1358,14 @@ td a {
 .flagText {
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
   font-weight: 400;
+}
+
+.flagImage {
+  width: 24px;
+  height: 18px;
+  border-radius: 2px;
+  object-fit: cover;
+  vertical-align: -3px;
 }
 
 .playerPanelHeader {
