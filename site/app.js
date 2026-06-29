@@ -183,7 +183,7 @@ function updateMenuVisibility() {
   menuButton.hidden = !loggedIn;
   sidebar.hidden = !loggedIn;
   appShell.classList.toggle("menuClosed", !loggedIn || !state.menuOpen);
-  statusText.hidden = !loggedIn;
+  statusText.hidden = false;
   menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
 }
 
@@ -439,6 +439,14 @@ async function setPage(pageName, updateHash = true) {
   }
 }
 
+function updateStatusDate(generatedAt) {
+  if (!generatedAt) {
+    return;
+  }
+
+  statusText.textContent = `Updated ${new Date(generatedAt).toLocaleString()}`;
+}
+
 function updateSummaryCounts(playerCount, walletCount) {
   const players = Number(playerCount || 0);
   const wallets = Number(walletCount || 0);
@@ -468,6 +476,7 @@ async function loadSummary() {
         source.type === "manifest" ? data.row_count : data.playerCount,
         source.type === "manifest" ? data.wallet_count : data.walletCount,
       );
+      updateStatusDate(source.type === "manifest" ? data.generated_at : data.generatedAt);
       return;
     } catch {
       // Try the next public summary source.
