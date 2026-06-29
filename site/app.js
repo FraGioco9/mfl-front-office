@@ -48,6 +48,7 @@ const columnLabels = {
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "nationality", ...statColumns];
+const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
@@ -99,6 +100,40 @@ function loadTheme() {
 
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
+}
+
+function saveTableState() {
+  const rules = Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => ({
+    column: rule.dataset.filterColumn,
+    connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+    operator: rule.querySelector("[data-filter-operator]").value,
+    value: rule.querySelector("[data-filter-value]").value,
+  }));
+
+  const savedState = {
+    hideRetired: hideRetiredInput.checked,
+    hideRetiring: hideRetiringInput.checked,
+    newMints: newMintsInput.checked,
+    pageSize: state.pageSize,
+    view: state.view,
+    sortKey: state.sortKey,
+    sortDirection: state.sortDirection,
+    rules,
+  };
+
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
+  } catch {
+    // Filtering still works for this page even if the browser blocks storage.
+  }
+}
+
+function loadSavedTableState() {
+  try {
+    return JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+  } catch {
+    return null;
+  }
 }
 
 function formatCount(value) {
@@ -401,7 +436,7 @@ function replaceOperatorSelect(rule, column) {
   oldOperator.replaceWith(newOperator);
 }
 
-function addFilterRule(column) {
+function addFilterRule(column, options = {}) {
   const rule = document.createElement("div");
   rule.className = "filterRule";
   rule.dataset.filterColumn = column;
@@ -410,6 +445,7 @@ function addFilterRule(column) {
   connector.dataset.filterConnector = "true";
   connector.innerHTML = '<option value="and">And</option><option value="or">Or</option>';
   connector.className = "connectorSelect";
+  connector.value = options.connector || "and";
 
   const columnSelect = buildColumnSelect(column);
   columnSelect.addEventListener("change", () => {
@@ -418,11 +454,15 @@ function addFilterRule(column) {
   });
 
   const operator = buildOperatorSelect(column);
+  if (options.operator) {
+    operator.value = options.operator;
+  }
 
   const value = document.createElement("input");
   value.type = "search";
   value.placeholder = "Value";
   value.dataset.filterValue = "true";
+  value.value = options.value || "";
 
   const remove = document.createElement("button");
   remove.type = "button";
@@ -442,7 +482,10 @@ function addFilterRule(column) {
   rule.appendChild(remove);
   filterRules.appendChild(rule);
   refreshRuleConnectors();
-  value.focus();
+
+  if (options.focus !== false) {
+    value.focus();
+  }
 }
 
 function refreshRuleConnectors() {
@@ -478,6 +521,52 @@ function refreshRuleColumnSelects() {
     });
 
     oldSelect.replaceWith(newSelect);
+  }
+}
+
+function restoreSavedTableState() {
+  const savedState = loadSavedTableState();
+
+  if (!savedState) {
+    return;
+  }
+
+  if (savedState.view && views[savedState.view]) {
+    state.view = savedState.view;
+    viewButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.view === state.view);
+    });
+  }
+
+  if (Number(savedState.pageSize)) {
+    state.pageSize = Number(savedState.pageSize);
+    pageSizeSelect.value = String(state.pageSize);
+  }
+
+  if (savedState.sortKey && sortableColumns.has(savedState.sortKey)) {
+    state.sortKey = savedState.sortKey;
+  }
+
+  if (savedState.sortDirection === "asc" || savedState.sortDirection === "desc") {
+    state.sortDirection = savedState.sortDirection;
+  }
+
+  hideRetiredInput.checked = savedState.hideRetired !== false;
+  hideRetiringInput.checked = Boolean(savedState.hideRetiring);
+  newMintsInput.checked = Boolean(savedState.newMints);
+
+  const allowedColumns = new Set(availableFilterColumns());
+  filterRules.replaceChildren();
+
+  for (const rule of savedState.rules || []) {
+    if (allowedColumns.has(rule.column)) {
+      addFilterRule(rule.column, {
+        connector: rule.connector,
+        operator: rule.operator,
+        value: rule.value,
+        focus: false,
+      });
+    }
   }
 }
 
@@ -604,6 +693,7 @@ function applyFilters() {
 
   state.filteredRows.sort(compareRows);
   updateFilterSummary();
+  saveTableState();
   renderTable();
 }
 
@@ -721,6 +811,7 @@ async function loadData() {
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
     populateAddFilterSelect();
+    restoreSavedTableState();
     buildHeader();
     applyFilters();
   } catch (error) {
