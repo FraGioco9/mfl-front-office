@@ -479,6 +479,10 @@ p {
   width: fit-content;
 }
 
+.homeLoginButton[hidden] {
+  display: none;
+}
+
 .homeLoginButton.signingIn {
   border-color: #8bbfdf;
   background: #bfe2f7;

@@ -195,9 +195,26 @@ function setHomeLoginSigningIn() {
 }
 
 function setHomeLoginReady() {
+  homeLoginButton.hidden = false;
   homeLoginButton.disabled = false;
   homeLoginButton.classList.remove("signingIn");
   homeLoginButton.textContent = "Sign In";
+}
+
+function hideHomeLoginButton() {
+  homeLoginButton.hidden = true;
+  homeLoginButton.disabled = false;
+  homeLoginButton.classList.remove("signingIn");
+  homeLoginButton.textContent = "Sign In";
+}
+
+function syncHomeLoginButton() {
+  if (!auth.required || auth.session) {
+    hideHomeLoginButton();
+    return;
+  }
+
+  setHomeLoginReady();
 }
 
 function showHomeShell(pageName = "home", updateUrl = true) {
@@ -206,10 +223,7 @@ function showHomeShell(pageName = "home", updateUrl = true) {
   loginScreen.hidden = true;
   updateMenuVisibility();
   accountMenu.hidden = !auth.required;
-  homeLoginButton.hidden = !auth.required || Boolean(auth.session);
-  if (auth.required && !auth.session) {
-    setHomeLoginReady();
-  }
+  syncHomeLoginButton();
   updateAccountState();
   return setPage(pageName, updateUrl);
 }
@@ -229,6 +243,7 @@ function showAppShell() {
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
   accountMenu.hidden = !auth.required;
+  syncHomeLoginButton();
   updateAccountState();
 }
 
@@ -266,6 +281,7 @@ async function setupAuth() {
   auth.client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
   const { data } = await auth.client.auth.getSession();
   auth.session = data.session;
+  syncHomeLoginButton();
 
   if (!auth.session) {
     showHomeShell();
@@ -342,6 +358,7 @@ async function signIn(event) {
   }
 
   auth.session = data.session;
+  syncHomeLoginButton();
   await loadCloudTableState();
   loginPassword.value = "";
   showAppShell();
