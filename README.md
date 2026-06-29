@@ -146,9 +146,30 @@ They are shown as the Team ID / Org ID and Project ID.
 
 ### 5. Enable login protection
 
-In Vercel, open the project settings and enable Deployment Protection / Vercel Authentication for the production deployment.
+Vercel Deployment Protection can be used if it is available on your plan.
 
-After this is enabled, visitors must log in through Vercel before they can see the website or download the data files.
+The site also supports Supabase Auth. With Supabase Auth, visitors must log in before the table loads, and the JSON data files are served through a protected Vercel API route instead of the public `site/data` folder.
+
+Create a Supabase project, then add these Vercel environment variables:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+```
+
+In Vercel, open:
+
+```text
+Project -> Settings -> Environment Variables
+```
+
+Add both variables for **Production**.
+
+In Supabase, create the users who are allowed to access the table:
+
+```text
+Authentication -> Users -> Add user
+```
 
 ### 6. Publish to Vercel
 
@@ -159,6 +180,26 @@ Manual Vercel site update
 ```
 
 This downloads the latest database artifact, exports the website data, and deploys the protected site to Vercel.
+
+For Vercel deploys, the workflow moves generated JSON files from:
+
+```text
+site/data
+```
+
+to:
+
+```text
+site/api/data-files
+```
+
+The browser then loads them through:
+
+```text
+/api/data?file=...
+```
+
+That API checks the Supabase login token before returning any data.
 
 If you do not want the public GitHub Pages version anymore, disable GitHub Pages in:
 

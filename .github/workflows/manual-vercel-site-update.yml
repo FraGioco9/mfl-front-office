@@ -50,6 +50,14 @@ jobs:
       - name: Export website data
         run: python export_for_website.py
 
+      - name: Move data behind protected API
+        shell: bash
+        run: |
+          rm -rf site/api/data-files
+          mkdir -p site/api/data-files
+          mv site/data/*.json site/api/data-files/
+          rmdir site/data
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 

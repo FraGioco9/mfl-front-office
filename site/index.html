@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Progression</title>
-    <link rel="stylesheet" href="styles.css?v=37">
+    <link rel="stylesheet" href="styles.css?v=38">
   </head>
   <body class="loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -16,12 +16,30 @@
       </div>
     </div>
 
+    <section id="loginScreen" class="loginScreen" hidden>
+      <form id="loginForm" class="loginPanel">
+        <h1>MFL Progression</h1>
+        <p>Sign in to view the player table.</p>
+        <label>
+          <span>Email</span>
+          <input id="loginEmail" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </label>
+        <button id="loginButton" type="submit">Sign In</button>
+        <div id="loginError" class="loginError" role="alert"></div>
+      </form>
+    </section>
+
     <header class="topbar">
       <div>
         <h1>MFL Progression</h1>
         <p id="statusText">Loading player table...</p>
       </div>
       <div class="headerControls">
+        <button id="signOutButton" class="compactButton" type="button" hidden>Sign Out</button>
         <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">🌙</button>
         <div class="stats" aria-label="Database stats">
           <div>
@@ -133,6 +151,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=37"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js?v=38"></script>
   </body>
 </html>

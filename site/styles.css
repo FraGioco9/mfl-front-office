@@ -46,7 +46,11 @@ body {
 
 body.loading .topbar,
 body.loading main,
-body.loading .modalBackdrop {
+body.loading .modalBackdrop,
+body.auth .topbar,
+body.auth main,
+body.auth .modalBackdrop,
+body.auth .loadingScreen {
   display: none;
 }
 
@@ -93,6 +97,53 @@ body.loading .modalBackdrop {
 
 .loadingScreen.failed .loadingBarFill {
   background: #b42318;
+}
+
+.loginScreen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--page-bg);
+}
+
+.loginScreen[hidden] {
+  display: none;
+}
+
+.loginPanel {
+  display: grid;
+  gap: 14px;
+  width: min(380px, 100%);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.12);
+}
+
+.loginPanel h1 {
+  font-size: 28px;
+}
+
+.loginPanel p {
+  margin: -6px 0 4px;
+}
+
+.loginPanel label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.loginError {
+  min-height: 18px;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 button,

@@ -53,12 +53,25 @@ const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 
+const auth = {
+  required: false,
+  client: null,
+  session: null,
+};
+
 const loadingScreen = document.querySelector("#loadingScreen");
 const loadingText = document.querySelector("#loadingText");
 const loadingBarFill = document.querySelector("#loadingBarFill");
+const loginScreen = document.querySelector("#loginScreen");
+const loginForm = document.querySelector("#loginForm");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const loginButton = document.querySelector("#loginButton");
+const loginError = document.querySelector("#loginError");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const visiblePlayers = document.querySelector("#visiblePlayers");
+const signOutButton = document.querySelector("#signOutButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
 const quickClearFiltersButton = document.querySelector("#quickClearFiltersButton");
@@ -132,6 +145,134 @@ function showLoadingError(message) {
 function finishLoading() {
   document.body.classList.remove("loading");
   loadingScreen.hidden = true;
+}
+
+function showLogin() {
+  document.body.classList.remove("loading");
+  document.body.classList.add("auth");
+  loadingScreen.hidden = true;
+  loginScreen.hidden = false;
+  signOutButton.hidden = true;
+  loginEmail.focus();
+}
+
+function showAppShell() {
+  document.body.classList.remove("auth");
+  loginScreen.hidden = true;
+  signOutButton.hidden = !auth.required;
+}
+
+function showLoading() {
+  document.body.classList.add("loading");
+  loadingScreen.hidden = false;
+  loadingScreen.classList.remove("failed");
+  updateLoadingProgress(0, 0);
+}
+
+async function setupAuth() {
+  let configResponse;
+
+  try {
+    configResponse = await fetch("/api/config", { cache: "no-store" });
+  } catch {
+    auth.required = false;
+    return true;
+  }
+
+  if (!configResponse.ok) {
+    auth.required = false;
+    return true;
+  }
+
+  const config = await configResponse.json();
+  auth.required = true;
+
+  if (!window.supabase) {
+    showLoadingError("Login library could not be loaded.");
+    return false;
+  }
+
+  auth.client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+  const { data } = await auth.client.auth.getSession();
+  auth.session = data.session;
+
+  if (!auth.session) {
+    showLogin();
+    return false;
+  }
+
+  return true;
+}
+
+function authHeaders() {
+  if (!auth.required || !auth.session?.access_token) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${auth.session.access_token}`,
+  };
+}
+
+async function fetchDataFile(fileName) {
+  if (!auth.required) {
+    const response = await fetch(`data/${fileName}`, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error("No exported data found yet.");
+    }
+
+    return response.json();
+  }
+
+  const response = await fetch(`/api/data?file=${encodeURIComponent(fileName)}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+
+  if (response.status === 401) {
+    auth.session = null;
+    showLogin();
+    throw new Error("Login required.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Protected website data could not be loaded.");
+  }
+
+  return response.json();
+}
+
+async function signIn(event) {
+  event.preventDefault();
+  loginError.textContent = "";
+  loginButton.disabled = true;
+
+  const { data, error } = await auth.client.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value,
+  });
+
+  loginButton.disabled = false;
+
+  if (error) {
+    loginError.textContent = error.message;
+    return;
+  }
+
+  auth.session = data.session;
+  loginPassword.value = "";
+  showAppShell();
+  showLoading();
+  await loadData();
+}
+
+async function signOut() {
+  if (auth.client) {
+    await auth.client.auth.signOut();
+  }
+
+  window.location.reload();
 }
 
 function saveTableState() {
@@ -726,6 +867,7 @@ function restoreSavedTableState() {
         connector: rule.connector,
         operator: rule.operator,
         value: rule.value,
+        valueTo: rule.valueTo,
         focus: false,
       });
     }
@@ -1015,14 +1157,11 @@ function setView(viewName) {
 
 async function loadData() {
   try {
+    state.rows = [];
+    state.filteredRows = [];
+    state.page = 1;
     updateLoadingProgress(0, 0);
-    const manifestResponse = await fetch("data/manifest.json", { cache: "no-store" });
-
-    if (!manifestResponse.ok) {
-      throw new Error("No exported data found yet.");
-    }
-
-    const manifest = await manifestResponse.json();
+    const manifest = await fetchDataFile("manifest.json");
     state.columns = manifest.columns;
     totalPlayers.textContent = formatCount(manifest.row_count);
     updateLoadingProgress(0, manifest.chunks.length);
@@ -1030,8 +1169,7 @@ async function loadData() {
 
     for (let index = 0; index < manifest.chunks.length; index += 1) {
       const chunkInfo = manifest.chunks[index];
-      const response = await fetch(`data/${chunkInfo.file}`);
-      const chunk = await response.json();
+      const chunk = await fetchDataFile(chunkInfo.file);
       state.rows.push(...chunk.rows);
       updateLoadingProgress(index + 1, manifest.chunks.length);
       await paintLoadingProgress();
@@ -1138,5 +1276,16 @@ themeButton.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
-loadTheme();
-loadData();
+loginForm.addEventListener("submit", signIn);
+signOutButton.addEventListener("click", signOut);
+
+async function startApp() {
+  loadTheme();
+
+  if (await setupAuth()) {
+    showAppShell();
+    await loadData();
+  }
+}
+
+startApp();
