@@ -1,0 +1,68 @@
+name: Manual Vercel site update
+
+on:
+  workflow_dispatch:
+    inputs:
+      database_run_id:
+        description: "Optional database refresh run ID. Leave empty to use the latest successful database refresh."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: vercel-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATABASE_RUN_ID: ${{ inputs.database_run_id }}
+        run: |
+          if [ -z "$DATABASE_RUN_ID" ]; then
+            DATABASE_RUN_ID="$(gh run list --workflow manual-refresh.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+
+          if [ -z "$DATABASE_RUN_ID" ]; then
+            echo "No successful database refresh run found."
+            exit 1
+          fi
+
+          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir .
+
+      - name: Export website data
+        run: python export_for_website.py
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Connect Vercel project
+        shell: bash
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          mkdir -p site/.vercel
+          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > site/.vercel/project.json
+
+      - name: Deploy protected site to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy site --prod --yes --token "$VERCEL_TOKEN"
