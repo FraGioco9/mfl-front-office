@@ -49,6 +49,7 @@ body.loading main,
 body.loading .menuRail,
 body.loading .sidebar,
 body.loading .modalBackdrop,
+body.loading .siteFooter,
 body.auth main,
 body.auth .menuRail,
 body.auth .sidebar,
@@ -78,21 +79,11 @@ body.auth .loadingScreen {
 
 .loadingBox {
   width: min(420px, 100%);
-  transform: translateY(0);
-  transition: transform 220ms ease, opacity 220ms ease;
-}
-
-
-.loadingScreen.complete .loadingBox {
-  transform: translateY(-4px);
+  transition: opacity 220ms ease;
 }
 
 .loadingScreen.leaving {
   opacity: 0;
-}
-
-.loadingScreen.leaving .loadingBox {
-  transform: translateY(-10px);
 }
 .loadingText {
   margin-bottom: 12px;
@@ -684,7 +675,7 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .quickFilters label {

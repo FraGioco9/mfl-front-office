@@ -2545,9 +2545,9 @@ signOutButton.addEventListener("click", handleAccountAction);
 async function startApp() {
   loadTheme();
   const initialPage = pageFromUrl();
+  updateMenuVisibility();
 
   if (initialPage === "changelog") {
-    updateMenuVisibility();
     await setPage("changelog", false);
   }
 
