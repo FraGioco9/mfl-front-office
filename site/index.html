@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=104">
+    <link rel="stylesheet" href="styles.css?v=105">
   </head>
   <body>
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -67,8 +67,8 @@
       <div id="menuRail" class="menuRail" hidden>
         <button id="menuButton" class="menuButton" type="button" aria-expanded="true" aria-controls="sidebar"><span class="menuIcon">&#9776;</span><span class="menuText">Menu</span></button>
         <aside id="sidebar" class="sidebar" hidden>
-          <a class="navButton" href="/progression" data-page="progression">Progression</a>
-          <a class="navButton" href="/watchlist" data-page="watchlist">Watchlist</a>
+          <a class="navButton" href="/progression" data-page="progression"><span class="navEmoji" aria-hidden="true">&#128200;</span><span class="navText">Progression</span></a>
+          <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#11088;</span><span class="navText">Watchlist</span></a>
         </aside>
       </div>
 
@@ -185,6 +185,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v105</span><p>Polish filters, homepage spacing and sidebar icons</p></li>
               <li><span>v104</span><p>Load the menu earlier and polish the loading fade</p></li>
               <li><span>v103</span><p>Refine loading transition, pitch arcs and table spacing</p></li>
               <li><span>v102</span><p>Hold loading complete and adjust table typography</p></li>
@@ -306,7 +307,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v104</a>
+      <a href="/changelog">MFL Front Office v105</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -349,6 +350,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=104"></script>
+    <script src="app.js?v=105"></script>
   </body>
 </html>

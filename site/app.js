@@ -921,6 +921,12 @@ function uniqueColumnValues(column) {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
+function uniqueNationalityValues() {
+  return uniqueColumnValues("nationality")
+    .map((value) => ({ value, label: formatNationality(value) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 function uniquePositions() {
   return POSITION_ORDER;
 }
@@ -1729,16 +1735,18 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
   if (column === "nationality" || column === "positions") {
     const select = document.createElement("select");
     select.dataset.filterValue = "true";
-    const values = column === "nationality" ? uniqueColumnValues("nationality") : uniquePositions();
+    const values = column === "nationality" ? uniqueNationalityValues() : uniquePositions();
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = "Select...";
     select.appendChild(placeholder);
 
-    values.forEach((value) => {
+    values.forEach((item) => {
+      const value = typeof item === "string" ? item : item.value;
+      const label = typeof item === "string" ? item : item.label;
       const option = document.createElement("option");
       option.value = value;
-      option.textContent = value;
+      option.textContent = label;
       option.selected = value === savedValue;
       select.appendChild(option);
     });
@@ -1748,7 +1756,7 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
 
   const input = document.createElement("input");
   input.type = isNumericColumn(column) ? "number" : "search";
-  input.placeholder = "Value";
+  input.placeholder = isNumericColumn(column) ? "Value" : "Text";
   input.dataset.filterValue = "true";
   input.value = savedValue;
   return input;

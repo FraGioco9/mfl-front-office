@@ -489,10 +489,11 @@ p {
 }
 
 .appShell.menuClosed .sidebar {
-  max-height: 0;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-12px);
+  width: 42px;
+  max-height: 180px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .navButton {
@@ -505,6 +506,7 @@ p {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
+  gap: 8px;
   padding: 0 14px;
   text-align: left;
   text-decoration: none;
@@ -515,6 +517,22 @@ p {
   margin: 14px 0 12px;
   font-size: 20px;
   line-height: 1.2;
+}
+
+.navEmoji {
+  width: 18px;
+  flex: 0 0 18px;
+  text-align: center;
+}
+
+.appShell.menuClosed .navButton {
+  justify-content: center;
+  width: 42px;
+  padding: 0;
+}
+
+.appShell.menuClosed .navText {
+  display: none;
 }
 
 .navButton:hover {
@@ -588,7 +606,9 @@ p {
 }
 
 .homeLoginButton[hidden] {
-  display: none;
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .homeLoginButton.signingIn {
