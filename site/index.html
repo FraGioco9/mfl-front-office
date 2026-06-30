@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.78.5">
+    <link rel="stylesheet" href="/styles.css?v=1.78.6">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -44,6 +44,7 @@
           <input id="loginPassword" type="password" autocomplete="current-password" required>
         </label>
         <button id="loginButton" type="submit">Sign In</button>
+        <button id="loginBackButton" class="loginBackButton" type="button">Go back</button>
         <div id="loginError" class="loginError" role="alert"></div>
       </form>
     </section>
@@ -199,6 +200,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.78.6</span><p>Add login back navigation and single-line view buttons</p></li>
               <li><span>v1.78.5</span><p>Equalize table view button sizes</p></li>
               <li><span>v1.78.4</span><p>Start protected page loading after successful login</p></li>
               <li><span>v1.78.3</span><p>Improve logged-out navigation and scheduled refreshes</p></li>
@@ -364,7 +366,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.78.5</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.78.6</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -407,6 +409,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.78.5"></script>
+    <script src="/app.js?v=1.78.6"></script>
   </body>
 </html>

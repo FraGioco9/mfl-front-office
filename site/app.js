@@ -156,6 +156,7 @@ const loginForm = document.querySelector("#loginForm");
 const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const loginButton = document.querySelector("#loginButton");
+const loginBackButton = document.querySelector("#loginBackButton");
 const loginError = document.querySelector("#loginError");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
@@ -378,6 +379,22 @@ function showLogin(returnPage = pageFromUrl()) {
   window.setTimeout(() => loginEmail.focus(), 0);
 }
 
+function openLoginFromCurrentPage() {
+  const returnPage = window.location.pathname || "/";
+  window.history.pushState({ login: true }, "", returnPage);
+  showLogin(returnPage);
+}
+
+function goBackFromLogin() {
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+
+  const returnTarget = pageTargetFromPath(state.loginReturnPage || "/");
+  showHomeShell(returnTarget.pageName, false, returnTarget.options);
+}
+
 function showAppShell() {
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
@@ -578,7 +595,7 @@ function handleAccountAction() {
     return;
   }
 
-  showLogin();
+  openLoginFromCurrentPage();
 }
 
 function openAccountMenu() {
@@ -2926,7 +2943,7 @@ themeButton.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
-homeLoginButton.addEventListener("click", showLogin);
+homeLoginButton.addEventListener("click", openLoginFromCurrentPage);
 menuButton.addEventListener("click", toggleMenu);
 brandLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
@@ -2964,6 +2981,7 @@ window.addEventListener("popstate", () => {
 });
 
 loginForm.addEventListener("submit", signIn);
+loginBackButton.addEventListener("click", goBackFromLogin);
 accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleAccountMenu();
