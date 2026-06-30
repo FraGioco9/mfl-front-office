@@ -399,6 +399,7 @@ p {
 }
 
 .appShell {
+  --sidebar-offset: 190px;
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
   min-height: calc(100vh - 154px);
@@ -410,6 +411,7 @@ p {
 }
 
 .appShell.menuClosed {
+  --sidebar-offset: 70px;
   grid-template-columns: 70px minmax(0, 1fr);
 }
 
@@ -544,7 +546,7 @@ p {
 }
 
 .appShell.menuClosed .navEmoji {
-  width: 42px;
+  width: 18px;
   transform: scale(1.04);
 }
 
@@ -728,7 +730,7 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 0;
+  margin-bottom: -2px;
 }
 
 .quickFilters label {
@@ -750,7 +752,7 @@ main {
   grid-template-columns: max-content max-content auto 120px;
   gap: 8px;
   align-items: end;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   padding-top: 0;
 }
 
@@ -770,7 +772,8 @@ main {
 }
 
 .field.compact {
-  gap: 2px;
+  gap: 0;
+  align-self: end;
 }
 
 .field span {
@@ -1156,6 +1159,8 @@ td a {
 }
 
 .pager {
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
   display: flex;
   justify-content: center;
   align-items: center;

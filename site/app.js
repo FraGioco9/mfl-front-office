@@ -797,6 +797,7 @@ function currentTableState() {
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
     menuOpen: state.menuOpen,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
+    playerAttributeView: state.playerAttributeView,
   };
 }
 
@@ -822,6 +823,7 @@ async function loadCloudTableState() {
   restoreWatchlistState(auth.savedTableState);
   restoreMenuState(auth.savedTableState);
   restoreRecentSearchState(auth.savedTableState);
+  restorePlayerAttributeView(auth.savedTableState);
 }
 
 function queueCloudTableStateSave(savedState) {
@@ -865,6 +867,12 @@ function restoreRecentSearchState(savedState) {
   state.recentSearchPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
 }
 
+function restorePlayerAttributeView(savedState) {
+  if (["attributes", "current", "all"].includes(savedState?.playerAttributeView)) {
+    state.playerAttributeView = savedState.playerAttributeView;
+  }
+}
+
 function restoreTablePageStates(savedState) {
   if (savedState?.pages) {
     state.tablePageStates = { ...savedState.pages };
@@ -881,6 +889,7 @@ function loadSavedTableState() {
     restoreWatchlistState(auth.savedTableState);
     restoreMenuState(auth.savedTableState);
     restoreRecentSearchState(auth.savedTableState);
+    restorePlayerAttributeView(auth.savedTableState);
     return auth.savedTableState;
   }
 
@@ -890,6 +899,7 @@ function loadSavedTableState() {
     restoreWatchlistState(savedState);
     restoreMenuState(savedState);
     restoreRecentSearchState(savedState);
+    restorePlayerAttributeView(savedState);
     return savedState;
   } catch {
     return null;
@@ -1434,6 +1444,7 @@ function renderPlayerPage(playerId) {
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
       state.playerAttributeView = button.dataset.playerAttributeView;
+      saveTableState();
       renderPlayerPage(id);
     });
   });

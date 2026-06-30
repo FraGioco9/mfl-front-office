@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=110">
+    <link rel="stylesheet" href="/styles.css?v=112">
   </head>
   <body>
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -68,7 +68,7 @@
         <button id="menuButton" class="menuButton" type="button" aria-expanded="true" aria-controls="sidebar"><span class="menuIcon">&#9776;</span><span class="menuText">Menu</span></button>
         <aside id="sidebar" class="sidebar" hidden>
           <a class="navButton" href="/progression" data-page="progression"><svg class="navEmoji navTrendIcon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 10 13 14 21 5"></polyline><path d="M15 5h6v6"></path></svg><span class="navText">Progression</span></a>
-          <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9734;</span><span class="navText">Watchlist</span></a>
+          <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#128108;</span><span class="navText">Watchlist</span></a>
         </aside>
       </div>
 
@@ -120,7 +120,6 @@
             <button id="quickClearFiltersButton" class="compactButton" type="button">&#129529; Clear</button>
             <span id="filterSummary">0 active</span>
             <label class="field compact">
-              <span>Rows</span>
               <select id="pageSizeSelect">
                 <option value="25">25</option>
                 <option value="50">50</option>
@@ -185,6 +184,8 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v112</span><p>Polish watchlist icon, sidebar collapse and pagination</p></li>
+              <li><span>v111</span><p>Remember player attribute view and tighten table controls</p></li>
               <li><span>v110</span><p>Improve protected refresh loading and goalkeeper attribute layout</p></li>
               <li><span>v109</span><p>Refine controls, goalkeeper cards and progression icon</p></li>
               <li><span>v108</span><p>Tighten table controls and restore player progression color</p></li>
@@ -312,7 +313,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v110</a>
+      <a href="/changelog">MFL Front Office v112</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -355,6 +356,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=110"></script>
+    <script src="/app.js?v=112"></script>
   </body>
 </html>
