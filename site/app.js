@@ -603,6 +603,7 @@ async function ensureProgressionData() {
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
+  document.body.dataset.page = pageName;
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
     state.tablePageStates[previousTablePage] = currentTablePageState();

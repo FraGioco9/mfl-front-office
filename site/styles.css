@@ -371,6 +371,10 @@ p {
   line-height: 1;
 }
 
+body[data-page="home"] .topbar .stats {
+  display: none;
+}
+
 .stats {
   display: flex;
   gap: 10px;
