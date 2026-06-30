@@ -342,7 +342,7 @@ function pageRequiresData(pageName) {
   return tablePages.has(pageName) || pageName === "player";
 }
 
-async function showHomeShell(pageName = "home", updateUrl = true) {
+async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
   const needsDataFirst = pageRequiresData(pageName) && !state.dataLoaded;
 
   if (!needsDataFirst) {
@@ -355,7 +355,7 @@ async function showHomeShell(pageName = "home", updateUrl = true) {
   accountMenu.hidden = !auth.required;
   syncHomeLoginButton();
   updateAccountState();
-  const result = await setPage(pageName, updateUrl);
+  const result = await setPage(pageName, updateUrl, options);
   updateMenuVisibility();
   revealAppShell();
   return result;
@@ -545,9 +545,9 @@ async function signIn(event) {
   syncHomeLoginButton();
   await loadCloudTableState();
   loginPassword.value = "";
-  const returnPage = state.loginReturnPage || pageFromUrl() || "home";
+  const returnTarget = pageTargetFromPath(state.loginReturnPage || window.location.pathname || "/");
   showAppShell();
-  await showHomeShell(returnPage, false);
+  await showHomeShell(returnTarget.pageName, false, returnTarget.options);
 }
 
 async function signOut() {
@@ -623,6 +623,23 @@ function pageFromUrl() {
   }
 
   return ["home", "database", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
+}
+
+function pageTargetFromPath(path) {
+  const playerMatch = String(path || "").match(/^\/players\/([^/]+)$/);
+
+  if (playerMatch) {
+    return {
+      pageName: "player",
+      options: { playerId: decodeURIComponent(playerMatch[1]) },
+    };
+  }
+
+  const pageName = String(path || "").replace(/^\//, "") || "home";
+  return {
+    pageName: ["home", "database", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home",
+    options: {},
+  };
 }
 
 async function ensureProgressionData() {
