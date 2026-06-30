@@ -346,11 +346,11 @@ function pageRequiresData(pageName) {
 }
 
 function pageRequiresLogin(pageName) {
-  return pageName === "progression" || pageName === "player";
+  return pageName === "progression";
 }
 
 function pageRequiresFullData(pageName) {
-  return pageName === "progression" || pageName === "player" || (pageName === "watchlist" && Boolean(auth.session));
+  return pageName === "progression" || (pageName === "player" && Boolean(auth.session)) || (pageName === "watchlist" && Boolean(auth.session));
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
@@ -1070,9 +1070,20 @@ function restoreRecentSearchState(savedState) {
   state.recentSearchPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
 }
 
+function allowedPlayerAttributeViews() {
+  return auth.required && !auth.session
+    ? [["attributes", "Attributes"], ["next", "Next Overall"]]
+    : [["attributes", "Attributes"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]];
+}
+
+function normalizePlayerAttributeView(viewName) {
+  const allowedViews = allowedPlayerAttributeViews().map(([view]) => view);
+  return allowedViews.includes(viewName) ? viewName : allowedViews[0];
+}
+
 function restorePlayerAttributeView(savedState) {
   if (["attributes", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
-    state.playerAttributeView = savedState.playerAttributeView;
+    state.playerAttributeView = normalizePlayerAttributeView(savedState.playerAttributeView);
   }
 }
 
@@ -1766,7 +1777,8 @@ function playerAttributeValueHtml(row, column, viewName) {
 
 function renderPlayerAttributePanel(row) {
   const columns = playerAttributeColumns(row);
-  const viewName = state.playerAttributeView;
+  const viewName = normalizePlayerAttributeView(state.playerAttributeView);
+  state.playerAttributeView = viewName;
 
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
@@ -1813,12 +1825,10 @@ function renderPlayerPage(playerId) {
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
-  const viewButtons = [
-    ["attributes", "Attributes"],
-    ["next", "Next Overall"],
-    ["current", "Current Season"],
-    ["all", "All Time"],
-  ].map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`).join("");
+  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
+  const viewButtons = allowedPlayerAttributeViews()
+    .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
+    .join("");
 
   playerDetail.innerHTML = `
     <section class="playerHero">
@@ -1856,11 +1866,6 @@ function renderPlayerPage(playerId) {
 }
 
 async function openSearch() {
-  if (auth.required && !auth.session) {
-    showLogin();
-    return;
-  }
-
   const loaded = await ensureProgressionData();
   if (!loaded) {
     return;
