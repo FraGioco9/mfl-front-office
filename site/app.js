@@ -306,7 +306,7 @@ function pageRequiresData(pageName) {
   return ["progression", "watchlist", "player"].includes(pageName);
 }
 
-function showHomeShell(pageName = "home", updateUrl = true) {
+async function showHomeShell(pageName = "home", updateUrl = true) {
   const needsDataFirst = pageRequiresData(pageName) && !state.dataLoaded;
 
   if (!needsDataFirst) {
@@ -316,16 +316,21 @@ function showHomeShell(pageName = "home", updateUrl = true) {
 
   document.body.classList.remove("auth");
   loginScreen.hidden = true;
-  updateMenuVisibility();
   accountMenu.hidden = !auth.required;
   syncHomeLoginButton();
   updateAccountState();
-  return setPage(pageName, updateUrl);
+  const result = await setPage(pageName, updateUrl);
+  updateMenuVisibility();
+  return result;
 }
 
 function showLogin() {
-  document.body.classList.remove("loading");
+  state.loginReturnPage = pageFromUrl();
+  menuRail.hidden = true;
+  menuButton.hidden = true;
+  sidebar.hidden = true;
   document.body.classList.add("auth");
+  document.body.classList.remove("loading");
   loadingScreen.hidden = true;
   loginScreen.hidden = false;
   accountMenu.hidden = !auth.required;
@@ -502,8 +507,9 @@ async function signIn(event) {
   syncHomeLoginButton();
   await loadCloudTableState();
   loginPassword.value = "";
+  const returnPage = state.loginReturnPage || pageFromUrl() || "home";
   showAppShell();
-  showHomeShell();
+  await showHomeShell(returnPage, false);
 }
 
 async function signOut() {
@@ -652,6 +658,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
       window.history.pushState({}, "", `/players/${encodeURIComponent(playerId)}`);
     }
 
+    if (document.body.classList.contains("loading")) {
+      await finishLoading();
+    }
+
     return;
   }
 
@@ -662,6 +672,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (tablePage && state.rows.length) {
     state.page = 1;
     applyFilters();
+  }
+
+  if (document.body.classList.contains("loading")) {
+    await finishLoading();
   }
 }
 
@@ -1476,6 +1490,9 @@ async function openSearch() {
   const loaded = await ensureProgressionData();
   if (!loaded) {
     return;
+  }
+  if (document.body.classList.contains("loading")) {
+    await finishLoading();
   }
   searchModal.hidden = false;
   playerSearchInput.value = "";
@@ -2468,7 +2485,6 @@ async function loadData() {
     buildHeader();
     applyFilters();
     state.dataLoaded = true;
-    await finishLoading();
     return true;
   } catch (error) {
     const message = error.message === "Login required."
