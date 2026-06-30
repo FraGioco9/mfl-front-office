@@ -1776,6 +1776,7 @@ td a {
 .playerAttributeCard strong {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   font-size: 24px;
   line-height: 1.05;
@@ -1852,12 +1853,23 @@ td a {
 }
 
 
-.playerAttributeCard .progressionValue {
+.playerAttributeCard .progressionValue,
+.playerAttributeCard .nextOverallValue {
+  color: #2fbf62;
   font-size: 12px;
 }
 
-.playerAttributeCard.featured .progressionValue {
+.playerAttributeCard .nextOverallValue.neutral {
+  color: var(--text-soft);
+}
+
+.playerAttributeCard.featured .progressionValue,
+.playerAttributeCard.featured .nextOverallValue {
   font-size: 16px;
+}
+
+.playerAgeMarker {
+  margin-left: 5px;
 }
 .playerAttributeCard.fullWidth {
   grid-column: 1 / -1;

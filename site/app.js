@@ -926,7 +926,7 @@ function restoreRecentSearchState(savedState) {
 }
 
 function restorePlayerAttributeView(savedState) {
-  if (["attributes", "current", "all"].includes(savedState?.playerAttributeView)) {
+  if (["attributes", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
     state.playerAttributeView = savedState.playerAttributeView;
   }
 }
@@ -1340,7 +1340,7 @@ function familiarityForPosition(row, position) {
   return POSITION_FAMILIARITY[primary]?.[position] || null;
 }
 
-function positionRating(row, position, familiarity) {
+function weightedPositionOverall(row, position, familiarity = "primary") {
   const weights = POSITION_GROUP_WEIGHTS[position];
 
   if (!weights || !familiarity) {
@@ -1352,7 +1352,12 @@ function positionRating(row, position, familiarity) {
     const raw = Number(getValue(row, attribute) || 0);
     return total + ((raw + penalty) * weight) / 100;
   }, 0);
-  return Math.max(0, Math.round(weighted));
+  return Math.max(0, weighted);
+}
+
+function positionRating(row, position, familiarity) {
+  const weighted = weightedPositionOverall(row, position, familiarity);
+  return weighted === null ? null : Math.round(weighted);
 }
 
 function renderPitch(row) {
@@ -1418,7 +1423,68 @@ function playerAttributeContributionTooltip(row, column) {
 
   return ` data-tooltip="${escapeHtml(`${label} contributes to ${weight}% of the overall for the ${primary} position.`)}"`;
 }
+
+function primaryPreciseOverall(row) {
+  const primary = playerPositions(row)[0];
+
+  if (!primary) {
+    return Number(statDisplayValue(row, "overall") || 0);
+  }
+
+  const weighted = weightedPositionOverall(row, primary, "primary");
+  return weighted === null ? Number(statDisplayValue(row, "overall") || 0) : weighted;
+}
+
+function nextOverallTarget(row) {
+  const displayedOverall = Math.floor(Number(statDisplayValue(row, "overall") || 0));
+  return displayedOverall + 0.5;
+}
+
+function nextOverallGap(row) {
+  return Math.max(0, nextOverallTarget(row) - primaryPreciseOverall(row));
+}
+
+function formatDecimal(value, digits = 2) {
+  return Number(value || 0).toFixed(digits);
+}
+
+function shortStatLabel(column) {
+  return {
+    pace: "PAC",
+    shooting: "SHO",
+    passing: "PAS",
+    dribbling: "DRI",
+    defense: "DEF",
+    physical: "PHY",
+    goalkeeping: "GK",
+  }[column] || String(columnLabels[column] || column).toUpperCase();
+}
+
+function nextOverallDetailHtml(row, column) {
+  const gap = nextOverallGap(row);
+
+  if (column === "overall") {
+    return `<span class="nextOverallValue">(+${formatDecimal(gap)} OVR)</span>`;
+  }
+
+  const primary = playerPositions(row)[0];
+  const weight = POSITION_GROUP_WEIGHTS[primary]?.[column] || 0;
+
+  if (!weight) {
+    return `<span class="nextOverallValue neutral">No OVR impact</span>`;
+  }
+
+  const neededStatGain = gap / (weight / 100);
+  return `<span class="nextOverallValue">+1 OVR if +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
+}
+
 function playerAttributeValueHtml(row, column, viewName) {
+  if (viewName === "next") {
+    const value = column === "overall" ? primaryPreciseOverall(row) : getValue(row, column);
+    const formattedValue = column === "overall" ? formatDecimal(value) : escapeHtml(formatPlainValue(value, column));
+    return `${formattedValue} ${nextOverallDetailHtml(row, column)}`;
+  }
+
   const value = column === "overall" ? statDisplayValue(row, column) : getValue(row, column);
   const formattedValue = escapeHtml(formatPlainValue(value, column));
 
@@ -1474,9 +1540,13 @@ function renderPlayerPage(playerId) {
   const positions = playerPositions(row);
   const height = formatCellValue(row, "height");
   const heightLabel = height === "NULL" ? height : `${height} cm`;
+  const ageMarker = retirementMarker(row);
+  const ageMarkerHtml = ageMarker
+    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.emoji}</span>`
+    : "";
   const infoCards = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
-    ["Age", escapeHtml(formatCellValue(row, "age"))],
+    ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
     ["Height", escapeHtml(heightLabel)],
     ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
@@ -1484,6 +1554,7 @@ function renderPlayerPage(playerId) {
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   const viewButtons = [
     ["attributes", "Attributes"],
+    ["next", "Next Overall"],
     ["current", "Current Season"],
     ["all", "All Time"],
   ].map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`).join("");
