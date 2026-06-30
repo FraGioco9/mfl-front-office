@@ -929,11 +929,14 @@ td {
   padding: 0 6px;
   text-align: left;
   white-space: nowrap;
-  font-size: 12px;
   line-height: 38px;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
+}
+
+td {
+  font-size: 14px;
 }
 
 .flagCell {
@@ -952,7 +955,7 @@ th {
   z-index: 1;
   background: var(--header-bg);
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   cursor: default;
 }
@@ -1545,7 +1548,7 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 24px;
+  font-size: 32px;
 }
 
 .playerAttributeCard.featured .attributeValueText {

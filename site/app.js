@@ -226,7 +226,10 @@ function showLoadingError(message) {
   loadingText.textContent = message;
 }
 
-function finishLoading() {
+async function finishLoading() {
+  updateLoadingProgress(1, 1);
+  await paintLoadingProgress();
+  await new Promise((resolve) => window.setTimeout(resolve, 450));
   document.body.classList.remove("loading");
   loadingScreen.hidden = true;
 }
@@ -2380,7 +2383,7 @@ async function loadData() {
     buildHeader();
     applyFilters();
     state.dataLoaded = true;
-    finishLoading();
+    await finishLoading();
     return true;
   } catch (error) {
     const message = error.message === "Login required."
