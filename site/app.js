@@ -215,7 +215,7 @@ const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  themeButton.textContent = theme === "dark" ? "☀️" : "🌙";
+  themeButton.textContent = theme === "dark" ? "\u2600\uFE0F" : "\u{1F319}";
   themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to night mode");
   themeButton.title = theme === "dark" ? "Light mode" : "Night mode";
 
@@ -646,8 +646,29 @@ async function ensureProgressionData() {
   return state.dataLoadPromise;
 }
 
+function pagePath(pageName, options = {}) {
+  if (pageName === "player") {
+    const playerId = options.playerId || playerIdFromUrl();
+    return playerId ? `/players/${encodeURIComponent(playerId)}` : window.location.pathname;
+  }
+
+  return pageName === "home" ? "/" : `/${pageName}`;
+}
+
+function updatePageUrl(pageName, options = {}) {
+  if (!options.updateUrl) {
+    return;
+  }
+
+  const targetPath = pagePath(pageName, options);
+  if (window.location.pathname !== targetPath) {
+    window.history.pushState({}, "", targetPath);
+  }
+}
+
 async function setPage(pageName, updateHash = true, options = {}) {
   document.body.dataset.page = pageName;
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash });
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
     state.tablePageStates[previousTablePage] = currentTablePageState();
@@ -692,23 +713,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (playerPageActive) {
     const playerId = options.playerId || playerIdFromUrl();
     renderPlayerPage(playerId);
-
-    if (updateHash && playerId && window.location.pathname !== `/players/${encodeURIComponent(playerId)}`) {
-      window.history.pushState({}, "", `/players/${encodeURIComponent(playerId)}`);
-    }
-
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
 
     return;
   }
-
-  const targetPath = pageName === "home" ? "/" : `/${pageName}`;
-  if (updateHash && window.location.pathname !== targetPath) {
-    window.history.pushState({}, "", targetPath);
-  }
-
   if (tablePage && state.rows.length) {
     state.page = 1;
     applyFilters();
@@ -1264,14 +1274,14 @@ function retirementMarker(row) {
 
   if (retirementYears === 0) {
     return {
-      emoji: "🏁",
+      emoji: "\u{1F3C1}",
       label: "Retired",
     };
   }
 
   if ([1, 2, 3].includes(retirementYears)) {
     return {
-      emoji: "⏳",
+      emoji: "\u23F3",
       label: `${retirementYears} year${retirementYears === 1 ? "" : "s"} left`,
     };
   }
