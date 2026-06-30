@@ -302,8 +302,12 @@ function syncHomeLoginButton() {
   setHomeLoginReady();
 }
 
+function pageRequiresData(pageName) {
+  return ["progression", "watchlist", "player"].includes(pageName);
+}
+
 function showHomeShell(pageName = "home", updateUrl = true) {
-  const needsDataFirst = ["progression", "watchlist", "player"].includes(pageName) && !state.dataLoaded;
+  const needsDataFirst = pageRequiresData(pageName) && !state.dataLoaded;
 
   if (!needsDataFirst) {
     document.body.classList.remove("loading");
@@ -1357,7 +1361,7 @@ function renderPlayerAttributePanel(row) {
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
     const featured = column === "overall" ? " featured" : "";
-    const fullWidth = column === "overall" ? " fullWidth" : "";
+    const fullWidth = column === "overall" || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
     const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
     return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText">${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
   }).join("");
@@ -2564,6 +2568,10 @@ async function startApp() {
   const initialPage = pageFromUrl();
   loadSavedTableState();
   updateMenuVisibility();
+
+  if (pageRequiresData(initialPage) && hasSavedSupabaseSession()) {
+    showLoading();
+  }
 
   if (initialPage === "changelog") {
     await setPage("changelog", false);

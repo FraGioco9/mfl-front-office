@@ -749,7 +749,7 @@ main {
   display: grid;
   grid-template-columns: max-content max-content auto 120px;
   gap: 8px;
-  align-items: center;
+  align-items: end;
   margin-bottom: 12px;
   padding-top: 0;
 }
@@ -767,6 +767,10 @@ main {
 .field {
   display: grid;
   gap: 6px;
+}
+
+.field.compact {
+  gap: 2px;
 }
 
 .field span {
@@ -820,8 +824,8 @@ button:disabled {
 #filterSummary {
   display: flex;
   align-items: center;
-  align-self: center;
-  height: 34px;
+  align-self: end;
+  height: 40px;
   color: var(--text-muted);
   font-size: 12px;
 }
