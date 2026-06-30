@@ -1,6 +1,9 @@
 name: Manual database and site update
 
 on:
+  schedule:
+    - cron: "30 8,9 * * *"
+    - cron: "15 17,18,21,22 * * *"
   workflow_dispatch:
     inputs:
       limit:
