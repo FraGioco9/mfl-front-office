@@ -603,6 +603,7 @@ body[data-page="home"] .topbar .stats {
 .appShell.menuClosed .navButton {
   justify-content: center;
   width: 42px;
+  gap: 0;
   margin-left: 0;
   margin-right: 0;
   padding: 0;
