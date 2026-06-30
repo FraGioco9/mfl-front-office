@@ -473,6 +473,11 @@ body[data-page="home"] .topbar .stats {
   display: none;
 }
 
+body.auth .appShell .menuRail,
+body.auth .appShell .sidebar {
+  display: none !important;
+}
+
 .menuRail[hidden] + main {
   margin-left: 0;
 }
@@ -1245,12 +1250,12 @@ td a {
 
 .progressionValue.positive {
   color: #2fbf62;
-  font-weight: 700;
+  font-weight: inherit;
 }
 
 .progressionValue.negative {
   color: #b42318;
-  font-weight: 700;
+  font-weight: inherit;
 }
 
 .retirementMarker,

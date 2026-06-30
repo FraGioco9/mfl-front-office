@@ -665,8 +665,9 @@ async function setPage(pageName, updateHash = true, options = {}) {
     return;
   }
 
-  if (updateHash && window.location.pathname !== `/${pageName}`) {
-    window.history.pushState({}, "", `/${pageName}`);
+  const targetPath = pageName === "home" ? "/" : `/${pageName}`;
+  if (updateHash && window.location.pathname !== targetPath) {
+    window.history.pushState({}, "", targetPath);
   }
 
   if (tablePage && state.rows.length) {
