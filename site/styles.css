@@ -1681,6 +1681,21 @@ td a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 40px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 0 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.playerExternalButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  text-decoration: none;
 }
 
 .playerWatchlistButton {

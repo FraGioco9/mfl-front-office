@@ -1111,16 +1111,16 @@ function tableNextOverallInfo(row, statColumn) {
 
   if (statColumn === "overall") {
     return maxOverall
-      ? { text: "MAXIMUM", className: "neutral" }
+      ? { text: "MAX", className: "neutral" }
       : { text: `+${formatDecimal(gap)}`, className: "easy" };
   }
 
   if (!weight) {
-    return { text: "-", className: "neutral" };
+    return null;
   }
 
   if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
-    return { text: "MAXIMUM", className: "neutral" };
+    return { text: "MAX", className: "neutral" };
   }
 
   const neededStatGain = gap / (weight / 100);
@@ -1131,17 +1131,24 @@ function tableNextOverallInfo(row, statColumn) {
 }
 
 function appendNextOverallTableValue(cell, row, statColumn) {
-  const value = getValue(row, statColumn);
+  const value = statColumn === "overall" ? primaryPreciseOverall(row) : getValue(row, statColumn);
 
   if (value === null || value === undefined || value === "") {
     cell.textContent = "NULL";
     return;
   }
 
+  const displayValue = statColumn === "overall" ? formatDecimal(value) : String(value);
+  cell.append(displayValue);
   const nextOverall = tableNextOverallInfo(row, statColumn);
+
+  if (!nextOverall) {
+    return;
+  }
+
   const element = document.createElement("span");
   element.className = `nextOverallValue tableNextOverallValue ${nextOverall.className}`;
-  element.textContent = nextOverall.text;
+  element.textContent = ` (${nextOverall.text})`;
   cell.appendChild(element);
 }
 
@@ -1526,7 +1533,7 @@ function nextOverallDetailHtml(row, column) {
 
   if (column === "overall") {
     if (maxOverall) {
-      return `<span class="nextOverallValue neutral">MAXIMUM</span>`;
+      return `<span class="nextOverallValue neutral">MAX</span>`;
     }
 
     return `<span class="nextOverallValue easy">+1 OVR IF +${formatDecimal(gap)}</span>`;
@@ -1537,7 +1544,7 @@ function nextOverallDetailHtml(row, column) {
   }
 
   if (maxOverall || Number(getValue(row, column) || 0) >= 99) {
-    return `<span class="nextOverallValue neutral">MAXIMUM</span>`;
+    return `<span class="nextOverallValue neutral">MAX</span>`;
   }
 
   const neededStatGain = gap / (weight / 100);
@@ -1635,7 +1642,7 @@ function renderPlayerPage(playerId) {
       </div>
       <div class="playerHeroActions">
         <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
-        <button id="openPlayerExternalButton" class="playerExternalButton" type="button">Open link</button>
+        <a id="openPlayerExternalButton" class="playerExternalButton" href="${escapeHtml(formatCellValue(row, linkColumn))}" target="_blank" rel="noopener noreferrer">Open link</a>
       </div>
     </section>
     <section class="playerGrid">
@@ -1651,7 +1658,6 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
-  playerDetail.querySelector("#openPlayerExternalButton").addEventListener("click", () => window.open(formatCellValue(row, linkColumn), "_blank", "noopener,noreferrer"));
   playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1769,7 +1775,7 @@ function tableNextOverallSortValue(row, statColumn) {
   const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
 
   if (statColumn === "overall") {
-    return maxOverall ? null : gap;
+    return primaryPreciseOverall(row);
   }
 
   if (!weight || maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
@@ -2639,6 +2645,12 @@ function setView(viewName) {
 
   state.view = viewName;
   state.page = 1;
+
+  if (viewName === "next") {
+    state.sortKey = "overall";
+    state.sortDirection = "desc";
+  }
+
   removeUnavailableFilterRules();
   populateAddFilterSelect();
   refreshRuleColumnSelects();
