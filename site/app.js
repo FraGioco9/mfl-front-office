@@ -908,12 +908,31 @@ function showToast(message) {
     document.body.appendChild(toast);
   }
 
-  toast.textContent = message;
+  toast.replaceChildren();
+  if (message instanceof Node) {
+    toast.appendChild(message);
+  } else {
+    toast.textContent = message;
+  }
   toast.classList.add("visible");
   window.clearTimeout(state.toastTimer);
   state.toastTimer = window.setTimeout(() => {
     toast.classList.remove("visible");
   }, 2200);
+}
+
+function showWatchlistToast(prefix) {
+  const content = document.createElement("span");
+  const watchlistLink = document.createElement("button");
+
+  content.append(document.createTextNode(`${prefix} `));
+  watchlistLink.type = "button";
+  watchlistLink.className = "toastLink";
+  watchlistLink.textContent = "watchlist";
+  watchlistLink.addEventListener("click", () => setPage("watchlist"));
+  content.appendChild(watchlistLink);
+  content.append(document.createTextNode("."));
+  showToast(content);
 }
 function saveGuestWatchlist() {
   if (auth.session) {
@@ -1488,7 +1507,7 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
   }
 
   saveTableState();
-  showToast(`${playerName} ${added ? "added to" : "removed from"} watchlist.`);
+  showWatchlistToast(`${playerName} ${added ? "added to" : "removed from"}`);
 
   if (state.currentPage === "watchlist") {
     applyFilters();
@@ -2718,7 +2737,7 @@ function addSelectedToWatchlist() {
     state.selectedPlayerIds.clear();
     saveTableState();
     applyFilters();
-    showToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from watchlist.`);
+    showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`);
     return;
   }
 
@@ -2727,7 +2746,7 @@ function addSelectedToWatchlist() {
   saveTableState();
   renderTable();
   updateSelectionBar();
-  showToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} added to watchlist.`);
+  showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} added to`);
 }
 
 
