@@ -1683,19 +1683,28 @@ function updateFilterSummary() {
   filterSummary.textContent = `${count} active`;
 }
 
+function selectedFilterColumns(exceptRule = null) {
+  return new Set(Array.from(filterRules.querySelectorAll(".filterRule"))
+    .filter((rule) => rule !== exceptRule)
+    .map((rule) => rule.dataset.filterColumn));
+}
+
 function populateAddFilterSelect() {
+  const selectedColumns = selectedFilterColumns();
   const fragment = document.createDocumentFragment();
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.textContent = "Select filter...";
   fragment.appendChild(placeholder);
 
-  availableFilterColumns().forEach((column) => {
-    const option = document.createElement("option");
-    option.value = column;
-    option.textContent = filterLabel(column);
-    fragment.appendChild(option);
-  });
+  availableFilterColumns()
+    .filter((column) => !selectedColumns.has(column))
+    .forEach((column) => {
+      const option = document.createElement("option");
+      option.value = column;
+      option.textContent = filterLabel(column);
+      fragment.appendChild(option);
+    });
 
   addFilterSelect.replaceChildren(fragment);
 }
@@ -1787,11 +1796,12 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
   return input;
 }
 
-function buildColumnSelect(selectedColumn) {
+function buildColumnSelect(selectedColumn, currentRule = null) {
   const select = document.createElement("select");
   select.dataset.filterColumnSelect = "true";
+  const selectedColumns = selectedFilterColumns(currentRule);
 
-  availableFilterColumns().forEach((column) => {
+  availableFilterColumns().filter((column) => column === selectedColumn || !selectedColumns.has(column)).forEach((column) => {
     const option = document.createElement("option");
     option.value = column;
     option.textContent = filterLabel(column);
@@ -1834,11 +1844,13 @@ function addFilterRule(column, options = {}) {
   connector.className = "connectorSelect";
   connector.value = options.connector || "and";
 
-  const columnSelect = buildColumnSelect(column);
+  const columnSelect = buildColumnSelect(column, rule);
   columnSelect.addEventListener("change", () => {
     rule.dataset.filterColumn = columnSelect.value;
     replaceOperatorSelect(rule, columnSelect.value);
     replaceValueControl(rule, columnSelect.value);
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
   });
 
   const operator = buildOperatorSelect(column);
@@ -1861,6 +1873,8 @@ function addFilterRule(column, options = {}) {
     rule.remove();
     refreshRuleConnectors();
     updateFilterSummary();
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
   });
 
   rule.appendChild(connector);
@@ -1870,6 +1884,7 @@ function addFilterRule(column, options = {}) {
   rule.appendChild(remove);
   filterRules.appendChild(rule);
   refreshRuleConnectors();
+  populateAddFilterSelect();
 
   if (options.focus !== false) {
     (value.querySelector("[data-filter-value]") || value).focus();
@@ -1901,12 +1916,14 @@ function removeUnavailableFilterRules() {
 function refreshRuleColumnSelects() {
   for (const rule of filterRules.querySelectorAll(".filterRule")) {
     const oldSelect = rule.querySelector("[data-filter-column-select]");
-    const newSelect = buildColumnSelect(rule.dataset.filterColumn);
+    const newSelect = buildColumnSelect(rule.dataset.filterColumn, rule);
 
     newSelect.addEventListener("change", () => {
       rule.dataset.filterColumn = newSelect.value;
       replaceOperatorSelect(rule, newSelect.value);
       replaceValueControl(rule, newSelect.value);
+      populateAddFilterSelect();
+      refreshRuleColumnSelects();
     });
 
     oldSelect.replaceWith(newSelect);
@@ -1976,6 +1993,7 @@ function closeFilters() {
 
 function clearAdvancedFilters() {
   filterRules.replaceChildren();
+  populateAddFilterSelect();
   state.page = 1;
   applyFilters();
 }
