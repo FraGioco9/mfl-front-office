@@ -280,6 +280,10 @@ p {
   width: 100%;
 }
 
+.accountMenu .compactButton {
+  height: 58px;
+}
+
 .accountDropdownItem {
   display: flex;
   align-items: center;
@@ -337,6 +341,7 @@ p {
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
+  transition: width var(--menu-transition, 0ms ease), color 120ms ease;
 }
 
 .menuIcon {
@@ -353,6 +358,10 @@ p {
   display: inline-flex;
   align-items: center;
   height: 24px;
+  max-width: 80px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
 }
 
 .menuButton[hidden] {
@@ -363,8 +372,8 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
+  width: 58px;
+  height: 58px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -380,12 +389,17 @@ body[data-page="home"] .topbar .stats {
 
 .stats {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
 .stats div {
+  box-sizing: border-box;
+  display: grid;
+  align-content: center;
   min-width: 116px;
-  padding: 10px 12px;
+  height: 58px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
@@ -413,7 +427,7 @@ body[data-page="home"] .topbar .stats {
 }
 
 .appShell.menuAnimating {
-  transition: grid-template-columns 180ms ease;
+  --menu-transition: 220ms ease;
 }
 
 .appShell.menuClosed {
@@ -436,6 +450,7 @@ body[data-page="home"] .topbar .stats {
   padding: 14px 14px;
   border-right: 1px solid var(--border);
   background: var(--surface);
+  transition: width var(--menu-transition, 0ms ease);
 }
 
 .menuRail[hidden] {
@@ -498,7 +513,8 @@ body[data-page="home"] .topbar .stats {
 }
 
 .appShell.menuClosed .menuText {
-  display: none;
+  max-width: 0;
+  opacity: 0;
 }
 
 .sidebar {
@@ -507,7 +523,7 @@ body[data-page="home"] .topbar .stats {
   max-height: 180px;
   opacity: 1;
   transform: translateX(0);
-  transition: none;
+  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
 }
 
 .sidebar[hidden] {
@@ -538,6 +554,7 @@ body[data-page="home"] .topbar .stats {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: width var(--menu-transition, 0ms ease), padding var(--menu-transition, 0ms ease), background 120ms ease, border-color 120ms ease;
 }
 
 .tablePageTitle {
@@ -554,7 +571,7 @@ body[data-page="home"] .topbar .stats {
   font-size: 18px;
   line-height: 1;
   text-align: center;
-  transition: none;
+  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
 }
 
 .appShell.menuClosed .navButton {
@@ -569,11 +586,11 @@ body[data-page="home"] .topbar .stats {
 }
 
 .appShell.menuAnimating .sidebar {
-  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease, width 180ms ease;
+  transition: opacity var(--menu-transition, 220ms ease), transform var(--menu-transition, 220ms ease), max-height var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
 }
 
 .appShell.menuAnimating .navEmoji {
-  transition: transform 180ms ease, width 180ms ease;
+  transition: transform var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
 }
 
 .navTrendIcon {
@@ -592,8 +609,18 @@ body[data-page="home"] .topbar .stats {
   stroke-linejoin: round;
 }
 
+.navText {
+  display: inline-block;
+  max-width: 112px;
+  overflow: hidden;
+  opacity: 1;
+  white-space: nowrap;
+  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
+}
+
 .appShell.menuClosed .navText {
-  display: none;
+  max-width: 0;
+  opacity: 0;
 }
 
 .navButton:hover {
@@ -734,6 +761,7 @@ body[data-page="home"] .topbar .stats {
 main {
   min-width: 0;
   margin-left: var(--sidebar-offset, 0px);
+  transition: margin-left var(--menu-transition, 0ms ease);
   padding: 4px 28px 6px;
 }
 
