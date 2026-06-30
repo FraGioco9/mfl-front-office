@@ -81,7 +81,7 @@ body.auth .loadingScreen {
 .loadingText {
   margin-bottom: 12px;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   text-align: center;
 }
@@ -235,7 +235,7 @@ p {
 
 .searchButton .searchEmoji {
   color: var(--text);
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -350,8 +350,8 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -641,7 +641,7 @@ p {
 }
 main {
   min-width: 0;
-  padding: 8px 28px 12px;
+  padding: 6px 28px 8px;
 }
 
 .views {
@@ -1034,7 +1034,7 @@ td a {
   background: transparent;
   color: var(--text-soft);
   padding: 0;
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -1341,14 +1341,14 @@ td a {
 
 .playerPage {
   max-width: 1180px;
-  min-height: calc(100vh - 220px);
+  min-height: 0;
   margin: 0 auto;
 }
 
 .playerDetail {
   display: grid;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .playerHero,
@@ -1363,7 +1363,7 @@ td a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 6px 12px 10px;
+  padding: 5px 12px 7px;
 }
 
 .playerHero h2,
@@ -1441,7 +1441,13 @@ td a {
   cursor: pointer;
 }
 
-.playerIdText:hover {
+.playerIdText:hover,
+.playerIdText:focus,
+.playerIdText:active {
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
+  color: var(--text-soft);
   text-decoration: underline;
 }
 
@@ -1532,7 +1538,7 @@ td a {
 
 
 .playerAttributeCard.featured {
-  min-height: 82px;
+  min-height: 70px;
 }
 
 .playerAttributeCard.featured strong {
@@ -1565,7 +1571,7 @@ td a {
 
 .playerStack {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-rows: auto auto;
 }
 
@@ -1587,8 +1593,8 @@ td a {
 .detailGrid,
 .attributeGrid {
   display: grid;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .detailGrid {
@@ -1596,7 +1602,7 @@ td a {
 }
 
 .playerInfoPanel .detailGrid {
-  min-height: 244px;
+  min-height: 204px;
   grid-template-rows: repeat(3, minmax(0, 1fr));
 }
 
@@ -1614,8 +1620,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 76px;
-  padding: 13px 14px;
+  min-height: 62px;
+  padding: 9px 12px;
 }
 
 .detailGrid strong {
@@ -1625,8 +1631,8 @@ td a {
 }
 
 .playerAttributeCard {
-  min-height: 68px;
-  padding: 10px 12px;
+  min-height: 60px;
+  padding: 8px 12px;
 }
 
 .detailGrid span,
@@ -1640,13 +1646,13 @@ td a {
 .pitch {
   display: grid;
   align-content: space-between;
-  gap: 7px;
+  gap: 5px;
   position: relative;
   width: 360px;
   min-height: 0;
   height: calc(100% - 8px);
   margin: 8px auto 0;
-  padding: 12px 8px;
+  padding: 10px 8px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
@@ -1665,7 +1671,7 @@ td a {
 
 .pitchPositionSlot {
   display: grid;
-  min-width: 48px;
+  min-width: 58px;
   place-items: center;
 }
 
@@ -1674,8 +1680,8 @@ td a {
   align-content: center;
   justify-items: center;
   gap: 3px;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   color: #000000;
   font-weight: 800;
@@ -1684,12 +1690,12 @@ td a {
 }
 
 .pitchPositionCircle strong {
-  font-size: 15px;
+  font-size: 18px;
 }
 
 .pitchPositionCircle small {
   margin-top: 0;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -1712,8 +1718,8 @@ td a {
 
 .pitchPositionBlank {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
 }
 
 .pitch::before,
@@ -1727,8 +1733,8 @@ td a {
 
 .pitch::before {
   top: 50%;
-  width: 74px;
-  height: 74px;
+  width: 108px;
+  height: 108px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -1749,8 +1755,8 @@ td a {
 
 .pitchBoxTop,
 .pitchBoxBottom {
-  width: 44%;
-  height: 42px;
+  width: 68%;
+  height: 18%;
   border: 1px solid rgba(255, 255, 255, 0.58);
 }
 
@@ -1766,11 +1772,29 @@ td a {
 
 .pitchGoalTop,
 .pitchGoalBottom {
-  width: 22%;
-  height: 18px;
+  width: 36%;
+  height: 7%;
   border: 1px solid rgba(255, 255, 255, 0.52);
 }
 
+
+.pitchArcTop,
+.pitchArcBottom {
+  width: 28%;
+  height: 11%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+}
+
+.pitchArcTop {
+  top: 13.5%;
+  clip-path: inset(50% 0 0 0);
+}
+
+.pitchArcBottom {
+  bottom: 13.5%;
+  clip-path: inset(0 0 50% 0);
+}
 .pitchGoalTop {
   top: 0;
   border-top: 0;
