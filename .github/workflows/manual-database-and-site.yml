@@ -3,7 +3,7 @@ name: Manual database and site update
 on:
   schedule:
     # GitHub cron is UTC. These cover Rome CET and CEST; the guard step keeps only Rome-time matches.
-    - cron: "30 8,9 * * *"
+    - cron: "20 8,9 * * *"
     - cron: "15 17,18,21,22 * * *"
   workflow_dispatch:
     inputs:
@@ -54,7 +54,7 @@ jobs:
           from zoneinfo import ZoneInfo
 
           now = datetime.now(ZoneInfo("Europe/Rome"))
-          targets = [(10, 30), (19, 15), (23, 15)]
+          targets = [(10, 20), (19, 15), (23, 15)]
           should_run = any(
               0 <= (now - now.replace(hour=hour, minute=minute, second=0, microsecond=0)).total_seconds() <= 20 * 60
               for hour, minute in targets
