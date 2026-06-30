@@ -2,6 +2,7 @@ name: Manual database and site update
 
 on:
   schedule:
+    # GitHub cron is UTC. These cover Rome CET and CEST; the guard step keeps only Rome-time matches.
     - cron: "30 8,9 * * *"
     - cron: "15 17,18,21,22 * * *"
   workflow_dispatch:
@@ -43,15 +44,37 @@ jobs:
       - name: Download repository
         uses: actions/checkout@v4
 
+      - name: Check Rome schedule time
+        id: schedule_gate
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          now = datetime.now(ZoneInfo("Europe/Rome"))
+          targets = [(10, 30), (19, 15), (23, 15)]
+          should_run = any(
+              0 <= (now - now.replace(hour=hour, minute=minute, second=0, microsecond=0)).total_seconds() <= 20 * 60
+              for hour, minute in targets
+          )
+          print(f"should_run={'true' if should_run else 'false'}")
+          PY
+
       - name: Set up Python
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Run database refresh
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
-          COMMAND=(python update_database.py --workers "${{ inputs.workers }}" --seasons "${{ inputs.seasons }}")
+          WORKERS="${{ inputs.workers || '100' }}"
+          SEASONS="${{ inputs.seasons || 'no' }}"
+          COMMAND=(python update_database.py --workers "$WORKERS" --seasons "$SEASONS")
 
           if [ -n "${{ inputs.limit }}" ]; then
             COMMAND+=(--limit "${{ inputs.limit }}")
@@ -64,9 +87,11 @@ jobs:
           "${COMMAND[@]}"
 
       - name: Export website data
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         run: python export_for_website.py
 
       - name: Upload database
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: mfl_progression_database
@@ -74,6 +99,7 @@ jobs:
           if-no-files-found: error
 
       - name: Move data behind protected API
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
           rm -rf site/api/data-files
@@ -84,9 +110,11 @@ jobs:
           ls site/api/data-files | head
 
       - name: Install Vercel CLI
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         run: npm install --global vercel@latest
 
       - name: Connect Vercel project
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -96,6 +124,7 @@ jobs:
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
       - name: Deploy protected site to Vercel
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel deploy --prod --yes --token "$VERCEL_TOKEN"

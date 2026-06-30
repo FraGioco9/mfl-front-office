@@ -361,8 +361,8 @@ async function showHomeShell(pageName = "home", updateUrl = true) {
   return result;
 }
 
-function showLogin() {
-  state.loginReturnPage = pageFromUrl();
+function showLogin(returnPage = pageFromUrl()) {
+  state.loginReturnPage = returnPage;
   menuRail.hidden = true;
   menuButton.hidden = true;
   sidebar.hidden = true;
@@ -555,7 +555,7 @@ async function signOut() {
     await auth.client.auth.signOut();
   }
 
-  window.location.reload();
+  window.location.href = "/";
 }
 
 function accountName() {
@@ -669,6 +669,17 @@ function updatePageUrl(pageName, options = {}) {
 async function setPage(pageName, updateHash = true, options = {}) {
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
+
+  if (auth.initialized && auth.required && !auth.session && pageRequiresData(pageName)) {
+    state.currentPage = pageName;
+    homePage.hidden = true;
+    progressionPage.hidden = true;
+    playerPage.hidden = true;
+    changelogPage.hidden = true;
+    showLogin(pagePath(pageName, options));
+    return false;
+  }
+
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
     state.tablePageStates[previousTablePage] = currentTablePageState();
@@ -2925,7 +2936,14 @@ navButtons.forEach((button) => {
 });
 
 window.addEventListener("popstate", () => {
-  setPage(pageFromUrl(), false);
+  const targetPage = pageFromUrl();
+
+  if (auth.initialized && auth.required && !auth.session && !pageRequiresData(targetPage)) {
+    showHomeShell(targetPage, false);
+    return;
+  }
+
+  setPage(targetPage, false);
 });
 
 loginForm.addEventListener("submit", signIn);
