@@ -1097,7 +1097,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1193px;
+  min-width: 1240px;
 }
 
 .col-select {
@@ -1105,43 +1105,43 @@ table {
 }
 
 .col-id {
-  width: 50px;
-}
-
-.col-flag {
-  width: 36px;
-}
-
-.col-name {
-  width: 170px;
-}
-
-.col-nationality {
-  width: 112px;
-}
-
-.col-age {
   width: 48px;
 }
 
+.col-flag {
+  width: 32px;
+}
+
+.col-name {
+  width: 150px;
+}
+
+.col-nationality {
+  width: 100px;
+}
+
+.col-age {
+  width: 46px;
+}
+
 .col-positions {
-  width: 92px;
+  width: 84px;
 }
 
 .col-seasons {
-  width: 60px;
+  width: 58px;
 }
 
 .col-stat {
-  width: 64px;
+  width: 82px;
 }
 
 .col-agent {
-  width: 90px;
+  width: 78px;
 }
 
 .col-link {
-  width: 45px;
+  width: 34px;
 }
 
 th,

@@ -515,7 +515,6 @@ def insert_players(
                 to_int(metadata.get("defense")),
                 to_int(metadata.get("physical")),
                 to_int(metadata.get("goalkeeping")),
-                None,
             )
         )
 
@@ -539,10 +538,9 @@ def insert_players(
             dribbling,
             defense,
             physical,
-            goalkeeping,
-            player_seasons
+            goalkeeping
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(player_id) DO UPDATE SET
             wallet_address = excluded.wallet_address,
             wallet_name = excluded.wallet_name,
@@ -560,8 +558,7 @@ def insert_players(
             dribbling = excluded.dribbling,
             defense = excluded.defense,
             physical = excluded.physical,
-            goalkeeping = excluded.goalkeeping,
-            player_seasons = players.player_seasons
+            goalkeeping = excluded.goalkeeping
         """,
         rows,
     )

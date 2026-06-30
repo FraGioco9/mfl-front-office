@@ -60,6 +60,21 @@ const views = {
   },
 };
 
+const tableColumnClasses = {
+  player_id: "col-id",
+  nationality_flag: "col-flag",
+  name: "col-name",
+  nationality: "col-nationality",
+  age: "col-age",
+  positions: "col-positions",
+  player_seasons: "col-seasons",
+  wallet_name: "col-agent",
+  player_link: "col-link",
+};
+
+function tableColumnClass(column) {
+  return statColumns.includes(column) ? "col-stat" : tableColumnClasses[column] || "";
+}
 const columnLabels = {
   player_id: "ID",
   nationality_flag: "",
@@ -1859,6 +1874,10 @@ function buildHeader() {
 
   views[state.view].columns.forEach((column) => {
     const cell = document.createElement("th");
+    const columnClass = tableColumnClass(column);
+    if (columnClass) {
+      cell.classList.add(columnClass);
+    }
     const isSorted = state.sortKey === column;
     const label = document.createElement("span");
     label.textContent = columnLabels[column];
@@ -2627,6 +2646,10 @@ function renderTable() {
 
     views[state.view].columns.forEach((column) => {
       const cell = document.createElement("td");
+      const columnClass = tableColumnClass(column);
+      if (columnClass) {
+        cell.classList.add(columnClass);
+      }
 
       if (column === "name") {
         cell.classList.add("nameCell");
@@ -2646,7 +2669,7 @@ function renderTable() {
         appendNameMarker(cell, retirementMarker(row), "retirementMarker");
         appendNameMarker(cell, newMintMarker(row), "newMintMarker");
       } else if (column === flagColumn) {
-        cell.className = "flagCell";
+        cell.classList.add("flagCell");
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === linkColumn) {
         const link = document.createElement("a");
