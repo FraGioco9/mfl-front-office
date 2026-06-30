@@ -415,11 +415,18 @@ p {
   grid-template-columns: 70px minmax(0, 1fr);
 }
 
+.appShell.menuClosed .menuRail {
+  width: 70px;
+}
+
 .menuRail {
-  position: sticky;
+  position: fixed;
   top: 74px;
-  align-self: start;
-  min-height: calc(100vh - 74px);
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  width: 190px;
+  box-sizing: border-box;
   overflow: hidden;
   padding: 14px 14px;
   border-right: 1px solid var(--border);
@@ -804,6 +811,10 @@ main {
 .field.compact {
   gap: 0;
   align-self: end;
+}
+
+.field.compact.rowsField {
+  gap: 12px;
 }
 
 .field span {
@@ -1233,6 +1244,7 @@ td a {
 
   .menuRail {
     position: static;
+    width: auto;
     min-height: 0;
   }
 
