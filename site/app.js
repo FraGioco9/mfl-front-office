@@ -1345,19 +1345,20 @@ function playerAttributeColumns(row) {
   return ["overall", "pace", "dribbling", "shooting", "defense", "passing", "physical"];
 }
 
-function playerAttributeContributionTitle(row, column) {
+function playerAttributeContributionTooltip(row, column) {
   if (column === "overall") {
     return "";
   }
 
   const primary = playerPositions(row)[0];
   const weight = POSITION_GROUP_WEIGHTS[primary]?.[column];
+  const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
 
-  if (weight === undefined) {
+  if (weight === undefined || !primary || !label) {
     return "";
   }
 
-  return ` title="${escapeHtml(`This stat contributes to ${weight}% of the overall of that primary position.`)}"`;
+  return ` data-tooltip="${escapeHtml(`${label} contributes to ${weight}% of the overall for the ${primary} position.`)}"`;
 }
 function playerAttributeValueHtml(row, column, viewName) {
   const value = column === "overall" ? statDisplayValue(row, column) : getValue(row, column);
@@ -1387,8 +1388,8 @@ function renderPlayerAttributePanel(row) {
     const featured = column === "overall" ? " featured" : "";
     const fullWidth = column === "overall" || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
     const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
-    const contributionTitle = playerAttributeContributionTitle(row, column);
-    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTitle}>${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
+    const contributionTooltip = playerAttributeContributionTooltip(row, column);
+    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTooltip}>${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
   }).join("");
 }
 

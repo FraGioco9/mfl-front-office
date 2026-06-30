@@ -419,7 +419,7 @@ p {
 
 .menuRail {
   position: fixed;
-  top: 74px;
+  top: 102px;
   bottom: 0;
   left: 0;
   z-index: 15;
@@ -1651,6 +1651,42 @@ td a {
   font-size: inherit;
   line-height: 1;
   text-shadow: none;
+}
+.playerAttributeCard .attributeValueText[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+.playerAttributeCard .attributeValueText[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 45;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.playerAttributeCard .attributeValueText[data-tooltip]:hover::after,
+.playerAttributeCard .attributeValueText[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 :root[data-theme="dark"] .playerAttributeCard strong,
