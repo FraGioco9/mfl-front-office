@@ -1477,9 +1477,10 @@ function rememberSearchResult(playerId) {
 function renderSearchResultsNow() {
   const query = playerSearchInput.value.trim().toLowerCase();
   const results = query ? bestSearchResults(query) : recentSearchRows();
-  playerSearchResults.classList.toggle("recentSearchResults", !query);
+  playerSearchResults.classList.add("filledSearchResults");
 
   if (!results.length) {
+    playerSearchResults.classList.remove("filledSearchResults");
     playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players found." : "Recent players will appear here."}</div>`;
     return;
   }

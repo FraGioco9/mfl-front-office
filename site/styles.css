@@ -1306,12 +1306,12 @@ td a {
   overflow: auto;
 }
 
-.searchResults.recentSearchResults {
+.searchResults.filledSearchResults {
   grid-template-rows: repeat(5, minmax(0, 1fr));
   align-content: stretch;
 }
 
-.searchResults.recentSearchResults .searchResult {
+.searchResults.filledSearchResults .searchResult {
   height: 100%;
   align-content: center;
 }
@@ -1389,8 +1389,8 @@ td a {
 
 .playerWatchlistButton,
 .playerExternalButton {
-  width: 156px;
-  min-width: 156px;
+  width: 172px;
+  min-width: 172px;
 }
 
 .playerHeroActions {
@@ -1409,7 +1409,8 @@ td a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .watchlistButtonStar {
@@ -1489,7 +1490,7 @@ td a {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.05;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
@@ -1510,11 +1511,11 @@ td a {
 
 
 .playerAttributeCard .progressionValue {
-  font-size: 16px;
+  font-size: 13px;
 }
 
 .playerAttributeCard.featured .progressionValue {
-  font-size: 17px;
+  font-size: 16px;
 }
 .playerAttributeCard.fullWidth {
   grid-column: 1 / -1;
@@ -1544,7 +1545,7 @@ td a {
 
 .playerGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   align-items: stretch;
   gap: 8px;
 }
@@ -1632,7 +1633,7 @@ td a {
   align-content: space-between;
   gap: 7px;
   position: relative;
-  width: 280px;
+  width: 320px;
   min-height: 0;
   height: calc(100% - 8px);
   margin: 8px auto 0;
