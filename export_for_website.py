@@ -48,6 +48,15 @@ PLAYER_COLUMNS = [
     "defense_prog_current_season",
     "physical_prog_current_season",
     "goalkeeping_prog_current_season",
+    "next_overall",
+    "next_overall_gap",
+    "pace_to_next_overall",
+    "shooting_to_next_overall",
+    "passing_to_next_overall",
+    "dribbling_to_next_overall",
+    "defense_to_next_overall",
+    "physical_to_next_overall",
+    "goalkeeping_to_next_overall",
 ]
 
 

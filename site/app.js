@@ -33,7 +33,7 @@ const tablePages = new Set(["database", "progression", "watchlist"]);
 const pageViewOptions = {
   database: ["attributes", "next"],
   progression: ["current", "all"],
-  watchlist: ["current", "all"],
+  watchlist: ["attributes", "next", "current", "all"],
 };
 const defaultPageViews = {
   database: "attributes",
@@ -1103,10 +1103,17 @@ function formatStatValue(row, statColumn) {
   return `${value} (${sign}${progression})`;
 }
 
+function hasColumn(column) {
+  return state.columns.includes(column);
+}
+
+function precomputedValue(row, column) {
+  return hasColumn(column) ? getValue(row, column) : null;
+}
+
 function tableNextOverallInfo(row, statColumn) {
-  const gap = nextOverallGap(row);
-  const primary = playerPositions(row)[0];
-  const weight = statColumn === "overall" ? 100 : (POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0);
+  const precomputedGap = precomputedValue(row, "next_overall_gap");
+  const gap = precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
   const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
 
   if (statColumn === "overall") {
@@ -1114,6 +1121,28 @@ function tableNextOverallInfo(row, statColumn) {
       ? { text: "MAX", className: "neutral" }
       : { text: `+${formatDecimal(gap)}`, className: "easy" };
   }
+
+  const precomputedColumn = `${statColumn}_to_next_overall`;
+  const precomputedNeeded = precomputedValue(row, precomputedColumn);
+
+  if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
+    const neededStatGain = Number(precomputedNeeded);
+    return {
+      text: `+${formatDecimal(neededStatGain, 1)}`,
+      className: nextOverallColorClass(neededStatGain),
+    };
+  }
+
+  if (hasColumn(precomputedColumn)) {
+    if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
+      return { text: "MAX", className: "neutral" };
+    }
+
+    return null;
+  }
+
+  const primary = playerPositions(row)[0];
+  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
 
   if (!weight) {
     return null;
@@ -1131,7 +1160,10 @@ function tableNextOverallInfo(row, statColumn) {
 }
 
 function appendNextOverallTableValue(cell, row, statColumn) {
-  const value = statColumn === "overall" ? primaryPreciseOverall(row) : getValue(row, statColumn);
+  const precomputedOverall = precomputedValue(row, "next_overall");
+  const value = statColumn === "overall"
+    ? (precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : precomputedOverall)
+    : getValue(row, statColumn);
 
   if (value === null || value === undefined || value === "") {
     cell.textContent = "NULL";
@@ -1769,14 +1801,26 @@ function renderSearchResults() {
 }
 
 function tableNextOverallSortValue(row, statColumn) {
+  if (statColumn === "overall") {
+    const precomputedOverall = precomputedValue(row, "next_overall");
+    return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : precomputedOverall;
+  }
+
+  const precomputedColumn = `${statColumn}_to_next_overall`;
+  const precomputedNeeded = precomputedValue(row, precomputedColumn);
+
+  if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
+    return precomputedNeeded;
+  }
+
+  if (hasColumn(precomputedColumn)) {
+    return null;
+  }
+
   const gap = nextOverallGap(row);
   const primary = playerPositions(row)[0];
-  const weight = statColumn === "overall" ? 100 : (POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0);
+  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
   const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
-
-  if (statColumn === "overall") {
-    return primaryPreciseOverall(row);
-  }
 
   if (!weight || maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
     return null;
