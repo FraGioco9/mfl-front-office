@@ -607,26 +607,33 @@ def next_overall_values(row: sqlite3.Row) -> tuple[Any, ...]:
 def update_next_overall_columns(connection: sqlite3.Connection, player_ids: list[int] | None = None) -> int:
     ensure_players_columns(connection)
     connection.row_factory = sqlite3.Row
-    parameters: list[Any] = []
-    where_sql = ""
+    all_updates = []
 
     if player_ids:
-        unique_ids = sorted(set(player_ids))
-        placeholders = ",".join("?" for _ in unique_ids)
-        where_sql = f"WHERE player_id IN ({placeholders})"
-        parameters = unique_ids
+        batches: list[list[int] | None] = chunks(sorted(set(player_ids)), PROGRESSION_BATCH_SIZE)
+    else:
+        batches = [None]
 
-    rows = connection.execute(
-        f"""
-        SELECT player_id, positions, overall, pace, shooting, passing, dribbling, defense, physical, goalkeeping
-        FROM players
-        {where_sql}
-        """,
-        parameters,
-    ).fetchall()
+    for batch in batches:
+        parameters: list[Any] = []
+        where_sql = ""
 
-    updates = [(*next_overall_values(row), row["player_id"]) for row in rows]
-    if not updates:
+        if batch:
+            placeholders = ",".join("?" for _ in batch)
+            where_sql = f"WHERE player_id IN ({placeholders})"
+            parameters = batch
+
+        rows = connection.execute(
+            f"""
+            SELECT player_id, positions, overall, pace, shooting, passing, dribbling, defense, physical, goalkeeping
+            FROM players
+            {where_sql}
+            """,
+            parameters,
+        ).fetchall()
+        all_updates.extend((*next_overall_values(row), row["player_id"]) for row in rows)
+
+    if not all_updates:
         return 0
 
     connection.executemany(
@@ -644,9 +651,9 @@ def update_next_overall_columns(connection: sqlite3.Connection, player_ids: list
             goalkeeping_to_next_overall = ?
         WHERE player_id = ?
         """,
-        updates,
+        all_updates,
     )
-    return len(updates)
+    return len(all_updates)
 
 
 def progression_value(progression: Any, attribute: str) -> int | None:
