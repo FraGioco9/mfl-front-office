@@ -67,6 +67,15 @@ body.auth .loadingScreen {
   display: none;
 }
 
+body.booting .topbar,
+body.booting main,
+body.booting .menuRail,
+body.booting .sidebar,
+body.booting .modalBackdrop,
+body.booting .siteFooter {
+  visibility: hidden;
+}
+
 :root[data-initial-page="changelog"] #homeLoginButton {
   display: none;
 }
@@ -1143,6 +1152,10 @@ td {
   font-size: 14px;
 }
 
+td.nameCell {
+  overflow: visible;
+}
+
 .flagCell {
   text-align: center;
   vertical-align: middle;
@@ -1261,11 +1274,47 @@ td a {
 
 .retirementMarker,
 .newMintMarker {
+  position: relative;
   display: inline-block;
   margin-left: 7px;
   font-size: 14px;
   line-height: 1;
   vertical-align: middle;
+  cursor: help;
+}
+
+.retirementMarker[data-tooltip]::after,
+.newMintMarker[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 45;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.retirementMarker[data-tooltip]:hover::after,
+.retirementMarker[data-tooltip]:focus::after,
+.newMintMarker[data-tooltip]:hover::after,
+.newMintMarker[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .emptyState {

@@ -19,9 +19,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.75.0">
+    <link rel="stylesheet" href="/styles.css?v=1.75.1">
   </head>
-  <body data-page="home">
+  <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
       <div class="loadingBox">
         <div id="loadingText" class="loadingText">Preparing data...</div>
@@ -198,6 +198,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.75.1</span><p>Reveal the app shell together after loading and style table marker tooltips</p></li>
               <li><span>v1.75.0</span><p>Split attributes into a dedicated Database page</p></li>
               <li><span>v1.74.12</span><p>Keep brand on root, hide sidebar during login, and lighten progression text</p></li>
               <li><span>v1.74.11</span><p>Preserve page after login and reveal sidebar with loaded pages</p></li>
@@ -349,7 +350,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.75.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.75.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -392,6 +393,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.75.0"></script>
+    <script src="/app.js?v=1.75.1"></script>
   </body>
 </html>

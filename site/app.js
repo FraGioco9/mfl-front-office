@@ -248,9 +248,13 @@ async function finishLoading() {
   await new Promise((resolve) => window.setTimeout(resolve, 450));
   loadingScreen.classList.add("leaving");
   await new Promise((resolve) => window.setTimeout(resolve, 220));
-  document.body.classList.remove("loading");
   loadingScreen.hidden = true;
   loadingScreen.classList.remove("complete", "leaving");
+  document.body.classList.remove("loading");
+}
+
+function revealAppShell() {
+  document.body.classList.remove("booting");
 }
 
 function updateMenuVisibility() {
@@ -333,6 +337,7 @@ async function showHomeShell(pageName = "home", updateUrl = true) {
   updateAccountState();
   const result = await setPage(pageName, updateUrl);
   updateMenuVisibility();
+  revealAppShell();
   return result;
 }
 
@@ -343,6 +348,7 @@ function showLogin() {
   sidebar.hidden = true;
   document.body.classList.add("auth");
   document.body.classList.remove("loading");
+  revealAppShell();
   loadingScreen.hidden = true;
   loginScreen.hidden = false;
   accountMenu.hidden = !auth.required;
@@ -1186,7 +1192,7 @@ function appendNameMarker(cell, marker, className) {
   const markerElement = document.createElement("span");
   markerElement.className = className;
   markerElement.textContent = marker.emoji;
-  markerElement.title = marker.label;
+  markerElement.dataset.tooltip = marker.label;
   markerElement.setAttribute("aria-label", marker.label);
   cell.appendChild(markerElement);
 }
@@ -2413,6 +2419,7 @@ function renderTable() {
       const cell = document.createElement("td");
 
       if (column === "name") {
+        cell.classList.add("nameCell");
         const nameWrap = document.createElement("div");
         const nameLink = document.createElement("a");
         nameWrap.className = "playerNameCell";
