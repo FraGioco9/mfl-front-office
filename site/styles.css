@@ -633,6 +633,7 @@ body.auth .appShell .sidebar {
   transition: transform var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
 }
 
+.navDatabaseIcon,
 .navTrendIcon {
   fill: none;
   stroke: currentColor;

@@ -29,6 +29,18 @@ const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "def
 const agentColumn = "wallet_name";
 const linkColumn = "player_link";
 
+const tablePages = new Set(["database", "progression", "watchlist"]);
+const pageViewOptions = {
+  database: ["attributes"],
+  progression: ["current", "all"],
+  watchlist: ["current", "all"],
+};
+const defaultPageViews = {
+  database: "attributes",
+  progression: "current",
+  watchlist: "current",
+};
+
 const views = {
   attributes: {
     columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
@@ -303,7 +315,7 @@ function syncHomeLoginButton() {
 }
 
 function pageRequiresData(pageName) {
-  return ["progression", "watchlist", "player"].includes(pageName);
+  return tablePages.has(pageName) || pageName === "player";
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true) {
@@ -584,7 +596,7 @@ function pageFromUrl() {
     return "player";
   }
 
-  return ["home", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
+  return ["home", "database", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
 }
 
 async function ensureProgressionData() {
@@ -616,7 +628,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     saveTableState();
   }
 
-  const tablePage = pageName === "progression" || pageName === "watchlist";
+  const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
 
   if ((tablePage || playerPageActive) && !state.dataLoaded) {
@@ -637,9 +649,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   progressionPage.hidden = !tablePage;
   playerPage.hidden = !playerPageActive;
   changelogPage.hidden = pageName !== "changelog";
-  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : "Progression";
+  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "database" ? "Database" : "Progression";
   if (tablePage) {
     restoreSavedTableState(pageName);
+    updateViewButtons();
     buildHeader();
   }
   emptyState.textContent = pageName === "watchlist"
@@ -726,16 +739,38 @@ async function loadSummary() {
 }
 
 function tablePageKey(pageName = state.currentPage) {
-  return pageName === "progression" || pageName === "watchlist" ? pageName : null;
+  return tablePages.has(pageName) ? pageName : null;
 }
 
-function defaultTablePageState() {
+function allowedViewsForPage(pageName = tablePageKey() || "progression") {
+  return pageViewOptions[pageName] || pageViewOptions.progression;
+}
+
+function defaultViewForPage(pageName = tablePageKey() || "progression") {
+  return defaultPageViews[pageName] || "current";
+}
+
+function normalizeViewForPage(viewName, pageName = tablePageKey() || "progression") {
+  return allowedViewsForPage(pageName).includes(viewName) ? viewName : defaultViewForPage(pageName);
+}
+
+function updateViewButtons() {
+  const allowedViews = allowedViewsForPage();
+
+  viewButtons.forEach((button) => {
+    const allowed = allowedViews.includes(button.dataset.view);
+    button.hidden = !allowed;
+    button.classList.toggle("active", allowed && button.dataset.view === state.view);
+  });
+}
+
+function defaultTablePageState(pageName = tablePageKey() || "progression") {
   return {
     hideRetired: true,
     hideRetiring: false,
     newMints: false,
     pageSize: 100,
-    view: "current",
+    view: defaultViewForPage(pageName),
     sortKey: "overall",
     sortDirection: "desc",
     rules: [],
@@ -1982,14 +2017,10 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
   const savedRoot = loadSavedTableState();
   const savedState = savedRoot?.pages?.[pageName]
     || (pageName === "progression" && !savedRoot?.pages ? savedRoot : null)
-    || defaultTablePageState();
+    || defaultTablePageState(pageName);
 
-  if (savedState.view && views[savedState.view]) {
-    state.view = savedState.view;
-    viewButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.view === state.view);
-    });
-  }
+  state.view = normalizeViewForPage(savedState.view, pageName);
+  updateViewButtons();
 
   if (Number(savedState.pageSize)) {
     state.pageSize = Number(savedState.pageSize);
@@ -2435,15 +2466,17 @@ function csvEscape(value) {
 
 
 function setView(viewName) {
+  if (!allowedViewsForPage().includes(viewName)) {
+    return;
+  }
+
   state.view = viewName;
   state.page = 1;
   removeUnavailableFilterRules();
   populateAddFilterSelect();
   refreshRuleColumnSelects();
 
-  viewButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === viewName);
-  });
+  updateViewButtons();
 
   buildHeader();
   applyFilters();
