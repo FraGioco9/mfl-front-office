@@ -294,7 +294,7 @@ function hideHomeLoginButton() {
 }
 
 function syncHomeLoginButton() {
-  if (!auth.required || auth.session) {
+  if (pageFromUrl() === "changelog" || state.currentPage === "changelog" || !auth.required || auth.session) {
     hideHomeLoginButton();
     return;
   }
