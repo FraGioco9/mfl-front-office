@@ -2,6 +2,32 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json)$/;
+const PUBLIC_DATABASE_COLUMNS = [
+  "player_id",
+  "wallet_address",
+  "wallet_name",
+  "name",
+  "positions",
+  "age",
+  "nationality",
+  "retirement_years",
+  "overall",
+  "pace",
+  "shooting",
+  "passing",
+  "dribbling",
+  "defense",
+  "physical",
+  "player_seasons",
+  "next_overall",
+  "next_overall_gap",
+  "pace_to_next_overall",
+  "shooting_to_next_overall",
+  "passing_to_next_overall",
+  "dribbling_to_next_overall",
+  "defense_to_next_overall",
+  "physical_to_next_overall",
+];
 
 async function findDataFile(fileName) {
   const candidates = [
@@ -43,10 +69,11 @@ async function verifySupabaseToken(token) {
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
+  const publicDatabase = request.query.access === "public-database";
   const authorization = request.headers.authorization || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
 
-  if (!token || !(await verifySupabaseToken(token))) {
+  if (!publicDatabase && (!token || !(await verifySupabaseToken(token)))) {
     response.status(401).json({ error: "Login required." });
     return;
   }
@@ -68,7 +95,25 @@ module.exports = async function handler(request, response) {
   try {
     const fileContent = await fs.readFile(filePath, "utf8");
     response.setHeader("Content-Type", "application/json; charset=utf-8");
-    response.status(200).send(fileContent);
+
+    if (!publicDatabase) {
+      response.status(200).send(fileContent);
+      return;
+    }
+
+    const data = JSON.parse(fileContent);
+    const publicColumns = PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column));
+    const publicColumnIndexes = publicColumns.map((column) => data.columns.indexOf(column));
+
+    if (fileName === "manifest.json") {
+      response.status(200).json({ ...data, columns: publicColumns, publicAccess: "database" });
+      return;
+    }
+
+    response.status(200).json({
+      columns: publicColumns,
+      rows: data.rows.map((row) => publicColumnIndexes.map((index) => row[index])),
+    });
   } catch (error) {
     response.status(500).json({ error: `Could not read data file: ${error.message}` });
   }

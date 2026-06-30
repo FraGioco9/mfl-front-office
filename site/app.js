@@ -11,6 +11,7 @@ const state = {
   manifest: null,
   dataLoaded: false,
   dataLoadPromise: null,
+  dataAccess: null,
   selectedPlayerIds: new Set(),
   watchlistPlayerIds: new Set(),
   tablePageStates: {},
@@ -98,6 +99,7 @@ const numberColumns = new Set(["player_id", "age", "height", "retirement_years",
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
@@ -343,6 +345,14 @@ function pageRequiresData(pageName) {
   return tablePages.has(pageName) || pageName === "player";
 }
 
+function pageRequiresLogin(pageName) {
+  return pageName === "progression" || pageName === "player";
+}
+
+function pageRequiresFullData(pageName) {
+  return pageName === "progression" || pageName === "player" || (pageName === "watchlist" && Boolean(auth.session));
+}
+
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
   const needsDataFirst = pageRequiresData(pageName) && !state.dataLoaded;
 
@@ -461,12 +471,24 @@ function authHeaders() {
   };
 }
 
+function currentDataAccess() {
+  return auth.required && !auth.session ? "public" : "full";
+}
+
 function dataFileUrl(fileName) {
-  return auth.required ? `/api/data?file=${encodeURIComponent(fileName)}` : `/data/${fileName}`;
+  if (!auth.required) {
+    return `/data/${fileName}`;
+  }
+
+  const query = new URLSearchParams({ file: fileName });
+  if (!auth.session) {
+    query.set("access", "public-database");
+  }
+  return `/api/data?${query.toString()}`;
 }
 
 function cacheRequestForDataFile(fileName) {
-  return new Request(`/data-cache/${fileName}`);
+  return new Request(`/data-cache/${currentDataAccess()}/${fileName}`);
 }
 
 async function readCachedDataFile(fileName) {
@@ -510,7 +532,7 @@ async function fetchDataFile(fileName, options = {}) {
 
   const response = await fetch(dataFileUrl(fileName), {
     cache: fileName === "manifest.json" ? "no-store" : "default",
-    headers: auth.required ? authHeaders() : {},
+    headers: auth.required && auth.session ? authHeaders() : {},
   });
 
   if (response.status === 401) {
@@ -561,6 +583,7 @@ async function signIn(event) {
   auth.session = data.session;
   syncHomeLoginButton();
   await loadCloudTableState();
+  mergeGuestWatchlistIntoAccount();
   loginPassword.value = "";
   const returnTarget = pageTargetFromPath(state.loginReturnPage || window.location.pathname || "/");
   showAppShell();
@@ -704,7 +727,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
-  if (auth.initialized && auth.required && !auth.session && pageRequiresData(pageName)) {
+  if (auth.initialized && auth.required && !auth.session && pageRequiresLogin(pageName)) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
@@ -722,6 +745,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
+
+  if (pageRequiresFullData(pageName) && state.dataAccess !== "full") {
+    state.dataLoaded = false;
+    state.rows = [];
+    state.filteredRows = [];
+  }
 
   if ((tablePage || playerPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
@@ -824,10 +853,18 @@ function tablePageKey(pageName = state.currentPage) {
 }
 
 function allowedViewsForPage(pageName = tablePageKey() || "progression") {
+  if (pageName === "watchlist" && auth.required && !auth.session) {
+    return ["attributes", "next"];
+  }
+
   return pageViewOptions[pageName] || pageViewOptions.progression;
 }
 
 function defaultViewForPage(pageName = tablePageKey() || "progression") {
+  if (pageName === "watchlist" && auth.required && !auth.session) {
+    return "attributes";
+  }
+
   return defaultPageViews[pageName] || "current";
 }
 
@@ -878,6 +915,39 @@ function showToast(message) {
     toast.classList.remove("visible");
   }, 2200);
 }
+function saveGuestWatchlist() {
+  if (auth.session) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(GUEST_WATCHLIST_STORAGE_KEY, JSON.stringify(Array.from(state.watchlistPlayerIds)));
+  } catch {
+    // Watchlist still works for this page even if the browser blocks storage.
+  }
+}
+
+function loadGuestWatchlist() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(GUEST_WATCHLIST_STORAGE_KEY) || "[]");
+    return Array.isArray(ids) ? ids.map((playerId) => String(playerId)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeGuestWatchlistIntoAccount() {
+  const guestIds = loadGuestWatchlist();
+
+  if (!guestIds.length) {
+    return;
+  }
+
+  guestIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  localStorage.removeItem(GUEST_WATCHLIST_STORAGE_KEY);
+  saveTableState();
+}
+
 function saveTableState() {
   const savedState = currentTableState();
   auth.savedTableState = savedState;
@@ -888,6 +958,7 @@ function saveTableState() {
     // Filtering still works for this page even if the browser blocks storage.
   }
 
+  saveGuestWatchlist();
   queueCloudTableStateSave(savedState);
 }
 
@@ -1015,6 +1086,17 @@ function restoreTablePageStates(savedState) {
   }
 }
 
+function applyGuestWatchlistIfNeeded() {
+  if (auth.session) {
+    return;
+  }
+
+  const guestIds = loadGuestWatchlist();
+  if (guestIds.length) {
+    state.watchlistPlayerIds = new Set(guestIds);
+  }
+}
+
 function loadSavedTableState() {
   if (auth.savedTableState) {
     restoreTablePageStates(auth.savedTableState);
@@ -1022,6 +1104,7 @@ function loadSavedTableState() {
     restoreMenuState(auth.savedTableState);
     restoreRecentSearchState(auth.savedTableState);
     restorePlayerAttributeView(auth.savedTableState);
+    applyGuestWatchlistIfNeeded();
     return auth.savedTableState;
   }
 
@@ -1032,8 +1115,10 @@ function loadSavedTableState() {
     restoreMenuState(savedState);
     restoreRecentSearchState(savedState);
     restorePlayerAttributeView(savedState);
+    applyGuestWatchlistIfNeeded();
     return savedState;
   } catch {
+    applyGuestWatchlistIfNeeded();
     return null;
   }
 }
@@ -2788,6 +2873,7 @@ async function loadData() {
     state.rows = [];
     state.filteredRows = [];
     state.page = 1;
+    state.dataAccess = currentDataAccess();
     updateLoadingProgress(0, 0);
     const manifest = await fetchDataFile("manifest.json");
     const cacheVersion = `${manifest.generated_at || ""}:${manifest.row_count || 0}:${(manifest.chunks || []).map((chunk) => chunk.file).join("|")}`;
