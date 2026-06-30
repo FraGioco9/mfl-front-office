@@ -210,7 +210,7 @@ function updateLoadingProgress(loadedFiles, totalFiles) {
   const percent = totalFiles > 0 ? Math.round((loadedFiles / totalFiles) * 100) : 0;
   loadingBarFill.style.width = `${percent}%`;
   loadingText.textContent = totalFiles > 0
-    ? (loadedFiles >= totalFiles ? "Loading complete" : `Loading data files ${loadedFiles}/${totalFiles}`)
+    ? `Loading data files ${loadedFiles}/${totalFiles}`
     : "Preparing data...";
 }
 
@@ -227,11 +227,16 @@ function showLoadingError(message) {
 }
 
 async function finishLoading() {
-  updateLoadingProgress(1, 1);
   await paintLoadingProgress();
+  await new Promise((resolve) => window.setTimeout(resolve, 300));
+  loadingScreen.classList.add("complete");
+  loadingText.textContent = "Loading complete";
   await new Promise((resolve) => window.setTimeout(resolve, 450));
+  loadingScreen.classList.add("leaving");
+  await new Promise((resolve) => window.setTimeout(resolve, 220));
   document.body.classList.remove("loading");
   loadingScreen.hidden = true;
+  loadingScreen.classList.remove("complete", "leaving");
 }
 
 function updateMenuVisibility() {
@@ -335,7 +340,7 @@ function showAppShell() {
 function showLoading() {
   document.body.classList.add("loading");
   loadingScreen.hidden = false;
-  loadingScreen.classList.remove("failed");
+  loadingScreen.classList.remove("failed", "complete", "leaving");
   updateLoadingProgress(0, 0);
 }
 

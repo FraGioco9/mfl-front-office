@@ -68,6 +68,8 @@ body.auth .loadingScreen {
   gap: 0;
   padding: 24px;
   background: var(--page-bg);
+  opacity: 1;
+  transition: opacity 220ms ease;
 }
 
 .loadingScreen[hidden] {
@@ -76,8 +78,22 @@ body.auth .loadingScreen {
 
 .loadingBox {
   width: min(420px, 100%);
+  transform: translateY(0);
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
+
+.loadingScreen.complete .loadingBox {
+  transform: translateY(-4px);
+}
+
+.loadingScreen.leaving {
+  opacity: 0;
+}
+
+.loadingScreen.leaving .loadingBox {
+  transform: translateY(-10px);
+}
 .loadingText {
   margin-bottom: 12px;
   color: var(--text-muted);
@@ -113,6 +129,8 @@ body.auth .loadingScreen {
   gap: 0;
   padding: 24px;
   background: var(--page-bg);
+  opacity: 1;
+  transition: opacity 220ms ease;
 }
 
 .loginScreen[hidden] {
@@ -390,7 +408,7 @@ p {
 .appShell {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
-  min-height: calc(100vh - 138px);
+  min-height: calc(100vh - 154px);
   transition: grid-template-columns 180ms ease;
 }
 
@@ -400,7 +418,7 @@ p {
 
 .menuRail {
   overflow: hidden;
-  padding: 18px 14px;
+  padding: 14px 14px;
   border-right: 1px solid var(--border);
   background: var(--surface);
 }
@@ -503,7 +521,7 @@ p {
 }
 
 .tablePageTitle {
-  margin: 0 0 12px;
+  margin: 14px 0 12px;
   font-size: 20px;
   line-height: 1.2;
 }
@@ -529,7 +547,7 @@ p {
   justify-items: center;
   gap: 10px;
   width: min(780px, 100%);
-  min-height: calc(100vh - 270px);
+  min-height: calc(100vh - 298px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
@@ -641,7 +659,7 @@ p {
 }
 main {
   min-width: 0;
-  padding: 6px 28px 8px;
+  padding: 4px 28px 6px;
 }
 
 .views {
@@ -665,8 +683,8 @@ main {
 .quickFilters {
   display: flex;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .quickFilters label {
@@ -686,10 +704,10 @@ main {
 .controlsBar {
   display: grid;
   grid-template-columns: max-content max-content auto 120px;
-  gap: 10px;
+  gap: 8px;
   align-items: end;
-  margin-bottom: 14px;
-  padding-top: 2px;
+  margin-bottom: 10px;
+  padding-top: 0;
 }
 
 .compactButton {
@@ -1793,12 +1811,12 @@ td a {
 }
 
 .pitchArcTop {
-  top: 17.5%;
+  top: 12.5%;
   clip-path: inset(50% 0 0 0);
 }
 
 .pitchArcBottom {
-  bottom: 17.5%;
+  bottom: 12.5%;
   clip-path: inset(0 0 50% 0);
 }
 .pitchGoalTop {
