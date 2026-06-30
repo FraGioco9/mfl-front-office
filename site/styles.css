@@ -417,8 +417,9 @@ p {
 
 .menuRail {
   position: sticky;
-  top: 0;
+  top: 74px;
   align-self: start;
+  min-height: calc(100vh - 74px);
   overflow: hidden;
   padding: 14px 14px;
   border-right: 1px solid var(--border);
@@ -572,8 +573,11 @@ p {
 }
 
 .navBinocularsIcon {
-  fill: currentColor;
-  stroke: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .appShell.menuClosed .navText {
@@ -772,7 +776,7 @@ main {
 .field.rowsField {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .field.rowsField span {
@@ -1229,6 +1233,7 @@ td a {
 
   .menuRail {
     position: static;
+    min-height: 0;
   }
 
   .sidebar {
