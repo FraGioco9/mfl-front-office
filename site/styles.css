@@ -4,6 +4,7 @@
   --page-bg: #f6f7f9;
   --surface: #ffffff;
   --surface-muted: #fbfcfe;
+  --color-bg-default-secondary: #fbfcfe;
   --border: #d9dee7;
   --border-strong: #c9d1dc;
   --text: #172026;
@@ -22,6 +23,7 @@
   --page-bg: #101418;
   --surface: #171d22;
   --surface-muted: #1d252c;
+  --color-bg-default-secondary: #1d252c;
   --border: #303b44;
   --border-strong: #46535e;
   --text: #e8eef3;
@@ -481,7 +483,7 @@ p {
   max-height: 180px;
   opacity: 1;
   transform: translateX(0);
-  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease;
+  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease, width 180ms ease;
 }
 
 .sidebar[hidden] {
@@ -499,6 +501,7 @@ p {
 .navButton {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   width: 100%;
   height: 40px;
   margin-bottom: 8px;
@@ -522,13 +525,23 @@ p {
 .navEmoji {
   width: 18px;
   flex: 0 0 18px;
+  color: currentColor;
+  font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  line-height: 1;
   text-align: center;
+  transition: transform 180ms ease, width 180ms ease;
 }
 
 .appShell.menuClosed .navButton {
   justify-content: center;
   width: 42px;
   padding: 0;
+}
+
+.appShell.menuClosed .navEmoji {
+  width: 42px;
+  transform: scale(1.04);
 }
 
 .appShell.menuClosed .navText {
@@ -852,6 +865,11 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.addFilterRow .iconButton,
+.addFilterRow select {
+  height: 44px;
 }
 
 .addFilterRow select {
@@ -1479,7 +1497,7 @@ td a {
 .playerIdText:hover,
 .playerIdText:focus,
 .playerIdText:active {
-  background: transparent;
+  background: transparent !important;
   box-shadow: none;
   outline: 0;
   color: var(--text-soft);
@@ -1553,7 +1571,7 @@ td a {
 }
 .playerAttributeCard.featured {
   border: 2px solid var(--rarity-color);
-  background: color-mix(in srgb, var(--rarity-color) 18%, var(--surface-muted));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
   color: var(--text);
 }
 

@@ -113,6 +113,7 @@ const auth = {
   session: null,
   savedTableState: null,
   saveTimer: null,
+  initialized: false,
 };
 
 const loadingScreen = document.querySelector("#loadingScreen");
@@ -240,7 +241,7 @@ async function finishLoading() {
 }
 
 function updateMenuVisibility() {
-  const loggedIn = !auth.required || Boolean(auth.session) || hasSavedSupabaseSession();
+  const loggedIn = Boolean(auth.session) || hasSavedSupabaseSession() || (auth.initialized && !auth.required);
   menuRail.hidden = !loggedIn;
   menuButton.hidden = !loggedIn;
   sidebar.hidden = !loggedIn;
@@ -352,16 +353,19 @@ async function setupAuth() {
     configResponse = await fetch("/api/config", { cache: "no-store" });
   } catch {
     auth.required = false;
+    auth.initialized = true;
     return true;
   }
 
   if (!configResponse.ok) {
     auth.required = false;
+    auth.initialized = true;
     return true;
   }
 
   const config = await configResponse.json();
   auth.required = true;
+  auth.initialized = true;
 
   if (!window.supabase) {
     showLoadingError("Login library could not be loaded.");
@@ -393,7 +397,7 @@ function authHeaders() {
 }
 
 function dataFileUrl(fileName) {
-  return auth.required ? `/api/data?file=${encodeURIComponent(fileName)}` : `data/${fileName}`;
+  return auth.required ? `/api/data?file=${encodeURIComponent(fileName)}` : `/data/${fileName}`;
 }
 
 function cacheRequestForDataFile(fileName) {
@@ -2378,15 +2382,14 @@ async function loadData() {
     state.manifest = manifest;
     state.columns = manifest.columns;
     updateSummaryCounts(manifest.row_count, manifest.wallet_count);
-    updateLoadingProgress(0, manifest.chunks.length);
     await paintLoadingProgress();
 
     for (let index = 0; index < manifest.chunks.length; index += 1) {
+      updateLoadingProgress(index + 1, manifest.chunks.length);
+      await paintLoadingProgress();
       const chunkInfo = manifest.chunks[index];
       const chunk = await fetchDataFile(chunkInfo.file, { useCache: useCachedChunks, writeCache: !useCachedChunks });
       state.rows.push(...chunk.rows);
-      updateLoadingProgress(index + 1, manifest.chunks.length);
-      await paintLoadingProgress();
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
@@ -2553,6 +2556,7 @@ signOutButton.addEventListener("click", handleAccountAction);
 async function startApp() {
   loadTheme();
   const initialPage = pageFromUrl();
+  loadSavedTableState();
   updateMenuVisibility();
 
   if (initialPage === "changelog") {
