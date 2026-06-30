@@ -831,9 +831,15 @@ main {
 }
 
 .viewButton {
+  width: 116px;
+  height: 40px;
+  justify-content: center;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
+  text-align: center;
+  white-space: normal;
+  line-height: 1.05;
 }
 
 .viewButton.active {
@@ -1411,6 +1417,10 @@ td a {
   .views {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .viewButton {
+    width: 100%;
   }
 
   .quickFilters {
