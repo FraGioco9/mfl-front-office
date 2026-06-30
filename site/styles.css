@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Titillium Web", Arial, Helvetica, sans-serif;
   --page-bg: #f6f7f9;
   --surface: #ffffff;
   --surface-muted: #fbfcfe;
@@ -150,7 +150,7 @@ body.auth .loadingScreen {
 .loginError {
   min-height: 18px;
   color: #b42318;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -415,7 +415,7 @@ p {
 
 .changelogPage {
   max-width: 860px;
-  margin: 0 auto;
+  margin: 14px auto 0;
 }
 
 .changelogPage h2 {
@@ -752,7 +752,7 @@ button:disabled {
   align-self: end;
   height: 40px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .modalBackdrop {
@@ -1043,7 +1043,7 @@ td a {
 }
 
 .progressionValue.positive {
-  color: #16803c;
+  color: #2fbf62;
   font-weight: 700;
 }
 
@@ -1214,7 +1214,7 @@ td a {
   border-color: #1d5f8a;
   background: #1d5f8a;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .selectionBar .textButton {
@@ -1255,7 +1255,7 @@ td a {
   border-radius: 8px;
   background: #d9efff;
   color: #12364f;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   box-shadow: 0 14px 36px rgba(28, 95, 138, 0.22);
   opacity: 0;
@@ -1436,8 +1436,11 @@ td a {
   appearance: none;
   border: 0;
   background: transparent;
+  min-height: 0;
+  height: auto;
   padding: 0;
   color: var(--text-soft);
+  line-height: 0.9;
   cursor: pointer;
 }
 
@@ -1496,7 +1499,7 @@ td a {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1.05;
   color: #111820;
   text-shadow: none;
@@ -1524,7 +1527,7 @@ td a {
 
 
 .playerAttributeCard .progressionValue {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .playerAttributeCard.featured .progressionValue {
@@ -1542,7 +1545,7 @@ td a {
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 32px;
+  font-size: 24px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
@@ -1787,12 +1790,12 @@ td a {
 }
 
 .pitchArcTop {
-  top: 13.5%;
+  top: 17.5%;
   clip-path: inset(50% 0 0 0);
 }
 
 .pitchArcBottom {
-  bottom: 13.5%;
+  bottom: 17.5%;
   clip-path: inset(0 0 50% 0);
 }
 .pitchGoalTop {

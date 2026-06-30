@@ -210,7 +210,7 @@ function updateLoadingProgress(loadedFiles, totalFiles) {
   const percent = totalFiles > 0 ? Math.round((loadedFiles / totalFiles) * 100) : 0;
   loadingBarFill.style.width = `${percent}%`;
   loadingText.textContent = totalFiles > 0
-    ? `Loading data files ${loadedFiles}/${totalFiles}`
+    ? (loadedFiles >= totalFiles ? "Loading complete" : `Loading data files ${loadedFiles}/${totalFiles}`)
     : "Preparing data...";
 }
 
@@ -1492,7 +1492,7 @@ function renderSearchResultsNow() {
     button.type = "button";
     button.className = "searchResult";
     const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
-    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; ${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
+    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
       rememberSearchResult(id);
       closeSearch();
