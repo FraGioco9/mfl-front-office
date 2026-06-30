@@ -251,6 +251,7 @@ async function finishLoading() {
   loadingScreen.hidden = true;
   loadingScreen.classList.remove("complete", "leaving");
   document.body.classList.remove("loading");
+  revealAppShell();
 }
 
 function revealAppShell() {
@@ -367,7 +368,7 @@ function showAppShell() {
 }
 
 function showLoading() {
-  document.body.classList.add("loading");
+  document.body.classList.add("booting", "loading");
   loadingScreen.hidden = false;
   loadingScreen.classList.remove("failed", "complete", "leaving");
   updateLoadingProgress(0, 0);

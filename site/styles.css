@@ -646,9 +646,18 @@ body.auth .appShell .sidebar {
 .navTrendIcon {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.8;
   stroke-linecap: square;
   stroke-linejoin: miter;
+}
+
+.navDatabaseIcon {
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navTrendIcon {
+  stroke-width: 2.8;
 }
 
 .navBinocularsIcon {
