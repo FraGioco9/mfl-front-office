@@ -1357,7 +1357,7 @@ function renderPlayerAttributePanel(row) {
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
     const featured = column === "overall" ? " featured" : "";
-    const fullWidth = (!playerIsGoalkeeper(row) && column === "overall") || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
+    const fullWidth = column === "overall" ? " fullWidth" : "";
     const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
     return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText">${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
   }).join("");

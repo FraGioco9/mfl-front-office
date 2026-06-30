@@ -556,6 +556,14 @@ p {
   transition: transform 180ms ease, width 180ms ease;
 }
 
+.navTrendIcon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.8;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
 .appShell.menuClosed .navText {
   display: none;
 }
@@ -742,13 +750,18 @@ main {
   grid-template-columns: max-content max-content auto 120px;
   gap: 8px;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   padding-top: 0;
 }
 
 .compactButton {
   width: fit-content;
   padding: 0 10px;
+}
+
+#openFiltersButton,
+#quickClearFiltersButton {
+  width: 92px;
 }
 
 .field {
@@ -1601,7 +1614,7 @@ td a {
 }
 
 .playerAttributeCard.featured .progressionValue.positive {
-  color: #7dff9f;
+  color: #2fbf62;
 }
 
 .playerAttributeCard.featured .progressionValue.negative {
