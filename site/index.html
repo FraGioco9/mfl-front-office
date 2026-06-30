@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.74.1">
+    <link rel="stylesheet" href="/styles.css?v=1.74.2">
   </head>
   <body data-page="home">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -52,7 +52,6 @@
       </div>
       <button id="openSearchButton" class="searchButton" type="button"><span class="searchLabel"><span class="searchEmoji" aria-hidden="true">&#128269;</span> Search</span><span class="searchShortcut">Ctrl K</span></button>
       <div class="headerControls">
-        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div class="stats" aria-label="Database stats">
           <div>
             <span id="totalPlayers">-</span>
@@ -63,6 +62,7 @@
             <label>wallets</label>
           </div>
         </div>
+        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
         <div id="accountMenu" class="accountMenu">
           <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
           <div id="accountDropdown" class="accountDropdown" hidden>
@@ -195,6 +195,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.74.2</span><p>Move theme toggle after header count boxes</p></li>
               <li><span>v1.74.1</span><p>Start semantic versioning from the initial release and keep homepage header height consistent</p></li>
               <li><span>v1.74.0</span><p>Use semantic versioning and hide homepage header counts</p></li>
               <li><span>v1.73.0</span><p>Point homepage navigation to the root URL</p></li>
@@ -334,7 +335,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v1.74.1</a>
+      <a href="/changelog">MFL Front Office v1.74.2</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -377,6 +378,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.74.1"></script>
+    <script src="/app.js?v=1.74.2"></script>
   </body>
 </html>
