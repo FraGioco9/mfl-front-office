@@ -1446,7 +1446,7 @@ function bestSearchResults(query) {
     const insertAt = bestRows.findIndex((candidate) => entry.overall > candidate.overall);
 
     if (insertAt === -1) {
-      if (bestRows.length < 12) {
+      if (bestRows.length < 5) {
         bestRows.push(entry);
       }
       return;
@@ -1454,7 +1454,7 @@ function bestSearchResults(query) {
 
     bestRows.splice(insertAt, 0, entry);
 
-    if (bestRows.length > 12) {
+    if (bestRows.length > 5) {
       bestRows.pop();
     }
   });
