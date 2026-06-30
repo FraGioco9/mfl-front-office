@@ -31,7 +31,7 @@ const linkColumn = "player_link";
 
 const tablePages = new Set(["database", "progression", "watchlist"]);
 const pageViewOptions = {
-  database: ["attributes"],
+  database: ["attributes", "next"],
   progression: ["current", "all"],
   watchlist: ["current", "all"],
 };
@@ -53,6 +53,10 @@ const views = {
   all: {
     columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
     progressionSuffix: "prog_all",
+  },
+  next: {
+    columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
+    progressionSuffix: null,
   },
 };
 
@@ -1099,9 +1103,56 @@ function formatStatValue(row, statColumn) {
   return `${value} (${sign}${progression})`;
 }
 
+function tableNextOverallInfo(row, statColumn) {
+  const gap = nextOverallGap(row);
+  const primary = playerPositions(row)[0];
+  const weight = statColumn === "overall" ? 100 : (POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0);
+  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+  if (statColumn === "overall") {
+    return maxOverall
+      ? { text: "MAXIMUM", className: "neutral" }
+      : { text: `+${formatDecimal(gap)}`, className: "easy" };
+  }
+
+  if (!weight) {
+    return { text: "-", className: "neutral" };
+  }
+
+  if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
+    return { text: "MAXIMUM", className: "neutral" };
+  }
+
+  const neededStatGain = gap / (weight / 100);
+  return {
+    text: `+${formatDecimal(neededStatGain, 1)}`,
+    className: nextOverallColorClass(neededStatGain),
+  };
+}
+
+function appendNextOverallTableValue(cell, row, statColumn) {
+  const value = getValue(row, statColumn);
+
+  if (value === null || value === undefined || value === "") {
+    cell.textContent = "NULL";
+    return;
+  }
+
+  const nextOverall = tableNextOverallInfo(row, statColumn);
+  const element = document.createElement("span");
+  element.className = `nextOverallValue tableNextOverallValue ${nextOverall.className}`;
+  element.textContent = nextOverall.text;
+  cell.appendChild(element);
+}
+
 function appendStatValue(cell, row, statColumn) {
   const value = getValue(row, statColumn);
   const progressionColumn = getProgressionColumn(statColumn);
+
+  if (state.view === "next") {
+    appendNextOverallTableValue(cell, row, statColumn);
+    return;
+  }
 
   if (value === null || value === undefined || value === "") {
     cell.textContent = "NULL";
@@ -1711,7 +1762,28 @@ function renderSearchResults() {
   state.searchRenderTimer = window.setTimeout(renderSearchResultsNow, 80);
 }
 
+function tableNextOverallSortValue(row, statColumn) {
+  const gap = nextOverallGap(row);
+  const primary = playerPositions(row)[0];
+  const weight = statColumn === "overall" ? 100 : (POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0);
+  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+  if (statColumn === "overall") {
+    return maxOverall ? null : gap;
+  }
+
+  if (!weight || maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
+    return null;
+  }
+
+  return gap / (weight / 100);
+}
+
 function sortableValue(row, column) {
+  if (state.view === "next" && statColumns.includes(column)) {
+    return tableNextOverallSortValue(row, column);
+  }
+
   if (column === "overall" && state.view !== "attributes") {
     return [
       getValue(row, getProgressionColumn("overall")) || 0,

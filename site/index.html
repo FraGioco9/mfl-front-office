@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.76.2">
+    <link rel="stylesheet" href="/styles.css?v=1.77.0">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -109,6 +109,7 @@
           <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
           <section class="views" aria-label="Table views">
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="next">Next Overall</button>
             <button class="viewButton active" type="button" data-view="current">Current Season</button>
             <button class="viewButton" type="button" data-view="all">All Time</button>
           </section>
@@ -198,6 +199,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.77.0</span><p>Add compact Next Overall view to the Database table</p></li>
               <li><span>v1.76.2</span><p>Color Next Overall stat gaps and tighten age marker spacing</p></li>
               <li><span>v1.76.1</span><p>Polish Next Overall maximum states and age marker alignment</p></li>
               <li><span>v1.76.0</span><p>Add player retiring markers and Next Overall attribute view</p></li>
@@ -354,7 +356,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.76.2</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.77.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -397,6 +399,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.76.2"></script>
+    <script src="/app.js?v=1.77.0"></script>
   </body>
 </html>

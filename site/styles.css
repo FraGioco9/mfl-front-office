@@ -1859,24 +1859,28 @@ td a {
   font-size: 12px;
 }
 
-.playerAttributeCard .nextOverallValue.easy {
+.nextOverallValue.easy {
   color: #2fbf62;
 }
 
-.playerAttributeCard .nextOverallValue.medium {
+.nextOverallValue.medium {
   color: #f1c232;
 }
 
-.playerAttributeCard .nextOverallValue.hard {
+.nextOverallValue.hard {
   color: #f28c28;
 }
 
-.playerAttributeCard .nextOverallValue.veryHard {
+.nextOverallValue.veryHard {
   color: #d92d20;
 }
 
-.playerAttributeCard .nextOverallValue.neutral {
+.nextOverallValue.neutral {
   color: var(--text-soft);
+}
+
+.tableNextOverallValue {
+  font-weight: 700;
 }
 
 .playerAttributeCard.featured .progressionValue,
