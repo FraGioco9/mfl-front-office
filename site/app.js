@@ -1464,7 +1464,15 @@ function nextOverallDetailHtml(row, column) {
   const gap = nextOverallGap(row);
 
   if (column === "overall") {
-    return `<span class="nextOverallValue">(+${formatDecimal(gap)} OVR)</span>`;
+    if (Number(statDisplayValue(row, "overall") || 0) >= 99) {
+      return `<span class="nextOverallValue neutral">Maximum</span>`;
+    }
+
+    return `<span class="nextOverallValue">+1 OVR IF +${formatDecimal(gap)}</span>`;
+  }
+
+  if (Number(getValue(row, column) || 0) >= 99) {
+    return `<span class="nextOverallValue neutral">Maximum</span>`;
   }
 
   const primary = playerPositions(row)[0];
@@ -1475,7 +1483,7 @@ function nextOverallDetailHtml(row, column) {
   }
 
   const neededStatGain = gap / (weight / 100);
-  return `<span class="nextOverallValue">+1 OVR if +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
+  return `<span class="nextOverallValue">+1 OVR IF +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
 }
 
 function playerAttributeValueHtml(row, column, viewName) {

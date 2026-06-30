@@ -1869,7 +1869,11 @@ td a {
 }
 
 .playerAgeMarker {
+  display: inline-flex;
+  align-items: center;
   margin-left: 5px;
+  line-height: 1;
+  transform: translateY(1px);
 }
 .playerAttributeCard.fullWidth {
   grid-column: 1 / -1;
