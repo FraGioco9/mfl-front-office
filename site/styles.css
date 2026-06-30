@@ -416,6 +416,9 @@ p {
 }
 
 .menuRail {
+  position: sticky;
+  top: 0;
+  align-self: start;
   overflow: hidden;
   padding: 14px 14px;
   border-right: 1px solid var(--border);
@@ -560,13 +563,17 @@ p {
   transition: transform 180ms ease, width 180ms ease;
 }
 
-.navBinocularsIcon,
 .navTrendIcon {
   fill: none;
   stroke: currentColor;
   stroke-width: 2.8;
   stroke-linecap: square;
   stroke-linejoin: miter;
+}
+
+.navBinocularsIcon {
+  fill: currentColor;
+  stroke: none;
 }
 
 .appShell.menuClosed .navText {
@@ -754,7 +761,7 @@ main {
 
 .controlsBar {
   display: grid;
-  grid-template-columns: max-content max-content auto 120px;
+  grid-template-columns: max-content max-content auto 150px;
   gap: 8px;
   align-items: end;
   margin-bottom: 10px;
@@ -762,13 +769,13 @@ main {
   padding-top: 0;
 }
 
-.rowsField {
+.field.rowsField {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.rowsField span {
+.field.rowsField span {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 800;
@@ -1218,6 +1225,10 @@ td a {
   .appShell {
     --sidebar-offset: 0px;
     grid-template-columns: 1fr;
+  }
+
+  .menuRail {
+    position: static;
   }
 
   .sidebar {
