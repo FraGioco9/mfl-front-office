@@ -242,13 +242,13 @@ async function finishLoading() {
 }
 
 function updateMenuVisibility() {
-  const loggedIn = Boolean(auth.session) || hasSavedSupabaseSession() || (auth.initialized && !auth.required);
-  menuRail.hidden = !loggedIn;
-  menuButton.hidden = !loggedIn;
-  sidebar.hidden = !loggedIn;
-  appShell.classList.toggle("menuClosed", !loggedIn || !state.menuOpen);
+  const showMenu = !document.body.classList.contains("auth");
+  menuRail.hidden = !showMenu;
+  menuButton.hidden = !showMenu;
+  sidebar.hidden = !showMenu;
+  appShell.classList.toggle("menuClosed", !state.menuOpen);
   statusText.hidden = false;
-  menuButton.setAttribute("aria-expanded", String(loggedIn && state.menuOpen));
+  menuButton.setAttribute("aria-expanded", String(showMenu && state.menuOpen));
 }
 
 function setHomeLoginSigningIn() {
@@ -2598,6 +2598,13 @@ brandLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
     setPage("home");
+  });
+});
+
+document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    setPage("changelog");
   });
 });
 openSearchButton.addEventListener("click", openSearch);

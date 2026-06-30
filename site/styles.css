@@ -67,6 +67,10 @@ body.auth .loadingScreen {
   display: none;
 }
 
+:root[data-initial-page="changelog"] #homeLoginButton {
+  display: none;
+}
+
 .loadingScreen {
   position: fixed;
   inset: 0;

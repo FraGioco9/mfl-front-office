@@ -9,15 +9,17 @@
         try {
           const theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
           document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         } catch {
           document.documentElement.dataset.theme = "light";
+          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         }
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.74.9">
+    <link rel="stylesheet" href="/styles.css?v=1.74.10">
   </head>
   <body data-page="home">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -195,6 +197,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.74.10</span><p>Keep changelog navigation public and show sidebar while logged out</p></li>
               <li><span>v1.74.9</span><p>Prevent homepage sign-in flash on changelog navigation</p></li>
               <li><span>v1.74.8</span><p>Align menu icon with sidebar navigation icons</p></li>
               <li><span>v1.74.7</span><p>Center collapsed sidebar icons inside their buttons</p></li>
@@ -342,7 +345,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog">MFL Front Office v1.74.9</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.74.10</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -385,6 +388,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.74.9"></script>
+    <script src="/app.js?v=1.74.10"></script>
   </body>
 </html>
