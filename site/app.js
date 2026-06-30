@@ -1460,30 +1460,38 @@ function shortStatLabel(column) {
   }[column] || String(columnLabels[column] || column).toUpperCase();
 }
 
+function nextOverallColorClass(neededStatGain) {
+  if (neededStatGain <= 1) return "easy";
+  if (neededStatGain <= 2) return "medium";
+  if (neededStatGain <= 3) return "hard";
+  return "veryHard";
+}
+
 function nextOverallDetailHtml(row, column) {
   const gap = nextOverallGap(row);
-
-  if (column === "overall") {
-    if (Number(statDisplayValue(row, "overall") || 0) >= 99) {
-      return `<span class="nextOverallValue neutral">Maximum</span>`;
-    }
-
-    return `<span class="nextOverallValue">+1 OVR IF +${formatDecimal(gap)}</span>`;
-  }
-
-  if (Number(getValue(row, column) || 0) >= 99) {
-    return `<span class="nextOverallValue neutral">Maximum</span>`;
-  }
-
   const primary = playerPositions(row)[0];
   const weight = POSITION_GROUP_WEIGHTS[primary]?.[column] || 0;
+  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+  if (column === "overall") {
+    if (maxOverall) {
+      return `<span class="nextOverallValue neutral">MAXIMUM</span>`;
+    }
+
+    return `<span class="nextOverallValue easy">+1 OVR IF +${formatDecimal(gap)}</span>`;
+  }
 
   if (!weight) {
     return `<span class="nextOverallValue neutral">No OVR impact</span>`;
   }
 
+  if (maxOverall || Number(getValue(row, column) || 0) >= 99) {
+    return `<span class="nextOverallValue neutral">MAXIMUM</span>`;
+  }
+
   const neededStatGain = gap / (weight / 100);
-  return `<span class="nextOverallValue">+1 OVR IF +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
+  const colorClass = nextOverallColorClass(neededStatGain);
+  return `<span class="nextOverallValue ${colorClass}">+1 OVR IF +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
 }
 
 function playerAttributeValueHtml(row, column, viewName) {

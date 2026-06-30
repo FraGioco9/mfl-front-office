@@ -1859,6 +1859,22 @@ td a {
   font-size: 12px;
 }
 
+.playerAttributeCard .nextOverallValue.easy {
+  color: #2fbf62;
+}
+
+.playerAttributeCard .nextOverallValue.medium {
+  color: #f1c232;
+}
+
+.playerAttributeCard .nextOverallValue.hard {
+  color: #f28c28;
+}
+
+.playerAttributeCard .nextOverallValue.veryHard {
+  color: #d92d20;
+}
+
 .playerAttributeCard .nextOverallValue.neutral {
   color: var(--text-soft);
 }
@@ -1871,7 +1887,7 @@ td a {
 .playerAgeMarker {
   display: inline-flex;
   align-items: center;
-  margin-left: 5px;
+  margin-left: 2px;
   line-height: 1;
   transform: translateY(1px);
 }
