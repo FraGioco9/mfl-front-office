@@ -3,6 +3,7 @@ import json
 import sqlite3
 import sys
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -607,14 +608,19 @@ def next_overall_values(row: sqlite3.Row) -> tuple[Any, ...]:
 def update_next_overall_columns(connection: sqlite3.Connection, player_ids: list[int] | None = None) -> int:
     ensure_players_columns(connection)
     connection.row_factory = sqlite3.Row
-    all_updates = []
 
-    if player_ids:
-        batches: list[list[int] | None] = chunks(sorted(set(player_ids)), PROGRESSION_BATCH_SIZE)
+    if player_ids is None:
+        batches: list[list[int] | None] = [None]
     else:
-        batches = [None]
+        unique_ids = sorted(set(player_ids))
+        if not unique_ids:
+            return 0
+        batches = chunks(unique_ids, PROGRESSION_BATCH_SIZE)
 
-    for batch in batches:
+    total_updated = 0
+    total_batches = len(batches)
+
+    for index, batch in enumerate(batches, start=1):
         parameters: list[Any] = []
         where_sql = ""
 
@@ -631,29 +637,34 @@ def update_next_overall_columns(connection: sqlite3.Connection, player_ids: list
             """,
             parameters,
         ).fetchall()
-        all_updates.extend((*next_overall_values(row), row["player_id"]) for row in rows)
+        updates = [(*next_overall_values(row), row["player_id"]) for row in rows]
 
-    if not all_updates:
-        return 0
+        if not updates:
+            print(f"Next Overall batch {index}/{total_batches}: updated 0 players", flush=True)
+            continue
 
-    connection.executemany(
-        """
-        UPDATE players
-        SET
-            next_overall = ?,
-            next_overall_gap = ?,
-            pace_to_next_overall = ?,
-            shooting_to_next_overall = ?,
-            passing_to_next_overall = ?,
-            dribbling_to_next_overall = ?,
-            defense_to_next_overall = ?,
-            physical_to_next_overall = ?,
-            goalkeeping_to_next_overall = ?
-        WHERE player_id = ?
-        """,
-        all_updates,
-    )
-    return len(all_updates)
+        connection.executemany(
+            """
+            UPDATE players
+            SET
+                next_overall = ?,
+                next_overall_gap = ?,
+                pace_to_next_overall = ?,
+                shooting_to_next_overall = ?,
+                passing_to_next_overall = ?,
+                dribbling_to_next_overall = ?,
+                defense_to_next_overall = ?,
+                physical_to_next_overall = ?,
+                goalkeeping_to_next_overall = ?
+            WHERE player_id = ?
+            """,
+            updates,
+        )
+        connection.commit()
+        total_updated += len(updates)
+        print(f"Next Overall batch {index}/{total_batches}: updated {len(updates)} players", flush=True)
+
+    return total_updated
 
 
 def progression_value(progression: Any, attribute: str) -> int | None:
@@ -951,6 +962,11 @@ def format_duration(seconds: float) -> str:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(line_buffering=True)
+
     started_at = time.monotonic()
     args = parse_args()
 
@@ -976,6 +992,7 @@ def main() -> int:
         return 0
     except Exception as error:
         print(f"Player refresh failed: {error}", file=sys.stderr)
+        traceback.print_exc()
         print(f"Total time before failure: {format_duration(time.monotonic() - started_at)}")
         return 1
 
