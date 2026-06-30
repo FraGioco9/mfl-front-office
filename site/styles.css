@@ -178,7 +178,9 @@ select {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(420px, 560px) minmax(220px, 1fr);
   align-items: center;
-  min-height: 74px;
+  height: 102px;
+  min-height: 102px;
+  box-sizing: border-box;
   gap: 24px;
   padding: 14px 28px;
   background: var(--surface);
@@ -372,7 +374,8 @@ p {
 }
 
 body[data-page="home"] .topbar .stats {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .stats {
