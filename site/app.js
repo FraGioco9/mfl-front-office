@@ -15,6 +15,7 @@ const state = {
   watchlistPlayerIds: new Set(),
   tablePageStates: {},
   toastTimer: null,
+  menuAnimationTimer: null,
   menuOpen: true,
   playerAttributeView: "attributes",
   searchRenderTimer: null,
@@ -551,8 +552,13 @@ function toggleAccountMenu() {
 }
 
 function toggleMenu() {
+  appShell.classList.add("menuAnimating");
+  window.clearTimeout(state.menuAnimationTimer);
   state.menuOpen = !state.menuOpen;
   updateMenuVisibility();
+  state.menuAnimationTimer = window.setTimeout(() => {
+    appShell.classList.remove("menuAnimating");
+  }, 220);
   saveTableState();
 }
 

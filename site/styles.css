@@ -402,6 +402,10 @@ p {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
   min-height: calc(100vh - 154px);
+  transition: none;
+}
+
+.appShell.menuAnimating {
   transition: grid-template-columns 180ms ease;
 }
 
@@ -483,7 +487,7 @@ p {
   max-height: 180px;
   opacity: 1;
   transform: translateX(0);
-  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease, width 180ms ease;
+  transition: none;
 }
 
 .sidebar[hidden] {
@@ -530,7 +534,7 @@ p {
   font-size: 18px;
   line-height: 1;
   text-align: center;
-  transition: transform 180ms ease, width 180ms ease;
+  transition: none;
 }
 
 .appShell.menuClosed .navButton {
@@ -542,6 +546,14 @@ p {
 .appShell.menuClosed .navEmoji {
   width: 42px;
   transform: scale(1.04);
+}
+
+.appShell.menuAnimating .sidebar {
+  transition: opacity 180ms ease, transform 180ms ease, max-height 180ms ease, width 180ms ease;
+}
+
+.appShell.menuAnimating .navEmoji {
+  transition: transform 180ms ease, width 180ms ease;
 }
 
 .appShell.menuClosed .navText {
@@ -762,6 +774,10 @@ select {
   padding: 0 11px;
 }
 
+select {
+  padding-right: 32px;
+}
+
 button {
   height: 40px;
   border: 1px solid var(--primary);
@@ -845,12 +861,17 @@ button:disabled {
 }
 
 .iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
   padding: 0;
+  line-height: 1;
+  text-align: center;
 }
 
 .filterBuilder {
@@ -1564,15 +1585,18 @@ td a {
 }
 
 :root[data-theme="dark"] .playerAttributeCard strong,
-:root[data-theme="dark"] .playerAttributeCard .attributeValueText,
-:root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
+:root[data-theme="dark"] .playerAttributeCard .attributeValueText {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 .playerAttributeCard.featured {
-  border: 2px solid var(--rarity-color);
+  border-color: var(--border);
   background: linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
   color: var(--text);
+}
+
+.playerAttributeCard.featured span {
+  color: #ffffff;
 }
 
 
@@ -1602,7 +1626,7 @@ td a {
   width: fit-content;
   border-radius: 6px;
   background: transparent;
-  color: #111820;
+  color: #ffffff;
   padding: 0;
   text-shadow: none;
 }
