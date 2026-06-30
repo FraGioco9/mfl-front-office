@@ -433,6 +433,8 @@ p {
 .changelogPage {
   max-width: 860px;
   margin: 14px auto 0;
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
 }
 
 .changelogPage h2 {
@@ -558,6 +560,7 @@ p {
   transition: transform 180ms ease, width 180ms ease;
 }
 
+.navBinocularsIcon,
 .navTrendIcon {
   fill: none;
   stroke: currentColor;
@@ -595,6 +598,8 @@ p {
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
 }
 
 .homeIntro p {
@@ -753,9 +758,23 @@ main {
   gap: 8px;
   align-items: end;
   margin-bottom: 10px;
+  margin-top: 10px;
   padding-top: 0;
 }
 
+.rowsField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowsField span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 40px;
+  text-transform: uppercase;
+}
 .compactButton {
   width: fit-content;
   padding: 0 10px;
@@ -1197,6 +1216,7 @@ td a {
   }
 
   .appShell {
+    --sidebar-offset: 0px;
     grid-template-columns: 1fr;
   }
 
