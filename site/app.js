@@ -1330,6 +1330,13 @@ function tableNextOverallInfo(row, statColumn) {
       : { text: `+${formatDecimal(gap)}`, className: "easy" };
   }
 
+  const primary = playerPositions(row)[0];
+  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
+
+  if (!weight) {
+    return null;
+  }
+
   const precomputedColumn = `${statColumn}_to_next_overall`;
   const precomputedNeeded = precomputedValue(row, precomputedColumn);
 
@@ -1341,23 +1348,12 @@ function tableNextOverallInfo(row, statColumn) {
     };
   }
 
-  if (hasColumn(precomputedColumn)) {
-    if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
-      return { text: "MAX", className: "neutral" };
-    }
-
-    return null;
-  }
-
-  const primary = playerPositions(row)[0];
-  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
-
-  if (!weight) {
-    return null;
-  }
-
   if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
     return { text: "MAX", className: "neutral" };
+  }
+
+  if (hasColumn(precomputedColumn)) {
+    return null;
   }
 
   const neededStatGain = gap / (weight / 100);
