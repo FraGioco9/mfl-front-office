@@ -2050,7 +2050,7 @@ function buildHeader() {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
     if (columnClass) {
-      cell.classList.add(columnClass);
+      cell.classList.add(...columnClass.split(" "));
     }
     const isSorted = state.sortKey === column;
     const label = document.createElement("span");
@@ -2822,7 +2822,7 @@ function renderTable() {
       const cell = document.createElement("td");
       const columnClass = tableColumnClass(column);
       if (columnClass) {
-        cell.classList.add(columnClass);
+        cell.classList.add(...columnClass.split(" "));
       }
 
       if (column === "name") {
