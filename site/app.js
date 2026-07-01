@@ -797,6 +797,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
       await finishLoading();
     }
 
+    syncHomeLoginButton();
     return;
   }
   if (tablePage && state.rows.length) {
@@ -807,6 +808,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
+
+  syncHomeLoginButton();
 }
 
 function updateStatusDate(generatedAt) {
