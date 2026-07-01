@@ -2560,6 +2560,12 @@ td a {
   border-radius: 4px;
   font-size: 10px;
 }
+.evaluationMflUsdResetSlot {
+  display: inline-flex;
+  justify-content: center;
+  width: 112px;
+}
+
 
 .evaluationSummaryShell {
   margin-bottom: 14px;
