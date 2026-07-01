@@ -261,8 +261,8 @@ p {
 }
 
 .searchButton:hover {
-  background: var(--header-bg);
-  border-color: var(--border-strong);
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
 }
 
 .searchButton span {
@@ -2434,8 +2434,13 @@ td a {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
+.advancedSettingsButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
 .advancedSettingsButton span {
   font-size: 15px;
   line-height: 1;
