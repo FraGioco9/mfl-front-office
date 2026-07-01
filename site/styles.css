@@ -2562,7 +2562,7 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 25%;
+  width: 37.5%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
@@ -2574,7 +2574,7 @@ td a {
 
 .evaluationSummaryTable th:nth-child(4),
 .evaluationSummaryTable td:nth-child(4) {
-  width: 37.5%;
+  width: 25%;
 }
 
 .evaluationSummaryTable th:nth-child(5),
@@ -2623,6 +2623,15 @@ td a {
   width: 6.5%;
 }
 
+.evaluationTableShell th:nth-child(3),
+.evaluationTableShell td:nth-child(3),
+.evaluationTableShell th:nth-child(4),
+.evaluationTableShell td:nth-child(4),
+.evaluationTableShell th:nth-child(8),
+.evaluationTableShell td:nth-child(8) {
+  width: 12.5%;
+}
+
 .evaluationTable th,
 .evaluationTable td {
   text-align: left;
@@ -2640,4 +2649,25 @@ td a {
   .evaluationTopBar {
     grid-template-columns: 1fr;
   }
+}
+
+.evaluationOptionFilters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-basis: 100%;
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evaluationOptionFilters[hidden] {
+  display: none;
+}
+
+.evaluationOptionFilters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }

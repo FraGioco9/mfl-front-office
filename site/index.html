@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.83.7">
+    <link rel="stylesheet" href="/styles.css?v=1.83.8">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -206,6 +206,10 @@
                 <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
               </section>
               <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
+              <section id="evaluationOptionFilters" class="evaluationOptionFilters" aria-label="Evaluation options" hidden>
+                <label><input id="ignoreDiscountRateInput" type="checkbox"> <span>Ignore discount rate</span></label>
+                <label><input id="ignoreFirstSeasonInput" type="checkbox"> <span>Ignore first season</span></label>
+              </section>
             </section>
             <section class="evaluationMetric" aria-label="MFL per USD">
               <span>MFL/USD</span>
@@ -265,6 +269,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.83.8</span><p>Add Evaluation discount and first-season toggles</p></li>
               <li><span>v1.83.7</span><p>Add Evaluation earnings and player-page shortcut</p></li>
               <li><span>v1.83.6</span><p>Add adjustable season Overall values to Evaluation</p></li>
               <li><span>v1.83.5</span><p>Add player Evaluate shortcut and refine Evaluation metric boxes</p></li>
@@ -471,7 +476,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.7</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.8</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -514,6 +519,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.83.7"></script>
+    <script src="/app.js?v=1.83.8"></script>
   </body>
 </html>
