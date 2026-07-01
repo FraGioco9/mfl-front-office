@@ -2615,7 +2615,16 @@ td a {
   justify-content: flex-start;
 }
 
-.evaluationButtons[hidden],
+.evaluationButtons[hidden] {
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.evaluationButtons[hidden] .evaluationPlayerPageButton[hidden] {
+  display: inline-flex;
+}
+
 .evaluationPlayerPageButton[hidden] {
   display: none;
 }
