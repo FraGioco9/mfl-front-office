@@ -74,6 +74,10 @@ const tableColumnClasses = {
 };
 
 function tableColumnClass(column) {
+  if (column === "overall") {
+    return "col-stat col-overall";
+  }
+
   return statColumns.includes(column) ? "col-stat" : tableColumnClasses[column] || "";
 }
 const columnLabels = {

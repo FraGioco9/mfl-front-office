@@ -1155,6 +1155,10 @@ table {
   width: 82px;
 }
 
+.col-overall {
+  font-weight: 800;
+}
+
 .col-agent {
   width: 78px;
 }
