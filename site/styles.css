@@ -2584,11 +2584,14 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 30%;
+  width: 34%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
-.evaluationSummaryTable td:nth-child(2),
+.evaluationSummaryTable td:nth-child(2) {
+  width: 8.5%;
+}
+
 .evaluationSummaryTable th:nth-child(3),
 .evaluationSummaryTable td:nth-child(3) {
   width: 12.5%;
@@ -2637,7 +2640,7 @@ td a {
 }
 .evaluationTableShell th:nth-child(1),
 .evaluationTableShell td:nth-child(1) {
-  width: 24%;
+  width: 28%;
 }
 
 .evaluationTableShell th:nth-child(2),
@@ -2646,7 +2649,10 @@ td a {
 }
 
 .evaluationTableShell th:nth-child(3),
-.evaluationTableShell td:nth-child(3),
+.evaluationTableShell td:nth-child(3) {
+  width: 8.5%;
+}
+
 .evaluationTableShell th:nth-child(4),
 .evaluationTableShell td:nth-child(4),
 .evaluationTableShell th:nth-child(8),

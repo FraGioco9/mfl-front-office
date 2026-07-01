@@ -690,6 +690,17 @@ function evaluationPlayerIdFromUrl() {
   return new URLSearchParams(window.location.search).get("player");
 }
 
+function syncEvaluationPlayerUrl(playerId) {
+  if (window.location.pathname !== "/evaluation") {
+    return;
+  }
+
+  const targetPath = playerId ? pagePath("evaluation", { playerId }) : "/evaluation";
+  if (`${window.location.pathname}${window.location.search}` !== targetPath) {
+    window.history.replaceState({}, "", targetPath);
+  }
+}
+
 function pageFromUrl() {
   const pageName = window.location.pathname.replace(/^\//, "");
 
@@ -1788,6 +1799,7 @@ function rememberEvaluationResult(playerId) {
 
 function resetEvaluationSelection() {
   state.evaluationPlayerId = null;
+  syncEvaluationPlayerUrl(null);
   evaluationPanel.hidden = true;
   evaluationSearchResults.hidden = true;
   evaluationSummaryBody.replaceChildren();
@@ -1815,6 +1827,7 @@ function renderEvaluationSearchResults() {
       rememberEvaluationResult(playerId);
       evaluationSearchInput.value = formatCellValue(row, "name");
       evaluationSearchResults.hidden = true;
+      syncEvaluationPlayerUrl(playerId);
       renderEvaluationTable(row);
     });
     evaluationSearchResults.appendChild(button);
@@ -1993,6 +2006,7 @@ function renderEvaluationPage() {
 
   if (!row || getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
+    syncEvaluationPlayerUrl(null);
     evaluationPanel.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
@@ -3907,7 +3921,7 @@ evaluationResetButton.addEventListener("click", () => {
   renderEvaluationTable(row);
 });
 
-evaluationPlayerPageButton.addEventListener("click", () => {
+const openEvaluationPlayerPage = (event) => {
   const row = rowByPlayerId(state.evaluationPlayerId);
 
   if (!row) {
@@ -3915,8 +3929,23 @@ evaluationPlayerPageButton.addEventListener("click", () => {
   }
 
   const playerId = String(getValue(row, "player_id"));
+  const targetPath = pagePath("player", { playerId });
   rememberSearchResult(playerId);
+
+  if (event.ctrlKey || event.metaKey || event.button === 1) {
+    window.open(targetPath, "_blank", "noopener");
+    return;
+  }
+
   openPlayerPage(playerId);
+};
+
+evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
+evaluationPlayerPageButton.addEventListener("auxclick", (event) => {
+  if (event.button === 1) {
+    event.preventDefault();
+    openEvaluationPlayerPage(event);
+  }
 });
 
 navButtons.forEach((button) => {
