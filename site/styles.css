@@ -1784,6 +1784,7 @@ td a {
   text-transform: uppercase;
 }
 
+.playerEvaluateButton,
 .playerWatchlistButton,
 .playerExternalButton {
   width: 172px;
@@ -1796,6 +1797,7 @@ td a {
   gap: 8px;
 }
 
+.playerEvaluateButton,
 .playerExternalButton {
   display: inline-flex;
   align-items: center;
@@ -1810,6 +1812,7 @@ td a {
   cursor: pointer;
 }
 
+.playerEvaluateButton:hover,
 .playerExternalButton:hover {
   border-color: var(--primary-hover);
   background: var(--primary-hover);
@@ -2468,6 +2471,8 @@ td a {
 
 .evaluationMetric {
   position: relative;
+  width: 140px;
+  box-sizing: border-box;
   display: grid;
   gap: 3px;
   min-height: 64px;

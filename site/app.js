@@ -1617,8 +1617,8 @@ function evaluationDiscountFactor(rate, season) {
   return Number.isFinite(rate) ? 1 / Math.pow(1 + rate, season) : null;
 }
 
-function formatEvaluationNumber(value) {
-  return Number.isFinite(value) ? value.toFixed(2) : "";
+function formatEvaluationNumber(value, decimals = 2) {
+  return Number.isFinite(value) ? value.toFixed(decimals) : "";
 }
 
 function expectedEvaluationSeasons(row) {
@@ -1747,7 +1747,7 @@ function renderEvaluationTable(row) {
       seasonOverall,
       mflValue,
       formatEvaluationNumber(usdValue),
-      formatEvaluationNumber(discountFactor),
+      formatEvaluationNumber(discountFactor, 4),
       formatEvaluationNumber(presentValue),
     ];
 
@@ -2277,6 +2277,7 @@ function renderPlayerPage(playerId) {
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
+        <button id="playerEvaluateButton" class="playerEvaluateButton" type="button">Evaluate</button>
         <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
         <a id="openPlayerExternalButton" class="playerExternalButton" href="${escapeHtml(formatCellValue(row, linkColumn))}" target="_blank" rel="noopener noreferrer">Open link</a>
       </div>
@@ -2294,6 +2295,12 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
+  playerDetail.querySelector("#playerEvaluateButton").addEventListener("click", () => {
+    state.evaluationPlayerId = id;
+    rememberEvaluationResult(id);
+    evaluationSearchInput.value = playerName;
+    setPage("evaluation");
+  });
   playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", (event) => {
     copyPlayerId(id);
     event.currentTarget.blur();
