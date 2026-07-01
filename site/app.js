@@ -1763,6 +1763,17 @@ function adjustTrainingStat(playerId, column, delta) {
   renderPlayerPage(playerId);
 }
 
+function resetTrainingStats(playerId) {
+  const row = rowByPlayerId(playerId);
+
+  if (!row) {
+    return;
+  }
+
+  delete state.trainingAdjustments[playerTrainingKey(row)];
+  renderPlayerPage(playerId);
+}
+
 function playerAttributeColumns(row) {
   if (playerIsGoalkeeper(row)) {
     return ["overall", "goalkeeping"].filter((column) => column === "overall" || state.columns.includes(column));
@@ -1912,8 +1923,10 @@ function renderPlayerAttributePanel(row) {
     const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
     const contributionTooltip = playerAttributeContributionTooltip(row, column);
     const valueHtml = playerAttributeValueHtml(row, column, viewName);
-    const trainingControls = isTraining && column !== "overall"
-      ? `<span class="trainingStatControls"><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="-1" aria-label="Reduce ${escapeHtml(label)}">-</button><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="1" aria-label="Increase ${escapeHtml(label)}">+</button></span>`
+    const trainingControls = isTraining
+      ? (column === "overall"
+        ? `<span class="trainingStatControls"><button class="trainingResetButton" type="button" data-training-reset="1">Reset</button></span>`
+        : `<span class="trainingStatControls"><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="-1" aria-label="Reduce ${escapeHtml(label)}">-</button><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="1" aria-label="Increase ${escapeHtml(label)}">+</button></span>`)
       : "";
     return `<div class="playerAttributeCard${featured}${fullWidth}${isTraining ? " trainingCard" : ""}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTooltip}>${valueHtml}</span>${trainingControls}</strong></div>`;
   }).join("");
@@ -1997,6 +2010,9 @@ function renderPlayerPage(playerId) {
     button.addEventListener("click", () => {
       adjustTrainingStat(id, button.dataset.trainingStat, Number(button.dataset.trainingDelta || 0));
     });
+  });
+  playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
+    button.addEventListener("click", () => resetTrainingStats(id));
   });
 }
 
