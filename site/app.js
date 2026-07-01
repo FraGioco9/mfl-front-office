@@ -27,6 +27,7 @@ const state = {
   recentSearchPlayerIds: [],
   recentEvaluationPlayerIds: [],
   evaluationPlayerId: null,
+  evaluationOverallRows: {},
 };
 
 const flagColumn = "nationality_flag";
@@ -1721,11 +1722,73 @@ function handleEvaluationSearchInput() {
   renderEvaluationSearchResults();
 }
 
+
+function evaluationOverallKey(row) {
+  return String(getValue(row, "player_id") || "");
+}
+
+function currentEvaluationOverall(row) {
+  const value = Number(statDisplayValue(row, "overall"));
+  return Number.isFinite(value) ? Math.round(value) : 0;
+}
+
+function evaluationOverallValues(row, expectedSeasons) {
+  const key = evaluationOverallKey(row);
+  const currentOverall = currentEvaluationOverall(row);
+  const savedValues = Array.isArray(state.evaluationOverallRows[key]) ? state.evaluationOverallRows[key] : [];
+  const values = Array.from({ length: expectedSeasons }, (_, index) => {
+    const savedValue = Number(savedValues[index]);
+    return Number.isFinite(savedValue) ? savedValue : currentOverall;
+  });
+
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index] < values[index - 1]) {
+      values[index] = values[index - 1];
+    }
+  }
+
+  state.evaluationOverallRows[key] = values;
+  return values;
+}
+
+function adjustEvaluationOverall(playerId, season, delta) {
+  const row = rowByPlayerId(playerId);
+
+  if (!row) {
+    return;
+  }
+
+  const expectedSeasons = expectedEvaluationSeasons(row);
+  const values = evaluationOverallValues(row, expectedSeasons);
+  const index = season - 1;
+  const nextValue = Math.max(0, Math.min(99, (values[index] || 0) + delta));
+  values[index] = nextValue;
+
+  for (let forward = index + 1; forward < values.length; forward += 1) {
+    if (values[forward] < nextValue) {
+      values[forward] = nextValue;
+    }
+  }
+
+  for (let backward = index - 1; backward >= 0; backward -= 1) {
+    if (values[backward] > nextValue) {
+      values[backward] = nextValue;
+    }
+  }
+
+  state.evaluationOverallRows[String(playerId)] = values;
+  renderEvaluationTable(row);
+}
+
+function evaluationOverallControl(value, season) {
+  return `<div class="evaluationOverallControl"><button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall">-</button><strong>${escapeHtml(value)}</strong><button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall">+</button></div>`;
+}
 function renderEvaluationTable(row) {
   const expectedSeasons = expectedEvaluationSeasons(row);
   const playerName = formatCellValue(row, "name");
   const currentAge = Number(getValue(row, "age"));
-  const currentOverall = formatPlainValue(statDisplayValue(row, "overall"), "overall");
+  const overallValues = evaluationOverallValues(row, expectedSeasons);
+  const currentOverall = overallValues[0];
   const discountRate = evaluationDiscountRateValue();
   const fragment = document.createDocumentFragment();
   const presentValues = [];
@@ -1734,7 +1797,7 @@ function renderEvaluationTable(row) {
 
   for (let season = 1; season <= expectedSeasons; season += 1) {
     const tableRow = document.createElement("tr");
-    const seasonOverall = season === 1 ? currentOverall : "";
+    const seasonOverall = evaluationOverallControl(overallValues[season - 1], season);
     const mflValue = "";
     const numericMflValue = Number(mflValue);
     const usdValue = mflValue !== "" && Number.isFinite(numericMflValue) ? numericMflValue / evaluationMflPerUsd : null;
@@ -1757,7 +1820,11 @@ function renderEvaluationTable(row) {
 
     values.forEach((value) => {
       const cell = document.createElement("td");
-      cell.textContent = value;
+      if (typeof value === "string" && value.includes("evaluationOverallControl")) {
+        cell.innerHTML = value;
+      } else {
+        cell.textContent = value;
+      }
       tableRow.appendChild(cell);
     });
 
@@ -1771,8 +1838,8 @@ function renderEvaluationTable(row) {
   [
     playerName,
     Number.isFinite(currentAge) ? currentAge : "",
-    expectedSeasons,
     currentOverall,
+    expectedSeasons,
     presentValueTotal,
   ].forEach((value) => {
     const cell = document.createElement("td");
@@ -1782,6 +1849,9 @@ function renderEvaluationTable(row) {
 
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
+  evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach((button) => {
+    button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
+  });
 }
 
 function renderEvaluationPage() {

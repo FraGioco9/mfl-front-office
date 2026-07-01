@@ -2406,8 +2406,8 @@ td a {
 
 .evaluationTopBar {
   display: grid;
-  grid-template-columns: minmax(280px, 560px) repeat(2, 140px);
-  gap: 14px;
+  grid-template-columns: minmax(280px, 1fr) repeat(2, 112px);
+  gap: 6px;
   align-items: end;
   justify-content: space-between;
   margin-bottom: 18px;
@@ -2471,7 +2471,7 @@ td a {
 
 .evaluationMetric {
   position: relative;
-  width: 140px;
+  width: 112px;
   box-sizing: border-box;
   display: grid;
   gap: 3px;
@@ -2544,22 +2544,19 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 48%;
+  width: 25%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
-.evaluationSummaryTable td:nth-child(2) {
-  width: 10%;
-}
-
+.evaluationSummaryTable td:nth-child(2),
 .evaluationSummaryTable th:nth-child(3),
 .evaluationSummaryTable td:nth-child(3) {
-  width: 17%;
+  width: 12.5%;
 }
 
 .evaluationSummaryTable th:nth-child(4),
 .evaluationSummaryTable td:nth-child(4) {
-  width: 12.5%;
+  width: 37.5%;
 }
 
 .evaluationSummaryTable th:nth-child(5),
@@ -2567,6 +2564,29 @@ td a {
   width: 12.5%;
 }
 
+
+.evaluationOverallControl {
+  display: inline-grid;
+  grid-template-columns: 24px minmax(28px, auto) 24px;
+  align-items: center;
+  justify-content: start;
+  gap: 5px;
+}
+
+.evaluationOverallControl button {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.evaluationOverallControl strong {
+  min-width: 28px;
+  text-align: center;
+}
 .evaluationPanel h3 {
   margin: 0 0 10px;
   font-size: 18px;
