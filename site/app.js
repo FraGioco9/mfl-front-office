@@ -1727,10 +1727,24 @@ function formatEvaluationCurrency(value) {
   return Number.isFinite(value) ? "$" + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) : "";
 }
 
-function evaluationMflValueForOverall(overall) {
+function evaluationMflShareForSeason(rowIndex, expectedSeasons) {
+  const seasonsFromEnd = expectedSeasons - rowIndex;
+
+  if (seasonsFromEnd === 1) {
+    return 0.04;
+  }
+
+  if (seasonsFromEnd === 2 || seasonsFromEnd === 3) {
+    return 0.05;
+  }
+
+  return 0.06;
+}
+
+function evaluationMflValueForOverall(overall, rowIndex, expectedSeasons) {
   const roundedOverall = Math.round(Number(overall));
   const teamEarnings = evaluationTeamEarningsByOverall[roundedOverall] || 0;
-  return teamEarnings * 0.06;
+  return teamEarnings * evaluationMflShareForSeason(rowIndex, expectedSeasons);
 }
 
 function formatEvaluationMfl(value) {
@@ -1927,7 +1941,7 @@ function renderEvaluationTable(row) {
     const overallIndex = season - 1;
     const tableRow = document.createElement("tr");
     const seasonOverall = evaluationOverallControl(overallValues[overallIndex], season);
-    const numericMflValue = evaluationMflValueForOverall(overallValues[overallIndex]);
+    const numericMflValue = evaluationMflValueForOverall(overallValues[overallIndex], rowIndex, expectedSeasons);
     const mflValue = formatEvaluationMfl(numericMflValue);
     const usdValue = Number.isFinite(numericMflValue) ? numericMflValue / evaluationMflPerUsd : null;
     const discountFactor = evaluationDiscountFactor(discountRate, season);
