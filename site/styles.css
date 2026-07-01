@@ -2393,8 +2393,12 @@ td a {
 }
 
 .evaluationPage {
-  max-width: 1180px;
+  width: min(1180px, 100%);
   margin: 0 auto;
+}
+
+.evaluationPage .tablePageTitle {
+  margin: 14px 0 12px;
 }
 
 .evaluationSearch {
@@ -2435,8 +2439,9 @@ td a {
 .evaluationSearchResult {
   display: grid;
   gap: 2px;
-  min-height: 52px;
+  min-height: 58px;
   padding: 8px 10px;
+  align-content: center;
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text);
@@ -2451,6 +2456,12 @@ td a {
 .evaluationSearchResult span {
   color: var(--text-soft);
   font-size: 12px;
+}
+
+.evaluationSelectedPlayer {
+  margin-bottom: 4px;
+  color: var(--text-soft);
+  font-size: 14px;
 }
 
 .evaluationPanel h3 {

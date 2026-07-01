@@ -25,6 +25,7 @@ const state = {
   searchRenderTimer: null,
   searchIndex: [],
   recentSearchPlayerIds: [],
+  recentEvaluationPlayerIds: [],
   evaluationPlayerId: null,
 };
 
@@ -1071,6 +1072,7 @@ function currentTableState() {
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
     menuOpen: state.menuOpen,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
+    recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     playerAttributeView: state.playerAttributeView,
   };
 }
@@ -1097,6 +1099,7 @@ async function loadCloudTableState() {
   restoreWatchlistState(auth.savedTableState);
   restoreMenuState(auth.savedTableState);
   restoreRecentSearchState(auth.savedTableState);
+  restoreRecentEvaluationState(auth.savedTableState);
   restorePlayerAttributeView(auth.savedTableState);
 }
 
@@ -1139,6 +1142,11 @@ function restoreMenuState(savedState) {
 function restoreRecentSearchState(savedState) {
   const ids = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
   state.recentSearchPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
+}
+
+function restoreRecentEvaluationState(savedState) {
+  const ids = Array.isArray(savedState?.recentEvaluationPlayerIds) ? savedState.recentEvaluationPlayerIds : [];
+  state.recentEvaluationPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
 }
 
 function allowedPlayerAttributeViews() {
@@ -1185,6 +1193,7 @@ function loadSavedTableState() {
     restoreWatchlistState(auth.savedTableState);
     restoreMenuState(auth.savedTableState);
     restoreRecentSearchState(auth.savedTableState);
+    restoreRecentEvaluationState(auth.savedTableState);
     restorePlayerAttributeView(auth.savedTableState);
     applyGuestWatchlistIfNeeded();
     return auth.savedTableState;
@@ -1196,6 +1205,7 @@ function loadSavedTableState() {
     restoreWatchlistState(savedState);
     restoreMenuState(savedState);
     restoreRecentSearchState(savedState);
+    restoreRecentEvaluationState(savedState);
     restorePlayerAttributeView(savedState);
     applyGuestWatchlistIfNeeded();
     return savedState;
@@ -1603,16 +1613,36 @@ function evaluationSearchMatches(query) {
 
   return results
     .sort((a, b) => b.overall - a.overall)
-    .slice(0, 8)
+    .slice(0, 5)
     .map((entry) => entry.row);
+}
+
+function recentEvaluationRows() {
+  return state.recentEvaluationPlayerIds
+    .map((playerId) => rowByPlayerId(playerId))
+    .filter((row) => row && getValue(row, "retirement_years") !== 0);
+}
+
+function rememberEvaluationResult(playerId) {
+  const key = String(playerId);
+  state.recentEvaluationPlayerIds = [key, ...state.recentEvaluationPlayerIds.filter((id) => id !== key)].slice(0, 5);
+  saveTableState();
+}
+
+function resetEvaluationSelection() {
+  state.evaluationPlayerId = null;
+  evaluationPanel.hidden = true;
+  evaluationSearchResults.hidden = true;
+  evaluationPlayerName.textContent = "";
+  evaluationTableBody.replaceChildren();
 }
 
 function renderEvaluationSearchResults() {
   const query = evaluationSearchInput.value.trim().toLowerCase();
-  const rows = evaluationSearchMatches(query);
+  const rows = query ? evaluationSearchMatches(query) : recentEvaluationRows();
 
   evaluationSearchResults.replaceChildren();
-  evaluationSearchResults.hidden = !query || rows.length === 0;
+  evaluationSearchResults.hidden = rows.length === 0;
 
   rows.forEach((row) => {
     const playerId = String(getValue(row, "player_id"));
@@ -1622,12 +1652,21 @@ function renderEvaluationSearchResults() {
     button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>#${escapeHtml(playerId)} &middot; OVR ${escapeHtml(formatPlainValue(statDisplayValue(row, "overall"), "overall"))} &middot; ${escapeHtml(formatCellValue(row, "age"))} years old</span>`;
     button.addEventListener("click", () => {
       state.evaluationPlayerId = playerId;
+      rememberEvaluationResult(playerId);
       evaluationSearchInput.value = formatCellValue(row, "name");
       evaluationSearchResults.hidden = true;
       renderEvaluationTable(row);
     });
     evaluationSearchResults.appendChild(button);
   });
+}
+
+function handleEvaluationSearchInput() {
+  if (!evaluationSearchInput.value.trim()) {
+    resetEvaluationSelection();
+  }
+
+  renderEvaluationSearchResults();
 }
 
 function renderEvaluationTable(row) {
@@ -1637,7 +1676,7 @@ function renderEvaluationTable(row) {
   const fragment = document.createDocumentFragment();
 
   evaluationPanel.hidden = false;
-  evaluationPlayerName.textContent = `${playerName} evaluation`;
+  evaluationPlayerName.textContent = playerName;
 
   for (let season = 1; season <= expectedSeasons; season += 1) {
     const tableRow = document.createElement("tr");
@@ -3541,7 +3580,8 @@ document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
 openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
 playerSearchInput.addEventListener("input", renderSearchResults);
-evaluationSearchInput.addEventListener("input", renderEvaluationSearchResults);
+evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
+evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {

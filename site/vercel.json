@@ -25,6 +25,10 @@
       "destination": "/"
     },
     {
+      "source": "/evaluation",
+      "destination": "/"
+    },
+    {
       "source": "/changelog",
       "destination": "/"
     },
