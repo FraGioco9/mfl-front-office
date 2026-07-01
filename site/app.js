@@ -1901,7 +1901,7 @@ function adjustEvaluationOverall(playerId, season, delta) {
   const expectedSeasons = expectedEvaluationSeasons(row);
   const values = evaluationOverallValues(row, expectedSeasons);
   const index = season - 1;
-  const nextValue = Math.max(0, Math.min(99, (values[index] || 0) + delta));
+  const nextValue = Math.max(1, Math.min(99, (values[index] || 1) + delta));
   values[index] = nextValue;
 
   for (let forward = index + 1; forward < values.length; forward += 1) {
@@ -1921,7 +1921,15 @@ function adjustEvaluationOverall(playerId, season, delta) {
 }
 
 function evaluationOverallControl(value, season) {
-  return `<div class="evaluationOverallControl"><button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall">-</button><strong>${escapeHtml(value)}</strong><button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall">+</button></div>`;
+  const numericValue = Number(value);
+  const reduceControl = numericValue <= 1
+    ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
+    : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall">-</button>`;
+  const increaseControl = numericValue >= 99
+    ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
+    : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall">+</button>`;
+
+  return `<div class="evaluationOverallControl">${reduceControl}<strong>${escapeHtml(value)}</strong>${increaseControl}</div>`;
 }
 function renderEvaluationTable(row) {
   const rawExpectedSeasons = expectedEvaluationSeasons(row);
@@ -1937,7 +1945,6 @@ function renderEvaluationTable(row) {
 
   evaluationPanel.hidden = false;
   evaluationResetButton.hidden = false;
-  evaluationPlayerPageButton.href = pagePath("player", { playerId: getValue(row, "player_id") });
   evaluationPlayerPageButton.hidden = false;
   evaluationOptionFilters.hidden = false;
   ignoreDiscountRateInput.checked = state.evaluationIgnoreDiscountRate;
@@ -3944,7 +3951,7 @@ evaluationResetButton.addEventListener("click", () => {
 });
 
 const openEvaluationPlayerPage = (event) => {
-  if (event.ctrlKey || event.metaKey || event.button === 1) {
+  if (event.type === "mouseup" && event.button !== 1) {
     return;
   }
 
@@ -3954,13 +3961,34 @@ const openEvaluationPlayerPage = (event) => {
     return;
   }
 
-  event.preventDefault();
   const playerId = String(getValue(row, "player_id"));
   rememberSearchResult(playerId);
+
+  if (event.type === "mouseup" && event.button === 1) {
+    event.preventDefault();
+    const playerWindow = window.open(pagePath("player", { playerId }), "_blank", "noopener");
+    window.focus();
+    if (playerWindow) {
+      playerWindow.blur();
+    }
+    return;
+  }
+
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault();
+    const playerWindow = window.open(pagePath("player", { playerId }), "_blank", "noopener");
+    window.focus();
+    if (playerWindow) {
+      playerWindow.blur();
+    }
+    return;
+  }
+
   openPlayerPage(playerId);
 };
 
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
+evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
