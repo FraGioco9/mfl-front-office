@@ -2611,6 +2611,9 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
       });
     }
   }
+
+  populateAddFilterSelect(pageName);
+  refreshRuleColumnSelects(pageName);
 }
 
 function openFilters() {
