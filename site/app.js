@@ -1425,6 +1425,21 @@ function appendStatValue(cell, row, statColumn) {
   cell.appendChild(progressionElement);
 }
 
+function createCopyPlayerIdButton(playerId, label = String(playerId)) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "copyPlayerIdButton";
+  button.textContent = label;
+  button.title = "Click to copy";
+  button.setAttribute("aria-label", "Click to copy");
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    copyPlayerId(playerId);
+  });
+  return button;
+}
+
 function formatCellValue(row, column) {
   if (column === linkColumn) {
     return `https://app.playmfl.com/players/${getValue(row, "player_id")}`;
@@ -1982,7 +1997,7 @@ function renderPlayerPage(playerId) {
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div>
-        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button">ID #${escapeHtml(id)}</button>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" title="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
         <h2>${escapeHtml(playerName)}</h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
@@ -2973,6 +2988,8 @@ function renderTable() {
       } else if (column === flagColumn) {
         cell.classList.add("flagCell");
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
+      } else if (column === "player_id") {
+        cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
       } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);

@@ -1127,6 +1127,28 @@ table {
   width: 48px;
 }
 
+.copyPlayerIdButton {
+  appearance: none;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.copyPlayerIdButton:hover,
+.copyPlayerIdButton:focus {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-decoration: underline;
+}
+
 .col-flag {
   width: 32px;
 }
