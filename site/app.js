@@ -242,9 +242,7 @@ function loadTheme() {
   } catch {
     savedTheme = null;
   }
-
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
+  applyTheme(savedTheme || "dark");
 }
 
 function updateLoadingProgress(loadedFiles, totalFiles) {

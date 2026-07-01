@@ -1910,6 +1910,11 @@ td a {
 
 .playerAttributeCard.featured > span,
 .playerAttributeCard.featured .attributeValueText {
+  color: #111820;
+}
+
+:root[data-theme="dark"] .playerAttributeCard.featured > span,
+:root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
   color: #ffffff;
 }
 
