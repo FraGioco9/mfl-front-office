@@ -2529,9 +2529,13 @@ td a {
 }
 
 .evaluationPlayerPageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 128px;
   height: 42px;
   min-height: 42px;
+  text-decoration: none;
   white-space: nowrap;
 }
 

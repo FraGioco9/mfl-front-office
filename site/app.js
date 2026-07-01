@@ -1937,6 +1937,7 @@ function renderEvaluationTable(row) {
 
   evaluationPanel.hidden = false;
   evaluationResetButton.hidden = false;
+  evaluationPlayerPageButton.href = pagePath("player", { playerId: getValue(row, "player_id") });
   evaluationPlayerPageButton.hidden = false;
   evaluationOptionFilters.hidden = false;
   ignoreDiscountRateInput.checked = state.evaluationIgnoreDiscountRate;
@@ -3943,36 +3944,23 @@ evaluationResetButton.addEventListener("click", () => {
 });
 
 const openEvaluationPlayerPage = (event) => {
+  if (event.ctrlKey || event.metaKey || event.button === 1) {
+    return;
+  }
+
   const row = rowByPlayerId(state.evaluationPlayerId);
 
   if (!row) {
     return;
   }
 
+  event.preventDefault();
   const playerId = String(getValue(row, "player_id"));
-  const targetPath = pagePath("player", { playerId });
   rememberSearchResult(playerId);
-
-  if (event.ctrlKey || event.metaKey || event.button === 1) {
-    window.open(targetPath, "_blank", "noopener");
-    return;
-  }
-
   openPlayerPage(playerId);
 };
 
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
-evaluationPlayerPageButton.addEventListener("mousedown", (event) => {
-  if (event.button === 1) {
-    event.preventDefault();
-    openEvaluationPlayerPage(event);
-  }
-});
-evaluationPlayerPageButton.addEventListener("auxclick", (event) => {
-  if (event.button === 1) {
-    event.preventDefault();
-  }
-});
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
