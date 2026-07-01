@@ -1823,6 +1823,12 @@ function resetEvaluationSelection() {
   evaluationOptionFilters.hidden = true;
 }
 
+function clearEvaluationSearchFocus() {
+  evaluationSearchInput.blur();
+  evaluationSearchResults.hidden = true;
+  evaluationSearchResults.replaceChildren();
+}
+
 function renderEvaluationSearchResults() {
   const query = evaluationSearchInput.value.trim().toLowerCase();
   const rows = query ? evaluationSearchMatches(query) : recentEvaluationRows();
@@ -2535,6 +2541,7 @@ function renderPlayerPage(playerId) {
 
     state.evaluationPlayerId = id;
     evaluationSearchInput.value = playerName;
+    clearEvaluationSearchFocus();
     setPage("evaluation", true, { playerId: id });
   };
 
