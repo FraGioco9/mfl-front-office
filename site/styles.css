@@ -2613,11 +2613,14 @@ td a {
 
 
 .evaluationOverallControl {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: 24px 28px 24px;
   align-items: center;
-  justify-content: start;
+  justify-content: end;
+  justify-items: center;
   gap: 5px;
+  width: 86px;
+  margin-left: auto;
   height: 24px;
   line-height: 24px;
 }
