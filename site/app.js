@@ -226,6 +226,7 @@ const viewButtons = document.querySelectorAll(".viewButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
+const evaluationButtons = document.querySelector("#evaluationButtons");
 const evaluationResetButton = document.querySelector("#evaluationResetButton");
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationOptionFilters = document.querySelector("#evaluationOptionFilters");
@@ -1902,6 +1903,7 @@ function resetEvaluationSelection() {
   evaluationSearchResults.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
+  evaluationButtons.hidden = true;
   evaluationResetButton.hidden = true;
   evaluationPlayerPageButton.hidden = true;
   evaluationOptionFilters.hidden = true;
@@ -2028,6 +2030,7 @@ function renderEvaluationTable(row) {
   const presentValues = [];
 
   evaluationPanel.hidden = false;
+  evaluationButtons.hidden = false;
   evaluationResetButton.hidden = false;
   evaluationPlayerPageButton.hidden = false;
   evaluationOptionFilters.hidden = false;
@@ -2104,6 +2107,7 @@ function renderEvaluationPage() {
     evaluationSearchResults.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationButtons.hidden = true;
     evaluationResetButton.hidden = true;
     evaluationPlayerPageButton.hidden = true;
     evaluationOptionFilters.hidden = true;
@@ -2122,6 +2126,7 @@ function renderEvaluationPage() {
     evaluationPanel.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationButtons.hidden = true;
     evaluationResetButton.hidden = true;
     evaluationPlayerPageButton.hidden = true;
     evaluationOptionFilters.hidden = true;
