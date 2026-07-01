@@ -1864,7 +1864,15 @@ function playerAttributeValueHtml(row, column, viewName) {
       return `${escapeHtml(formatPlainValue(value, column))} ${nextOverallDetailHtml(row, column)}`;
     }
 
-    return `${escapeHtml(formatPlainValue(getValue(row, column), column))} ${nextOverallDetailHtml(row, column)}`;
+    const value = escapeHtml(formatPlainValue(getValue(row, column), column));
+    const adjustment = trainingAdjustmentFor(row, column);
+
+    if (adjustment === 0) {
+      return value;
+    }
+
+    const className = adjustment > 0 ? "positive" : "negative";
+    return `${value} <span class="trainingDelta ${className}">${adjustment > 0 ? "+" : ""}${adjustment}</span>`;
   }
 
   if (viewName === "next") {
