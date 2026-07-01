@@ -13,6 +13,7 @@ const state = {
   dataLoadPromise: null,
   dataAccess: null,
   selectedPlayerIds: new Set(),
+  selectionAnchorPlayerId: null,
   watchlistPlayerIds: new Set(),
   tablePageStates: {},
   toastTimer: null,
@@ -2856,6 +2857,8 @@ function updateSelectionBar() {
 }
 
 function setVisiblePlayersSelected(selected) {
+  state.selectionAnchorPlayerId = null;
+
   currentPageRows().forEach((row) => {
     const playerId = String(getValue(row, "player_id"));
 
@@ -2870,8 +2873,29 @@ function setVisiblePlayersSelected(selected) {
   saveTableState();
 }
 
-function setPlayerSelected(playerId, selected) {
+function setPlayerSelected(playerId, selected, shiftKey = false) {
   const key = String(playerId);
+  const anchorKey = state.selectionAnchorPlayerId;
+  const filteredIds = state.filteredRows.map((row) => String(getValue(row, "player_id")));
+  const anchorIndex = filteredIds.indexOf(anchorKey);
+  const currentIndex = filteredIds.indexOf(key);
+
+  if (shiftKey && anchorKey && anchorIndex >= 0 && currentIndex >= 0) {
+    const start = Math.min(anchorIndex, currentIndex);
+    const end = Math.max(anchorIndex, currentIndex);
+
+    filteredIds.slice(start, end + 1).forEach((rangePlayerId) => {
+      if (selected) {
+        state.selectedPlayerIds.add(rangePlayerId);
+      } else {
+        state.selectedPlayerIds.delete(rangePlayerId);
+      }
+    });
+
+    renderTable();
+    saveTableState();
+    return;
+  }
 
   if (selected) {
     state.selectedPlayerIds.add(key);
@@ -2879,12 +2903,14 @@ function setPlayerSelected(playerId, selected) {
     state.selectedPlayerIds.delete(key);
   }
 
+  state.selectionAnchorPlayerId = key;
   updateSelectionBar();
   saveTableState();
 }
 
 function clearSelection() {
   state.selectedPlayerIds.clear();
+  state.selectionAnchorPlayerId = null;
   renderTable();
   updateSelectionBar();
   saveTableState();
@@ -2900,6 +2926,7 @@ function addSelectedToWatchlist() {
   if (state.currentPage === "watchlist") {
     state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.delete(String(playerId)));
     state.selectedPlayerIds.clear();
+    state.selectionAnchorPlayerId = null;
     saveTableState();
     applyFilters();
     showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`);
@@ -2908,6 +2935,7 @@ function addSelectedToWatchlist() {
 
   state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
   state.selectedPlayerIds.clear();
+  state.selectionAnchorPlayerId = null;
   saveTableState();
   renderTable();
   updateSelectionBar();
@@ -2969,7 +2997,7 @@ function renderTable() {
     selectionInput.type = "checkbox";
     selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
     selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
-    selectionInput.addEventListener("change", () => setPlayerSelected(playerId, selectionInput.checked));
+    selectionInput.addEventListener("click", (event) => setPlayerSelected(playerId, selectionInput.checked, event.shiftKey));
     selectionCell.appendChild(selectionInput);
     tableRow.appendChild(selectionCell);
 
