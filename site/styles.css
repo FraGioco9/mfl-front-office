@@ -2614,16 +2614,27 @@ td a {
 
 .evaluationOverallControl {
   display: inline-grid;
-  grid-template-columns: 24px minmax(28px, auto) 24px;
+  grid-template-columns: 24px 28px 24px;
   align-items: center;
   justify-content: start;
   gap: 5px;
+  height: 24px;
+  line-height: 24px;
+}
+
+.evaluationOverallControl button,
+.evaluationOverallControlSpacer {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
 }
 
 .evaluationOverallControl button {
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border-radius: 5px;
   font-size: 14px;
@@ -2631,6 +2642,7 @@ td a {
 }
 
 .evaluationOverallControlSpacer {
+  display: block;
   visibility: hidden;
   pointer-events: none;
 }
@@ -2638,6 +2650,7 @@ td a {
 .evaluationOverallControl strong {
   min-width: 28px;
   text-align: center;
+  line-height: 24px;
 }
 .evaluationPanel h3 {
   margin: 0 0 10px;
