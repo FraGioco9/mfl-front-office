@@ -2414,9 +2414,11 @@ td a {
 }
 
 .evaluationSearchGroup {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(320px, 560px) max-content;
+  column-gap: 8px;
+  row-gap: 8px;
   align-items: end;
-  gap: 8px;
   min-width: 0;
 }
 .evaluationSearch {
@@ -2504,6 +2506,12 @@ td a {
 
 .evaluationSummaryShell {
   margin-bottom: 14px;
+}
+
+.evaluationActions {
+  display: flex;
+  gap: 8px;
+  align-items: end;
 }
 
 .evaluationPlayerPageButton {
@@ -2653,11 +2661,10 @@ td a {
 
 .evaluationOptionFilters {
   display: flex;
+  grid-column: 1;
   gap: 12px;
   align-items: center;
-  flex-basis: 100%;
-  margin-top: 8px;
-  color: var(--text-soft);
+  color: var(--text);
   font-size: 13px;
   font-weight: 700;
 }
@@ -2669,5 +2676,11 @@ td a {
 .evaluationOptionFilters label {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+}
+
+.evaluationOptionFilters input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
 }

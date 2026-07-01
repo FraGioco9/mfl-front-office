@@ -225,6 +225,7 @@ const viewButtons = document.querySelectorAll(".viewButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
+const evaluationResetButton = document.querySelector("#evaluationResetButton");
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationOptionFilters = document.querySelector("#evaluationOptionFilters");
 const ignoreDiscountRateInput = document.querySelector("#ignoreDiscountRateInput");
@@ -1224,7 +1225,7 @@ function loadSavedTableState() {
 }
 
 function formatCount(value) {
-  return new Intl.NumberFormat().format(value);
+  return new Intl.NumberFormat("en-US").format(value);
 }
 
 function filterLabel(column) {
@@ -1699,7 +1700,7 @@ function formatEvaluationNumber(value, decimals = 2) {
 }
 
 function formatEvaluationCurrency(value) {
-  return Number.isFinite(value) ? "$" + new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) : "";
+  return Number.isFinite(value) ? "$" + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) : "";
 }
 
 function evaluationMflValueForOverall(overall) {
@@ -1709,7 +1710,7 @@ function evaluationMflValueForOverall(overall) {
 }
 
 function formatEvaluationMfl(value) {
-  return Number.isFinite(value) ? new Intl.NumberFormat().format(value) : "";
+  return Number.isFinite(value) ? new Intl.NumberFormat("en-US").format(value) : "";
 }
 
 function expectedEvaluationSeasons(row) {
@@ -1778,6 +1779,7 @@ function resetEvaluationSelection() {
   evaluationSearchResults.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
+  evaluationResetButton.hidden = true;
   evaluationPlayerPageButton.hidden = true;
   evaluationOptionFilters.hidden = true;
 }
@@ -1888,6 +1890,7 @@ function renderEvaluationTable(row) {
   const presentValues = [];
 
   evaluationPanel.hidden = false;
+  evaluationResetButton.hidden = false;
   evaluationPlayerPageButton.hidden = false;
   evaluationOptionFilters.hidden = false;
   ignoreDiscountRateInput.checked = state.evaluationIgnoreDiscountRate;
@@ -1959,6 +1962,7 @@ function renderEvaluationPage() {
     evaluationSearchResults.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationResetButton.hidden = true;
     evaluationPlayerPageButton.hidden = true;
     evaluationOptionFilters.hidden = true;
     return;
@@ -1971,6 +1975,7 @@ function renderEvaluationPage() {
     evaluationPanel.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationResetButton.hidden = true;
     evaluationPlayerPageButton.hidden = true;
     evaluationOptionFilters.hidden = true;
     return;
@@ -3853,6 +3858,17 @@ ignoreFirstSeasonInput.addEventListener("change", () => {
   state.evaluationIgnoreFirstSeason = ignoreFirstSeasonInput.checked;
   renderEvaluationPage();
 });
+evaluationResetButton.addEventListener("click", () => {
+  const row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (!row) {
+    return;
+  }
+
+  delete state.evaluationOverallRows[evaluationOverallKey(row)];
+  renderEvaluationTable(row);
+});
+
 evaluationPlayerPageButton.addEventListener("click", () => {
   const row = rowByPlayerId(state.evaluationPlayerId);
 

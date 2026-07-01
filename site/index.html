@@ -205,7 +205,10 @@
                 </label>
                 <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
               </section>
-              <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
+              <section class="evaluationActions" aria-label="Evaluation actions">
+                <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
+                <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
+              </section>
               <section id="evaluationOptionFilters" class="evaluationOptionFilters" aria-label="Evaluation options" hidden>
                 <label><input id="ignoreDiscountRateInput" type="checkbox"> <span>Ignore discount rate</span></label>
                 <label><input id="ignoreFirstSeasonInput" type="checkbox"> <span>Ignore first season</span></label>
@@ -269,6 +272,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.83.9</span><p>Refine Evaluation controls and reset button</p></li>
               <li><span>v1.83.8</span><p>Add Evaluation discount and first-season toggles</p></li>
               <li><span>v1.83.7</span><p>Add Evaluation earnings and player-page shortcut</p></li>
               <li><span>v1.83.6</span><p>Add adjustable season Overall values to Evaluation</p></li>
@@ -476,7 +480,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.8</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.9</a>
       <span id="statusText">Updated -</span>
     </footer>
 
