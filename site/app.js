@@ -481,7 +481,7 @@ function currentDataAccess() {
   return auth.required && !auth.session ? "public" : "full";
 }
 
-function dataFileUrl(fileName) {
+function dataFileUrl(fileName, options = {}) {
   if (!auth.required) {
     return `/data/${fileName}`;
   }
@@ -489,6 +489,8 @@ function dataFileUrl(fileName) {
   const query = new URLSearchParams({ file: fileName });
   if (!auth.session) {
     query.set("access", "public-database");
+  } else if (Array.isArray(options.columns) && options.columns.length) {
+    query.set("columns", options.columns.join(","));
   }
   return `/api/data?${query.toString()}`;
 }
@@ -526,7 +528,7 @@ async function clearDataCache() {
 }
 
 async function fetchDataFile(fileName, options = {}) {
-  const { useCache = false, writeCache = false } = options;
+  const { useCache = false, writeCache = false, columns = null } = options;
 
   if (useCache) {
     const cached = await readCachedDataFile(fileName);
@@ -536,7 +538,7 @@ async function fetchDataFile(fileName, options = {}) {
     }
   }
 
-  const response = await fetch(dataFileUrl(fileName), {
+  const response = await fetch(dataFileUrl(fileName, { columns }), {
     cache: fileName === "manifest.json" ? "no-store" : "default",
     headers: auth.required && auth.session ? authHeaders() : {},
   });
@@ -754,8 +756,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   if (pageRequiresFullData(pageName) && state.dataAccess !== "full") {
     state.dataLoaded = false;
-    state.rows = [];
-    state.filteredRows = [];
   }
 
   if ((tablePage || playerPageActive) && !state.dataLoaded) {
@@ -3029,35 +3029,122 @@ function setView(viewName) {
   applyFilters();
 }
 
-async function loadData() {
-  try {
-    state.rows = [];
-    state.filteredRows = [];
-    state.page = 1;
-    state.dataAccess = currentDataAccess();
-    updateLoadingProgress(0, 0);
-    const manifest = await fetchDataFile("manifest.json");
-    const cacheVersion = `${manifest.generated_at || ""}:${manifest.row_count || 0}:${(manifest.chunks || []).map((chunk) => chunk.file).join("|")}`;
-    const cachedVersion = localStorage.getItem(DATA_CACHE_VERSION_KEY);
-    const useCachedChunks = cachedVersion === cacheVersion;
+function dataCacheVersion(manifest) {
+  return `${currentDataAccess()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${(manifest.chunks || []).map((chunk) => chunk.file).join("|")}`;
+}
 
-    if (!useCachedChunks) {
-      await clearDataCache();
-      localStorage.setItem(DATA_CACHE_VERSION_KEY, cacheVersion);
-      localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(manifest));
+function missingFullDataColumns(fullColumns) {
+  return fullColumns.filter((column) => !state.columns.includes(column));
+}
+
+function rowMapByPlayerId() {
+  const playerIdIndex = state.columns.indexOf("player_id");
+  const rowMap = new Map();
+
+  if (playerIdIndex < 0) {
+    return rowMap;
+  }
+
+  state.rows.forEach((row) => {
+    rowMap.set(String(row[playerIdIndex]), row);
+  });
+
+  return rowMap;
+}
+
+function mergeDataColumns(chunk, columnsToMerge, rowMap) {
+  const chunkPlayerIdIndex = chunk.columns.indexOf("player_id");
+  const chunkColumnIndexes = columnsToMerge.map((column) => chunk.columns.indexOf(column));
+
+  if (chunkPlayerIdIndex < 0) {
+    return;
+  }
+
+  chunk.rows.forEach((chunkRow) => {
+    const existingRow = rowMap.get(String(chunkRow[chunkPlayerIdIndex]));
+
+    if (!existingRow) {
+      return;
     }
 
-    state.manifest = manifest;
-    state.columns = manifest.columns;
-    updateSummaryCounts(manifest.row_count, manifest.wallet_count);
-    await paintLoadingProgress();
+    chunkColumnIndexes.forEach((chunkColumnIndex) => {
+      existingRow.push(chunkColumnIndex >= 0 ? chunkRow[chunkColumnIndex] : null);
+    });
+  });
+}
 
-    for (let index = 0; index < manifest.chunks.length; index += 1) {
-      updateLoadingProgress(index + 1, manifest.chunks.length);
+async function upgradePublicDataToFull(manifest) {
+  const columnsToMerge = missingFullDataColumns(manifest.columns);
+
+  if (!columnsToMerge.length) {
+    state.manifest = manifest;
+    state.dataAccess = "full";
+    return true;
+  }
+
+  const rowMap = rowMapByPlayerId();
+  const requestColumns = ["player_id", ...columnsToMerge];
+
+  updateSummaryCounts(manifest.row_count, manifest.wallet_count);
+  await paintLoadingProgress();
+
+  for (let index = 0; index < manifest.chunks.length; index += 1) {
+    updateLoadingProgress(index + 1, manifest.chunks.length);
+    await paintLoadingProgress();
+    const chunkInfo = manifest.chunks[index];
+    const chunk = await fetchDataFile(chunkInfo.file, { columns: requestColumns });
+    mergeDataColumns(chunk, columnsToMerge, rowMap);
+  }
+
+  state.manifest = manifest;
+  state.columns = [...state.columns, ...columnsToMerge];
+  state.dataAccess = "full";
+  return true;
+}
+
+async function loadData() {
+  try {
+    const targetAccess = currentDataAccess();
+    const upgradeFromPublic = targetAccess === "full"
+      && state.dataAccess === "public"
+      && state.rows.length > 0
+      && state.columns.length > 0;
+
+    if (!upgradeFromPublic) {
+      state.rows = [];
+      state.filteredRows = [];
+      state.page = 1;
+    }
+
+    state.dataAccess = targetAccess;
+    updateLoadingProgress(0, 0);
+    const manifest = await fetchDataFile("manifest.json");
+
+    if (upgradeFromPublic) {
+      await upgradePublicDataToFull(manifest);
+    } else {
+      const cacheVersion = dataCacheVersion(manifest);
+      const cachedVersion = localStorage.getItem(DATA_CACHE_VERSION_KEY);
+      const useCachedChunks = cachedVersion === cacheVersion;
+
+      if (!useCachedChunks) {
+        await clearDataCache();
+        localStorage.setItem(DATA_CACHE_VERSION_KEY, cacheVersion);
+        localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(manifest));
+      }
+
+      state.manifest = manifest;
+      state.columns = manifest.columns;
+      updateSummaryCounts(manifest.row_count, manifest.wallet_count);
       await paintLoadingProgress();
-      const chunkInfo = manifest.chunks[index];
-      const chunk = await fetchDataFile(chunkInfo.file, { useCache: useCachedChunks, writeCache: !useCachedChunks });
-      state.rows.push(...chunk.rows);
+
+      for (let index = 0; index < manifest.chunks.length; index += 1) {
+        updateLoadingProgress(index + 1, manifest.chunks.length);
+        await paintLoadingProgress();
+        const chunkInfo = manifest.chunks[index];
+        const chunk = await fetchDataFile(chunkInfo.file, { useCache: useCachedChunks, writeCache: !useCachedChunks });
+        state.rows.push(...chunk.rows);
+      }
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;

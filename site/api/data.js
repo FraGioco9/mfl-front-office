@@ -10,6 +10,8 @@ const PUBLIC_DATABASE_COLUMNS = [
   "positions",
   "age",
   "nationality",
+  "preferred_foot",
+  "height",
   "retirement_years",
   "overall",
   "pace",
@@ -18,6 +20,7 @@ const PUBLIC_DATABASE_COLUMNS = [
   "dribbling",
   "defense",
   "physical",
+  "goalkeeping",
   "player_seasons",
   "next_overall",
   "next_overall_gap",
@@ -27,6 +30,7 @@ const PUBLIC_DATABASE_COLUMNS = [
   "dribbling_to_next_overall",
   "defense_to_next_overall",
   "physical_to_next_overall",
+  "goalkeeping_to_next_overall",
 ];
 
 async function findDataFile(fileName) {
@@ -96,23 +100,31 @@ module.exports = async function handler(request, response) {
     const fileContent = await fs.readFile(filePath, "utf8");
     response.setHeader("Content-Type", "application/json; charset=utf-8");
 
-    if (!publicDatabase) {
-      response.status(200).send(fileContent);
-      return;
-    }
-
     const data = JSON.parse(fileContent);
-    const publicColumns = PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column));
-    const publicColumnIndexes = publicColumns.map((column) => data.columns.indexOf(column));
+    const requestedColumns = String(request.query.columns || "")
+      .split(",")
+      .map((column) => column.trim())
+      .filter(Boolean);
+    const selectedColumns = publicDatabase
+      ? PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column))
+      : (requestedColumns.length
+        ? requestedColumns.filter((column) => data.columns.includes(column))
+        : data.columns);
+    const selectedColumnIndexes = selectedColumns.map((column) => data.columns.indexOf(column));
 
     if (fileName === "manifest.json") {
-      response.status(200).json({ ...data, columns: publicColumns, publicAccess: "database" });
+      response.status(200).json({
+        ...data,
+        columns: selectedColumns,
+        publicAccess: publicDatabase ? "database" : undefined,
+        partialAccess: !publicDatabase && requestedColumns.length ? "columns" : undefined,
+      });
       return;
     }
 
     response.status(200).json({
-      columns: publicColumns,
-      rows: data.rows.map((row) => publicColumnIndexes.map((index) => row[index])),
+      columns: selectedColumns,
+      rows: data.rows.map((row) => selectedColumnIndexes.map((index) => row[index])),
     });
   } catch (error) {
     response.status(500).json({ error: `Could not read data file: ${error.message}` });
