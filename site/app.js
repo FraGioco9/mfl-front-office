@@ -19,6 +19,7 @@ const state = {
   menuAnimationTimer: null,
   menuOpen: true,
   playerAttributeView: "attributes",
+  trainingAdjustments: {},
   searchRenderTimer: null,
   searchIndex: [],
   recentSearchPlayerIds: [],
@@ -1114,8 +1115,8 @@ function restoreRecentSearchState(savedState) {
 
 function allowedPlayerAttributeViews() {
   return auth.required && !auth.session
-    ? [["attributes", "Attributes"], ["next", "Next Overall"]]
-    : [["attributes", "Attributes"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]];
+    ? [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"]]
+    : [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]];
 }
 
 function normalizePlayerAttributeView(viewName) {
@@ -1124,7 +1125,7 @@ function normalizePlayerAttributeView(viewName) {
 }
 
 function restorePlayerAttributeView(savedState) {
-  if (["attributes", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
+  if (["attributes", "training", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
     state.playerAttributeView = normalizePlayerAttributeView(savedState.playerAttributeView);
   }
 }
@@ -1695,6 +1696,73 @@ function progressionValue(row, statColumn, suffix) {
   return Number(getValue(row, `${statColumn}_${suffix}`) || 0);
 }
 
+function playerTrainingKey(row) {
+  return String(getValue(row, "player_id") || "");
+}
+
+function trainingStatColumns(row) {
+  return playerAttributeColumns(row).filter((column) => column !== "overall");
+}
+
+function setRowValue(row, column, value) {
+  const index = state.columns.indexOf(column);
+  if (index >= 0) {
+    row[index] = value;
+  }
+}
+
+function trainingAdjustmentFor(row, column) {
+  const key = playerTrainingKey(row);
+  return Number(state.trainingAdjustments[key]?.[column] || 0);
+}
+
+function adjustedTrainingValue(row, column) {
+  const base = Number(getValue(row, column) || 0);
+  return Math.max(0, Math.min(99, base + trainingAdjustmentFor(row, column)));
+}
+
+function trainingRow(row) {
+  const adjustedRow = [...row];
+
+  trainingStatColumns(row).forEach((column) => {
+    setRowValue(adjustedRow, column, adjustedTrainingValue(row, column));
+  });
+
+  if (!playerIsGoalkeeper(adjustedRow)) {
+    setRowValue(adjustedRow, "overall", Math.round(primaryPreciseOverall(adjustedRow)));
+  }
+
+  return adjustedRow;
+}
+
+function adjustTrainingStat(playerId, column, delta) {
+  const row = rowByPlayerId(playerId);
+
+  if (!row || !trainingStatColumns(row).includes(column)) {
+    return;
+  }
+
+  const key = playerTrainingKey(row);
+  const currentAdjustment = trainingAdjustmentFor(row, column);
+  const baseValue = Number(getValue(row, column) || 0);
+  const nextValue = Math.max(0, Math.min(99, baseValue + currentAdjustment + delta));
+  const nextAdjustment = nextValue - baseValue;
+
+  state.trainingAdjustments[key] = { ...(state.trainingAdjustments[key] || {}) };
+
+  if (nextAdjustment === 0) {
+    delete state.trainingAdjustments[key][column];
+  } else {
+    state.trainingAdjustments[key][column] = nextAdjustment;
+  }
+
+  if (!Object.keys(state.trainingAdjustments[key]).length) {
+    delete state.trainingAdjustments[key];
+  }
+
+  renderPlayerPage(playerId);
+}
+
 function playerAttributeColumns(row) {
   if (playerIsGoalkeeper(row)) {
     return ["overall", "goalkeeping"].filter((column) => column === "overall" || state.columns.includes(column));
@@ -1790,6 +1858,15 @@ function nextOverallDetailHtml(row, column) {
 }
 
 function playerAttributeValueHtml(row, column, viewName) {
+  if (viewName === "training") {
+    if (column === "overall") {
+      const value = Math.round(primaryPreciseOverall(row));
+      return `${escapeHtml(formatPlainValue(value, column))} ${nextOverallDetailHtml(row, column)}`;
+    }
+
+    return `${escapeHtml(formatPlainValue(getValue(row, column), column))} ${nextOverallDetailHtml(row, column)}`;
+  }
+
   if (viewName === "next") {
     const value = column === "overall" ? primaryPreciseOverall(row) : getValue(row, column);
     const formattedValue = column === "overall" ? formatDecimal(value) : escapeHtml(formatPlainValue(value, column));
@@ -1818,6 +1895,7 @@ function renderPlayerAttributePanel(row) {
   const columns = playerAttributeColumns(row);
   const viewName = normalizePlayerAttributeView(state.playerAttributeView);
   state.playerAttributeView = viewName;
+  const isTraining = viewName === "training";
 
   return columns.map((column) => {
     const label = column === "goalkeeping" ? "Goalkeeping" : columnLabels[column];
@@ -1825,7 +1903,11 @@ function renderPlayerAttributePanel(row) {
     const fullWidth = column === "overall" || (playerIsGoalkeeper(row) && column === "goalkeeping") ? " fullWidth" : "";
     const rarityStyle = ` style="--rarity-color: ${rarityColorForOverall(statDisplayValue(row, "overall"))}"`;
     const contributionTooltip = playerAttributeContributionTooltip(row, column);
-    return `<div class="playerAttributeCard${featured}${fullWidth}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTooltip}>${playerAttributeValueHtml(row, column, viewName)}</span></strong></div>`;
+    const valueHtml = playerAttributeValueHtml(row, column, viewName);
+    const trainingControls = isTraining && column !== "overall"
+      ? `<span class="trainingStatControls"><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="-1" aria-label="Reduce ${escapeHtml(label)}">-</button><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="1" aria-label="Increase ${escapeHtml(label)}">+</button></span>`
+      : "";
+    return `<div class="playerAttributeCard${featured}${fullWidth}${isTraining ? " trainingCard" : ""}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTooltip}>${valueHtml}</span>${trainingControls}</strong></div>`;
   }).join("");
 }
 
@@ -1865,6 +1947,7 @@ function renderPlayerPage(playerId) {
     ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
+  const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews()
     .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
     .join("");
@@ -1884,9 +1967,9 @@ function renderPlayerPage(playerId) {
     <section class="playerGrid">
       <div class="playerStack">
         <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
-        <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(row)}</div></div>
+        <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(displayRow)}</div></div>
       </div>
-      <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(row)}</div></div>
+      <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(displayRow)}</div></div>
     </section>`;
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
@@ -1900,6 +1983,11 @@ function renderPlayerPage(playerId) {
       state.playerAttributeView = button.dataset.playerAttributeView;
       saveTableState();
       renderPlayerPage(id);
+    });
+  });
+  playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      adjustTrainingStat(id, button.dataset.trainingStat, Number(button.dataset.trainingDelta || 0));
     });
   });
 }
