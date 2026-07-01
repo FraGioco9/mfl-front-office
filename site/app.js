@@ -223,7 +223,8 @@ const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
 const evaluationPanel = document.querySelector("#evaluationPanel");
-const evaluationPlayerName = document.querySelector("#evaluationPlayerName");
+const evaluationDiscountRate = document.querySelector("#evaluationDiscountRate");
+const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
 const evaluationTableBody = document.querySelector("#evaluationTableBody");
 const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
@@ -1569,6 +1570,47 @@ function buildSearchIndex() {
 }
 
 
+const evaluationConversions = {
+  1: 300,
+  2: 333,
+  3: 333,
+  4: 300,
+  5: 225,
+  6: 250,
+  7: 333,
+  8: 400,
+  9: 450,
+  10: 500,
+  11: 475,
+  12: 450,
+  13: 450,
+  14: 400,
+};
+
+function evaluationDiscountRateValue(currentSeason = 15, seasonsToAverage = 5) {
+  const lastCompletedSeason = currentSeason - 1;
+  const ratios = [];
+
+  for (let season = lastCompletedSeason - seasonsToAverage + 1; season <= lastCompletedSeason; season += 1) {
+    const previousConversion = evaluationConversions[season - 1];
+    const conversion = evaluationConversions[season];
+
+    if (previousConversion && conversion) {
+      ratios.push(conversion / previousConversion);
+    }
+  }
+
+  if (!ratios.length) {
+    return null;
+  }
+
+  return Math.pow(ratios.reduce((product, ratio) => product * ratio, 1), 1 / ratios.length) - 1;
+}
+
+function formatEvaluationRate(value) {
+  return Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : "-";
+}
+
 function expectedEvaluationSeasons(row) {
   const playerId = Number(getValue(row, "player_id") || 0);
   const age = Number(getValue(row, "age"));
@@ -1633,7 +1675,7 @@ function resetEvaluationSelection() {
   state.evaluationPlayerId = null;
   evaluationPanel.hidden = true;
   evaluationSearchResults.hidden = true;
-  evaluationPlayerName.textContent = "";
+  evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
 }
 
@@ -1673,23 +1715,30 @@ function renderEvaluationTable(row) {
   const expectedSeasons = expectedEvaluationSeasons(row);
   const playerName = formatCellValue(row, "name");
   const currentAge = Number(getValue(row, "age"));
+  const currentOverall = formatPlainValue(statDisplayValue(row, "overall"), "overall");
   const fragment = document.createDocumentFragment();
+  const presentValues = [];
 
   evaluationPanel.hidden = false;
-  evaluationPlayerName.textContent = playerName;
 
   for (let season = 1; season <= expectedSeasons; season += 1) {
     const tableRow = document.createElement("tr");
+    const seasonOverall = season === 1 ? currentOverall : "";
+    const presentValue = "";
     const values = [
       playerName,
       season,
       Number.isFinite(currentAge) ? currentAge + season - 1 : "",
+      seasonOverall,
       "",
       "",
       "",
-      "",
-      "",
+      presentValue,
     ];
+
+    if (presentValue !== "" && Number.isFinite(Number(presentValue))) {
+      presentValues.push(Number(presentValue));
+    }
 
     values.forEach((value) => {
       const cell = document.createElement("td");
@@ -1700,6 +1749,23 @@ function renderEvaluationTable(row) {
     fragment.appendChild(tableRow);
   }
 
+  const presentValueTotal = presentValues.length
+    ? presentValues.reduce((total, value) => total + value, 0).toFixed(2)
+    : "";
+  const summaryRow = document.createElement("tr");
+  [
+    playerName,
+    Number.isFinite(currentAge) ? currentAge : "",
+    expectedSeasons,
+    currentOverall,
+    presentValueTotal,
+  ].forEach((value) => {
+    const cell = document.createElement("td");
+    cell.textContent = value;
+    summaryRow.appendChild(cell);
+  });
+
+  evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
 }
 
@@ -3613,6 +3679,7 @@ async function startApp() {
   loadTheme();
   const initialPage = pageFromUrl();
   loadSavedTableState();
+  evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
 
   if (pageRequiresData(initialPage) && hasSavedSupabaseSession()) {
