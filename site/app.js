@@ -1917,17 +1917,26 @@ function rememberEvaluationResult(playerId) {
   saveTableState();
 }
 
-function resetEvaluationSelection() {
-  state.evaluationPlayerId = null;
-  syncEvaluationPlayerUrl(null);
+function renderEmptyEvaluationSelection(showRecentResults = true) {
   evaluationPanel.hidden = true;
-  evaluationSearchResults.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
   evaluationButtons.hidden = true;
   evaluationResetButton.hidden = true;
   evaluationPlayerPageButton.hidden = true;
   evaluationOptionFilters.hidden = true;
+
+  if (showRecentResults) {
+    renderEvaluationSearchResults();
+  } else {
+    evaluationSearchResults.hidden = true;
+  }
+}
+
+function resetEvaluationSelection() {
+  state.evaluationPlayerId = null;
+  syncEvaluationPlayerUrl(null);
+  renderEmptyEvaluationSelection(true);
 }
 
 function clearEvaluationSearchFocus() {
@@ -2124,14 +2133,7 @@ function renderEvaluationPage() {
   }
 
   if (!state.evaluationPlayerId) {
-    evaluationPanel.hidden = true;
-    evaluationSearchResults.hidden = true;
-    evaluationSummaryBody.replaceChildren();
-    evaluationTableBody.replaceChildren();
-    evaluationButtons.hidden = true;
-    evaluationResetButton.hidden = true;
-    evaluationPlayerPageButton.hidden = true;
-    evaluationOptionFilters.hidden = true;
+    renderEmptyEvaluationSelection(true);
     return;
   }
 
@@ -2144,13 +2146,7 @@ function renderEvaluationPage() {
   if (!row || getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
     syncEvaluationPlayerUrl(null);
-    evaluationPanel.hidden = true;
-    evaluationSummaryBody.replaceChildren();
-    evaluationTableBody.replaceChildren();
-    evaluationButtons.hidden = true;
-    evaluationResetButton.hidden = true;
-    evaluationPlayerPageButton.hidden = true;
-    evaluationOptionFilters.hidden = true;
+    renderEmptyEvaluationSelection(true);
     return;
   }
 
