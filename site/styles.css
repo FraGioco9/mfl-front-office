@@ -2502,6 +2502,7 @@ td a {
   font-size: 22px;
 }
 .evaluationMflUsdGroup {
+  position: relative;
   display: grid;
   justify-items: center;
   gap: 4px;
@@ -2553,20 +2554,17 @@ td a {
 }
 
 .evaluationMetricResetButton {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
   width: auto;
   height: 20px;
   min-height: 20px;
   padding: 0 7px;
   border-radius: 4px;
   font-size: 10px;
+  transform: translateX(-50%);
 }
-.evaluationMflUsdResetSlot {
-  display: inline-flex;
-  justify-content: center;
-  width: 112px;
-}
-
-
 .evaluationSummaryShell {
   margin-bottom: 14px;
 }
