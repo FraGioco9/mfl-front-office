@@ -1588,7 +1588,8 @@ td a {
 }
 
 .toastLink:hover {
-  color: var(--primary);
+  background: transparent;
+  color: inherit;
 }
 
 

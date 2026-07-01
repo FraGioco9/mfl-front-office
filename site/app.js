@@ -896,6 +896,13 @@ function defaultTablePageState(pageName = tablePageKey() || "progression") {
   };
 }
 
+function scheduleToastHide(toast) {
+  window.clearTimeout(state.toastTimer);
+  state.toastTimer = window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 2200);
+}
+
 function showToast(message) {
   let toast = document.querySelector("#toastMessage");
 
@@ -905,6 +912,8 @@ function showToast(message) {
     toast.className = "toastMessage";
     toast.setAttribute("role", "status");
     toast.setAttribute("aria-live", "polite");
+    toast.addEventListener("mouseenter", () => window.clearTimeout(state.toastTimer));
+    toast.addEventListener("mouseleave", () => scheduleToastHide(toast));
     document.body.appendChild(toast);
   }
 
@@ -915,10 +924,7 @@ function showToast(message) {
     toast.textContent = message;
   }
   toast.classList.add("visible");
-  window.clearTimeout(state.toastTimer);
-  state.toastTimer = window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2200);
+  scheduleToastHide(toast);
 }
 
 function showWatchlistToast(prefix) {
