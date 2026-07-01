@@ -2054,9 +2054,13 @@ td a {
   width: fit-content;
   border-radius: 6px;
   background: transparent;
-  color: #ffffff;
+  color: #111820;
   padding: 0;
   text-shadow: none;
+}
+
+:root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
+  color: #ffffff;
 }
 
 .attributesPanel {
