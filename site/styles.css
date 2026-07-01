@@ -993,6 +993,17 @@ button:hover:not(:disabled) {
   background: var(--primary-hover);
 }
 
+.searchButton:hover:not(:disabled),
+.viewButton:not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.viewButton.active:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
 .menuButton:hover:not(:disabled) {
   border-color: transparent;
   background: transparent;
