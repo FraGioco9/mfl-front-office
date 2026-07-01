@@ -1128,6 +1128,7 @@ table {
 }
 
 .copyPlayerIdButton {
+  position: relative;
   appearance: none;
   width: auto;
   height: auto;
@@ -1141,9 +1142,10 @@ table {
 }
 
 .copyPlayerIdButton:hover,
-.copyPlayerIdButton:focus {
-  border-color: transparent;
-  background: transparent;
+.copyPlayerIdButton:focus,
+.copyPlayerIdButton:hover:not(:disabled) {
+  border-color: transparent !important;
+  background: transparent !important;
   color: inherit;
   box-shadow: none;
   text-decoration: underline;
@@ -1338,7 +1340,9 @@ td a {
 }
 
 .retirementMarker[data-tooltip]::after,
-.newMintMarker[data-tooltip]::after {
+.newMintMarker[data-tooltip]::after,
+.copyPlayerIdButton[data-tooltip]::after,
+.playerIdText[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
@@ -1355,6 +1359,7 @@ td a {
   font-weight: 600;
   line-height: 1.35;
   text-align: left;
+  text-transform: none;
   white-space: normal;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   opacity: 0;
@@ -1366,7 +1371,11 @@ td a {
 .retirementMarker[data-tooltip]:hover::after,
 .retirementMarker[data-tooltip]:focus::after,
 .newMintMarker[data-tooltip]:hover::after,
-.newMintMarker[data-tooltip]:focus::after {
+.newMintMarker[data-tooltip]:focus::after,
+.copyPlayerIdButton[data-tooltip]:hover::after,
+.copyPlayerIdButton[data-tooltip]:focus::after,
+.playerIdText[data-tooltip]:hover::after,
+.playerIdText[data-tooltip]:focus::after {
   opacity: 1;
   transform: translate(-50%, 0);
 }
@@ -1800,6 +1809,7 @@ td a {
 }
 
 .playerIdText {
+  position: relative;
   appearance: none;
   border: 0;
   background: transparent;

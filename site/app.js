@@ -1430,7 +1430,7 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.type = "button";
   button.className = "copyPlayerIdButton";
   button.textContent = label;
-  button.title = "Click to copy";
+  button.dataset.tooltip = "Click to copy";
   button.setAttribute("aria-label", "Click to copy");
   button.addEventListener("click", (event) => {
     event.preventDefault();
@@ -1997,7 +1997,7 @@ function renderPlayerPage(playerId) {
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div>
-        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" title="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
         <h2>${escapeHtml(playerName)}</h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
