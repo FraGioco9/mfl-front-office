@@ -1771,8 +1771,9 @@ function renderEvaluationMflPerUsdControl(editing = false) {
   evaluationMflUsdInput.value = value.toFixed(2);
   evaluationMflUsd.hidden = editing;
   evaluationMflUsdInput.hidden = !editing;
-  evaluationMflUsdEditButton.hidden = editing;
-  evaluationMflUsdResetButton.hidden = editing || value === DEFAULT_EVALUATION_MFL_PER_USD;
+  evaluationMflUsdEditButton.textContent = editing ? "\u2713" : "\u270E";
+  evaluationMflUsdEditButton.setAttribute("aria-label", editing ? "Confirm MFL per USD" : "Edit MFL per USD");
+  evaluationMflUsdResetButton.hidden = value === DEFAULT_EVALUATION_MFL_PER_USD;
 
   if (editing) {
     evaluationMflUsdInput.focus();
@@ -4014,7 +4015,14 @@ ignoreFirstSeasonInput.addEventListener("change", () => {
   state.evaluationIgnoreFirstSeason = ignoreFirstSeasonInput.checked;
   renderEvaluationPage();
 });
-evaluationMflUsdEditButton.addEventListener("click", () => renderEvaluationMflPerUsdControl(true));
+evaluationMflUsdEditButton.addEventListener("mousedown", (event) => event.preventDefault());
+evaluationMflUsdEditButton.addEventListener("click", () => {
+  if (evaluationMflUsdInput.hidden) {
+    renderEvaluationMflPerUsdControl(true);
+  } else {
+    commitEvaluationMflPerUsd();
+  }
+});
 evaluationMflUsdResetButton.addEventListener("click", resetEvaluationMflPerUsd);
 evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);
 evaluationMflUsdInput.addEventListener("keydown", (event) => {

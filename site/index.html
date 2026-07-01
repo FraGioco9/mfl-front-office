@@ -211,10 +211,12 @@
                   <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
                 </section>
                 <section class="evaluationMetrics" aria-label="Evaluation metrics">
-                  <section class="evaluationMetric evaluationMflUsdMetric" aria-label="MFL per USD">
-                    <span class="evaluationMetricLabel">MFL/USD <button id="evaluationMflUsdEditButton" class="evaluationMetricIconButton" type="button" aria-label="Edit MFL per USD">✎</button></span>
-                    <strong id="evaluationMflUsd">400</strong>
-                    <input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="number" min="0.01" step="0.01" inputmode="decimal" hidden>
+                  <section class="evaluationMflUsdGroup" aria-label="MFL per USD controls">
+                    <section class="evaluationMetric evaluationMflUsdMetric" aria-label="MFL per USD">
+                      <span class="evaluationMetricLabel">MFL/USD <button id="evaluationMflUsdEditButton" class="evaluationMetricIconButton" type="button" aria-label="Edit MFL per USD">&#9998;</button></span>
+                      <strong id="evaluationMflUsd">400</strong>
+                      <input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="number" min="0.01" step="0.01" inputmode="decimal" hidden>
+                    </section>
                     <button id="evaluationMflUsdResetButton" class="evaluationMetricResetButton" type="button" hidden>Reset</button>
                   </section>
                   <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
@@ -278,6 +280,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.6</span><p>Stabilize Evaluation MFL/USD edit controls</p></li>
               <li><span>v1.84.5</span><p>Add editable Evaluation MFL/USD setting</p></li>
               <li><span>v1.84.4</span><p>Reset Evaluation Overall control margin</p></li>
               <li><span>v1.84.3</span><p>Emphasize Evaluation Summary Present Value</p></li>
@@ -504,7 +507,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.5</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.6</a>
       <span id="statusText">Updated -</span>
     </footer>
 

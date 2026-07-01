@@ -2481,6 +2481,7 @@ td a {
   box-sizing: border-box;
   display: grid;
   gap: 3px;
+  height: 64px;
   min-height: 64px;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -2500,8 +2501,15 @@ td a {
 .evaluationMetric strong {
   font-size: 22px;
 }
+.evaluationMflUsdGroup {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 112px;
+}
+
 .evaluationMflUsdMetric {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .evaluationMetricLabel {
@@ -2512,6 +2520,7 @@ td a {
 }
 
 .evaluationMetricIconButton {
+  flex: 0 0 18px;
   width: 18px;
   height: 18px;
   min-height: 18px;
@@ -2544,9 +2553,6 @@ td a {
 }
 
 .evaluationMetricResetButton {
-  position: absolute;
-  right: 8px;
-  bottom: 5px;
   width: auto;
   height: 20px;
   min-height: 20px;
