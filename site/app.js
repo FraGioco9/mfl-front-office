@@ -682,6 +682,14 @@ function playerIdFromUrl() {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function evaluationPlayerIdFromUrl() {
+  if (window.location.pathname !== "/evaluation") {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.search).get("player");
+}
+
 function pageFromUrl() {
   const pageName = window.location.pathname.replace(/^\//, "");
 
@@ -736,6 +744,11 @@ function pagePath(pageName, options = {}) {
     return playerId ? `/players/${encodeURIComponent(playerId)}` : window.location.pathname;
   }
 
+  if (pageName === "evaluation") {
+    const playerId = options.playerId || evaluationPlayerIdFromUrl();
+    return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
+  }
+
   return pageName === "home" ? "/" : `/${pageName}`;
 }
 
@@ -745,7 +758,7 @@ function updatePageUrl(pageName, options = {}) {
   }
 
   const targetPath = pagePath(pageName, options);
-  if (window.location.pathname !== targetPath) {
+  if (`${window.location.pathname}${window.location.search}` !== targetPath) {
     window.history.pushState({}, "", targetPath);
   }
 }
@@ -1936,7 +1949,7 @@ function renderEvaluationTable(row) {
 
   const presentValueTotal = presentValues.length
     ? presentValues.reduce((total, value) => total + value, 0)
-    : null;
+    : 0;
   const summaryRow = document.createElement("tr");
   [
     playerName,
@@ -1957,6 +1970,10 @@ function renderEvaluationTable(row) {
   });
 }
 function renderEvaluationPage() {
+  if (!state.evaluationPlayerId && evaluationPlayerIdFromUrl()) {
+    state.evaluationPlayerId = evaluationPlayerIdFromUrl();
+  }
+
   if (!state.evaluationPlayerId) {
     evaluationPanel.hidden = true;
     evaluationSearchResults.hidden = true;
@@ -1969,6 +1986,10 @@ function renderEvaluationPage() {
   }
 
   const row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (row) {
+    evaluationSearchInput.value = formatCellValue(row, "name");
+  }
 
   if (!row || getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
@@ -2473,11 +2494,28 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
-  playerDetail.querySelector("#playerEvaluateButton").addEventListener("click", () => {
-    state.evaluationPlayerId = id;
+  const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
+  const openEvaluationForPlayer = (event) => {
+    const targetPath = pagePath("evaluation", { playerId: id });
+
     rememberEvaluationResult(id);
+
+    if (event.ctrlKey || event.metaKey || event.button === 1) {
+      window.open(targetPath, "_blank", "noopener");
+      return;
+    }
+
+    state.evaluationPlayerId = id;
     evaluationSearchInput.value = playerName;
-    setPage("evaluation");
+    setPage("evaluation", true, { playerId: id });
+  };
+
+  evaluateButton.addEventListener("click", openEvaluationForPlayer);
+  evaluateButton.addEventListener("auxclick", (event) => {
+    if (event.button === 1) {
+      event.preventDefault();
+      openEvaluationForPlayer(event);
+    }
   });
   playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", (event) => {
     copyPlayerId(id);
