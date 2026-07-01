@@ -30,18 +30,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          DATABASE_RUN_ID="$(
-            {
-              gh run list --workflow manual-refresh.yml --status success --limit 20 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
-              gh run list --workflow manual-database-and-site.yml --status success --limit 20 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
-            } | sort -r | head -n 1 | cut -f2
-          )"
+          DATABASE_RUN_ID=""
 
-          if [ -z "$DATABASE_RUN_ID" ]; then
-            echo "No successful database refresh run found."
+          {
+            gh run list --workflow manual-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh run list --workflow manual-database-and-site.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            if [ -z "$RUN_ID" ]; then
+              continue
+            fi
+
+            HAS_DATABASE_ARTIFACT="$(
+              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
+                --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' \
+                | head -n 1
+            )"
+
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
+              echo "$RUN_ID" > database_run_id.txt
+              break
+            fi
+
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+          done
+
+          if [ ! -f database_run_id.txt ]; then
+            echo "No successful database refresh run with a usable database artifact found."
             exit 1
           fi
 
+          DATABASE_RUN_ID="$(cat database_run_id.txt)"
           echo "Using database artifact from run $DATABASE_RUN_ID"
           gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir .
 
