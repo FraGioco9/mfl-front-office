@@ -1436,6 +1436,7 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
     event.preventDefault();
     event.stopPropagation();
     copyPlayerId(playerId);
+    button.blur();
   });
   return button;
 }
@@ -2019,7 +2020,10 @@ function renderPlayerPage(playerId) {
   watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
-  playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", () => copyPlayerId(id));
+  playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", (event) => {
+    copyPlayerId(id);
+    event.currentTarget.blur();
+  });
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
       state.playerAttributeView = button.dataset.playerAttributeView;

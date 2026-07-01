@@ -1138,6 +1138,7 @@ table {
   color: inherit;
   padding: 0;
   font: inherit;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -1212,6 +1213,15 @@ td {
 td.nameCell,
 td.col-id {
   overflow: visible;
+}
+
+td.col-id {
+  position: relative;
+  z-index: 2;
+}
+
+td.col-id:hover {
+  z-index: 90;
 }
 
 .flagCell {
