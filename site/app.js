@@ -234,7 +234,10 @@ const ignoreFirstSeasonInput = document.querySelector("#ignoreFirstSeasonInput")
 const evaluationPanel = document.querySelector("#evaluationPanel");
 const evaluationDiscountRate = document.querySelector("#evaluationDiscountRate");
 const evaluationMflUsd = document.querySelector("#evaluationMflUsd");
+const evaluationMflUsdEditor = document.querySelector("#evaluationMflUsdEditor");
 const evaluationMflUsdInput = document.querySelector("#evaluationMflUsdInput");
+const evaluationMflUsdIncreaseButton = document.querySelector("#evaluationMflUsdIncreaseButton");
+const evaluationMflUsdDecreaseButton = document.querySelector("#evaluationMflUsdDecreaseButton");
 const evaluationMflUsdEditButton = document.querySelector("#evaluationMflUsdEditButton");
 const evaluationMflUsdResetButton = document.querySelector("#evaluationMflUsdResetButton");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
@@ -1770,7 +1773,7 @@ function renderEvaluationMflPerUsdControl(editing = false) {
   evaluationMflUsd.textContent = formatEvaluationMflPerUsd(value);
   evaluationMflUsdInput.value = value.toFixed(2);
   evaluationMflUsd.hidden = editing;
-  evaluationMflUsdInput.hidden = !editing;
+  evaluationMflUsdEditor.hidden = !editing;
   evaluationMflUsdEditButton.textContent = editing ? "\u2713" : "\u270E";
   evaluationMflUsdEditButton.setAttribute("aria-label", editing ? "Confirm MFL per USD" : "Edit MFL per USD");
   evaluationMflUsdResetButton.hidden = value === DEFAULT_EVALUATION_MFL_PER_USD;
@@ -1782,7 +1785,7 @@ function renderEvaluationMflPerUsdControl(editing = false) {
 }
 
 function commitEvaluationMflPerUsd() {
-  if (evaluationMflUsdInput.hidden) {
+  if (evaluationMflUsdEditor.hidden) {
     return;
   }
 
@@ -1800,6 +1803,11 @@ function resetEvaluationMflPerUsd() {
   saveEvaluationMflPerUsd(DEFAULT_EVALUATION_MFL_PER_USD);
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
+}
+function adjustEvaluationMflPerUsdDraft(delta) {
+  const currentValue = parseEvaluationMflPerUsd(evaluationMflUsdInput.value) || state.evaluationMflPerUsd;
+  const nextValue = Math.max(0.01, Math.round((currentValue + delta) * 100) / 100);
+  evaluationMflUsdInput.value = nextValue.toFixed(2);
 }
 
 
@@ -4017,13 +4025,17 @@ ignoreFirstSeasonInput.addEventListener("change", () => {
 });
 evaluationMflUsdEditButton.addEventListener("mousedown", (event) => event.preventDefault());
 evaluationMflUsdEditButton.addEventListener("click", () => {
-  if (evaluationMflUsdInput.hidden) {
+  if (evaluationMflUsdEditor.hidden) {
     renderEvaluationMflPerUsdControl(true);
   } else {
     commitEvaluationMflPerUsd();
   }
 });
 evaluationMflUsdResetButton.addEventListener("click", resetEvaluationMflPerUsd);
+evaluationMflUsdIncreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
+evaluationMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
+evaluationMflUsdIncreaseButton.addEventListener("click", () => adjustEvaluationMflPerUsdDraft(1));
+evaluationMflUsdDecreaseButton.addEventListener("click", () => adjustEvaluationMflPerUsdDraft(-1));
 evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);
 evaluationMflUsdInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {

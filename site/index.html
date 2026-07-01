@@ -215,7 +215,7 @@
                     <section class="evaluationMetric evaluationMflUsdMetric" aria-label="MFL per USD">
                       <span class="evaluationMetricLabel">MFL/USD <button id="evaluationMflUsdEditButton" class="evaluationMetricIconButton" type="button" aria-label="Edit MFL per USD">&#9998;</button></span>
                       <strong id="evaluationMflUsd">400</strong>
-                      <input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="number" min="0.01" step="1" inputmode="decimal" lang="en-US" hidden>
+                      <span id="evaluationMflUsdEditor" class="evaluationMflUsdEditor" hidden><input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="text" inputmode="decimal" autocomplete="off"><span class="evaluationMflUsdStepper" aria-label="Adjust MFL per USD"><button id="evaluationMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="evaluationMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span></span>
                     </section>
                     <button id="evaluationMflUsdResetButton" class="evaluationMetricResetButton" type="button" hidden>Reset</button>
                   </section>
@@ -280,6 +280,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.10</span><p>Use custom Evaluation MFL/USD stepper</p></li>
               <li><span>v1.84.9</span><p>Refine Evaluation MFL/USD input stepping</p></li>
               <li><span>v1.84.8</span><p>Place Evaluation MFL/USD reset below its box</p></li>
               <li><span>v1.84.7</span><p>Align Evaluation MFL/USD reset with options</p></li>
@@ -510,7 +511,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.9</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.10</a>
       <span id="statusText">Updated -</span>
     </footer>
 
