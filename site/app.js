@@ -372,6 +372,7 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   syncHomeLoginButton();
   updateAccountState();
   const result = await setPage(pageName, updateUrl, options);
+  syncHomeLoginButton();
   updateMenuVisibility();
   revealAppShell();
   return result;
