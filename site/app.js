@@ -907,6 +907,16 @@ function scheduleToastHide(toast) {
   }, 2200);
 }
 
+function hideToast() {
+  const toast = document.querySelector("#toastMessage");
+  if (!toast) {
+    return;
+  }
+
+  window.clearTimeout(state.toastTimer);
+  toast.classList.remove("visible");
+}
+
 function showToast(message) {
   let toast = document.querySelector("#toastMessage");
 
@@ -939,7 +949,10 @@ function showWatchlistToast(prefix) {
   watchlistLink.type = "button";
   watchlistLink.className = "toastLink";
   watchlistLink.textContent = "watchlist";
-  watchlistLink.addEventListener("click", () => setPage("watchlist"));
+  watchlistLink.addEventListener("click", () => {
+    hideToast();
+    setPage("watchlist");
+  });
   content.appendChild(watchlistLink);
   content.append(document.createTextNode("."));
   showToast(content);

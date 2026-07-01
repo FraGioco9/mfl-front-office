@@ -1591,9 +1591,11 @@ td a {
   text-decoration: underline;
 }
 
-.toastLink:hover {
+.toastMessage .toastLink:hover {
+  border-color: transparent;
   background: transparent;
   color: inherit;
+  box-shadow: none;
 }
 
 
