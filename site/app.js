@@ -2057,6 +2057,7 @@ function renderEvaluationTable(row) {
   const currentOverall = overallValues[seasonOffset] ?? overallValues[0];
   const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();
   const fragment = document.createDocumentFragment();
+  const mflValues = [];
   const presentValues = [];
 
   evaluationPanel.hidden = false;
@@ -2088,6 +2089,10 @@ function renderEvaluationTable(row) {
       formatEvaluationCurrency(presentValue),
     ];
 
+    if (Number.isFinite(numericMflValue)) {
+      mflValues.push(numericMflValue);
+    }
+
     if (Number.isFinite(presentValue)) {
       presentValues.push(presentValue);
     }
@@ -2105,6 +2110,9 @@ function renderEvaluationTable(row) {
     fragment.appendChild(tableRow);
   }
 
+  const mflValueTotal = mflValues.length
+    ? mflValues.reduce((total, value) => total + value, 0)
+    : 0;
   const presentValueTotal = presentValues.length
     ? presentValues.reduce((total, value) => total + value, 0)
     : 0;
@@ -2114,6 +2122,7 @@ function renderEvaluationTable(row) {
     Number.isFinite(currentAge) ? currentAge + seasonOffset : "",
     currentOverall,
     expectedSeasons,
+    formatEvaluationMfl(mflValueTotal),
     formatEvaluationCurrency(presentValueTotal),
   ].forEach((value) => {
     const cell = document.createElement("td");

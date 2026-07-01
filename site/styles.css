@@ -2487,6 +2487,8 @@ td a {
   width: 112px;
   box-sizing: border-box;
   display: grid;
+  grid-template-rows: 18px 1fr;
+  align-items: center;
   gap: 3px;
   height: 64px;
   min-height: 64px;
@@ -2656,7 +2658,7 @@ td a {
 .evaluationMetric[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  right: 0;
+  left: 50%;
   bottom: calc(100% + 10px);
   z-index: 80;
   width: max-content;
@@ -2675,14 +2677,14 @@ td a {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(4px);
+  transform: translate(-50%, 4px);
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .evaluationMetric[data-tooltip]:hover::after,
 .evaluationMetric[data-tooltip]:focus::after {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
 .evaluationSummaryShell .tableScroller {
   overflow: hidden;
@@ -2714,15 +2716,20 @@ td a {
 
 .evaluationSummaryTable th:nth-child(4),
 .evaluationSummaryTable td:nth-child(4) {
-  width: 32.5%;
+  width: 16.25%;
 }
 
 .evaluationSummaryTable th:nth-child(5),
 .evaluationSummaryTable td:nth-child(5) {
+  width: 16.25%;
+}
+
+.evaluationSummaryTable th:nth-child(6),
+.evaluationSummaryTable td:nth-child(6) {
   width: 12.5%;
 }
 
-.evaluationSummaryTable td:nth-child(5) {
+.evaluationSummaryTable td:nth-child(6) {
   font-weight: 800;
 }
 
