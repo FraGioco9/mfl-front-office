@@ -180,6 +180,7 @@ const homePlayers = document.querySelector("#homePlayers");
 const homeWallets = document.querySelector("#homeWallets");
 const homeLoginButton = document.querySelector("#homeLoginButton");
 const appShell = document.querySelector("#appShell");
+const mainContent = document.querySelector("main");
 const menuButton = document.querySelector("#menuButton");
 const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
@@ -782,8 +783,16 @@ function updatePageUrl(pageName, options = {}) {
     window.history.pushState({}, "", targetPath);
   }
 }
+function resetPageScroll() {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 
+  if (mainContent) {
+    mainContent.scrollTop = 0;
+  }
+}
 async function setPage(pageName, updateHash = true, options = {}) {
+  const previousPage = state.currentPage;
+  const shouldResetScroll = previousPage !== pageName;
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
@@ -853,6 +862,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
     }
 
     syncHomeLoginButton();
+    if (shouldResetScroll) {
+      resetPageScroll();
+    }
+
     return;
   }
 
@@ -864,6 +877,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
     }
 
     syncHomeLoginButton();
+    if (shouldResetScroll) {
+      resetPageScroll();
+    }
+
     return;
   }
   if (tablePage && state.rows.length) {
@@ -873,6 +890,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   if (document.body.classList.contains("loading")) {
     await finishLoading();
+  }
+
+  if (shouldResetScroll) {
+    resetPageScroll();
   }
 
   syncHomeLoginButton();
