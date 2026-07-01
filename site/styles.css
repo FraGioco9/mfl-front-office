@@ -2615,6 +2615,10 @@ td a {
   justify-content: flex-start;
 }
 
+.evaluationButtons[hidden],
+.evaluationPlayerPageButton[hidden] {
+  display: none;
+}
 .evaluationMetrics {
   justify-content: flex-end;
 }
