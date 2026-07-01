@@ -36,5 +36,6 @@
       "source": "/players/:id",
       "destination": "/"
     }
-  ]
+  ],
+  "ignoreCommand": "node vercel-ignore-git-deploy.js"
 }
