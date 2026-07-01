@@ -1631,9 +1631,10 @@ td a {
   font-weight: 700;
   box-shadow: 0 14px 36px rgba(28, 95, 138, 0.22);
   opacity: 0;
-  pointer-events: auto;
+  pointer-events: none;
+  visibility: hidden;
   transform: translate(-50%, 14px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0ms linear 180ms;
 }
 
 :root[data-theme="dark"] .toastMessage {
@@ -1644,7 +1645,10 @@ td a {
 
 .toastMessage.visible {
   opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
   transform: translate(-50%, 0);
+  transition-delay: 0ms;
 }
 
 .toastWatchlistContent,
