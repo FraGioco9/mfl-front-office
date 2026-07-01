@@ -2820,9 +2820,9 @@ function sortableValue(row, column) {
     return tableNextOverallSortValue(row, column);
   }
 
-  if (column === "overall" && state.view !== "attributes") {
+  if ((state.view === "current" || state.view === "all") && statColumns.includes(column)) {
     return [
-      getValue(row, getProgressionColumn("overall")) || 0,
+      getValue(row, getProgressionColumn(column)) || 0,
       getValue(row, "overall") || 0,
     ];
   }
