@@ -4123,6 +4123,14 @@ const openEvaluationPlayerPage = (event) => {
   openPlayerPage(playerId);
 };
 
+const preventEvaluationPlayerPageAutoscroll = (event) => {
+  if (event.button === 1) {
+    event.preventDefault();
+  }
+};
+
+evaluationPlayerPageButton.addEventListener("mousedown", preventEvaluationPlayerPageAutoscroll);
+evaluationPlayerPageButton.addEventListener("auxclick", preventEvaluationPlayerPageAutoscroll);
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
