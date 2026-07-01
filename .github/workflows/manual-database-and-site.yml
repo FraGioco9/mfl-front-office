@@ -19,14 +19,6 @@ on:
         description: "Number of workers to use."
         required: false
         default: "100"
-      seasons:
-        description: "Also populate player_seasons from Flow after the main refresh."
-        required: true
-        type: choice
-        options:
-          - "no"
-          - "yes"
-        default: "no"
 
 permissions:
   contents: read
@@ -73,8 +65,7 @@ jobs:
         shell: bash
         run: |
           WORKERS="${{ inputs.workers || '100' }}"
-          SEASONS="${{ inputs.seasons || 'no' }}"
-          COMMAND=(python update_database.py --workers "$WORKERS" --seasons "$SEASONS")
+          COMMAND=(python update_database.py --workers "$WORKERS" --seasons yes)
 
           if [ -n "${{ inputs.limit }}" ]; then
             COMMAND+=(--limit "${{ inputs.limit }}")

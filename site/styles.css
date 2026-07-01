@@ -255,6 +255,12 @@ p {
   background: var(--surface-muted);
   color: var(--text);
   text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.searchButton:hover {
+  background: var(--header-bg);
+  border-color: var(--border-strong);
 }
 
 .searchButton span {
@@ -697,6 +703,15 @@ body.auth .appShell .sidebar {
   background: var(--row-hover);
 }
 
+body.guest .navButton[data-page="progression"] {
+  display: none;
+}
+
+body.filtersOpen .navButton:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
 .navButton.active {
   border-color: var(--primary);
   background: var(--primary);
@@ -989,7 +1004,7 @@ button:disabled {
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -285,6 +285,7 @@ function revealAppShell() {
 
 function updateMenuVisibility() {
   const showMenu = !document.body.classList.contains("auth");
+  document.body.classList.toggle("guest", auth.required && !auth.session);
   menuRail.hidden = !showMenu;
   menuButton.hidden = !showMenu;
   sidebar.hidden = !showMenu;
@@ -415,6 +416,7 @@ function showAppShell() {
   accountMenu.hidden = !auth.required;
   syncHomeLoginButton();
   updateAccountState();
+  updateMenuVisibility();
 }
 
 function showLoading() {
@@ -2617,6 +2619,7 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
 }
 
 function openFilters() {
+  document.body.classList.add("filtersOpen");
   filtersModal.hidden = false;
   const firstInput = filterRules.querySelector("input") || addFilterSelect;
 
@@ -2627,6 +2630,7 @@ function openFilters() {
 
 function closeFilters() {
   filtersModal.hidden = true;
+  document.body.classList.remove("filtersOpen");
   openFiltersButton.focus();
 }
 
