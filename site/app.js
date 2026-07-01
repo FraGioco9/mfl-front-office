@@ -1229,12 +1229,13 @@ function uniquePositions() {
   return POSITION_ORDER;
 }
 
-function availableFilterColumns() {
+function availableFilterColumns(pageName = tablePageKey() || state.currentPage || "progression", viewName = state.view) {
+  const normalizedView = normalizeViewForPage(viewName, pageName);
   const columns = [...baseFilterColumns];
 
-  if (state.view === "current") {
+  if (normalizedView === "current") {
     columns.push(...statColumns.map((column) => `${column}_prog_current_season`));
-  } else if (state.view === "all") {
+  } else if (normalizedView === "all") {
     columns.push(...statColumns.map((column) => `${column}_prog_all`));
   }
 
@@ -2315,7 +2316,7 @@ function selectedFilterColumns(exceptRule = null) {
     .map((rule) => rule.dataset.filterColumn));
 }
 
-function populateAddFilterSelect() {
+function populateAddFilterSelect(pageName = tablePageKey() || state.currentPage || "progression") {
   const selectedColumns = selectedFilterColumns();
   const fragment = document.createDocumentFragment();
   const placeholder = document.createElement("option");
@@ -2323,7 +2324,7 @@ function populateAddFilterSelect() {
   placeholder.textContent = "Select filter...";
   fragment.appendChild(placeholder);
 
-  availableFilterColumns()
+  availableFilterColumns(pageName)
     .filter((column) => !selectedColumns.has(column))
     .forEach((column) => {
       const option = document.createElement("option");
@@ -2534,8 +2535,8 @@ function refreshRuleConnectors() {
   });
 }
 
-function removeUnavailableFilterRules() {
-  const allowedColumns = new Set(availableFilterColumns());
+function removeUnavailableFilterRules(pageName = tablePageKey() || state.currentPage || "progression") {
+  const allowedColumns = new Set(availableFilterColumns(pageName));
 
   for (const rule of filterRules.querySelectorAll(".filterRule")) {
     if (!allowedColumns.has(rule.dataset.filterColumn)) {
@@ -2546,7 +2547,7 @@ function removeUnavailableFilterRules() {
   refreshRuleConnectors();
 }
 
-function refreshRuleColumnSelects() {
+function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage || "progression") {
   for (const rule of filterRules.querySelectorAll(".filterRule")) {
     const oldSelect = rule.querySelector("[data-filter-column-select]");
     const newSelect = buildColumnSelect(rule.dataset.filterColumn, rule);
@@ -2554,15 +2555,15 @@ function refreshRuleColumnSelects() {
     newSelect.addEventListener("change", () => {
       const nextColumn = newSelect.value;
       if (selectedFilterColumns(rule).has(nextColumn)) {
-        refreshRuleColumnSelects();
-        populateAddFilterSelect();
+        refreshRuleColumnSelects(pageName);
+        populateAddFilterSelect(pageName);
         return;
       }
       rule.dataset.filterColumn = nextColumn;
       replaceOperatorSelect(rule, nextColumn);
       replaceValueControl(rule, nextColumn);
-      populateAddFilterSelect();
-      refreshRuleColumnSelects();
+      populateAddFilterSelect(pageName);
+      refreshRuleColumnSelects(pageName);
     });
 
     oldSelect.replaceWith(newSelect);
@@ -2596,7 +2597,7 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
   newMintsInput.checked = Boolean(savedState.newMints);
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
 
-  const allowedColumns = new Set(availableFilterColumns());
+  const allowedColumns = new Set(availableFilterColumns(pageName));
   filterRules.replaceChildren();
 
   for (const rule of savedState.rules || []) {
