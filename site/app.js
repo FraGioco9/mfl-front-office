@@ -1938,7 +1938,10 @@ function renderPlayerAttributePanel(row) {
 async function copyPlayerId(id) {
   try {
     await navigator.clipboard.writeText(String(id));
-    showToast(`Player ID ${id} copied.`);
+    const content = document.createElement("span");
+    content.className = "toastPlayerIdContent";
+    content.textContent = `Player ID ${id} copied.`;
+    showToast(content);
   } catch {
     showToast("Could not copy player ID.");
   }

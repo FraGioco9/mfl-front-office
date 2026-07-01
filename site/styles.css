@@ -1580,7 +1580,8 @@ td a {
   transform: translate(-50%, 0);
 }
 
-.toastWatchlistContent {
+.toastWatchlistContent,
+.toastPlayerIdContent {
   display: inline-block;
   width: min(320px, calc(100vw - 64px));
   text-align: center;
