@@ -2624,7 +2624,7 @@ td a {
   justify-items: center;
   gap: 5px;
   width: 86px;
-  margin-left: auto;
+  margin-left: 0;
   height: 24px;
   line-height: 24px;
 }
