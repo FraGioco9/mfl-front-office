@@ -45,6 +45,8 @@ html {
 }
 
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   scrollbar-gutter: stable;
   min-height: 100vh;
@@ -458,7 +460,8 @@ body[data-page="home"] .topbar .stats {
 .appShell {
   --sidebar-offset: 190px;
   display: block;
-  min-height: calc(100vh - 142px);
+  flex: 1 0 auto;
+  min-height: 0;
   transition: none;
 }
 
