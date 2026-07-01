@@ -206,15 +206,19 @@
                 <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
               </section>
               <section class="evaluationActions" aria-label="Evaluation actions">
-                <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
-                <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
-                <section class="evaluationMetric" aria-label="MFL per USD">
-                  <span>MFL/USD</span>
-                  <strong id="evaluationMflUsd">400</strong>
+                <section class="evaluationButtons" aria-label="Evaluation page actions">
+                  <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
+                  <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
                 </section>
-                <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
-                  <span>Discount Rate</span>
-                  <strong id="evaluationDiscountRate">-</strong>
+                <section class="evaluationMetrics" aria-label="Evaluation metrics">
+                  <section class="evaluationMetric" aria-label="MFL per USD">
+                    <span>MFL/USD</span>
+                    <strong id="evaluationMflUsd">400</strong>
+                  </section>
+                  <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
+                    <span>Discount Rate</span>
+                    <strong id="evaluationDiscountRate">-</strong>
+                  </section>
                 </section>
               </section>
               <section id="evaluationOptionFilters" class="evaluationOptionFilters" aria-label="Evaluation options" hidden>
@@ -272,6 +276,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.83.11</span><p>Refine Evaluation action row and table widths</p></li>
               <li><span>v1.83.10</span><p>Move Evaluation metrics into the action row</p></li>
               <li><span>v1.83.9</span><p>Refine Evaluation controls and reset button</p></li>
               <li><span>v1.83.8</span><p>Add Evaluation discount and first-season toggles</p></li>
@@ -481,7 +486,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.10</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.11</a>
       <span id="statusText">Updated -</span>
     </footer>
 
