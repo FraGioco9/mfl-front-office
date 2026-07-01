@@ -2405,11 +2405,7 @@ td a {
 }
 
 .evaluationTopBar {
-  display: grid;
-  grid-template-columns: minmax(360px, 1fr) repeat(2, 112px);
-  gap: 6px;
-  align-items: end;
-  justify-content: space-between;
+  display: block;
   margin-bottom: 18px;
 }
 
@@ -2419,6 +2415,7 @@ td a {
   column-gap: 8px;
   row-gap: 8px;
   align-items: end;
+  justify-content: space-between;
   min-width: 0;
 }
 .evaluationSearch {
@@ -2512,6 +2509,7 @@ td a {
   display: flex;
   gap: 8px;
   align-items: end;
+  justify-content: flex-end;
 }
 
 .evaluationPlayerPageButton {
