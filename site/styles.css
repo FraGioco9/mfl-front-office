@@ -2406,6 +2406,7 @@ td a {
   grid-template-columns: minmax(280px, 560px) 160px;
   gap: 14px;
   align-items: end;
+  justify-content: space-between;
   margin-bottom: 18px;
 }
 
@@ -2473,6 +2474,8 @@ td a {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
+  justify-self: end;
+  text-align: right;
 }
 
 .evaluationDiscountRate span {
@@ -2488,6 +2491,40 @@ td a {
 
 .evaluationSummaryShell {
   margin-bottom: 14px;
+}
+.evaluationSummaryShell .tableScroller {
+  overflow: hidden;
+}
+
+.evaluationSummaryTable {
+  min-width: 0;
+}
+
+.evaluationSummaryTable th,
+.evaluationSummaryTable td {
+  white-space: normal;
+}
+
+.evaluationSummaryTable th:nth-child(1),
+.evaluationSummaryTable td:nth-child(1) {
+  width: 38%;
+}
+
+.evaluationSummaryTable th:nth-child(2),
+.evaluationSummaryTable td:nth-child(2) {
+  width: 12%;
+}
+
+.evaluationSummaryTable th:nth-child(3),
+.evaluationSummaryTable td:nth-child(3) {
+  width: 20%;
+}
+
+.evaluationSummaryTable th:nth-child(4),
+.evaluationSummaryTable td:nth-child(4),
+.evaluationSummaryTable th:nth-child(5),
+.evaluationSummaryTable td:nth-child(5) {
+  width: 15%;
 }
 
 .evaluationPanel h3 {
