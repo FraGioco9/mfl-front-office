@@ -25,6 +25,7 @@ const state = {
   searchRenderTimer: null,
   searchIndex: [],
   recentSearchPlayerIds: [],
+  evaluationPlayerId: null,
 };
 
 const flagColumn = "nationality_flag";
@@ -180,6 +181,7 @@ const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
 const playerPage = document.querySelector("#playerPage");
+const evaluationPage = document.querySelector("#evaluationPage");
 const playerDetail = document.querySelector("#playerDetail");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
@@ -217,6 +219,11 @@ const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
+const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
+const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
+const evaluationPanel = document.querySelector("#evaluationPanel");
+const evaluationPlayerName = document.querySelector("#evaluationPlayerName");
+const evaluationTableBody = document.querySelector("#evaluationTableBody");
 const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
@@ -348,7 +355,7 @@ function syncHomeLoginButton() {
 }
 
 function pageRequiresData(pageName) {
-  return tablePages.has(pageName) || pageName === "player";
+  return tablePages.has(pageName) || pageName === "player" || pageName === "evaluation";
 }
 
 function pageRequiresLogin(pageName) {
@@ -672,7 +679,7 @@ function pageFromUrl() {
     return "player";
   }
 
-  return ["home", "database", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
+  return ["home", "database", "progression", "evaluation", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
 }
 
 function pageTargetFromPath(path) {
@@ -687,7 +694,7 @@ function pageTargetFromPath(path) {
 
   const pageName = String(path || "").replace(/^\//, "") || "home";
   return {
-    pageName: ["home", "database", "progression", "watchlist", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "database", "progression", "evaluation", "watchlist", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -741,6 +748,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
+    evaluationPage.hidden = true;
     playerPage.hidden = true;
     changelogPage.hidden = true;
     showLogin(pagePath(pageName, options));
@@ -755,15 +763,17 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
+  const evaluationPageActive = pageName === "evaluation";
 
   if (pageRequiresFullData(pageName) && state.dataAccess !== "full") {
     state.dataLoaded = false;
   }
 
-  if ((tablePage || playerPageActive) && !state.dataLoaded) {
+  if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
+    evaluationPage.hidden = true;
     playerPage.hidden = true;
     changelogPage.hidden = true;
     const loaded = await ensureProgressionData();
@@ -776,6 +786,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
+  evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
   changelogPage.hidden = pageName !== "changelog";
   tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "database" ? "Database" : "Progression";
@@ -791,6 +802,16 @@ async function setPage(pageName, updateHash = true, options = {}) {
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
+
+  if (evaluationPageActive) {
+    renderEvaluationPage();
+    if (document.body.classList.contains("loading")) {
+      await finishLoading();
+    }
+
+    syncHomeLoginButton();
+    return;
+  }
 
   if (playerPageActive) {
     const playerId = options.playerId || playerIdFromUrl();
@@ -1533,9 +1554,135 @@ function buildSearchIndex() {
     id: String(getValue(row, "player_id") || "").toLowerCase(),
     name: String(getValue(row, "name") || "").toLowerCase(),
     overall: Number(statDisplayValue(row, "overall") || 0),
+    retired: getValue(row, "retirement_years") === 0,
   }));
 }
 
+
+function expectedEvaluationSeasons(row) {
+  const playerId = Number(getValue(row, "player_id") || 0);
+  const age = Number(getValue(row, "age"));
+  const retirementYears = Number(getValue(row, "retirement_years"));
+
+  if (Number.isFinite(retirementYears) && retirementYears > 0) {
+    return retirementYears;
+  }
+
+  if (!Number.isFinite(age)) {
+    return 0;
+  }
+
+  const averageRetirementAge = playerId <= 77848 ? 37 : 35;
+  const yearsToAverageRetirement = averageRetirementAge - age;
+
+  if (yearsToAverageRetirement <= 3) {
+    return 4;
+  }
+
+  return Math.max(0, yearsToAverageRetirement);
+}
+
+function evaluationSearchMatches(query) {
+  if (!query) {
+    return [];
+  }
+
+  if (!state.searchIndex.length && state.rows.length) {
+    buildSearchIndex();
+  }
+
+  const results = [];
+
+  state.searchIndex.forEach((entry) => {
+    if (entry.retired || (!entry.id.includes(query) && !entry.name.includes(query))) {
+      return;
+    }
+
+    results.push(entry);
+  });
+
+  return results
+    .sort((a, b) => b.overall - a.overall)
+    .slice(0, 8)
+    .map((entry) => entry.row);
+}
+
+function renderEvaluationSearchResults() {
+  const query = evaluationSearchInput.value.trim().toLowerCase();
+  const rows = evaluationSearchMatches(query);
+
+  evaluationSearchResults.replaceChildren();
+  evaluationSearchResults.hidden = !query || rows.length === 0;
+
+  rows.forEach((row) => {
+    const playerId = String(getValue(row, "player_id"));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "evaluationSearchResult";
+    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>#${escapeHtml(playerId)} &middot; OVR ${escapeHtml(formatPlainValue(statDisplayValue(row, "overall"), "overall"))} &middot; ${escapeHtml(formatCellValue(row, "age"))} years old</span>`;
+    button.addEventListener("click", () => {
+      state.evaluationPlayerId = playerId;
+      evaluationSearchInput.value = formatCellValue(row, "name");
+      evaluationSearchResults.hidden = true;
+      renderEvaluationTable(row);
+    });
+    evaluationSearchResults.appendChild(button);
+  });
+}
+
+function renderEvaluationTable(row) {
+  const expectedSeasons = expectedEvaluationSeasons(row);
+  const playerName = formatCellValue(row, "name");
+  const currentAge = Number(getValue(row, "age"));
+  const fragment = document.createDocumentFragment();
+
+  evaluationPanel.hidden = false;
+  evaluationPlayerName.textContent = `${playerName} evaluation`;
+
+  for (let season = 1; season <= expectedSeasons; season += 1) {
+    const tableRow = document.createElement("tr");
+    const values = [
+      playerName,
+      season,
+      Number.isFinite(currentAge) ? currentAge + season - 1 : "",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ];
+
+    values.forEach((value) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      tableRow.appendChild(cell);
+    });
+
+    fragment.appendChild(tableRow);
+  }
+
+  evaluationTableBody.replaceChildren(fragment);
+}
+
+function renderEvaluationPage() {
+  if (!state.evaluationPlayerId) {
+    evaluationPanel.hidden = true;
+    evaluationSearchResults.hidden = true;
+    evaluationTableBody.replaceChildren();
+    return;
+  }
+
+  const row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (!row || getValue(row, "retirement_years") === 0) {
+    state.evaluationPlayerId = null;
+    evaluationPanel.hidden = true;
+    evaluationTableBody.replaceChildren();
+    return;
+  }
+
+  renderEvaluationTable(row);
+}
 function openPlayerPage(playerId) {
   setPage("player", true, { playerId: String(playerId) });
 }
@@ -3394,6 +3541,7 @@ document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
 openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
 playerSearchInput.addEventListener("input", renderSearchResults);
+evaluationSearchInput.addEventListener("input", renderEvaluationSearchResults);
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {

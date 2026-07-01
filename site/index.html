@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.82.3">
+    <link rel="stylesheet" href="/styles.css?v=1.83.0">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -82,6 +82,7 @@
         <aside id="sidebar" class="sidebar" hidden>
           <a class="navButton" href="/database" data-page="database"><svg class="navEmoji navDatabaseIcon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg><span class="navText">Database</span></a>
           <a class="navButton" href="/progression" data-page="progression"><svg class="navEmoji navTrendIcon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 10 13 14 21 5"></polyline><path d="M15 5h6v6"></path></svg><span class="navText">Progression</span></a>
+          <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"></path><path d="M6 17l4-9 4 6 4-10"></path><circle cx="10" cy="8" r="1.5"></circle><circle cx="14" cy="14" r="1.5"></circle><circle cx="18" cy="4" r="1.5"></circle></svg><span class="navText">Evaluation</span></a>
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
         </aside>
       </div>
@@ -192,6 +193,40 @@
           </div>
         </section>
 
+
+        <section id="evaluationPage" class="pageView evaluationPage" hidden>
+          <h2 class="tablePageTitle">Evaluation</h2>
+          <section class="evaluationSearch" aria-label="Evaluation player search">
+            <label class="field">
+              <span>Player</span>
+              <input id="evaluationSearchInput" type="search" placeholder="Search ID or player name" autocomplete="off">
+            </label>
+            <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
+          </section>
+
+          <section id="evaluationPanel" class="evaluationPanel" hidden>
+            <h3 id="evaluationPlayerName">Select a player</h3>
+            <div class="tableShell evaluationTableShell" aria-label="Player evaluation table">
+              <div class="tableScroller">
+                <table class="evaluationTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Season</th>
+                      <th>Age</th>
+                      <th>Overall</th>
+                      <th>$MFL</th>
+                      <th>Dollars</th>
+                      <th>Discount Factor</th>
+                      <th>Present Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </section>
         <section id="playerPage" class="pageView playerPage" hidden>
           <div id="playerDetail" class="playerDetail"></div>
         </section>
@@ -200,6 +235,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.83.0</span><p>Add guest Evaluation page with player longevity table</p></li>
               <li><span>v1.82.3</span><p>Apply advanced filter edits only after confirmation</p></li>
               <li><span>v1.82.2</span><p>Use the latest database artifact for manual Vercel site updates</p></li>
               <li><span>v1.82.1</span><p>Add shift range selection to player tables</p></li>
@@ -398,7 +434,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.82.3</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -441,6 +477,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.82.3"></script>
+    <script src="/app.js?v=1.83.0"></script>
   </body>
 </html>
