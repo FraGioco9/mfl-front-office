@@ -950,6 +950,7 @@ function showWatchlistToast(prefix) {
   const content = document.createElement("span");
   const watchlistLink = document.createElement("button");
 
+  content.className = "toastWatchlistContent";
   content.append(document.createTextNode(`${prefix} `));
   watchlistLink.type = "button";
   watchlistLink.className = "toastLink";
