@@ -1923,10 +1923,10 @@ function adjustEvaluationOverall(playerId, season, delta) {
 function evaluationOverallControl(value, season) {
   const numericValue = Number(value);
   const reduceControl = numericValue <= 1
-    ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
+    ? `<button class="evaluationOverallControlSpacer" type="button" tabindex="-1" aria-hidden="true" disabled></button>`
     : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall">-</button>`;
   const increaseControl = numericValue >= 99
-    ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
+    ? `<button class="evaluationOverallControlSpacer" type="button" tabindex="-1" aria-hidden="true" disabled></button>`
     : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall">+</button>`;
 
   return `<div class="evaluationOverallControl">${reduceControl}<strong>${escapeHtml(value)}</strong>${increaseControl}</div>`;

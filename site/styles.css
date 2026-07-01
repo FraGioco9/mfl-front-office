@@ -2620,14 +2620,10 @@ td a {
   gap: 5px;
 }
 
-.evaluationOverallControl button,
-.evaluationOverallControlSpacer {
+.evaluationOverallControl button {
   width: 24px;
   height: 24px;
   min-height: 24px;
-}
-
-.evaluationOverallControl button {
   padding: 0;
   border-radius: 5px;
   font-size: 14px;
@@ -2635,7 +2631,8 @@ td a {
 }
 
 .evaluationOverallControlSpacer {
-  display: block;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .evaluationOverallControl strong {
