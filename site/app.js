@@ -3214,7 +3214,7 @@ navButtons.forEach((button) => {
 window.addEventListener("popstate", () => {
   const targetPage = pageFromUrl();
 
-  if (auth.initialized && auth.required && !auth.session && !pageRequiresData(targetPage)) {
+  if (auth.initialized && auth.required && !auth.session && !pageRequiresLogin(targetPage)) {
     showHomeShell(targetPage, false);
     return;
   }
