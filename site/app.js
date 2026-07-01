@@ -14,6 +14,7 @@ const state = {
   dataAccess: null,
   selectedPlayerIds: new Set(),
   selectionAnchorPlayerId: null,
+  filterDraftRules: null,
   watchlistPlayerIds: new Set(),
   tablePageStates: {},
   toastTimer: null,
@@ -2508,7 +2509,6 @@ function addFilterRule(column, options = {}) {
   remove.addEventListener("click", () => {
     rule.remove();
     refreshRuleConnectors();
-    updateFilterSummary();
     populateAddFilterSelect();
     refreshRuleColumnSelects();
   });
@@ -2619,7 +2619,39 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
   refreshRuleColumnSelects(pageName);
 }
 
+function readFilterDraftRules() {
+  return Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => {
+    const values = readRuleValues(rule);
+
+    return {
+      column: rule.dataset.filterColumn,
+      connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+      operator: rule.querySelector("[data-filter-operator]").value,
+      value: values.value,
+      valueTo: values.valueTo,
+    };
+  });
+}
+
+function restoreFilterDraftRules(rules = []) {
+  filterRules.replaceChildren();
+
+  rules.forEach((rule) => {
+    addFilterRule(rule.column, {
+      connector: rule.connector,
+      operator: rule.operator,
+      value: rule.value,
+      valueTo: rule.valueTo,
+      focus: false,
+    });
+  });
+
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
+}
+
 function openFilters() {
+  state.filterDraftRules = readFilterDraftRules();
   document.body.classList.add("filtersOpen");
   filtersModal.hidden = false;
   const firstInput = filterRules.querySelector("input") || addFilterSelect;
@@ -2629,15 +2661,25 @@ function openFilters() {
   }
 }
 
-function closeFilters() {
+function closeFilters(commitChanges = false) {
+  if (!commitChanges && state.filterDraftRules) {
+    restoreFilterDraftRules(state.filterDraftRules);
+  }
+
+  state.filterDraftRules = null;
   filtersModal.hidden = true;
   document.body.classList.remove("filtersOpen");
   openFiltersButton.focus();
 }
 
-function clearAdvancedFilters() {
+function clearAdvancedFilters(applyNow = true) {
   filterRules.replaceChildren();
   populateAddFilterSelect();
+
+  if (!applyNow) {
+    return;
+  }
+
   state.page = 1;
   applyFilters();
 }
@@ -2645,7 +2687,7 @@ function clearAdvancedFilters() {
 function applyAdvancedFilters() {
   state.page = 1;
   applyFilters();
-  closeFilters();
+  closeFilters(true);
 }
 
 function readRuleValues(rule) {
@@ -3272,7 +3314,6 @@ addFilterSelect.addEventListener("change", () => {
   addFilterRule(addFilterSelect.value);
   addFilterSelect.value = "";
   addFilterSelect.hidden = true;
-  updateFilterSummary();
 });
 
 filtersModal.addEventListener("click", (event) => {
@@ -3312,7 +3353,7 @@ searchModal.addEventListener("click", (event) => {
 applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
 clearFiltersButton.addEventListener("click", () => {
-  clearAdvancedFilters();
+  clearAdvancedFilters(false);
 });
 
 clearSelectionButton.addEventListener("click", clearSelection);
