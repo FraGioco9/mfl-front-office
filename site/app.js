@@ -1570,6 +1570,8 @@ function buildSearchIndex() {
 }
 
 
+const evaluationMflPerUsd = 400;
+
 const evaluationConversions = {
   1: 300,
   2: 333,
@@ -1609,6 +1611,14 @@ function evaluationDiscountRateValue(currentSeason = 15, seasonsToAverage = 5) {
 
 function formatEvaluationRate(value) {
   return Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : "-";
+}
+
+function evaluationDiscountFactor(rate, season) {
+  return Number.isFinite(rate) ? 1 / Math.pow(1 + rate, season) : null;
+}
+
+function formatEvaluationNumber(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : "";
 }
 
 function expectedEvaluationSeasons(row) {
@@ -1716,6 +1726,7 @@ function renderEvaluationTable(row) {
   const playerName = formatCellValue(row, "name");
   const currentAge = Number(getValue(row, "age"));
   const currentOverall = formatPlainValue(statDisplayValue(row, "overall"), "overall");
+  const discountRate = evaluationDiscountRateValue();
   const fragment = document.createDocumentFragment();
   const presentValues = [];
 
@@ -1724,20 +1735,24 @@ function renderEvaluationTable(row) {
   for (let season = 1; season <= expectedSeasons; season += 1) {
     const tableRow = document.createElement("tr");
     const seasonOverall = season === 1 ? currentOverall : "";
-    const presentValue = "";
+    const mflValue = "";
+    const numericMflValue = Number(mflValue);
+    const usdValue = mflValue !== "" && Number.isFinite(numericMflValue) ? numericMflValue / evaluationMflPerUsd : null;
+    const discountFactor = evaluationDiscountFactor(discountRate, season);
+    const presentValue = Number.isFinite(usdValue) && Number.isFinite(discountFactor) ? usdValue * discountFactor : null;
     const values = [
       playerName,
       season,
       Number.isFinite(currentAge) ? currentAge + season - 1 : "",
       seasonOverall,
-      "",
-      "",
-      "",
-      presentValue,
+      mflValue,
+      formatEvaluationNumber(usdValue),
+      formatEvaluationNumber(discountFactor),
+      formatEvaluationNumber(presentValue),
     ];
 
-    if (presentValue !== "" && Number.isFinite(Number(presentValue))) {
-      presentValues.push(Number(presentValue));
+    if (Number.isFinite(presentValue)) {
+      presentValues.push(presentValue);
     }
 
     values.forEach((value) => {
@@ -1773,6 +1788,7 @@ function renderEvaluationPage() {
   if (!state.evaluationPlayerId) {
     evaluationPanel.hidden = true;
     evaluationSearchResults.hidden = true;
+    evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
     return;
   }
@@ -1782,6 +1798,7 @@ function renderEvaluationPage() {
   if (!row || getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
     evaluationPanel.hidden = true;
+    evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
     return;
   }

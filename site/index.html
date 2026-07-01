@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.83.3">
+    <link rel="stylesheet" href="/styles.css?v=1.83.4">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -204,9 +204,13 @@
               </label>
               <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
             </section>
-            <section class="evaluationDiscountRate" aria-label="Discount rate">
+            <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
               <span>Discount Rate</span>
               <strong id="evaluationDiscountRate">-</strong>
+            </section>
+            <section class="evaluationMetric" aria-label="MFL per USD">
+              <span>MFL/USD</span>
+              <strong id="evaluationMflUsd">400</strong>
             </section>
           </section>
 
@@ -239,7 +243,7 @@
                       <th>Age</th>
                       <th>Overall</th>
                       <th>$MFL</th>
-                      <th>Dollars</th>
+                      <th>USD</th>
                       <th>Discount Factor</th>
                       <th>Present Value</th>
                     </tr>
@@ -258,6 +262,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.83.4</span><p>Add Evaluation discount factors and MFL/USD conversion</p></li>
               <li><span>v1.83.3</span><p>Refine Evaluation summary and discount-rate layout</p></li>
               <li><span>v1.83.2</span><p>Add Evaluation summary and discount-rate panel</p></li>
               <li><span>v1.83.1</span><p>Refine Evaluation search, route refresh behavior, and season table labeling</p></li>
@@ -460,7 +465,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.3</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.83.4</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -503,6 +508,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.83.3"></script>
+    <script src="/app.js?v=1.83.4"></script>
   </body>
 </html>

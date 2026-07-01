@@ -2403,7 +2403,7 @@ td a {
 
 .evaluationTopBar {
   display: grid;
-  grid-template-columns: minmax(280px, 560px) 160px;
+  grid-template-columns: minmax(280px, 560px) repeat(2, 140px);
   gap: 14px;
   align-items: end;
   justify-content: space-between;
@@ -2466,7 +2466,8 @@ td a {
   font-size: 12px;
 }
 
-.evaluationDiscountRate {
+.evaluationMetric {
+  position: relative;
   display: grid;
   gap: 3px;
   min-height: 64px;
@@ -2478,19 +2479,50 @@ td a {
   text-align: right;
 }
 
-.evaluationDiscountRate span {
+.evaluationMetric span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.evaluationDiscountRate strong {
+.evaluationMetric strong {
   font-size: 22px;
 }
 
 .evaluationSummaryShell {
   margin-bottom: 14px;
+}
+.evaluationMetric[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.evaluationMetric[data-tooltip]:hover::after,
+.evaluationMetric[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 .evaluationSummaryShell .tableScroller {
   overflow: hidden;
@@ -2507,24 +2539,27 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 38%;
+  width: 48%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
 .evaluationSummaryTable td:nth-child(2) {
-  width: 12%;
+  width: 10%;
 }
 
 .evaluationSummaryTable th:nth-child(3),
 .evaluationSummaryTable td:nth-child(3) {
-  width: 20%;
+  width: 17%;
 }
 
 .evaluationSummaryTable th:nth-child(4),
-.evaluationSummaryTable td:nth-child(4),
+.evaluationSummaryTable td:nth-child(4) {
+  width: 12.5%;
+}
+
 .evaluationSummaryTable th:nth-child(5),
 .evaluationSummaryTable td:nth-child(5) {
-  width: 15%;
+  width: 12.5%;
 }
 
 .evaluationPanel h3 {
