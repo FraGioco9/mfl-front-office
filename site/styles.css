@@ -458,7 +458,7 @@ body[data-page="home"] .topbar .stats {
 .appShell {
   --sidebar-offset: 190px;
   display: block;
-  min-height: calc(100vh - 154px);
+  min-height: calc(100vh - 142px);
   transition: none;
 }
 
