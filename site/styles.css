@@ -2611,6 +2611,10 @@ td a {
   width: 12.5%;
 }
 
+.evaluationSummaryTable td:nth-child(5) {
+  font-weight: 800;
+}
+
 
 .evaluationOverallControl {
   display: grid;
