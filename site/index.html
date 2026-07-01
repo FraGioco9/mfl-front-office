@@ -195,7 +195,10 @@
 
 
         <section id="evaluationPage" class="pageView evaluationPage" hidden>
-          <h2 class="tablePageTitle">Evaluation</h2>
+          <div class="evaluationTitleRow">
+            <h2 class="tablePageTitle">Evaluation</h2>
+            <button class="advancedSettingsButton" type="button" aria-label="Advanced Settings"><span aria-hidden="true">&#9881;</span> Advanced Settings</button>
+          </div>
           <section class="evaluationTopBar" aria-label="Evaluation controls">
             <section class="evaluationSearchGroup" aria-label="Evaluation player search">
               <section class="evaluationSearch">
@@ -281,6 +284,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.22</span><p>Add Evaluation Advanced Settings placeholder</p></li>
               <li><span>v1.84.21</span><p>Add Evaluation summary MFL return and align metric tooltips</p></li>
               <li><span>v1.84.20</span><p>Reduce page height so the footer fits in view</p></li>
               <li><span>v1.84.19</span><p>Keep the footer flush with the bottom of the screen</p></li>
@@ -523,7 +527,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.21</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.22</a>
       <span id="statusText">Updated -</span>
     </footer>
 

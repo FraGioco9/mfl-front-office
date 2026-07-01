@@ -2407,8 +2407,38 @@ td a {
   margin: 0 auto;
 }
 
-.evaluationPage .tablePageTitle {
+.evaluationTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin: 14px 0 12px;
+}
+
+.evaluationPage .tablePageTitle {
+  margin: 0;
+}
+
+.advancedSettingsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 178px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.advancedSettingsButton span {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .evaluationTopBar {
