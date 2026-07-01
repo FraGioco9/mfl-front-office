@@ -3962,10 +3962,15 @@ const openEvaluationPlayerPage = (event) => {
 };
 
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
-evaluationPlayerPageButton.addEventListener("auxclick", (event) => {
+evaluationPlayerPageButton.addEventListener("mousedown", (event) => {
   if (event.button === 1) {
     event.preventDefault();
     openEvaluationPlayerPage(event);
+  }
+});
+evaluationPlayerPageButton.addEventListener("auxclick", (event) => {
+  if (event.button === 1) {
+    event.preventDefault();
   }
 });
 
