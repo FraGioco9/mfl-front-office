@@ -1941,6 +1941,10 @@ td a {
   font-weight: 400;
 }
 
+.tableNextOverallValueOverall {
+  font-weight: 800;
+}
+
 .playerAttributeCard.featured .progressionValue,
 .playerAttributeCard.featured .nextOverallValue {
   font-size: 16px;

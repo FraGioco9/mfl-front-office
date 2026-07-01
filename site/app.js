@@ -1374,7 +1374,8 @@ function appendNextOverallTableValue(cell, row, statColumn) {
   }
 
   const element = document.createElement("span");
-  element.className = `nextOverallValue tableNextOverallValue ${nextOverall.className}`;
+  const overallClass = statColumn === "overall" ? " tableNextOverallValueOverall" : "";
+  element.className = `nextOverallValue tableNextOverallValue${overallClass} ${nextOverall.className}`;
   element.textContent = ` (${nextOverall.text})`;
   cell.appendChild(element);
 }
