@@ -223,6 +223,7 @@ const viewButtons = document.querySelectorAll(".viewButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
+const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationPanel = document.querySelector("#evaluationPanel");
 const evaluationDiscountRate = document.querySelector("#evaluationDiscountRate");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
@@ -1573,6 +1574,76 @@ function buildSearchIndex() {
 
 const evaluationMflPerUsd = 400;
 
+
+const evaluationTeamEarningsByOverall = {
+  99: 1400000,
+  98: 1200000,
+  97: 1200000,
+  96: 1000000,
+  95: 1000000,
+  94: 800000,
+  93: 500000,
+  92: 400000,
+  91: 300000,
+  90: 250000,
+  89: 200000,
+  88: 175000,
+  87: 150000,
+  86: 125000,
+  85: 100000,
+  84: 80000,
+  83: 60000,
+  82: 50000,
+  81: 40000,
+  80: 30000,
+  79: 25000,
+  78: 20000,
+  77: 15000,
+  76: 10000,
+  75: 7500,
+  74: 6000,
+  73: 5000,
+  72: 4000,
+  71: 3000,
+  70: 2700,
+  69: 2400,
+  68: 2200,
+  67: 2000,
+  66: 1800,
+  65: 1600,
+  64: 1400,
+  63: 1000,
+  62: 800,
+  61: 650,
+  60: 550,
+  59: 550,
+  58: 550,
+  57: 550,
+  56: 550,
+  55: 550,
+  54: 550,
+  53: 550,
+  52: 550,
+  51: 550,
+  50: 550,
+  49: 0,
+  48: 0,
+  47: 0,
+  46: 0,
+  45: 0,
+  44: 0,
+  43: 0,
+  42: 0,
+  41: 0,
+  40: 0,
+  39: 0,
+  38: 0,
+  37: 0,
+  36: 0,
+  35: 0,
+  34: 0,
+  33: 0,
+};
 const evaluationConversions = {
   1: 300,
   2: 333,
@@ -1620,6 +1691,16 @@ function evaluationDiscountFactor(rate, season) {
 
 function formatEvaluationNumber(value, decimals = 2) {
   return Number.isFinite(value) ? value.toFixed(decimals) : "";
+}
+
+function evaluationMflValueForOverall(overall) {
+  const roundedOverall = Math.round(Number(overall));
+  const teamEarnings = evaluationTeamEarningsByOverall[roundedOverall] || 0;
+  return teamEarnings * 0.06;
+}
+
+function formatEvaluationMfl(value) {
+  return Number.isFinite(value) ? new Intl.NumberFormat().format(value) : "";
 }
 
 function expectedEvaluationSeasons(row) {
@@ -1688,6 +1769,7 @@ function resetEvaluationSelection() {
   evaluationSearchResults.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
+  evaluationPlayerPageButton.hidden = true;
 }
 
 function renderEvaluationSearchResults() {
@@ -1794,13 +1876,14 @@ function renderEvaluationTable(row) {
   const presentValues = [];
 
   evaluationPanel.hidden = false;
+  evaluationPlayerPageButton.hidden = false;
 
   for (let season = 1; season <= expectedSeasons; season += 1) {
     const tableRow = document.createElement("tr");
     const seasonOverall = evaluationOverallControl(overallValues[season - 1], season);
-    const mflValue = "";
-    const numericMflValue = Number(mflValue);
-    const usdValue = mflValue !== "" && Number.isFinite(numericMflValue) ? numericMflValue / evaluationMflPerUsd : null;
+    const numericMflValue = evaluationMflValueForOverall(overallValues[season - 1]);
+    const mflValue = formatEvaluationMfl(numericMflValue);
+    const usdValue = Number.isFinite(numericMflValue) ? numericMflValue / evaluationMflPerUsd : null;
     const discountFactor = evaluationDiscountFactor(discountRate, season);
     const presentValue = Number.isFinite(usdValue) && Number.isFinite(discountFactor) ? usdValue * discountFactor : null;
     const values = [
@@ -1860,6 +1943,7 @@ function renderEvaluationPage() {
     evaluationSearchResults.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationPlayerPageButton.hidden = true;
     return;
   }
 
@@ -1870,6 +1954,7 @@ function renderEvaluationPage() {
     evaluationPanel.hidden = true;
     evaluationSummaryBody.replaceChildren();
     evaluationTableBody.replaceChildren();
+    evaluationPlayerPageButton.hidden = true;
     return;
   }
 
@@ -3742,6 +3827,17 @@ closeSearchButton.addEventListener("click", closeSearch);
 playerSearchInput.addEventListener("input", renderSearchResults);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
+evaluationPlayerPageButton.addEventListener("click", () => {
+  const row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (!row) {
+    return;
+  }
+
+  const playerId = String(getValue(row, "player_id"));
+  rememberSearchResult(playerId);
+  openPlayerPage(playerId);
+});
 
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
