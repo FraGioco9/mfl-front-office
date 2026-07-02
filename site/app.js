@@ -1346,6 +1346,7 @@ async function linkWallet() {
     const upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
     if (!upgradedCurrentPage) {
       refreshWatchlistPageAfterWalletSync();
+      refreshPlayerPageAfterWalletSync();
     }
     updateAccountState();
     updateMenuVisibility();
@@ -1860,6 +1861,15 @@ function refreshWatchlistPageAfterWalletSync() {
   updateViewButtons();
   buildHeader();
   applyFilters();
+}
+
+function refreshPlayerPageAfterWalletSync() {
+  if (state.currentPage !== "player") {
+    return;
+  }
+
+  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
+  renderPlayerPage(playerIdFromUrl());
 }
 
 async function upgradeCurrentPageAfterWalletOptIn() {
