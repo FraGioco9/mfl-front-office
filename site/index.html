@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.85.46">
+    <link rel="stylesheet" href="/styles.css?v=1.86.1">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -66,7 +66,7 @@
           <a class="navButton" href="/progression" data-page="progression"><svg class="navEmoji navTrendIcon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 10 13 14 21 5"></polyline><path d="M15 5h6v6"></path></svg><span class="navText">Progression</span></a>
           <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span class="navText">Evaluation</span></a>
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
-          <a class="navButton" href="/my-players" data-page="my-players"><span class="navEmoji" aria-hidden="true">&#9917;</span><span class="navText">My Players</span></a>
+          <a class="navButton" href="/my-players" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l4 2 4-2 4 3-3 4v9H7v-9L4 7l4-3z"></path><path d="M10 5.5c.4 1 1.1 1.5 2 1.5s1.6-.5 2-1.5"></path></svg><span class="navText">My Players</span></a>
         </aside>
       </div>
 
@@ -276,6 +276,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.86.1</span><p>Use the My Players route and jersey sidebar icon</p></li>
               <li><span>v1.86.0</span><p>Add My Players page</p></li>
               <li><span>v1.85.45</span><p>Move player seasons to public data</p></li>
               <li><span>v1.85.44</span><p>Make the loading bar follow actual data download progress</p></li>
@@ -601,7 +602,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.86.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.86.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -690,6 +691,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.85.46"></script>
+    <script src="/app.js?v=1.86.1"></script>
   </body>
 </html>

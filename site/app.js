@@ -122,16 +122,18 @@ const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	R
 const agentColumn = "wallet_name";
 const linkColumn = "player_link";
 
-const tablePages = new Set(["database", "progression", "watchlist"]);
+const tablePages = new Set(["database", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
   database: ["attributes", "next"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "current", "all"],
+  myplayers: ["attributes", "next"],
 };
 const defaultPageViews = {
   database: "attributes",
   progression: "current",
   watchlist: "current",
+  myplayers: "attributes",
 };
 
 const views = {
@@ -268,6 +270,8 @@ const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
+const myPlayersLockedPage = document.querySelector("#myPlayersLockedPage");
+const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
 const playerDetail = document.querySelector("#playerDetail");
@@ -481,16 +485,28 @@ function hideHomeLoginButton() {
 }
 
 function syncHomeLoginButton() {
-  if (!homeOptInButton) {
-    return;
+  const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
+
+  if (homeOptInButton) {
+    homeOptInButton.hidden = walletLinked;
+    homeOptInButton.disabled = state.walletOptInInProgress;
   }
 
-  const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
-  homeOptInButton.hidden = walletLinked;
-  homeOptInButton.disabled = state.walletOptInInProgress;
+  if (myPlayersOptInButton) {
+    myPlayersOptInButton.hidden = walletLinked;
+    myPlayersOptInButton.disabled = state.walletOptInInProgress;
+  }
+}
+
+function hasWalletOptIn() {
+  return Boolean(state.linkedWalletAddress && hasWalletProof());
 }
 
 function pageRequiresData(pageName) {
+  if (pageName === "myplayers" && !hasWalletOptIn()) {
+    return false;
+  }
+
   return tablePages.has(pageName) || pageName === "player" || pageName === "evaluation";
 }
 
@@ -1463,14 +1479,18 @@ function syncEvaluationPlayerUrl(playerId) {
   }
 }
 
+function normalizedPageName(pageName) {
+  return pageName === "my-players" ? "myplayers" : pageName;
+}
+
 function pageFromUrl() {
-  const pageName = window.location.pathname.replace(/^\//, "");
+  const pageName = normalizedPageName(window.location.pathname.replace(/^\//, ""));
 
   if (playerIdFromUrl()) {
     return "player";
   }
 
-  return ["home", "database", "progression", "evaluation", "watchlist", "changelog"].includes(pageName) ? pageName : "home";
+  return ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "changelog"].includes(pageName) ? pageName : "home";
 }
 
 function pageTargetFromPath(path) {
@@ -1483,9 +1503,9 @@ function pageTargetFromPath(path) {
     };
   }
 
-  const pageName = String(path || "").replace(/^\//, "") || "home";
+  const pageName = normalizedPageName(String(path || "").replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "database", "progression", "evaluation", "watchlist", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -1522,7 +1542,7 @@ function pagePath(pageName, options = {}) {
     return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
   }
 
-  return pageName === "home" ? "/" : `/${pageName}`;
+  return pageName === "home" ? "/" : pageName === "myplayers" ? "/my-players" : `/${pageName}`;
 }
 
 function updatePageUrl(pageName, options = {}) {
@@ -1551,6 +1571,26 @@ async function setPage(pageName, updateHash = true, options = {}) {
     return showUnauthorizedProgressionRedirect();
   }
 
+  if (pageName === "myplayers" && !hasWalletOptIn()) {
+    state.currentPage = pageName;
+    homePage.hidden = true;
+    progressionPage.hidden = true;
+    myPlayersLockedPage.hidden = false;
+    evaluationPage.hidden = true;
+    playerPage.hidden = true;
+    changelogPage.hidden = true;
+    navButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.page === pageName);
+    });
+    syncHomeLoginButton();
+    if (document.body.classList.contains("loading")) {
+      await finishLoading();
+    }
+    if (shouldResetScroll) {
+      resetPageScroll();
+    }
+    return;
+  }
 
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
@@ -1576,6 +1616,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
+    myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = true;
     playerPage.hidden = true;
     changelogPage.hidden = true;
@@ -1589,10 +1630,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
+  myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
   changelogPage.hidden = pageName !== "changelog";
-  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "database" ? "Database" : "Progression";
+  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
   if (tablePage) {
     restoreSavedTableState(pageName);
     updateViewButtons();
@@ -1600,7 +1642,9 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
   emptyState.textContent = pageName === "watchlist"
     ? "No players in your watchlist yet."
-    : "No players match the current filters.";
+    : pageName === "myplayers"
+      ? "No owned players match the current filters."
+      : "No players match the current filters.";
 
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
@@ -1921,6 +1965,12 @@ function refreshPlayerPageAfterWalletSync() {
 }
 
 async function upgradeCurrentPageAfterWalletOptIn() {
+  if (state.currentPage === "myplayers") {
+    state.dataLoaded = false;
+    await setPage("myplayers", false);
+    return true;
+  }
+
   if (!hasProgressionAccess() || !pageCanUseProgressionData(state.currentPage) || state.dataAccess === "full") {
     return false;
   }
@@ -4539,18 +4589,36 @@ function rowMatchesRules(row, rules) {
   return result;
 }
 
+
+function linkedWalletAddressesForOwnedPlayers() {
+  return new Set([state.linkedWalletAddress, state.linkedWalletProof?.signingAddress, state.linkedWalletProof?.address]
+    .map((address) => normalizeWalletAddress(address).toLowerCase())
+    .filter(Boolean));
+}
+
+function rowIsOwnedByLinkedWallet(row) {
+  const walletAddress = normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase();
+  return Boolean(walletAddress && linkedWalletAddressesForOwnedPlayers().has(walletAddress));
+}
+
 function applyFilters() {
   const rules = readFilterRules();
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
-  const sourceRows = state.currentPage === "watchlist"
-    ? state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))))
-    : state.rows;
+  let sourceRows = state.rows;
+
+  if (state.currentPage === "watchlist") {
+    sourceRows = state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))));
+  } else if (state.currentPage === "myplayers") {
+    sourceRows = state.rows.filter(rowIsOwnedByLinkedWallet);
+  }
 
   emptyState.textContent = state.currentPage === "watchlist"
     ? (sourceRows.length ? "No watchlist players match the current filters." : "No players in your watchlist yet.")
-    : "No players match the current filters.";
+    : state.currentPage === "myplayers"
+      ? (sourceRows.length ? "No owned players match the current filters." : "No players found for this wallet.")
+      : "No players match the current filters.";
 
   state.filteredRows = sourceRows.filter((row) => {
     if (hideRetiredInput.checked && row[retirementIndex] === 0) {
@@ -5315,6 +5383,9 @@ accountButton.addEventListener("click", (event) => {
 linkWalletButton.addEventListener("click", linkWallet);
 if (homeOptInButton) {
   homeOptInButton.addEventListener("click", linkWallet);
+}
+if (myPlayersOptInButton) {
+  myPlayersOptInButton.addEventListener("click", linkWallet);
 }
 
 async function startApp() {
