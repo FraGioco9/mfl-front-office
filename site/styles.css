@@ -1200,7 +1200,20 @@ button:disabled {
 }
 
 .advancedPlayerTableSection {
+  position: relative;
   min-width: 0;
+}
+
+.advancedPlayerTableSection::before {
+  content: "";
+  position: sticky;
+  display: block;
+  top: 0;
+  z-index: 15;
+  height: 32px;
+  margin-bottom: -32px;
+  background: var(--surface);
+  pointer-events: none;
 }
 
 .advancedPlayerTableScroller {
@@ -1239,16 +1252,6 @@ button:disabled {
   top: 0;
   z-index: 20;
   background: var(--header-bg);
-  isolation: isolate;
-}
-
-.advancedPlayerTable thead::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: var(--header-bg);
-  pointer-events: none;
 }
 
 .advancedPlayerTable thead tr {
@@ -1258,7 +1261,7 @@ button:disabled {
 .advancedPlayerTable th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 21;
   background: var(--header-bg);
   color: var(--text);
   font-size: 14px;
@@ -1299,7 +1302,7 @@ button:disabled {
 .advancedPlayerTable tbody tr:hover td:not(:first-child):hover,
 .advancedPlayerTable tbody td:not(:first-child):hover {
   background-color: var(--contracts-cell-hover) !important;
-  background: var(--contracts-cell-hover) !important;
+  background-image: linear-gradient(var(--contracts-cell-hover), var(--contracts-cell-hover)) !important;
   box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
