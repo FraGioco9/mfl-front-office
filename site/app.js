@@ -208,7 +208,8 @@ const FLOW_WALLET_MODULE_URLS = [
 const FLOW_DISCOVERY_WALLET = "https://fcl-discovery.onflow.org/authn";
 const FLOW_DISCOVERY_AUTHN_ENDPOINT = "https://fcl-discovery.onflow.org/api/authn";
 const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress("0xead892083b3e2c6c");
-const DAPPER_AUTHN_INCLUDE = [DAPPER_PROVIDER_ADDRESS];
+const DAPPER_AUTHN_INCLUDE = ["dapper-wallet", DAPPER_PROVIDER_ADDRESS];
+const DAPPER_AUTHN_EXCLUDE = ["flow-wallet", "nufi", "blocto", "ledger"];
 const WALLET_ADDRESS_PATTERN = /0x[0-9a-f]{16,64}/gi;
 const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
@@ -863,6 +864,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
     "discovery.wallet": FLOW_DISCOVERY_WALLET,
     "discovery.authn.endpoint": FLOW_DISCOVERY_AUTHN_ENDPOINT,
     "discovery.authn.include": DAPPER_AUTHN_INCLUDE,
+    "discovery.authn.exclude": DAPPER_AUTHN_EXCLUDE,
     "discovery.wallet.method.default": "POP/RPC",
     "discovery.authn.method": "POP/RPC",
     "app.detail.title": "MFL Front Office",
@@ -944,46 +946,103 @@ function findDapperAuthnService(data) {
   }) || null;
 }
 
+function discoveryResponseResults(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  if (Array.isArray(data?.data?.results)) {
+    return data.data.results;
+  }
+
+  return data ? [data] : [];
+}
+
+async function waitForDapperAuthnSubscription(fcl) {
+  if (!fcl?.discovery?.authn?.subscribe) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    let unsubscribe = null;
+    const timeout = window.setTimeout(() => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+      resolve(null);
+    }, 2500);
+
+    unsubscribe = fcl.discovery.authn.subscribe((data) => {
+      const service = findDapperAuthnService(discoveryResponseResults(data));
+      if (!service) {
+        return;
+      }
+
+      window.clearTimeout(timeout);
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+      resolve(service);
+    });
+  });
+}
+
 async function dapperAuthnService(fcl) {
   try {
     if (fcl?.discovery?.authn?.update) {
       await fcl.discovery.authn.update();
     }
 
-    if (fcl?.discovery?.authn?.snapshot) {
-      const service = findDapperAuthnService(await fcl.discovery.authn.snapshot());
+    if (typeof fcl?.discovery?.authn === "function") {
+      const service = findDapperAuthnService(discoveryResponseResults(await fcl.discovery.authn()));
       if (service) {
         return service;
       }
     }
 
-    const query = new URLSearchParams({
-      include: DAPPER_AUTHN_INCLUDE.join(","),
-      l6n: appOrigin(),
-      appIdentifier: "MFL Front Office",
-      appDetailTitle: "MFL Front Office",
-      appDetailUrl: appOrigin(),
-      appDetailIcon: `${appOrigin()}/favicon.ico`,
-    });
-    const response = await fetch(`${FLOW_DISCOVERY_AUTHN_ENDPOINT}?${query.toString()}`, { cache: "no-store" });
-    if (!response.ok) {
-      return null;
+    if (fcl?.discovery?.authn?.snapshot) {
+      const service = findDapperAuthnService(discoveryResponseResults(await fcl.discovery.authn.snapshot()));
+      if (service) {
+        return service;
+      }
     }
 
-    return findDapperAuthnService(await response.json());
+    const subscribedService = await waitForDapperAuthnSubscription(fcl);
+    if (subscribedService) {
+      return subscribedService;
+    }
+
+    for (const include of DAPPER_AUTHN_INCLUDE) {
+      const query = new URLSearchParams({ include });
+      const response = await fetch(`${FLOW_DISCOVERY_AUTHN_ENDPOINT}?${query.toString()}`, { cache: "no-store" });
+      if (!response.ok) {
+        continue;
+      }
+
+      const service = findDapperAuthnService(discoveryResponseResults(await response.json()));
+      if (service) {
+        return service;
+      }
+    }
   } catch (error) {
     console.warn("Could not load direct Dapper authn service.", error);
-    return null;
   }
+
+  return null;
 }
 
 async function authenticateWithDapper(fcl) {
   const service = await dapperAuthnService(fcl);
-  if (!service) {
-    throw new Error("Dapper opt-in service could not be found.");
+  if (service) {
+    return fcl.authenticate({ service, forceReauth: true });
   }
 
-  return fcl.authenticate({ service, forceReauth: true });
+  // Last-resort fallback: keep Discovery restricted to Dapper instead of opening a multi-wallet chooser.
+  return fcl.authenticate({ forceReauth: true });
 }
 
 function walletLinkErrorMessage(error) {
