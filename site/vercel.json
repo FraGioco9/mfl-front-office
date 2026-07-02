@@ -12,6 +12,10 @@
                   },
     "rewrites":  [
                      {
+                         "source":  "/api/wallet-permissions.json",
+                         "destination":  "/api/wallet-access"
+                     },
+                     {
                          "source":  "/home",
                          "destination":  "/"
                      },
