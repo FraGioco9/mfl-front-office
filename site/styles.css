@@ -2956,12 +2956,12 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 28%;
+  width: 24%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
 .evaluationSummaryTable td:nth-child(2) {
-  width: 6%;
+  width: 10%;
 }
 
 .evaluationSummaryTable th:nth-child(3),
@@ -3091,12 +3091,12 @@ td a {
 }
 .evaluationTableShell th:nth-child(1),
 .evaluationTableShell td:nth-child(1) {
-  width: 28%;
+  width: 24%;
 }
 
 .evaluationTableShell th:nth-child(2),
 .evaluationTableShell td:nth-child(2) {
-  width: 6%;
+  width: 10%;
 }
 
 .evaluationTableShell th:nth-child(3),
