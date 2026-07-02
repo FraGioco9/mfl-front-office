@@ -279,7 +279,6 @@ p {
 
 
 #linkWalletButton:not(:disabled) {
-  justify-content: center;
   border-color: #2fbf62;
   background: #2fbf62;
   color: #ffffff;
