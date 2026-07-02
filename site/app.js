@@ -35,7 +35,8 @@ const state = {
   linkedWalletAddress: "",
   linkedWalletProof: null,
   whitelistedWallets: new Set(),
-  flowWalletScriptPromise: null,
+  flowWalletModule: null,
+  flowWalletModulePromise: null,
 };
 
 const flagColumn = "nationality_flag";
@@ -194,9 +195,8 @@ const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
-const FLOW_WALLET_SCRIPT_URLS = [
-  "https://cdn.jsdelivr.net/npm/@onflow/fcl/dist/fcl.min.js",
-  "https://unpkg.com/@onflow/fcl/dist/fcl.min.js",
+const FLOW_WALLET_MODULE_URLS = [
+  "https://esm.sh/@onflow/fcl@1.21.11?bundle",
 ];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
@@ -622,6 +622,14 @@ function stringToHex(value) {
     .join("");
 }
 
+async function signWalletMessage(fcl, message) {
+  const currentUser = typeof fcl.currentUser === "function" ? fcl.currentUser() : fcl.currentUser;
+  if (!currentUser?.signUserMessage) {
+    throw new Error("Wallet message signing is not available.");
+  }
+  return currentUser.signUserMessage(stringToHex(message));
+}
+
 function restoreLinkedWalletProof() {
   try {
     const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
@@ -636,63 +644,50 @@ function restoreLinkedWalletProof() {
     state.linkedWalletProof = null;
   }
 }
-function configureFlowWallet() {
-  if (!window.fcl?.config) {
-    return false;
+function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl || window.fcl) {
+  if (!fcl?.config) {
+    return null;
   }
 
-  window.fcl.config({
+  fcl.config({
     "accessNode.api": "https://rest-mainnet.onflow.org",
     "discovery.wallet": "https://fcl-discovery.onflow.org/authn",
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${window.location.origin}/favicon.ico`,
   });
-  return true;
+  state.flowWalletModule = fcl;
+  return fcl;
 }
 
-function loadFlowWalletScriptFrom(src) {
-  return new Promise((resolve, reject) => {
-    const existingScript = document.querySelector(`script[src="${src}"]`);
-    if (existingScript?.dataset.loaded === "true") {
-      resolve();
-      return;
-    }
-
-    existingScript?.remove();
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = () => {
-      script.dataset.loaded = "true";
-      resolve();
-    };
-    script.onerror = () => reject(new Error(`Could not load ${src}`));
-    document.head.appendChild(script);
-  });
+async function importFlowWalletModule(src) {
+  const module = await import(src);
+  return module?.default || module;
 }
 
 async function ensureFlowWallet() {
-  if (configureFlowWallet()) {
-    return true;
+  const configuredWallet = configureFlowWallet();
+  if (configuredWallet) {
+    return configuredWallet;
   }
 
-  if (!state.flowWalletScriptPromise) {
-    state.flowWalletScriptPromise = (async () => {
-      for (const src of FLOW_WALLET_SCRIPT_URLS) {
+  if (!state.flowWalletModulePromise) {
+    state.flowWalletModulePromise = (async () => {
+      for (const src of FLOW_WALLET_MODULE_URLS) {
         try {
-          await loadFlowWalletScriptFrom(src);
-          if (configureFlowWallet()) {
-            return true;
+          const module = await importFlowWalletModule(src);
+          const fcl = configureFlowWallet(module);
+          if (fcl) {
+            return fcl;
           }
         } catch (error) {
-          console.warn("Could not load Flow wallet script.", error);
+          console.warn("Could not load Flow wallet module.", error);
         }
       }
-      return false;
+      return null;
     })();
   }
 
-  return state.flowWalletScriptPromise;
+  return state.flowWalletModulePromise;
 }
 
 async function linkWallet() {
@@ -705,7 +700,8 @@ async function linkWallet() {
   linkWalletButton.disabled = true;
   linkWalletButton.textContent = "Loading...";
 
-  if (!(await ensureFlowWallet())) {
+  const fcl = await ensureFlowWallet();
+  if (!fcl) {
     updateAccountState();
     showToast("Wallet login could not load. Try again in a moment.");
     return;
@@ -714,7 +710,7 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const user = await window.fcl.authenticate();
+    const user = await fcl.authenticate();
     const flowAddress = normalizeWalletAddress(user?.addr);
 
     if (!flowAddress) {
@@ -722,12 +718,12 @@ async function linkWallet() {
     }
 
     const initialMessage = walletAccessMessage(flowAddress);
-    const initialSignatures = await window.fcl.currentUser.signUserMessage(stringToHex(initialMessage));
+    const initialSignatures = await signWalletMessage(fcl, initialMessage);
     const dapperAddress = signatureWalletAddress(initialSignatures) || flowAddress;
     const message = walletAccessMessage(dapperAddress);
     const signatures = dapperAddress === flowAddress
       ? initialSignatures
-      : await window.fcl.currentUser.signUserMessage(stringToHex(message));
+      : await signWalletMessage(fcl, message);
 
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = { address: dapperAddress, message, signatures };
