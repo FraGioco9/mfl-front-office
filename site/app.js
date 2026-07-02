@@ -686,10 +686,15 @@ async function authenticatedWalletUser(fcl, authenticatedUser) {
 }
 function signatureWalletAddress(signatures) {
   const signature = Array.isArray(signatures) ? signatures.find((item) => item?.addr || item?.address) : null;
-  return normalizeWalletAddress(signature?.addr || signature?.address);
+  const directAddress = normalizeWalletAddress(signature?.addr || signature?.address);
+  return directAddress || walletAddressCandidatesFromValue(signatures)[0] || "";
 }
 function walletAccessMessage(address) {
   return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
+}
+
+function walletDiscoveryMessage() {
+  return "MFL Front Office Wallet Link";
 }
 
 function stringToHex(value) {
@@ -815,17 +820,17 @@ async function linkWallet() {
     const authenticatedUser = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
+    const initialMessage = flowAddress ? walletAccessMessage(flowAddress) : walletDiscoveryMessage();
+    const initialSignatures = await signWalletMessage(fcl, initialMessage);
+    const dapperAddress = signatureWalletAddress(initialSignatures) || flowAddress;
 
-    if (!flowAddress) {
-      console.warn("Dapper authentication did not include a wallet address.", { authenticatedUser, user });
+    if (!dapperAddress) {
+      console.warn("Dapper authentication and signature did not include a wallet address.", { authenticatedUser, user, initialSignatures });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
-    const initialMessage = walletAccessMessage(flowAddress);
-    const initialSignatures = await signWalletMessage(fcl, initialMessage);
-    const dapperAddress = signatureWalletAddress(initialSignatures) || flowAddress;
     const message = walletAccessMessage(dapperAddress);
-    const signatures = dapperAddress === flowAddress
+    const signatures = initialMessage === message
       ? initialSignatures
       : await signWalletMessage(fcl, message);
 
