@@ -611,18 +611,55 @@ async function fetchDataFile(fileName, options = {}) {
   return data;
 }
 
+function agentNameForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  const walletRow = state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress);
+  const agentName = walletRow ? getValue(walletRow, "wallet_name") : "";
+  const formattedAgentName = agentName === null || agentName === undefined ? "" : String(agentName).trim();
+  if (formattedAgentName && formattedAgentName.toUpperCase() !== "NULL") {
+    return formattedAgentName;
+  }
+
+  return normalizeWalletAddress(address);
+}
+
 function accountName() {
-  return state.linkedWalletAddress
-    ? `${state.linkedWalletAddress.slice(0, 6)}...${state.linkedWalletAddress.slice(-4)}`
-    : "Guest";
+  return state.linkedWalletAddress ? agentNameForWallet(state.linkedWalletAddress) : "Guest";
 }
 
 function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
-  linkWalletButton.textContent = walletLinked ? "Opted In" : "Opt In";
-  linkWalletButton.disabled = walletLinked;
-  linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Opt in with Dapper";
+  linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
+  linkWalletButton.disabled = false;
+  linkWalletButton.classList.toggle("walletOptOut", walletLinked);
+  linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+}
+
+function optOutWallet() {
+  state.linkedWalletAddress = "";
+  state.linkedWalletProof = null;
+  state.walletPermissionAllowed = false;
+
+  try {
+    localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
+    localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
+  } catch {
+    // The page state is still cleared even if storage is blocked.
+  }
+
+  updateAccountState();
+  updateMenuVisibility();
+  saveTableState();
+  showToast("Dapper opt-in removed.");
+
+  if (pageRequiresProgressionPermission(state.currentPage)) {
+    setPage("home");
+  }
 }
 function walletAddressCandidatesFromValue(value, seen = new WeakSet()) {
   if (!value) {
@@ -800,6 +837,7 @@ async function linkWallet() {
   closeAccountMenu();
 
   if (state.linkedWalletAddress && hasWalletProof()) {
+    optOutWallet();
     return;
   }
 
@@ -844,6 +882,7 @@ async function linkWallet() {
     updateAccountState();
     updateMenuVisibility();
     saveTableState();
+    closeAccountMenu();
     showToast("Dapper opt-in saved.");
   } catch (error) {
     console.warn("Could not link Dapper wallet.", error);
@@ -4250,6 +4289,7 @@ async function loadData() {
     buildHeader();
     applyFilters();
     state.dataLoaded = true;
+    updateAccountState();
     return true;
   } catch (error) {
     const message = error.message || "No website data found yet. Run the GitHub workflow to publish the table.";

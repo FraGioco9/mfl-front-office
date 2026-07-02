@@ -289,6 +289,18 @@ p {
   background: #249b50;
   color: #ffffff;
 }
+
+#linkWalletButton.walletOptOut {
+  border-color: #d84b4b;
+  background: #d84b4b;
+  color: #ffffff;
+}
+
+#linkWalletButton.walletOptOut:hover {
+  border-color: #b93a3a;
+  background: #b93a3a;
+  color: #ffffff;
+}
 .accountDropdownItem + .accountDropdownItem {
   margin-top: 2px;
 }
