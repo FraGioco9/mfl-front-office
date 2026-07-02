@@ -755,6 +755,7 @@ body.filtersOpen .navButton:hover {
 }
 
 .homeOptInIcon {
+  display: block;
   width: 17px;
   height: 17px;
   fill: none;
@@ -762,6 +763,7 @@ body.filtersOpen .navButton:hover {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transform: translateY(1px);
 }
 
 .buttonGear {
