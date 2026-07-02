@@ -208,7 +208,7 @@ const FLOW_WALLET_MODULE_URLS = [
 const FLOW_DISCOVERY_WALLET = "https://fcl-discovery.onflow.org/authn";
 const FLOW_DISCOVERY_AUTHN_ENDPOINT = "https://fcl-discovery.onflow.org/api/authn";
 const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress("0xead892083b3e2c6c");
-const DAPPER_AUTHN_INCLUDE = [DAPPER_PROVIDER_ADDRESS];
+const DAPPER_AUTHN_INCLUDE = ["dapper-wallet"];
 const WALLET_ADDRESS_PATTERN = /0x[0-9a-f]{16,64}/gi;
 const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
@@ -905,13 +905,42 @@ async function ensureFlowWallet() {
   return state.flowWalletModulePromise;
 }
 
+function authnServicesFromDiscovery(data) {
+  const candidates = Array.isArray(data) ? data : [data];
+  const services = [];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    if (Array.isArray(candidate)) {
+      services.push(...authnServicesFromDiscovery(candidate));
+      continue;
+    }
+
+    if (candidate.type === "authn") {
+      services.push(candidate);
+    }
+
+    for (const key of ["services", "authn", "results", "data"]) {
+      if (candidate[key]) {
+        services.push(...authnServicesFromDiscovery(candidate[key]));
+      }
+    }
+  }
+
+  return services;
+}
+
 function findDapperAuthnService(data) {
-  const services = Array.isArray(data) ? data : (data?.services || data?.authn || data?.results || []);
-  return services.find((service) => {
+  return authnServicesFromDiscovery(data).find((service) => {
     const providerAddress = normalizeWalletAddress(service?.provider?.address || service?.provider?.addr || service?.addr);
     const searchable = JSON.stringify(service || {}).toLowerCase();
-    return service?.type === "authn"
-      && (providerAddress === DAPPER_PROVIDER_ADDRESS || searchable.includes("dapper"));
+    return providerAddress === DAPPER_PROVIDER_ADDRESS
+      || service?.uid === "dapper-wallet"
+      || service?.provider?.name?.toLowerCase?.().includes("dapper")
+      || searchable.includes("dapper");
   }) || null;
 }
 
@@ -950,11 +979,11 @@ async function dapperAuthnService(fcl) {
 
 async function authenticateWithDapper(fcl) {
   const service = await dapperAuthnService(fcl);
-  if (service) {
-    return fcl.authenticate({ service, forceReauth: true });
+  if (!service) {
+    throw new Error("Dapper opt-in service could not be found.");
   }
 
-  return fcl.authenticate({ forceReauth: true });
+  return fcl.authenticate({ service, forceReauth: true });
 }
 
 function walletLinkErrorMessage(error) {
