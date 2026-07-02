@@ -1204,18 +1204,6 @@ button:disabled {
   min-width: 0;
 }
 
-.advancedPlayerTableSection::before {
-  content: "";
-  position: sticky;
-  display: block;
-  top: 0;
-  z-index: 15;
-  height: 32px;
-  margin-bottom: -32px;
-  background: var(--surface);
-  pointer-events: none;
-}
-
 .advancedPlayerTableScroller {
   position: relative;
   overflow: visible;
@@ -1252,6 +1240,19 @@ button:disabled {
   top: 0;
   z-index: 20;
   background: var(--header-bg);
+  isolation: isolate;
+}
+
+.advancedPlayerTable thead::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 1;
+  height: 32px;
+  background: var(--surface);
+  pointer-events: none;
 }
 
 .advancedPlayerTable thead tr {
@@ -1261,7 +1262,7 @@ button:disabled {
 .advancedPlayerTable th {
   position: sticky;
   top: 0;
-  z-index: 21;
+  z-index: 2;
   background: var(--header-bg);
   color: var(--text);
   font-size: 14px;
