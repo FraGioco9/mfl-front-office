@@ -607,7 +607,8 @@ body[data-page="home"] .topbar .stats {
 
 .navDatabaseIcon,
 .navTrendIcon,
-.navEvaluationIcon {
+.navEvaluationIcon,
+.navJerseyIcon {
   fill: none;
   stroke: currentColor;
   stroke-linecap: square;
@@ -3162,4 +3163,41 @@ td a {
   width: 16px;
   height: 16px;
   padding: 0;
+}
+.myPlayersLockedPage {
+  position: fixed;
+  top: 102px;
+  right: 0;
+  bottom: 52px;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.myPlayersLockedPage[hidden] {
+  display: none;
+}
+
+.myPlayersLockedContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 420px;
+  padding: 32px;
+  pointer-events: auto;
+}
+
+.myPlayersLockedContent h2 {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 42px);
+}
+
+.myPlayersLockedContent p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 16px;
 }

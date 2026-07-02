@@ -966,6 +966,11 @@ function optOutWallet() {
   saveTableState();
   showToast("Dapper opt-in removed.");
 
+  if (state.currentPage === "myplayers") {
+    setPage("myplayers", false);
+    return;
+  }
+
   if (pageRequiresProgressionPermission(state.currentPage)) {
     setPage("home");
   }
