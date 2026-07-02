@@ -194,6 +194,7 @@ const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
+const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
@@ -615,6 +616,41 @@ async function fetchDataFile(fileName, options = {}) {
   return data;
 }
 
+function normalizedAgentName(value) {
+  const name = value === null || value === undefined ? "" : String(value).trim();
+  return name && name.toUpperCase() !== "NULL" ? name : "";
+}
+
+function savedAgentNameForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
+    return normalizeWalletAddress(saved?.address).toLowerCase() === normalizedAddress
+      ? normalizedAgentName(saved?.name)
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function saveAgentNameForWallet(address, name) {
+  const normalizedAddress = normalizeWalletAddress(address);
+  const agentName = normalizedAgentName(name);
+  if (!normalizedAddress || !agentName) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY, JSON.stringify({ address: normalizedAddress, name: agentName }));
+  } catch {
+    // The account dropdown can still fall back to the live data for this page.
+  }
+}
+
 function agentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) {
@@ -622,13 +658,13 @@ function agentNameForWallet(address) {
   }
 
   const walletRow = state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress);
-  const agentName = walletRow ? getValue(walletRow, "wallet_name") : "";
-  const formattedAgentName = agentName === null || agentName === undefined ? "" : String(agentName).trim();
-  if (formattedAgentName && formattedAgentName.toUpperCase() !== "NULL") {
-    return formattedAgentName;
+  const agentName = walletRow ? normalizedAgentName(getValue(walletRow, "wallet_name")) : "";
+  if (agentName) {
+    saveAgentNameForWallet(address, agentName);
+    return agentName;
   }
 
-  return normalizeWalletAddress(address);
+  return savedAgentNameForWallet(address) || normalizeWalletAddress(address);
 }
 
 function accountName() {
@@ -652,6 +688,7 @@ function optOutWallet() {
   try {
     localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
+    localStorage.removeItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY);
   } catch {
     // The page state is still cleared even if storage is blocked.
   }
@@ -925,16 +962,30 @@ async function linkWallet() {
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
     const discoverySignatures = await signWalletMessage(fcl, walletDiscoveryMessage());
-    const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
+    const firstSignedAddress = signatureWalletAddress(discoverySignatures);
+    let dapperAddress = firstSignedAddress || flowAddress;
 
     if (!dapperAddress) {
       console.warn("Dapper opt-in and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
-    const signingAddress = signatureWalletAddress(discoverySignatures) || dapperAddress;
-    const message = walletAccessMessage(dapperAddress, signingAddress);
-    const signatures = await signWalletMessage(fcl, message);
+    let signingAddress = firstSignedAddress || dapperAddress;
+    let message = walletAccessMessage(dapperAddress, signingAddress);
+    let signatures = await signWalletMessage(fcl, message);
+    const finalSignedAddress = signatureWalletAddress(signatures);
+
+    if (finalSignedAddress && finalSignedAddress !== dapperAddress) {
+      dapperAddress = finalSignedAddress;
+      signingAddress = finalSignedAddress;
+      message = walletAccessMessage(dapperAddress, signingAddress);
+      signatures = await signWalletMessage(fcl, message);
+    }
+
+    const proofSignedAddress = signatureWalletAddress(signatures);
+    if (proofSignedAddress && proofSignedAddress !== dapperAddress) {
+      throw new Error("Dapper signed with a different wallet than the selected opt-in wallet.");
+    }
 
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = { address: dapperAddress, signingAddress, message, signatures };
