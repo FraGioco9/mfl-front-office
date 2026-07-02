@@ -36,6 +36,77 @@ const state = {
 const flagColumn = "nationality_flag";
 const baseColumns = ["player_id", flagColumn, "name", "nationality", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
+const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
+99	84000	84000	84000	112000	56000	56000	70000	112000	112000	112000	70000	42000	84000	84000	112000
+98	78000	78000	78000	104000	52000	52000	65000	104000	104000	104000	65000	39000	78000	78000	104000
+97	72000	72000	72000	96000	48000	48000	60000	96000	96000	96000	60000	36000	72000	72000	96000
+96	60000	60000	60000	80000	40000	40000	50000	80000	80000	80000	50000	30000	60000	60000	80000
+95	48000	48000	48000	64000	32000	32000	40000	64000	64000	64000	40000	24000	48000	48000	64000
+94	39000	39000	39000	52000	26000	26000	32500	52000	52000	52000	32500	19500	39000	39000	52000
+93	30000	30000	30000	40000	20000	20000	25000	40000	40000	40000	25000	15000	30000	30000	40000
+92	24000	24000	24000	32000	16000	16000	20000	32000	32000	32000	20000	12000	24000	24000	32000
+91	18000	18000	18000	24000	12000	12000	15000	24000	24000	24000	15000	9000	18000	18000	24000
+90	15000	15000	15000	20000	10000	10000	12500	20000	20000	20000	12500	7500	15000	15000	20000
+89	12000	12000	12000	16000	8000	8000	10000	16000	16000	16000	10000	6000	12000	12000	16000
+88	9000	9000	9000	12000	6000	6000	7500	12000	12000	12000	7500	4500	9000	9000	12000
+87	7500	7500	7500	10000	5000	5000	6250	10000	10000	10000	6250	3750	7500	7500	10000
+86	6000	6000	6000	8000	4000	4000	5000	8000	8000	8000	5000	3000	6000	6000	8000
+85	4500	4500	4500	6000	3000	3000	3750	6000	6000	6000	3750	2250	4500	4500	6000
+84	3000	3000	3000	4000	2000	2000	2500	4000	4000	4000	2500	1500	3000	3000	4000
+83	2400	2400	2400	3200	1600	1600	2000	3200	3200	3200	2000	1200	2400	2400	3200
+82	1800	1800	1800	2400	1200	1200	1500	2400	2400	2400	1500	900	1800	1800	2400
+81	1500	1500	1500	2000	1000	1000	1250	2000	2000	2000	1250	750	1500	1500	2000
+80	1200	1200	1200	1600	800	800	1000	1600	1600	1600	1000	600	1200	1200	1600
+79	1050	1050	1050	1400	700	700	875	1400	1400	1400	875	525	1050	1050	1400
+78	900	900	900	1200	600	600	750	1200	1200	1200	750	450	900	900	1200
+77	750	750	750	1000	500	500	625	1000	1000	1000	625	375	750	750	1000
+76	600	600	600	800	400	400	500	800	800	800	500	300	600	600	800
+75	450	450	450	600	300	300	375	600	600	600	375	225	450	450	600
+74	360	360	360	480	240	240	300	480	480	480	300	180	360	360	480
+73	300	300	300	400	200	200	250	400	400	400	250	150	300	300	400
+72	240	240	240	320	160	160	200	320	320	320	200	120	240	240	320
+71	210	210	210	280	140	140	175	280	280	280	175	105	210	210	280
+70	180	180	180	240	120	120	150	240	240	240	150	90	180	180	240
+69	150	150	150	200	100	100	125	200	200	200	125	75	150	150	200
+68	135	135	135	180	90	90	112.5	180	180	180	112.5	67.5	135	135	180
+67	120	120	120	160	80	80	100	160	160	160	100	60	120	120	160
+66	108	108	108	144	72	72	90	144	144	144	90	54	108	108	144
+65	96	96	96	128	64	64	80	128	128	128	80	48	96	96	128
+64	84	84	84	112	56	56	70	112	112	112	70	42	84	84	112
+63	72	72	72	96	48	48	60	96	96	96	60	36	72	72	96
+62	60	60	60	80	40	40	50	80	80	80	50	30	60	60	80
+61	54	54	54	72	36	36	45	72	72	72	45	27	54	54	72
+60	48	48	48	64	32	32	40	64	64	64	40	24	48	48	64
+59	42	42	42	56	28	28	35	56	56	56	35	21	42	42	56
+58	37.5	37.5	37.5	50	25	25	31.25	50	50	50	31.25	18.75	37.5	37.5	50
+57	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+56	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+55	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+54	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+53	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+52	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+51	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+50	33	33	33	44	22	22	27.5	44	44	44	27.5	16.5	33	33	44
+49	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+48	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+47	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+46	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+45	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+44	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+43	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+42	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+41	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+40	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+39	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+38	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+37	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+36	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+35	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+34	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+33	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+32	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+31	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+30	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0`;
 const agentColumn = "wallet_name";
 const linkColumn = "player_link";
 
@@ -242,6 +313,16 @@ const evaluationMflUsdIncreaseButton = document.querySelector("#evaluationMflUsd
 const evaluationMflUsdDecreaseButton = document.querySelector("#evaluationMflUsdDecreaseButton");
 const evaluationMflUsdEditButton = document.querySelector("#evaluationMflUsdEditButton");
 const evaluationMflUsdResetButton = document.querySelector("#evaluationMflUsdResetButton");
+const advancedSettingsButton = document.querySelector(".advancedSettingsButton");
+const advancedSettingsModal = document.querySelector("#advancedSettingsModal");
+const closeAdvancedSettingsButton = document.querySelector("#closeAdvancedSettingsButton");
+const advancedMflUsdInput = document.querySelector("#advancedMflUsdInput");
+const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetButton");
+const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
+const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
+const advancedDiscountRateValue = document.querySelector("#advancedDiscountRateValue");
+const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
+const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
 const evaluationTableBody = document.querySelector("#evaluationTableBody");
 const selectionBar = document.querySelector("#selectionBar");
@@ -1788,6 +1869,90 @@ function loadEvaluationMflPerUsd() {
   } catch {
     state.evaluationMflPerUsd = DEFAULT_EVALUATION_MFL_PER_USD;
   }
+}
+
+function formatAdvancedPlayerTableValue(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue)
+    ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(numericValue)
+    : value;
+}
+
+function renderAdvancedPlayerTable() {
+  if (advancedPlayerTableBody.children.length) {
+    return;
+  }
+
+  const rows = advancedPlayerTableTsv.trim().split("\n").map((line) => line.split("\t"));
+  const headers = rows.shift();
+  const headerRow = document.createElement("tr");
+  const bodyFragment = document.createDocumentFragment();
+
+  headers.forEach((header) => {
+    const cell = document.createElement("th");
+    cell.textContent = header;
+    headerRow.appendChild(cell);
+  });
+
+  advancedPlayerTableHead.replaceChildren(headerRow);
+
+  rows.forEach((row) => {
+    const tableRow = document.createElement("tr");
+
+    row.forEach((value, index) => {
+      const cell = document.createElement("td");
+      cell.textContent = index === 0 ? value : formatAdvancedPlayerTableValue(value);
+      tableRow.appendChild(cell);
+    });
+
+    bodyFragment.appendChild(tableRow);
+  });
+
+  advancedPlayerTableBody.replaceChildren(bodyFragment);
+}
+
+function syncAdvancedSettingsValues() {
+  advancedMflUsdInput.value = state.evaluationMflPerUsd.toFixed(2);
+  advancedMflUsdResetButton.hidden = state.evaluationMflPerUsd === DEFAULT_EVALUATION_MFL_PER_USD;
+  advancedDiscountRateValue.textContent = evaluationDiscountRate.textContent || formatEvaluationRate(evaluationDiscountRateValue());
+}
+
+function updateAdvancedMflUsdResetVisibility() {
+  const parsedValue = parseEvaluationMflPerUsd(advancedMflUsdInput.value);
+  advancedMflUsdResetButton.hidden = !parsedValue || parsedValue === DEFAULT_EVALUATION_MFL_PER_USD;
+}
+
+function openAdvancedSettings() {
+  renderAdvancedPlayerTable();
+  syncAdvancedSettingsValues();
+  advancedSettingsModal.hidden = false;
+  window.setTimeout(() => advancedMflUsdInput.focus(), 0);
+}
+
+function closeAdvancedSettings() {
+  advancedSettingsModal.hidden = true;
+}
+
+function applyAdvancedSettings() {
+  const parsedValue = parseEvaluationMflPerUsd(advancedMflUsdInput.value);
+
+  if (parsedValue) {
+    saveEvaluationMflPerUsd(parsedValue);
+  }
+
+  renderEvaluationMflPerUsdControl(false);
+  renderEvaluationPage();
+  closeAdvancedSettings();
+}
+
+function discardAdvancedSettings() {
+  syncAdvancedSettingsValues();
+  closeAdvancedSettings();
+}
+
+function resetAdvancedMflUsd() {
+  advancedMflUsdInput.value = DEFAULT_EVALUATION_MFL_PER_USD.toFixed(2);
+  updateAdvancedMflUsdResetVisibility();
 }
 
 function renderEvaluationMflPerUsdControl(editing = false) {
@@ -3980,11 +4145,16 @@ document.addEventListener("keydown", (event) => {
     closeSearch();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
+  } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
+    closeAdvancedSettings();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
+  } else if (event.key === "Enter" && !advancedSettingsModal.hidden && document.activeElement === advancedMflUsdInput) {
+    event.preventDefault();
+    applyAdvancedSettings();
   }
 });
 
@@ -3997,6 +4167,12 @@ document.addEventListener("click", (event) => {
 searchModal.addEventListener("click", (event) => {
   if (event.target === searchModal) {
     closeSearch();
+  }
+});
+
+advancedSettingsModal.addEventListener("click", (event) => {
+  if (event.target === advancedSettingsModal) {
+    closeAdvancedSettings();
   }
 });
 
@@ -4043,6 +4219,12 @@ document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
 });
 openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
+advancedSettingsButton.addEventListener("click", openAdvancedSettings);
+closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
+advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
+advancedMflUsdResetButton.addEventListener("click", resetAdvancedMflUsd);
+discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
+applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);

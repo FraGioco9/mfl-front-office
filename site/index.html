@@ -284,6 +284,8 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.26</span><p>Refine Evaluation Advanced Settings layout</p></li>
+              <li><span>v1.84.25</span><p>Add Evaluation Advanced Settings popup</p></li>
               <li><span>v1.84.24</span><p>Fix search and table view hover styles</p></li>
               <li><span>v1.84.23</span><p>Match search and advanced settings hover styles</p></li>
               <li><span>v1.84.22</span><p>Add Evaluation Advanced Settings placeholder</p></li>
@@ -529,7 +531,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.24</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.26</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -571,6 +573,48 @@
       </section>
     </div>
 
+    <div id="advancedSettingsModal" class="modalBackdrop" hidden>
+      <section class="advancedSettingsDialog" role="dialog" aria-modal="true" aria-labelledby="advancedSettingsTitle">
+        <header class="filtersHeader">
+          <h2 id="advancedSettingsTitle">Advanced Settings</h2>
+          <button id="closeAdvancedSettingsButton" class="iconButton" type="button" aria-label="Close advanced settings">x</button>
+        </header>
+
+        <section class="advancedSettingsBody">
+          <section class="advancedSettingsSection" aria-labelledby="advancedMflUsdTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedMflUsdTitle">MFL/USD</h3>
+              <div class="advancedSettingHeaderControl">
+                <input id="advancedMflUsdInput" class="advancedMflUsdInput" type="text" inputmode="decimal" autocomplete="off" aria-label="MFL per USD">
+                <button id="advancedMflUsdResetButton" type="button">Reset</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection" aria-labelledby="advancedDiscountRateTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedDiscountRateTitle">Discount Rate</h3>
+              <div class="advancedSettingValue" id="advancedDiscountRateValue">-</div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection advancedPlayerTableSection" aria-labelledby="advancedPlayerTableTitle">
+            <h3 id="advancedPlayerTableTitle">Player Table</h3>
+            <div class="advancedPlayerTableScroller">
+              <table class="advancedPlayerTable">
+                <thead id="advancedPlayerTableHead"></thead>
+                <tbody id="advancedPlayerTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <footer class="filtersFooter advancedSettingsFooter">
+          <button id="discardAdvancedSettingsButton" type="button">Discard</button>
+          <button id="applyAdvancedSettingsButton" type="button">Apply</button>
+        </footer>
+      </section>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/app.js?v=1.83.8"></script>
   </body>

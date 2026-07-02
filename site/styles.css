@@ -896,6 +896,7 @@ main {
 }
 
 .quickFilters label {
+  user-select: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1085,6 +1086,143 @@ button:disabled {
   text-align: center;
 }
 
+.advancedSettingsDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  max-height: min(860px, 92vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.advancedSettingsBody {
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding: 16px 18px 18px;
+}
+
+.advancedSettingsSection {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.advancedSettingsSection h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.advancedSettingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.advancedSettingHeaderControl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.advancedMflUsdInput {
+  width: 112px;
+  height: 42px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.advancedSettingsFooter {
+  flex: 0 0 auto;
+}
+
+.advancedSettingRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.advancedSettingField {
+  width: min(220px, 100%);
+}
+
+.advancedSettingValue {
+  width: fit-content;
+  min-width: 112px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.advancedPlayerTableSection {
+  min-width: 0;
+}
+
+.advancedPlayerTableScroller {
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.advancedPlayerTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.advancedPlayerTable th,
+.advancedPlayerTable td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.advancedPlayerTable th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--header-bg);
+  color: var(--text);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.advancedPlayerTable th:first-child,
+.advancedPlayerTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  font-weight: 800;
+  text-align: center;
+}
+
+.advancedPlayerTable th:first-child {
+  z-index: 3;
+  background: var(--header-bg);
+}
 .filterBuilder {
   display: flex;
   flex-direction: column;
@@ -2907,6 +3045,7 @@ td a {
 }
 
 .evaluationOptionFilters label {
+  user-select: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
