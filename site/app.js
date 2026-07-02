@@ -898,6 +898,7 @@ function optOutWallet() {
 
   updateAccountState();
   updateMenuVisibility();
+  normalizeCurrentViewsAfterProgressionAccessLoss();
   saveTableState();
   showToast("Dapper opt-in removed.");
 
@@ -1679,6 +1680,24 @@ function updateViewButtons() {
   });
 }
 
+function normalizeCurrentViewsAfterProgressionAccessLoss() {
+  if (state.currentPage === "watchlist") {
+    state.view = normalizeViewForPage(state.view, "watchlist");
+    state.page = 1;
+    removeUnavailableFilterRules("watchlist", state.view);
+    populateAddFilterSelect("watchlist");
+    refreshRuleColumnSelects("watchlist");
+    updateViewButtons();
+    buildHeader();
+    applyFilters();
+    return;
+  }
+
+  if (state.currentPage === "player") {
+    state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
+    renderPlayerPage(playerIdFromUrl());
+  }
+}
 function defaultTablePageState(pageName = tablePageKey() || "progression") {
   return {
     hideRetired: true,
