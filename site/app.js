@@ -386,6 +386,20 @@ function showLoadingError(message) {
   loadingText.textContent = message;
 }
 
+async function showUnauthorizedProgressionRedirect() {
+  showLoading();
+  await paintLoadingProgress();
+  await new Promise((resolve) => window.setTimeout(resolve, 300));
+  showLoadingError("Not authorised.");
+  showToast("Not authorised.");
+  await new Promise((resolve) => window.setTimeout(resolve, 700));
+  window.history.replaceState({}, "", "/");
+  loadingScreen.hidden = true;
+  loadingScreen.classList.remove("failed", "complete", "leaving");
+  document.body.classList.remove("loading");
+  return setPage("home", false);
+}
+
 async function finishLoading() {
   await paintLoadingProgress();
   await new Promise((resolve) => window.setTimeout(resolve, 300));
@@ -1255,14 +1269,13 @@ function resetPageScroll() {
 async function setPage(pageName, updateHash = true, options = {}) {
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
-  if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
-    document.body.dataset.page = "home";
-    showToast("Not authorised.");
-    return setPage("home", updateHash);
-  }
-
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
+
+  if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
+    return showUnauthorizedProgressionRedirect();
+  }
+
 
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
