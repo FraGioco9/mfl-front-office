@@ -1213,18 +1213,6 @@ button:disabled {
   isolation: isolate;
 }
 
-.advancedPlayerTableScroller::before {
-  content: "";
-  position: sticky;
-  display: block;
-  top: 0;
-  z-index: 19;
-  height: 32px;
-  margin-bottom: -32px;
-  background: var(--surface);
-  pointer-events: none;
-}
-
 .advancedPlayerTable {
   position: relative;
   z-index: 1;
