@@ -422,11 +422,11 @@ function hasProgressionAccess() {
 
 function progressionAccessMessage() {
   if (!state.linkedWalletAddress) {
-    return "Link your wallet to view Progression.";
+    return "Opt in with Dapper to view Progression.";
   }
 
   if (!hasWalletProof()) {
-    return "Verify your linked wallet to view Progression.";
+    return "Verify your Dapper wallet opt-in to view Progression.";
   }
 
   return "This wallet does not have Progression access yet.";
@@ -630,9 +630,9 @@ function accountName() {
 function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
-  linkWalletButton.textContent = walletLinked ? "Linked" : "Link Wallet";
+  linkWalletButton.textContent = walletLinked ? "Opted In" : "Opt In";
   linkWalletButton.disabled = walletLinked;
-  linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
+  linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Opt in with Dapper";
 }
 function walletAddressCandidatesFromValue(value, seen = new WeakSet()) {
   if (!value) {
@@ -794,14 +794,14 @@ function walletLinkErrorMessage(error) {
   }
 
   if (lowerMessage.includes("404") || lowerMessage.includes("not found")) {
-    return "Dapper login endpoint could not be reached.";
+    return "Dapper opt-in endpoint could not be reached.";
   }
 
   if (message) {
-    return `Dapper login failed: ${message.slice(0, 120)}`;
+    return `Dapper opt-in failed: ${message.slice(0, 120)}`;
   }
 
-  return "Dapper login failed. Try again in a moment.";
+  return "Dapper opt-in failed. Try again in a moment.";
 }
 
 async function linkWallet() {
@@ -817,7 +817,7 @@ async function linkWallet() {
   const fcl = await ensureFlowWallet();
   if (!fcl) {
     updateAccountState();
-    showToast("Wallet login could not load. Try again in a moment.");
+    showToast("Dapper opt-in could not load. Try again in a moment.");
     return;
   }
 
@@ -831,7 +831,7 @@ async function linkWallet() {
     const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
 
     if (!dapperAddress) {
-      console.warn("Dapper popup login and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
+      console.warn("Dapper opt-in and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
@@ -851,7 +851,7 @@ async function linkWallet() {
     updateAccountState();
     updateMenuVisibility();
     saveTableState();
-    showToast("Wallet linked.");
+    showToast("Dapper opt-in saved.");
   } catch (error) {
     console.warn("Could not link Dapper wallet.", error);
     updateAccountState();
@@ -1333,7 +1333,7 @@ function currentTableState() {
 }
 
 function queueCloudTableStateSave() {
-  // Preferences are local until wallet accounts replace the old login system.
+  // Preferences stay local until wallet opt-in can sync them.
 }
 
 function restoreWatchlistState(savedState) {
