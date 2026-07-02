@@ -1240,6 +1240,9 @@ button:disabled {
   top: 0;
   z-index: 20;
   background: var(--header-bg);
+  box-shadow:
+    inset 0 1px 0 var(--border),
+    inset 0 -1px 0 var(--border);
 }
 
 .advancedPlayerTable thead tr {
@@ -1255,10 +1258,7 @@ button:disabled {
   font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
-  box-shadow:
-    0 -48px 0 48px var(--surface),
-    inset 0 1px 0 var(--border),
-    inset 0 -1px 0 var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
 }
 
 .advancedPlayerTable th:first-child,
@@ -1279,13 +1279,27 @@ button:disabled {
   border-bottom-color: var(--header-bg);
 }
 
+.advancedPlayerTable thead th:first-child {
+  border-top-left-radius: 7px;
+}
+
+.advancedPlayerTable thead th:last-child {
+  border-top-right-radius: 7px;
+}
+
+.advancedPlayerTable tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 7px;
+}
+
+.advancedPlayerTable tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 7px;
+}
+
+
 .advancedPlayerTable th:first-child {
   z-index: 21;
   border-bottom-color: var(--border);
-  box-shadow:
-    0 -48px 0 48px var(--surface),
-    inset 0 1px 0 var(--border),
-    inset 0 -1px 0 var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
 }
 
 .evaluationSummaryTable tbody tr:hover,
