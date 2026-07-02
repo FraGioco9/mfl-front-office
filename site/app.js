@@ -2243,6 +2243,12 @@ function evaluationSummaryOverall(row, position, currentOverall) {
   return rating === null ? currentOverall : rating;
 }
 
+function setEvaluationOverallValues(row, overall) {
+  const expectedSeasons = expectedEvaluationSeasons(row);
+  const value = Math.max(1, Math.min(99, Math.round(Number(overall) || 1)));
+  state.evaluationOverallRows[evaluationOverallKey(row)] = Array.from({ length: expectedSeasons }, () => value);
+}
+
 function evaluationSummaryPositionControl(row, selectedPosition) {
   const positions = playerPositions(row);
 
@@ -2252,6 +2258,7 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
 
   return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
+
 function renderEvaluationTable(row) {
   const rawExpectedSeasons = expectedEvaluationSeasons(row);
   const seasonOffset = state.evaluationIgnoreFirstSeason ? 1 : 0;
@@ -2349,6 +2356,7 @@ function renderEvaluationTable(row) {
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
     select.addEventListener("change", () => {
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
+            setEvaluationOverallValues(row, evaluationSummaryOverall(row, select.value, currentOverall));
       renderEvaluationTable(row);
     });
   });
