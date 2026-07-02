@@ -59,7 +59,6 @@ PLAYER_COLUMNS = [
 
 PROGRESSION_COLUMNS = [
     "player_id",
-    "player_seasons",
     "overall_prog_all",
     "pace_prog_all",
     "shooting_prog_all",
