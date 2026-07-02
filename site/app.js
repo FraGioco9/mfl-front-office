@@ -198,12 +198,14 @@ const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
 const FLOW_WALLET_MODULE_URLS = [
   "https://esm.sh/@onflow/fcl@1.21.11?bundle",
 ];
+const DAPPER_LOGIN_L6N = "https://www.mfledge.com";
+const DAPPER_AUTHN_ENDPOINT = "https://accounts.meetdapper.com/fcl/authn-restricted?l6n=" + encodeURIComponent(DAPPER_LOGIN_L6N);
 const DAPPER_AUTHN_SERVICE = {
   f_type: "Service",
   f_vsn: "1.0.0",
   type: "authn",
   uid: "dapper#authn",
-  endpoint: "https://accounts.meetdapper.com/fcl/authn",
+  endpoint: DAPPER_AUTHN_ENDPOINT,
   method: "HTTP/POST",
   provider: {
     name: "Dapper Wallet",
@@ -732,7 +734,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
 
   fcl.config({
     "accessNode.api": "https://rest-mainnet.onflow.org",
-    "discovery.wallet": "https://fcl-discovery.onflow.org/authn",
+    "discovery.wallet": DAPPER_AUTHN_ENDPOINT,
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${window.location.origin}/favicon.ico`,
   });
@@ -819,20 +821,15 @@ async function linkWallet() {
   try {
     const authenticatedUser = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
-    const flowAddress = walletAddressFromUser(user);
-    const initialMessage = flowAddress ? walletAccessMessage(flowAddress) : walletDiscoveryMessage();
-    const initialSignatures = await signWalletMessage(fcl, initialMessage);
-    const dapperAddress = signatureWalletAddress(initialSignatures) || flowAddress;
+    const dapperAddress = walletAddressFromUser(user);
 
     if (!dapperAddress) {
-      console.warn("Dapper authentication and signature did not include a wallet address.", { authenticatedUser, user, initialSignatures });
+      console.warn("Dapper restricted login did not include a wallet address.", { authenticatedUser, user });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
     const message = walletAccessMessage(dapperAddress);
-    const signatures = initialMessage === message
-      ? initialSignatures
-      : await signWalletMessage(fcl, message);
+    const signatures = await signWalletMessage(fcl, message);
 
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = { address: dapperAddress, message, signatures };
