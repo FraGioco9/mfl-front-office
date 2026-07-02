@@ -203,8 +203,8 @@ const FLOW_WALLET_MODULE_URLS = [
 ];
 const FLOW_DISCOVERY_WALLET = "https://fcl-discovery.onflow.org/authn";
 const FLOW_DISCOVERY_AUTHN_ENDPOINT = "https://fcl-discovery.onflow.org/api/authn";
-const DAPPER_AUTHN_INCLUDE = ["dapper-wallet"];
 const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress("0xead892083b3e2c6c");
+const DAPPER_AUTHN_INCLUDE = [DAPPER_PROVIDER_ADDRESS];
 const WALLET_ADDRESS_PATTERN = /0x[0-9a-f]{16,64}/gi;
 const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
@@ -721,7 +721,11 @@ async function authenticatedWalletUser(fcl, authenticatedUser) {
 function signatureWalletAddress(signatures) {
   const signature = Array.isArray(signatures) ? signatures.find((item) => item?.addr || item?.address) : null;
   const directAddress = normalizeWalletAddress(signature?.addr || signature?.address);
-  return directAddress || walletAddressCandidatesFromValue(signatures)[0] || "";
+  if (directAddress && directAddress !== DAPPER_PROVIDER_ADDRESS) {
+    return directAddress;
+  }
+
+  return walletAddressCandidatesFromValue(signatures)[0] || "";
 }
 function walletAccessMessage(address) {
   return `MFL Front Office Opt-In\nDapper Wallet: ${normalizeWalletAddress(address)}`;
@@ -811,8 +815,29 @@ async function ensureFlowWallet() {
   return state.flowWalletModulePromise;
 }
 
-async function dapperAuthnService() {
+function findDapperAuthnService(data) {
+  const services = Array.isArray(data) ? data : (data?.services || data?.authn || data?.results || []);
+  return services.find((service) => {
+    const providerAddress = normalizeWalletAddress(service?.provider?.address || service?.provider?.addr || service?.addr);
+    const searchable = JSON.stringify(service || {}).toLowerCase();
+    return service?.type === "authn"
+      && (providerAddress === DAPPER_PROVIDER_ADDRESS || searchable.includes("dapper"));
+  }) || null;
+}
+
+async function dapperAuthnService(fcl) {
   try {
+    if (fcl?.discovery?.authn?.update) {
+      await fcl.discovery.authn.update();
+    }
+
+    if (fcl?.discovery?.authn?.snapshot) {
+      const service = findDapperAuthnService(await fcl.discovery.authn.snapshot());
+      if (service) {
+        return service;
+      }
+    }
+
     const query = new URLSearchParams({
       include: DAPPER_AUTHN_INCLUDE.join(","),
       l6n: appOrigin(),
@@ -826,12 +851,7 @@ async function dapperAuthnService() {
       return null;
     }
 
-    const data = await response.json();
-    const services = Array.isArray(data) ? data : (data.services || data.authn || data.results || []);
-    return services.find((service) => {
-      const searchable = JSON.stringify(service || {}).toLowerCase();
-      return service?.type === "authn" && searchable.includes("dapper");
-    }) || null;
+    return findDapperAuthnService(await response.json());
   } catch (error) {
     console.warn("Could not load direct Dapper authn service.", error);
     return null;
@@ -839,7 +859,7 @@ async function dapperAuthnService() {
 }
 
 async function authenticateWithDapper(fcl) {
-  const service = await dapperAuthnService();
+  const service = await dapperAuthnService(fcl);
   if (service) {
     return fcl.authenticate({ service, forceReauth: true });
   }
@@ -899,7 +919,7 @@ async function linkWallet() {
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
     const discoverySignatures = await signWalletMessage(fcl, walletDiscoveryMessage());
-    const dapperAddress = signatureWalletAddress(discoverySignatures) || flowAddress;
+    const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
 
     if (!dapperAddress) {
       console.warn("Dapper opt-in and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
@@ -921,6 +941,7 @@ async function linkWallet() {
     await loadWalletPermissions();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
+    refreshWatchlistPageAfterWalletSync();
     updateAccountState();
     updateMenuVisibility();
     saveTableState();
@@ -1395,6 +1416,17 @@ function applyWalletWatchlistIds(ids) {
   }
 
   ids.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+}
+
+function refreshWatchlistPageAfterWalletSync() {
+  if (state.currentPage !== "watchlist") {
+    return;
+  }
+
+  state.view = normalizeViewForPage(state.view, "watchlist");
+  updateViewButtons();
+  buildHeader();
+  applyFilters();
 }
 
 async function loadWalletPreferences() {
