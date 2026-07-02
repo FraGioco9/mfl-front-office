@@ -898,8 +898,8 @@ async function linkWallet() {
     console.debug("Dapper opt-in user snapshot", await fcl.currentUser.snapshot());
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
-    const discoverySignatures = flowAddress ? [] : await signWalletMessage(fcl, walletDiscoveryMessage());
-    const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
+    const discoverySignatures = await signWalletMessage(fcl, walletDiscoveryMessage());
+    const dapperAddress = signatureWalletAddress(discoverySignatures) || flowAddress;
 
     if (!dapperAddress) {
       console.warn("Dapper opt-in and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
