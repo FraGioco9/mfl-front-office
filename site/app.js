@@ -210,6 +210,7 @@ const DAPPER_AUTHN_SERVICE = {
     address: "0xead892083b3e2c6c",
   },
 };
+const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
 const POSITION_GROUP_WEIGHTS = {
@@ -709,6 +710,32 @@ async function ensureFlowWallet() {
   return state.flowWalletModulePromise;
 }
 
+function walletLinkErrorMessage(error) {
+  const rawMessage = typeof error === "string"
+    ? error
+    : error?.message || error?.errorMessage || error?.body?.message || String(error || "");
+  const message = rawMessage.trim();
+  const lowerMessage = message.toLowerCase();
+
+  if (WALLET_CANCELLED_PATTERNS.some((pattern) => lowerMessage.includes(pattern))) {
+    return "Wallet link cancelled.";
+  }
+
+  if (lowerMessage.includes("popup") || lowerMessage.includes("window")) {
+    return "Dapper popup was blocked. Allow pop-ups, then try again.";
+  }
+
+  if (lowerMessage.includes("404") || lowerMessage.includes("not found")) {
+    return "Dapper login endpoint could not be reached.";
+  }
+
+  if (message) {
+    return `Dapper login failed: ${message.slice(0, 120)}`;
+  }
+
+  return "Dapper login failed. Try again in a moment.";
+}
+
 async function linkWallet() {
   closeAccountMenu();
 
@@ -759,9 +786,9 @@ async function linkWallet() {
     saveTableState();
     showToast("Wallet linked.");
   } catch (error) {
-    console.warn("Could not link wallet.", error);
+    console.warn("Could not link Dapper wallet.", error);
     updateAccountState();
-    showToast("Wallet link cancelled.");
+    showToast(walletLinkErrorMessage(error));
   }
 }
 
@@ -4456,6 +4483,7 @@ async function startApp() {
     await setPage("changelog", false);
   }
 
+  void ensureFlowWallet();
   await loadWalletPermissions();
   updateAccountState();
   await loadSummary();
