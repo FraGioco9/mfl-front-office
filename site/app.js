@@ -199,6 +199,8 @@ const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
+const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
+const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
@@ -520,7 +522,78 @@ function normalizeWalletAddress(address) {
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
 }
 
-async function loadWalletPermissions() {
+function walletPermissionCacheKey(address = state.linkedWalletAddress) {
+  const wallet = normalizeWalletAddress(address).toLowerCase();
+  return wallet ? `${WALLET_PERMISSION_CACHE_STORAGE_KEY}:${wallet}` : "";
+}
+
+function readWalletPermissionCache(address = state.linkedWalletAddress) {
+  const key = walletPermissionCacheKey(address);
+  if (!key) {
+    return null;
+  }
+
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || "null");
+    return cached && typeof cached === "object" ? cached : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeWalletPermissionCache({ allowed, version, updatedAt }) {
+  const key = walletPermissionCacheKey();
+  if (!key) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      allowed: Boolean(allowed),
+      version: String(version || ""),
+      updatedAt: String(updatedAt || ""),
+      checkedAt: Date.now(),
+    }));
+  } catch {
+    // Access still works for this page even if storage is blocked.
+  }
+}
+
+function clearWalletPermissionCache(address = state.linkedWalletAddress) {
+  const key = walletPermissionCacheKey(address);
+  if (!key) {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Nothing else to clear if storage is blocked.
+  }
+}
+
+async function loadWalletPermissionVersion() {
+  const response = await fetch("/api/wallet-permissions-version", { cache: "no-store" });
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = await response.json();
+  return {
+    version: String(data.version || ""),
+    updatedAt: String(data.updated_at || ""),
+  };
+}
+
+function applyCachedWalletPermission(cacheEntry, previousAllowed) {
+  state.walletPermissionAllowed = Boolean(cacheEntry?.allowed);
+  return {
+    allowed: state.walletPermissionAllowed,
+    changed: previousAllowed !== state.walletPermissionAllowed,
+  };
+}
+
+async function loadWalletPermissions(options = {}) {
   const previousAllowed = state.walletPermissionAllowed;
   state.walletPermissionAllowed = false;
 
@@ -529,6 +602,35 @@ async function loadWalletPermissions() {
       allowed: state.walletPermissionAllowed,
       changed: previousAllowed !== state.walletPermissionAllowed,
     };
+  }
+
+  const cached = readWalletPermissionCache();
+  const cacheAge = cached?.checkedAt ? Date.now() - Number(cached.checkedAt) : Infinity;
+  const cacheIsFresh = cacheAge >= 0 && cacheAge < WALLET_PERMISSION_CACHE_TTL_MS;
+
+  if (!options.force && cached && cacheIsFresh) {
+    return applyCachedWalletPermission(cached, previousAllowed);
+  }
+
+  let metadata = null;
+
+  try {
+    metadata = await loadWalletPermissionVersion();
+  } catch {
+    metadata = null;
+  }
+
+  const cacheMatchesVersion = metadata
+    ? cached?.version === metadata.version && cached?.updatedAt === metadata.updatedAt
+    : false;
+
+  if (!options.force && cached && cacheMatchesVersion) {
+    writeWalletPermissionCache({
+      allowed: cached.allowed,
+      version: cached.version,
+      updatedAt: cached.updatedAt,
+    });
+    return applyCachedWalletPermission(cached, previousAllowed);
   }
 
   try {
@@ -540,8 +642,19 @@ async function loadWalletPermissions() {
     if (response.ok) {
       const data = await response.json();
       state.walletPermissionAllowed = Boolean(data.allowed);
+      writeWalletPermissionCache({
+        allowed: state.walletPermissionAllowed,
+        version: metadata?.version || data.version || "",
+        updatedAt: metadata?.updatedAt || data.updated_at || "",
+      });
+    } else if (cached && cacheIsFresh) {
+      return applyCachedWalletPermission(cached, previousAllowed);
     }
   } catch {
+    if (cached && cacheIsFresh) {
+      return applyCachedWalletPermission(cached, previousAllowed);
+    }
+
     state.walletPermissionAllowed = false;
   }
 
@@ -550,7 +663,6 @@ async function loadWalletPermissions() {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-
 function currentDataAccess() {
   return hasProgressionAccess() ? "full" : "public";
 }
@@ -769,6 +881,7 @@ function optOutWallet() {
     localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_PROOF_STORAGE_KEY);
     localStorage.removeItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY);
+    clearWalletPermissionCache();
   } catch {
     // The page state is still cleared even if storage is blocked.
   }
@@ -1215,7 +1328,7 @@ async function linkWallet() {
       // The linked state still works for this page if storage is blocked.
     }
 
-    await loadWalletPermissions();
+    await loadWalletPermissions({ force: true });
     await loadWalletNames();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();

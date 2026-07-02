@@ -8,7 +8,10 @@
                                          },
                       "api/wallet-access.js":  {
                                                    "includeFiles":  "api/wallet-permissions.json"
-                                               }
+                                               },
+                      "api/wallet-permissions-version.js":  {
+                                                                "includeFiles":  "api/wallet-permissions.json"
+                                                            }
                   },
     "rewrites":  [
                      {

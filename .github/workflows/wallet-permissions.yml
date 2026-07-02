@@ -50,10 +50,11 @@ jobs:
 
           const current = fs.existsSync(path)
             ? JSON.parse(fs.readFileSync(path, 'utf8'))
-            : { wallets: [] };
+            : { version: 0, updated_at: '', wallets: [] };
           const wallets = new Set((Array.isArray(current.wallets) ? current.wallets : [])
             .map((value) => String(value).trim().toLowerCase())
             .filter(Boolean));
+          const before = JSON.stringify(Array.from(wallets).sort());
 
           if (action === 'add') {
             wallets.add(wallet);
@@ -63,7 +64,15 @@ jobs:
             throw new Error(`Unsupported action: ${action}`);
           }
 
-          fs.writeFileSync(path, `${JSON.stringify({ wallets: Array.from(wallets).sort() }, null, 2)}\n`);
+          const sortedWallets = Array.from(wallets).sort();
+          const changed = before !== JSON.stringify(sortedWallets);
+          const output = {
+            version: changed ? Number(current.version || 0) + 1 : Number(current.version || 0),
+            updated_at: changed ? new Date().toISOString() : String(current.updated_at || ''),
+            wallets: sortedWallets,
+          };
+
+          fs.writeFileSync(path, `${JSON.stringify(output, null, 2)}\n`);
           NODE
 
       - name: Commit wallet permissions
