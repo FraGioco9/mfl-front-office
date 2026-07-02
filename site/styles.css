@@ -1206,11 +1206,23 @@ button:disabled {
 
 .advancedPlayerTableScroller {
   position: relative;
-  overflow: visible;
+  overflow: clip;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   isolation: isolate;
+}
+
+.advancedPlayerTableScroller::before {
+  content: "";
+  position: sticky;
+  display: block;
+  top: 0;
+  z-index: 19;
+  height: 32px;
+  margin-bottom: -32px;
+  background: var(--surface);
+  pointer-events: none;
 }
 
 .advancedPlayerTable {
@@ -1240,19 +1252,6 @@ button:disabled {
   top: 0;
   z-index: 20;
   background: var(--header-bg);
-  isolation: isolate;
-}
-
-.advancedPlayerTable thead::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  z-index: 1;
-  height: 32px;
-  background: var(--surface);
-  pointer-events: none;
 }
 
 .advancedPlayerTable thead tr {
