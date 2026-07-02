@@ -1927,7 +1927,7 @@ function updateAdvancedPlayerTableClip() {
   const headerRect = advancedPlayerTableHead.getBoundingClientRect();
   const bodyRect = advancedPlayerTableBody.getBoundingClientRect();
   const clipTop = Math.max(0, Math.ceil(headerRect.bottom - bodyRect.top) + 1);
-  const clipValue = clipTop > 0 ? `inset(${clipTop}px 1px 0 1px)` : "";
+  const clipValue = clipTop > 0 ? `inset(${clipTop}px 2px 0 2px)` : "";
 
   advancedPlayerTableBody.style.clipPath = clipValue;
   advancedPlayerTableBody.style.webkitClipPath = clipValue;
