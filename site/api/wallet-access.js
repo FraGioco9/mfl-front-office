@@ -16,7 +16,7 @@ function signatureWalletAddresses(signatures) {
 }
 
 function walletAccessMessage(address) {
-  return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
+  return `MFL Front Office Opt-In\nDapper Wallet: ${normalizeWalletAddress(address)}`;
 }
 
 function stringToHex(value) {

@@ -37,6 +37,8 @@ const state = {
   walletPermissionAllowed: false,
   flowWalletModule: null,
   flowWalletModulePromise: null,
+  walletPreferencesSaveTimer: null,
+  walletPreferencesLoading: false,
 };
 
 const flagColumn = "nationality_flag";
@@ -192,6 +194,7 @@ const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
+const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
@@ -721,7 +724,7 @@ function signatureWalletAddress(signatures) {
   return directAddress || walletAddressCandidatesFromValue(signatures)[0] || "";
 }
 function walletAccessMessage(address) {
-  return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
+  return `MFL Front Office Opt-In\nDapper Wallet: ${normalizeWalletAddress(address)}`;
 }
 
 function walletDiscoveryMessage() {
@@ -767,6 +770,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
     "discovery.authn.endpoint": FLOW_DISCOVERY_AUTHN_ENDPOINT,
     "discovery.authn.include": DAPPER_AUTHN_INCLUDE,
     "discovery.wallet.method.default": "POP/RPC",
+    "discovery.authn.method": "POP/RPC",
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${appOrigin()}/favicon.ico`,
     "app.detail.url": appOrigin(),
@@ -805,6 +809,42 @@ async function ensureFlowWallet() {
   }
 
   return state.flowWalletModulePromise;
+}
+
+async function dapperAuthnService() {
+  try {
+    const query = new URLSearchParams({
+      include: DAPPER_AUTHN_INCLUDE.join(","),
+      l6n: appOrigin(),
+      appIdentifier: "MFL Front Office",
+      appDetailTitle: "MFL Front Office",
+      appDetailUrl: appOrigin(),
+      appDetailIcon: `${appOrigin()}/favicon.ico`,
+    });
+    const response = await fetch(`${FLOW_DISCOVERY_AUTHN_ENDPOINT}?${query.toString()}`, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const services = Array.isArray(data) ? data : (data.services || data.authn || data.results || []);
+    return services.find((service) => {
+      const searchable = JSON.stringify(service || {}).toLowerCase();
+      return service?.type === "authn" && searchable.includes("dapper");
+    }) || null;
+  } catch (error) {
+    console.warn("Could not load direct Dapper authn service.", error);
+    return null;
+  }
+}
+
+async function authenticateWithDapper(fcl) {
+  const service = await dapperAuthnService();
+  if (service) {
+    return fcl.authenticate({ service, forceReauth: true });
+  }
+
+  return fcl.authenticate({ forceReauth: true });
 }
 
 function walletLinkErrorMessage(error) {
@@ -854,7 +894,7 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const authenticatedUser = await fcl.authenticate({ forceReauth: true });
+    const authenticatedUser = await authenticateWithDapper(fcl);
     console.debug("Dapper opt-in user snapshot", await fcl.currentUser.snapshot());
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
@@ -879,11 +919,13 @@ async function linkWallet() {
     }
 
     await loadWalletPermissions();
+    await loadWalletPreferences();
+    mergeGuestWatchlistIntoAccount();
     updateAccountState();
     updateMenuVisibility();
     saveTableState();
     closeAccountMenu();
-    showToast("Dapper opt-in saved.");
+    showToast("Successful opt-in.");
   } catch (error) {
     console.warn("Could not link Dapper wallet.", error);
     updateAccountState();
@@ -1278,12 +1320,47 @@ function showWatchlistToast(prefix) {
   content.append(document.createTextNode("."));
   showToast(content);
 }
+function walletWatchlistStorageKey(address = state.linkedWalletAddress) {
+  const wallet = normalizeWalletAddress(address).toLowerCase();
+  return wallet ? `${WALLET_WATCHLIST_STORAGE_PREFIX}${wallet}` : "";
+}
+
 function saveGuestWatchlist() {
+  if (state.linkedWalletAddress && hasWalletProof()) {
+    return;
+  }
 
   try {
     localStorage.setItem(GUEST_WATCHLIST_STORAGE_KEY, JSON.stringify(Array.from(state.watchlistPlayerIds)));
   } catch {
     // Watchlist still works for this page even if the browser blocks storage.
+  }
+}
+
+function saveWalletWatchlistLocally() {
+  const key = walletWatchlistStorageKey();
+  if (!key) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(Array.from(state.watchlistPlayerIds)));
+  } catch {
+    // Wallet watchlist sync is best-effort when browser storage is blocked.
+  }
+}
+
+function loadLocalWalletWatchlist() {
+  const key = walletWatchlistStorageKey();
+  if (!key) {
+    return [];
+  }
+
+  try {
+    const ids = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(ids) ? ids.map((playerId) => String(playerId)) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -1304,8 +1381,65 @@ function mergeGuestWatchlistIntoAccount() {
   }
 
   guestIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
-  localStorage.removeItem(GUEST_WATCHLIST_STORAGE_KEY);
+  try {
+    localStorage.removeItem(GUEST_WATCHLIST_STORAGE_KEY);
+  } catch {
+    // Nothing else to do if guest storage is blocked.
+  }
   saveTableState();
+}
+
+function applyWalletWatchlistIds(ids) {
+  if (!Array.isArray(ids)) {
+    return;
+  }
+
+  ids.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+}
+
+async function loadWalletPreferences() {
+  if (!state.linkedWalletAddress || !hasWalletProof() || state.walletPreferencesLoading) {
+    return;
+  }
+
+  state.walletPreferencesLoading = true;
+  try {
+    applyWalletWatchlistIds(loadLocalWalletWatchlist());
+    const response = await fetch("/api/wallet-preferences", {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      applyWalletWatchlistIds(data.watchlistPlayerIds);
+    }
+  } catch {
+    // Local wallet watchlist is still available if cloud sync is unavailable.
+  } finally {
+    state.walletPreferencesLoading = false;
+  }
+}
+
+async function saveWalletPreferencesNow() {
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+
+  saveWalletWatchlistLocally();
+
+  try {
+    await fetch("/api/wallet-preferences", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...walletProofHeaders(true),
+      },
+      body: JSON.stringify({ watchlistPlayerIds: Array.from(state.watchlistPlayerIds) }),
+    });
+  } catch {
+    // Local wallet watchlist remains saved if cloud sync is unavailable.
+  }
 }
 
 function saveTableState() {
@@ -1365,7 +1499,14 @@ function currentTableState() {
 }
 
 function queueCloudTableStateSave() {
-  // Preferences stay local until wallet opt-in can sync them.
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+
+  window.clearTimeout(state.walletPreferencesSaveTimer);
+  state.walletPreferencesSaveTimer = window.setTimeout(() => {
+    void saveWalletPreferencesNow();
+  }, 500);
 }
 
 function restoreWatchlistState(savedState) {
@@ -4585,6 +4726,7 @@ async function startApp() {
 
   void ensureFlowWallet();
   await loadWalletPermissions();
+  await loadWalletPreferences();
   updateAccountState();
   await loadSummary();
   showAppShell();
