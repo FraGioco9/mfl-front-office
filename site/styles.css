@@ -749,15 +749,19 @@ body.filtersOpen .navButton:hover {
 }
 
 .homeOptInButton[hidden] {
-  display: none;
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .homeOptInIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .buttonGear {
