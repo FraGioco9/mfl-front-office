@@ -813,16 +813,8 @@ function signatureWalletAddress(signatures) {
 
   return walletAddressCandidatesFromValue(signatures)[0] || "";
 }
-function walletAccessMessage(address, signingAddress = "") {
-  const dapperAddress = normalizeWalletAddress(address);
-  const signerAddress = normalizeWalletAddress(signingAddress);
-  return signerAddress && signerAddress !== dapperAddress
-    ? `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}\nSigning Wallet: ${signerAddress}`
-    : `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}`;
-}
-
-function walletDiscoveryMessage() {
-  return "MFL Front Office Wallet Link";
+function walletAccessMessage() {
+  return "MFL Front Office Dapper Opt-In";
 }
 
 function stringToHex(value) {
@@ -1092,36 +1084,16 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const authenticatedUser = await authenticateWithDapper(fcl);
-    console.debug("Dapper opt-in user snapshot", await fcl.currentUser.snapshot());
-    const user = await authenticatedWalletUser(fcl, authenticatedUser);
-    const flowAddress = walletAddressFromUser(user);
-    const discoverySignatures = await signWalletMessage(fcl, walletDiscoveryMessage());
-    const firstSignedAddress = signatureWalletAddress(discoverySignatures);
-    let dapperAddress = firstSignedAddress || flowAddress;
+    const message = walletAccessMessage();
+    const signatures = await signWalletMessage(fcl, message);
+    const dapperAddress = signatureWalletAddress(signatures);
 
     if (!dapperAddress) {
-      console.warn("Dapper opt-in and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
-      throw new Error("Dapper connected, but did not return a wallet address.");
+      console.warn("Dapper opt-in signature did not include a wallet address.", { signatures });
+      throw new Error("Dapper did not return a wallet address.");
     }
 
-    let signingAddress = firstSignedAddress || dapperAddress;
-    let message = walletAccessMessage(dapperAddress, signingAddress);
-    let signatures = await signWalletMessage(fcl, message);
-    const finalSignedAddress = signatureWalletAddress(signatures);
-
-    if (finalSignedAddress && finalSignedAddress !== dapperAddress) {
-      dapperAddress = finalSignedAddress;
-      signingAddress = finalSignedAddress;
-      message = walletAccessMessage(dapperAddress, signingAddress);
-      signatures = await signWalletMessage(fcl, message);
-    }
-
-    const proofSignedAddress = signatureWalletAddress(signatures);
-    if (proofSignedAddress && proofSignedAddress !== dapperAddress) {
-      throw new Error("Dapper signed with a different wallet than the selected opt-in wallet.");
-    }
-
+    const signingAddress = dapperAddress;
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = { address: dapperAddress, signingAddress, message, signatures };
     try {

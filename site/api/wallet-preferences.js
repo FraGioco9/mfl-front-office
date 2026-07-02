@@ -13,12 +13,8 @@ function signatureWalletAddresses(signatures) {
     .filter(Boolean));
 }
 
-function walletAccessMessage(address, signingAddress = "") {
-  const dapperAddress = normalizeWalletAddress(address);
-  const signerAddress = normalizeWalletAddress(signingAddress);
-  return signerAddress && signerAddress !== dapperAddress
-    ? `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}\nSigning Wallet: ${signerAddress}`
-    : `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}`;
+function walletAccessMessage() {
+  return "MFL Front Office Dapper Opt-In";
 }
 
 function stringToHex(value) {
