@@ -493,6 +493,9 @@ function showLoading() {
   updateLoadingProgress(0, 0);
 }
 
+function appOrigin() {
+  return window.location.origin;
+}
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim();
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
@@ -736,7 +739,9 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
     "discovery.wallet": DAPPER_AUTHN_ENDPOINT,
     "discovery.wallet.method.default": "POP/RPC",
     "app.detail.title": "MFL Front Office",
-    "app.detail.icon": `${window.location.origin}/favicon.ico`,
+    "app.detail.icon": `${appOrigin()}/favicon.ico`,
+    "app.detail.url": appOrigin(),
+    "app.detail.description": "MFL Front Office player database and club management tools",
   });
   state.flowWalletModule = fcl;
   return fcl;
