@@ -1932,7 +1932,6 @@ function openAdvancedSettings() {
   renderAdvancedPlayerTable();
   syncAdvancedSettingsValues();
   advancedSettingsModal.hidden = false;
-  window.setTimeout(() => advancedMflUsdInput.focus(), 0);
 }
 
 function closeAdvancedSettings() {
@@ -2261,7 +2260,7 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
     return escapeHtml(selectedPosition || "");
   }
 
-  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position ondblclick="return false;">${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
+  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
 
 function renderEvaluationTable(row) {
@@ -2359,6 +2358,17 @@ function renderEvaluationTable(row) {
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
+    select.addEventListener("mousedown", (event) => {
+      if (event.detail > 1) {
+        event.preventDefault();
+        window.getSelection()?.removeAllRanges();
+      }
+    });
+    select.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      select.blur();
+      window.getSelection()?.removeAllRanges();
+    });
     select.addEventListener("change", () => {
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
       setEvaluationOverallValues(row, evaluationSummaryOverall(row, select.value, currentOverall));

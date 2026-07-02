@@ -1227,6 +1227,17 @@ button:disabled {
   white-space: nowrap;
 }
 
+.advancedPlayerTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable thead tr {
+  background: var(--header-bg);
+}
+
 .advancedPlayerTable th {
   position: sticky;
   top: 0;
@@ -1235,6 +1246,7 @@ button:disabled {
   color: var(--text);
   font-size: 12px;
   text-transform: uppercase;
+  box-shadow: 0 -48px 0 48px var(--surface);
 }
 
 .advancedPlayerTable th:first-child,
@@ -1249,12 +1261,18 @@ button:disabled {
   font-weight: 800;
   text-align: center;
   border-bottom-color: transparent;
+  box-shadow: none;
 }
 
 .advancedPlayerTable th:first-child {
-  z-index: 3;
+  z-index: 5;
   background: var(--header-bg);
   border-bottom-color: var(--border);
+  box-shadow: 0 -48px 0 48px var(--surface);
+}
+
+.advancedPlayerTable tbody tr:hover {
+  background: transparent;
 }
 
 .advancedPlayerTable tbody tr:hover td {
@@ -1266,7 +1284,7 @@ button:disabled {
 }
 
 .advancedPlayerTable tbody td:hover {
-  background: var(--button-hover-bg);
+  background: var(--button-hover-bg) !important;
 }
 
 .advancedPlayerTable tbody td:first-child:hover {
@@ -2987,6 +3005,11 @@ td a {
   vertical-align: baseline;
   appearance: auto;
   user-select: none;
+}
+
+.evaluationSummaryPositionSelect:focus {
+  outline: none;
+  box-shadow: none;
 }
 .evaluationSummaryPositionSelect option {
   background: var(--surface);
