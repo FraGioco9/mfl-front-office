@@ -39,6 +39,7 @@ const state = {
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
   walletPreferencesLoading: false,
+  walletOptInInProgress: false,
   walletRows: [],
   walletNamesLoaded: false,
   walletNamesLoadPromise: null,
@@ -550,25 +551,6 @@ async function loadWalletPermissions() {
   };
 }
 
-async function refreshWalletAccessForPage(pageName) {
-  const beforeAccess = state.dataAccess;
-  const { changed } = await loadWalletPermissions();
-  const afterAccess = currentDataAccess();
-
-  if (!changed && beforeAccess === afterAccess) {
-    return false;
-  }
-
-  updateAccountState();
-  updateMenuVisibility();
-
-  if (state.dataLoaded && beforeAccess !== afterAccess && pageRequiresData(pageName)) {
-    state.dataLoaded = false;
-    state.dataLoadPromise = null;
-  }
-
-  return true;
-}
 function currentDataAccess() {
   return hasProgressionAccess() ? "full" : "public";
 }
@@ -1136,6 +1118,12 @@ async function authenticateWithDapper(fcl) {
   return { user, accountProof };
 }
 
+function finishWalletOptIn() {
+  state.walletOptInInProgress = false;
+  document.body.classList.remove("walletOptingIn");
+  updateAccountState();
+}
+
 function walletLinkErrorMessage(error) {
   const rawMessage = typeof error === "string"
     ? error
@@ -1165,17 +1153,24 @@ function walletLinkErrorMessage(error) {
 async function linkWallet() {
   closeAccountMenu();
 
+  if (state.walletOptInInProgress) {
+    return;
+  }
+
   if (state.linkedWalletAddress && hasWalletProof()) {
     optOutWallet();
     return;
   }
 
+  state.walletOptInInProgress = true;
+  document.body.classList.add("walletOptingIn");
+  showToast("Opting in...", { sticky: true });
   linkWalletButton.disabled = true;
   linkWalletButton.textContent = "Loading...";
 
   const fcl = await ensureFlowWallet();
   if (!fcl) {
-    updateAccountState();
+    finishWalletOptIn();
     showToast("Dapper opt-in could not load. Try again in a moment.");
     return;
   }
@@ -1237,6 +1232,8 @@ async function linkWallet() {
     console.warn("Could not link Dapper wallet.", error);
     updateAccountState();
     showToast(walletLinkErrorMessage(error));
+  } finally {
+    finishWalletOptIn();
   }
 }
 
@@ -1377,9 +1374,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const shouldResetScroll = previousPage !== pageName;
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
-
-  await refreshWalletAccessForPage(pageName);
-
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
   }
@@ -1593,7 +1587,7 @@ function hideToast() {
   toast.classList.remove("visible");
 }
 
-function showToast(message) {
+function showToast(message, options = {}) {
   let toast = document.querySelector("#toastMessage");
 
   if (!toast) {
@@ -1614,7 +1608,11 @@ function showToast(message) {
     toast.textContent = message;
   }
   toast.classList.add("visible");
-  scheduleToastHide(toast);
+  if (options.sticky) {
+    window.clearTimeout(state.toastTimer);
+  } else {
+    scheduleToastHide(toast);
+  }
 }
 
 function showWatchlistToast(prefix) {

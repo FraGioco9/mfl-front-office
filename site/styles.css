@@ -71,6 +71,14 @@ body.booting .siteFooter {
   visibility: hidden;
 }
 
+body.walletOptingIn::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  background: transparent;
+  cursor: wait;
+}
 .loadingScreen {
   position: fixed;
   inset: 0;
