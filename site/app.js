@@ -509,7 +509,7 @@ function walletProofHeaders() {
   }
 
   return {
-    "x-wallet-address": state.linkedWalletAddress,
+    "x-dapper-wallet-address": state.linkedWalletAddress,
     "x-wallet-message": state.linkedWalletProof.message,
     "x-wallet-signatures": JSON.stringify(state.linkedWalletProof.signatures),
   };
@@ -591,14 +591,18 @@ function accountName() {
 }
 
 function updateAccountState() {
-  const walletLinked = Boolean(state.linkedWalletAddress);
+  const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
   linkWalletButton.textContent = walletLinked ? "Linked" : "Link Wallet";
   linkWalletButton.disabled = walletLinked;
   linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
 }
+function signatureWalletAddress(signatures) {
+  const signature = Array.isArray(signatures) ? signatures.find((item) => item?.addr || item?.address) : null;
+  return normalizeWalletAddress(signature?.addr || signature?.address);
+}
 function walletAccessMessage(address) {
-  return `MFL Front Office Progression Access\nWallet: ${normalizeWalletAddress(address)}`;
+  return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
 }
 
 function stringToHex(value) {
@@ -638,7 +642,7 @@ function configureFlowWallet() {
 async function linkWallet() {
   closeAccountMenu();
 
-  if (state.linkedWalletAddress) {
+  if (state.linkedWalletAddress && hasWalletProof()) {
     return;
   }
 
@@ -652,15 +656,25 @@ async function linkWallet() {
 
   try {
     const user = await window.fcl.authenticate();
-    const address = normalizeWalletAddress(user?.addr);
+    const flowAddress = normalizeWalletAddress(user?.addr);
 
-    if (!address) {
+    if (!flowAddress) {
       throw new Error("No wallet address returned.");
     }
 
-    state.linkedWalletAddress = address;
+    const initialMessage = walletAccessMessage(flowAddress);
+    const initialSignatures = await window.fcl.currentUser.signUserMessage(stringToHex(initialMessage));
+    const dapperAddress = signatureWalletAddress(initialSignatures) || flowAddress;
+    const message = walletAccessMessage(dapperAddress);
+    const signatures = dapperAddress === flowAddress
+      ? initialSignatures
+      : await window.fcl.currentUser.signUserMessage(stringToHex(message));
+
+    state.linkedWalletAddress = dapperAddress;
+    state.linkedWalletProof = { address: dapperAddress, message, signatures };
     try {
-      localStorage.setItem(LINKED_WALLET_STORAGE_KEY, address);
+      localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
+      localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
     } catch {
       // The linked state still works for this page if storage is blocked.
     }

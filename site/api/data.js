@@ -41,8 +41,13 @@ function normalizeWalletAddress(address) {
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
 }
 
+function signatureWalletAddresses(signatures) {
+  return new Set((Array.isArray(signatures) ? signatures : [])
+    .map((signature) => normalizeWalletAddress(signature?.addr || signature?.address))
+    .filter(Boolean));
+}
 function walletAccessMessage(address) {
-  return `MFL Front Office Progression Access\nWallet: ${normalizeWalletAddress(address)}`;
+  return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
 }
 
 function stringToHex(value) {
@@ -92,7 +97,7 @@ async function allowedWallets() {
 }
 
 async function verifyWalletProof(request) {
-  const wallet = normalizeWalletAddress(request.headers["x-wallet-address"]);
+  const wallet = normalizeWalletAddress(request.headers["x-dapper-wallet-address"]);
   const message = String(request.headers["x-wallet-message"] || "");
   let signatures = [];
 
@@ -106,6 +111,10 @@ async function verifyWalletProof(request) {
     return false;
   }
 
+  if (!signatureWalletAddresses(signatures).has(wallet)) {
+    return false;
+  }
+
   const whitelist = await allowedWallets();
   if (!whitelist.has(wallet)) {
     return false;
@@ -114,7 +123,7 @@ async function verifyWalletProof(request) {
   try {
     return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
   } catch (error) {
-    console.warn("Could not verify Flow wallet signature.", error);
+    console.warn("Could not verify Dapper wallet signature.", error);
     return false;
   }
 }

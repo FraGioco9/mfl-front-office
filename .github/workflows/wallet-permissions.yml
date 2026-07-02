@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Add or remove progression access for this wallet."
+        description: "Add or remove progression access for this Dapper wallet."
         required: true
         type: choice
         options:
@@ -12,7 +12,7 @@ on:
           - remove
         default: add
       wallet:
-        description: "Flow wallet address, for example 0x1234abcd."
+        description: "Dapper wallet address, for example 0x1234abcd."
         required: true
         default: ""
 
@@ -45,7 +45,7 @@ jobs:
           const wallet = walletInput.startsWith('0x') ? walletInput : `0x${walletInput}`;
 
           if (!/^0x[0-9a-f]+$/.test(wallet)) {
-            throw new Error(`Invalid Flow wallet address: ${process.env.WALLET}`);
+            throw new Error(`Invalid Dapper wallet address: ${process.env.WALLET}`);
           }
 
           const current = fs.existsSync(path)

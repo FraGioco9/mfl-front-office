@@ -1,10 +1,7 @@
 {
     "functions":  {
                       "api/data.js":  {
-                                          "includeFiles":  [
-                                                               "api/data-files/**",
-                                                               "wallet-permissions.json"
-                                                           ]
+                                          "includeFiles":  "{api/data-files/**,wallet-permissions.json}"
                                       },
                       "api/summary.js":  {
                                              "includeFiles":  "api/data-files/manifest.json"
