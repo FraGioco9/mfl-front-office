@@ -4,8 +4,11 @@ const path = require("node:path");
 async function findManifestFile() {
   const candidates = [
     path.join(__dirname, "data-files", "manifest.json"),
+    path.join(__dirname, "..", "data", "manifest.json"),
     path.join(process.cwd(), "api", "data-files", "manifest.json"),
+    path.join(process.cwd(), "data", "manifest.json"),
     path.join(process.cwd(), "site", "api", "data-files", "manifest.json"),
+    path.join(process.cwd(), "site", "data", "manifest.json"),
   ];
 
   for (const candidate of candidates) {

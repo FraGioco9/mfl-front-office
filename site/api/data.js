@@ -70,7 +70,9 @@ async function findFile(candidates) {
 async function findDataFile(fileName) {
   return findFile([
     path.join(__dirname, "data-files", fileName),
+    path.join(__dirname, "..", "data", fileName),
     path.join(process.cwd(), "api", "data-files", fileName),
+    path.join(process.cwd(), "data", fileName),
     path.join(process.cwd(), "site", "api", "data-files", fileName),
     path.join(process.cwd(), "site", "data", fileName),
   ]);
