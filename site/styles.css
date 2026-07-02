@@ -1217,9 +1217,9 @@ button:disabled {
 
 .advancedPlayerTable th,
 .advancedPlayerTable td {
-  width: 42px;
-  min-width: 42px;
-  max-width: 42px;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
   height: 32px;
   padding: 4px 5px;
   border-bottom: 1px solid var(--border);
@@ -1248,10 +1248,28 @@ button:disabled {
   background: var(--header-bg);
   font-weight: 800;
   text-align: center;
+  border-bottom-color: transparent;
 }
 
 .advancedPlayerTable th:first-child {
   z-index: 3;
+  background: var(--header-bg);
+  border-bottom-color: var(--border);
+}
+
+.advancedPlayerTable tbody tr:hover td {
+  background: transparent;
+}
+
+.advancedPlayerTable tbody tr:hover td:first-child {
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable tbody td:hover {
+  background: var(--button-hover-bg);
+}
+
+.advancedPlayerTable tbody td:first-child:hover {
   background: var(--header-bg);
 }
 
@@ -2955,17 +2973,30 @@ td a {
 }
 
 .evaluationSummaryPositionSelect {
+  display: inline-block;
   width: auto;
   min-width: 0;
   height: auto;
-  padding: 0 16px 0 0;
+  margin: 0;
+  padding: 0 14px 0 0;
   border: 0;
   background-color: transparent;
   color: inherit;
   font: inherit;
-  font-weight: 700;
+  line-height: inherit;
+  vertical-align: baseline;
   appearance: auto;
+  user-select: none;
 }
+.evaluationSummaryPositionSelect option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.evaluationSummaryTable td:nth-child(2) {
+  user-select: none;
+}
+
 .evaluationOverallControl {
   display: grid;
   grid-template-columns: 24px 28px 24px;

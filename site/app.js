@@ -2235,8 +2235,13 @@ function evaluationSummaryOverall(row, position, currentOverall) {
   const positions = playerPositions(row);
   const primary = positions[0];
 
-  if (!position || position === primary) {
+  if (!position) {
     return currentOverall;
+  }
+
+  if (position === primary) {
+    const primaryOverall = Number(getValue(row, "overall"));
+    return Number.isFinite(primaryOverall) ? primaryOverall : currentOverall;
   }
 
   const rating = positionRating(row, position, familiarityForPosition(row, position));
@@ -2256,7 +2261,7 @@ function evaluationSummaryPositionControl(row, selectedPosition) {
     return escapeHtml(selectedPosition || "");
   }
 
-  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
+  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position ondblclick="return false;">${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
 }
 
 function renderEvaluationTable(row) {
@@ -2356,7 +2361,7 @@ function renderEvaluationTable(row) {
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
     select.addEventListener("change", () => {
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
-            setEvaluationOverallValues(row, evaluationSummaryOverall(row, select.value, currentOverall));
+      setEvaluationOverallValues(row, evaluationSummaryOverall(row, select.value, currentOverall));
       renderEvaluationTable(row);
     });
   });
