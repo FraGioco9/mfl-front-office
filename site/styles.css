@@ -1132,7 +1132,7 @@ button:disabled {
 
 .advancedMflUsdControl {
   display: grid;
-  grid-template-columns: 112px 18px;
+  grid-template-columns: 18px 112px;
   gap: 4px;
   align-items: center;
 }
@@ -1193,6 +1193,8 @@ button:disabled {
   font-size: 22px;
   font-weight: 800;
   text-align: right;
+  height: 42px;
+  box-sizing: border-box;
 }
 
 .advancedPlayerTableSection {
@@ -1244,7 +1246,9 @@ button:disabled {
 .advancedPlayerTable th:first-child {
   z-index: 3;
   background: var(--header-bg);
-}.filterBuilder {
+}
+
+.filterBuilder {
   display: flex;
   flex-direction: column;
   gap: 10px;

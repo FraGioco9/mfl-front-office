@@ -1887,9 +1887,7 @@ function renderAdvancedPlayerTable() {
   }
 
   const rows = advancedPlayerTableTsv.trim().split("\n").map((line) => line.split("\t"));
-  const sourceHeaders = rows.shift();
-  const ovrValues = rows.map((row) => row[0]);
-  const positions = sourceHeaders.slice(1);
+  const headers = rows.shift();
   const headerRow = document.createElement("tr");
   const bodyFragment = document.createDocumentFragment();
   const emptyHeader = document.createElement("th");
@@ -1897,24 +1895,20 @@ function renderAdvancedPlayerTable() {
   emptyHeader.textContent = "";
   headerRow.appendChild(emptyHeader);
 
-  ovrValues.forEach((ovr) => {
+  headers.slice(1).forEach((header) => {
     const cell = document.createElement("th");
-    cell.textContent = ovr;
+    cell.textContent = header;
     headerRow.appendChild(cell);
   });
 
   advancedPlayerTableHead.replaceChildren(headerRow);
 
-  positions.forEach((position, positionIndex) => {
+  rows.forEach((row) => {
     const tableRow = document.createElement("tr");
-    const positionCell = document.createElement("td");
 
-    positionCell.textContent = position;
-    tableRow.appendChild(positionCell);
-
-    rows.forEach((row) => {
+    row.forEach((value, index) => {
       const cell = document.createElement("td");
-      cell.textContent = formatAdvancedPlayerTableValue(row[positionIndex + 1]);
+      cell.textContent = index === 0 ? value : formatAdvancedPlayerTableValue(value);
       tableRow.appendChild(cell);
     });
 
@@ -2266,6 +2260,8 @@ function renderEvaluationTable(row) {
   const currentAge = Number(getValue(row, "age"));
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
   const currentOverall = overallValues[seasonOffset] ?? overallValues[0];
+  const summaryPosition = evaluationSummaryPosition(row);
+  const summaryOverall = evaluationSummaryOverall(row, summaryPosition, currentOverall);
   const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();
   const fragment = document.createDocumentFragment();
   const mflValues = [];
