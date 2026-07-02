@@ -1,11 +1,14 @@
 {
     "functions":  {
                       "api/data.js":  {
-                                          "includeFiles":  "{api/data-files/**,wallet-permissions.json}"
+                                          "includeFiles":  "{api/data-files/**,api/wallet-permissions.json}"
                                       },
                       "api/summary.js":  {
                                              "includeFiles":  "api/data-files/manifest.json"
-                                         }
+                                         },
+                      "api/wallet-access.js":  {
+                                                   "includeFiles":  "api/wallet-permissions.json"
+                                               }
                   },
     "rewrites":  [
                      {

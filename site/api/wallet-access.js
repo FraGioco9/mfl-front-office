@@ -4,38 +4,6 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json)$/;
-const PUBLIC_DATABASE_COLUMNS = [
-  "player_id",
-  "wallet_address",
-  "wallet_name",
-  "name",
-  "positions",
-  "age",
-  "nationality",
-  "preferred_foot",
-  "height",
-  "retirement_years",
-  "overall",
-  "pace",
-  "shooting",
-  "passing",
-  "dribbling",
-  "defense",
-  "physical",
-  "goalkeeping",
-  "player_seasons",
-  "next_overall",
-  "next_overall_gap",
-  "pace_to_next_overall",
-  "shooting_to_next_overall",
-  "passing_to_next_overall",
-  "dribbling_to_next_overall",
-  "defense_to_next_overall",
-  "physical_to_next_overall",
-  "goalkeeping_to_next_overall",
-];
-
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
@@ -46,6 +14,7 @@ function signatureWalletAddresses(signatures) {
     .map((signature) => normalizeWalletAddress(signature?.addr || signature?.address))
     .filter(Boolean));
 }
+
 function walletAccessMessage(address) {
   return `MFL Front Office Progression Access\nDapper Wallet: ${normalizeWalletAddress(address)}`;
 }
@@ -65,15 +34,6 @@ async function findFile(candidates) {
   }
 
   return null;
-}
-
-async function findDataFile(fileName) {
-  return findFile([
-    path.join(__dirname, "data-files", fileName),
-    path.join(process.cwd(), "api", "data-files", fileName),
-    path.join(process.cwd(), "site", "api", "data-files", fileName),
-    path.join(process.cwd(), "site", "data", fileName),
-  ]);
 }
 
 async function allowedWallets() {
@@ -131,52 +91,10 @@ async function verifyWalletProof(request) {
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
-  const publicDatabase = request.query.access === "public-database" || !(await verifyWalletProof(request));
-  const fileName = String(request.query.file || "");
-
-  if (!DATA_FILE_PATTERN.test(fileName)) {
-    response.status(400).json({ error: "Invalid data file." });
+  if (request.method !== "GET") {
+    response.status(405).json({ allowed: false });
     return;
   }
 
-  const filePath = await findDataFile(fileName);
-
-  if (!filePath) {
-    response.status(404).json({ error: `Data file not found: ${fileName}` });
-    return;
-  }
-
-  try {
-    const fileContent = await fs.readFile(filePath, "utf8");
-    response.setHeader("Content-Type", "application/json; charset=utf-8");
-
-    const data = JSON.parse(fileContent);
-    const requestedColumns = String(request.query.columns || "")
-      .split(",")
-      .map((column) => column.trim())
-      .filter(Boolean);
-    const selectedColumns = publicDatabase
-      ? PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column))
-      : (requestedColumns.length
-        ? requestedColumns.filter((column) => data.columns.includes(column))
-        : data.columns);
-    const selectedColumnIndexes = selectedColumns.map((column) => data.columns.indexOf(column));
-
-    if (fileName === "manifest.json") {
-      response.status(200).json({
-        ...data,
-        columns: selectedColumns,
-        publicAccess: publicDatabase ? "database" : undefined,
-        partialAccess: !publicDatabase && requestedColumns.length ? "columns" : undefined,
-      });
-      return;
-    }
-
-    response.status(200).json({
-      columns: selectedColumns,
-      rows: data.rows.map((row) => selectedColumnIndexes.map((index) => row[index])),
-    });
-  } catch (error) {
-    response.status(500).json({ error: `Could not read data file: ${error.message}` });
-  }
+  response.status(200).json({ allowed: await verifyWalletProof(request) });
 };

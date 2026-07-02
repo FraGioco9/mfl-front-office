@@ -34,7 +34,7 @@ const state = {
   evaluationSummaryPositions: {},
   linkedWalletAddress: "",
   linkedWalletProof: null,
-  whitelistedWallets: new Set(),
+  walletPermissionAllowed: false,
   flowWalletModule: null,
   flowWalletModulePromise: null,
 };
@@ -198,6 +198,18 @@ const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
 const FLOW_WALLET_MODULE_URLS = [
   "https://esm.sh/@onflow/fcl@1.21.11?bundle",
 ];
+const DAPPER_AUTHN_SERVICE = {
+  f_type: "Service",
+  f_vsn: "1.0.0",
+  type: "authn",
+  uid: "dapper#authn",
+  endpoint: "https://accounts.meetdapper.com/fcl/authn",
+  method: "HTTP/POST",
+  provider: {
+    name: "Dapper Wallet",
+    address: "0xead892083b3e2c6c",
+  },
+};
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
 const POSITION_GROUP_WEIGHTS = {
@@ -401,7 +413,7 @@ function hasWalletProof() {
 }
 
 function hasProgressionAccess() {
-  return Boolean(state.linkedWalletAddress && hasWalletProof() && state.whitelistedWallets.has(state.linkedWalletAddress.toLowerCase()));
+  return Boolean(state.linkedWalletAddress && hasWalletProof() && state.walletPermissionAllowed);
 }
 
 function progressionAccessMessage() {
@@ -483,21 +495,28 @@ function normalizeWalletAddress(address) {
 }
 
 async function loadWalletPermissions() {
+  state.walletPermissionAllowed = false;
+
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+
   try {
-    const response = await fetch("/wallet-permissions.json", { cache: "no-store" });
+    const response = await fetch("/api/wallet-access", {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+
     if (!response.ok) {
-      state.whitelistedWallets = new Set();
       return;
     }
 
     const data = await response.json();
-    const wallets = Array.isArray(data.wallets) ? data.wallets : [];
-    state.whitelistedWallets = new Set(wallets.map((wallet) => normalizeWalletAddress(wallet).toLowerCase()).filter(Boolean));
+    state.walletPermissionAllowed = Boolean(data.allowed);
   } catch {
-    state.whitelistedWallets = new Set();
+    state.walletPermissionAllowed = false;
   }
 }
-
 function currentDataAccess() {
   return hasProgressionAccess() ? "full" : "public";
 }
@@ -514,8 +533,8 @@ function dataFileUrl(fileName, options = {}) {
   return `/api/data?${query.toString()}`;
 }
 
-function walletProofHeaders() {
-  if (!hasProgressionAccess()) {
+function walletProofHeaders(force = false) {
+  if ((!force && !hasProgressionAccess()) || !hasWalletProof()) {
     return {};
   }
 
@@ -710,7 +729,7 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const user = await fcl.authenticate();
+    const user = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
     const flowAddress = normalizeWalletAddress(user?.addr);
 
     if (!flowAddress) {
@@ -734,7 +753,9 @@ async function linkWallet() {
       // The linked state still works for this page if storage is blocked.
     }
 
+    await loadWalletPermissions();
     updateAccountState();
+    updateMenuVisibility();
     saveTableState();
     showToast("Wallet linked.");
   } catch (error) {

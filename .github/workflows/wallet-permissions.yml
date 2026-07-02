@@ -39,7 +39,7 @@ jobs:
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const path = 'site/wallet-permissions.json';
+          const path = 'site/api/wallet-permissions.json';
           const action = process.env.ACTION;
           const walletInput = String(process.env.WALLET || '').trim().toLowerCase();
           const wallet = walletInput.startsWith('0x') ? walletInput : `0x${walletInput}`;
@@ -71,7 +71,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add site/wallet-permissions.json
+          git add site/api/wallet-permissions.json
           if git diff --cached --quiet; then
             echo "No wallet permission changes to commit."
           else
