@@ -1206,11 +1206,27 @@ button:disabled {
 
 .advancedPlayerTableScroller {
   position: relative;
-  overflow: clip;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   isolation: isolate;
+}
+
+.advancedPlayerTableScroller::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  z-index: 19;
+  display: block;
+  width: calc(100% + 2px);
+  height: 32px;
+  margin-left: -1px;
+  margin-bottom: -32px;
+  background:
+    linear-gradient(var(--surface), var(--surface)) left top / 10px 32px no-repeat,
+    linear-gradient(var(--surface), var(--surface)) right top / 10px 32px no-repeat;
+  pointer-events: none;
 }
 
 .advancedPlayerTable {
@@ -1280,10 +1296,6 @@ button:disabled {
   z-index: 8;
   border-bottom-color: var(--border);
   box-shadow: inset 0 -1px 0 var(--border);
-}
-
-.advancedPlayerTable tbody {
-  will-change: clip-path;
 }
 
 .evaluationSummaryTable tbody tr:hover,

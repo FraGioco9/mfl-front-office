@@ -316,7 +316,6 @@ const evaluationMflUsdEditButton = document.querySelector("#evaluationMflUsdEdit
 const evaluationMflUsdResetButton = document.querySelector("#evaluationMflUsdResetButton");
 const advancedSettingsButton = document.querySelector(".advancedSettingsButton");
 const advancedSettingsModal = document.querySelector("#advancedSettingsModal");
-const advancedSettingsBody = document.querySelector(".advancedSettingsBody");
 const closeAdvancedSettingsButton = document.querySelector("#closeAdvancedSettingsButton");
 const advancedMflUsdInput = document.querySelector("#advancedMflUsdInput");
 const advancedMflUsdIncreaseButton = document.querySelector("#advancedMflUsdIncreaseButton");
@@ -1917,20 +1916,6 @@ function renderAdvancedPlayerTable() {
   });
 
   advancedPlayerTableBody.replaceChildren(bodyFragment);
-  window.requestAnimationFrame(updateAdvancedPlayerTableClip);
-}
-function updateAdvancedPlayerTableClip() {
-  if (!advancedPlayerTableHead || !advancedPlayerTableBody || !advancedSettingsBody || advancedSettingsModal.hidden) {
-    return;
-  }
-
-  const headerRect = advancedPlayerTableHead.getBoundingClientRect();
-  const bodyRect = advancedPlayerTableBody.getBoundingClientRect();
-  const clipTop = Math.max(0, Math.ceil(headerRect.bottom - bodyRect.top) + 1);
-  const clipValue = clipTop > 0 ? `inset(${clipTop}px 5px 0 5px)` : "";
-
-  advancedPlayerTableBody.style.clipPath = clipValue;
-  advancedPlayerTableBody.style.webkitClipPath = clipValue;
 }
 function syncAdvancedSettingsValues() {
   advancedMflUsdInput.value = state.evaluationMflPerUsd.toFixed(2);
@@ -1947,13 +1932,10 @@ function openAdvancedSettings() {
   renderAdvancedPlayerTable();
   syncAdvancedSettingsValues();
   advancedSettingsModal.hidden = false;
-  window.requestAnimationFrame(updateAdvancedPlayerTableClip);
 }
 
 function closeAdvancedSettings() {
   advancedSettingsModal.hidden = true;
-  advancedPlayerTableBody.style.clipPath = "";
-  advancedPlayerTableBody.style.webkitClipPath = "";
 }
 
 function applyAdvancedSettings() {
@@ -4333,8 +4315,6 @@ openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
-advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });
-window.addEventListener("resize", updateAdvancedPlayerTableClip);
 advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
 advancedMflUsdIncreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
 advancedMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
