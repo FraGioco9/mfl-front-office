@@ -35,6 +35,7 @@ const state = {
   linkedWalletAddress: "",
   linkedWalletProof: null,
   whitelistedWallets: new Set(),
+  flowWalletScriptPromise: null,
 };
 
 const flagColumn = "nationality_flag";
@@ -193,6 +194,10 @@ const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
+const FLOW_WALLET_SCRIPT_URLS = [
+  "https://cdn.jsdelivr.net/npm/@onflow/fcl/dist/fcl.min.js",
+  "https://unpkg.com/@onflow/fcl/dist/fcl.min.js",
+];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
 const POSITION_GROUP_WEIGHTS = {
@@ -386,7 +391,13 @@ function revealAppShell() {
 }
 
 function hasWalletProof() {
-  return Boolean(state.linkedWalletProof?.message && Array.isArray(state.linkedWalletProof?.signatures) && state.linkedWalletProof.signatures.length);
+  return Boolean(
+    state.linkedWalletAddress
+    && state.linkedWalletProof?.address === state.linkedWalletAddress
+    && state.linkedWalletProof?.message === walletAccessMessage(state.linkedWalletAddress)
+    && Array.isArray(state.linkedWalletProof?.signatures)
+    && state.linkedWalletProof.signatures.length
+  );
 }
 
 function hasProgressionAccess() {
@@ -639,6 +650,51 @@ function configureFlowWallet() {
   return true;
 }
 
+function loadFlowWalletScriptFrom(src) {
+  return new Promise((resolve, reject) => {
+    const existingScript = document.querySelector(`script[src="${src}"]`);
+    if (existingScript?.dataset.loaded === "true") {
+      resolve();
+      return;
+    }
+
+    existingScript?.remove();
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`Could not load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureFlowWallet() {
+  if (configureFlowWallet()) {
+    return true;
+  }
+
+  if (!state.flowWalletScriptPromise) {
+    state.flowWalletScriptPromise = (async () => {
+      for (const src of FLOW_WALLET_SCRIPT_URLS) {
+        try {
+          await loadFlowWalletScriptFrom(src);
+          if (configureFlowWallet()) {
+            return true;
+          }
+        } catch (error) {
+          console.warn("Could not load Flow wallet script.", error);
+        }
+      }
+      return false;
+    })();
+  }
+
+  return state.flowWalletScriptPromise;
+}
+
 async function linkWallet() {
   closeAccountMenu();
 
@@ -646,12 +702,15 @@ async function linkWallet() {
     return;
   }
 
-  if (!configureFlowWallet()) {
-    showToast("Wallet login is still loading. Try again in a moment.");
+  linkWalletButton.disabled = true;
+  linkWalletButton.textContent = "Loading...";
+
+  if (!(await ensureFlowWallet())) {
+    updateAccountState();
+    showToast("Wallet login could not load. Try again in a moment.");
     return;
   }
 
-  linkWalletButton.disabled = true;
   linkWalletButton.textContent = "Linking...";
 
   try {

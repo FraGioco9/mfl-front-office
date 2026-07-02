@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MFL Front Office - Progression Permissions</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+        background: #101418;
+        color: #e8eef3;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: start center;
+        padding: 48px 16px;
+      }
+
+      main {
+        width: min(760px, 100%);
+        border: 1px solid #303b44;
+        border-radius: 8px;
+        background: #171d22;
+        overflow: hidden;
+      }
+
+      header {
+        padding: 22px 24px;
+        border-bottom: 1px solid #303b44;
+        background: #222b33;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 8px 0 0;
+        color: #a9b4bd;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 24px;
+        border-bottom: 1px solid #303b44;
+        text-align: left;
+      }
+
+      th {
+        color: #8f9ba5;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      td {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty,
+      .error {
+        padding: 24px;
+        color: #a9b4bd;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Progression Permissions</h1>
+        <p>Dapper wallets allowed to view Progression data.</p>
+      </header>
+      <div id="walletList" class="empty">Loading wallets...</div>
+    </main>
+    <script>
+      async function loadWallets() {
+        const container = document.querySelector("#walletList");
+        try {
+          const response = await fetch("/wallet-permissions.json", { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`Status ${response.status}`);
+          }
+
+          const data = await response.json();
+          const wallets = Array.isArray(data.wallets) ? data.wallets : [];
+
+          if (!wallets.length) {
+            container.className = "empty";
+            container.textContent = "No Dapper wallets have Progression permission yet.";
+            return;
+          }
+
+          container.className = "";
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>#</th><th>Dapper wallet</th></tr>
+              </thead>
+              <tbody>
+                ${wallets.map((wallet, index) => `<tr><td>${index + 1}</td><td>${wallet}</td></tr>`).join("")}
+              </tbody>
+            </table>
+          `;
+        } catch (error) {
+          container.className = "error";
+          container.textContent = "Could not load wallet permissions.";
+        }
+      }
+
+      loadWallets();
+    </script>
+  </body>
+</html>
