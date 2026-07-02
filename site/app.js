@@ -4368,6 +4368,7 @@ evaluationResetButton.addEventListener("click", () => {
   }
 
   delete state.evaluationOverallRows[evaluationOverallKey(row)];
+  delete state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")];
   renderEvaluationTable(row);
 });
 
