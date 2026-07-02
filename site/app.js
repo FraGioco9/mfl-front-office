@@ -472,7 +472,11 @@ function pageRequiresProgressionPermission(pageName) {
 }
 
 function pageRequiresFullData(pageName) {
-  return hasProgressionAccess() && (pageName === "progression" || pageName === "player" || pageName === "watchlist");
+  return hasProgressionAccess() && pageCanUseProgressionData(pageName);
+}
+
+function pageCanUseProgressionData(pageName) {
+  return pageName === "progression" || pageName === "player" || pageName === "watchlist";
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
@@ -1063,7 +1067,7 @@ function walletLinkErrorMessage(error) {
   }
 
   if (lowerMessage.includes("popup") || lowerMessage.includes("window")) {
-    return "Dapper popup was blocked. Allow pop-ups, then try again.";
+    return "Enable pop-ups for this site to complete Dapper opt-in, then try again.";
   }
 
   if (lowerMessage.includes("404") || lowerMessage.includes("not found")) {
@@ -1098,6 +1102,7 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
+    await authenticateWithDapper(fcl);
     const message = walletAccessMessage();
     const signatures = await signWalletMessage(fcl, message);
     const dapperAddress = signatureWalletAddress(signatures);
@@ -1121,7 +1126,10 @@ async function linkWallet() {
     await loadWalletNames();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
-    refreshWatchlistPageAfterWalletSync();
+    const upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
+    if (!upgradedCurrentPage) {
+      refreshWatchlistPageAfterWalletSync();
+    }
     updateAccountState();
     updateMenuVisibility();
     saveTableState();
@@ -1606,6 +1614,17 @@ function refreshWatchlistPageAfterWalletSync() {
   updateViewButtons();
   buildHeader();
   applyFilters();
+}
+
+async function upgradeCurrentPageAfterWalletOptIn() {
+  if (!hasProgressionAccess() || !pageCanUseProgressionData(state.currentPage) || state.dataAccess === "full") {
+    return false;
+  }
+
+  state.dataLoaded = false;
+  const options = state.currentPage === "player" ? { playerId: playerIdFromUrl() } : {};
+  await setPage(state.currentPage, false, options);
+  return true;
 }
 
 async function loadWalletPreferences() {
