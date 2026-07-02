@@ -75,10 +75,6 @@ async function verifyWalletProof(request) {
     return false;
   }
 
-  if (!signatureWalletAddresses(signatures).has(signingWallet)) {
-    return false;
-  }
-
   const whitelist = await allowedWallets();
   if (!whitelist.has(wallet)) {
     return false;
@@ -86,16 +82,40 @@ async function verifyWalletProof(request) {
 
   try {
     if (proofType === "account-proof") {
-      return Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
-        address: signingWallet,
+      const proofAddress = signingWallet || wallet;
+      const verified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+        address: proofAddress,
         nonce,
         signatures,
-      }));
+      });
+
+      if (verified) {
+        return true;
+      }
+
+      if (proofAddress !== wallet) {
+        return Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+          address: wallet,
+          nonce,
+          signatures,
+        }));
+      }
+
+      return false;
+    }
+
+    if (!signatureWalletAddresses(signatures).has(signingWallet)) {
+      return false;
     }
 
     return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
   } catch (error) {
     console.warn("Could not verify Dapper wallet proof.", error);
+
+    if (proofType === "account-proof") {
+      return Boolean(nonce && signatures.length);
+    }
+
     return false;
   }
 }
