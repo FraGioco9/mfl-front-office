@@ -62,15 +62,6 @@ body.loading .menuRail,
 body.loading .sidebar,
 body.loading .modalBackdrop,
 body.loading .siteFooter,
-body.auth main,
-body.auth .menuRail,
-body.auth .sidebar,
-body.auth .modalBackdrop,
-body.auth .siteFooter,
-body.auth .loadingScreen {
-  display: none;
-}
-
 body.booting .topbar,
 body.booting main,
 body.booting .menuRail,
@@ -78,10 +69,6 @@ body.booting .sidebar,
 body.booting .modalBackdrop,
 body.booting .siteFooter {
   visibility: hidden;
-}
-
-:root[data-initial-page="changelog"] #homeLoginButton {
-  display: none;
 }
 
 .loadingScreen {
@@ -135,67 +122,6 @@ body.booting .siteFooter {
 
 .loadingScreen.failed .loadingBarFill {
   background: #b42318;
-}
-
-.loginScreen {
-  min-height: 100vh;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 0;
-  padding: 24px;
-  background: var(--page-bg);
-  opacity: 1;
-  transition: opacity 220ms ease;
-}
-
-.loginScreen[hidden] {
-  display: none;
-}
-
-.loginPanel {
-  display: grid;
-  gap: 14px;
-  width: min(380px, 100%);
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.12);
-}
-
-.loginPanel h1 {
-  font-size: 32px;
-}
-
-.loginPanel p {
-  margin: -6px 0 4px;
-}
-
-.loginPanel label {
-  display: grid;
-  gap: 6px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.loginBackButton {
-  border-color: var(--border-strong);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.loginBackButton:hover {
-  color: var(--text);
-}
-
-.loginError {
-  min-height: 18px;
-  color: #b42318;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 button,
@@ -344,24 +270,6 @@ p {
   cursor: pointer;
 }
 
-.accountDropdown #signOutButton {
-  color: #b42318;
-}
-
-.accountDropdown #signOutButton.signInAction {
-  color: #16803c;
-}
-
-.accountDropdown button.accountDropdownItem:hover {
-  background: #b42318;
-  color: #ffffff;
-}
-
-.accountDropdown button.accountDropdownItem.signInAction:hover {
-  background: #16803c;
-  color: #ffffff;
-}
-
 .accountDropdown button.accountDropdownItem:disabled,
 .accountDropdown button.accountDropdownItem:disabled:hover {
   cursor: default;
@@ -508,11 +416,6 @@ body[data-page="home"] .topbar .stats {
 
 .menuRail[hidden] {
   display: none;
-}
-
-body.auth .appShell .menuRail,
-body.auth .appShell .sidebar {
-  display: none !important;
 }
 
 .menuRail[hidden] + main {
@@ -790,34 +693,6 @@ body.filtersOpen .navButton:hover {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-.homeLoginButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: fit-content;
-}
-
-.homeLoginButton[hidden] {
-  display: inline-flex;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.homeLoginButton.signingIn {
-  border-color: #8bbfdf;
-  background: #bfe2f7;
-  color: #12364f;
-  cursor: wait;
-  opacity: 1;
-}
-
-:root[data-theme="dark"] .homeLoginButton.signingIn {
-  border-color: #4d8db8;
-  background: #245371;
-  color: #e8f5ff;
 }
 
 .buttonGear {

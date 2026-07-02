@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.84.57">
+    <link rel="stylesheet" href="/styles.css?v=1.85.0">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -30,24 +30,6 @@
         </div>
       </div>
     </div>
-
-    <section id="loginScreen" class="loginScreen" hidden>
-      <form id="loginForm" class="loginPanel">
-        <h1>MFL Front Office</h1>
-        <p>Sign in to access the site.</p>
-        <label>
-          <span>Email</span>
-          <input id="loginEmail" type="email" autocomplete="email" required>
-        </label>
-        <label>
-          <span>Password</span>
-          <input id="loginPassword" type="password" autocomplete="current-password" required>
-        </label>
-        <button id="loginButton" type="submit">Sign In</button>
-        <button id="loginBackButton" class="loginBackButton" type="button">Go back</button>
-        <div id="loginError" class="loginError" role="alert"></div>
-      </form>
-    </section>
 
     <header class="topbar">
       <div>
@@ -70,8 +52,7 @@
           <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
           <div id="accountDropdown" class="accountDropdown" hidden>
             <div id="accountEmail" class="accountDropdownItem">Guest</div>
-            <button id="linkWalletButton" class="accountDropdownItem" type="button">Link wallet</button>
-            <button id="signOutButton" class="accountDropdownItem signInAction" type="button">Sign In</button>
+            <button id="linkWalletButton" class="accountDropdownItem" type="button">Link Wallet</button>
           </div>
         </div>
       </div>
@@ -105,7 +86,6 @@
             </div>
           </section>
 
-          <button id="homeLoginButton" class="homeLoginButton" type="button">Sign In</button>
         </section>
 
         <section id="progressionPage" class="pageView progressionPage" hidden>
@@ -286,6 +266,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.85.0</span><p>Replace login with wallet permissions</p></li>
               <li><span>v1.84.57</span><p>Add account wallet linking</p></li>
               <li><span>v1.84.56</span><p>Fix Contracts table header corners</p></li>
               <li><span>v1.84.55</span><p>Keep Contracts header border visible while scrolling</p></li>
@@ -564,7 +545,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.57</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.85.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -653,8 +634,7 @@
         </footer>
       </section>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@onflow/fcl/dist/fcl.min.js"></script>
-    <script src="/app.js?v=1.84.57"></script>
+    <script src="/app.js?v=1.85.0"></script>
   </body>
 </html>

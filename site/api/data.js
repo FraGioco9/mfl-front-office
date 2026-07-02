@@ -1,5 +1,8 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const fcl = require("@onflow/fcl");
+
+fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
 const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json)$/;
 const PUBLIC_DATABASE_COLUMNS = [
@@ -33,55 +36,93 @@ const PUBLIC_DATABASE_COLUMNS = [
   "goalkeeping_to_next_overall",
 ];
 
-async function findDataFile(fileName) {
-  const candidates = [
-    path.join(__dirname, "data-files", fileName),
-    path.join(process.cwd(), "api", "data-files", fileName),
-    path.join(process.cwd(), "site", "api", "data-files", fileName),
-  ];
+function normalizeWalletAddress(address) {
+  const value = String(address || "").trim().toLowerCase();
+  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
+}
 
+function walletAccessMessage(address) {
+  return `MFL Front Office Progression Access\nWallet: ${normalizeWalletAddress(address)}`;
+}
+
+function stringToHex(value) {
+  return Buffer.from(value, "utf8").toString("hex");
+}
+
+async function findFile(candidates) {
   for (const candidate of candidates) {
     try {
       await fs.access(candidate);
       return candidate;
     } catch {
-      // Try the next possible Vercel function location.
+      // Try the next possible Vercel/local path.
     }
   }
 
   return null;
 }
 
-async function verifySupabaseToken(token) {
-  const supabaseUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
+async function findDataFile(fileName) {
+  return findFile([
+    path.join(__dirname, "data-files", fileName),
+    path.join(process.cwd(), "api", "data-files", fileName),
+    path.join(process.cwd(), "site", "api", "data-files", fileName),
+    path.join(process.cwd(), "site", "data", fileName),
+  ]);
+}
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+async function allowedWallets() {
+  const permissionsPath = await findFile([
+    path.join(__dirname, "..", "wallet-permissions.json"),
+    path.join(process.cwd(), "wallet-permissions.json"),
+    path.join(process.cwd(), "site", "wallet-permissions.json"),
+  ]);
+
+  if (!permissionsPath) {
+    return new Set();
+  }
+
+  try {
+    const data = JSON.parse(await fs.readFile(permissionsPath, "utf8"));
+    const wallets = Array.isArray(data.wallets) ? data.wallets : [];
+    return new Set(wallets.map(normalizeWalletAddress).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+async function verifyWalletProof(request) {
+  const wallet = normalizeWalletAddress(request.headers["x-wallet-address"]);
+  const message = String(request.headers["x-wallet-message"] || "");
+  let signatures = [];
+
+  try {
+    signatures = JSON.parse(String(request.headers["x-wallet-signatures"] || "[]"));
+  } catch {
     return false;
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  if (!wallet || message !== walletAccessMessage(wallet) || !Array.isArray(signatures) || !signatures.length) {
+    return false;
+  }
 
-  return response.ok;
+  const whitelist = await allowedWallets();
+  if (!whitelist.has(wallet)) {
+    return false;
+  }
+
+  try {
+    return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
+  } catch (error) {
+    console.warn("Could not verify Flow wallet signature.", error);
+    return false;
+  }
 }
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
-  const publicDatabase = request.query.access === "public-database";
-  const authorization = request.headers.authorization || "";
-  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-
-  if (!publicDatabase && (!token || !(await verifySupabaseToken(token)))) {
-    response.status(401).json({ error: "Login required." });
-    return;
-  }
-
+  const publicDatabase = request.query.access === "public-database" || !(await verifyWalletProof(request));
   const fileName = String(request.query.file || "");
 
   if (!DATA_FILE_PATTERN.test(fileName)) {

@@ -1,0 +1,97 @@
+name: Manage wallet progression access
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Add or remove progression access for this wallet."
+        required: true
+        type: choice
+        options:
+          - add
+          - remove
+        default: add
+      wallet:
+        description: "Flow wallet address, for example 0x1234abcd."
+        required: true
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wallet-permissions
+  cancel-in-progress: false
+
+jobs:
+  update-wallet-permissions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Update wallet whitelist
+        shell: bash
+        env:
+          ACTION: ${{ inputs.action }}
+          WALLET: ${{ inputs.wallet }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = 'site/wallet-permissions.json';
+          const action = process.env.ACTION;
+          const walletInput = String(process.env.WALLET || '').trim().toLowerCase();
+          const wallet = walletInput.startsWith('0x') ? walletInput : `0x${walletInput}`;
+
+          if (!/^0x[0-9a-f]+$/.test(wallet)) {
+            throw new Error(`Invalid Flow wallet address: ${process.env.WALLET}`);
+          }
+
+          const current = fs.existsSync(path)
+            ? JSON.parse(fs.readFileSync(path, 'utf8'))
+            : { wallets: [] };
+          const wallets = new Set((Array.isArray(current.wallets) ? current.wallets : [])
+            .map((value) => String(value).trim().toLowerCase())
+            .filter(Boolean));
+
+          if (action === 'add') {
+            wallets.add(wallet);
+          } else if (action === 'remove') {
+            wallets.delete(wallet);
+          } else {
+            throw new Error(`Unsupported action: ${action}`);
+          }
+
+          fs.writeFileSync(path, `${JSON.stringify({ wallets: Array.from(wallets).sort() }, null, 2)}\n`);
+          NODE
+
+      - name: Commit wallet permissions
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/wallet-permissions.json
+          if git diff --cached --quiet; then
+            echo "No wallet permission changes to commit."
+          else
+            git commit -m "Update wallet progression access"
+            git push
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Connect Vercel project
+        shell: bash
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+
+      - name: Deploy wallet permissions to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prod --yes --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"

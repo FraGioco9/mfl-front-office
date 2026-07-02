@@ -1,41 +1,44 @@
 {
-  "functions": {
-    "api/data.js": {
-      "includeFiles": "api/data-files/**"
-    },
-    "api/summary.js": {
-      "includeFiles": "api/data-files/manifest.json"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/home",
-      "destination": "/"
-    },
-    {
-      "source": "/database",
-      "destination": "/"
-    },
-    {
-      "source": "/progression",
-      "destination": "/"
-    },
-    {
-      "source": "/watchlist",
-      "destination": "/"
-    },
-    {
-      "source": "/evaluation",
-      "destination": "/"
-    },
-    {
-      "source": "/changelog",
-      "destination": "/"
-    },
-    {
-      "source": "/players/:id",
-      "destination": "/"
-    }
-  ],
-  "ignoreCommand": "node vercel-ignore-git-deploy.js"
+    "functions":  {
+                      "api/data.js":  {
+                                          "includeFiles":  [
+                                                               "api/data-files/**",
+                                                               "wallet-permissions.json"
+                                                           ]
+                                      },
+                      "api/summary.js":  {
+                                             "includeFiles":  "api/data-files/manifest.json"
+                                         }
+                  },
+    "rewrites":  [
+                     {
+                         "source":  "/home",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/database",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/progression",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/watchlist",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/evaluation",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/changelog",
+                         "destination":  "/"
+                     },
+                     {
+                         "source":  "/players/:id",
+                         "destination":  "/"
+                     }
+                 ],
+    "ignoreCommand":  "node vercel-ignore-git-deploy.js"
 }

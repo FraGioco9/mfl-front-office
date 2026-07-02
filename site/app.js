@@ -33,6 +33,8 @@ const state = {
   evaluationMflPerUsd: 400,
   evaluationSummaryPositions: {},
   linkedWalletAddress: "",
+  linkedWalletProof: null,
+  whitelistedWallets: new Set(),
 };
 
 const flagColumn = "nationality_flag";
@@ -187,6 +189,7 @@ const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
+const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
@@ -228,31 +231,14 @@ const POSITION_FAMILIARITY = {
   ST: { CF: "fair" },
 };
 
-const auth = {
-  required: false,
-  client: null,
-  session: null,
-  savedTableState: null,
-  saveTimer: null,
-  initialized: false,
-};
-
 const loadingScreen = document.querySelector("#loadingScreen");
 const loadingText = document.querySelector("#loadingText");
 const loadingBarFill = document.querySelector("#loadingBarFill");
-const loginScreen = document.querySelector("#loginScreen");
-const loginForm = document.querySelector("#loginForm");
-const loginEmail = document.querySelector("#loginEmail");
-const loginPassword = document.querySelector("#loginPassword");
-const loginButton = document.querySelector("#loginButton");
-const loginBackButton = document.querySelector("#loginBackButton");
-const loginError = document.querySelector("#loginError");
 const statusText = document.querySelector("#statusText");
 const totalPlayers = document.querySelector("#totalPlayers");
 const totalWallets = document.querySelector("#totalWallets");
 const homePlayers = document.querySelector("#homePlayers");
 const homeWallets = document.querySelector("#homeWallets");
-const homeLoginButton = document.querySelector("#homeLoginButton");
 const appShell = document.querySelector("#appShell");
 const mainContent = document.querySelector("main");
 const menuButton = document.querySelector("#menuButton");
@@ -276,7 +262,6 @@ const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
 const accountEmail = document.querySelector("#accountEmail");
 const linkWalletButton = document.querySelector("#linkWalletButton");
-const signOutButton = document.querySelector("#signOutButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
 const quickClearFiltersButton = document.querySelector("#quickClearFiltersButton");
@@ -400,78 +385,55 @@ function revealAppShell() {
   document.body.classList.remove("booting");
 }
 
+function hasWalletProof() {
+  return Boolean(state.linkedWalletProof?.message && Array.isArray(state.linkedWalletProof?.signatures) && state.linkedWalletProof.signatures.length);
+}
+
+function hasProgressionAccess() {
+  return Boolean(state.linkedWalletAddress && hasWalletProof() && state.whitelistedWallets.has(state.linkedWalletAddress.toLowerCase()));
+}
+
+function progressionAccessMessage() {
+  if (!state.linkedWalletAddress) {
+    return "Link your wallet to view Progression.";
+  }
+
+  if (!hasWalletProof()) {
+    return "Verify your linked wallet to view Progression.";
+  }
+
+  return "This wallet does not have Progression access yet.";
+}
+
 function updateMenuVisibility() {
-  const showMenu = !document.body.classList.contains("auth");
-  document.body.classList.toggle("guest", auth.required && !auth.session);
-  menuRail.hidden = !showMenu;
-  menuButton.hidden = !showMenu;
-  sidebar.hidden = !showMenu;
+  const showMenu = true;
+  document.body.classList.toggle("guest", !hasProgressionAccess());
+  menuRail.hidden = false;
+  menuButton.hidden = false;
+  sidebar.hidden = false;
   appShell.classList.toggle("menuClosed", !state.menuOpen);
   statusText.hidden = false;
   menuButton.setAttribute("aria-expanded", String(showMenu && state.menuOpen));
 }
 
-function setHomeLoginSigningIn() {
-  homeLoginButton.hidden = false;
-  homeLoginButton.disabled = true;
-  homeLoginButton.classList.add("signingIn");
-  homeLoginButton.innerHTML = '<span class="buttonGear" aria-hidden="true">&#9881;</span><span class="homeLoginButtonText">Signing in</span>';
-}
-
-function hasSavedSupabaseSession() {
-  try {
-    return Object.keys(localStorage).some((key) => key.startsWith("sb-") && key.endsWith("-auth-token"));
-  } catch {
-    return false;
-  }
-}
-
-function setHomeLoginRestoringIfNeeded() {
-  if (pageFromUrl() === "changelog") {
-    hideHomeLoginButton();
-    return;
-  }
-
-  if (hasSavedSupabaseSession()) {
-    setHomeLoginSigningIn();
-  } else {
-    setHomeLoginReady();
-  }
-}
-
-function setHomeLoginReady() {
-  homeLoginButton.hidden = false;
-  homeLoginButton.disabled = false;
-  homeLoginButton.classList.remove("signingIn");
-  homeLoginButton.textContent = "Sign In";
-}
-
 function hideHomeLoginButton() {
-  homeLoginButton.hidden = true;
-  homeLoginButton.disabled = false;
-  homeLoginButton.classList.remove("signingIn");
-  homeLoginButton.textContent = "Sign In";
+  // Email login has been removed.
 }
 
 function syncHomeLoginButton() {
-  if (pageFromUrl() === "changelog" || state.currentPage === "changelog" || !auth.required || auth.session) {
-    hideHomeLoginButton();
-    return;
-  }
-
-  setHomeLoginReady();
+  hideHomeLoginButton();
 }
 
 function pageRequiresData(pageName) {
   return tablePages.has(pageName) || pageName === "player" || pageName === "evaluation";
 }
 
-function pageRequiresLogin(pageName) {
+function pageRequiresProgressionPermission(pageName) {
   return pageName === "progression";
 }
 
 function pageRequiresFullData(pageName) {
-  return pageName === "progression" || (pageName === "player" && Boolean(auth.session)) || (pageName === "watchlist" && Boolean(auth.session));
+  return hasProgressionAccess() && (pageName === "progression" || pageName === "player" || pageName === "watchlist");
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
@@ -482,9 +444,6 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
     loadingScreen.hidden = true;
   }
 
-  document.body.classList.remove("auth");
-  loginScreen.hidden = true;
-  accountMenu.hidden = !auth.required;
   syncHomeLoginButton();
   updateAccountState();
   const result = await setPage(pageName, updateUrl, options);
@@ -494,43 +453,7 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   return result;
 }
 
-function showLogin(returnPage = pageFromUrl()) {
-  state.loginReturnPage = returnPage;
-  menuRail.hidden = true;
-  menuButton.hidden = true;
-  sidebar.hidden = true;
-  document.body.classList.add("auth");
-  document.body.classList.remove("loading");
-  revealAppShell();
-  loadingScreen.hidden = true;
-  loginScreen.hidden = false;
-  accountMenu.hidden = !auth.required;
-  updateAccountState();
-  updateMenuVisibility();
-  closeAccountMenu();
-  window.setTimeout(() => loginEmail.focus(), 0);
-}
-
-function openLoginFromCurrentPage() {
-  const returnPage = window.location.pathname || "/";
-  window.history.pushState({ login: true }, "", returnPage);
-  showLogin(returnPage);
-}
-
-function goBackFromLogin() {
-  if (window.history.length > 1) {
-    window.history.back();
-    return;
-  }
-
-  const returnTarget = pageTargetFromPath(state.loginReturnPage || "/");
-  showHomeShell(returnTarget.pageName, false, returnTarget.options);
-}
-
 function showAppShell() {
-  document.body.classList.remove("auth");
-  loginScreen.hidden = true;
-  accountMenu.hidden = !auth.required;
   syncHomeLoginButton();
   updateAccountState();
   updateMenuVisibility();
@@ -543,73 +466,53 @@ function showLoading() {
   updateLoadingProgress(0, 0);
 }
 
-async function setupAuth() {
-  setHomeLoginRestoringIfNeeded();
-  let configResponse;
-
-  try {
-    configResponse = await fetch("/api/config", { cache: "no-store" });
-  } catch {
-    auth.required = false;
-    auth.initialized = true;
-    return true;
-  }
-
-  if (!configResponse.ok) {
-    auth.required = false;
-    auth.initialized = true;
-    return true;
-  }
-
-  const config = await configResponse.json();
-  auth.required = true;
-  auth.initialized = true;
-
-  if (!window.supabase) {
-    showLoadingError("Login library could not be loaded.");
-    return false;
-  }
-
-  auth.client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-  const { data } = await auth.client.auth.getSession();
-  auth.session = data.session;
-  syncHomeLoginButton();
-
-  if (!auth.session) {
-    await showHomeShell(pageFromUrl(), false);
-    return false;
-  }
-
-  await loadCloudTableState();
-  return true;
+function normalizeWalletAddress(address) {
+  const value = String(address || "").trim();
+  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
 }
 
-function authHeaders() {
-  if (!auth.required || !auth.session?.access_token) {
-    return {};
-  }
+async function loadWalletPermissions() {
+  try {
+    const response = await fetch("/wallet-permissions.json", { cache: "no-store" });
+    if (!response.ok) {
+      state.whitelistedWallets = new Set();
+      return;
+    }
 
-  return {
-    Authorization: `Bearer ${auth.session.access_token}`,
-  };
+    const data = await response.json();
+    const wallets = Array.isArray(data.wallets) ? data.wallets : [];
+    state.whitelistedWallets = new Set(wallets.map((wallet) => normalizeWalletAddress(wallet).toLowerCase()).filter(Boolean));
+  } catch {
+    state.whitelistedWallets = new Set();
+  }
 }
 
 function currentDataAccess() {
-  return auth.required && !auth.session ? "public" : "full";
+  return hasProgressionAccess() ? "full" : "public";
 }
 
 function dataFileUrl(fileName, options = {}) {
-  if (!auth.required) {
-    return `/data/${fileName}`;
-  }
-
   const query = new URLSearchParams({ file: fileName });
-  if (!auth.session) {
+
+  if (!hasProgressionAccess()) {
     query.set("access", "public-database");
   } else if (Array.isArray(options.columns) && options.columns.length) {
     query.set("columns", options.columns.join(","));
   }
+
   return `/api/data?${query.toString()}`;
+}
+
+function walletProofHeaders() {
+  if (!hasProgressionAccess()) {
+    return {};
+  }
+
+  return {
+    "x-wallet-address": state.linkedWalletAddress,
+    "x-wallet-message": state.linkedWalletProof.message,
+    "x-wallet-signatures": JSON.stringify(state.linkedWalletProof.signatures),
+  };
 }
 
 function cacheRequestForDataFile(fileName) {
@@ -643,7 +546,6 @@ async function clearDataCache() {
     await caches.delete(DATA_CACHE_NAME);
   }
 }
-
 async function fetchDataFile(fileName, options = {}) {
   const { useCache = false, writeCache = false, columns = null } = options;
 
@@ -657,17 +559,11 @@ async function fetchDataFile(fileName, options = {}) {
 
   const response = await fetch(dataFileUrl(fileName, { columns }), {
     cache: fileName === "manifest.json" ? "no-store" : "default",
-    headers: auth.required && auth.session ? authHeaders() : {},
+    headers: walletProofHeaders(),
   });
 
-  if (response.status === 401) {
-    auth.session = null;
-    showLogin();
-    throw new Error("Login required.");
-  }
-
   if (!response.ok) {
-    let message = auth.required ? "Protected website data could not be loaded." : "No exported data found yet.";
+    let message = "No exported data found yet.";
 
     try {
       const body = await response.json();
@@ -688,68 +584,43 @@ async function fetchDataFile(fileName, options = {}) {
   return data;
 }
 
-async function signIn(event) {
-  event.preventDefault();
-  loginError.textContent = "";
-  loginButton.disabled = true;
-
-  const { data, error } = await auth.client.auth.signInWithPassword({
-    email: loginEmail.value.trim(),
-    password: loginPassword.value,
-  });
-
-  loginButton.disabled = false;
-
-  if (error) {
-    loginError.textContent = error.message;
-    return;
-  }
-
-  auth.session = data.session;
-  syncHomeLoginButton();
-  await loadCloudTableState();
-  mergeGuestWatchlistIntoAccount();
-  loginPassword.value = "";
-  const returnTarget = pageTargetFromPath(state.loginReturnPage || window.location.pathname || "/");
-  showAppShell();
-  await showHomeShell(returnTarget.pageName, false, returnTarget.options);
-}
-
-async function signOut() {
-  if (auth.client) {
-    await auth.client.auth.signOut();
-  }
-
-  window.location.href = "/";
-}
-
 function accountName() {
-  const email = auth.session?.user?.email || "";
-  return email.split("@")[0] || "Guest";
+  return state.linkedWalletAddress
+    ? `${state.linkedWalletAddress.slice(0, 6)}...${state.linkedWalletAddress.slice(-4)}`
+    : "Guest";
 }
 
 function updateAccountState() {
-  const signedIn = Boolean(auth.session);
   const walletLinked = Boolean(state.linkedWalletAddress);
   accountEmail.textContent = accountName();
-  signOutButton.textContent = signedIn ? "Sign Out" : "Sign In";
-  signOutButton.classList.toggle("signInAction", !signedIn);
-  linkWalletButton.textContent = walletLinked ? "Linked" : "Link wallet";
+  linkWalletButton.textContent = walletLinked ? "Linked" : "Link Wallet";
   linkWalletButton.disabled = walletLinked;
   linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
 }
-
-function handleAccountAction() {
-  closeAccountMenu();
-
-  if (auth.session) {
-    signOut();
-    return;
-  }
-
-  openLoginFromCurrentPage();
+function walletAccessMessage(address) {
+  return `MFL Front Office Progression Access\nWallet: ${normalizeWalletAddress(address)}`;
 }
 
+function stringToHex(value) {
+  return Array.from(new TextEncoder().encode(value))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function restoreLinkedWalletProof() {
+  try {
+    const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
+    if (proof?.address && proof?.message && Array.isArray(proof?.signatures)) {
+      state.linkedWalletProof = {
+        address: normalizeWalletAddress(proof.address),
+        message: proof.message,
+        signatures: proof.signatures,
+      };
+    }
+  } catch {
+    state.linkedWalletProof = null;
+  }
+}
 function configureFlowWallet() {
   if (!window.fcl?.config) {
     return false;
@@ -942,16 +813,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
-  if (auth.initialized && auth.required && !auth.session && pageRequiresLogin(pageName)) {
-    state.currentPage = pageName;
-    homePage.hidden = true;
-    progressionPage.hidden = true;
-    evaluationPage.hidden = true;
-    playerPage.hidden = true;
-    changelogPage.hidden = true;
-    showLogin(pagePath(pageName, options));
-    return false;
+  if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
+    showToast(progressionAccessMessage());
+    return setPage("home", updateHash);
   }
+
 
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
@@ -1095,7 +961,7 @@ function tablePageKey(pageName = state.currentPage) {
 }
 
 function allowedViewsForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && auth.required && !auth.session) {
+  if (pageName === "watchlist" && !hasProgressionAccess()) {
     return ["attributes", "next"];
   }
 
@@ -1103,7 +969,7 @@ function allowedViewsForPage(pageName = tablePageKey() || "progression") {
 }
 
 function defaultViewForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && auth.required && !auth.session) {
+  if (pageName === "watchlist" && !hasProgressionAccess()) {
     return "attributes";
   }
 
@@ -1197,9 +1063,6 @@ function showWatchlistToast(prefix) {
   showToast(content);
 }
 function saveGuestWatchlist() {
-  if (auth.session) {
-    return;
-  }
 
   try {
     localStorage.setItem(GUEST_WATCHLIST_STORAGE_KEY, JSON.stringify(Array.from(state.watchlistPlayerIds)));
@@ -1231,8 +1094,6 @@ function mergeGuestWatchlistIntoAccount() {
 
 function saveTableState() {
   const savedState = currentTableState();
-  auth.savedTableState = savedState;
-
   try {
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
   } catch {
@@ -1287,56 +1148,8 @@ function currentTableState() {
   };
 }
 
-async function loadCloudTableState() {
-  if (!auth.required || !auth.client || !auth.session?.user?.id) {
-    auth.savedTableState = null;
-    return;
-  }
-
-  const { data, error } = await auth.client
-    .from("user_preferences")
-    .select("table_state")
-    .eq("user_id", auth.session.user.id)
-    .maybeSingle();
-
-  if (error) {
-    console.warn("Could not load Supabase table preferences.", error);
-    auth.savedTableState = null;
-    return;
-  }
-
-  auth.savedTableState = data?.table_state || null;
-  restoreWatchlistState(auth.savedTableState);
-  restoreMenuState(auth.savedTableState);
-  restoreRecentSearchState(auth.savedTableState);
-  restoreRecentEvaluationState(auth.savedTableState);
-  restorePlayerAttributeView(auth.savedTableState);
-  restoreLinkedWalletState(auth.savedTableState);
-}
-
-function queueCloudTableStateSave(savedState) {
-  if (!auth.required || !auth.client || !auth.session?.user?.id) {
-    return;
-  }
-
-  window.clearTimeout(auth.saveTimer);
-  auth.saveTimer = window.setTimeout(() => {
-    saveCloudTableState(savedState);
-  }, 600);
-}
-
-async function saveCloudTableState(savedState) {
-  const { error } = await auth.client
-    .from("user_preferences")
-    .upsert({
-      user_id: auth.session.user.id,
-      table_state: savedState,
-      updated_at: new Date().toISOString(),
-    });
-
-  if (error) {
-    console.warn("Could not save Supabase table preferences.", error);
-  }
+function queueCloudTableStateSave() {
+  // Preferences are local until wallet accounts replace the old login system.
 }
 
 function restoreWatchlistState(savedState) {
@@ -1361,7 +1174,7 @@ function restoreRecentEvaluationState(savedState) {
 }
 
 function allowedPlayerAttributeViews() {
-  return auth.required && !auth.session
+  return !hasProgressionAccess()
     ? [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"]]
     : [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]];
 }
@@ -1391,12 +1204,14 @@ function restoreLinkedWalletState(savedState) {
     } catch {
       // The linked state still works for this page if storage is blocked.
     }
+    restoreLinkedWalletProof();
     updateAccountState();
     return;
   }
 
   try {
     state.linkedWalletAddress = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
+    restoreLinkedWalletProof();
   } catch {
     state.linkedWalletAddress = "";
   }
@@ -1414,9 +1229,6 @@ function restoreTablePageStates(savedState) {
 }
 
 function applyGuestWatchlistIfNeeded() {
-  if (auth.session) {
-    return;
-  }
 
   const guestIds = loadGuestWatchlist();
   if (guestIds.length) {
@@ -1425,18 +1237,6 @@ function applyGuestWatchlistIfNeeded() {
 }
 
 function loadSavedTableState() {
-  if (auth.savedTableState) {
-    restoreTablePageStates(auth.savedTableState);
-    restoreWatchlistState(auth.savedTableState);
-    restoreMenuState(auth.savedTableState);
-    restoreRecentSearchState(auth.savedTableState);
-    restoreRecentEvaluationState(auth.savedTableState);
-    restorePlayerAttributeView(auth.savedTableState);
-    restoreLinkedWalletState(auth.savedTableState);
-    applyGuestWatchlistIfNeeded();
-    return auth.savedTableState;
-  }
-
   try {
     const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
     restoreTablePageStates(savedState);
@@ -4275,9 +4075,7 @@ async function loadData() {
     state.dataLoaded = true;
     return true;
   } catch (error) {
-    const message = error.message === "Login required."
-      ? "Login required."
-      : error.message || "No website data found yet. Run the GitHub workflow to publish the table.";
+    const message = error.message || "No website data found yet. Run the GitHub workflow to publish the table.";
     statusText.textContent = message;
     tableBody.replaceChildren();
     emptyState.hidden = false;
@@ -4406,7 +4204,6 @@ themeButton.addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
-homeLoginButton.addEventListener("click", openLoginFromCurrentPage);
 menuButton.addEventListener("click", toggleMenu);
 brandLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
@@ -4542,22 +4339,15 @@ navButtons.forEach((button) => {
 window.addEventListener("popstate", () => {
   const targetPage = pageFromUrl();
 
-  if (auth.initialized && auth.required && !auth.session && !pageRequiresLogin(targetPage)) {
-    showHomeShell(targetPage, false);
-    return;
-  }
 
   setPage(targetPage, false);
 });
 
-loginForm.addEventListener("submit", signIn);
-loginBackButton.addEventListener("click", goBackFromLogin);
 accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleAccountMenu();
 });
 linkWalletButton.addEventListener("click", linkWallet);
-signOutButton.addEventListener("click", handleAccountAction);
 
 async function startApp() {
   loadTheme();
@@ -4568,7 +4358,7 @@ async function startApp() {
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
 
-  if (pageRequiresData(initialPage) && hasSavedSupabaseSession()) {
+  if (pageRequiresData(initialPage)) {
     showLoading();
   }
 
@@ -4576,12 +4366,10 @@ async function startApp() {
     await setPage("changelog", false);
   }
 
-  setHomeLoginRestoringIfNeeded();
+  await loadWalletPermissions();
+  updateAccountState();
   await loadSummary();
-
-  if (await setupAuth()) {
-    showAppShell();
-    await showHomeShell(initialPage, false);
-  }
+  showAppShell();
+  await showHomeShell(initialPage, false);
 }
 startApp();
