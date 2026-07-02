@@ -2294,7 +2294,7 @@ function renderEvaluationTable(row) {
   const overallValues = evaluationOverallValues(row, rawExpectedSeasons);
   const currentOverall = overallValues[seasonOffset] ?? overallValues[0];
   const summaryPosition = evaluationSummaryPosition(row);
-  const summaryOverall = evaluationSummaryOverall(row, summaryPosition, currentOverall);
+  const summaryOverall = currentOverall;
   const discountRate = state.evaluationIgnoreDiscountRate ? 0 : evaluationDiscountRateValue();
   const fragment = document.createDocumentFragment();
   const mflValues = [];

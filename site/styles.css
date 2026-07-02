@@ -1210,6 +1210,18 @@ button:disabled {
   isolation: isolate;
 }
 
+.advancedPlayerTableScroller::before {
+  content: "";
+  position: sticky;
+  display: block;
+  top: 0;
+  z-index: 5;
+  height: 32px;
+  margin-bottom: -32px;
+  background: var(--header-bg);
+  pointer-events: none;
+}
+
 .advancedPlayerTable {
   position: relative;
   z-index: 1;
@@ -1236,14 +1248,6 @@ button:disabled {
   position: sticky;
   top: 0;
   z-index: 6;
-  background: var(--header-bg);
-}
-
-.advancedPlayerTable thead::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
   background: var(--header-bg);
 }
 
@@ -1294,6 +1298,7 @@ button:disabled {
 
 .advancedPlayerTable tbody td:not(:first-child):hover {
   background: var(--button-hover-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 
 .filterBuilder {
