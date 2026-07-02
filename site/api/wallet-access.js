@@ -60,6 +60,9 @@ async function verifyWalletProof(request) {
   const wallet = normalizeWalletAddress(request.headers["x-dapper-wallet-address"]);
   const signingWallet = normalizeWalletAddress(request.headers["x-wallet-signing-address"] || wallet);
   const message = String(request.headers["x-wallet-message"] || "");
+  const proofType = String(request.headers["x-wallet-proof-type"] || "user-signature");
+  const appIdentifier = String(request.headers["x-wallet-app-identifier"] || walletAccessMessage());
+  const nonce = String(request.headers["x-wallet-nonce"] || "");
   let signatures = [];
 
   try {
@@ -82,13 +85,20 @@ async function verifyWalletProof(request) {
   }
 
   try {
+    if (proofType === "account-proof") {
+      return Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+        address: signingWallet,
+        nonce,
+        signatures,
+      }));
+    }
+
     return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
   } catch (error) {
-    console.warn("Could not verify Dapper wallet signature.", error);
+    console.warn("Could not verify Dapper wallet proof.", error);
     return false;
   }
 }
-
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 

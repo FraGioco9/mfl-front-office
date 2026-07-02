@@ -419,12 +419,14 @@ function revealAppShell() {
 }
 
 function hasWalletProof() {
+  const proof = state.linkedWalletProof;
   return Boolean(
     state.linkedWalletAddress
-    && state.linkedWalletProof?.address === state.linkedWalletAddress
-    && state.linkedWalletProof?.message === walletAccessMessage(state.linkedWalletAddress, state.linkedWalletProof?.signingAddress)
-    && Array.isArray(state.linkedWalletProof?.signatures)
-    && state.linkedWalletProof.signatures.length
+    && proof?.address === state.linkedWalletAddress
+    && proof?.message === walletAccessMessage(state.linkedWalletAddress, proof?.signingAddress)
+    && Array.isArray(proof?.signatures)
+    && proof.signatures.length
+    && (proof.type !== "account-proof" || (proof.appIdentifier && proof.nonce))
   );
 }
 
@@ -565,6 +567,9 @@ function walletProofHeaders(force = false) {
     "x-dapper-wallet-address": state.linkedWalletAddress,
     "x-wallet-signing-address": state.linkedWalletProof.signingAddress || state.linkedWalletAddress,
     "x-wallet-message": state.linkedWalletProof.message,
+    "x-wallet-proof-type": state.linkedWalletProof.type || "user-signature",
+    "x-wallet-app-identifier": state.linkedWalletProof.appIdentifier || walletAccessMessage(),
+    "x-wallet-nonce": state.linkedWalletProof.nonce || "",
     "x-wallet-signatures": JSON.stringify(state.linkedWalletProof.signatures),
   };
 }
@@ -835,6 +840,44 @@ function walletAccessMessage() {
   return "MFL Front Office Dapper Opt-In";
 }
 
+function walletAccessNonce() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function walletAccountProofFromUser(user, accountProof) {
+  const services = Array.isArray(user?.services) ? user.services : [];
+  const accountProofService = services.find((service) => service?.type === "account-proof");
+  const proofData = accountProofService?.data || accountProofService;
+  const signatures = Array.isArray(proofData?.signatures)
+    ? proofData.signatures
+    : (proofData?.signature ? [proofData.signature] : []);
+  const address = normalizeWalletAddress(
+    proofData?.address
+    || proofData?.addr
+    || signatures[0]?.addr
+    || signatures[0]?.address
+    || walletAddressFromUser(user),
+  );
+
+  if (!address || !Array.isArray(signatures) || !signatures.length || !accountProof?.nonce) {
+    return null;
+  }
+
+  return {
+    type: "account-proof",
+    address,
+    signingAddress: address,
+    message: walletAccessMessage(),
+    appIdentifier: accountProof.appIdentifier,
+    nonce: accountProof.nonce,
+    signatures,
+  };
+}
+
 function stringToHex(value) {
   return Array.from(new TextEncoder().encode(value))
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -854,8 +897,11 @@ function restoreLinkedWalletProof() {
     const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
     if (proof?.address && proof?.message && Array.isArray(proof?.signatures)) {
       state.linkedWalletProof = {
+        type: proof.type || "user-signature",
         address: normalizeWalletAddress(proof.address),
         message: proof.message,
+        appIdentifier: proof.appIdentifier || walletAccessMessage(),
+        nonce: proof.nonce || "",
         signingAddress: normalizeWalletAddress(proof.signingAddress || proof.address),
         signatures: proof.signatures,
       };
@@ -1046,13 +1092,21 @@ async function dapperAuthnService(fcl) {
 }
 
 async function authenticateWithDapper(fcl) {
-  const service = await dapperAuthnService(fcl);
-  if (service) {
-    return fcl.authenticate({ service, forceReauth: true });
+  const accountProof = {
+    appIdentifier: walletAccessMessage(),
+    nonce: walletAccessNonce(),
+  };
+
+  if (fcl?.config?.put) {
+    fcl.config().put("fcl.accountProof.resolver", async () => accountProof);
   }
 
-  // Last-resort fallback: keep Discovery restricted to Dapper instead of opening a multi-wallet chooser.
-  return fcl.authenticate({ forceReauth: true });
+  const service = await dapperAuthnService(fcl);
+  const user = service
+    ? await fcl.authenticate({ service, forceReauth: true })
+    : await fcl.authenticate({ forceReauth: true });
+
+  return { user, accountProof };
 }
 
 function walletLinkErrorMessage(error) {
@@ -1102,19 +1156,36 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    await authenticateWithDapper(fcl);
-    const message = walletAccessMessage();
-    const signatures = await signWalletMessage(fcl, message);
-    const dapperAddress = signatureWalletAddress(signatures);
+    const authenticated = await authenticateWithDapper(fcl);
+    const authenticatedUser = await authenticatedWalletUser(fcl, authenticated.user);
+    let linkedWalletProof = walletAccountProofFromUser(authenticatedUser, authenticated.accountProof);
+    let dapperAddress = linkedWalletProof?.address || walletAddressFromUser(authenticatedUser);
 
-    if (!dapperAddress) {
-      console.warn("Dapper opt-in signature did not include a wallet address.", { signatures });
+    if (!linkedWalletProof) {
+      const message = walletAccessMessage();
+      const signatures = await signWalletMessage(fcl, message);
+      dapperAddress = signatureWalletAddress(signatures);
+
+      if (dapperAddress) {
+        linkedWalletProof = {
+          type: "user-signature",
+          address: dapperAddress,
+          signingAddress: dapperAddress,
+          message,
+          appIdentifier: walletAccessMessage(),
+          nonce: "",
+          signatures,
+        };
+      }
+    }
+
+    if (!dapperAddress || !linkedWalletProof) {
+      console.warn("Dapper opt-in did not include a wallet address or proof.", { authenticatedUser });
       throw new Error("Dapper did not return a wallet address.");
     }
 
-    const signingAddress = dapperAddress;
     state.linkedWalletAddress = dapperAddress;
-    state.linkedWalletProof = { address: dapperAddress, signingAddress, message, signatures };
+    state.linkedWalletProof = linkedWalletProof;
     try {
       localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
       localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
