@@ -31,6 +31,7 @@ const state = {
   evaluationIgnoreDiscountRate: false,
   evaluationIgnoreFirstSeason: false,
   evaluationMflPerUsd: 400,
+  evaluationSummaryPositions: {},
 };
 
 const flagColumn = "nationality_flag";
@@ -317,6 +318,8 @@ const advancedSettingsButton = document.querySelector(".advancedSettingsButton")
 const advancedSettingsModal = document.querySelector("#advancedSettingsModal");
 const closeAdvancedSettingsButton = document.querySelector("#closeAdvancedSettingsButton");
 const advancedMflUsdInput = document.querySelector("#advancedMflUsdInput");
+const advancedMflUsdIncreaseButton = document.querySelector("#advancedMflUsdIncreaseButton");
+const advancedMflUsdDecreaseButton = document.querySelector("#advancedMflUsdDecreaseButton");
 const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetButton");
 const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
 const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
@@ -1884,24 +1887,34 @@ function renderAdvancedPlayerTable() {
   }
 
   const rows = advancedPlayerTableTsv.trim().split("\n").map((line) => line.split("\t"));
-  const headers = rows.shift();
+  const sourceHeaders = rows.shift();
+  const ovrValues = rows.map((row) => row[0]);
+  const positions = sourceHeaders.slice(1);
   const headerRow = document.createElement("tr");
   const bodyFragment = document.createDocumentFragment();
+  const emptyHeader = document.createElement("th");
 
-  headers.forEach((header) => {
+  emptyHeader.textContent = "";
+  headerRow.appendChild(emptyHeader);
+
+  ovrValues.forEach((ovr) => {
     const cell = document.createElement("th");
-    cell.textContent = header;
+    cell.textContent = ovr;
     headerRow.appendChild(cell);
   });
 
   advancedPlayerTableHead.replaceChildren(headerRow);
 
-  rows.forEach((row) => {
+  positions.forEach((position, positionIndex) => {
     const tableRow = document.createElement("tr");
+    const positionCell = document.createElement("td");
 
-    row.forEach((value, index) => {
+    positionCell.textContent = position;
+    tableRow.appendChild(positionCell);
+
+    rows.forEach((row) => {
       const cell = document.createElement("td");
-      cell.textContent = index === 0 ? value : formatAdvancedPlayerTableValue(value);
+      cell.textContent = formatAdvancedPlayerTableValue(row[positionIndex + 1]);
       tableRow.appendChild(cell);
     });
 
@@ -1910,7 +1923,6 @@ function renderAdvancedPlayerTable() {
 
   advancedPlayerTableBody.replaceChildren(bodyFragment);
 }
-
 function syncAdvancedSettingsValues() {
   advancedMflUsdInput.value = state.evaluationMflPerUsd.toFixed(2);
   advancedMflUsdResetButton.hidden = state.evaluationMflPerUsd === DEFAULT_EVALUATION_MFL_PER_USD;
@@ -1950,6 +1962,12 @@ function discardAdvancedSettings() {
   closeAdvancedSettings();
 }
 
+function adjustAdvancedMflUsdDraft(delta) {
+  const currentValue = parseEvaluationMflPerUsd(advancedMflUsdInput.value) || state.evaluationMflPerUsd;
+  const nextValue = Math.max(0.01, Math.round((currentValue + delta) * 100) / 100);
+  advancedMflUsdInput.value = nextValue.toFixed(2);
+  updateAdvancedMflUsdResetVisibility();
+}
 function resetAdvancedMflUsd() {
   advancedMflUsdInput.value = DEFAULT_EVALUATION_MFL_PER_USD.toFixed(2);
   updateAdvancedMflUsdResetVisibility();
@@ -2212,6 +2230,34 @@ function evaluationOverallControl(value, season) {
 
   return `<div class="evaluationOverallControl">${reduceControl}<strong>${escapeHtml(value)}</strong>${increaseControl}</div>`;
 }
+function evaluationSummaryPosition(row) {
+  const positions = playerPositions(row);
+  const playerId = String(getValue(row, "player_id") || "");
+  const savedPosition = state.evaluationSummaryPositions[playerId];
+  return positions.includes(savedPosition) ? savedPosition : positions[0] || "";
+}
+
+function evaluationSummaryOverall(row, position, currentOverall) {
+  const positions = playerPositions(row);
+  const primary = positions[0];
+
+  if (!position || position === primary) {
+    return currentOverall;
+  }
+
+  const rating = positionRating(row, position, familiarityForPosition(row, position));
+  return rating === null ? currentOverall : rating;
+}
+
+function evaluationSummaryPositionControl(row, selectedPosition) {
+  const positions = playerPositions(row);
+
+  if (positions.length <= 1) {
+    return escapeHtml(selectedPosition || "");
+  }
+
+  return `<select class="evaluationSummaryPositionSelect" data-evaluation-summary-position>${positions.map((position) => `<option value="${escapeHtml(position)}"${position === selectedPosition ? " selected" : ""}>${escapeHtml(position)}</option>`).join("")}</select>`;
+}
 function renderEvaluationTable(row) {
   const rawExpectedSeasons = expectedEvaluationSeasons(row);
   const seasonOffset = state.evaluationIgnoreFirstSeason ? 1 : 0;
@@ -2284,19 +2330,32 @@ function renderEvaluationTable(row) {
   const summaryRow = document.createElement("tr");
   [
     playerName,
+    evaluationSummaryPositionControl(row, summaryPosition),
     Number.isFinite(currentAge) ? currentAge + seasonOffset : "",
-    currentOverall,
+    summaryOverall,
     expectedSeasons,
     formatEvaluationMfl(mflValueTotal),
     formatEvaluationCurrency(presentValueTotal),
   ].forEach((value) => {
     const cell = document.createElement("td");
-    cell.textContent = value;
+
+    if (typeof value === "string" && value.includes("data-evaluation-summary-position")) {
+      cell.innerHTML = value;
+    } else {
+      cell.textContent = value;
+    }
+
     summaryRow.appendChild(cell);
   });
 
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
+  evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
+    select.addEventListener("change", () => {
+      state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
+      renderEvaluationTable(row);
+    });
+  });
   evaluationTableBody.querySelectorAll("[data-evaluation-overall-season]").forEach((button) => {
     button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
   });
@@ -4222,6 +4281,10 @@ closeSearchButton.addEventListener("click", closeSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
 advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
+advancedMflUsdIncreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
+advancedMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
+advancedMflUsdIncreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(1));
+advancedMflUsdDecreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(-1));
 advancedMflUsdResetButton.addEventListener("click", resetAdvancedMflUsd);
 discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
