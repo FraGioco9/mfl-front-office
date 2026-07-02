@@ -520,10 +520,14 @@ function normalizeWalletAddress(address) {
 }
 
 async function loadWalletPermissions() {
+  const previousAllowed = state.walletPermissionAllowed;
   state.walletPermissionAllowed = false;
 
   if (!state.linkedWalletAddress || !hasWalletProof()) {
-    return;
+    return {
+      allowed: state.walletPermissionAllowed,
+      changed: previousAllowed !== state.walletPermissionAllowed,
+    };
   }
 
   try {
@@ -532,15 +536,38 @@ async function loadWalletPermissions() {
       headers: walletProofHeaders(true),
     });
 
-    if (!response.ok) {
-      return;
+    if (response.ok) {
+      const data = await response.json();
+      state.walletPermissionAllowed = Boolean(data.allowed);
     }
-
-    const data = await response.json();
-    state.walletPermissionAllowed = Boolean(data.allowed);
   } catch {
     state.walletPermissionAllowed = false;
   }
+
+  return {
+    allowed: state.walletPermissionAllowed,
+    changed: previousAllowed !== state.walletPermissionAllowed,
+  };
+}
+
+async function refreshWalletAccessForPage(pageName) {
+  const beforeAccess = state.dataAccess;
+  const { changed } = await loadWalletPermissions();
+  const afterAccess = currentDataAccess();
+
+  if (!changed && beforeAccess === afterAccess) {
+    return false;
+  }
+
+  updateAccountState();
+  updateMenuVisibility();
+
+  if (state.dataLoaded && beforeAccess !== afterAccess && pageRequiresData(pageName)) {
+    state.dataLoaded = false;
+    state.dataLoadPromise = null;
+  }
+
+  return true;
 }
 function currentDataAccess() {
   return hasProgressionAccess() ? "full" : "public";
@@ -1351,6 +1378,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
+  await refreshWalletAccessForPage(pageName);
+
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
   }
@@ -1365,6 +1394,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
+  const targetDataAccess = currentDataAccess();
+
+  if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && pageRequiresData(pageName)) {
+    state.dataLoaded = false;
+    state.dataLoadPromise = null;
+  }
 
   if (pageRequiresFullData(pageName) && state.dataAccess !== "full") {
     state.dataLoaded = false;
