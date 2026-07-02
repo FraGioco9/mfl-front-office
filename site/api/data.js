@@ -4,7 +4,7 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json)$/;
+const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json|players_public\.json|players_progression\.json)$/;
 const PUBLIC_DATABASE_COLUMNS = [
   "player_id",
   "wallet_address",
@@ -213,26 +213,36 @@ module.exports = async function handler(request, response) {
       .split(",")
       .map((column) => column.trim())
       .filter(Boolean);
-    const selectedColumns = publicDatabase
-      ? PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column))
-      : (requestedColumns.length
-        ? requestedColumns.filter((column) => data.columns.includes(column))
-        : data.columns);
-    const selectedColumnIndexes = selectedColumns.map((column) => data.columns.indexOf(column));
 
     if (fileName === "manifest.json") {
+      const publicColumns = Array.isArray(data.files?.public?.columns)
+        ? data.files.public.columns
+        : (Array.isArray(data.columns) ? PUBLIC_DATABASE_COLUMNS.filter((column) => data.columns.includes(column)) : PUBLIC_DATABASE_COLUMNS);
+      const fullColumns = Array.isArray(data.files?.progression?.columns)
+        ? [...publicColumns, ...data.files.progression.columns.filter((column) => !publicColumns.includes(column))]
+        : (Array.isArray(data.columns) ? data.columns : publicColumns);
+
       response.status(200).json({
         ...data,
-        columns: selectedColumns,
+        columns: publicDatabase ? publicColumns : fullColumns,
         publicAccess: publicDatabase ? "database" : undefined,
         partialAccess: !publicDatabase && requestedColumns.length ? "columns" : undefined,
       });
       return;
     }
 
+    const dataColumns = Array.isArray(data.columns) ? data.columns : [];
+    const dataRows = Array.isArray(data.rows) ? data.rows : [];
+    const selectedColumns = publicDatabase
+      ? PUBLIC_DATABASE_COLUMNS.filter((column) => dataColumns.includes(column))
+      : (requestedColumns.length
+        ? requestedColumns.filter((column) => dataColumns.includes(column))
+        : dataColumns);
+    const selectedColumnIndexes = selectedColumns.map((column) => dataColumns.indexOf(column));
+
     response.status(200).json({
       columns: selectedColumns,
-      rows: data.rows.map((row) => selectedColumnIndexes.map((index) => row[index])),
+      rows: dataRows.map((row) => selectedColumnIndexes.map((index) => row[index])),
     });
   } catch (error) {
     response.status(500).json({ error: `Could not read data file: ${error.message}` });
