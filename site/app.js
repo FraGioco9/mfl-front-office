@@ -1255,14 +1255,14 @@ function resetPageScroll() {
 async function setPage(pageName, updateHash = true, options = {}) {
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
-  document.body.dataset.page = pageName;
-  updatePageUrl(pageName, { ...options, updateUrl: updateHash });
-
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
-    showToast(progressionAccessMessage());
+    document.body.dataset.page = "home";
+    showToast("Not authorised.");
     return setPage("home", updateHash);
   }
 
+  document.body.dataset.page = pageName;
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
