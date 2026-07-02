@@ -285,6 +285,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.28</span><p>Fix Advanced Settings MFL/USD arrow startup error</p></li>
               <li><span>v1.84.27</span><p>Add Evaluation summary positions and refine advanced settings</p></li>
               <li><span>v1.84.26</span><p>Refine Evaluation Advanced Settings layout</p></li>
               <li><span>v1.84.25</span><p>Add Evaluation Advanced Settings popup</p></li>
@@ -533,7 +534,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.27</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.28</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -587,7 +588,10 @@
             <div class="advancedSettingHeader">
               <h3 id="advancedMflUsdTitle">MFL/USD</h3>
               <div class="advancedSettingHeaderControl">
-                <input id="advancedMflUsdInput" class="advancedMflUsdInput" type="text" inputmode="decimal" autocomplete="off" aria-label="MFL per USD">
+                <div class="advancedMflUsdControl">
+                  <input id="advancedMflUsdInput" class="advancedMflUsdInput" type="text" inputmode="decimal" autocomplete="off" aria-label="MFL per USD">
+                  <span class="advancedMflUsdStepper" aria-label="Adjust MFL per USD"><button id="advancedMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="advancedMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span>
+                </div>
                 <button id="advancedMflUsdResetButton" type="button">Reset</button>
               </div>
             </div>
