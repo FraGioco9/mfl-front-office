@@ -39,6 +39,9 @@ const state = {
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
   walletPreferencesLoading: false,
+  walletRows: [],
+  walletNamesLoaded: false,
+  walletNamesLoadPromise: null,
 };
 
 const flagColumn = "nationality_flag";
@@ -621,6 +624,43 @@ function normalizedAgentName(value) {
   return name && name.toUpperCase() !== "NULL" ? name : "";
 }
 
+
+async function loadWalletNames() {
+  if (state.walletNamesLoaded) {
+    return true;
+  }
+
+  if (!state.walletNamesLoadPromise) {
+    state.walletNamesLoadPromise = fetch("/data/wallets.json", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return false;
+        }
+
+        const data = await response.json();
+        const walletAddressIndex = data.columns?.indexOf("wallet_address") ?? -1;
+        const walletNameIndex = data.columns?.indexOf("wallet_name") ?? -1;
+
+        if (!Array.isArray(data.rows) || walletAddressIndex < 0 || walletNameIndex < 0) {
+          return false;
+        }
+
+        state.walletRows = data.rows.map((row) => ({
+          wallet_address: row[walletAddressIndex],
+          wallet_name: row[walletNameIndex],
+        }));
+        state.walletNamesLoaded = true;
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        state.walletNamesLoadPromise = null;
+      });
+  }
+
+  return state.walletNamesLoadPromise;
+}
+
 function savedAgentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) {
@@ -655,6 +695,13 @@ function agentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) {
     return "";
+  }
+
+  const walletNameRow = state.walletRows.find((row) => normalizeWalletAddress(row.wallet_address).toLowerCase() === normalizedAddress);
+  const walletName = walletNameRow ? normalizedAgentName(walletNameRow.wallet_name) : "";
+  if (walletName) {
+    saveAgentNameForWallet(address, walletName);
+    return walletName;
   }
 
   const walletRow = state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress);
@@ -997,6 +1044,7 @@ async function linkWallet() {
     }
 
     await loadWalletPermissions();
+    await loadWalletNames();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
     refreshWatchlistPageAfterWalletSync();
@@ -4816,6 +4864,7 @@ async function startApp() {
 
   void ensureFlowWallet();
   await loadWalletPermissions();
+  await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
   await loadSummary();

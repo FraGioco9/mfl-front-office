@@ -75,6 +75,29 @@ def row_to_json_values(row: sqlite3.Row) -> list[Any]:
     return [row[column] for column in PLAYER_COLUMNS]
 
 
+def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
+    rows = connection.execute(
+        """
+        SELECT wallet_address, name AS wallet_name
+        FROM wallets
+        ORDER BY wallet_address
+        """
+    ).fetchall()
+
+    with (output_path / "wallets.json").open("w", encoding="utf-8") as file:
+        json.dump(
+            {
+                "columns": ["wallet_address", "wallet_name"],
+                "rows": [[row["wallet_address"], row["wallet_name"]] for row in rows],
+            },
+            file,
+            separators=(",", ":"),
+        )
+
+    print(f"Exported wallets.json: {len(rows)} wallets")
+    return len(rows)
+
+
 def export_players(chunk_size: int, output_path: Path) -> dict[str, Any]:
     clean_output_folder(output_path)
 
@@ -82,7 +105,7 @@ def export_players(chunk_size: int, output_path: Path) -> dict[str, Any]:
     connection.row_factory = sqlite3.Row
 
     total_players = connection.execute("SELECT COUNT(*) FROM players").fetchone()[0]
-    total_wallets = connection.execute("SELECT COUNT(*) FROM wallets").fetchone()[0]
+    total_wallets = export_wallets(connection, output_path)
     chunk_files = []
     offset = 0
     chunk_number = 1
