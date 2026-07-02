@@ -1211,6 +1211,8 @@ button:disabled {
 }
 
 .advancedPlayerTable {
+  position: relative;
+  z-index: 1;
   width: max-content;
   min-width: 100%;
   border-collapse: separate;
@@ -1237,13 +1239,25 @@ button:disabled {
   background: var(--header-bg);
 }
 
+.advancedPlayerTable thead::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable thead tr {
+  background: var(--header-bg);
+}
+
 .advancedPlayerTable th {
   position: sticky;
   top: 0;
   z-index: 7;
   background: var(--header-bg);
   color: var(--text);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1257,6 +1271,7 @@ button:disabled {
   left: 0;
   z-index: 2;
   background: var(--header-bg);
+  font-size: 14px;
   font-weight: 800;
   text-align: center;
   border-bottom-color: var(--header-bg);
@@ -1277,7 +1292,7 @@ button:disabled {
   background: var(--header-bg);
 }
 
-.advancedPlayerTable tbody tr:hover td:not(:first-child):hover {
+.advancedPlayerTable tbody td:not(:first-child):hover {
   background: var(--button-hover-bg) !important;
 }
 
@@ -2982,11 +2997,11 @@ td a {
 
 .evaluationSummaryPositionSelect {
   display: inline-block;
-  width: 100%;
+  width: 52px;
   min-width: 0;
   height: auto;
   margin: 0;
-  padding: 0 14px 0 0;
+  padding: 0 12px 0 0;
   border: 0;
   background-color: transparent;
   color: inherit;
@@ -3015,7 +3030,7 @@ td a {
 .evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after {
   content: "";
   position: absolute;
-  right: 14px;
+  left: 42px;
   top: 50%;
   width: 7px;
   height: 7px;
