@@ -15,8 +15,12 @@ function signatureWalletAddresses(signatures) {
     .filter(Boolean));
 }
 
-function walletAccessMessage(address) {
-  return `MFL Front Office Opt-In\nDapper Wallet: ${normalizeWalletAddress(address)}`;
+function walletAccessMessage(address, signingAddress = "") {
+  const dapperAddress = normalizeWalletAddress(address);
+  const signerAddress = normalizeWalletAddress(signingAddress);
+  return signerAddress && signerAddress !== dapperAddress
+    ? `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}\nSigning Wallet: ${signerAddress}`
+    : `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}`;
 }
 
 function stringToHex(value) {
@@ -58,6 +62,7 @@ async function allowedWallets() {
 
 async function verifyWalletProof(request) {
   const wallet = normalizeWalletAddress(request.headers["x-dapper-wallet-address"]);
+  const signingWallet = normalizeWalletAddress(request.headers["x-wallet-signing-address"] || wallet);
   const message = String(request.headers["x-wallet-message"] || "");
   let signatures = [];
 
@@ -67,11 +72,11 @@ async function verifyWalletProof(request) {
     return false;
   }
 
-  if (!wallet || message !== walletAccessMessage(wallet) || !Array.isArray(signatures) || !signatures.length) {
+  if (!wallet || !signingWallet || message !== walletAccessMessage(wallet, signingWallet) || !Array.isArray(signatures) || !signatures.length) {
     return false;
   }
 
-  if (!signatureWalletAddresses(signatures).has(wallet)) {
+  if (!signatureWalletAddresses(signatures).has(signingWallet)) {
     return false;
   }
 

@@ -403,7 +403,7 @@ function hasWalletProof() {
   return Boolean(
     state.linkedWalletAddress
     && state.linkedWalletProof?.address === state.linkedWalletAddress
-    && state.linkedWalletProof?.message === walletAccessMessage(state.linkedWalletAddress)
+    && state.linkedWalletProof?.message === walletAccessMessage(state.linkedWalletAddress, state.linkedWalletProof?.signingAddress)
     && Array.isArray(state.linkedWalletProof?.signatures)
     && state.linkedWalletProof.signatures.length
   );
@@ -540,6 +540,7 @@ function walletProofHeaders(force = false) {
 
   return {
     "x-dapper-wallet-address": state.linkedWalletAddress,
+    "x-wallet-signing-address": state.linkedWalletProof.signingAddress || state.linkedWalletAddress,
     "x-wallet-message": state.linkedWalletProof.message,
     "x-wallet-signatures": JSON.stringify(state.linkedWalletProof.signatures),
   };
@@ -727,8 +728,12 @@ function signatureWalletAddress(signatures) {
 
   return walletAddressCandidatesFromValue(signatures)[0] || "";
 }
-function walletAccessMessage(address) {
-  return `MFL Front Office Opt-In\nDapper Wallet: ${normalizeWalletAddress(address)}`;
+function walletAccessMessage(address, signingAddress = "") {
+  const dapperAddress = normalizeWalletAddress(address);
+  const signerAddress = normalizeWalletAddress(signingAddress);
+  return signerAddress && signerAddress !== dapperAddress
+    ? `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}\nSigning Wallet: ${signerAddress}`
+    : `MFL Front Office Opt-In\nDapper Wallet: ${dapperAddress}`;
 }
 
 function walletDiscoveryMessage() {
@@ -756,6 +761,7 @@ function restoreLinkedWalletProof() {
       state.linkedWalletProof = {
         address: normalizeWalletAddress(proof.address),
         message: proof.message,
+        signingAddress: normalizeWalletAddress(proof.signingAddress || proof.address),
         signatures: proof.signatures,
       };
     }
@@ -926,11 +932,12 @@ async function linkWallet() {
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
-    const message = walletAccessMessage(dapperAddress);
+    const signingAddress = signatureWalletAddress(discoverySignatures) || dapperAddress;
+    const message = walletAccessMessage(dapperAddress, signingAddress);
     const signatures = await signWalletMessage(fcl, message);
 
     state.linkedWalletAddress = dapperAddress;
-    state.linkedWalletProof = { address: dapperAddress, message, signatures };
+    state.linkedWalletProof = { address: dapperAddress, signingAddress, message, signatures };
     try {
       localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
       localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
