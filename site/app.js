@@ -198,20 +198,10 @@ const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
 const FLOW_WALLET_MODULE_URLS = [
   "https://esm.sh/@onflow/fcl@1.21.11?bundle",
 ];
-const DAPPER_AUTHN_ENDPOINT = "https://accounts.meetdapper.com/fcl/authn";
-const DAPPER_AUTHN_SERVICE = {
-  f_type: "Service",
-  f_vsn: "1.0.0",
-  type: "authn",
-  uid: "dapper#authn",
-  endpoint: DAPPER_AUTHN_ENDPOINT,
-  method: "HTTP/POST",
-  provider: {
-    name: "Dapper Wallet",
-    address: "0xead892083b3e2c6c",
-  },
-};
-const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress(DAPPER_AUTHN_SERVICE.provider.address);
+const FLOW_DISCOVERY_WALLET = "https://fcl-discovery.onflow.org/authn";
+const FLOW_DISCOVERY_AUTHN_ENDPOINT = "https://fcl-discovery.onflow.org/api/authn";
+const DAPPER_AUTHN_INCLUDE = ["dapper-wallet"];
+const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress("0xead892083b3e2c6c");
 const WALLET_ADDRESS_PATTERN = /0x[0-9a-f]{16,64}/gi;
 const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
@@ -736,7 +726,9 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
 
   fcl.config({
     "accessNode.api": "https://rest-mainnet.onflow.org",
-    "discovery.wallet": DAPPER_AUTHN_ENDPOINT,
+    "discovery.wallet": FLOW_DISCOVERY_WALLET,
+    "discovery.authn.endpoint": FLOW_DISCOVERY_AUTHN_ENDPOINT,
+    "discovery.authn.include": DAPPER_AUTHN_INCLUDE,
     "discovery.wallet.method.default": "POP/RPC",
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${appOrigin()}/favicon.ico`,
@@ -825,6 +817,7 @@ async function linkWallet() {
 
   try {
     const authenticatedUser = await fcl.authenticate({ forceReauth: true });
+    console.debug("Dapper opt-in user snapshot", await fcl.currentUser.snapshot());
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
     const discoverySignatures = flowAddress ? [] : await signWalletMessage(fcl, walletDiscoveryMessage());
