@@ -370,12 +370,10 @@ function loadTheme() {
   applyTheme(savedTheme || "dark");
 }
 
-function updateLoadingProgress(loadedFiles, totalFiles) {
+function updateLoadingProgress(loadedFiles, totalFiles, message = null) {
   const percent = totalFiles > 0 ? Math.round((loadedFiles / totalFiles) * 100) : 0;
-  loadingBarFill.style.width = `${percent}%`;
-  loadingText.textContent = totalFiles > 0
-    ? `Loading data files ${loadedFiles}/${totalFiles}`
-    : "Preparing data...";
+  loadingBarFill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  loadingText.textContent = message || (totalFiles > 0 ? "Loading data..." : "Preparing data...");
 }
 
 function paintLoadingProgress() {
@@ -4791,8 +4789,50 @@ function setView(viewName) {
   applyFilters();
 }
 
+function publicDataFile(manifest) {
+  return manifest?.files?.public?.file || manifest?.chunks?.[0]?.file || "players_public.json";
+}
+
+function progressionDataFile(manifest) {
+  return manifest?.files?.progression?.file || "players_progression.json";
+}
+
+function publicDataColumns(manifest) {
+  return manifest?.files?.public?.columns || manifest?.columns || [];
+}
+
+function progressionDataColumns(manifest) {
+  return manifest?.files?.progression?.columns || [];
+}
+
+function fullDataColumns(manifest) {
+  const columns = [...publicDataColumns(manifest)];
+
+  progressionDataColumns(manifest).forEach((column) => {
+    if (!columns.includes(column)) {
+      columns.push(column);
+    }
+  });
+
+  return columns;
+}
+
+function manifestDataFiles(manifest) {
+  if (manifest?.files?.public?.file) {
+    const files = [manifest.files.public.file];
+
+    if (currentDataAccess() === "full" && manifest?.files?.progression?.file) {
+      files.push(manifest.files.progression.file);
+    }
+
+    return files;
+  }
+
+  return (manifest?.chunks || []).map((chunk) => chunk.file);
+}
+
 function dataCacheVersion(manifest) {
-  return `${currentDataAccess()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${(manifest.chunks || []).map((chunk) => chunk.file).join("|")}`;
+  return `${currentDataAccess()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
 }
 
 function missingFullDataColumns(fullColumns) {
@@ -4836,7 +4876,8 @@ function mergeDataColumns(chunk, columnsToMerge, rowMap) {
 }
 
 async function upgradePublicDataToFull(manifest) {
-  const columnsToMerge = missingFullDataColumns(manifest.columns);
+  const targetColumns = fullDataColumns(manifest);
+  const columnsToMerge = missingFullDataColumns(targetColumns);
 
   if (!columnsToMerge.length) {
     state.manifest = manifest;
@@ -4845,21 +4886,31 @@ async function upgradePublicDataToFull(manifest) {
   }
 
   const rowMap = rowMapByPlayerId();
-  const requestColumns = ["player_id", ...columnsToMerge];
+  const requestColumns = ["player_id", ...columnsToMerge.filter((column) => column !== "player_id")];
 
   updateSummaryCounts(manifest.row_count, manifest.wallet_count);
   await paintLoadingProgress();
 
-  for (let index = 0; index < manifest.chunks.length; index += 1) {
-    updateLoadingProgress(index + 1, manifest.chunks.length);
+  if (manifest?.files?.progression?.file) {
+    updateLoadingProgress(0, 1);
     await paintLoadingProgress();
-    const chunkInfo = manifest.chunks[index];
-    const chunk = await fetchDataFile(chunkInfo.file, { columns: requestColumns });
-    mergeDataColumns(chunk, columnsToMerge, rowMap);
+    const progression = await fetchDataFile(progressionDataFile(manifest), { columns: requestColumns });
+    mergeDataColumns(progression, columnsToMerge, rowMap);
+    updateLoadingProgress(1, 1);
+    await paintLoadingProgress();
+  } else {
+    for (let index = 0; index < manifest.chunks.length; index += 1) {
+      updateLoadingProgress(index, manifest.chunks.length);
+      await paintLoadingProgress();
+      const chunkInfo = manifest.chunks[index];
+      const chunk = await fetchDataFile(chunkInfo.file, { columns: requestColumns });
+      mergeDataColumns(chunk, columnsToMerge, rowMap);
+      updateLoadingProgress(index + 1, manifest.chunks.length);
+    }
   }
 
   state.manifest = manifest;
-  state.columns = [...state.columns, ...columnsToMerge];
+  state.columns = targetColumns;
   state.dataAccess = "full";
   return true;
 }
@@ -4896,16 +4947,20 @@ async function loadData() {
       }
 
       state.manifest = manifest;
-      state.columns = manifest.columns;
+      state.columns = publicDataColumns(manifest);
       updateSummaryCounts(manifest.row_count, manifest.wallet_count);
       await paintLoadingProgress();
 
-      for (let index = 0; index < manifest.chunks.length; index += 1) {
-        updateLoadingProgress(index + 1, manifest.chunks.length);
-        await paintLoadingProgress();
-        const chunkInfo = manifest.chunks[index];
-        const chunk = await fetchDataFile(chunkInfo.file, { useCache: useCachedChunks, writeCache: !useCachedChunks });
-        state.rows.push(...chunk.rows);
+      const totalLoadSteps = targetAccess === "full" && manifest?.files?.progression?.file ? 2 : 1;
+      const publicFile = publicDataFile(manifest);
+      updateLoadingProgress(0, totalLoadSteps);
+      await paintLoadingProgress();
+      const publicChunk = await fetchDataFile(publicFile, { useCache: useCachedChunks, writeCache: !useCachedChunks });
+      state.rows.push(...publicChunk.rows);
+      updateLoadingProgress(1, totalLoadSteps);
+
+      if (targetAccess === "full") {
+        await upgradePublicDataToFull(manifest);
       }
     }
 
