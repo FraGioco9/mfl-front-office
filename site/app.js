@@ -2009,24 +2009,46 @@ function adjustEvaluationMflPerUsdDraft(delta) {
 }
 
 
-function evaluationMflShareForSeason(rowIndex, expectedSeasons) {
+const evaluationContractsTable = (() => {
+  const rows = advancedPlayerTableTsv.trim().split("\n").map((line) => line.split("\t"));
+  const headers = rows.shift();
+  const table = {};
+
+  rows.forEach((row) => {
+    const overall = Number(row[0]);
+
+    if (!Number.isFinite(overall)) {
+      return;
+    }
+
+    table[overall] = {};
+    headers.slice(1).forEach((position, index) => {
+      table[overall][position] = Number(row[index + 1]) || 0;
+    });
+  });
+
+  return table;
+})();
+
+function evaluationMflMultiplierForSeason(rowIndex, expectedSeasons) {
   const seasonsFromEnd = expectedSeasons - rowIndex;
 
   if (seasonsFromEnd === 1) {
-    return 0.04;
+    return 0.6;
   }
 
   if (seasonsFromEnd === 2 || seasonsFromEnd === 3) {
-    return 0.05;
+    return 0.8;
   }
 
-  return 0.06;
+  return 1;
 }
 
-function evaluationMflValueForOverall(overall, rowIndex, expectedSeasons) {
+function evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons) {
   const roundedOverall = Math.round(Number(overall));
-  const teamEarnings = evaluationTeamEarningsByOverall[roundedOverall] || 0;
-  return teamEarnings * evaluationMflShareForSeason(rowIndex, expectedSeasons);
+  const positionValues = evaluationContractsTable[roundedOverall] || {};
+  const contractValue = positionValues[position] || 0;
+  return contractValue * evaluationMflMultiplierForSeason(rowIndex, expectedSeasons);
 }
 
 function formatEvaluationMfl(value) {
@@ -2291,7 +2313,7 @@ function renderEvaluationTable(row) {
     const overallIndex = season - 1;
     const tableRow = document.createElement("tr");
     const seasonOverall = evaluationOverallControl(overallValues[overallIndex], season);
-    const numericMflValue = evaluationMflValueForOverall(overallValues[overallIndex], rowIndex, expectedSeasons);
+    const numericMflValue = evaluationMflValueForOverall(overallValues[overallIndex], summaryPosition, rowIndex, expectedSeasons);
     const mflValue = formatEvaluationMfl(numericMflValue);
     const usdValue = Number.isFinite(numericMflValue) ? numericMflValue / state.evaluationMflPerUsd : null;
     const discountFactor = evaluationDiscountFactor(discountRate, season);
@@ -2358,12 +2380,6 @@ function renderEvaluationTable(row) {
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
-    select.addEventListener("mousedown", (event) => {
-      if (event.detail > 1) {
-        event.preventDefault();
-        window.getSelection()?.removeAllRanges();
-      }
-    });
     select.addEventListener("dblclick", (event) => {
       event.preventDefault();
       select.blur();

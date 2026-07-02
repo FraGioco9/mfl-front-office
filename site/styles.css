@@ -1202,6 +1202,7 @@ button:disabled {
 }
 
 .advancedPlayerTableScroller {
+  position: relative;
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1211,7 +1212,8 @@ button:disabled {
 .advancedPlayerTable {
   width: max-content;
   min-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
@@ -1230,23 +1232,19 @@ button:disabled {
 .advancedPlayerTable thead {
   position: sticky;
   top: 0;
-  z-index: 4;
+  z-index: 6;
   background: var(--header-bg);
-}
-
-.advancedPlayerTable thead tr {
-  background: var(--header-bg);
+  box-shadow: 0 -96px 0 96px var(--surface);
 }
 
 .advancedPlayerTable th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 7;
   background: var(--header-bg);
   color: var(--text);
   font-size: 12px;
   text-transform: uppercase;
-  box-shadow: 0 -48px 0 48px var(--surface);
 }
 
 .advancedPlayerTable th:first-child,
@@ -1260,21 +1258,16 @@ button:disabled {
   background: var(--header-bg);
   font-weight: 800;
   text-align: center;
-  border-bottom-color: transparent;
-  box-shadow: none;
+  border-bottom-color: var(--header-bg);
 }
 
 .advancedPlayerTable th:first-child {
-  z-index: 5;
-  background: var(--header-bg);
-  border-bottom-color: var(--border);
-  box-shadow: 0 -48px 0 48px var(--surface);
+  z-index: 8;
 }
 
-.advancedPlayerTable tbody tr:hover {
-  background: transparent;
-}
-
+.evaluationSummaryTable tbody tr:hover,
+.evaluationSummaryTable tbody tr:hover td,
+.advancedPlayerTable tbody tr:hover,
 .advancedPlayerTable tbody tr:hover td {
   background: transparent;
 }
@@ -1283,12 +1276,8 @@ button:disabled {
   background: var(--header-bg);
 }
 
-.advancedPlayerTable tbody td:hover {
+.advancedPlayerTable tbody td:not(:first-child):hover {
   background: var(--button-hover-bg) !important;
-}
-
-.advancedPlayerTable tbody td:first-child:hover {
-  background: var(--header-bg);
 }
 
 .filterBuilder {
