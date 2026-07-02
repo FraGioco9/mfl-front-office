@@ -827,10 +827,12 @@ async function linkWallet() {
   try {
     const authenticatedUser = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
-    const dapperAddress = walletAddressFromUser(user);
+    const flowAddress = walletAddressFromUser(user);
+    const discoverySignatures = flowAddress ? [] : await signWalletMessage(fcl, walletDiscoveryMessage());
+    const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
 
     if (!dapperAddress) {
-      console.warn("Dapper restricted login did not include a wallet address.", { authenticatedUser, user });
+      console.warn("Dapper restricted login and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
