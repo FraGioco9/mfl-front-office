@@ -32,6 +32,7 @@ const state = {
   evaluationIgnoreFirstSeason: false,
   evaluationMflPerUsd: 400,
   evaluationSummaryPositions: {},
+  linkedWalletAddress: "",
 };
 
 const flagColumn = "nationality_flag";
@@ -185,6 +186,7 @@ const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", .
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
+const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
@@ -273,6 +275,7 @@ const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
 const accountEmail = document.querySelector("#accountEmail");
+const linkWalletButton = document.querySelector("#linkWalletButton");
 const signOutButton = document.querySelector("#signOutButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
@@ -727,9 +730,13 @@ function accountName() {
 
 function updateAccountState() {
   const signedIn = Boolean(auth.session);
+  const walletLinked = Boolean(state.linkedWalletAddress);
   accountEmail.textContent = accountName();
   signOutButton.textContent = signedIn ? "Sign Out" : "Sign In";
   signOutButton.classList.toggle("signInAction", !signedIn);
+  linkWalletButton.textContent = walletLinked ? "Linked" : "Link wallet";
+  linkWalletButton.disabled = walletLinked;
+  linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
 }
 
 function handleAccountAction() {
@@ -741,6 +748,60 @@ function handleAccountAction() {
   }
 
   openLoginFromCurrentPage();
+}
+
+function configureFlowWallet() {
+  if (!window.fcl?.config) {
+    return false;
+  }
+
+  window.fcl.config({
+    "accessNode.api": "https://rest-mainnet.onflow.org",
+    "discovery.wallet": "https://fcl-discovery.onflow.org/authn",
+    "app.detail.title": "MFL Front Office",
+    "app.detail.icon": `${window.location.origin}/favicon.ico`,
+  });
+  return true;
+}
+
+async function linkWallet() {
+  closeAccountMenu();
+
+  if (state.linkedWalletAddress) {
+    return;
+  }
+
+  if (!configureFlowWallet()) {
+    showToast("Wallet login is still loading. Try again in a moment.");
+    return;
+  }
+
+  linkWalletButton.disabled = true;
+  linkWalletButton.textContent = "Linking...";
+
+  try {
+    const user = await window.fcl.authenticate();
+    const address = normalizeWalletAddress(user?.addr);
+
+    if (!address) {
+      throw new Error("No wallet address returned.");
+    }
+
+    state.linkedWalletAddress = address;
+    try {
+      localStorage.setItem(LINKED_WALLET_STORAGE_KEY, address);
+    } catch {
+      // The linked state still works for this page if storage is blocked.
+    }
+
+    updateAccountState();
+    saveTableState();
+    showToast("Wallet linked.");
+  } catch (error) {
+    console.warn("Could not link wallet.", error);
+    updateAccountState();
+    showToast("Wallet link cancelled.");
+  }
 }
 
 function openAccountMenu() {
@@ -1222,6 +1283,7 @@ function currentTableState() {
     recentSearchPlayerIds: state.recentSearchPlayerIds,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     playerAttributeView: state.playerAttributeView,
+    linkedWalletAddress: state.linkedWalletAddress,
   };
 }
 
@@ -1249,6 +1311,7 @@ async function loadCloudTableState() {
   restoreRecentSearchState(auth.savedTableState);
   restoreRecentEvaluationState(auth.savedTableState);
   restorePlayerAttributeView(auth.savedTableState);
+  restoreLinkedWalletState(auth.savedTableState);
 }
 
 function queueCloudTableStateSave(savedState) {
@@ -1314,6 +1377,32 @@ function restorePlayerAttributeView(savedState) {
   }
 }
 
+function normalizeWalletAddress(address) {
+  const value = String(address || "").trim();
+  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
+}
+
+function restoreLinkedWalletState(savedState) {
+  const savedAddress = normalizeWalletAddress(savedState?.linkedWalletAddress);
+  if (savedAddress) {
+    state.linkedWalletAddress = savedAddress;
+    try {
+      localStorage.setItem(LINKED_WALLET_STORAGE_KEY, savedAddress);
+    } catch {
+      // The linked state still works for this page if storage is blocked.
+    }
+    updateAccountState();
+    return;
+  }
+
+  try {
+    state.linkedWalletAddress = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
+  } catch {
+    state.linkedWalletAddress = "";
+  }
+  updateAccountState();
+}
+
 function restoreTablePageStates(savedState) {
   if (savedState?.pages) {
     state.tablePageStates = { ...savedState.pages };
@@ -1343,6 +1432,7 @@ function loadSavedTableState() {
     restoreRecentSearchState(auth.savedTableState);
     restoreRecentEvaluationState(auth.savedTableState);
     restorePlayerAttributeView(auth.savedTableState);
+    restoreLinkedWalletState(auth.savedTableState);
     applyGuestWatchlistIfNeeded();
     return auth.savedTableState;
   }
@@ -1355,9 +1445,11 @@ function loadSavedTableState() {
     restoreRecentSearchState(savedState);
     restoreRecentEvaluationState(savedState);
     restorePlayerAttributeView(savedState);
+    restoreLinkedWalletState(savedState);
     applyGuestWatchlistIfNeeded();
     return savedState;
   } catch {
+    restoreLinkedWalletState(null);
     applyGuestWatchlistIfNeeded();
     return null;
   }
@@ -4464,6 +4556,7 @@ accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleAccountMenu();
 });
+linkWalletButton.addEventListener("click", linkWallet);
 signOutButton.addEventListener("click", handleAccountAction);
 
 async function startApp() {

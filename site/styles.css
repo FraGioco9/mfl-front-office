@@ -362,6 +362,13 @@ p {
   color: #ffffff;
 }
 
+.accountDropdown button.accountDropdownItem:disabled,
+.accountDropdown button.accountDropdownItem:disabled:hover {
+  cursor: default;
+  background: transparent;
+  color: var(--text-muted);
+}
+
 .accountDropdownItem + .accountDropdownItem {
   margin-top: 2px;
 }

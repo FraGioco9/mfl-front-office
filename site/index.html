@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.83.8">
+    <link rel="stylesheet" href="/styles.css?v=1.84.57">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -70,6 +70,7 @@
           <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
           <div id="accountDropdown" class="accountDropdown" hidden>
             <div id="accountEmail" class="accountDropdownItem">Guest</div>
+            <button id="linkWalletButton" class="accountDropdownItem" type="button">Link wallet</button>
             <button id="signOutButton" class="accountDropdownItem signInAction" type="button">Sign In</button>
           </div>
         </div>
@@ -285,6 +286,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.84.57</span><p>Add account wallet linking</p></li>
               <li><span>v1.84.56</span><p>Fix Contracts table header corners</p></li>
               <li><span>v1.84.55</span><p>Keep Contracts header border visible while scrolling</p></li>
               <li><span>v1.84.54</span><p>Clip Contracts rows beneath sticky headers</p></li>
@@ -562,7 +564,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.56</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.84.57</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -652,6 +654,7 @@
       </section>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/app.js?v=1.83.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@onflow/fcl/dist/fcl.min.js"></script>
+    <script src="/app.js?v=1.84.57"></script>
   </body>
 </html>
