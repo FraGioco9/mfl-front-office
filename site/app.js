@@ -4956,7 +4956,7 @@ async function loadData() {
       updateLoadingProgress(0, totalLoadSteps);
       await paintLoadingProgress();
       const publicChunk = await fetchDataFile(publicFile, { useCache: useCachedChunks, writeCache: !useCachedChunks });
-      state.rows.push(...publicChunk.rows);
+      state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
       updateLoadingProgress(1, totalLoadSteps);
 
       if (targetAccess === "full") {
