@@ -727,6 +727,39 @@ body.filtersOpen .navButton:hover {
   text-transform: uppercase;
 }
 
+
+.homeOptInButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 124px;
+  height: 40px;
+  margin-top: 2px;
+  border-color: #2fbf62;
+  background: #2fbf62;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.homeOptInButton:hover:not(:disabled) {
+  border-color: #249b50;
+  background: #249b50;
+  color: #ffffff;
+}
+
+.homeOptInButton[hidden] {
+  display: none;
+}
+
+.homeOptInIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
 .buttonGear {
   display: inline-flex;
   align-items: center;

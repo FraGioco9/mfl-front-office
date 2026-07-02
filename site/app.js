@@ -284,6 +284,7 @@ const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
 const accountEmail = document.querySelector("#accountEmail");
 const linkWalletButton = document.querySelector("#linkWalletButton");
+const homeOptInButton = document.querySelector("#homeOptInButton");
 const themeButton = document.querySelector("#themeButton");
 const openFiltersButton = document.querySelector("#openFiltersButton");
 const quickClearFiltersButton = document.querySelector("#quickClearFiltersButton");
@@ -461,11 +462,19 @@ function updateMenuVisibility() {
 }
 
 function hideHomeLoginButton() {
-  // Email login has been removed.
+  if (homeOptInButton) {
+    homeOptInButton.hidden = true;
+  }
 }
 
 function syncHomeLoginButton() {
-  hideHomeLoginButton();
+  if (!homeOptInButton) {
+    return;
+  }
+
+  const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
+  homeOptInButton.hidden = walletLinked;
+  homeOptInButton.disabled = state.walletOptInInProgress;
 }
 
 function pageRequiresData(pageName) {
@@ -867,9 +876,10 @@ function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
-  linkWalletButton.disabled = false;
+  linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
   linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+  syncHomeLoginButton();
 }
 
 function optOutWallet() {
@@ -5153,6 +5163,9 @@ accountButton.addEventListener("click", (event) => {
   toggleAccountMenu();
 });
 linkWalletButton.addEventListener("click", linkWallet);
+if (homeOptInButton) {
+  homeOptInButton.addEventListener("click", linkWallet);
+}
 
 async function startApp() {
   loadTheme();
