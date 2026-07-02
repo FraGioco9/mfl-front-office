@@ -210,6 +210,8 @@ const DAPPER_AUTHN_SERVICE = {
     address: "0xead892083b3e2c6c",
   },
 };
+const DAPPER_PROVIDER_ADDRESS = normalizeWalletAddress(DAPPER_AUTHN_SERVICE.provider.address);
+const WALLET_ADDRESS_PATTERN = /0x[0-9a-f]{16,64}/gi;
 const WALLET_CANCELLED_PATTERNS = ["cancel", "declin", "reject", "closed", "user aborted"];
 const POSITION_ORDER = ["GK", "RB", "LB", "CB", "RWB", "LWB", "CDM", "RM", "LM", "CM", "CAM", "RW", "LW", "CF", "ST"];
 const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
@@ -628,8 +630,32 @@ function updateAccountState() {
   linkWalletButton.disabled = walletLinked;
   linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
 }
+function walletAddressCandidatesFromValue(value, seen = new WeakSet()) {
+  if (!value) {
+    return [];
+  }
+
+  if (typeof value === "string") {
+    const matches = value.match(WALLET_ADDRESS_PATTERN) || [];
+    return matches
+      .map(normalizeWalletAddress)
+      .filter((address) => address && address !== DAPPER_PROVIDER_ADDRESS);
+  }
+
+  if (typeof value !== "object") {
+    return [];
+  }
+
+  if (seen.has(value)) {
+    return [];
+  }
+  seen.add(value);
+
+  return Object.values(value).flatMap((childValue) => walletAddressCandidatesFromValue(childValue, seen));
+}
+
 function walletAddressFromUser(user) {
-  return normalizeWalletAddress(
+  const directAddress = normalizeWalletAddress(
     user?.addr
     || user?.address
     || user?.account?.addr
@@ -637,6 +663,12 @@ function walletAddressFromUser(user) {
     || user?.authorization?.addr
     || user?.authorization?.address,
   );
+
+  if (directAddress && directAddress !== DAPPER_PROVIDER_ADDRESS) {
+    return directAddress;
+  }
+
+  return walletAddressCandidatesFromValue(user)[0] || "";
 }
 
 async function authenticatedWalletUser(fcl, authenticatedUser) {
@@ -785,6 +817,7 @@ async function linkWallet() {
     const flowAddress = walletAddressFromUser(user);
 
     if (!flowAddress) {
+      console.warn("Dapper authentication did not include a wallet address.", { authenticatedUser, user });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
