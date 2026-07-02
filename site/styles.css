@@ -2956,12 +2956,12 @@ td a {
 
 .evaluationSummaryTable th:nth-child(1),
 .evaluationSummaryTable td:nth-child(1) {
-  width: 24%;
+  width: 28%;
 }
 
 .evaluationSummaryTable th:nth-child(2),
 .evaluationSummaryTable td:nth-child(2) {
-  width: 10%;
+  width: 6%;
 }
 
 .evaluationSummaryTable th:nth-child(3),
