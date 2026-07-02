@@ -78,6 +78,39 @@ async function findDataFile(fileName) {
   ]);
 }
 
+function requestOrigin(request) {
+  const host = request.headers["x-forwarded-host"] || request.headers.host;
+  if (!host) {
+    return "";
+  }
+
+  const protocol = request.headers["x-forwarded-proto"] || "https";
+  return `${protocol}://${host}`;
+}
+
+async function readDataJson(fileName, request) {
+  const filePath = await findDataFile(fileName);
+
+  if (filePath) {
+    return JSON.parse(await fs.readFile(filePath, "utf8"));
+  }
+
+  const origin = requestOrigin(request);
+  if (!origin) {
+    throw new Error(`Data file not found: ${fileName}`);
+  }
+
+  const staticResponse = await fetch(`${origin}/data/${encodeURIComponent(fileName)}`, {
+    cache: "no-store",
+  });
+
+  if (!staticResponse.ok) {
+    throw new Error(`Data file not found: ${fileName}`);
+  }
+
+  return staticResponse.json();
+}
+
 async function allowedWallets() {
   const permissionsPath = await findFile([
     path.join(__dirname, "wallet-permissions.json"),
@@ -152,18 +185,10 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const filePath = await findDataFile(fileName);
-
-  if (!filePath) {
-    response.status(404).json({ error: `Data file not found: ${fileName}` });
-    return;
-  }
-
   try {
-    const fileContent = await fs.readFile(filePath, "utf8");
     response.setHeader("Content-Type", "application/json; charset=utf-8");
 
-    const data = JSON.parse(fileContent);
+    const data = await readDataJson(fileName, request);
     const requestedColumns = String(request.query.columns || "")
       .split(",")
       .map((column) => column.trim())
