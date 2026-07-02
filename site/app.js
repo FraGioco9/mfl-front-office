@@ -198,7 +198,7 @@ const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
 const FLOW_WALLET_MODULE_URLS = [
   "https://esm.sh/@onflow/fcl@1.21.11?bundle",
 ];
-const DAPPER_AUTHN_ENDPOINT = "https://accounts.meetdapper.com/fcl/authn-restricted";
+const DAPPER_AUTHN_ENDPOINT = "https://accounts.meetdapper.com/fcl/authn";
 const DAPPER_AUTHN_SERVICE = {
   f_type: "Service",
   f_vsn: "1.0.0",
@@ -734,6 +734,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
   fcl.config({
     "accessNode.api": "https://rest-mainnet.onflow.org",
     "discovery.wallet": DAPPER_AUTHN_ENDPOINT,
+    "discovery.wallet.method.default": "POP/RPC",
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${window.location.origin}/favicon.ico`,
   });
@@ -818,14 +819,14 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const authenticatedUser = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
+    const authenticatedUser = await fcl.authenticate({ forceReauth: true });
     const user = await authenticatedWalletUser(fcl, authenticatedUser);
     const flowAddress = walletAddressFromUser(user);
     const discoverySignatures = flowAddress ? [] : await signWalletMessage(fcl, walletDiscoveryMessage());
     const dapperAddress = flowAddress || signatureWalletAddress(discoverySignatures);
 
     if (!dapperAddress) {
-      console.warn("Dapper restricted login and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
+      console.warn("Dapper popup login and signature did not include a wallet address.", { authenticatedUser, user, discoverySignatures });
       throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
