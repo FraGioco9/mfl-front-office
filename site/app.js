@@ -204,7 +204,7 @@ const DAPPER_AUTHN_SERVICE = {
   f_vsn: "1.0.0",
   type: "authn",
   uid: "dapper#authn",
-  endpoint: dapperAuthnEndpoint(),
+  endpoint: DAPPER_AUTHN_ENDPOINT,
   method: "HTTP/POST",
   provider: {
     name: "Dapper Wallet",
@@ -493,13 +493,6 @@ function showLoading() {
   updateLoadingProgress(0, 0);
 }
 
-function dapperLoginOrigin() {
-  return window.location.origin;
-}
-
-function dapperAuthnEndpoint() {
-  return `${DAPPER_AUTHN_ENDPOINT}?l6n=${encodeURIComponent(dapperLoginOrigin())}`;
-}
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim();
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
@@ -740,7 +733,7 @@ function configureFlowWallet(fcl = state.flowWalletModule || window.onflowFcl ||
 
   fcl.config({
     "accessNode.api": "https://rest-mainnet.onflow.org",
-    "discovery.wallet": dapperAuthnEndpoint(),
+    "discovery.wallet": DAPPER_AUTHN_ENDPOINT,
     "app.detail.title": "MFL Front Office",
     "app.detail.icon": `${window.location.origin}/favicon.ico`,
   });
