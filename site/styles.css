@@ -1766,6 +1766,12 @@ td a {
   left: 50%;
   bottom: 88px;
   z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(360px, calc(100vw - 64px));
+  min-height: 42px;
+  box-sizing: border-box;
   padding: 10px 14px;
   border: 1px solid #7db8de;
   border-radius: 8px;
@@ -1773,6 +1779,8 @@ td a {
   color: #12364f;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
   box-shadow: 0 14px 36px rgba(28, 95, 138, 0.22);
   opacity: 0;
   pointer-events: none;
@@ -1798,7 +1806,7 @@ td a {
 .toastWatchlistContent,
 .toastPlayerIdContent {
   display: inline-block;
-  width: min(320px, calc(100vw - 64px));
+  width: 100%;
   text-align: center;
 }
 

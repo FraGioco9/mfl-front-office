@@ -628,6 +628,30 @@ function updateAccountState() {
   linkWalletButton.disabled = walletLinked;
   linkWalletButton.title = walletLinked ? state.linkedWalletAddress : "Link Dapper Wallet";
 }
+function walletAddressFromUser(user) {
+  return normalizeWalletAddress(
+    user?.addr
+    || user?.address
+    || user?.account?.addr
+    || user?.account?.address
+    || user?.authorization?.addr
+    || user?.authorization?.address,
+  );
+}
+
+async function authenticatedWalletUser(fcl, authenticatedUser) {
+  if (walletAddressFromUser(authenticatedUser)) {
+    return authenticatedUser;
+  }
+
+  const currentUser = typeof fcl.currentUser === "function" ? fcl.currentUser() : fcl.currentUser;
+  if (typeof currentUser?.snapshot === "function") {
+    const snapshot = await currentUser.snapshot();
+    return walletAddressFromUser(snapshot) ? snapshot : authenticatedUser;
+  }
+
+  return authenticatedUser;
+}
 function signatureWalletAddress(signatures) {
   const signature = Array.isArray(signatures) ? signatures.find((item) => item?.addr || item?.address) : null;
   return normalizeWalletAddress(signature?.addr || signature?.address);
@@ -756,11 +780,12 @@ async function linkWallet() {
   linkWalletButton.textContent = "Linking...";
 
   try {
-    const user = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
-    const flowAddress = normalizeWalletAddress(user?.addr);
+    const authenticatedUser = await fcl.authenticate({ service: DAPPER_AUTHN_SERVICE });
+    const user = await authenticatedWalletUser(fcl, authenticatedUser);
+    const flowAddress = walletAddressFromUser(user);
 
     if (!flowAddress) {
-      throw new Error("No wallet address returned.");
+      throw new Error("Dapper connected, but did not return a wallet address.");
     }
 
     const initialMessage = walletAccessMessage(flowAddress);
