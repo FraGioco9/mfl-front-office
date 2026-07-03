@@ -1927,7 +1927,7 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 492px;
+  height: 498px;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3219,7 +3219,7 @@ td a {
 
 .playerNotesInput {
   width: 100%;
-  min-height: 96px;
+  min-height: 118px;
   resize: none;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -3308,17 +3308,19 @@ td a {
 }
 
 .playerNameCell .playerNoteIcon[data-tooltip]::after {
-  left: auto;
-  right: 0;
+  left: 50%;
+  right: auto;
+  z-index: 220;
+  width: max-content;
   max-width: 260px;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  transform: translate(0, 4px);
+  overflow-wrap: break-word;
+  transform: translate(-50%, 4px);
 }
 
 .playerNameCell .playerNoteIcon[data-tooltip]:hover::after,
 .playerNameCell .playerNoteIcon[data-tooltip]:focus::after {
-  transform: translate(0, 0);
+  transform: translate(-50%, 0);
 }
 
 .myPlayersLockedPage {
