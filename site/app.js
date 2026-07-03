@@ -436,21 +436,6 @@ async function finishLoading() {
   revealAppShell();
 }
 
-async function showPermissionCheckLoading() {
-  const wasLoading = document.body.classList.contains("loading");
-
-  if (!wasLoading) {
-    showLoading();
-  }
-
-  loadingScreen.hidden = false;
-  loadingScreen.classList.remove("failed", "complete", "leaving");
-  document.body.classList.add("loading");
-  setLoadingPercent(20, "Checking permissions");
-  await paintLoadingProgress();
-  return !wasLoading;
-}
-
 function revealAppShell() {
   document.body.classList.remove("booting");
 }
@@ -717,13 +702,10 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-async function refreshWalletPermissionsForNavigation(options = {}) {
+async function refreshWalletPermissionsForNavigation() {
   if (!hasWalletOptIn()) {
-    return { allowed: false, changed: false, showedLoading: false };
+    return { allowed: false, changed: false };
   }
-
-  const showLoader = options.showLoader !== false;
-  const shouldCloseLoader = showLoader ? await showPermissionCheckLoading() : false;
 
   if (!state.walletPermissionRefreshPromise) {
     state.walletPermissionRefreshPromise = loadWalletPermissions({ checkVersion: true })
@@ -740,7 +722,7 @@ async function refreshWalletPermissionsForNavigation(options = {}) {
     syncHomeLoginButton();
   }
 
-  return { ...result, showedLoading: shouldCloseLoader };
+  return result;
 }
 
 function currentDataAccess(pageName = state.currentPage) {
@@ -1706,11 +1688,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
-  }
-
-  const willLoadPageData = pageRequiresData(pageName) && !state.dataLoaded;
-  if (permissionResult.showedLoading && !willLoadPageData) {
-    await finishLoading();
   }
 
   if (pageName === "myplayers" && !hasWalletOptIn()) {
@@ -4041,33 +4018,58 @@ function renderSearchResults() {
   state.searchRenderTimer = window.setTimeout(renderSearchResultsNow, 80);
 }
 
-function tableNextOverallSortValue(row, statColumn) {
+function tableNextOverallPreciseValue(row) {
+  const precomputedOverall = precomputedValue(row, "next_overall");
+  return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : Number(precomputedOverall);
+}
+
+function tableNextOverallNeededValue(row, statColumn) {
+  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+  if (maxOverall) {
+    return null;
+  }
+
   if (statColumn === "overall") {
-    const precomputedOverall = precomputedValue(row, "next_overall");
-    return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : precomputedOverall;
+    const precomputedGap = precomputedValue(row, "next_overall_gap");
+    return precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
   }
 
   const precomputedColumn = `${statColumn}_to_next_overall`;
   const precomputedNeeded = precomputedValue(row, precomputedColumn);
 
   if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
-    return precomputedNeeded;
+    return Number(precomputedNeeded);
   }
 
   if (hasColumn(precomputedColumn)) {
     return null;
   }
 
-  const gap = nextOverallGap(row);
   const primary = playerPositions(row)[0];
   const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
-  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
 
-  if (!weight || maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
+  if (!weight || Number(getValue(row, statColumn) || 0) >= 99) {
     return null;
   }
 
-  return gap / (weight / 100);
+  return nextOverallGap(row) / (weight / 100);
+}
+
+function tableNextOverallSortValue(row, statColumn) {
+  return tableNextOverallNeededValue(row, statColumn);
+}
+
+function compareNextOverallRows(a, b, column, direction) {
+  const aNeeded = tableNextOverallSortValue(a, column);
+  const bNeeded = tableNextOverallSortValue(b, column);
+  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, direction, true);
+
+  if (primaryComparison !== 0) {
+    return primaryComparison;
+  }
+
+  return comparePrimitiveValues(tableNextOverallPreciseValue(a), tableNextOverallPreciseValue(b), -1, true);
 }
 
 function sortableValue(row, column) {
@@ -4120,7 +4122,8 @@ function buildHeader() {
       }
 
       cell.addEventListener("click", () => {
-        const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
+        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
+        const resetDirection = state.view === "next" ? "asc" : "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
 
         if (state.sortKey !== column) {
@@ -4132,7 +4135,7 @@ function buildHeader() {
           state.sortDirection = defaultDirection;
         } else {
           state.sortKey = "overall";
-          state.sortDirection = "desc";
+          state.sortDirection = resetDirection;
         }
 
         state.page = 1;
@@ -4172,6 +4175,11 @@ function comparePrimitiveValues(aValue, bValue, direction, numeric = false) {
 
 function compareRows(a, b) {
   const direction = state.sortDirection === "asc" ? 1 : -1;
+
+  if (state.view === "next" && statColumns.includes(state.sortKey)) {
+    return compareNextOverallRows(a, b, state.sortKey, direction);
+  }
+
   const aValue = sortableValue(a, state.sortKey);
   const bValue = sortableValue(b, state.sortKey);
 
@@ -5034,7 +5042,7 @@ function setView(viewName) {
 
   if (viewName === "next") {
     state.sortKey = "overall";
-    state.sortDirection = "desc";
+    state.sortDirection = "asc";
   }
 
   removeUnavailableFilterRules();
@@ -5546,11 +5554,7 @@ async function startApp() {
   }
 
   void ensureFlowWallet();
-  const startupPermissionLoading = hasWalletOptIn() ? await showPermissionCheckLoading() : false;
   await loadWalletPermissions({ checkVersion: true });
-  if (startupPermissionLoading && !pageRequiresData(initialPage)) {
-    await finishLoading();
-  }
   await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
