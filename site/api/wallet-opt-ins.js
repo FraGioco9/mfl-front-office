@@ -4,7 +4,7 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const OPT_IN_FILE_PATH = "site/api/wallet-opt-ins.json";
+const OPT_IN_FILE_PATH = "site/api/wallet-opt-ins-list.json";
 
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
@@ -203,9 +203,9 @@ async function writeGithubOptIns(wallet) {
 
 async function localOptInPath() {
   return findFile([
-    path.join(__dirname, "wallet-opt-ins.json"),
-    path.join(process.cwd(), "api", "wallet-opt-ins.json"),
-    path.join(process.cwd(), "site", "api", "wallet-opt-ins.json"),
+    path.join(__dirname, "wallet-opt-ins-list.json"),
+    path.join(process.cwd(), "api", "wallet-opt-ins-list.json"),
+    path.join(process.cwd(), "site", "api", "wallet-opt-ins-list.json"),
   ]);
 }
 
