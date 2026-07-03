@@ -933,6 +933,46 @@ function saveAgentNameForWallet(address, name) {
   }
 }
 
+async function fetchLiveAgentNameForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  try {
+    const response = await fetch("https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global", { cache: "no-store" });
+    if (!response.ok) {
+      return "";
+    }
+
+    const data = await response.json();
+    const wallet = Array.isArray(data?.users)
+      ? data.users.find((user) => normalizeWalletAddress(user?.walletAddress).toLowerCase() === normalizedAddress)
+      : null;
+    const agentName = normalizedAgentName(wallet?.name);
+
+    if (agentName) {
+      saveAgentNameForWallet(address, agentName);
+      return agentName;
+    }
+  } catch {
+    // Saved/exported names and the wallet address remain valid fallbacks.
+  }
+
+  return "";
+}
+
+async function refreshLinkedWalletAgentName() {
+  if (!state.linkedWalletAddress || agentNameForWallet(state.linkedWalletAddress) !== normalizeWalletAddress(state.linkedWalletAddress)) {
+    return;
+  }
+
+  const agentName = await fetchLiveAgentNameForWallet(state.linkedWalletAddress);
+  if (agentName) {
+    updateAccountState();
+  }
+}
+
 function agentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) {
@@ -1435,6 +1475,7 @@ async function linkWallet() {
     const optInRecord = await recordWalletOptIn();
     await loadWalletPermissions({ force: true });
     await loadWalletNames();
+    await refreshLinkedWalletAgentName();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
     const upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
