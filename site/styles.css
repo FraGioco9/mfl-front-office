@@ -3302,7 +3302,8 @@ td a {
   margin-left: 0;
 }
 
-.playerNameCell .playerNoteIcon[data-tooltip] {
+.playerNameCell .playerNoteIcon[data-tooltip],
+.playerNoteIcon[data-note-tooltip] {
   position: relative;
   cursor: help;
 }

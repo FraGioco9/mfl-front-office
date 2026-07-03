@@ -35,30 +35,30 @@ async function verifyWalletProof(request) {
   try {
     signatures = JSON.parse(String(request.headers["x-wallet-signatures"] || "[]"));
   } catch {
-    return false;
+    return "";
   }
 
-  if (!wallet || !signingWallet || message !== walletAccessMessage(wallet, signingWallet) || !Array.isArray(signatures) || !signatures.length) {
-    return false;
+  if (!wallet || !signingWallet || message !== walletAccessMessage() || !Array.isArray(signatures) || !signatures.length) {
+    return "";
   }
 
   if (!signatureWalletAddresses(signatures).has(signingWallet)) {
-    return false;
+    return "";
   }
 
   try {
-    if (proofType === "account-proof") {
-      return Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
-        address: signingWallet,
-        nonce,
-        signatures,
-      }));
-    }
+    const verified = proofType === "account-proof"
+      ? Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+          address: signingWallet,
+          nonce,
+          signatures,
+        }))
+      : Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
 
-    return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
+    return verified ? wallet : "";
   } catch (error) {
     console.warn("Could not verify Dapper wallet proof.", error);
-    return false;
+    return "";
   }
 }
 function preferenceKey(wallet) {

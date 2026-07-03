@@ -1056,7 +1056,7 @@ function updateAccountState() {
 
 function optOutWallet() {
   const previousWalletAddress = state.linkedWalletAddress;
-  clearWalletNotesState(previousWalletAddress);
+  clearWalletNotesState();
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -2056,19 +2056,10 @@ function loadLocalWalletNotes() {
   }
 }
 
-function clearWalletNotesState(address = state.linkedWalletAddress) {
-  const key = walletNotesStorageKey(address);
+function clearWalletNotesState() {
   state.playerNotes = {};
   window.clearTimeout(state.walletNotesSaveTimer);
   state.walletNotesSaveTimer = null;
-
-  if (key) {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // Notes are still removed from the current page state.
-    }
-  }
 }
 
 function applyWalletPlayerNotes(notes) {
