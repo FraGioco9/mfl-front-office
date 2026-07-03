@@ -1656,6 +1656,17 @@ function basicEvaluationPathForPlayer(playerId = "") {
   return id ? `/evaluation?player=${encodeURIComponent(id)}` : "/evaluation";
 }
 
+function replaceEvaluationUrlWithBasicPlayer(playerId = state.evaluationPlayerId) {
+  if (window.location.pathname !== "/evaluation") {
+    return;
+  }
+
+  const targetPath = basicEvaluationPathForPlayer(playerId);
+  if (`${window.location.pathname}${window.location.search}` !== targetPath) {
+    window.history.replaceState({}, "", targetPath);
+  }
+}
+
 function redirectSavedEvaluationLinkToBasicEvaluation() {
   if (window.location.pathname !== "/evaluation" || !evaluationSavedIdFromUrl()) {
     return false;
@@ -1842,13 +1853,16 @@ async function createSavedEvaluation() {
     return "";
   }
 
+  const currentSavedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
+  const payload = currentEvaluationSharePayload();
+
   const response = await fetch("/api/evaluation-save", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...walletProofHeaders(true),
     },
-    body: JSON.stringify(currentEvaluationSharePayload()),
+    body: JSON.stringify(currentSavedId ? { ...payload, savedId: currentSavedId } : payload),
   });
 
   if (!response.ok) {
@@ -1864,10 +1878,15 @@ async function createSavedEvaluation() {
     throw new Error("Could not save evaluation.");
   }
 
+  state.evaluationSavedId = id;
+  state.evaluationShareId = "";
   const url = new URL("/evaluation", window.location.origin);
   url.searchParams.set("player", playerId);
   url.searchParams.set("saved", id);
-  return url.toString();
+  return {
+    url: url.toString(),
+    overwritten: Boolean(data.overwritten || currentSavedId),
+  };
 }
 
 async function loadSavedEvaluation(savedId, playerId = "") {
@@ -1967,7 +1986,50 @@ async function deleteSavedEvaluation(savedId) {
   return true;
 }
 
+
+let evaluationLoadFloatingTooltip = null;
+
+function hideEvaluationLoadActionTooltip() {
+  if (evaluationLoadFloatingTooltip) {
+    evaluationLoadFloatingTooltip.remove();
+    evaluationLoadFloatingTooltip = null;
+  }
+}
+
+function showEvaluationLoadActionTooltip(button) {
+  const text = String(button?.dataset?.tooltip || "").trim();
+
+  if (!text) {
+    return;
+  }
+
+  hideEvaluationLoadActionTooltip();
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "floatingActionTooltip";
+  tooltip.textContent = text;
+  document.body.appendChild(tooltip);
+
+  const rect = button.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const left = Math.min(Math.max(rect.left + rect.width / 2 - tooltipRect.width / 2, 8), window.innerWidth - tooltipRect.width - 8);
+  const top = Math.max(8, rect.top - tooltipRect.height - 8);
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+  tooltip.classList.add("visible");
+  evaluationLoadFloatingTooltip = tooltip;
+}
+
+function attachEvaluationLoadActionTooltip(button) {
+  button.addEventListener("mouseenter", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("focus", () => showEvaluationLoadActionTooltip(button));
+  button.addEventListener("mouseleave", hideEvaluationLoadActionTooltip);
+  button.addEventListener("blur", hideEvaluationLoadActionTooltip);
+}
+
 function renderSavedEvaluationList(rows) {
+  hideEvaluationLoadActionTooltip();
   evaluationLoadList.replaceChildren();
 
   if (!rows.length) {
@@ -2029,6 +2091,9 @@ function renderSavedEvaluationList(rows) {
     deleteButton.dataset.tooltip = "Delete";
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
 
+    attachEvaluationLoadActionTooltip(shareButton);
+    attachEvaluationLoadActionTooltip(deleteButton);
+
     const loadEvaluation = () => {
       clearEvaluationSearchFocus();
       const url = new URL("/evaluation", window.location.origin);
@@ -2041,6 +2106,7 @@ function renderSavedEvaluationList(rows) {
 
     shareButton.addEventListener("click", async (event) => {
       event.stopPropagation();
+      hideEvaluationLoadActionTooltip();
       shareButton.disabled = true;
 
       try {
@@ -2056,6 +2122,7 @@ function renderSavedEvaluationList(rows) {
 
     deleteButton.addEventListener("click", async (event) => {
       event.stopPropagation();
+      hideEvaluationLoadActionTooltip();
       deleteButton.disabled = true;
 
       try {
@@ -2092,6 +2159,7 @@ function renderSavedEvaluationList(rows) {
 
 
 async function openSavedEvaluationsModal() {
+  hideEvaluationLoadActionTooltip();
   if (!hasWalletOptIn()) {
     showToast("Opt in to load saved evaluations.");
     return;
@@ -6491,10 +6559,10 @@ if (evaluationSaveButton) {
   evaluationSaveButton.addEventListener("click", async () => {
     evaluationSaveButton.disabled = true;
     try {
-      const saveUrl = await createSavedEvaluation();
-      if (saveUrl) {
-        window.history.replaceState({}, "", saveUrl);
-        showToast("Evaluation saved.");
+      const saveResult = await createSavedEvaluation();
+      if (saveResult?.url) {
+        window.history.replaceState({}, "", saveResult.url);
+        showToast(saveResult.overwritten ? "Evaluation overwritten and saved." : "Evaluation saved.");
       }
     } catch (error) {
       showToast(error?.message || "Could not save evaluation.");
@@ -6517,6 +6585,9 @@ if (evaluationLoadModal) {
       hideModal(evaluationLoadModal);
     }
   });
+}
+if (evaluationLoadList) {
+  evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });
 }
 if (evaluationShareButton) {
   evaluationShareButton.addEventListener("click", async () => {
@@ -6547,8 +6618,12 @@ evaluationResetButton.addEventListener("click", () => {
     return;
   }
 
+  const playerId = String(getValue(row, "player_id") || state.evaluationPlayerId || "").trim();
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
   delete state.evaluationOverallRows[evaluationOverallKey(row)];
-  delete state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")];
+  delete state.evaluationSummaryPositions[playerId];
+  replaceEvaluationUrlWithBasicPlayer(playerId);
   renderEvaluationTable(row);
 });
 

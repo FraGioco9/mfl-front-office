@@ -1887,7 +1887,7 @@ td a {
   position: fixed;
   left: 50%;
   bottom: 88px;
-  z-index: 35;
+  z-index: 10020;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2971,6 +2971,8 @@ td a {
 
 .evaluationButtons {
   justify-content: flex-start;
+  width: 400px;
+  flex: 0 0 400px;
 }
 
 .evaluationButtons[hidden] {
@@ -3623,39 +3625,7 @@ td a {
   position: relative;
 }
 
-.evaluationLoadIconButton[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  z-index: 100;
-  width: max-content;
-  max-width: 220px;
-  padding: 7px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  background: #171717;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: center;
-  text-transform: none;
-  white-space: pre-wrap;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.evaluationLoadIconButton[data-tooltip]:hover::after,
-.evaluationLoadIconButton[data-tooltip]:focus-visible::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
 .evaluationLoadDeleteButton {
   border-color: var(--border);
   background: var(--surface-muted);
@@ -3673,7 +3643,7 @@ td a {
 }
 
 
-/* v1.89.17 */
+/* v1.89.18 */
 .searchResults .searchResult:hover,
 .searchResults .searchResult:focus-visible,
 .evaluationSearchResults .evaluationSearchResult:hover,
@@ -3689,40 +3659,13 @@ td a {
   stroke-width: 2;
 }
 
-.evaluationLoadIconButton[data-tooltip]::after {
-  left: auto;
-  right: calc(100% + 8px);
-  top: 50%;
-  bottom: auto;
-  transform: translate(4px, -50%);
-  z-index: 120;
-}
-
-.evaluationLoadIconButton[data-tooltip]:hover::after,
-.evaluationLoadIconButton[data-tooltip]:focus-visible::after {
-  transform: translate(0, -50%);
-}
-
-
-/* v1.89.17 */
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
+/* v1.89.18 */
 .toastMessage {
   z-index: 10000;
 }
 
-.evaluationLoadIconButton[data-tooltip]::after {
-  left: 50%;
-  right: auto;
-  top: auto;
-  bottom: calc(100% + 8px);
-  z-index: 10000;
-  transform: translate(-50%, 4px);
-}
-
-.evaluationLoadIconButton[data-tooltip]:hover::after,
-.evaluationLoadIconButton[data-tooltip]:focus-visible::after {
-  transform: translate(-50%, 0);
-}
-
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
 .evaluationLoadDialog,
 .evaluationLoadList,
 .evaluationLoadResult,
@@ -3733,4 +3676,33 @@ td a {
 .evaluationLoadList {
   overflow-y: auto;
   overflow-x: visible;
+}
+
+
+.floatingActionTooltip {
+  position: fixed;
+  z-index: 10030;
+  width: max-content;
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: none;
+  white-space: pre-wrap;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.floatingActionTooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
 }

@@ -179,10 +179,42 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "POST") {
       const rawBody = await readBody(request);
-      const payload = normalizeEvaluationPayload(rawBody ? JSON.parse(rawBody) : {});
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const payload = normalizeEvaluationPayload(body);
+      const requestedSavedId = normalizeShareId(body.savedId || body.id);
 
       if (!payload) {
         response.status(400).json({ error: "Invalid evaluation save payload." });
+        return;
+      }
+
+      if (requestedSavedId) {
+        const existingRows = await supabaseRequest(`evaluation_saves?select=id&wallet_address=eq.${encodeURIComponent(wallet)}&id=eq.${encodeURIComponent(requestedSavedId)}&limit=1`);
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+
+        if (!existing) {
+          response.status(404).json({ error: "Saved evaluation not found." });
+          return;
+        }
+
+        const rows = await supabaseRequest(`evaluation_saves?id=eq.${encodeURIComponent(requestedSavedId)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+          method: "PATCH",
+          headers: {
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify({
+            player_id: payload.playerId,
+            summary_overall: payload.summaryOverall,
+            summary_age: payload.summaryAge,
+            payload,
+          }),
+        });
+
+        response.status(200).json({
+          id: Array.isArray(rows) && rows[0]?.id ? rows[0].id : requestedSavedId,
+          playerId: payload.playerId,
+          overwritten: true,
+        });
         return;
       }
 
@@ -210,6 +242,7 @@ module.exports = async function handler(request, response) {
       response.status(200).json({
         id: Array.isArray(rows) && rows[0]?.id ? rows[0].id : id,
         playerId: payload.playerId,
+        overwritten: false,
       });
       return;
     }
