@@ -569,6 +569,17 @@ def primary_position(positions: Any) -> str:
     return str(positions or "").split(",")[0].strip().upper()
 
 
+def next_overall_target(display_overall: Any, precise_overall: float) -> float:
+    displayed = int(float(display_overall or 0))
+    target = displayed + 0.5
+    rounded_precise = round(precise_overall, 2)
+
+    if displayed == int(rounded_precise) and abs(rounded_precise - target) < 0.000001:
+        return round(target + 0.01, 2)
+
+    return target
+
+
 def next_overall_values(row: sqlite3.Row) -> tuple[Any, ...]:
     primary = primary_position(row["positions"])
     weights = POSITION_GROUP_WEIGHTS.get(primary)
@@ -586,7 +597,7 @@ def next_overall_values(row: sqlite3.Row) -> tuple[Any, ...]:
         display_overall = weighted
 
     max_overall = float(display_overall or 0) >= 99
-    target = int(float(display_overall or 0)) + 0.5
+    target = next_overall_target(display_overall, weighted)
     gap = max(0.0, target - weighted)
 
     needed_values = []

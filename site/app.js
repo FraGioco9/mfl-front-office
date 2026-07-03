@@ -3687,7 +3687,12 @@ function primaryPreciseOverall(row) {
 
 function nextOverallTarget(row) {
   const displayedOverall = Math.floor(Number(statDisplayValue(row, "overall") || 0));
-  return displayedOverall + 0.5;
+  const target = displayedOverall + 0.5;
+  const preciseOverall = Math.round(primaryPreciseOverall(row) * 100) / 100;
+
+  return displayedOverall === Math.floor(preciseOverall) && Math.abs(preciseOverall - target) < 0.000001
+    ? Math.round((target + 0.01) * 100) / 100
+    : target;
 }
 
 function nextOverallGap(row) {
