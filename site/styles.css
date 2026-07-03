@@ -3481,6 +3481,7 @@ td a {
 
 
 .evaluationLoadDialog {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
@@ -3493,6 +3494,18 @@ td a {
   overflow: hidden;
 }
 
+.evaluationLoadDialog::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  height: 16px;
+  background: var(--surface);
+  pointer-events: none;
+}
+
 .evaluationLoadList {
   display: grid;
   gap: 6px;
@@ -3500,7 +3513,7 @@ td a {
   flex: 1;
   grid-auto-rows: 66px;
   align-content: start;
-  padding: 16px 18px 12px;
+  padding: 16px 18px 16px;
   box-sizing: border-box;
   overflow-y: auto;
 }
@@ -3516,15 +3529,16 @@ td a {
 
 .evaluationLoadResult {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   min-height: 66px;
   padding: 10px 12px;
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text);
   text-align: center;
+  cursor: pointer;
 }
 
 .evaluationLoadResult:hover {
@@ -3557,4 +3571,43 @@ td a {
   min-width: 112px;
   text-align: center;
   white-space: nowrap;
+}
+
+.evaluationLoadActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.evaluationLoadIconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.evaluationLoadIconButton svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.evaluationLoadDeleteButton {
+  border-color: #b94444;
+  color: #e06b6b;
+}
+
+.evaluationLoadDeleteButton:hover {
+  border-color: #d75a5a;
+  background: rgba(217, 83, 83, 0.14);
+  color: #ff8585;
 }

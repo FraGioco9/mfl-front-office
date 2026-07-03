@@ -1754,15 +1754,17 @@ async function loadSharedEvaluation(shareId) {
   }
 }
 
-async function createSharedEvaluation() {
+async function createSharedEvaluationFromPayload(payload, fallbackPlayerId = "") {
   if (!hasWalletOptIn()) {
     showToast("Opt in to share evaluations.");
-    return;
+    return "";
   }
 
-  if (!state.evaluationPlayerId) {
-    showToast("Select a player to share.");
-    return;
+  const normalizedPayload = normalizeSharedEvaluationPayload(payload);
+  const payloadPlayerId = String(normalizedPayload.playerId || fallbackPlayerId || "").trim();
+
+  if (!payloadPlayerId) {
+    throw new Error("Select a player to share.");
   }
 
   const response = await fetch("/api/evaluation-share", {
@@ -1771,7 +1773,10 @@ async function createSharedEvaluation() {
       "Content-Type": "application/json",
       ...walletProofHeaders(true),
     },
-    body: JSON.stringify(currentEvaluationSharePayload()),
+    body: JSON.stringify({
+      ...normalizedPayload,
+      playerId: payloadPlayerId,
+    }),
   });
 
   if (!response.ok) {
@@ -1781,7 +1786,7 @@ async function createSharedEvaluation() {
 
   const data = await response.json();
   const id = String(data.id || "").trim();
-  const playerId = String(data.playerId || state.evaluationPlayerId || "").trim();
+  const playerId = String(data.playerId || payloadPlayerId || "").trim();
 
   if (!id || !playerId) {
     throw new Error("Could not create share link.");
@@ -1791,6 +1796,15 @@ async function createSharedEvaluation() {
   url.searchParams.set("player", playerId);
   url.searchParams.set("share", id);
   return url.toString();
+}
+
+async function createSharedEvaluation() {
+  if (!state.evaluationPlayerId) {
+    showToast("Select a player to share.");
+    return "";
+  }
+
+  return createSharedEvaluationFromPayload(currentEvaluationSharePayload(), state.evaluationPlayerId);
 }
 
 
@@ -1906,6 +1920,30 @@ function evaluationPresentValueTotalFromPayload(payload) {
   return total;
 }
 
+async function deleteSavedEvaluation(savedId) {
+  const id = String(savedId || "").trim();
+
+  if (!id) {
+    return false;
+  }
+
+  const requestUrl = new URL("/api/evaluation-save", window.location.origin);
+  requestUrl.searchParams.set("id", id);
+
+  const response = await fetch(requestUrl.toString(), {
+    method: "DELETE",
+    cache: "no-store",
+    headers: walletProofHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "Could not delete saved evaluation.");
+  }
+
+  return true;
+}
+
 function renderSavedEvaluationList(rows) {
   evaluationLoadList.replaceChildren();
 
@@ -1921,9 +1959,10 @@ function renderSavedEvaluationList(rows) {
     const payload = normalizeSharedEvaluationPayload(entry.payload);
     const row = rowByPlayerId(payload.playerId);
     const playerId = payload.playerId || String(entry.playerId || "");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "evaluationLoadResult";
+    const result = document.createElement("div");
+    result.className = "evaluationLoadResult";
+    result.tabIndex = 0;
+    result.role = "button";
 
     const main = document.createElement("span");
     main.className = "evaluationLoadResultMain";
@@ -1950,8 +1989,22 @@ function renderSavedEvaluationList(rows) {
     const presentValue = evaluationPresentValueTotalFromPayload(entry.payload);
     value.textContent = Number.isFinite(presentValue) ? formatEvaluationCurrency(presentValue) : "-";
 
-    button.append(main, value);
-    button.addEventListener("click", () => {
+    const actions = document.createElement("span");
+    actions.className = "evaluationLoadActions";
+
+    const shareButton = document.createElement("button");
+    shareButton.type = "button";
+    shareButton.className = "evaluationLoadIconButton evaluationLoadShareButton";
+    shareButton.setAttribute("aria-label", "Share saved evaluation");
+    shareButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>';
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "evaluationLoadIconButton evaluationLoadDeleteButton";
+    deleteButton.setAttribute("aria-label", "Delete saved evaluation");
+    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
+
+    const loadEvaluation = () => {
       clearEvaluationSearchFocus();
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
@@ -1959,10 +2012,59 @@ function renderSavedEvaluationList(rows) {
       window.history.replaceState({}, "", url.toString());
       hideModal(evaluationLoadModal);
       void loadSavedEvaluation(entry.id, playerId);
+    };
+
+    shareButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      shareButton.disabled = true;
+
+      try {
+        const shareUrl = await createSharedEvaluationFromPayload(entry.payload, playerId);
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("Evaluation share link copied.");
+      } catch (error) {
+        showToast(error?.message || "Could not create evaluation share link.");
+      } finally {
+        shareButton.disabled = false;
+      }
     });
-    evaluationLoadList.appendChild(button);
+
+    deleteButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      deleteButton.disabled = true;
+
+      try {
+        await deleteSavedEvaluation(entry.id);
+        result.remove();
+
+        if (!evaluationLoadList.querySelector(".evaluationLoadResult")) {
+          renderSavedEvaluationList([]);
+        }
+
+        if (state.evaluationSavedId === String(entry.id || "")) {
+          state.evaluationSavedId = "";
+        }
+
+        showToast("Saved evaluation deleted.");
+      } catch (error) {
+        deleteButton.disabled = false;
+        showToast(error?.message || "Could not delete saved evaluation.");
+      }
+    });
+
+    actions.append(shareButton, deleteButton);
+    result.append(main, value, actions);
+    result.addEventListener("click", loadEvaluation);
+    result.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        loadEvaluation();
+      }
+    });
+    evaluationLoadList.appendChild(result);
   });
 }
+
 
 async function openSavedEvaluationsModal() {
   if (!hasWalletOptIn()) {

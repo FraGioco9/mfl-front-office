@@ -254,6 +254,27 @@ module.exports = async function handler(request, response) {
       return;
     }
 
+
+    if (request.method === "DELETE") {
+      const requestUrl = new URL(request.url, "http://localhost");
+      const id = normalizeShareId(requestUrl.searchParams.get("id"));
+
+      if (!id) {
+        response.status(400).json({ error: "Missing saved evaluation id." });
+        return;
+      }
+
+      await supabaseRequest(`evaluation_saves?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+        method: "DELETE",
+        headers: {
+          Prefer: "return=minimal",
+        },
+      });
+
+      response.status(200).json({ ok: true });
+      return;
+    }
+
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     console.warn("Could not handle saved evaluation.", error);
