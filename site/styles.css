@@ -2393,7 +2393,7 @@ td a {
 .playerStack {
   display: grid;
   gap: 6px;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto minmax(130px, 1fr);
 }
 
 .playerInfoPanel {
@@ -2423,8 +2423,8 @@ td a {
 }
 
 .playerInfoPanel .detailGrid {
-  min-height: 204px;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
+  min-height: 150px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .attributeGrid {
@@ -2441,8 +2441,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 62px;
-  padding: 9px 12px;
+  min-height: 48px;
+  padding: 7px 10px;
 }
 
 .detailGrid strong {
@@ -2452,8 +2452,8 @@ td a {
 }
 
 .playerAttributeCard {
-  min-height: 60px;
-  padding: 8px 12px;
+  min-height: 48px;
+  padding: 7px 10px;
 }
 
 .detailGrid span,
@@ -2471,7 +2471,7 @@ td a {
   position: relative;
   width: 360px;
   min-height: 0;
-  height: calc(100% - 8px);
+  height: 520px;
   margin: 8px auto 0;
   padding: 10px 8px;
   overflow: hidden;
@@ -3190,6 +3190,57 @@ td a {
   height: 16px;
   padding: 0;
 }
+
+
+.playerNotesPanel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 130px;
+}
+
+.playerNotesInput {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+  line-height: 1.35;
+}
+
+.playerNotesInput:focus {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.playerNotesPanel p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.playerNoteIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.playerHero h2 .playerNoteIcon {
+  font-size: 20px;
+}
+
+.playerNameCell .playerNoteIcon {
+  margin-left: 4px;
+  font-size: 13px;
+}
+
 .myPlayersLockedPage {
   position: fixed;
   top: 102px;

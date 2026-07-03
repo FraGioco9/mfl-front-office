@@ -102,7 +102,7 @@ async function kvCommand(command) {
 async function readPreferences(wallet) {
   const result = await kvCommand(["GET", preferenceKey(wallet)]);
   if (!result?.result) {
-    return { watchlistPlayerIds: [] };
+    return { watchlistPlayerIds: [], playerNotes: {} };
   }
 
   try {
@@ -111,18 +111,42 @@ async function readPreferences(wallet) {
       watchlistPlayerIds: Array.isArray(data.watchlistPlayerIds)
         ? data.watchlistPlayerIds.map((playerId) => String(playerId))
         : [],
+      playerNotes: normalizePlayerNotes(data.playerNotes),
     };
   } catch {
-    return { watchlistPlayerIds: [] };
+    return { watchlistPlayerIds: [], playerNotes: {} };
   }
 }
 
+function normalizePlayerNotes(notes) {
+  const normalized = {};
+  if (!notes || typeof notes !== "object" || Array.isArray(notes)) {
+    return normalized;
+  }
+
+  Object.entries(notes).forEach(([playerId, note]) => {
+    const key = String(playerId || "").trim();
+    const text = String(note || "").trim();
+    if (key && text) {
+      normalized[key] = text;
+    }
+  });
+
+  return normalized;
+}
+
 async function writePreferences(wallet, preferences) {
+  const currentPreferences = await readPreferences(wallet);
   const watchlistPlayerIds = Array.isArray(preferences.watchlistPlayerIds)
     ? [...new Set(preferences.watchlistPlayerIds.map((playerId) => String(playerId)).filter(Boolean))]
-    : [];
-  await kvCommand(["SET", preferenceKey(wallet), JSON.stringify({ watchlistPlayerIds })]);
-  return { watchlistPlayerIds };
+    : currentPreferences.watchlistPlayerIds;
+  const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
+    ? normalizePlayerNotes(preferences.playerNotes)
+    : currentPreferences.playerNotes;
+
+  const nextPreferences = { watchlistPlayerIds, playerNotes };
+  await kvCommand(["SET", preferenceKey(wallet), JSON.stringify(nextPreferences)]);
+  return nextPreferences;
 }
 
 module.exports = async function handler(request, response) {
