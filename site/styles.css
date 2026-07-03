@@ -1985,7 +1985,7 @@ td a {
   grid-template-rows: repeat(5, minmax(0, 1fr));
   align-content: stretch;
   box-sizing: border-box;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
 }
 
 .searchResults.filledSearchResults .searchResult {
@@ -3534,8 +3534,8 @@ td a {
   display: grid;
   gap: 3px;
   min-width: 0;
-  justify-items: center;
-  text-align: center;
+  justify-items: start;
+  text-align: left;
 }
 
 .evaluationLoadResultMain span,

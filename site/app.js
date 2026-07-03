@@ -1654,6 +1654,8 @@ function normalizeSharedEvaluationPayload(payload) {
     ? data.overallValues.map((value) => Number(value)).filter((value) => Number.isFinite(value))
     : [];
   const summaryPosition = String(data.summaryPosition || data.summary_position || "").trim();
+  const summaryOverall = Number(data.summaryOverall ?? data.summary_overall);
+  const summaryAge = Number(data.summaryAge ?? data.summary_age);
 
   return {
     playerId,
@@ -1662,6 +1664,8 @@ function normalizeSharedEvaluationPayload(payload) {
     ignoreFirstSeason: Boolean(data.ignoreFirstSeason ?? data.ignore_first_season),
     overallValues,
     summaryPosition,
+    summaryOverall: Number.isFinite(summaryOverall) ? summaryOverall : null,
+    summaryAge: Number.isFinite(summaryAge) ? summaryAge : null,
   };
 }
 
@@ -1669,14 +1673,21 @@ function currentEvaluationSharePayload() {
   const playerId = String(state.evaluationPlayerId || "").trim();
   const row = playerId ? rowByPlayerId(playerId) : null;
   const expectedSeasons = row ? expectedEvaluationSeasons(row) : 0;
+  const seasonOffset = state.evaluationIgnoreFirstSeason ? 1 : 0;
+  const overallValues = row ? evaluationOverallValues(row, expectedSeasons) : [];
+  const currentAge = row ? Number(getValue(row, "age")) : NaN;
+  const summaryOverall = overallValues[seasonOffset] ?? overallValues[0];
+  const summaryAge = Number.isFinite(currentAge) ? currentAge + seasonOffset : null;
 
   return {
     playerId,
     mflPerUsd: state.evaluationMflPerUsd,
     ignoreDiscountRate: state.evaluationIgnoreDiscountRate,
     ignoreFirstSeason: state.evaluationIgnoreFirstSeason,
-    overallValues: row ? evaluationOverallValues(row, expectedSeasons) : [],
+    overallValues,
     summaryPosition: row ? evaluationSummaryPosition(row) : "",
+    summaryOverall: Number.isFinite(summaryOverall) ? summaryOverall : null,
+    summaryAge,
   };
 }
 
@@ -1919,9 +1930,19 @@ function renderSavedEvaluationList(rows) {
     const name = document.createElement("strong");
     name.textContent = row ? formatCellValue(row, "name") : `Player ${playerId}`;
     const details = document.createElement("span");
-    details.textContent = row
-      ? `#${playerId} · OVR ${formatPlainValue(statDisplayValue(row, "overall"), "overall")} · ${formatCellValue(row, "age")} years old`
-      : `#${playerId}`;
+    const summaryOverall = Number(entry.summaryOverall ?? payload.summaryOverall);
+    const summaryAge = Number(entry.summaryAge ?? payload.summaryAge);
+    const overallText = Number.isFinite(summaryOverall)
+      ? formatPlainValue(summaryOverall, "overall")
+      : (row ? formatPlainValue(statDisplayValue(row, "overall"), "overall") : "");
+    const ageText = Number.isFinite(summaryAge)
+      ? String(summaryAge)
+      : (row ? formatCellValue(row, "age") : "");
+    details.textContent = [
+      `#${playerId}`,
+      overallText ? `OVR ${overallText}` : "",
+      ageText ? `${ageText} years old` : "",
+    ].filter(Boolean).join(" · ");
     main.append(name, details);
 
     const value = document.createElement("strong");
