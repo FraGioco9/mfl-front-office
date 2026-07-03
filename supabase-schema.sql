@@ -22,6 +22,17 @@ alter table public.wallet_preferences add column if not exists watchlist_player_
 alter table public.wallet_preferences add column if not exists player_notes jsonb not null default '{}'::jsonb;
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;
 
+
+create table if not exists public.evaluation_shares (
+  id uuid primary key,
+  player_id text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists evaluation_shares_expires_at_idx on public.evaluation_shares (expires_at);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -47,3 +58,4 @@ execute function public.set_updated_at();
 alter table public.wallet_opt_ins enable row level security;
 alter table public.wallet_permissions enable row level security;
 alter table public.wallet_preferences enable row level security;
+alter table public.evaluation_shares enable row level security;

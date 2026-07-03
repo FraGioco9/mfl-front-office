@@ -35,6 +35,8 @@ const state = {
   evaluationIgnoreFirstSeason: false,
   evaluationMflPerUsd: 400,
   evaluationSummaryPositions: {},
+  evaluationShareId: "",
+  evaluationShareLoading: false,
   linkedWalletAddress: "",
   linkedWalletProof: null,
   walletPermissionAllowed: false,
@@ -1614,6 +1616,135 @@ function syncEvaluationPlayerUrl(playerId) {
     window.history.replaceState({}, "", targetPath);
   }
 }
+
+function evaluationShareIdFromUrl() {
+  if (window.location.pathname !== "/evaluation") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("share") || "";
+}
+
+function normalizeSharedEvaluationPayload(payload) {
+  const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  const playerId = String(data.playerId || data.player_id || "").trim();
+  const mflPerUsd = parseEvaluationMflPerUsd(data.mflPerUsd ?? data.mfl_per_usd);
+  const overallValues = Array.isArray(data.overallValues)
+    ? data.overallValues.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    : [];
+  const summaryPosition = String(data.summaryPosition || data.summary_position || "").trim();
+
+  return {
+    playerId,
+    mflPerUsd,
+    ignoreDiscountRate: Boolean(data.ignoreDiscountRate ?? data.ignore_discount_rate),
+    ignoreFirstSeason: Boolean(data.ignoreFirstSeason ?? data.ignore_first_season),
+    overallValues,
+    summaryPosition,
+  };
+}
+
+function currentEvaluationSharePayload() {
+  const playerId = String(state.evaluationPlayerId || "").trim();
+  const row = playerId ? rowByPlayerId(playerId) : null;
+  const expectedSeasons = row ? expectedEvaluationSeasons(row) : 0;
+
+  return {
+    playerId,
+    mflPerUsd: state.evaluationMflPerUsd,
+    ignoreDiscountRate: state.evaluationIgnoreDiscountRate,
+    ignoreFirstSeason: state.evaluationIgnoreFirstSeason,
+    overallValues: row ? evaluationOverallValues(row, expectedSeasons) : [],
+    summaryPosition: row ? evaluationSummaryPosition(row) : "",
+  };
+}
+
+function applySharedEvaluationPayload(payload) {
+  const data = normalizeSharedEvaluationPayload(payload);
+
+  if (!data.playerId) {
+    showToast("Shared evaluation is not available.");
+    return;
+  }
+
+  state.evaluationPlayerId = data.playerId;
+  if (data.mflPerUsd) {
+    state.evaluationMflPerUsd = data.mflPerUsd;
+  }
+  state.evaluationIgnoreDiscountRate = data.ignoreDiscountRate;
+  state.evaluationIgnoreFirstSeason = data.ignoreFirstSeason;
+
+  if (data.overallValues.length) {
+    state.evaluationOverallRows[data.playerId] = data.overallValues;
+  }
+
+  if (data.summaryPosition) {
+    state.evaluationSummaryPositions[data.playerId] = data.summaryPosition;
+  }
+
+  evaluationSearchInput.value = "";
+  renderEvaluationMflPerUsdControl(false);
+  renderEvaluationPage();
+}
+
+async function loadSharedEvaluation(shareId) {
+  const id = String(shareId || "").trim();
+
+  if (!id || state.evaluationShareLoading) {
+    return;
+  }
+
+  state.evaluationShareLoading = true;
+
+  try {
+    const response = await fetch(`/api/evaluation-share?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error("Share not found.");
+    }
+
+    const data = await response.json();
+    state.evaluationShareId = id;
+    applySharedEvaluationPayload(data.payload);
+  } catch {
+    showToast("Shared evaluation has expired or could not be loaded.");
+    state.evaluationShareId = id;
+    renderEmptyEvaluationSelection(true);
+  } finally {
+    state.evaluationShareLoading = false;
+  }
+}
+
+async function createSharedEvaluation() {
+  if (!state.evaluationPlayerId) {
+    showToast("Select a player to share.");
+    return;
+  }
+
+  const response = await fetch("/api/evaluation-share", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(currentEvaluationSharePayload()),
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not create share link.");
+  }
+
+  const data = await response.json();
+  const id = String(data.id || "").trim();
+
+  if (!id) {
+    throw new Error("Could not create share link.");
+  }
+
+  const url = new URL("/evaluation", window.location.origin);
+  url.searchParams.set("share", id);
+  return url.toString();
+}
+
 
 function normalizedPageName(pageName) {
   return pageName === "my-players" ? "myplayers" : pageName;
@@ -3643,6 +3774,13 @@ function renderEvaluationTable(row) {
   });
 }
 function renderEvaluationPage() {
+  const shareId = evaluationShareIdFromUrl();
+  if (shareId && state.evaluationShareId !== shareId) {
+    renderEmptyEvaluationSelection(false);
+    void loadSharedEvaluation(shareId);
+    return;
+  }
+
   if (!state.evaluationPlayerId && evaluationPlayerIdFromUrl()) {
     state.evaluationPlayerId = evaluationPlayerIdFromUrl();
   }
@@ -5914,15 +6052,19 @@ if (evaluationSaveButton) {
 }
 if (evaluationShareButton) {
   evaluationShareButton.addEventListener("click", async () => {
-    const url = new URL(window.location.href);
-    if (state.evaluationPlayerId) {
-      url.searchParams.set("player", state.evaluationPlayerId);
-    }
+    evaluationShareButton.disabled = true;
     try {
-      await navigator.clipboard.writeText(url.toString());
-      showToast("Evaluation link copied.");
+      const shareUrl = await createSharedEvaluation();
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("Evaluation share link copied.");
+      } catch {
+        showToast("Share link: " + shareUrl);
+      }
     } catch {
-      showToast("Share link: " + url.toString());
+      showToast("Could not create evaluation share link.");
+    } finally {
+      evaluationShareButton.disabled = false;
     }
   });
 }

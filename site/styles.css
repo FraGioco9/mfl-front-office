@@ -2967,6 +2967,12 @@ td a {
   gap: 8px;
 }
 
+.evaluationFooterActions #evaluationSaveButton[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .evaluationButtonIcon {
   width: 17px;
   height: 17px;
