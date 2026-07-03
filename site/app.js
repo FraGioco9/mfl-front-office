@@ -706,7 +706,7 @@ function currentDataAccess(pageName = state.currentPage) {
     return "full";
   }
 
-  return pageName === "myplayers" && hasWalletOptIn() ? "owned" : "public";
+  return ["myplayers", "player"].includes(pageName) && hasWalletOptIn() ? "owned" : "public";
 }
 
 function dataFileUrl(fileName, options = {}) {
@@ -1875,7 +1875,6 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
   }
 
   if (state.currentPage === "player") {
-    state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
     renderPlayerPage(playerIdFromUrl());
   }
 }
@@ -2048,18 +2047,13 @@ function refreshPlayerPageAfterWalletSync() {
     return;
   }
 
-  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
   renderPlayerPage(playerIdFromUrl());
 }
 
 async function upgradeCurrentPageAfterWalletOptIn() {
-  if (state.currentPage === "myplayers") {
-    state.dataLoaded = false;
-    await setPage("myplayers", false);
-    return true;
-  }
+  const targetAccess = currentDataAccess(state.currentPage);
 
-  if (!hasProgressionAccess() || !pageCanUseProgressionData(state.currentPage) || state.dataAccess === "full") {
+  if (!pageCanUseProgressionData(state.currentPage) || targetAccess === "public" || state.dataAccess === targetAccess) {
     return false;
   }
 
@@ -2202,20 +2196,24 @@ function restoreRecentEvaluationState(savedState) {
   state.recentEvaluationPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
 }
 
-function allowedPlayerAttributeViews() {
-  return !hasProgressionAccess()
+function playerCanViewProgression(row = null) {
+  return hasProgressionAccess() || (Boolean(row) && hasWalletOptIn() && rowIsOwnedByLinkedWallet(row));
+}
+
+function allowedPlayerAttributeViews(row = null) {
+  return !playerCanViewProgression(row)
     ? [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"]]
     : [["attributes", "Attributes"], ["training", "Training"], ["next", "Next Overall"], ["current", "Current Season"], ["all", "All Time"]];
 }
 
-function normalizePlayerAttributeView(viewName) {
-  const allowedViews = allowedPlayerAttributeViews().map(([view]) => view);
+function normalizePlayerAttributeView(viewName, row = null) {
+  const allowedViews = allowedPlayerAttributeViews(row).map(([view]) => view);
   return allowedViews.includes(viewName) ? viewName : allowedViews[0];
 }
 
 function restorePlayerAttributeView(savedState) {
   if (["attributes", "training", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
-    state.playerAttributeView = normalizePlayerAttributeView(savedState.playerAttributeView);
+    state.playerAttributeView = savedState.playerAttributeView;
   }
 }
 
@@ -3759,7 +3757,7 @@ function playerAttributeValueHtml(row, column, viewName) {
 
 function renderPlayerAttributePanel(row) {
   const columns = playerAttributeColumns(row);
-  const viewName = normalizePlayerAttributeView(state.playerAttributeView);
+  const viewName = normalizePlayerAttributeView(state.playerAttributeView, row);
   state.playerAttributeView = viewName;
   const isTraining = viewName === "training";
 
@@ -3817,9 +3815,9 @@ function renderPlayerPage(playerId) {
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
-  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView);
+  state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
-  const viewButtons = allowedPlayerAttributeViews()
+  const viewButtons = allowedPlayerAttributeViews(row)
     .map(([view, label]) => `<button class="playerAttributeViewButton ${state.playerAttributeView === view ? "active" : ""}" type="button" data-player-attribute-view="${view}">${label}</button>`)
     .join("");
 
