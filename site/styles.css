@@ -1016,6 +1016,35 @@ button:disabled {
   justify-content: center;
   padding: 24px;
   background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.modalBackdrop > section {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.modalBackdrop.modalOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modalBackdrop.modalOpen > section {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.modalBackdrop.modalClosing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modalBackdrop.modalClosing > section {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
 }
 
 .modalBackdrop[hidden] {
@@ -1955,6 +1984,8 @@ td a {
 .searchResults.filledSearchResults {
   grid-template-rows: repeat(5, minmax(0, 1fr));
   align-content: stretch;
+  box-sizing: border-box;
+  padding-bottom: 8px;
 }
 
 .searchResults.filledSearchResults .searchResult {
@@ -3450,25 +3481,35 @@ td a {
 
 
 .evaluationLoadDialog {
-  width: min(640px, calc(100vw - 32px));
-  max-height: min(720px, calc(100vh - 48px));
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100vw - 32px));
+  height: 492px;
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 
 .evaluationLoadList {
   display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  padding: 14px;
+  height: 366px;
+  min-height: 0;
+  padding: 16px 18px 18px;
   overflow: auto;
 }
 
 .evaluationLoadEmpty {
   margin: 0;
   padding: 18px;
-  color: var(--muted);
+  color: var(--text-soft);
   text-align: center;
+  align-self: center;
+  justify-self: center;
 }
 
 .evaluationLoadResult {
@@ -3476,12 +3517,12 @@ td a {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 66px;
+  padding: 10px 12px;
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text);
-  text-align: left;
+  text-align: center;
 }
 
 .evaluationLoadResult:hover {
@@ -3491,8 +3532,10 @@ td a {
 
 .evaluationLoadResultMain {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
+  justify-items: center;
+  text-align: center;
 }
 
 .evaluationLoadResultMain span,
@@ -3500,15 +3543,16 @@ td a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .evaluationLoadResultMain span {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--text-soft);
+  font-size: 12px;
 }
 
 .evaluationLoadPresentValue {
-  min-width: 96px;
+  min-width: 112px;
   text-align: center;
   white-space: nowrap;
 }

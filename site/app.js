@@ -1851,6 +1851,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     const data = await response.json();
     state.evaluationSavedId = id;
     state.evaluationShareId = "";
+    clearEvaluationSearchFocus();
     applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
@@ -1930,11 +1931,12 @@ function renderSavedEvaluationList(rows) {
 
     button.append(main, value);
     button.addEventListener("click", () => {
+      clearEvaluationSearchFocus();
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", entry.id);
       window.history.replaceState({}, "", url.toString());
-      evaluationLoadModal.hidden = true;
+      hideModal(evaluationLoadModal);
       void loadSavedEvaluation(entry.id, playerId);
     });
     evaluationLoadList.appendChild(button);
@@ -1947,7 +1949,7 @@ async function openSavedEvaluationsModal() {
     return;
   }
 
-  evaluationLoadModal.hidden = false;
+  showModal(evaluationLoadModal);
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
 
   try {
@@ -3509,12 +3511,12 @@ function updateAdvancedMflUsdResetVisibility() {
 function openAdvancedSettings() {
   renderAdvancedPlayerTable();
   syncAdvancedSettingsValues();
-  advancedSettingsModal.hidden = false;
+  showModal(advancedSettingsModal);
   window.requestAnimationFrame(updateAdvancedPlayerTableClip);
 }
 
 function closeAdvancedSettings() {
-  advancedSettingsModal.hidden = true;
+  hideModal(advancedSettingsModal);
   advancedPlayerTableBody.style.clipPath = "";
   advancedPlayerTableBody.style.webkitClipPath = "";
 }
@@ -4618,6 +4620,38 @@ function renderPlayerPage(playerId) {
   }
 }
 
+
+function showModal(modal) {
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.remove("modalClosing");
+  modal.hidden = false;
+  window.requestAnimationFrame(() => {
+    modal.classList.add("modalOpen");
+  });
+}
+
+function hideModal(modal, afterClose) {
+  if (!modal || modal.hidden) {
+    if (typeof afterClose === "function") {
+      afterClose();
+    }
+    return;
+  }
+
+  modal.classList.remove("modalOpen");
+  modal.classList.add("modalClosing");
+  window.setTimeout(() => {
+    modal.hidden = true;
+    modal.classList.remove("modalClosing");
+    if (typeof afterClose === "function") {
+      afterClose();
+    }
+  }, 180);
+}
+
 async function openSearch() {
   const loaded = await ensureProgressionData();
   if (!loaded) {
@@ -4626,14 +4660,14 @@ async function openSearch() {
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
-  searchModal.hidden = false;
+  showModal(searchModal);
   playerSearchInput.value = "";
   renderSearchResultsNow();
   window.setTimeout(() => playerSearchInput.focus(), 0);
 }
 
 function closeSearch() {
-  searchModal.hidden = true;
+  hideModal(searchModal);
 }
 
 function bestSearchResults(query) {
@@ -5256,7 +5290,7 @@ function restoreFilterDraftRules(rules = []) {
 function openFilters() {
   state.filterDraftRules = readFilterDraftRules();
   document.body.classList.add("filtersOpen");
-  filtersModal.hidden = false;
+  showModal(filtersModal);
   const firstInput = filterRules.querySelector("input") || addFilterSelect;
 
   if (firstInput) {
@@ -5270,9 +5304,10 @@ function closeFilters(commitChanges = false) {
   }
 
   state.filterDraftRules = null;
-  filtersModal.hidden = true;
-  document.body.classList.remove("filtersOpen");
-  openFiltersButton.focus();
+  hideModal(filtersModal, () => {
+    document.body.classList.remove("filtersOpen");
+    openFiltersButton.focus();
+  });
 }
 
 function clearAdvancedFilters(applyNow = true) {
@@ -6312,13 +6347,13 @@ if (evaluationLoadButton) {
 }
 if (closeEvaluationLoadButton) {
   closeEvaluationLoadButton.addEventListener("click", () => {
-    evaluationLoadModal.hidden = true;
+    hideModal(evaluationLoadModal);
   });
 }
 if (evaluationLoadModal) {
   evaluationLoadModal.addEventListener("click", (event) => {
     if (event.target === evaluationLoadModal) {
-      evaluationLoadModal.hidden = true;
+      hideModal(evaluationLoadModal);
     }
   });
 }
