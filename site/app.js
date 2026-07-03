@@ -2061,6 +2061,10 @@ function pagePath(pageName, options = {}) {
   }
 
   if (pageName === "evaluation") {
+    if (options.plain) {
+      return "/evaluation";
+    }
+
     const playerId = options.playerId || evaluationPlayerIdFromUrl();
     return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
   }
@@ -6463,6 +6467,12 @@ evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage)
 navButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
     event.preventDefault();
+
+    if (button.dataset.page === "evaluation") {
+      setPage("evaluation", true, { plain: true });
+      return;
+    }
+
     setPage(button.dataset.page);
   });
 });

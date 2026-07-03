@@ -3495,10 +3495,12 @@ td a {
 
 .evaluationLoadList {
   display: grid;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  height: 366px;
   min-height: 0;
+  height: 366px;
+  max-height: 366px;
+  grid-auto-rows: 66px;
+  align-content: start;
   padding: 16px 18px 18px;
   overflow: auto;
 }
