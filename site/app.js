@@ -35,6 +35,7 @@ const state = {
   linkedWalletAddress: "",
   linkedWalletProof: null,
   walletPermissionAllowed: false,
+  walletPermissionRefreshPromise: null,
   flowWalletModule: null,
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
@@ -646,7 +647,7 @@ async function loadWalletPermissions(options = {}) {
   const cacheAge = cached?.checkedAt ? Date.now() - Number(cached.checkedAt) : Infinity;
   const cacheIsFresh = cacheAge >= 0 && cacheAge < WALLET_PERMISSION_CACHE_TTL_MS;
 
-  if (!options.force && cached && cacheIsFresh) {
+  if (!options.force && !options.checkVersion && cached && cacheIsFresh) {
     return applyCachedWalletPermission(cached, previousAllowed);
   }
 
@@ -701,6 +702,29 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
+async function refreshWalletPermissionsForNavigation() {
+  if (!hasWalletOptIn()) {
+    return { allowed: false, changed: false };
+  }
+
+  if (!state.walletPermissionRefreshPromise) {
+    state.walletPermissionRefreshPromise = loadWalletPermissions({ checkVersion: true })
+      .finally(() => {
+        state.walletPermissionRefreshPromise = null;
+      });
+  }
+
+  const result = await state.walletPermissionRefreshPromise;
+
+  if (result.changed) {
+    updateAccountState();
+    updateMenuVisibility();
+    syncHomeLoginButton();
+  }
+
+  return result;
+}
+
 function currentDataAccess(pageName = state.currentPage) {
   if (hasProgressionAccess()) {
     return "full";
@@ -1655,6 +1679,13 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const shouldResetScroll = previousPage !== pageName;
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
+  const permissionResult = await refreshWalletPermissionsForNavigation();
+
+  if (permissionResult.changed && state.dataLoaded && pageRequiresData(pageName)) {
+    state.dataLoaded = false;
+    state.dataLoadPromise = null;
+  }
+
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
   }
@@ -5492,7 +5523,7 @@ async function startApp() {
   }
 
   void ensureFlowWallet();
-  await loadWalletPermissions();
+  await loadWalletPermissions({ checkVersion: true });
   await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
