@@ -11,6 +11,9 @@
     },
     "api/wallet-permissions-version.js": {
       "includeFiles": "api/wallet-permissions.json"
+    },
+    "api/wallet-opt-ins.js": {
+      "includeFiles": "api/wallet-opt-ins-list.json"
     }
   },
   "rewrites": [
