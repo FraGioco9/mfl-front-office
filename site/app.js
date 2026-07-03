@@ -1996,12 +1996,14 @@ function renderSavedEvaluationList(rows) {
     shareButton.type = "button";
     shareButton.className = "evaluationLoadIconButton evaluationLoadShareButton";
     shareButton.setAttribute("aria-label", "Share saved evaluation");
+    shareButton.dataset.tooltip = "Share";
     shareButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg>';
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "evaluationLoadIconButton evaluationLoadDeleteButton";
     deleteButton.setAttribute("aria-label", "Delete saved evaluation");
+    deleteButton.dataset.tooltip = "Delete";
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
 
     const loadEvaluation = () => {

@@ -1997,11 +1997,13 @@ td a {
   display: grid;
   gap: 3px;
   min-height: 66px;
-  border-color: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--surface-muted);
   color: var(--text);
   padding: 10px 12px;
   text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .searchResult:hover {
@@ -2799,10 +2801,12 @@ td a {
   min-height: 58px;
   padding: 8px 10px;
   align-content: center;
-  border-color: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--surface-muted);
   color: var(--text);
   text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .evaluationSearchResult:hover {
@@ -3605,6 +3609,43 @@ td a {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+.evaluationLoadIconButton[data-tooltip] {
+  position: relative;
+}
+
+.evaluationLoadIconButton[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 100;
+  width: max-content;
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: none;
+  white-space: pre-wrap;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.evaluationLoadIconButton[data-tooltip]:hover::after,
+.evaluationLoadIconButton[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 
 .evaluationLoadDeleteButton {
   border-color: var(--border);
