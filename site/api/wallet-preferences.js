@@ -38,31 +38,44 @@ async function verifyWalletProof(request) {
     return "";
   }
 
-  if (!wallet || !signingWallet || message !== walletAccessMessage() || !Array.isArray(signatures) || !signatures.length) {
-    return "";
-  }
-
-  if (!signatureWalletAddresses(signatures).has(signingWallet)) {
+  if (!wallet || !signingWallet || message !== walletAccessMessage(wallet, signingWallet) || !Array.isArray(signatures) || !signatures.length) {
     return "";
   }
 
   try {
-    const verified = proofType === "account-proof"
-      ? Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
-          address: signingWallet,
+    if (proofType === "account-proof") {
+      const verified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+        address: signingWallet,
+        nonce,
+        signatures,
+      });
+
+      if (verified) {
+        return wallet;
+      }
+
+      if (signingWallet !== wallet) {
+        const walletVerified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+          address: wallet,
           nonce,
           signatures,
-        }))
-      : Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
+        });
 
-    return verified ? wallet : "";
+        return walletVerified ? wallet : "";
+      }
+
+      return "";
+    }
+
+    if (!signatureWalletAddresses(signatures).has(signingWallet)) {
+      return "";
+    }
+
+    return (await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures)) ? wallet : "";
   } catch (error) {
     console.warn("Could not verify Dapper wallet proof.", error);
     return "";
   }
-}
-function preferenceKey(wallet) {
-  return `mfl-front-office:wallet-preferences:${normalizeWalletAddress(wallet)}`;
 }
 
 async function readBody(request) {
@@ -73,51 +86,47 @@ async function readBody(request) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function kvConfig() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  return url && token ? { url: url.replace(/\/$/, ""), token } : null;
-}
+function supabaseConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 
-async function kvCommand(command) {
-  const config = kvConfig();
-  if (!config) {
+  if (!url || !key) {
     return null;
   }
 
-  const response = await fetch(config.url, {
-    method: "POST",
+  return { url, key };
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const config = supabaseConfig();
+
+  if (!config) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const response = await fetch(`${config.url}/rest/v1/${pathname}`, {
+    ...options,
     headers: {
-      Authorization: `Bearer ${config.token}`,
+      apikey: config.key,
+      Authorization: `Bearer ${config.key}`,
       "Content-Type": "application/json",
+      ...(options.headers || {}),
     },
-    body: JSON.stringify(command),
   });
 
   if (!response.ok) {
-    throw new Error(`KV request failed with ${response.status}`);
+    throw new Error(`Supabase request failed with ${response.status}: ${await response.text()}`);
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
 }
 
-async function readPreferences(wallet) {
-  const result = await kvCommand(["GET", preferenceKey(wallet)]);
-  if (!result?.result) {
-    return { watchlistPlayerIds: [], playerNotes: {} };
-  }
-
-  try {
-    const data = typeof result.result === "string" ? JSON.parse(result.result) : result.result;
-    return {
-      watchlistPlayerIds: Array.isArray(data.watchlistPlayerIds)
-        ? data.watchlistPlayerIds.map((playerId) => String(playerId))
-        : [],
-      playerNotes: normalizePlayerNotes(data.playerNotes),
-    };
-  } catch {
-    return { watchlistPlayerIds: [], playerNotes: {} };
-  }
+function emptyPreferences() {
+  return { watchlistPlayerIds: [], playerNotes: {} };
 }
 
 function normalizePlayerNotes(notes) {
@@ -137,18 +146,59 @@ function normalizePlayerNotes(notes) {
   return normalized;
 }
 
+function normalizeWatchlistIds(ids) {
+  return Array.isArray(ids)
+    ? [...new Set(ids.map((playerId) => String(playerId || "").trim()).filter(Boolean))]
+    : [];
+}
+
+function preferencesFromRow(row) {
+  if (!row) {
+    return emptyPreferences();
+  }
+
+  return {
+    watchlistPlayerIds: normalizeWatchlistIds(row.watchlist_player_ids),
+    playerNotes: normalizePlayerNotes(row.player_notes),
+  };
+}
+
+async function readPreferences(wallet) {
+  if (!supabaseConfig()) {
+    return emptyPreferences();
+  }
+
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
+}
+
 async function writePreferences(wallet, preferences) {
   const currentPreferences = await readPreferences(wallet);
   const watchlistPlayerIds = Array.isArray(preferences.watchlistPlayerIds)
-    ? [...new Set(preferences.watchlistPlayerIds.map((playerId) => String(playerId)).filter(Boolean))]
+    ? normalizeWatchlistIds(preferences.watchlistPlayerIds)
     : currentPreferences.watchlistPlayerIds;
   const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
 
   const nextPreferences = { watchlistPlayerIds, playerNotes };
-  await kvCommand(["SET", preferenceKey(wallet), JSON.stringify(nextPreferences)]);
-  return nextPreferences;
+  if (!supabaseConfig()) {
+    return nextPreferences;
+  }
+
+  const rows = await supabaseRequest("wallet_preferences?on_conflict=wallet_address", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify([{
+      wallet_address: wallet,
+      watchlist_player_ids: watchlistPlayerIds,
+      player_notes: playerNotes,
+    }]),
+  });
+
+  return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
 module.exports = async function handler(request, response) {
@@ -160,17 +210,22 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  if (request.method === "GET") {
-    response.status(200).json(await readPreferences(wallet));
-    return;
-  }
+  try {
+    if (request.method === "GET") {
+      response.status(200).json(await readPreferences(wallet));
+      return;
+    }
 
-  if (request.method === "PUT") {
-    const rawBody = await readBody(request);
-    const body = rawBody ? JSON.parse(rawBody) : {};
-    response.status(200).json(await writePreferences(wallet, body));
-    return;
-  }
+    if (request.method === "PUT") {
+      const rawBody = await readBody(request);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      response.status(200).json(await writePreferences(wallet, body));
+      return;
+    }
 
-  response.status(405).json({ error: "Method not allowed." });
+    response.status(405).json({ error: "Method not allowed." });
+  } catch (error) {
+    console.warn("Could not handle wallet preferences.", error);
+    response.status(500).json({ error: "Could not save wallet preferences." });
+  }
 };

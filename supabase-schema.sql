@@ -10,6 +10,13 @@ create table if not exists public.wallet_permissions (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.wallet_preferences (
+  wallet_address text primary key,
+  watchlist_player_ids jsonb not null default '[]'::jsonb,
+  player_notes jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -26,5 +33,12 @@ before update on public.wallet_permissions
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists wallet_preferences_set_updated_at on public.wallet_preferences;
+create trigger wallet_preferences_set_updated_at
+before update on public.wallet_preferences
+for each row
+execute function public.set_updated_at();
+
 alter table public.wallet_opt_ins enable row level security;
 alter table public.wallet_permissions enable row level security;
+alter table public.wallet_preferences enable row level security;
