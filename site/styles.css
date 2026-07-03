@@ -633,6 +633,12 @@ body[data-page="home"] .topbar .stats {
   stroke-linejoin: round;
 }
 
+:root:not([data-theme="dark"]) .navJerseyIcon {
+  color: #000000;
+  fill: #000000;
+  stroke: #000000;
+}
+
 .navBinocularsIcon {
   fill: none;
   stroke: currentColor;
