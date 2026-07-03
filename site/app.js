@@ -733,6 +733,22 @@ function walletProofHeaders(force = false) {
   };
 }
 
+async function recordWalletOptIn() {
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+
+  try {
+    await fetch("/api/wallet-opt-ins", {
+      method: "POST",
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+  } catch (error) {
+    console.warn("Could not record Dapper wallet opt-in.", error);
+  }
+}
+
 function cacheRequestForDataFile(fileName) {
   return new Request(`/data-cache/${currentDataAccess()}/${fileName}`);
 }
@@ -1408,6 +1424,7 @@ async function linkWallet() {
       // The linked state still works for this page if storage is blocked.
     }
 
+    await recordWalletOptIn();
     await loadWalletPermissions({ force: true });
     await loadWalletNames();
     await loadWalletPreferences();
