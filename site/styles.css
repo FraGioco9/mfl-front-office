@@ -2720,8 +2720,12 @@ td a {
 .evaluationSearch .field::after {
   content: "x";
   position: absolute;
-  right: 14px;
-  bottom: 9px;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  height: 42px;
+  display: grid;
+  place-items: center;
   color: var(--muted);
   font-size: 16px;
   font-weight: 700;

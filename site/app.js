@@ -3386,10 +3386,21 @@ function renderEvaluationSearchResults() {
   });
 }
 
-function handleEvaluationSearchPointerDown(event) {
+function evaluationSearchClearZoneHit(event) {
   const rect = evaluationSearchInput.getBoundingClientRect();
   const clearZoneWidth = 40;
-  if (event.clientX < rect.right - clearZoneWidth || event.clientY < rect.top || event.clientY > rect.bottom) {
+  return event.clientX >= rect.right - clearZoneWidth && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function updateEvaluationSearchCursor(event) {
+  evaluationSearchInput.style.cursor = evaluationSearchClearZoneHit(event) ? "pointer" : "";
+}
+
+function resetEvaluationSearchCursor() {
+  evaluationSearchInput.style.cursor = "";
+}
+function handleEvaluationSearchPointerDown(event) {
+  if (!evaluationSearchClearZoneHit(event)) {
     return;
   }
 
@@ -5856,6 +5867,8 @@ applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchInput.addEventListener("pointerdown", handleEvaluationSearchPointerDown);
+evaluationSearchInput.addEventListener("pointermove", updateEvaluationSearchCursor);
+evaluationSearchInput.addEventListener("pointerleave", resetEvaluationSearchCursor);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
