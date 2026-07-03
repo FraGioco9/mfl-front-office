@@ -145,7 +145,7 @@ async function walletAllowed(wallet) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function verifyWalletProof(request) {
+async function signedWalletFromRequest(request) {
   const wallet = normalizeWalletAddress(request.headers["x-dapper-wallet-address"]);
   const signingWallet = normalizeWalletAddress(request.headers["x-wallet-signing-address"] || wallet);
   const message = String(request.headers["x-wallet-message"] || "");
@@ -157,15 +157,11 @@ async function verifyWalletProof(request) {
   try {
     signatures = JSON.parse(String(request.headers["x-wallet-signatures"] || "[]"));
   } catch {
-    return false;
+    return "";
   }
 
   if (!wallet || !signingWallet || message !== walletAccessMessage(wallet, signingWallet) || !Array.isArray(signatures) || !signatures.length) {
-    return false;
-  }
-
-  if (!(await walletAllowed(wallet))) {
-    return false;
+    return "";
   }
 
   try {
@@ -178,39 +174,69 @@ async function verifyWalletProof(request) {
       });
 
       if (verified) {
-        return true;
+        return wallet;
       }
 
       if (proofAddress !== wallet) {
-        return Boolean(await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+        return await fcl.AppUtils.verifyAccountProof(appIdentifier, {
           address: wallet,
           nonce,
           signatures,
-        }));
+        }) ? wallet : "";
       }
 
-      return false;
+      return "";
     }
 
     if (!signatureWalletAddresses(signatures).has(signingWallet)) {
-      return false;
+      return "";
     }
 
-    return Boolean(await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures));
+    return await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures) ? wallet : "";
   } catch (error) {
     console.warn("Could not verify Dapper wallet proof.", error);
 
     if (proofType === "account-proof") {
-      return Boolean(nonce && signatures.length);
+      return nonce && signatures.length ? wallet : "";
     }
 
-    return false;
+    return "";
   }
 }
+
+async function ownedPlayerIdsForWallet(request, wallet) {
+  const manifest = await readDataJson("manifest.json", request);
+  const publicFile = manifest?.files?.public?.file || manifest?.chunks?.[0]?.file || "players_public.json";
+  const data = await readDataJson(publicFile, request);
+  const playerIdIndex = data.columns?.indexOf("player_id") ?? -1;
+  const walletAddressIndex = data.columns?.indexOf("wallet_address") ?? -1;
+
+  if (!Array.isArray(data.rows) || playerIdIndex < 0 || walletAddressIndex < 0) {
+    return new Set();
+  }
+
+  return new Set(data.rows
+    .filter((row) => normalizeWalletAddress(row[walletAddressIndex]).toLowerCase() === wallet)
+    .map((row) => String(row[playerIdIndex])));
+}
+
+async function verifyWalletProof(request) {
+  const wallet = await signedWalletFromRequest(request);
+  return Boolean(wallet && await walletAllowed(wallet));
+}
+
+function publicDataFile(manifest) {
+  return manifest?.files?.public?.file || manifest?.chunks?.[0]?.file || "players_public.json";
+}
+
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
-  const publicDatabase = request.query.access === "public-database" || !(await verifyWalletProof(request));
+  const accessMode = String(request.query.access || "");
+  const signedWallet = await signedWalletFromRequest(request);
+  const fullAccess = signedWallet ? await walletAllowed(signedWallet) : false;
+  const ownedProgression = accessMode === "owned-progression" && Boolean(signedWallet);
+  const publicDatabase = accessMode === "public-database" || (!fullAccess && !ownedProgression);
   const fileName = String(request.query.file || "");
 
   if (!DATA_FILE_PATTERN.test(fileName)) {
@@ -239,13 +265,23 @@ module.exports = async function handler(request, response) {
         ...data,
         columns: publicDatabase ? publicColumns : fullColumns,
         publicAccess: publicDatabase ? "database" : undefined,
+        ownedAccess: ownedProgression ? "progression" : undefined,
         partialAccess: !publicDatabase && requestedColumns.length ? "columns" : undefined,
       });
       return;
     }
 
     const dataColumns = Array.isArray(data.columns) ? data.columns : [];
-    const dataRows = Array.isArray(data.rows) ? data.rows : [];
+    let dataRows = Array.isArray(data.rows) ? data.rows : [];
+
+    if (ownedProgression && !fullAccess && fileName !== publicDataFile(await readDataJson("manifest.json", request))) {
+      const ownedPlayerIds = await ownedPlayerIdsForWallet(request, signedWallet);
+      const playerIdIndex = dataColumns.indexOf("player_id");
+      dataRows = playerIdIndex >= 0
+        ? dataRows.filter((row) => ownedPlayerIds.has(String(row[playerIdIndex])))
+        : [];
+    }
+
     const selectedColumns = publicDatabase
       ? PUBLIC_DATABASE_COLUMNS.filter((column) => dataColumns.includes(column))
       : (requestedColumns.length

@@ -127,7 +127,7 @@ const pageViewOptions = {
   database: ["attributes", "next"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "current", "all"],
-  myplayers: ["attributes", "next"],
+  myplayers: ["attributes", "next", "current", "all"],
 };
 const defaultPageViews = {
   database: "attributes",
@@ -515,11 +515,11 @@ function pageRequiresProgressionPermission(pageName) {
 }
 
 function pageRequiresFullData(pageName) {
-  return hasProgressionAccess() && pageCanUseProgressionData(pageName);
+  return currentDataAccess(pageName) !== "public" && pageCanUseProgressionData(pageName);
 }
 
 function pageCanUseProgressionData(pageName) {
-  return pageName === "progression" || pageName === "player" || pageName === "watchlist";
+  return pageName === "progression" || pageName === "player" || pageName === "watchlist" || pageName === "myplayers";
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
@@ -701,16 +701,26 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-function currentDataAccess() {
-  return hasProgressionAccess() ? "full" : "public";
+function currentDataAccess(pageName = state.currentPage) {
+  if (hasProgressionAccess()) {
+    return "full";
+  }
+
+  return pageName === "myplayers" && hasWalletOptIn() ? "owned" : "public";
 }
 
 function dataFileUrl(fileName, options = {}) {
   const query = new URLSearchParams({ file: fileName });
 
-  if (!hasProgressionAccess()) {
+  const access = currentDataAccess();
+
+  if (access === "public") {
     query.set("access", "public-database");
-  } else if (Array.isArray(options.columns) && options.columns.length) {
+  } else if (access === "owned") {
+    query.set("access", "owned-progression");
+  }
+
+  if (access !== "public" && Array.isArray(options.columns) && options.columns.length) {
     query.set("columns", options.columns.join(","));
   }
 
@@ -718,7 +728,7 @@ function dataFileUrl(fileName, options = {}) {
 }
 
 function walletProofHeaders(force = false) {
-  if ((!force && !hasProgressionAccess()) || !hasWalletProof()) {
+  if ((!force && currentDataAccess() === "public") || !hasWalletProof()) {
     return {};
   }
 
@@ -757,8 +767,15 @@ async function recordWalletOptIn() {
   }
 }
 
+function dataCacheAccessKey() {
+  const access = currentDataAccess();
+  return access === "owned"
+    ? `${access}:${normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()}`
+    : access;
+}
+
 function cacheRequestForDataFile(fileName) {
-  return new Request(`/data-cache/${currentDataAccess()}/${fileName}`);
+  return new Request(`/data-cache/${dataCacheAccessKey()}/${fileName}`);
 }
 
 async function readCachedDataFile(fileName) {
@@ -1672,14 +1689,14 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
-  const targetDataAccess = currentDataAccess();
+  const targetDataAccess = currentDataAccess(pageName);
 
   if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && pageRequiresData(pageName)) {
     state.dataLoaded = false;
     state.dataLoadPromise = null;
   }
 
-  if (pageRequiresFullData(pageName) && state.dataAccess !== "full") {
+  if (pageRequiresFullData(pageName) && state.dataAccess !== targetDataAccess) {
     state.dataLoaded = false;
   }
 
@@ -5010,7 +5027,7 @@ function manifestDataFiles(manifest) {
   if (manifest?.files?.public?.file) {
     const files = [manifest.files.public.file];
 
-    if (currentDataAccess() === "full" && manifest?.files?.progression?.file) {
+    if (["full", "owned"].includes(currentDataAccess()) && manifest?.files?.progression?.file) {
       files.push(manifest.files.progression.file);
     }
 
@@ -5021,7 +5038,7 @@ function manifestDataFiles(manifest) {
 }
 
 function dataCacheVersion(manifest) {
-  return `${currentDataAccess()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
+  return `${dataCacheAccessKey()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
 }
 
 function missingFullDataColumns(fullColumns) {
@@ -5070,7 +5087,7 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
 
   if (!columnsToMerge.length) {
     state.manifest = manifest;
-    state.dataAccess = "full";
+    state.dataAccess = currentDataAccess();
     return true;
   }
 
@@ -5106,7 +5123,7 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
 
   state.manifest = manifest;
   state.columns = targetColumns;
-  state.dataAccess = "full";
+  state.dataAccess = currentDataAccess();
   return true;
 }
 
@@ -5149,7 +5166,7 @@ async function loadData() {
       await paintLoadingProgress();
 
       const publicFile = publicDataFile(manifest);
-      const publicProgressEnd = targetAccess === "full" ? 55 : 90;
+      const publicProgressEnd = ["full", "owned"].includes(targetAccess) ? 55 : 90;
       const publicProgress = loadingRangeProgress(10, publicProgressEnd);
       publicProgress(0);
       await paintLoadingProgress();
@@ -5161,7 +5178,7 @@ async function loadData() {
       state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
       publicProgress(1);
 
-      if (targetAccess === "full") {
+      if (["full", "owned"].includes(targetAccess)) {
         await upgradePublicDataToFull(manifest, { startPercent: 55, endPercent: 90 });
       }
     }
