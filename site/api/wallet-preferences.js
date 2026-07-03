@@ -126,7 +126,7 @@ async function supabaseRequest(pathname, options = {}) {
 }
 
 function emptyPreferences() {
-  return { watchlistPlayerIds: [], playerNotes: {} };
+  return { watchlistPlayerIds: [], playerNotes: {}, tableState: null };
 }
 
 function normalizePlayerNotes(notes) {
@@ -160,6 +160,7 @@ function preferencesFromRow(row) {
   return {
     watchlistPlayerIds: normalizeWatchlistIds(row.watchlist_player_ids),
     playerNotes: normalizePlayerNotes(row.player_notes),
+    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? row.table_state : null,
   };
 }
 
@@ -168,7 +169,7 @@ async function readPreferences(wallet) {
     return emptyPreferences();
   }
 
-  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes,table_state&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
@@ -181,7 +182,11 @@ async function writePreferences(wallet, preferences) {
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
 
-  const nextPreferences = { watchlistPlayerIds, playerNotes };
+  const tableState = preferences.tableState && typeof preferences.tableState === "object" && !Array.isArray(preferences.tableState)
+    ? preferences.tableState
+    : currentPreferences.tableState;
+
+  const nextPreferences = { watchlistPlayerIds, playerNotes, tableState };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -195,6 +200,7 @@ async function writePreferences(wallet, preferences) {
       wallet_address: wallet,
       watchlist_player_ids: watchlistPlayerIds,
       player_notes: playerNotes,
+      table_state: tableState || {},
     }]),
   });
 

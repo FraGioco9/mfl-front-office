@@ -1084,8 +1084,8 @@ function optOutWallet() {
   saveTableState();
   showToast("Dapper opt-in removed.");
 
-  if (state.currentPage === "myplayers") {
-    setPage("myplayers", false);
+  if (state.currentPage === "myplayers" || state.currentPage === "watchlist") {
+    setPage(state.currentPage, false);
     return;
   }
 
@@ -2309,8 +2309,13 @@ async function loadWalletPreferences() {
     if (response.ok) {
       const data = await response.json();
       applyWalletWatchlistIds(data.watchlistPlayerIds);
+      const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
       saveWalletNotesLocally();
+      if (tableStateChanged && tablePageKey()) {
+        restoreSavedTableState(tablePageKey());
+        applyFilters();
+      }
     }
   } catch {
     // Local wallet watchlist and notes are still available if cloud sync is unavailable.
@@ -2340,6 +2345,7 @@ async function saveWalletPreferencesNow() {
     };
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
+      body.tableState = currentTableState();
     }
 
     await fetch("/api/wallet-preferences", {
@@ -2357,11 +2363,7 @@ async function saveWalletPreferencesNow() {
 
 function saveTableState() {
   const savedState = currentTableState();
-  try {
-    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
-  } catch {
-    // Filtering still works for this page even if the browser blocks storage.
-  }
+  saveTableStateLocally(savedState);
 
   saveGuestWatchlist();
   queueCloudTableStateSave(savedState);
@@ -2411,6 +2413,32 @@ function currentTableState() {
   };
 }
 
+function saveTableStateLocally(savedState) {
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
+  } catch {
+    // Filtering still works for this page even if the browser blocks storage.
+  }
+}
+
+function applyWalletTableState(savedState) {
+  if (!savedState || typeof savedState !== "object" || Array.isArray(savedState)) {
+    return false;
+  }
+
+  restoreTablePageStates(savedState);
+  restoreMenuState(savedState);
+  restoreRecentSearchState(savedState);
+  restoreRecentEvaluationState(savedState);
+  restorePlayerAttributeView(savedState);
+  saveTableStateLocally({
+    ...savedState,
+    watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+    linkedWalletAddress: state.linkedWalletAddress,
+  });
+  updateMenuVisibility();
+  return true;
+}
 function queueCloudTableStateSave() {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     return;

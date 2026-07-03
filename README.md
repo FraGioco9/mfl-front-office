@@ -185,10 +185,10 @@ In Supabase, create the users who are allowed to access the table:
 Authentication -> Users -> Add user
 ```
 
-To make filters follow the logged-in account across devices, run the SQL in:
+To create the Supabase tables used by wallet opt-ins, progression permissions, watchlists, notes, and saved filters, run the SQL in:
 
 ```text
-supabase_user_preferences.sql
+supabase-schema.sql
 ```
 
 In Supabase, open:
