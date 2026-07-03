@@ -2954,6 +2954,30 @@ td a {
   white-space: nowrap;
 }
 
+
+.evaluationFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.evaluationFooterButton {
+  gap: 8px;
+}
+
+.evaluationButtonIcon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
 .evaluationMetric[data-tooltip] {
   cursor: help;
 }

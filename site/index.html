@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.88.13">
+    <link rel="stylesheet" href="/styles.css?v=1.89.0">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -266,6 +266,10 @@
                 </table>
               </div>
             </div>
+            <div class="evaluationFooterActions" aria-label="Evaluation save and share actions">
+              <button id="evaluationSaveButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg><span>Save</span></button>
+              <button id="evaluationShareButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button"><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a3 3 0 1 0-2.8-4"></path><path d="M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path><path d="M18 16a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path><path d="M8.7 14.9l6.6-3.8"></path><path d="M8.7 19.1l6.6 3.8"></path></svg><span>Share</span></button>
+            </div>
           </section>
         </section>
         <section id="playerPage" class="pageView playerPage" hidden>
@@ -276,7 +280,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
-              <li><span>v1.88.13</span><p>Center Evaluation search clear x and show pointer cursor</p></li>
+              <li><span>v1.89.0</span><p>Center Evaluation search clear x and show pointer cursor</p></li>
               <li><span>v1.88.12</span><p>Keep Evaluation search clear x visible</p></li>
               <li><span>v1.88.11</span><p>Open locked Watchlist after opt-in</p></li>
               <li><span>v1.88.10</span><p>Sync table filters by opted-in wallet</p></li>
@@ -636,7 +640,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.88.13</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -725,6 +729,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.88.13"></script>
+    <script src="/app.js?v=1.89.0"></script>
   </body>
 </html>

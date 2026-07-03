@@ -326,6 +326,8 @@ const evaluationSearchResults = document.querySelector("#evaluationSearchResults
 const evaluationButtons = document.querySelector("#evaluationButtons");
 const evaluationResetButton = document.querySelector("#evaluationResetButton");
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
+const evaluationSaveButton = document.querySelector("#evaluationSaveButton");
+const evaluationShareButton = document.querySelector("#evaluationShareButton");
 const evaluationOptionFilters = document.querySelector("#evaluationOptionFilters");
 const ignoreDiscountRateInput = document.querySelector("#ignoreDiscountRateInput");
 const ignoreFirstSeasonInput = document.querySelector("#ignoreFirstSeasonInput");
@@ -1054,6 +1056,9 @@ function updateAccountState() {
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
   linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+  if (evaluationSaveButton) {
+    evaluationSaveButton.hidden = !walletLinked;
+  }
   syncHomeLoginButton();
 }
 
@@ -5904,6 +5909,24 @@ evaluationMflUsdInput.addEventListener("keydown", (event) => {
     renderEvaluationMflPerUsdControl(false);
   }
 });
+if (evaluationSaveButton) {
+  evaluationSaveButton.addEventListener("click", () => showToast("Evaluation saved."));
+}
+if (evaluationShareButton) {
+  evaluationShareButton.addEventListener("click", async () => {
+    const url = new URL(window.location.href);
+    if (state.evaluationPlayerId) {
+      url.searchParams.set("player", state.evaluationPlayerId);
+    }
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      showToast("Evaluation link copied.");
+    } catch {
+      showToast("Share link: " + url.toString());
+    }
+  });
+}
+
 evaluationResetButton.addEventListener("click", () => {
   const row = rowByPlayerId(state.evaluationPlayerId);
 
