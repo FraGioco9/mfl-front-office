@@ -2747,7 +2747,7 @@ td a {
 .evaluationSearchGroup {
   display: grid;
   grid-template-columns: minmax(320px, 560px) minmax(520px, 1fr);
-  column-gap: 24px;
+  column-gap: 8px;
   row-gap: 8px;
   align-items: end;
   justify-content: space-between;
@@ -2955,11 +2955,11 @@ td a {
 }
 
 .evaluationActions {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 18px;
   align-items: end;
-  justify-content: flex-end;
-  justify-self: end;
+  justify-self: stretch;
   min-width: 0;
 }
 
@@ -2971,9 +2971,10 @@ td a {
 }
 
 .evaluationButtons {
-  justify-content: flex-end;
-  width: 400px;
-  flex: 0 0 400px;
+  justify-content: flex-start;
+  justify-self: start;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .evaluationButtons[hidden] {
@@ -2991,6 +2992,7 @@ td a {
 }
 .evaluationMetrics {
   justify-content: flex-end;
+  justify-self: end;
 }
 
 .evaluationPlayerPageButton {
