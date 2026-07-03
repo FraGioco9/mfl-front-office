@@ -2481,7 +2481,7 @@ function tableNextOverallInfo(row, statColumn) {
   if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
     const neededStatGain = Number(precomputedNeeded);
     return {
-      text: `+${formatDecimal(neededStatGain, 1)}`,
+      text: `+${formatRoundedUpDecimal(neededStatGain, 1)}`,
       className: nextOverallColorClass(neededStatGain),
     };
   }
@@ -2496,7 +2496,7 @@ function tableNextOverallInfo(row, statColumn) {
 
   const neededStatGain = gap / (weight / 100);
   return {
-    text: `+${formatDecimal(neededStatGain, 1)}`,
+    text: `+${formatRoundedUpDecimal(neededStatGain, 1)}`,
     className: nextOverallColorClass(neededStatGain),
   };
 }
@@ -3527,7 +3527,23 @@ function weightedPositionOverall(row, position, familiarity = "primary") {
   return Math.max(0, weighted);
 }
 
+function displayedPrimaryOverall(row) {
+  const displayed = Number(statDisplayValue(row, "overall") || 0);
+  const precise = Math.round(primaryPreciseOverall(row) * 100) / 100;
+  const baseTarget = Math.floor(displayed) + 0.5;
+
+  if (Math.floor(displayed) === Math.floor(precise) && Math.abs(precise - baseTarget) < 0.000001) {
+    return Math.floor(displayed);
+  }
+
+  return Math.round(precise);
+}
+
 function positionRating(row, position, familiarity) {
+  if (familiarity === "primary" && position === playerPositions(row)[0]) {
+    return displayedPrimaryOverall(row);
+  }
+
   const weighted = weightedPositionOverall(row, position, familiarity);
   return weighted === null ? null : Math.round(weighted);
 }
@@ -3605,7 +3621,7 @@ function trainingRow(row) {
   });
 
   if (!playerIsGoalkeeper(adjustedRow)) {
-    setRowValue(adjustedRow, "overall", Math.round(primaryPreciseOverall(adjustedRow)));
+    setRowValue(adjustedRow, "overall", displayedPrimaryOverall(adjustedRow));
   }
 
   return adjustedRow;
@@ -3703,6 +3719,11 @@ function formatDecimal(value, digits = 2) {
   return Number(value || 0).toFixed(digits);
 }
 
+function formatRoundedUpDecimal(value, digits = 1) {
+  const multiplier = 10 ** digits;
+  return (Math.ceil((Number(value || 0) - Number.EPSILON) * multiplier) / multiplier).toFixed(digits);
+}
+
 function shortStatLabel(column) {
   return {
     pace: "PAC",
@@ -3746,13 +3767,13 @@ function nextOverallDetailHtml(row, column) {
 
   const neededStatGain = gap / (weight / 100);
   const colorClass = nextOverallColorClass(neededStatGain);
-  return `<span class="nextOverallValue ${colorClass}">+1 OVR IF +${formatDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
+  return `<span class="nextOverallValue ${colorClass}">+1 OVR IF +${formatRoundedUpDecimal(neededStatGain, 1)} ${escapeHtml(shortStatLabel(column))}</span>`;
 }
 
 function playerAttributeValueHtml(row, column, viewName) {
   if (viewName === "training") {
     if (column === "overall") {
-      const value = Math.round(primaryPreciseOverall(row));
+      const value = displayedPrimaryOverall(row);
       return `${escapeHtml(formatPlainValue(value, column))} ${nextOverallDetailHtml(row, column)}`;
     }
 
