@@ -639,6 +639,12 @@ body[data-page="home"] .topbar .stats {
   stroke: #000000;
 }
 
+:root[data-theme="dark"] .navJerseyIcon {
+  color: #ffffff;
+  fill: #ffffff;
+  stroke: #ffffff;
+}
+
 .navBinocularsIcon {
   fill: none;
   stroke: currentColor;
