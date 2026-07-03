@@ -151,10 +151,31 @@ function normalizeEvaluationPayload(payload) {
   };
 }
 
-async function activeShareCount(wallet) {
-  const rows = await supabaseRequest(`evaluation_shares?select=id&wallet_address=eq.${encodeURIComponent(wallet)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}`);
+async function activeShareRows(wallet) {
+  const rows = await supabaseRequest(`evaluation_shares?select=id,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.asc`);
 
-  return Array.isArray(rows) ? rows.length : 0;
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function pruneOldestActiveShare(wallet) {
+  const rows = await activeShareRows(wallet);
+
+  if (rows.length < 5) {
+    return;
+  }
+
+  const oldest = rows[0];
+
+  if (!oldest?.id) {
+    return;
+  }
+
+  await supabaseRequest(`evaluation_shares?id=eq.${encodeURIComponent(oldest.id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+    method: "DELETE",
+    headers: {
+      Prefer: "return=minimal",
+    },
+  });
 }
 
 module.exports = async function handler(request, response) {
@@ -182,10 +203,7 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      if (await activeShareCount(wallet) >= 5) {
-        response.status(429).json({ error: "You can have a maximum of 5 active shared evaluations." });
-        return;
-      }
+      await pruneOldestActiveShare(wallet);
 
       const id = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();

@@ -3513,9 +3513,11 @@ td a {
   flex: 1;
   grid-auto-rows: 66px;
   align-content: start;
-  padding: 16px 18px 16px;
+  margin-bottom: 16px;
+  padding: 16px 18px 0;
   box-sizing: border-box;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .evaluationLoadEmpty {
@@ -3533,11 +3535,14 @@ td a {
   align-items: center;
   gap: 12px;
   min-height: 66px;
+  width: 100%;
   padding: 10px 12px;
-  border-color: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--surface-muted);
   color: var(--text);
   text-align: center;
+  box-sizing: border-box;
   cursor: pointer;
 }
 
@@ -3602,12 +3607,13 @@ td a {
 }
 
 .evaluationLoadDeleteButton {
-  border-color: #b94444;
+  border-color: var(--border);
+  background: var(--surface-muted);
   color: #e06b6b;
 }
 
 .evaluationLoadDeleteButton:hover {
   border-color: #d75a5a;
-  background: rgba(217, 83, 83, 0.14);
+  background: var(--row-hover);
   color: #ff8585;
 }
