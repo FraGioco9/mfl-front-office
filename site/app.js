@@ -12,6 +12,7 @@ const state = {
   dataLoaded: false,
   dataLoadPromise: null,
   dataAccess: null,
+  dataSnapshots: {},
   selectedPlayerIds: new Set(),
   selectionAnchorPlayerId: null,
   filterDraftRules: null,
@@ -791,15 +792,14 @@ async function recordWalletOptIn() {
   }
 }
 
-function dataCacheAccessKey() {
-  const access = currentDataAccess();
+function dataCacheAccessKey(access = currentDataAccess()) {
   return access === "owned"
     ? `${access}:${normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()}`
     : access;
 }
 
-function cacheRequestForDataFile(fileName) {
-  return new Request(`/data-cache/${dataCacheAccessKey()}/${fileName}`);
+function cacheRequestForDataFile(fileName, accessKey = dataCacheAccessKey()) {
+  return new Request(`/data-cache/${accessKey}/${fileName}`);
 }
 
 async function readCachedDataFile(fileName) {
@@ -1623,7 +1623,13 @@ function pageTargetFromPath(path) {
 }
 
 async function ensureProgressionData() {
-  if (state.dataLoaded) {
+  const targetAccess = currentDataAccess();
+
+  if (state.dataLoaded && state.dataAccess === targetAccess) {
+    return true;
+  }
+
+  if (restoreDataSnapshot(targetAccess)) {
     return true;
   }
 
@@ -1682,6 +1688,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const permissionResult = await refreshWalletPermissionsForNavigation();
 
   if (permissionResult.changed && state.dataLoaded && pageRequiresData(pageName)) {
+    captureCurrentDataSnapshot();
     state.dataLoaded = false;
     state.dataLoadPromise = null;
   }
@@ -1723,12 +1730,16 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const targetDataAccess = currentDataAccess(pageName);
 
   if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && pageRequiresData(pageName)) {
-    state.dataLoaded = false;
-    state.dataLoadPromise = null;
+    captureCurrentDataSnapshot();
+    state.dataLoaded = restoreDataSnapshot(targetDataAccess);
+    if (!state.dataLoaded) {
+      state.dataLoadPromise = null;
+    }
   }
 
   if (pageRequiresFullData(pageName) && state.dataAccess !== targetDataAccess) {
-    state.dataLoaded = false;
+    captureCurrentDataSnapshot();
+    state.dataLoaded = restoreDataSnapshot(targetDataAccess);
   }
 
   if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
@@ -5109,6 +5120,51 @@ function fullDataColumns(manifest) {
   return columns;
 }
 
+function currentDataSnapshotKey(access = currentDataAccess()) {
+  return dataCacheAccessKey(access);
+}
+
+function captureCurrentDataSnapshot() {
+  if (!state.dataLoaded || !state.dataAccess || !state.manifest) {
+    return;
+  }
+
+  state.dataSnapshots[currentDataSnapshotKey(state.dataAccess)] = {
+    access: state.dataAccess,
+    manifest: state.manifest,
+    columns: [...state.columns],
+    rows: state.rows.map((row) => [...row]),
+    version: dataCacheVersion(state.manifest, currentDataSnapshotKey(state.dataAccess)),
+  };
+}
+
+function restoreDataSnapshot(access = currentDataAccess()) {
+  const snapshot = state.dataSnapshots[currentDataSnapshotKey(access)];
+
+  if (!snapshot) {
+    return false;
+  }
+
+  state.manifest = snapshot.manifest;
+  state.columns = [...snapshot.columns];
+  state.rows = snapshot.rows.map((row) => [...row]);
+  state.filteredRows = [];
+  state.page = 1;
+  state.dataAccess = snapshot.access;
+  state.dataLoaded = true;
+  state.dataLoadPromise = null;
+
+  updateSummaryCounts(state.manifest.row_count, state.manifest.wallet_count);
+  statusText.textContent = `Updated ${new Date(state.manifest.generated_at).toLocaleString()}`;
+  buildSearchIndex();
+  populateAddFilterSelect();
+  restoreSavedTableState();
+  buildHeader();
+  applyFilters();
+  updateAccountState();
+  return true;
+}
+
 function manifestDataFiles(manifest) {
   if (manifest?.files?.public?.file) {
     const files = [manifest.files.public.file];
@@ -5123,8 +5179,8 @@ function manifestDataFiles(manifest) {
   return (manifest?.chunks || []).map((chunk) => chunk.file);
 }
 
-function dataCacheVersion(manifest) {
-  return `${dataCacheAccessKey()}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
+function dataCacheVersion(manifest, accessKey = dataCacheAccessKey()) {
+  return `${accessKey}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
 }
 
 function missingFullDataColumns(fullColumns) {
@@ -5279,6 +5335,7 @@ async function loadData() {
     applyFilters();
     setLoadingPercent(100, "Loading data");
     state.dataLoaded = true;
+    captureCurrentDataSnapshot();
     updateAccountState();
     return true;
   } catch (error) {
