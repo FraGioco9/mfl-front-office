@@ -2067,7 +2067,7 @@ function renderSavedEvaluationList(rows) {
       overallText ? `OVR ${overallText}` : "",
       `#${playerId}`,
       summaryPosition,
-      ageText ? `${ageText} years old` : "",
+      ageText ? `${ageText} yo` : "",
     ].filter(Boolean).join(" · ");
     main.append(name, details);
 

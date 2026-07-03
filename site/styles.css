@@ -2747,7 +2747,7 @@ td a {
 .evaluationSearchGroup {
   display: grid;
   grid-template-columns: minmax(320px, 560px) minmax(520px, 1fr);
-  column-gap: 8px;
+  column-gap: 24px;
   row-gap: 8px;
   align-items: end;
   justify-content: space-between;
@@ -2971,7 +2971,7 @@ td a {
 }
 
 .evaluationButtons {
-  justify-content: flex-start;
+  justify-content: flex-end;
   width: 400px;
   flex: 0 0 400px;
 }
@@ -3644,7 +3644,7 @@ td a {
 }
 
 
-/* v1.89.19 */
+/* v1.89.20 */
 .searchResults .searchResult:hover,
 .searchResults .searchResult:focus-visible,
 .evaluationSearchResults .evaluationSearchResult:hover,
@@ -3661,7 +3661,7 @@ td a {
 }
 
 .evaluationLoadIconButton[data-tooltip]::after { display: none; }
-/* v1.89.19 */
+/* v1.89.20 */
 .toastMessage {
   z-index: 10000;
 }
