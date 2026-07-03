@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.88.8">
+    <link rel="stylesheet" href="/styles.css?v=1.88.9">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -179,8 +179,8 @@
 
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
           <div class="myPlayersLockedContent">
-            <h2>My Players</h2>
-            <p>In order to see this page, you need to opt in.</p>
+            <h2 id="optInLockedTitle">My Players</h2>
+            <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>
             <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
           </div>
         </section>
@@ -276,6 +276,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.88.9</span><p>Require opt-in for Watchlist and refine locked page copy</p></li>
               <li><span>v1.88.8</span><p>Store player notes in Supabase by opted-in wallet</p></li>
               <li><span>v1.88.7</span><p>Fix player notes tooltip cursor</p></li>
               <li><span>v1.88.6</span><p>Fix player notes persistence</p></li>
@@ -631,7 +632,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.88.8</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.88.9</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -720,6 +721,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.88.8"></script>
+    <script src="/app.js?v=1.88.9"></script>
   </body>
 </html>

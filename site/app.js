@@ -278,6 +278,8 @@ const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
 const myPlayersLockedPage = document.querySelector("#myPlayersLockedPage");
+const optInLockedTitle = document.querySelector("#optInLockedTitle");
+const optInLockedMessage = document.querySelector("#optInLockedMessage");
 const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
@@ -513,7 +515,7 @@ function hasWalletOptIn() {
 }
 
 function pageRequiresData(pageName) {
-  if (pageName === "myplayers" && !hasWalletOptIn()) {
+  if ((pageName === "myplayers" || pageName === "watchlist") && !hasWalletOptIn()) {
     return false;
   }
 
@@ -1701,7 +1703,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     return showUnauthorizedProgressionRedirect();
   }
 
-  if (pageName === "myplayers" && !hasWalletOptIn()) {
+  if ((pageName === "myplayers" || pageName === "watchlist") && !hasWalletOptIn()) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
@@ -1709,6 +1711,14 @@ async function setPage(pageName, updateHash = true, options = {}) {
     evaluationPage.hidden = true;
     playerPage.hidden = true;
     changelogPage.hidden = true;
+    if (optInLockedTitle) {
+      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : "My Players";
+    }
+    if (optInLockedMessage) {
+      optInLockedMessage.textContent = pageName === "watchlist"
+        ? "In order to use the watchlist, you need to opt in."
+        : "In order to see your players, you need to opt in.";
+    }
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === pageName);
     });
