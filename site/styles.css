@@ -1927,7 +1927,7 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 498px;
+  height: 492px;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2481,7 +2481,7 @@ td a {
   position: relative;
   width: 360px;
   min-height: 0;
-  height: 492px;
+  height: 498px;
   margin: 8px auto 0;
   padding: 10px 8px;
   overflow: hidden;
@@ -3359,4 +3359,28 @@ td a {
   margin: 0;
   color: var(--text-soft);
   font-size: 16px;
+}
+
+.playerNoteFloatingTooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+.playerNameCell .playerNoteIcon[data-note-tooltip]::after {
+  display: none;
 }

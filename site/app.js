@@ -2103,6 +2103,44 @@ function updatePlayerNoteCount(input) {
   }
 }
 
+function hidePlayerNoteTooltip() {
+  document.querySelectorAll(".playerNoteFloatingTooltip").forEach((tooltip) => tooltip.remove());
+}
+
+function showPlayerNoteTooltip(icon) {
+  const note = icon?.dataset?.noteTooltip || icon?.dataset?.tooltip || "";
+  if (!note) {
+    return;
+  }
+
+  hidePlayerNoteTooltip();
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "playerNoteFloatingTooltip";
+  tooltip.textContent = note;
+  document.body.appendChild(tooltip);
+
+  const iconRect = icon.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 8;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+
+  let left = iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
+  left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
+
+  let top = iconRect.top - tooltipRect.height - 10;
+  if (top < margin) {
+    top = iconRect.bottom + 10;
+  }
+  if (top + tooltipRect.height > viewportHeight - margin) {
+    top = Math.max(margin, viewportHeight - tooltipRect.height - margin);
+  }
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
 function setPlayerNote(playerId, note) {
   const key = String(playerId || "").trim();
   if (!key) {
@@ -5190,9 +5228,13 @@ function renderTable() {
         if (playerHasNote(playerId)) {
           const noteIcon = document.createElement("span");
           noteIcon.className = "playerNoteIcon";
-          noteIcon.dataset.tooltip = playerNote(playerId);
+          noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
           noteIcon.textContent = "📝";
+          noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
+          noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
+          noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
+          noteIcon.addEventListener("blur", hidePlayerNoteTooltip);
           markerWrap.appendChild(noteIcon);
         }
         appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
@@ -5850,6 +5892,9 @@ navButtons.forEach((button) => {
     setPage(button.dataset.page);
   });
 });
+
+window.addEventListener("scroll", hidePlayerNoteTooltip, true);
+window.addEventListener("resize", hidePlayerNoteTooltip);
 
 window.addEventListener("popstate", () => {
   const targetPage = pageFromUrl();
