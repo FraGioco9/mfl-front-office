@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.4">
+    <link rel="stylesheet" href="/styles.css?v=1.89.5">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -202,6 +202,7 @@
               <section class="evaluationActions" aria-label="Evaluation actions">
                 <section id="evaluationButtons" class="evaluationButtons" aria-label="Evaluation page actions" hidden>
                   <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
+                  <button id="evaluationLoadButton" class="evaluationPlayerPageButton" type="button" hidden>Load</button>
                   <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
                 </section>
                 <section class="evaluationMetrics" aria-label="Evaluation metrics">
@@ -280,7 +281,8 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
-              <li><span>v1.89.4</span><p>Replace Evaluation URL with created share link</p></li>
+              <li><span>v1.89.5</span><p>Add saved Evaluation loading links</p></li>
+              <li><span>v1.89.5</span><p>Replace Evaluation URL with created share link</p></li>
               <li><span>v1.89.3</span><p>Add player IDs to shared Evaluation links</p></li>
               <li><span>v1.89.2</span><p>Require opt-in and limit shared Evaluation links</p></li>
               <li><span>v1.89.1</span><p>Add 24-hour shared Evaluation links</p></li>
@@ -645,7 +647,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.4</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.5</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -684,6 +686,17 @@
           <button id="clearFiltersButton" type="button">Clear</button>
           <button id="applyFiltersButton" type="button">Apply Filters</button>
         </footer>
+      </section>
+    </div>
+
+
+    <div id="evaluationLoadModal" class="modalBackdrop" hidden>
+      <section class="evaluationLoadDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationLoadTitle">
+        <header class="filtersHeader">
+          <h2 id="evaluationLoadTitle">Load saved evaluation</h2>
+          <button id="closeEvaluationLoadButton" class="iconButton" type="button" aria-label="Close saved evaluations">x</button>
+        </header>
+        <div id="evaluationLoadList" class="evaluationLoadList"></div>
       </section>
     </div>
 
@@ -734,6 +747,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.4"></script>
+    <script src="/app.js?v=1.89.5"></script>
   </body>
 </html>

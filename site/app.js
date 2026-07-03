@@ -37,6 +37,8 @@ const state = {
   evaluationSummaryPositions: {},
   evaluationShareId: "",
   evaluationShareLoading: false,
+  evaluationSavedId: "",
+  evaluationSavedLoading: false,
   linkedWalletAddress: "",
   linkedWalletProof: null,
   walletPermissionAllowed: false,
@@ -327,6 +329,7 @@ const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
 const evaluationButtons = document.querySelector("#evaluationButtons");
 const evaluationResetButton = document.querySelector("#evaluationResetButton");
+const evaluationLoadButton = document.querySelector("#evaluationLoadButton");
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationSaveButton = document.querySelector("#evaluationSaveButton");
 const evaluationShareButton = document.querySelector("#evaluationShareButton");
@@ -357,6 +360,9 @@ const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
 const evaluationTableBody = document.querySelector("#evaluationTableBody");
+const evaluationLoadModal = document.querySelector("#evaluationLoadModal");
+const closeEvaluationLoadButton = document.querySelector("#closeEvaluationLoadButton");
+const evaluationLoadList = document.querySelector("#evaluationLoadList");
 const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
@@ -1064,6 +1070,10 @@ function updateAccountState() {
   if (evaluationShareButton) {
     evaluationShareButton.hidden = !walletLinked;
   }
+  if (evaluationLoadButton) {
+    evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
+    evaluationButtons.hidden = Boolean(state.evaluationPlayerId) ? evaluationButtons.hidden : !walletLinked;
+  }
   syncHomeLoginButton();
 }
 
@@ -1628,6 +1638,14 @@ function evaluationShareIdFromUrl() {
   return new URLSearchParams(window.location.search).get("share") || "";
 }
 
+function evaluationSavedIdFromUrl() {
+  if (window.location.pathname !== "/evaluation") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("saved") || "";
+}
+
 function normalizeSharedEvaluationPayload(payload) {
   const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
   const playerId = String(data.playerId || data.player_id || "").trim();
@@ -1762,6 +1780,196 @@ async function createSharedEvaluation() {
   url.searchParams.set("player", playerId);
   url.searchParams.set("share", id);
   return url.toString();
+}
+
+
+async function createSavedEvaluation() {
+  if (!hasWalletOptIn()) {
+    showToast("Opt in to save evaluations.");
+    return "";
+  }
+
+  if (!state.evaluationPlayerId) {
+    showToast("Select a player to save.");
+    return "";
+  }
+
+  const response = await fetch("/api/evaluation-save", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...walletProofHeaders(true),
+    },
+    body: JSON.stringify(currentEvaluationSharePayload()),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "Could not save evaluation.");
+  }
+
+  const data = await response.json();
+  const id = String(data.id || "").trim();
+  const playerId = String(data.playerId || state.evaluationPlayerId || "").trim();
+
+  if (!id || !playerId) {
+    throw new Error("Could not save evaluation.");
+  }
+
+  const url = new URL("/evaluation", window.location.origin);
+  url.searchParams.set("player", playerId);
+  url.searchParams.set("saved", id);
+  return url.toString();
+}
+
+async function loadSavedEvaluation(savedId, playerId = "") {
+  const id = String(savedId || "").trim();
+
+  if (!id || state.evaluationSavedLoading) {
+    return;
+  }
+
+  state.evaluationSavedLoading = true;
+
+  try {
+    const requestUrl = new URL("/api/evaluation-save", window.location.origin);
+    requestUrl.searchParams.set("id", id);
+    const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
+    if (selectedPlayerId) {
+      requestUrl.searchParams.set("player", selectedPlayerId);
+    }
+
+    const response = await fetch(requestUrl.toString(), {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+
+    if (!response.ok) {
+      throw new Error("Saved evaluation not found.");
+    }
+
+    const data = await response.json();
+    state.evaluationSavedId = id;
+    state.evaluationShareId = "";
+    applySharedEvaluationPayload(data.payload);
+  } catch {
+    showToast("Saved evaluation could not be loaded.");
+    state.evaluationSavedId = id;
+    renderEmptyEvaluationSelection(true);
+  } finally {
+    state.evaluationSavedLoading = false;
+  }
+}
+
+function evaluationPresentValueTotalFromPayload(payload) {
+  const data = normalizeSharedEvaluationPayload(payload);
+  const row = data.playerId ? rowByPlayerId(data.playerId) : null;
+
+  if (!row) {
+    return null;
+  }
+
+  const rawExpectedSeasons = expectedEvaluationSeasons(row);
+  const seasonOffset = data.ignoreFirstSeason ? 1 : 0;
+  const expectedSeasons = Math.max(0, rawExpectedSeasons - seasonOffset);
+  const overallValues = data.overallValues.length ? data.overallValues : evaluationOverallValues(row, rawExpectedSeasons);
+  const position = data.summaryPosition || evaluationSummaryPosition(row);
+  const discountRate = data.ignoreDiscountRate ? 0 : evaluationDiscountRateValue();
+  const mflPerUsd = data.mflPerUsd || state.evaluationMflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD;
+  let total = 0;
+
+  for (let rowIndex = 0; rowIndex < expectedSeasons; rowIndex += 1) {
+    const season = rowIndex + 1 + seasonOffset;
+    const overall = overallValues[season - 1] ?? overallValues[0];
+    const mflValue = evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons);
+    const usdValue = Number.isFinite(mflValue) ? mflValue / mflPerUsd : null;
+    const discountFactor = evaluationDiscountFactor(discountRate, season);
+    const presentValue = Number.isFinite(usdValue) && Number.isFinite(discountFactor) ? usdValue * discountFactor : null;
+
+    if (Number.isFinite(presentValue)) {
+      total += presentValue;
+    }
+  }
+
+  return total;
+}
+
+function renderSavedEvaluationList(rows) {
+  evaluationLoadList.replaceChildren();
+
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "evaluationLoadEmpty";
+    empty.textContent = "No saved evaluations yet.";
+    evaluationLoadList.appendChild(empty);
+    return;
+  }
+
+  rows.forEach((entry) => {
+    const payload = normalizeSharedEvaluationPayload(entry.payload);
+    const row = rowByPlayerId(payload.playerId);
+    const playerId = payload.playerId || String(entry.playerId || "");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "evaluationLoadResult";
+
+    const main = document.createElement("span");
+    main.className = "evaluationLoadResultMain";
+    const name = document.createElement("strong");
+    name.textContent = row ? formatCellValue(row, "name") : `Player ${playerId}`;
+    const details = document.createElement("span");
+    details.textContent = row
+      ? `#${playerId} · OVR ${formatPlainValue(statDisplayValue(row, "overall"), "overall")} · ${formatCellValue(row, "age")} years old`
+      : `#${playerId}`;
+    main.append(name, details);
+
+    const value = document.createElement("strong");
+    value.className = "evaluationLoadPresentValue";
+    const presentValue = evaluationPresentValueTotalFromPayload(entry.payload);
+    value.textContent = Number.isFinite(presentValue) ? formatEvaluationCurrency(presentValue) : "-";
+
+    button.append(main, value);
+    button.addEventListener("click", () => {
+      const url = new URL("/evaluation", window.location.origin);
+      url.searchParams.set("player", playerId);
+      url.searchParams.set("saved", entry.id);
+      window.history.replaceState({}, "", url.toString());
+      evaluationLoadModal.hidden = true;
+      void loadSavedEvaluation(entry.id, playerId);
+    });
+    evaluationLoadList.appendChild(button);
+  });
+}
+
+async function openSavedEvaluationsModal() {
+  if (!hasWalletOptIn()) {
+    showToast("Opt in to load saved evaluations.");
+    return;
+  }
+
+  evaluationLoadModal.hidden = false;
+  evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
+
+  try {
+    const response = await fetch("/api/evaluation-save", {
+      cache: "no-store",
+      headers: walletProofHeaders(true),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Could not load saved evaluations.");
+    }
+
+    const data = await response.json();
+    renderSavedEvaluationList(Array.isArray(data.evaluations) ? data.evaluations : []);
+  } catch (error) {
+    evaluationLoadList.innerHTML = "";
+    const message = document.createElement("p");
+    message.className = "evaluationLoadEmpty";
+    message.textContent = error?.message || "Could not load saved evaluations.";
+    evaluationLoadList.appendChild(message);
+  }
 }
 
 
@@ -3492,8 +3700,11 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
   evaluationPanel.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
-  evaluationButtons.hidden = true;
+  evaluationButtons.hidden = !hasWalletOptIn();
   evaluationResetButton.hidden = true;
+  if (evaluationLoadButton) {
+    evaluationLoadButton.hidden = !hasWalletOptIn();
+  }
   evaluationPlayerPageButton.hidden = true;
   evaluationOptionFilters.hidden = true;
 
@@ -3505,6 +3716,8 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
 }
 
 function resetEvaluationSelection() {
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
   state.evaluationPlayerId = null;
   syncEvaluationPlayerUrl(null);
   renderEmptyEvaluationSelection(true);
@@ -3530,6 +3743,8 @@ function renderEvaluationSearchResults() {
     button.className = "evaluationSearchResult";
     button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>#${escapeHtml(playerId)} &middot; OVR ${escapeHtml(formatPlainValue(statDisplayValue(row, "overall"), "overall"))} &middot; ${escapeHtml(formatCellValue(row, "age"))} years old</span>`;
     button.addEventListener("click", () => {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
       state.evaluationPlayerId = playerId;
       rememberEvaluationResult(playerId);
       evaluationSearchInput.value = formatCellValue(row, "name");
@@ -3700,6 +3915,9 @@ function renderEvaluationTable(row) {
   evaluationPanel.hidden = false;
   evaluationButtons.hidden = false;
   evaluationResetButton.hidden = false;
+  if (evaluationLoadButton) {
+    evaluationLoadButton.hidden = true;
+  }
   evaluationPlayerPageButton.hidden = false;
   evaluationOptionFilters.hidden = false;
   ignoreDiscountRateInput.checked = state.evaluationIgnoreDiscountRate;
@@ -3793,6 +4011,13 @@ function renderEvaluationTable(row) {
   });
 }
 function renderEvaluationPage() {
+  const savedId = evaluationSavedIdFromUrl();
+  if (savedId && state.evaluationSavedId !== savedId) {
+    renderEmptyEvaluationSelection(false);
+    void loadSavedEvaluation(savedId);
+    return;
+  }
+
   const shareId = evaluationShareIdFromUrl();
   if (shareId && state.evaluationShareId !== shareId) {
     renderEmptyEvaluationSelection(false);
@@ -6067,7 +6292,35 @@ evaluationMflUsdInput.addEventListener("keydown", (event) => {
   }
 });
 if (evaluationSaveButton) {
-  evaluationSaveButton.addEventListener("click", () => showToast("Evaluation saved."));
+  evaluationSaveButton.addEventListener("click", async () => {
+    evaluationSaveButton.disabled = true;
+    try {
+      const saveUrl = await createSavedEvaluation();
+      if (saveUrl) {
+        window.history.replaceState({}, "", saveUrl);
+        showToast("Evaluation saved.");
+      }
+    } catch (error) {
+      showToast(error?.message || "Could not save evaluation.");
+    } finally {
+      evaluationSaveButton.disabled = false;
+    }
+  });
+}
+if (evaluationLoadButton) {
+  evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);
+}
+if (closeEvaluationLoadButton) {
+  closeEvaluationLoadButton.addEventListener("click", () => {
+    evaluationLoadModal.hidden = true;
+  });
+}
+if (evaluationLoadModal) {
+  evaluationLoadModal.addEventListener("click", (event) => {
+    if (event.target === evaluationLoadModal) {
+      evaluationLoadModal.hidden = true;
+    }
+  });
 }
 if (evaluationShareButton) {
   evaluationShareButton.addEventListener("click", async () => {

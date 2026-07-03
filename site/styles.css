@@ -3447,3 +3447,68 @@ td a {
 .playerNameCell .playerNoteIcon[data-note-tooltip]::after {
   display: none;
 }
+
+
+.evaluationLoadDialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 48px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.evaluationLoadList {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.evaluationLoadEmpty {
+  margin: 0;
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.evaluationLoadResult {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+  text-align: left;
+}
+
+.evaluationLoadResult:hover {
+  border-color: var(--primary);
+  background: var(--row-hover);
+}
+
+.evaluationLoadResultMain {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.evaluationLoadResultMain span,
+.evaluationLoadResultMain strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evaluationLoadResultMain span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.evaluationLoadPresentValue {
+  min-width: 96px;
+  text-align: center;
+  white-space: nowrap;
+}

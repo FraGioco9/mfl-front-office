@@ -23,6 +23,17 @@ alter table public.wallet_preferences add column if not exists player_notes json
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;
 
 
+
+create table if not exists public.evaluation_saves (
+  id uuid primary key,
+  wallet_address text not null,
+  player_id text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists evaluation_saves_wallet_created_idx on public.evaluation_saves (wallet_address, created_at desc);
+
 create table if not exists public.evaluation_shares (
   id uuid primary key,
   wallet_address text,
@@ -63,3 +74,4 @@ alter table public.wallet_opt_ins enable row level security;
 alter table public.wallet_permissions enable row level security;
 alter table public.wallet_preferences enable row level security;
 alter table public.evaluation_shares enable row level security;
+alter table public.evaluation_saves enable row level security;
