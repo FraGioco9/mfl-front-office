@@ -6074,6 +6074,9 @@ if (evaluationShareButton) {
     evaluationShareButton.disabled = true;
     try {
       const shareUrl = await createSharedEvaluation();
+      if (shareUrl) {
+        window.history.replaceState({}, "", shareUrl);
+      }
       try {
         await navigator.clipboard.writeText(shareUrl);
         showToast("Evaluation share link copied.");
