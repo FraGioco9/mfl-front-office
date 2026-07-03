@@ -2054,8 +2054,9 @@ function renderSavedEvaluationList(rows) {
     const name = document.createElement("strong");
     name.textContent = row ? formatCellValue(row, "name") : `Player ${playerId}`;
     const details = document.createElement("span");
-    const summaryOverall = Number(entry.summaryOverall ?? payload.summaryOverall);
-    const summaryAge = Number(entry.summaryAge ?? payload.summaryAge);
+    const summaryOverall = Number(payload.summaryOverall);
+    const summaryAge = Number(payload.summaryAge);
+    const summaryPosition = String(payload.summaryPosition || "").trim();
     const overallText = Number.isFinite(summaryOverall)
       ? formatPlainValue(summaryOverall, "overall")
       : (row ? formatPlainValue(statDisplayValue(row, "overall"), "overall") : "");
@@ -2063,8 +2064,9 @@ function renderSavedEvaluationList(rows) {
       ? String(summaryAge)
       : (row ? formatCellValue(row, "age") : "");
     details.textContent = [
-      `#${playerId}`,
       overallText ? `OVR ${overallText}` : "",
+      `#${playerId}`,
+      summaryPosition,
       ageText ? `${ageText} years old` : "",
     ].filter(Boolean).join(" · ");
     main.append(name, details);
@@ -3970,7 +3972,8 @@ function renderEvaluationSearchResults() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "evaluationSearchResult";
-    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>#${escapeHtml(playerId)} &middot; OVR ${escapeHtml(formatPlainValue(statDisplayValue(row, "overall"), "overall"))} &middot; ${escapeHtml(formatCellValue(row, "age"))} years old</span>`;
+    const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
+    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(playerId)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";

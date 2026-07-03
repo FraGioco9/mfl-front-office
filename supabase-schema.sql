@@ -32,9 +32,6 @@ create table if not exists public.evaluation_saves (
   created_at timestamptz not null default now()
 );
 
-alter table public.evaluation_saves add column if not exists summary_overall integer;
-alter table public.evaluation_saves add column if not exists summary_age integer;
-
 create index if not exists evaluation_saves_wallet_created_idx on public.evaluation_saves (wallet_address, created_at desc);
 
 create table if not exists public.evaluation_shares (

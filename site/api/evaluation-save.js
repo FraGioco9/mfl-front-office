@@ -204,8 +204,6 @@ module.exports = async function handler(request, response) {
           },
           body: JSON.stringify({
             player_id: payload.playerId,
-            summary_overall: payload.summaryOverall,
-            summary_age: payload.summaryAge,
             payload,
           }),
         });
@@ -233,8 +231,6 @@ module.exports = async function handler(request, response) {
           id,
           wallet_address: wallet,
           player_id: payload.playerId,
-          summary_overall: payload.summaryOverall,
-          summary_age: payload.summaryAge,
           payload,
         }]),
       });
@@ -254,7 +250,7 @@ module.exports = async function handler(request, response) {
 
       if (id) {
         const playerFilter = playerId ? `&player_id=eq.${encodeURIComponent(playerId)}` : "";
-        const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,summary_overall,summary_age,created_at&id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}${playerFilter}&limit=1`);
+        const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,created_at&id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}${playerFilter}&limit=1`);
         const row = Array.isArray(rows) ? rows[0] : null;
 
         if (!row) {
@@ -266,21 +262,17 @@ module.exports = async function handler(request, response) {
           id: row.id,
           playerId: row.player_id,
           payload: row.payload,
-          summaryOverall: row.summary_overall,
-          summaryAge: row.summary_age,
           createdAt: row.created_at,
         });
         return;
       }
 
-      const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,summary_overall,summary_age,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=created_at.desc&limit=10`);
+      const rows = await supabaseRequest(`evaluation_saves?select=id,player_id,payload,created_at&wallet_address=eq.${encodeURIComponent(wallet)}&order=created_at.desc&limit=10`);
       response.status(200).json({
         evaluations: Array.isArray(rows) ? rows.map((row) => ({
           id: row.id,
           playerId: row.player_id,
           payload: row.payload,
-          summaryOverall: row.summary_overall,
-          summaryAge: row.summary_age,
           createdAt: row.created_at,
         })) : [],
       });
