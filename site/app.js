@@ -5224,7 +5224,6 @@ function renderTable() {
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");
         markerWrap.className = "playerNameMarkers";
-        appendNameMarker(markerWrap, retirementMarker(row), "retirementMarker");
         if (playerHasNote(playerId)) {
           const noteIcon = document.createElement("span");
           noteIcon.className = "playerNoteIcon";
@@ -5237,6 +5236,7 @@ function renderTable() {
           noteIcon.addEventListener("blur", hidePlayerNoteTooltip);
           markerWrap.appendChild(noteIcon);
         }
+        appendNameMarker(markerWrap, retirementMarker(row), "retirementMarker");
         appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
         if (markerWrap.childElementCount) {
           nameWrap.appendChild(markerWrap);
