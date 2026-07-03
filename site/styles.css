@@ -3380,6 +3380,14 @@ td a {
   overflow-wrap: anywhere;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.playerNoteFloatingTooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .playerNameCell .playerNoteIcon[data-note-tooltip]::after {

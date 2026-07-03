@@ -43,6 +43,7 @@ const state = {
   walletPreferencesSaveTimer: null,
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
+  walletPreferencesLoaded: false,
   walletOptInInProgress: false,
   walletRows: [],
   walletNamesLoaded: false,
@@ -2058,6 +2059,7 @@ function loadLocalWalletNotes() {
 
 function clearWalletNotesState() {
   state.playerNotes = {};
+  state.walletPreferencesLoaded = false;
   window.clearTimeout(state.walletNotesSaveTimer);
   state.walletNotesSaveTimer = null;
 }
@@ -2130,6 +2132,7 @@ function showPlayerNoteTooltip(icon) {
 
   tooltip.style.left = `${left}px`;
   tooltip.style.top = `${top}px`;
+  window.requestAnimationFrame(() => tooltip.classList.add("visible"));
 }
 
 function setPlayerNote(playerId, note) {
@@ -2145,6 +2148,7 @@ function setPlayerNote(playerId, note) {
     delete state.playerNotes[key];
   }
 
+  state.walletPreferencesLoaded = true;
   saveWalletNotesLocally();
   queueWalletNotesSave();
 
@@ -2282,6 +2286,7 @@ async function loadWalletPreferences() {
   }
 
   state.walletPreferencesLoading = true;
+  const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
     applyWalletWatchlistIds(loadLocalWalletWatchlist());
     state.playerNotes = {};
@@ -2300,7 +2305,14 @@ async function loadWalletPreferences() {
   } catch {
     // Local wallet watchlist and notes are still available if cloud sync is unavailable.
   } finally {
+    state.walletPreferencesLoaded = true;
     state.walletPreferencesLoading = false;
+    if (previousNotes !== JSON.stringify(normalizedPlayerNotes(state.playerNotes))) {
+      refreshPlayerPageAfterWalletSync();
+      if (tablePageKey()) {
+        applyFilters();
+      }
+    }
   }
 }
 
@@ -2313,19 +2325,23 @@ async function saveWalletPreferencesNow() {
   saveWalletNotesLocally();
 
   try {
+    const body = {
+      watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+    };
+    if (state.walletPreferencesLoaded) {
+      body.playerNotes = normalizedPlayerNotes(state.playerNotes);
+    }
+
     await fetch("/api/wallet-preferences", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         ...walletProofHeaders(true),
       },
-      body: JSON.stringify({
-        watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
-        playerNotes: normalizedPlayerNotes(state.playerNotes),
-      }),
+      body: JSON.stringify(body),
     });
   } catch {
-    // Local wallet watchlist remains saved if cloud sync is unavailable.
+    // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
   }
 }
 
