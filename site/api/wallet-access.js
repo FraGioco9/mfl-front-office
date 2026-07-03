@@ -36,7 +36,44 @@ async function findFile(candidates) {
   return null;
 }
 
-async function allowedWallets() {
+function supabaseConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
+
+  if (!url || !key) {
+    return null;
+  }
+
+  return { url, key };
+}
+
+async function supabaseRequest(pathname) {
+  const config = supabaseConfig();
+
+  if (!config) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const response = await fetch(`${config.url}/rest/v1/${pathname}`, {
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${config.key}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase request failed with ${response.status}: ${await response.text()}`);
+  }
+
+  return response.json();
+}
+
+async function supabaseWalletAllowed(wallet) {
+  const rows = await supabaseRequest(`wallet_permissions?select=wallet_address&wallet_address=eq.${encodeURIComponent(wallet)}&can_view_progression=eq.true&limit=1`);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function localWalletAllowed(wallet) {
   const permissionsPath = await findFile([
     path.join(__dirname, "wallet-permissions.json"),
     path.join(process.cwd(), "api", "wallet-permissions.json"),
@@ -44,16 +81,24 @@ async function allowedWallets() {
   ]);
 
   if (!permissionsPath) {
-    return new Set();
+    return false;
   }
 
   try {
     const data = JSON.parse(await fs.readFile(permissionsPath, "utf8"));
     const wallets = Array.isArray(data.wallets) ? data.wallets : [];
-    return new Set(wallets.map(normalizeWalletAddress).filter(Boolean));
+    return new Set(wallets.map(normalizeWalletAddress).filter(Boolean)).has(wallet);
   } catch {
-    return new Set();
+    return false;
   }
+}
+
+async function walletAllowed(wallet) {
+  if (supabaseConfig()) {
+    return supabaseWalletAllowed(wallet);
+  }
+
+  return localWalletAllowed(wallet);
 }
 
 async function verifyWalletProof(request) {
@@ -75,8 +120,7 @@ async function verifyWalletProof(request) {
     return false;
   }
 
-  const whitelist = await allowedWallets();
-  if (!whitelist.has(wallet)) {
+  if (!(await walletAllowed(wallet))) {
     return false;
   }
 
@@ -119,6 +163,7 @@ async function verifyWalletProof(request) {
     return false;
   }
 }
+
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 

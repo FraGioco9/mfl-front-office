@@ -4,8 +4,6 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const OPT_IN_FILE_PATH = "site/api/wallet-opt-ins-list.json";
-
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
@@ -100,14 +98,6 @@ async function verifyWalletProof(request) {
   }
 }
 
-function emptyOptInList() {
-  return {
-    version: 0,
-    updated_at: "",
-    wallets: [],
-  };
-}
-
 function normalizedOptInList(data) {
   const wallets = new Set((Array.isArray(data?.wallets) ? data.wallets : [])
     .map(normalizeWalletAddress)
@@ -120,85 +110,67 @@ function normalizedOptInList(data) {
   };
 }
 
-function githubConfig() {
-  const token = process.env.OPT_IN_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
-  const repository = process.env.OPT_IN_GITHUB_REPOSITORY || process.env.GITHUB_REPOSITORY;
-  const branch = process.env.OPT_IN_GITHUB_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || "main";
+function supabaseConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 
-  if (!token || !repository) {
+  if (!url || !key) {
     return null;
   }
 
-  return { token, repository, branch };
+  return { url, key };
 }
 
-async function githubRequest(url, options = {}) {
-  const config = githubConfig();
+function isProductionFunction() {
+  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_REGION);
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const config = supabaseConfig();
 
   if (!config) {
-    throw new Error("GitHub opt-in logging is not configured.");
+    throw new Error("Supabase is not configured.");
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(`${config.url}/rest/v1/${pathname}`, {
     ...options,
     headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${config.token}`,
+      apikey: config.key,
+      Authorization: `Bearer ${config.key}`,
       "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28",
       ...(options.headers || {}),
     },
   });
 
   if (!response.ok) {
-    throw new Error(`GitHub request failed with ${response.status}: ${await response.text()}`);
+    throw new Error(`Supabase request failed with ${response.status}: ${await response.text()}`);
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
 }
 
-async function readGithubOptIns() {
-  const config = githubConfig();
-  const encodedPath = OPT_IN_FILE_PATH.split("/").map(encodeURIComponent).join("/");
-  const url = `https://api.github.com/repos/${config.repository}/contents/${encodedPath}?ref=${encodeURIComponent(config.branch)}`;
-  const data = await githubRequest(url);
-  const content = Buffer.from(String(data.content || ""), "base64").toString("utf8");
-  return {
-    sha: data.sha,
-    list: normalizedOptInList(JSON.parse(content || "{}")),
-  };
-}
-
-async function writeGithubOptIns(wallet) {
-  const config = githubConfig();
-  const current = await readGithubOptIns();
-  const wallets = new Set(current.list.wallets);
-
-  if (wallets.has(wallet)) {
-    return { recorded: false, wallet_count: wallets.size };
-  }
-
-  wallets.add(wallet);
-
-  const output = {
-    version: current.list.version + 1,
-    updated_at: new Date().toISOString(),
-    wallets: Array.from(wallets).sort(),
-  };
-
-  const encodedPath = OPT_IN_FILE_PATH.split("/").map(encodeURIComponent).join("/");
-  const url = `https://api.github.com/repos/${config.repository}/contents/${encodedPath}`;
-  await githubRequest(url, {
-    method: "PUT",
-    body: JSON.stringify({
-      message: "Record Dapper wallet opt-in",
-      content: Buffer.from(`${JSON.stringify(output, null, 2)}\n`, "utf8").toString("base64"),
-      sha: current.sha,
-      branch: config.branch,
-    }),
+async function writeSupabaseOptIn(wallet) {
+  const now = new Date().toISOString();
+  const rows = await supabaseRequest("wallet_opt_ins?on_conflict=wallet_address", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify([{
+      wallet_address: wallet,
+      last_seen_at: now,
+    }]),
   });
 
-  return { recorded: true, wallet_count: output.wallets.length };
+  return {
+    recorded: true,
+    storage: "supabase",
+    wallet_count: Array.isArray(rows) ? rows.length : 0,
+  };
 }
 
 async function localOptInPath() {
@@ -220,7 +192,7 @@ async function writeLocalOptIns(wallet) {
   const wallets = new Set(current.wallets);
 
   if (wallets.has(wallet)) {
-    return { recorded: false, wallet_count: wallets.size };
+    return { recorded: false, storage: "local", wallet_count: wallets.size };
   }
 
   wallets.add(wallet);
@@ -232,12 +204,16 @@ async function writeLocalOptIns(wallet) {
   };
 
   await fs.writeFile(optInPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
-  return { recorded: true, wallet_count: output.wallets.length };
+  return { recorded: true, storage: "local", wallet_count: output.wallets.length };
 }
 
 async function recordOptIn(wallet) {
-  if (githubConfig()) {
-    return writeGithubOptIns(wallet);
+  if (supabaseConfig()) {
+    return writeSupabaseOptIn(wallet);
+  }
+
+  if (isProductionFunction()) {
+    throw new Error("Supabase opt-in logging is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
   }
 
   return writeLocalOptIns(wallet);
@@ -262,6 +238,6 @@ module.exports = async function handler(request, response) {
     response.status(200).json({ wallet, ...(await recordOptIn(wallet)) });
   } catch (error) {
     console.warn("Could not record Dapper wallet opt-in.", error);
-    response.status(202).json({ wallet, recorded: false, warning: "Opt-in was accepted, but the private list could not be updated." });
+    response.status(202).json({ wallet, recorded: false, warning: "Opt-in was accepted, but Supabase could not be updated." });
   }
 };

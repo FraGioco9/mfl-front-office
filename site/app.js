@@ -735,17 +735,25 @@ function walletProofHeaders(force = false) {
 
 async function recordWalletOptIn() {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
-    return;
+    return null;
   }
 
   try {
-    await fetch("/api/wallet-opt-ins", {
+    const response = await fetch("/api/wallet-opt-ins", {
       method: "POST",
       cache: "no-store",
       headers: walletProofHeaders(true),
     });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.warning) {
+      throw new Error(data.warning || data.error || `Wallet opt-in list update failed with ${response.status}.`);
+    }
+
+    return data;
   } catch (error) {
     console.warn("Could not record Dapper wallet opt-in.", error);
+    return { recorded: false, warning: error.message || "Wallet opt-in list could not be updated." };
   }
 }
 
@@ -1424,7 +1432,7 @@ async function linkWallet() {
       // The linked state still works for this page if storage is blocked.
     }
 
-    await recordWalletOptIn();
+    const optInRecord = await recordWalletOptIn();
     await loadWalletPermissions({ force: true });
     await loadWalletNames();
     await loadWalletPreferences();
@@ -1438,7 +1446,7 @@ async function linkWallet() {
     updateMenuVisibility();
     saveTableState();
     closeAccountMenu();
-    showToast("Successful opt-in.");
+    showToast(optInRecord?.warning ? "Successful opt-in. Supabase opt-in list was not updated." : "Successful opt-in.");
   } catch (error) {
     console.warn("Could not link Dapper wallet.", error);
     updateAccountState();
