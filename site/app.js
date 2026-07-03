@@ -436,6 +436,21 @@ async function finishLoading() {
   revealAppShell();
 }
 
+async function showPermissionCheckLoading() {
+  const wasLoading = document.body.classList.contains("loading");
+
+  if (!wasLoading) {
+    showLoading();
+  }
+
+  loadingScreen.hidden = false;
+  loadingScreen.classList.remove("failed", "complete", "leaving");
+  document.body.classList.add("loading");
+  setLoadingPercent(20, "Checking permissions");
+  await paintLoadingProgress();
+  return !wasLoading;
+}
+
 function revealAppShell() {
   document.body.classList.remove("booting");
 }
@@ -702,10 +717,13 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-async function refreshWalletPermissionsForNavigation() {
+async function refreshWalletPermissionsForNavigation(options = {}) {
   if (!hasWalletOptIn()) {
-    return { allowed: false, changed: false };
+    return { allowed: false, changed: false, showedLoading: false };
   }
+
+  const showLoader = options.showLoader !== false;
+  const shouldCloseLoader = showLoader ? await showPermissionCheckLoading() : false;
 
   if (!state.walletPermissionRefreshPromise) {
     state.walletPermissionRefreshPromise = loadWalletPermissions({ checkVersion: true })
@@ -722,7 +740,7 @@ async function refreshWalletPermissionsForNavigation() {
     syncHomeLoginButton();
   }
 
-  return result;
+  return { ...result, showedLoading: shouldCloseLoader };
 }
 
 function currentDataAccess(pageName = state.currentPage) {
@@ -1688,6 +1706,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
+  }
+
+  const willLoadPageData = pageRequiresData(pageName) && !state.dataLoaded;
+  if (permissionResult.showedLoading && !willLoadPageData) {
+    await finishLoading();
   }
 
   if (pageName === "myplayers" && !hasWalletOptIn()) {
@@ -5523,7 +5546,11 @@ async function startApp() {
   }
 
   void ensureFlowWallet();
+  const startupPermissionLoading = hasWalletOptIn() ? await showPermissionCheckLoading() : false;
   await loadWalletPermissions({ checkVersion: true });
+  if (startupPermissionLoading && !pageRequiresData(initialPage)) {
+    await finishLoading();
+  }
   await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
