@@ -382,9 +382,12 @@ function setLoadingPercent(percent, message = "Loading data") {
   loadingText.textContent = message;
 }
 
-function updateLoadingProgress(loadedFiles, totalFiles, message = null) {
+function updateLoadingProgress(loadedFiles, totalFiles, message = null, progressRange = null) {
   const percent = totalFiles > 0 ? Math.round((loadedFiles / totalFiles) * 100) : 0;
-  setLoadingPercent(percent, message || (totalFiles > 0 ? "Loading data" : "Preparing data..."));
+  const mappedPercent = progressRange
+    ? progressRange.start + ((progressRange.end - progressRange.start) * (percent / 100))
+    : percent;
+  setLoadingPercent(mappedPercent, message || (totalFiles > 0 ? "Loading data" : "Preparing data..."));
 }
 
 function loadingRangeProgress(startPercent, endPercent, message = "Loading data") {
@@ -5270,28 +5273,46 @@ function loadingMessageForAccess(access) {
   return "Loading player data";
 }
 
-async function loadDataForAccess(access, message = loadingMessageForAccess(access)) {
+async function loadDataForAccess(access, message = loadingMessageForAccess(access), progressRange = { start: 0, end: 100 }) {
   const previousOverride = state.dataAccessOverride;
   state.dataAccessOverride = access;
   state.dataLoaded = false;
   state.dataLoadPromise = null;
 
   try {
-    return await loadData({ message });
+    return await loadData({ message, progressStart: progressRange.start, progressEnd: progressRange.end });
   } finally {
     state.dataAccessOverride = previousOverride;
   }
 }
 
+function loadingPhaseRange(index, total) {
+  return {
+    start: (index / total) * 100,
+    end: ((index + 1) / total) * 100,
+  };
+}
+
 async function preloadRefreshData(initialPage) {
   showLoading();
-  await loadDataForAccess("public", "Loading player data");
+  const hasWallet = hasWalletOptIn();
+  const totalPhases = 1 + (hasWallet ? 3 : 0);
+  let phaseIndex = 0;
 
-  if (hasWalletOptIn()) {
-    await loadDataForAccess("owned", "Loading your players");
-    setLoadingPercent(0, "Checking permissions");
+  await loadDataForAccess("public", "Loading player data", loadingPhaseRange(phaseIndex, totalPhases));
+  phaseIndex += 1;
+
+  if (hasWallet) {
+    await loadDataForAccess("owned", "Loading your players", loadingPhaseRange(phaseIndex, totalPhases));
+    phaseIndex += 1;
+
+    const permissionRange = loadingPhaseRange(phaseIndex, totalPhases);
+    setLoadingPercent(permissionRange.start, "Checking permissions");
     await paintLoadingProgress();
     const permissionResult = await loadWalletPermissions({ checkVersion: true });
+    setLoadingPercent(permissionRange.end, "Checking permissions");
+    await paintLoadingProgress();
+    phaseIndex += 1;
     updateAccountState();
     updateMenuVisibility();
     syncHomeLoginButton();
@@ -5301,17 +5322,27 @@ async function preloadRefreshData(initialPage) {
     }
 
     if (hasProgressionAccess()) {
-      await loadDataForAccess("full", "Loading progression data");
+      await loadDataForAccess("full", "Loading progression data", loadingPhaseRange(phaseIndex, totalPhases));
+      phaseIndex += 1;
     }
   }
 
   const targetAccess = currentDataAccess(initialPage);
   restoreDataSnapshot(targetAccess) || restoreDataSnapshot("public");
+  setLoadingPercent(100, "Loading complete");
+  await paintLoadingProgress();
+  await new Promise((resolve) => window.setTimeout(resolve, 450));
 }
 
 async function loadData(options = {}) {
   try {
     const message = options.message || "Loading data";
+    const progressStart = options.progressStart ?? 0;
+    const progressEnd = options.progressEnd ?? 100;
+    const phaseProgress = (percent) => progressStart + ((progressEnd - progressStart) * (percent / 100));
+    const phaseRange = (start, end) => loadingRangeProgress(phaseProgress(start), phaseProgress(end), message);
+    const phaseSet = (percent) => setLoadingPercent(phaseProgress(percent), message);
+    const phaseUpdate = (loaded, total) => updateLoadingProgress(loaded, total, message, { start: progressStart, end: progressEnd });
     const targetAccess = currentDataAccess();
     const upgradeFromPublic = targetAccess === "full"
       && state.dataAccess === "public"
@@ -5325,13 +5356,13 @@ async function loadData(options = {}) {
     }
 
     state.dataAccess = targetAccess;
-    setLoadingPercent(0, message);
+    phaseSet(0);
     const manifest = await fetchDataFile("manifest.json", {
-      onProgress: loadingRangeProgress(2, 10, message),
+      onProgress: phaseRange(2, 10),
     });
 
     if (upgradeFromPublic) {
-      await upgradePublicDataToFull(manifest, { startPercent: 10, endPercent: 90, message });
+      await upgradePublicDataToFull(manifest, { startPercent: phaseProgress(10), endPercent: phaseProgress(90), message });
     } else {
       const cacheVersion = dataCacheVersion(manifest);
       const cacheVersionKey = dataCacheVersionStorageKey();
@@ -5350,7 +5381,7 @@ async function loadData(options = {}) {
 
       const publicFile = publicDataFile(manifest);
       const publicProgressEnd = ["full", "owned"].includes(targetAccess) ? 55 : 90;
-      const publicProgress = loadingRangeProgress(10, publicProgressEnd, message);
+      const publicProgress = phaseRange(10, publicProgressEnd);
       publicProgress(0);
       await paintLoadingProgress();
       const publicChunk = await fetchDataFile(publicFile, {
@@ -5362,19 +5393,19 @@ async function loadData(options = {}) {
       publicProgress(1);
 
       if (["full", "owned"].includes(targetAccess)) {
-        await upgradePublicDataToFull(manifest, { startPercent: 55, endPercent: 90, message });
+        await upgradePublicDataToFull(manifest, { startPercent: phaseProgress(55), endPercent: phaseProgress(90), message });
       }
     }
 
-    setLoadingPercent(92, message);
+    phaseSet(92);
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
     buildSearchIndex();
-    setLoadingPercent(95, message);
+    phaseSet(95);
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();
     applyFilters();
-    setLoadingPercent(100, message);
+    phaseSet(100);
     state.dataLoaded = true;
     captureCurrentDataSnapshot();
     updateAccountState();
@@ -5682,5 +5713,8 @@ async function startApp() {
   await loadSummary();
   showAppShell();
   await showHomeShell(initialPage, false);
+  if (document.body.classList.contains("loading")) {
+    await finishLoading();
+  }
 }
 startApp();
