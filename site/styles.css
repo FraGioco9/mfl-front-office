@@ -633,6 +633,11 @@ body[data-page="home"] .topbar .stats {
   stroke-linejoin: round;
 }
 
+.navJerseyIcon {
+  transform: scale(0.88);
+  transform-origin: center;
+}
+
 :root:not([data-theme="dark"]) .navJerseyIcon {
   color: #000000;
   fill: #000000;
