@@ -1,51 +1,55 @@
 {
-    "functions":  {
-                      "api/data.js":  {
-                                          "includeFiles":  "{api/data-files/**,api/wallet-permissions.json}"
-                                      },
-                      "api/summary.js":  {
-                                             "includeFiles":  "api/data-files/manifest.json"
-                                         },
-                      "api/wallet-access.js":  {
-                                                   "includeFiles":  "api/wallet-permissions.json"
-                                               },
-                      "api/wallet-permissions-version.js":  {
-                                                                "includeFiles":  "api/wallet-permissions.json"
-                                                            }
-                  },
-    "rewrites":  [
-                     {
-                         "source":  "/api/wallet-permissions.json",
-                         "destination":  "/api/wallet-access"
-                     },
-                     {
-                         "source":  "/home",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/database",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/progression",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/watchlist",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/evaluation",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/changelog",
-                         "destination":  "/"
-                     },
-                     {
-                         "source":  "/players/:id",
-                         "destination":  "/"
-                     }
-                 ],
-    "ignoreCommand":  "node vercel-ignore-git-deploy.js"
+  "functions": {
+    "api/data.js": {
+      "includeFiles": "{api/data-files/**,api/wallet-permissions.json}"
+    },
+    "api/summary.js": {
+      "includeFiles": "api/data-files/manifest.json"
+    },
+    "api/wallet-access.js": {
+      "includeFiles": "api/wallet-permissions.json"
+    },
+    "api/wallet-permissions-version.js": {
+      "includeFiles": "api/wallet-permissions.json"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/wallet-permissions.json",
+      "destination": "/api/wallet-access"
+    },
+    {
+      "source": "/home",
+      "destination": "/"
+    },
+    {
+      "source": "/database",
+      "destination": "/"
+    },
+    {
+      "source": "/progression",
+      "destination": "/"
+    },
+    {
+      "source": "/watchlist",
+      "destination": "/"
+    },
+    {
+      "source": "/my-players",
+      "destination": "/"
+    },
+    {
+      "source": "/evaluation",
+      "destination": "/"
+    },
+    {
+      "source": "/changelog",
+      "destination": "/"
+    },
+    {
+      "source": "/players/:id",
+      "destination": "/"
+    }
+  ],
+  "ignoreCommand": "node vercel-ignore-git-deploy.js"
 }
