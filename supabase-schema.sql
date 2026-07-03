@@ -25,13 +25,17 @@ alter table public.wallet_preferences add column if not exists table_state jsonb
 
 create table if not exists public.evaluation_shares (
   id uuid primary key,
+  wallet_address text,
   player_id text not null,
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null
 );
 
+alter table public.evaluation_shares add column if not exists wallet_address text;
+
 create index if not exists evaluation_shares_expires_at_idx on public.evaluation_shares (expires_at);
+create index if not exists evaluation_shares_wallet_active_idx on public.evaluation_shares (wallet_address, expires_at);
 
 create or replace function public.set_updated_at()
 returns trigger

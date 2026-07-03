@@ -1061,6 +1061,9 @@ function updateAccountState() {
   if (evaluationSaveButton) {
     evaluationSaveButton.hidden = !walletLinked;
   }
+  if (evaluationShareButton) {
+    evaluationShareButton.hidden = !walletLinked;
+  }
   syncHomeLoginButton();
 }
 
@@ -1716,6 +1719,11 @@ async function loadSharedEvaluation(shareId) {
 }
 
 async function createSharedEvaluation() {
+  if (!hasWalletOptIn()) {
+    showToast("Opt in to share evaluations.");
+    return;
+  }
+
   if (!state.evaluationPlayerId) {
     showToast("Select a player to share.");
     return;
@@ -1725,12 +1733,14 @@ async function createSharedEvaluation() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...walletProofHeaders(true),
     },
     body: JSON.stringify(currentEvaluationSharePayload()),
   });
 
   if (!response.ok) {
-    throw new Error("Could not create share link.");
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "Could not create share link.");
   }
 
   const data = await response.json();
@@ -6061,8 +6071,8 @@ if (evaluationShareButton) {
       } catch {
         showToast("Share link: " + shareUrl);
       }
-    } catch {
-      showToast("Could not create evaluation share link.");
+    } catch (error) {
+      showToast(error?.message || "Could not create evaluation share link.");
     } finally {
       evaluationShareButton.disabled = false;
     }
