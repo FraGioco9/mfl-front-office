@@ -12,6 +12,7 @@ const state = {
   dataLoaded: false,
   dataLoadPromise: null,
   dataAccess: null,
+  dataAccessOverride: null,
   dataSnapshots: {},
   selectedPlayerIds: new Set(),
   selectionAnchorPlayerId: null,
@@ -633,6 +634,20 @@ function applyCachedWalletPermission(cacheEntry, previousAllowed) {
   };
 }
 
+function applyStoredWalletPermission() {
+  const previousAllowed = state.walletPermissionAllowed;
+
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    state.walletPermissionAllowed = false;
+    return {
+      allowed: state.walletPermissionAllowed,
+      changed: previousAllowed !== state.walletPermissionAllowed,
+    };
+  }
+
+  return applyCachedWalletPermission(readWalletPermissionCache(), previousAllowed);
+}
+
 async function loadWalletPermissions(options = {}) {
   const previousAllowed = state.walletPermissionAllowed;
   state.walletPermissionAllowed = false;
@@ -743,6 +758,10 @@ function refreshWalletPermissionsInBackground() {
 }
 
 function currentDataAccess(pageName = state.currentPage) {
+  if (arguments.length === 0 && state.dataAccessOverride) {
+    return state.dataAccessOverride;
+  }
+
   if (hasProgressionAccess()) {
     return "full";
   }
@@ -1651,7 +1670,7 @@ async function ensureProgressionData() {
 
   if (!state.dataLoadPromise) {
     showLoading();
-    state.dataLoadPromise = loadData()
+    state.dataLoadPromise = loadData({ message: loadingMessageForAccess(targetAccess) })
       .then((loaded) => {
         state.dataLoaded = Boolean(loaded);
         return state.dataLoaded;
@@ -5192,6 +5211,10 @@ function dataCacheVersion(manifest, accessKey = dataCacheAccessKey()) {
   return `${accessKey}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
 }
 
+function dataCacheVersionStorageKey(accessKey = dataCacheAccessKey()) {
+  return `${DATA_CACHE_VERSION_KEY}:${accessKey}`;
+}
+
 function missingFullDataColumns(fullColumns) {
   return fullColumns.filter((column) => !state.columns.includes(column));
 }
@@ -5234,6 +5257,7 @@ function mergeDataColumns(chunk, columnsToMerge, rowMap) {
 
 async function upgradePublicDataToFull(manifest, progressOptions = {}) {
   const targetColumns = fullDataColumns(manifest);
+  const message = progressOptions.message || "Loading data";
   const columnsToMerge = missingFullDataColumns(targetColumns);
 
   if (!columnsToMerge.length) {
@@ -5248,7 +5272,7 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
   updateSummaryCounts(manifest.row_count, manifest.wallet_count);
   const progressStart = progressOptions.startPercent ?? 55;
   const progressEnd = progressOptions.endPercent ?? 90;
-  const progress = loadingRangeProgress(progressStart, progressEnd);
+  const progress = loadingRangeProgress(progressStart, progressEnd, message);
   await paintLoadingProgress();
 
   if (manifest?.files?.progression?.file) {
@@ -5263,12 +5287,12 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
     await paintLoadingProgress();
   } else {
     for (let index = 0; index < manifest.chunks.length; index += 1) {
-      updateLoadingProgress(index, manifest.chunks.length);
+      updateLoadingProgress(index, manifest.chunks.length, message);
       await paintLoadingProgress();
       const chunkInfo = manifest.chunks[index];
       const chunk = await fetchDataFile(chunkInfo.file, { columns: requestColumns });
       mergeDataColumns(chunk, columnsToMerge, rowMap);
-      updateLoadingProgress(index + 1, manifest.chunks.length);
+      updateLoadingProgress(index + 1, manifest.chunks.length, message);
     }
   }
 
@@ -5278,8 +5302,60 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
   return true;
 }
 
-async function loadData() {
+function loadingMessageForAccess(access) {
+  if (access === "owned") {
+    return "Loading your players";
+  }
+
+  if (access === "full") {
+    return "Loading progression data";
+  }
+
+  return "Loading player data";
+}
+
+async function loadDataForAccess(access, message = loadingMessageForAccess(access)) {
+  const previousOverride = state.dataAccessOverride;
+  state.dataAccessOverride = access;
+  state.dataLoaded = false;
+  state.dataLoadPromise = null;
+
   try {
+    return await loadData({ message });
+  } finally {
+    state.dataAccessOverride = previousOverride;
+  }
+}
+
+async function preloadRefreshData(initialPage) {
+  showLoading();
+  await loadDataForAccess("public", "Loading player data");
+
+  if (hasWalletOptIn()) {
+    await loadDataForAccess("owned", "Loading your players");
+    setLoadingPercent(0, "Checking permissions");
+    await paintLoadingProgress();
+    const permissionResult = await loadWalletPermissions({ checkVersion: true });
+    updateAccountState();
+    updateMenuVisibility();
+    syncHomeLoginButton();
+
+    if (permissionResult.changed) {
+      captureCurrentDataSnapshot();
+    }
+
+    if (hasProgressionAccess()) {
+      await loadDataForAccess("full", "Loading progression data");
+    }
+  }
+
+  const targetAccess = currentDataAccess(initialPage);
+  restoreDataSnapshot(targetAccess) || restoreDataSnapshot("public");
+}
+
+async function loadData(options = {}) {
+  try {
+    const message = options.message || "Loading data";
     const targetAccess = currentDataAccess();
     const upgradeFromPublic = targetAccess === "full"
       && state.dataAccess === "public"
@@ -5293,21 +5369,21 @@ async function loadData() {
     }
 
     state.dataAccess = targetAccess;
-    setLoadingPercent(0, "Loading data");
+    setLoadingPercent(0, message);
     const manifest = await fetchDataFile("manifest.json", {
-      onProgress: loadingRangeProgress(2, 10),
+      onProgress: loadingRangeProgress(2, 10, message),
     });
 
     if (upgradeFromPublic) {
-      await upgradePublicDataToFull(manifest, { startPercent: 10, endPercent: 90 });
+      await upgradePublicDataToFull(manifest, { startPercent: 10, endPercent: 90, message });
     } else {
       const cacheVersion = dataCacheVersion(manifest);
-      const cachedVersion = localStorage.getItem(DATA_CACHE_VERSION_KEY);
+      const cacheVersionKey = dataCacheVersionStorageKey();
+      const cachedVersion = localStorage.getItem(cacheVersionKey);
       const useCachedChunks = cachedVersion === cacheVersion;
 
       if (!useCachedChunks) {
-        await clearDataCache();
-        localStorage.setItem(DATA_CACHE_VERSION_KEY, cacheVersion);
+        localStorage.setItem(cacheVersionKey, cacheVersion);
         localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(manifest));
       }
 
@@ -5318,7 +5394,7 @@ async function loadData() {
 
       const publicFile = publicDataFile(manifest);
       const publicProgressEnd = ["full", "owned"].includes(targetAccess) ? 55 : 90;
-      const publicProgress = loadingRangeProgress(10, publicProgressEnd);
+      const publicProgress = loadingRangeProgress(10, publicProgressEnd, message);
       publicProgress(0);
       await paintLoadingProgress();
       const publicChunk = await fetchDataFile(publicFile, {
@@ -5330,19 +5406,19 @@ async function loadData() {
       publicProgress(1);
 
       if (["full", "owned"].includes(targetAccess)) {
-        await upgradePublicDataToFull(manifest, { startPercent: 55, endPercent: 90 });
+        await upgradePublicDataToFull(manifest, { startPercent: 55, endPercent: 90, message });
       }
     }
 
-    setLoadingPercent(92, "Loading data");
+    setLoadingPercent(92, message);
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
     buildSearchIndex();
-    setLoadingPercent(95, "Loading data");
+    setLoadingPercent(95, message);
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();
     applyFilters();
-    setLoadingPercent(100, "Loading data");
+    setLoadingPercent(100, message);
     state.dataLoaded = true;
     captureCurrentDataSnapshot();
     updateAccountState();
@@ -5637,17 +5713,13 @@ async function startApp() {
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
 
-  if (pageRequiresData(initialPage)) {
-    showLoading();
-  }
-
   if (initialPage === "changelog") {
     await setPage("changelog", false);
   }
 
   void ensureFlowWallet();
-  await loadWalletPermissions();
-  void refreshWalletPermissionsInBackground();
+  applyStoredWalletPermission();
+  await preloadRefreshData(initialPage);
   await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
