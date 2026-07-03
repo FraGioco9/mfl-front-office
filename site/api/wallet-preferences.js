@@ -2,6 +2,8 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
+const PLAYER_NOTE_MAX_LENGTH = 200;
+
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
   return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
@@ -126,7 +128,7 @@ function normalizePlayerNotes(notes) {
 
   Object.entries(notes).forEach(([playerId, note]) => {
     const key = String(playerId || "").trim();
-    const text = String(note || "").trim();
+    const text = String(note || "").replace(/\r\n/g, "\n").slice(0, PLAYER_NOTE_MAX_LENGTH).trim();
     if (key && text) {
       normalized[key] = text;
     }

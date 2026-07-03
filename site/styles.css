@@ -1606,6 +1606,7 @@ td a {
 
 .retirementMarker[data-tooltip]::after,
 .newMintMarker[data-tooltip]::after,
+.playerNoteIcon[data-tooltip]::after,
 .copyPlayerIdButton[data-tooltip]::after,
 .playerIdText[data-tooltip]::after {
   content: attr(data-tooltip);
@@ -1637,6 +1638,8 @@ td a {
 .retirementMarker[data-tooltip]:focus::after,
 .newMintMarker[data-tooltip]:hover::after,
 .newMintMarker[data-tooltip]:focus::after,
+.playerNoteIcon[data-tooltip]:hover::after,
+.playerNoteIcon[data-tooltip]:focus::after,
 .copyPlayerIdButton[data-tooltip]:hover::after,
 .copyPlayerIdButton[data-tooltip]:focus::after,
 .playerIdText[data-tooltip]:hover::after,
@@ -2382,7 +2385,7 @@ td a {
 .playerGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
-  align-items: stretch;
+  align-items: start;
   gap: 8px;
 }
 
@@ -2402,8 +2405,9 @@ td a {
 
 .pitchPanel {
   display: grid;
-  grid-template-rows: auto 1fr;
-  align-content: stretch;
+  grid-template-rows: auto auto;
+  align-self: start;
+  align-content: start;
   justify-items: center;
 }
 
@@ -2423,7 +2427,7 @@ td a {
 }
 
 .playerInfoPanel .detailGrid {
-  min-height: 150px;
+  min-height: 132px;
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
@@ -2441,8 +2445,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 48px;
-  padding: 7px 10px;
+  min-height: 44px;
+  padding: 6px 10px;
 }
 
 .detailGrid strong {
@@ -2452,8 +2456,8 @@ td a {
 }
 
 .playerAttributeCard {
-  min-height: 48px;
-  padding: 7px 10px;
+  min-height: 44px;
+  padding: 6px 10px;
 }
 
 .detailGrid span,
@@ -3194,19 +3198,23 @@ td a {
 
 .playerNotesPanel {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  gap: 8px;
   min-height: 130px;
+}
+
+.playerNotesInputWrap {
+  position: relative;
 }
 
 .playerNotesInput {
   width: 100%;
   min-height: 96px;
-  resize: vertical;
+  resize: none;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface-muted);
   color: var(--text);
-  padding: 10px 12px;
+  padding: 10px 12px 24px;
   font: inherit;
   line-height: 1.35;
 }
@@ -3216,17 +3224,27 @@ td a {
   outline-offset: 2px;
 }
 
-.playerNotesPanel p {
-  margin: 6px 0 0;
+.playerNotesCount {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.playerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .playerNoteIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 6px;
   font-size: 14px;
   line-height: 1;
   vertical-align: middle;
@@ -3236,9 +3254,22 @@ td a {
   font-size: 20px;
 }
 
-.playerNameCell .playerNoteIcon {
-  margin-left: 4px;
-  font-size: 13px;
+.playerNameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.playerNameCell .playerNoteIcon,
+.playerNameCell .retirementMarker,
+.playerNameCell .newMintMarker {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip] {
+  position: relative;
+  cursor: help;
 }
 
 .myPlayersLockedPage {

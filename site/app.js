@@ -209,6 +209,7 @@ const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
+const PLAYER_NOTE_MAX_LENGTH = 200;
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
@@ -2001,6 +2002,10 @@ function walletNotesStorageKey(address = state.linkedWalletAddress) {
   return wallet ? `${WALLET_NOTES_STORAGE_PREFIX}${wallet}` : "";
 }
 
+function sanitizePlayerNote(note) {
+  return String(note || "").replace(/\r\n/g, "\n").slice(0, PLAYER_NOTE_MAX_LENGTH).trim();
+}
+
 function normalizedPlayerNotes(notes) {
   const normalized = {};
   if (!notes || typeof notes !== "object" || Array.isArray(notes)) {
@@ -2009,7 +2014,7 @@ function normalizedPlayerNotes(notes) {
 
   Object.entries(notes).forEach(([playerId, note]) => {
     const key = String(playerId || "").trim();
-    const text = String(note || "").trim();
+    const text = sanitizePlayerNote(note);
     if (key && text) {
       normalized[key] = text;
     }
@@ -2059,10 +2064,21 @@ function playerHasNote(playerId) {
   return Boolean(playerNote(playerId).trim());
 }
 
-function playerNoteIconHtml(playerId) {
-  return playerHasNote(playerId)
-    ? `<span class="playerNoteIcon" title="Player note" aria-label="Player note">📝</span>`
-    : "";
+function playerNoteIconHtml(playerId, includeTooltip = false) {
+  if (!playerHasNote(playerId)) {
+    return "";
+  }
+
+  const note = playerNote(playerId);
+  const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">📝</span>`;
+}
+
+function updatePlayerNoteCount(input) {
+  const counter = playerDetail.querySelector("#playerNotesCount");
+  if (counter) {
+    counter.textContent = `${input.value.length}/${PLAYER_NOTE_MAX_LENGTH}`;
+  }
 }
 
 function setPlayerNote(playerId, note) {
@@ -2071,7 +2087,7 @@ function setPlayerNote(playerId, note) {
     return;
   }
 
-  const text = String(note || "").trim();
+  const text = sanitizePlayerNote(note);
   if (text) {
     state.playerNotes[key] = text;
   } else {
@@ -4005,7 +4021,7 @@ function renderPlayerPage(playerId) {
     <section class="playerHero">
       <div>
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
-        <h2>${escapeHtml(playerName)} <span data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
+        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span><span data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
@@ -4018,7 +4034,7 @@ function renderPlayerPage(playerId) {
       <div class="playerStack">
         <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
         <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews">${viewButtons}</div></div><div class="attributeGrid">${renderPlayerAttributePanel(displayRow)}</div></div>
-        ${hasWalletOptIn() ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><textarea id="playerNotesInput" class="playerNotesInput" placeholder="Write private notes for this player...">${escapeHtml(playerNote(id))}</textarea><p>Saved to your opted-in Dapper wallet.</p></div>` : ""}
+        ${hasWalletOptIn() ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea id="playerNotesInput" class="playerNotesInput" placeholder="Write private notes for this player..." maxlength="${PLAYER_NOTE_MAX_LENGTH}">${escapeHtml(playerNote(id))}</textarea><span id="playerNotesCount" class="playerNotesCount">${playerNote(id).length}/${PLAYER_NOTE_MAX_LENGTH}</span></div></div>` : ""}
       </div>
       <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch">${renderPitch(displayRow)}</div></div>
     </section>`;
@@ -4073,7 +4089,10 @@ function renderPlayerPage(playerId) {
   });
   const notesInput = playerDetail.querySelector("#playerNotesInput");
   if (notesInput) {
-    notesInput.addEventListener("input", () => setPlayerNote(id, notesInput.value));
+    notesInput.addEventListener("input", () => {
+      updatePlayerNoteCount(notesInput);
+      setPlayerNote(id, notesInput.value);
+    });
   }
 }
 
@@ -5143,18 +5162,17 @@ function renderTable() {
           openPlayerPage(playerId);
         });
         nameWrap.appendChild(nameLink);
+        appendNameMarker(nameWrap, retirementMarker(row), "retirementMarker");
         if (playerHasNote(playerId)) {
           const noteIcon = document.createElement("span");
           noteIcon.className = "playerNoteIcon";
-          noteIcon.title = "Player note";
+          noteIcon.dataset.tooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
           noteIcon.textContent = "📝";
           nameWrap.appendChild(noteIcon);
         }
+        appendNameMarker(nameWrap, newMintMarker(row), "newMintMarker");
         cell.appendChild(nameWrap);
-
-        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
-        appendNameMarker(cell, newMintMarker(row), "newMintMarker");
       } else if (column === flagColumn) {
         cell.classList.add("flagCell");
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
