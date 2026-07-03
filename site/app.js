@@ -1104,6 +1104,11 @@ function optOutWallet() {
   saveTableState();
   showToast("Dapper opt-in removed.");
 
+  if (state.currentPage === "evaluation") {
+    redirectSavedEvaluationLinkToBasicEvaluation();
+    renderEvaluationPage();
+  }
+
   if (state.currentPage === "myplayers" || state.currentPage === "watchlist") {
     setPage(state.currentPage, false);
     return;
@@ -1644,6 +1649,24 @@ function evaluationSavedIdFromUrl() {
   }
 
   return new URLSearchParams(window.location.search).get("saved") || "";
+}
+
+function basicEvaluationPathForPlayer(playerId = "") {
+  const id = String(playerId || "").trim();
+  return id ? `/evaluation?player=${encodeURIComponent(id)}` : "/evaluation";
+}
+
+function redirectSavedEvaluationLinkToBasicEvaluation() {
+  if (window.location.pathname !== "/evaluation" || !evaluationSavedIdFromUrl()) {
+    return false;
+  }
+
+  const playerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = playerId || null;
+  window.history.replaceState({}, "", basicEvaluationPathForPlayer(playerId));
+  return true;
 }
 
 function normalizeSharedEvaluationPayload(payload) {
@@ -4150,7 +4173,9 @@ function renderEvaluationTable(row) {
 }
 function renderEvaluationPage() {
   const savedId = evaluationSavedIdFromUrl();
-  if (savedId && state.evaluationSavedId !== savedId) {
+  if (savedId && !hasWalletOptIn()) {
+    redirectSavedEvaluationLinkToBasicEvaluation();
+  } else if (savedId && state.evaluationSavedId !== savedId) {
     renderEmptyEvaluationSelection(false);
     void loadSavedEvaluation(savedId);
     return;
