@@ -1532,7 +1532,13 @@ async function linkWallet() {
     await refreshLinkedWalletAgentName();
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
-    const upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
+    let upgradedCurrentPage = false;
+    if ((state.currentPage === "myplayers" || state.currentPage === "watchlist") && !myPlayersLockedPage.hidden) {
+      await setPage(state.currentPage, false);
+      upgradedCurrentPage = true;
+    } else {
+      upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
+    }
     if (!upgradedCurrentPage) {
       refreshWatchlistPageAfterWalletSync();
       refreshPlayerPageAfterWalletSync();
