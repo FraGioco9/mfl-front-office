@@ -5142,13 +5142,9 @@ function restoreDataSnapshot(access = currentDataAccess()) {
   state.dataLoaded = true;
   state.dataLoadPromise = null;
 
+  state.searchIndex = [];
   updateSummaryCounts(state.manifest.row_count, state.manifest.wallet_count);
   statusText.textContent = `Updated ${new Date(state.manifest.generated_at).toLocaleString()}`;
-  buildSearchIndex();
-  populateAddFilterSelect();
-  restoreSavedTableState();
-  buildHeader();
-  applyFilters();
   updateAccountState();
   return true;
 }
