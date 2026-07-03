@@ -2191,6 +2191,13 @@ async function setPage(pageName, updateHash = true, options = {}) {
   });
 
   if (evaluationPageActive) {
+    if (options.plain) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+    }
+
     renderEvaluationPage();
     if (document.body.classList.contains("loading")) {
       await finishLoading();

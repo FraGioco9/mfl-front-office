@@ -3495,14 +3495,14 @@ td a {
 
 .evaluationLoadList {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
-  height: 366px;
-  max-height: 366px;
+  flex: 1;
   grid-auto-rows: 66px;
   align-content: start;
-  padding: 16px 18px 18px;
-  overflow: auto;
+  padding: 16px 18px 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .evaluationLoadEmpty {
