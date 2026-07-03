@@ -37,7 +37,6 @@ const state = {
   linkedWalletAddress: "",
   linkedWalletProof: null,
   walletPermissionAllowed: false,
-  walletPermissionRefreshPromise: null,
   flowWalletModule: null,
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
@@ -718,45 +717,6 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-function applyWalletPermissionRefresh(result) {
-  if (!result?.changed) {
-    return;
-  }
-
-  if (state.dataLoaded) {
-    captureCurrentDataSnapshot();
-    state.dataLoaded = false;
-    state.dataLoadPromise = null;
-  }
-
-  updateAccountState();
-  updateMenuVisibility();
-  syncHomeLoginButton();
-
-  if (state.currentPage && pageRequiresData(state.currentPage)) {
-    void setPage(state.currentPage, false, state.currentPage === "player" ? { playerId: playerIdFromUrl() } : {});
-  }
-}
-
-function refreshWalletPermissionsInBackground() {
-  if (!hasWalletOptIn()) {
-    return Promise.resolve({ allowed: false, changed: false });
-  }
-
-  if (!state.walletPermissionRefreshPromise) {
-    state.walletPermissionRefreshPromise = loadWalletPermissions({ checkVersion: true })
-      .then((result) => {
-        applyWalletPermissionRefresh(result);
-        return result;
-      })
-      .finally(() => {
-        state.walletPermissionRefreshPromise = null;
-      });
-  }
-
-  return state.walletPermissionRefreshPromise;
-}
-
 function currentDataAccess(pageName = state.currentPage) {
   if (arguments.length === 0 && state.dataAccessOverride) {
     return state.dataAccessOverride;
