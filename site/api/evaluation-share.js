@@ -205,6 +205,7 @@ module.exports = async function handler(request, response) {
 
       response.status(200).json({
         id: Array.isArray(rows) && rows[0]?.id ? rows[0].id : id,
+        playerId: payload.playerId,
         expiresAt,
       });
       return;
@@ -213,13 +214,15 @@ module.exports = async function handler(request, response) {
     if (request.method === "GET") {
       const requestUrl = new URL(request.url, "http://localhost");
       const id = normalizeShareId(requestUrl.searchParams.get("id"));
+      const playerId = String(requestUrl.searchParams.get("player") || requestUrl.searchParams.get("playerId") || "").trim();
 
       if (!id) {
         response.status(400).json({ error: "Missing share id." });
         return;
       }
 
-      const rows = await supabaseRequest(`evaluation_shares?select=id,player_id,payload,expires_at&id=eq.${encodeURIComponent(id)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
+      const playerFilter = playerId ? `&player_id=eq.${encodeURIComponent(playerId)}` : "";
+      const rows = await supabaseRequest(`evaluation_shares?select=id,player_id,payload,expires_at&id=eq.${encodeURIComponent(id)}${playerFilter}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
       const row = Array.isArray(rows) ? rows[0] : null;
 
       if (!row) {

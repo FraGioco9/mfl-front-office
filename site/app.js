@@ -1692,6 +1692,7 @@ function applySharedEvaluationPayload(payload) {
 
 async function loadSharedEvaluation(shareId) {
   const id = String(shareId || "").trim();
+  const playerId = String(evaluationPlayerIdFromUrl() || "").trim();
 
   if (!id || state.evaluationShareLoading) {
     return;
@@ -1700,7 +1701,13 @@ async function loadSharedEvaluation(shareId) {
   state.evaluationShareLoading = true;
 
   try {
-    const response = await fetch(`/api/evaluation-share?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+    const requestUrl = new URL("/api/evaluation-share", window.location.origin);
+    requestUrl.searchParams.set("id", id);
+    if (playerId) {
+      requestUrl.searchParams.set("player", playerId);
+    }
+
+    const response = await fetch(requestUrl.toString(), { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("Share not found.");
@@ -1745,12 +1752,14 @@ async function createSharedEvaluation() {
 
   const data = await response.json();
   const id = String(data.id || "").trim();
+  const playerId = String(data.playerId || state.evaluationPlayerId || "").trim();
 
-  if (!id) {
+  if (!id || !playerId) {
     throw new Error("Could not create share link.");
   }
 
   const url = new URL("/evaluation", window.location.origin);
+  url.searchParams.set("player", playerId);
   url.searchParams.set("share", id);
   return url.toString();
 }
