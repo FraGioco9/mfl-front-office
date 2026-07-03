@@ -634,8 +634,9 @@ body[data-page="home"] .topbar .stats {
 }
 
 .navJerseyIcon {
-  transform: scale(0.88);
-  transform-origin: center;
+  width: 14px;
+  flex-basis: 14px;
+  transform: none;
 }
 
 :root:not([data-theme="dark"]) .navJerseyIcon {
