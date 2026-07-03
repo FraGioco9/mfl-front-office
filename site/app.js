@@ -703,27 +703,43 @@ async function loadWalletPermissions(options = {}) {
     changed: previousAllowed !== state.walletPermissionAllowed,
   };
 }
-async function refreshWalletPermissionsForNavigation() {
+function applyWalletPermissionRefresh(result) {
+  if (!result?.changed) {
+    return;
+  }
+
+  if (state.dataLoaded) {
+    captureCurrentDataSnapshot();
+    state.dataLoaded = false;
+    state.dataLoadPromise = null;
+  }
+
+  updateAccountState();
+  updateMenuVisibility();
+  syncHomeLoginButton();
+
+  if (state.currentPage && pageRequiresData(state.currentPage)) {
+    void setPage(state.currentPage, false, state.currentPage === "player" ? { playerId: playerIdFromUrl() } : {});
+  }
+}
+
+function refreshWalletPermissionsInBackground() {
   if (!hasWalletOptIn()) {
-    return { allowed: false, changed: false };
+    return Promise.resolve({ allowed: false, changed: false });
   }
 
   if (!state.walletPermissionRefreshPromise) {
     state.walletPermissionRefreshPromise = loadWalletPermissions({ checkVersion: true })
+      .then((result) => {
+        applyWalletPermissionRefresh(result);
+        return result;
+      })
       .finally(() => {
         state.walletPermissionRefreshPromise = null;
       });
   }
 
-  const result = await state.walletPermissionRefreshPromise;
-
-  if (result.changed) {
-    updateAccountState();
-    updateMenuVisibility();
-    syncHomeLoginButton();
-  }
-
-  return result;
+  return state.walletPermissionRefreshPromise;
 }
 
 function currentDataAccess(pageName = state.currentPage) {
@@ -1685,13 +1701,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const shouldResetScroll = previousPage !== pageName;
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
-  const permissionResult = await refreshWalletPermissionsForNavigation();
-
-  if (permissionResult.changed && state.dataLoaded && pageRequiresData(pageName)) {
-    captureCurrentDataSnapshot();
-    state.dataLoaded = false;
-    state.dataLoadPromise = null;
-  }
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
@@ -5637,7 +5646,8 @@ async function startApp() {
   }
 
   void ensureFlowWallet();
-  await loadWalletPermissions({ checkVersion: true });
+  await loadWalletPermissions();
+  void refreshWalletPermissionsInBackground();
   await loadWalletNames();
   await loadWalletPreferences();
   updateAccountState();
