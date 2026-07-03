@@ -210,7 +210,6 @@ const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
-const WALLET_NOTES_BACKUP_STORAGE_KEY = "mfl-wallet-player-notes-backup-v1";
 const PLAYER_NOTE_MAX_LENGTH = 200;
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
@@ -2032,83 +2031,30 @@ function normalizedPlayerNotes(notes) {
   return normalized;
 }
 
-function walletNoteStorageAddresses() {
-  const addresses = [
-    state.linkedWalletAddress,
-    state.linkedWalletProof?.address,
-    state.linkedWalletProof?.signingAddress,
-  ]
-    .map((address) => normalizeWalletAddress(address).toLowerCase())
-    .filter(Boolean);
-
-  return Array.from(new Set(addresses));
-}
-
-function readWalletNotesBackup() {
-  try {
-    const data = JSON.parse(localStorage.getItem(WALLET_NOTES_BACKUP_STORAGE_KEY) || "{}");
-    return data && typeof data === "object" && !Array.isArray(data) ? data : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeWalletNotesBackup(notes) {
-  const addresses = walletNoteStorageAddresses();
-  if (!addresses.length) {
-    return;
-  }
-
-  const normalized = normalizedPlayerNotes(notes);
-  try {
-    const backup = readWalletNotesBackup();
-    addresses.forEach((address) => {
-      backup[address] = normalized;
-    });
-    localStorage.setItem(WALLET_NOTES_BACKUP_STORAGE_KEY, JSON.stringify(backup));
-  } catch {
-    // Wallet notes sync is best-effort when browser storage is blocked.
-  }
-}
-
 function saveWalletNotesLocally() {
-  const normalized = normalizedPlayerNotes(state.playerNotes);
-  const addresses = walletNoteStorageAddresses();
-  if (!addresses.length) {
+  const key = walletNotesStorageKey();
+  if (!key) {
     return;
   }
 
   try {
-    addresses.forEach((address) => {
-      localStorage.setItem(walletNotesStorageKey(address), JSON.stringify(normalized));
-    });
-    writeWalletNotesBackup(normalized);
+    localStorage.setItem(key, JSON.stringify(normalizedPlayerNotes(state.playerNotes)));
   } catch {
     // Wallet notes sync is best-effort when browser storage is blocked.
   }
 }
 
 function loadLocalWalletNotes() {
-  const addresses = walletNoteStorageAddresses();
-  const merged = {};
-
-  try {
-    addresses.forEach((address) => {
-      Object.assign(
-        merged,
-        normalizedPlayerNotes(JSON.parse(localStorage.getItem(walletNotesStorageKey(address)) || "{}")),
-      );
-    });
-
-    const backup = readWalletNotesBackup();
-    addresses.forEach((address) => {
-      Object.assign(merged, normalizedPlayerNotes(backup[address]));
-    });
-  } catch {
-    return normalizedPlayerNotes(merged);
+  const key = walletNotesStorageKey();
+  if (!key) {
+    return {};
   }
 
-  return normalizedPlayerNotes(merged);
+  try {
+    return normalizedPlayerNotes(JSON.parse(localStorage.getItem(key) || "{}"));
+  } catch {
+    return {};
+  }
 }
 
 function clearWalletNotesState() {
@@ -2343,9 +2289,8 @@ async function loadWalletPreferences() {
   const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
     applyWalletWatchlistIds(loadLocalWalletWatchlist());
-    const localNotes = loadLocalWalletNotes();
     state.playerNotes = {};
-    applyWalletPlayerNotes(localNotes);
+    applyWalletPlayerNotes(loadLocalWalletNotes());
     const response = await fetch("/api/wallet-preferences", {
       cache: "no-store",
       headers: walletProofHeaders(true),
@@ -2354,17 +2299,11 @@ async function loadWalletPreferences() {
     if (response.ok) {
       const data = await response.json();
       applyWalletWatchlistIds(data.watchlistPlayerIds);
-      applyWalletPlayerNotes({
-        ...normalizedPlayerNotes(data.playerNotes),
-        ...localNotes,
-      });
+      applyWalletPlayerNotes(data.playerNotes);
+      saveWalletNotesLocally();
     }
-
-    saveWalletNotesLocally();
   } catch {
     // Local wallet watchlist and notes are still available if cloud sync is unavailable.
-    applyWalletPlayerNotes(loadLocalWalletNotes());
-    saveWalletNotesLocally();
   } finally {
     state.walletPreferencesLoaded = true;
     state.walletPreferencesLoading = false;
