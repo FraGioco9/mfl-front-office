@@ -2713,11 +2713,30 @@ td a {
 }
 
 .evaluationSearch .field {
+  position: relative;
   gap: 6px;
+}
+
+.evaluationSearch .field::after {
+  content: "x";
+  position: absolute;
+  right: 14px;
+  bottom: 9px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .evaluationSearch input {
   height: 42px;
+  padding-right: 40px;
+}
+
+.evaluationSearch input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
 }
 
 .evaluationSearchResults {

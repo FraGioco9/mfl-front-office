@@ -3386,6 +3386,19 @@ function renderEvaluationSearchResults() {
   });
 }
 
+function handleEvaluationSearchPointerDown(event) {
+  const rect = evaluationSearchInput.getBoundingClientRect();
+  const clearZoneWidth = 40;
+  if (event.clientX < rect.right - clearZoneWidth || event.clientY < rect.top || event.clientY > rect.bottom) {
+    return;
+  }
+
+  event.preventDefault();
+  evaluationSearchInput.value = "";
+  resetEvaluationSelection();
+  renderEvaluationSearchResults();
+  evaluationSearchInput.focus();
+}
 function handleEvaluationSearchInput() {
   if (!evaluationSearchInput.value.trim()) {
     resetEvaluationSelection();
@@ -5842,6 +5855,7 @@ discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings)
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
+evaluationSearchInput.addEventListener("pointerdown", handleEvaluationSearchPointerDown);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
