@@ -1541,6 +1541,10 @@ tbody tr:hover {
   vertical-align: middle;
 }
 
+.nameCell {
+  width: 100%;
+}
+
 td a {
   color: var(--primary);
   font-weight: 700;
@@ -1626,7 +1630,8 @@ td a {
   line-height: 1.35;
   text-align: left;
   text-transform: none;
-  white-space: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
@@ -1922,7 +1927,7 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 520px;
+  height: 492px;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2199,7 +2204,8 @@ td a {
   line-height: 1.35;
   text-align: left;
   text-transform: none;
-  white-space: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
@@ -2475,7 +2481,7 @@ td a {
   position: relative;
   width: 360px;
   min-height: 0;
-  height: 520px;
+  height: 492px;
   margin: 8px auto 0;
   padding: 10px 8px;
   overflow: hidden;
@@ -2946,7 +2952,8 @@ td a {
   line-height: 1.35;
   text-align: left;
   text-transform: none;
-  white-space: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
@@ -3198,8 +3205,12 @@ td a {
 
 .playerNotesPanel {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   min-height: 130px;
+}
+
+.playerNotesPanel h3 {
+  margin-bottom: 2px;
 }
 
 .playerNotesInputWrap {
@@ -3239,6 +3250,13 @@ td a {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  line-height: 1.05;
+}
+
+.playerTitleNoteIcon {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
 }
 
 .playerNoteIcon {
@@ -3255,9 +3273,26 @@ td a {
 }
 
 .playerNameCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.playerNameCell .playerNameLink {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.playerNameMarkers {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .playerNameCell .playerNoteIcon,
@@ -3270,6 +3305,20 @@ td a {
 .playerNameCell .playerNoteIcon[data-tooltip] {
   position: relative;
   cursor: help;
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  max-width: 260px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  transform: translate(0, 4px);
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip]:hover::after,
+.playerNameCell .playerNoteIcon[data-tooltip]:focus::after {
+  transform: translate(0, 0);
 }
 
 .myPlayersLockedPage {

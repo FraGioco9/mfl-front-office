@@ -645,7 +645,7 @@ function applyStoredWalletPermission() {
 
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     state.walletPermissionAllowed = false;
-  state.playerNotes = {};
+    clearWalletNotesState();
     return {
       allowed: state.walletPermissionAllowed,
       changed: previousAllowed !== state.walletPermissionAllowed,
@@ -1055,6 +1055,8 @@ function updateAccountState() {
 }
 
 function optOutWallet() {
+  const previousWalletAddress = state.linkedWalletAddress;
+  clearWalletNotesState(previousWalletAddress);
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
@@ -1071,6 +1073,11 @@ function optOutWallet() {
   updateAccountState();
   updateMenuVisibility();
   normalizeCurrentViewsAfterProgressionAccessLoss();
+  if (state.currentPage === "player") {
+    renderPlayerPage(playerIdFromUrl());
+  } else if (tablePageKey()) {
+    applyFilters();
+  }
   saveTableState();
   showToast("Dapper opt-in removed.");
 
@@ -2046,6 +2053,21 @@ function loadLocalWalletNotes() {
     return normalizedPlayerNotes(JSON.parse(localStorage.getItem(key) || "{}"));
   } catch {
     return {};
+  }
+}
+
+function clearWalletNotesState(address = state.linkedWalletAddress) {
+  const key = walletNotesStorageKey(address);
+  state.playerNotes = {};
+  window.clearTimeout(state.walletNotesSaveTimer);
+  state.walletNotesSaveTimer = null;
+
+  if (key) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Notes are still removed from the current page state.
+    }
   }
 }
 
@@ -4021,7 +4043,7 @@ function renderPlayerPage(playerId) {
     <section class="playerHero">
       <div>
         <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
-        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span><span data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
+        <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span><span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
       <div class="playerHeroActions">
@@ -5162,16 +5184,21 @@ function renderTable() {
           openPlayerPage(playerId);
         });
         nameWrap.appendChild(nameLink);
-        appendNameMarker(nameWrap, retirementMarker(row), "retirementMarker");
+        const markerWrap = document.createElement("span");
+        markerWrap.className = "playerNameMarkers";
+        appendNameMarker(markerWrap, retirementMarker(row), "retirementMarker");
         if (playerHasNote(playerId)) {
           const noteIcon = document.createElement("span");
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.tooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
           noteIcon.textContent = "📝";
-          nameWrap.appendChild(noteIcon);
+          markerWrap.appendChild(noteIcon);
         }
-        appendNameMarker(nameWrap, newMintMarker(row), "newMintMarker");
+        appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
+        if (markerWrap.childElementCount) {
+          nameWrap.appendChild(markerWrap);
+        }
         cell.appendChild(nameWrap);
       } else if (column === flagColumn) {
         cell.classList.add("flagCell");
