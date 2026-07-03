@@ -1,5 +1,3 @@
-const fs = require("node:fs/promises");
-const path = require("node:path");
 const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
@@ -21,19 +19,6 @@ function walletAccessMessage() {
 
 function stringToHex(value) {
   return Buffer.from(value, "utf8").toString("hex");
-}
-
-async function findFile(candidates) {
-  for (const candidate of candidates) {
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      // Try the next possible Vercel/local path.
-    }
-  }
-
-  return null;
 }
 
 function supabaseConfig() {
@@ -73,32 +58,8 @@ async function supabaseWalletAllowed(wallet) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function localWalletAllowed(wallet) {
-  const permissionsPath = await findFile([
-    path.join(__dirname, "wallet-permissions.json"),
-    path.join(process.cwd(), "api", "wallet-permissions.json"),
-    path.join(process.cwd(), "site", "api", "wallet-permissions.json"),
-  ]);
-
-  if (!permissionsPath) {
-    return false;
-  }
-
-  try {
-    const data = JSON.parse(await fs.readFile(permissionsPath, "utf8"));
-    const wallets = Array.isArray(data.wallets) ? data.wallets : [];
-    return new Set(wallets.map(normalizeWalletAddress).filter(Boolean)).has(wallet);
-  } catch {
-    return false;
-  }
-}
-
 async function walletAllowed(wallet) {
-  if (supabaseConfig()) {
-    return supabaseWalletAllowed(wallet);
-  }
-
-  return localWalletAllowed(wallet);
+  return supabaseConfig() ? supabaseWalletAllowed(wallet) : false;
 }
 
 async function verifyWalletProof(request) {

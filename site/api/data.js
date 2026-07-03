@@ -111,24 +111,38 @@ async function readDataJson(fileName, request) {
   return staticResponse.json();
 }
 
-async function allowedWallets() {
-  const permissionsPath = await findFile([
-    path.join(__dirname, "wallet-permissions.json"),
-    path.join(process.cwd(), "api", "wallet-permissions.json"),
-    path.join(process.cwd(), "site", "api", "wallet-permissions.json"),
-  ]);
+function supabaseConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 
-  if (!permissionsPath) {
-    return new Set();
+  if (!url || !key) {
+    return null;
   }
 
-  try {
-    const data = JSON.parse(await fs.readFile(permissionsPath, "utf8"));
-    const wallets = Array.isArray(data.wallets) ? data.wallets : [];
-    return new Set(wallets.map(normalizeWalletAddress).filter(Boolean));
-  } catch {
-    return new Set();
+  return { url, key };
+}
+
+async function walletAllowed(wallet) {
+  const config = supabaseConfig();
+
+  if (!config) {
+    return false;
   }
+
+  const response = await fetch(`${config.url}/rest/v1/wallet_permissions?select=wallet_address&wallet_address=eq.${encodeURIComponent(wallet)}&can_view_progression=eq.true&limit=1`, {
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${config.key}`,
+    },
+  });
+
+  if (!response.ok) {
+    console.warn(`Could not check wallet permissions: ${response.status} ${await response.text()}`);
+    return false;
+  }
+
+  const rows = await response.json();
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 async function verifyWalletProof(request) {
@@ -150,8 +164,7 @@ async function verifyWalletProof(request) {
     return false;
   }
 
-  const whitelist = await allowedWallets();
-  if (!whitelist.has(wallet)) {
+  if (!(await walletAllowed(wallet))) {
     return false;
   }
 

@@ -1,5 +1,3 @@
-const fs = require("node:fs/promises");
-const path = require("node:path");
 const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
@@ -21,19 +19,6 @@ function walletAccessMessage() {
 
 function stringToHex(value) {
   return Buffer.from(value, "utf8").toString("hex");
-}
-
-async function findFile(candidates) {
-  for (const candidate of candidates) {
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      // Try the next possible Vercel/local path.
-    }
-  }
-
-  return null;
 }
 
 async function verifyWalletProof(request) {
@@ -98,18 +83,6 @@ async function verifyWalletProof(request) {
   }
 }
 
-function normalizedOptInList(data) {
-  const wallets = new Set((Array.isArray(data?.wallets) ? data.wallets : [])
-    .map(normalizeWalletAddress)
-    .filter(Boolean));
-
-  return {
-    version: Number(data?.version || 0),
-    updated_at: String(data?.updated_at || ""),
-    wallets: Array.from(wallets).sort(),
-  };
-}
-
 function supabaseConfig() {
   const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
   const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
@@ -119,10 +92,6 @@ function supabaseConfig() {
   }
 
   return { url, key };
-}
-
-function isProductionFunction() {
-  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_REGION);
 }
 
 async function supabaseRequest(pathname, options = {}) {
@@ -173,50 +142,12 @@ async function writeSupabaseOptIn(wallet) {
   };
 }
 
-async function localOptInPath() {
-  return findFile([
-    path.join(__dirname, "wallet-opt-ins-list.json"),
-    path.join(process.cwd(), "api", "wallet-opt-ins-list.json"),
-    path.join(process.cwd(), "site", "api", "wallet-opt-ins-list.json"),
-  ]);
-}
-
-async function writeLocalOptIns(wallet) {
-  const optInPath = await localOptInPath();
-
-  if (!optInPath) {
-    throw new Error("Local opt-in list could not be found.");
-  }
-
-  const current = normalizedOptInList(JSON.parse(await fs.readFile(optInPath, "utf8")));
-  const wallets = new Set(current.wallets);
-
-  if (wallets.has(wallet)) {
-    return { recorded: false, storage: "local", wallet_count: wallets.size };
-  }
-
-  wallets.add(wallet);
-
-  const output = {
-    version: current.version + 1,
-    updated_at: new Date().toISOString(),
-    wallets: Array.from(wallets).sort(),
-  };
-
-  await fs.writeFile(optInPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
-  return { recorded: true, storage: "local", wallet_count: output.wallets.length };
-}
-
 async function recordOptIn(wallet) {
-  if (supabaseConfig()) {
-    return writeSupabaseOptIn(wallet);
-  }
-
-  if (isProductionFunction()) {
+  if (!supabaseConfig()) {
     throw new Error("Supabase opt-in logging is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
   }
 
-  return writeLocalOptIns(wallet);
+  return writeSupabaseOptIn(wallet);
 }
 
 module.exports = async function handler(request, response) {
