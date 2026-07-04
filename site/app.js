@@ -1662,6 +1662,19 @@ function evaluationSavedIdFromUrl() {
   return new URLSearchParams(window.location.search).get("saved") || "";
 }
 
+function isPlainEvaluationUrl() {
+  if (window.location.pathname !== "/evaluation") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return !params.get("player") && !params.get("share") && !params.get("saved");
+}
+
+function shouldShowEvaluationRecentResults() {
+  return isPlainEvaluationUrl() || document.activeElement === evaluationSearchInput;
+}
+
 function basicEvaluationPathForPlayer(playerId = "") {
   const id = String(playerId || "").trim();
   return id ? `/evaluation?player=${encodeURIComponent(id)}` : "/evaluation";
@@ -4017,6 +4030,13 @@ function clearEvaluationSearchFocus() {
 
 function renderEvaluationSearchResults() {
   const query = evaluationSearchInput.value.trim().toLowerCase();
+
+  if (!query && !shouldShowEvaluationRecentResults()) {
+    evaluationSearchResults.hidden = true;
+    evaluationSearchResults.replaceChildren();
+    return;
+  }
+
   const rows = query ? evaluationSearchMatches(query) : recentEvaluationRows();
 
   evaluationSearchResults.replaceChildren();
@@ -4200,6 +4220,8 @@ function renderEvaluationTable(row) {
   const presentValues = [];
 
   evaluationPanel.hidden = false;
+  evaluationSearchResults.hidden = true;
+  evaluationSearchResults.replaceChildren();
   evaluationButtons.hidden = false;
   evaluationResetButton.hidden = false;
   if (evaluationLoadButton) {
@@ -6580,6 +6602,14 @@ evaluationSearchInput.addEventListener("pointerdown", handleEvaluationSearchPoin
 evaluationSearchInput.addEventListener("pointermove", updateEvaluationSearchCursor);
 evaluationSearchInput.addEventListener("pointerleave", resetEvaluationSearchCursor);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
+evaluationSearchInput.addEventListener("blur", () => {
+  window.setTimeout(() => {
+    if (!isPlainEvaluationUrl() && document.activeElement !== evaluationSearchInput && !evaluationSearchResults.contains(document.activeElement)) {
+      evaluationSearchResults.hidden = true;
+      evaluationSearchResults.replaceChildren();
+    }
+  }, 120);
+});
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
   renderEvaluationPage();
