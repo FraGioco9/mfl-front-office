@@ -3728,7 +3728,7 @@ td a {
 }
 
 
-/* v1.89.23 */
+/* v1.89.24 */
 .evaluationFooterDeleteButton {
   gap: 8px;
 }
@@ -3740,4 +3740,18 @@ td a {
 
 .evaluationFooterDeleteButton[hidden] {
   display: none;
+}
+
+/* v1.89.24 */
+.evaluationFooterDeleteButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
+.evaluationFooterDeleteButton:hover:not(:disabled),
+.evaluationFooterDeleteButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
 }

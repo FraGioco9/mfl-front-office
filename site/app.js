@@ -1676,6 +1676,28 @@ function replaceEvaluationUrlWithBasicPlayer(playerId = state.evaluationPlayerId
   }
 }
 
+function resetEvaluationToDefaultForPlayer(playerId = state.evaluationPlayerId) {
+  const id = String(playerId || "").trim();
+
+  state.evaluationShareId = "";
+  state.evaluationSavedId = "";
+  state.evaluationIgnoreDiscountRate = false;
+  state.evaluationIgnoreFirstSeason = false;
+
+  if (id) {
+    delete state.evaluationOverallRows[id];
+    delete state.evaluationSummaryPositions[id];
+    state.evaluationPlayerId = id;
+    replaceEvaluationUrlWithBasicPlayer(id);
+  } else {
+    state.evaluationPlayerId = null;
+    replaceEvaluationUrlWithBasicPlayer("");
+  }
+
+  renderEvaluationMflPerUsdControl(false);
+  renderEvaluationPage();
+}
+
 function redirectSavedEvaluationLinkToBasicEvaluation() {
   if (window.location.pathname !== "/evaluation" || !evaluationSavedIdFromUrl()) {
     return false;
@@ -6588,15 +6610,7 @@ if (evaluationDeleteButton) {
 
     try {
       await deleteSavedEvaluation(savedId);
-      state.evaluationSavedId = "";
-      updateEvaluationFooterActions();
-
-      if (playerId) {
-        const url = new URL("/evaluation", window.location.origin);
-        url.searchParams.set("player", playerId);
-        window.history.replaceState({}, "", url.toString());
-      }
-
+      resetEvaluationToDefaultForPlayer(playerId);
       showToast("Saved evaluation deleted.");
     } catch (error) {
       showToast(error?.message || "Could not delete saved evaluation.");
@@ -6668,13 +6682,7 @@ evaluationResetButton.addEventListener("click", () => {
     return;
   }
 
-  const playerId = String(getValue(row, "player_id") || state.evaluationPlayerId || "").trim();
-  state.evaluationShareId = "";
-  state.evaluationSavedId = "";
-  delete state.evaluationOverallRows[evaluationOverallKey(row)];
-  delete state.evaluationSummaryPositions[playerId];
-  replaceEvaluationUrlWithBasicPlayer(playerId);
-  renderEvaluationTable(row);
+  resetEvaluationToDefaultForPlayer(getValue(row, "player_id") || state.evaluationPlayerId);
 });
 
 const openEvaluationPlayerPage = (event) => {
