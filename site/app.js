@@ -4015,6 +4015,20 @@ function clearEvaluationSearchFocus() {
   evaluationSearchResults.replaceChildren();
 }
 
+function evaluationHasSelectedPlayerInUrl() {
+  return window.location.pathname === "/evaluation" && Boolean(evaluationPlayerIdFromUrl());
+}
+
+function handleEvaluationSearchFocus() {
+  if (state.evaluationPlayerId || evaluationHasSelectedPlayerInUrl()) {
+    evaluationSearchResults.hidden = true;
+    evaluationSearchResults.replaceChildren();
+    return;
+  }
+
+  renderEvaluationSearchResults();
+}
+
 function renderEvaluationSearchResults() {
   const query = evaluationSearchInput.value.trim().toLowerCase();
   const rows = query ? evaluationSearchMatches(query) : recentEvaluationRows();
@@ -4199,6 +4213,8 @@ function renderEvaluationTable(row) {
   const mflValues = [];
   const presentValues = [];
 
+  evaluationSearchResults.hidden = true;
+  evaluationSearchResults.replaceChildren();
   evaluationPanel.hidden = false;
   evaluationButtons.hidden = false;
   evaluationResetButton.hidden = false;
@@ -6579,7 +6595,7 @@ evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchInput.addEventListener("pointerdown", handleEvaluationSearchPointerDown);
 evaluationSearchInput.addEventListener("pointermove", updateEvaluationSearchCursor);
 evaluationSearchInput.addEventListener("pointerleave", resetEvaluationSearchCursor);
-evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
+evaluationSearchInput.addEventListener("focus", handleEvaluationSearchFocus);
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
   renderEvaluationPage();
