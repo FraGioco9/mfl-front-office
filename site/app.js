@@ -1060,6 +1060,8 @@ function accountName() {
 
 function updateEvaluationFooterActions() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
+  const savedEvaluationActive = Boolean(state.evaluationSavedId || evaluationSavedIdFromUrl());
+  const sharedEvaluationActive = Boolean(state.evaluationShareId || evaluationShareIdFromUrl());
   if (evaluationSaveButton) {
     evaluationSaveButton.hidden = !walletLinked;
   }
@@ -1067,7 +1069,7 @@ function updateEvaluationFooterActions() {
     evaluationShareButton.hidden = !walletLinked;
   }
   if (evaluationDeleteButton) {
-    evaluationDeleteButton.hidden = !walletLinked || !state.evaluationSavedId;
+    evaluationDeleteButton.hidden = !walletLinked || !savedEvaluationActive || sharedEvaluationActive;
   }
 }
 
@@ -6659,7 +6661,11 @@ if (evaluationShareButton) {
     try {
       const shareUrl = await createSharedEvaluation();
       if (shareUrl) {
+        const parsedShareUrl = new URL(shareUrl, window.location.origin);
+        state.evaluationShareId = parsedShareUrl.searchParams.get("share") || "";
+        state.evaluationSavedId = "";
         window.history.replaceState({}, "", shareUrl);
+        updateEvaluationFooterActions();
       }
       try {
         await navigator.clipboard.writeText(shareUrl);

@@ -3728,7 +3728,7 @@ td a {
 }
 
 
-/* v1.89.24 */
+/* v1.89.25 */
 .evaluationFooterDeleteButton {
   gap: 8px;
 }
@@ -3742,7 +3742,7 @@ td a {
   display: none;
 }
 
-/* v1.89.24 */
+/* v1.89.25 */
 .evaluationFooterDeleteButton {
   border-color: var(--border);
   background: var(--surface-muted);
