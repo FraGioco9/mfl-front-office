@@ -3726,3 +3726,18 @@ td a {
 .evaluationFooterDeleteButton[hidden] {
   display: none;
 }
+
+
+/* v1.89.23 */
+.evaluationFooterDeleteButton {
+  gap: 8px;
+}
+
+.evaluationFooterDeleteButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.evaluationFooterDeleteButton[hidden] {
+  display: none;
+}
