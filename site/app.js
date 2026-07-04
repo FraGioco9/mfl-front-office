@@ -4303,14 +4303,14 @@ function renderEvaluationPage() {
   if (savedId && !hasWalletOptIn()) {
     redirectSavedEvaluationLinkToBasicEvaluation();
   } else if (savedId && state.evaluationSavedId !== savedId) {
-    renderEmptyEvaluationSelection(false);
+    renderEmptyEvaluationSelection(true);
     void loadSavedEvaluation(savedId);
     return;
   }
 
   const shareId = evaluationShareIdFromUrl();
   if (shareId && state.evaluationShareId !== shareId) {
-    renderEmptyEvaluationSelection(false);
+    renderEmptyEvaluationSelection(true);
     void loadSharedEvaluation(shareId);
     return;
   }
