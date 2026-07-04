@@ -3709,3 +3709,20 @@ td a {
   opacity: 1;
   transform: translateY(0);
 }
+
+
+/* v1.89.22 */
+.evaluationFooterSavedActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.evaluationFooterDeleteButton {
+  align-self: center;
+}
+
+.evaluationFooterDeleteButton[hidden] {
+  display: none;
+}

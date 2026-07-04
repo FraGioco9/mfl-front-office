@@ -333,6 +333,7 @@ const evaluationLoadButton = document.querySelector("#evaluationLoadButton");
 const evaluationPlayerPageButton = document.querySelector("#evaluationPlayerPageButton");
 const evaluationSaveButton = document.querySelector("#evaluationSaveButton");
 const evaluationShareButton = document.querySelector("#evaluationShareButton");
+const evaluationDeleteButton = document.querySelector("#evaluationDeleteButton");
 const evaluationOptionFilters = document.querySelector("#evaluationOptionFilters");
 const ignoreDiscountRateInput = document.querySelector("#ignoreDiscountRateInput");
 const ignoreFirstSeasonInput = document.querySelector("#ignoreFirstSeasonInput");
@@ -1057,6 +1058,19 @@ function accountName() {
   return state.linkedWalletAddress ? agentNameForWallet(state.linkedWalletAddress) : "Guest";
 }
 
+function updateEvaluationFooterActions() {
+  const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
+  if (evaluationSaveButton) {
+    evaluationSaveButton.hidden = !walletLinked;
+  }
+  if (evaluationShareButton) {
+    evaluationShareButton.hidden = !walletLinked;
+  }
+  if (evaluationDeleteButton) {
+    evaluationDeleteButton.hidden = !walletLinked || !state.evaluationSavedId;
+  }
+}
+
 function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
@@ -1064,12 +1078,7 @@ function updateAccountState() {
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
   linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
-  if (evaluationSaveButton) {
-    evaluationSaveButton.hidden = !walletLinked;
-  }
-  if (evaluationShareButton) {
-    evaluationShareButton.hidden = !walletLinked;
-  }
+  updateEvaluationFooterActions();
   if (evaluationLoadButton) {
     evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
     evaluationButtons.hidden = Boolean(state.evaluationPlayerId) ? evaluationButtons.hidden : !walletLinked;
@@ -1880,6 +1889,7 @@ async function createSavedEvaluation() {
 
   state.evaluationSavedId = id;
   state.evaluationShareId = "";
+  updateEvaluationFooterActions();
   const url = new URL("/evaluation", window.location.origin);
   url.searchParams.set("player", playerId);
   url.searchParams.set("saved", id);
@@ -1918,11 +1928,13 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     const data = await response.json();
     state.evaluationSavedId = id;
     state.evaluationShareId = "";
+    updateEvaluationFooterActions();
     clearEvaluationSearchFocus();
     applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
     state.evaluationSavedId = id;
+    updateEvaluationFooterActions();
     renderEmptyEvaluationSelection(true);
   } finally {
     state.evaluationSavedLoading = false;
@@ -2137,6 +2149,7 @@ function renderSavedEvaluationList(rows) {
 
         if (state.evaluationSavedId === String(entry.id || "")) {
           state.evaluationSavedId = "";
+          updateEvaluationFooterActions();
         }
 
         showToast("Saved evaluation deleted.");
@@ -3938,6 +3951,7 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
   }
   evaluationPlayerPageButton.hidden = true;
   evaluationOptionFilters.hidden = true;
+  updateEvaluationFooterActions();
 
   if (showRecentResults) {
     renderEvaluationSearchResults();
@@ -3949,6 +3963,7 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
 function resetEvaluationSelection() {
   state.evaluationShareId = "";
   state.evaluationSavedId = "";
+  updateEvaluationFooterActions();
   state.evaluationPlayerId = null;
   syncEvaluationPlayerUrl(null);
   renderEmptyEvaluationSelection(true);
@@ -4226,6 +4241,7 @@ function renderEvaluationTable(row) {
 
   evaluationSummaryBody.replaceChildren(summaryRow);
   evaluationTableBody.replaceChildren(fragment);
+  updateEvaluationFooterActions();
   evaluationSummaryBody.querySelectorAll("[data-evaluation-summary-position]").forEach((select) => {
     select.addEventListener("dblclick", (event) => {
       event.preventDefault();
@@ -6558,6 +6574,37 @@ evaluationMflUsdInput.addEventListener("keydown", (event) => {
     renderEvaluationMflPerUsdControl(false);
   }
 });
+if (evaluationDeleteButton) {
+  evaluationDeleteButton.addEventListener("click", async () => {
+    const savedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
+    const playerId = String(state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "").trim();
+
+    if (!savedId) {
+      showToast("No saved evaluation to delete.");
+      return;
+    }
+
+    evaluationDeleteButton.disabled = true;
+
+    try {
+      await deleteSavedEvaluation(savedId);
+      state.evaluationSavedId = "";
+      updateEvaluationFooterActions();
+
+      if (playerId) {
+        const url = new URL("/evaluation", window.location.origin);
+        url.searchParams.set("player", playerId);
+        window.history.replaceState({}, "", url.toString());
+      }
+
+      showToast("Saved evaluation deleted.");
+    } catch (error) {
+      showToast(error?.message || "Could not delete saved evaluation.");
+    } finally {
+      evaluationDeleteButton.disabled = false;
+    }
+  });
+}
 if (evaluationSaveButton) {
   evaluationSaveButton.addEventListener("click", async () => {
     evaluationSaveButton.disabled = true;

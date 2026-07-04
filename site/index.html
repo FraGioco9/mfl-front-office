@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.21">
+    <link rel="stylesheet" href="/styles.css?v=1.89.22">
   </head>
   <body data-page="home" class="booting">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden>
@@ -268,8 +268,11 @@
               </div>
             </div>
             <div class="evaluationFooterActions" aria-label="Evaluation save and share actions">
-              <button id="evaluationSaveButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg><span>Save</span></button>
               <button id="evaluationShareButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button"><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg><span>Share</span></button>
+              <span class="evaluationFooterSavedActions">
+                <button id="evaluationDeleteButton" class="evaluationLoadIconButton evaluationLoadDeleteButton evaluationFooterDeleteButton" type="button" aria-label="Delete saved evaluation" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg></button>
+                <button id="evaluationSaveButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg><span>Save</span></button>
+              </span>
             </div>
           </section>
         </section>
@@ -281,6 +284,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.22</span><p>Invert Evaluation save and share actions</p></li>
               <li><span>v1.89.21</span><p>Move Evaluation action buttons beside search</p></li>
               <li><span>v1.89.20</span><p>Refine Evaluation action layout</p></li>
               <li><span>v1.89.19</span><p>Refine Evaluation metrics and saved result details</p></li>
@@ -663,7 +667,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.21</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.22</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -763,6 +767,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.21"></script>
+    <script src="/app.js?v=1.89.22"></script>
   </body>
 </html>
