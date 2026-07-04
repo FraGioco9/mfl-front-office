@@ -6628,6 +6628,7 @@ if (evaluationSaveButton) {
       const saveResult = await createSavedEvaluation();
       if (saveResult?.url) {
         window.history.replaceState({}, "", saveResult.url);
+        updateEvaluationFooterActions();
         showToast(saveResult.overwritten ? "Evaluation overwritten and saved." : "Evaluation saved.");
       }
     } catch (error) {
