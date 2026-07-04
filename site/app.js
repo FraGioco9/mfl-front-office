@@ -1713,6 +1713,22 @@ function redirectSavedEvaluationLinkToBasicEvaluation() {
   return true;
 }
 
+function resetInvalidEvaluationLinkToPlainEvaluation() {
+  if (window.location.pathname !== "/evaluation") {
+    return false;
+  }
+
+  if (!evaluationSavedIdFromUrl() && !evaluationShareIdFromUrl()) {
+    return false;
+  }
+
+  state.evaluationSavedId = "";
+  state.evaluationShareId = "";
+  state.evaluationPlayerId = null;
+  window.history.replaceState({}, "", "/evaluation");
+  return true;
+}
+
 function normalizeSharedEvaluationPayload(payload) {
   const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
   const playerId = String(data.playerId || data.player_id || "").trim();
@@ -1814,7 +1830,7 @@ async function loadSharedEvaluation(shareId) {
     applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
-    state.evaluationShareId = id;
+    resetInvalidEvaluationLinkToPlainEvaluation();
     renderEmptyEvaluationSelection(true);
   } finally {
     state.evaluationShareLoading = false;
@@ -1957,7 +1973,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
-    state.evaluationSavedId = id;
+    resetInvalidEvaluationLinkToPlainEvaluation();
     updateEvaluationFooterActions();
     renderEmptyEvaluationSelection(true);
   } finally {
