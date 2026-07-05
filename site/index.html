@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.57">
+    <link rel="stylesheet" href="/styles.css?v=1.89.58">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -284,8 +284,9 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.58</span><p>Organize the changelog into collapsible minor-version sections</p></li>
               <li><span>v1.89.57</span><p>Add Advanced Settings reset action and remove Contracts Table shadows</p></li>
-              <li><span>v1.89.56</span><p>Load progression with public data, speed up progression fetches, and sync evaluation settings to wallet preferences</p></li>
+              <li><span>v1.89.56</span><p>Sync evaluation settings to wallet preferences</p></li>
               <li><span>v1.89.55</span><p>Show player progression to everyone and unify loading messages</p></li>
               <li><span>v1.89.54</span><p>Load full individual-player data while keeping progression views permission-gated</p></li>
               <li><span>v1.89.53</span><p>Recreate Contracts Table with matched sticky headers and clipped scrolling rows</p></li>
@@ -293,8 +294,8 @@
               <li><span>v1.89.51</span><p>Polish late-career reward rate controls and add collapse animation</p></li>
               <li><span>v1.89.50</span><p>Save late-career reward rates with evaluations and make Advanced Settings collapsible</p></li>
               <li><span>v1.89.49</span><p>Add configurable late-career reward rates to Evaluation advanced settings</p></li>
-              <li><span>v1.89.48</span><p>Keep table view sorting independent, update the footer version, and finish successful loading bars at 100%</p></li>
-              <li><span>v1.89.47</span><p>Remove Database Next Overall, keep Next Overall sorting instant, and finish preparing-data loading at 100%</p></li>
+              <li><span>v1.89.48</span><p>Keep table view sorting independent, update the footer version</p></li>
+              <li><span>v1.89.47</span><p>Remove Database Next Overall, keep Next Overall sorting instant</p></li>
               <li><span>v1.89.46</span><p>Show preparing-data completion and speed up first-load and Next Overall paths</p></li>
               <li><span>v1.89.45</span><p>Load exported data through the protected API with static fallback</p></li>
               <li><span>v1.89.44</span><p>Fix exported data fallback for first-time and full-access loads</p></li>
@@ -302,7 +303,7 @@
               <li><span>v1.89.42</span><p>Fill preparing-data progress, reveal pages immediately after Home refresh, and keep sorting session-only</p></li>
               <li><span>v1.89.41</span><p>Fill the preparing-data progress step and speed up Next Overall sorting with indexed columns</p></li>
               <li><span>v1.89.40</span><p>Keep loading progress monotonic and preserve saved sorting after refresh</p></li>
-              <li><span>v1.89.39</span><p>Restore parsed data snapshots from IndexedDB and use static public data files to speed up refresh loading</p></li>
+              <li><span>v1.89.39</span><p>Optimized refresh loading</p></li>
               <li><span>v1.89.38</span><p>Show the loading screen immediately during refresh instead of leaving a blank page</p></li>
               <li><span>v1.89.37</span><p>Restore cached player data on refresh and tighten Rome scheduled update gating</p></li>
               <li><span>v1.89.36</span><p>Sync recent player searches across tabs, make searches accent-insensitive</p></li>
@@ -702,7 +703,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.57</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.58</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -824,6 +825,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.57"></script>
+    <script src="/app.js?v=1.89.58"></script>
   </body>
 </html>
