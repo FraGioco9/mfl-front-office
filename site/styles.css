@@ -1037,9 +1037,11 @@ main {
   color: var(--text);
   font-weight: 700;
   text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
-.watchlistButton:hover {
+.watchlistButton:hover,
+.watchlistButton:focus-visible {
   border-color: var(--primary-hover);
   background: var(--row-hover);
 }
@@ -1250,6 +1252,13 @@ button:hover:not(:disabled) {
 .viewButton:not(.active):hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
+}
+
+.watchlistButton:hover:not(:disabled),
+.watchlistButton:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
 }
 
 .viewButton.active:hover:not(:disabled) {
