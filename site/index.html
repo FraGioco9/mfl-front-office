@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.41">
+    <link rel="stylesheet" href="/styles.css?v=1.89.42">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -284,12 +284,13 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.42</span><p>Fill preparing-data progress, reveal pages immediately after Home refresh, and keep sorting session-only</p></li>
               <li><span>v1.89.41</span><p>Fill the preparing-data progress step and speed up Next Overall sorting with indexed columns</p></li>
               <li><span>v1.89.40</span><p>Keep loading progress monotonic and preserve saved sorting after refresh</p></li>
               <li><span>v1.89.39</span><p>Restore parsed data snapshots from IndexedDB and use static public data files to speed up refresh loading</p></li>
               <li><span>v1.89.38</span><p>Show the loading screen immediately during refresh instead of leaving a blank page</p></li>
               <li><span>v1.89.37</span><p>Restore cached player data on refresh and tighten Rome scheduled update gating</p></li>
-              <li><span>v1.89.36</span><p>Sync recent player searches across tabs, make searches accent-insensitive, reduce Watchlist load lag, and fix scheduled refresh times</p></li>
+              <li><span>v1.89.36</span><p>Sync recent player searches across tabs, make searches accent-insensitive</p></li>
               <li><span>v1.89.35</span><p>Load Watchlist edits before revealing the page</p></li>
               <li><span>v1.89.34</span><p>Stabilize Watchlist sync and prevent row flicker</p></li>
               <li><span>v1.89.33</span><p>Merge concurrent Watchlist edits across tabs</p></li>
@@ -786,6 +787,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.41"></script>
+    <script src="/app.js?v=1.89.42"></script>
   </body>
 </html>

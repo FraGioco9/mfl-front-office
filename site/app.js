@@ -586,7 +586,13 @@ function showLoading() {
   loadingScreen.hidden = false;
   loadingScreen.classList.remove("failed", "complete", "leaving");
   state.loadingPercent = 0;
-  setLoadingPercent(0, "Preparing data...", { allowBackwards: true });
+  setLoadingPercent(3, "Preparing data...", { allowBackwards: true });
+
+  window.setTimeout(() => {
+    if (document.body.classList.contains("loading") && state.loadingPercent < 8) {
+      setLoadingPercent(8, "Preparing data...");
+    }
+  }, 0);
 }
 
 function appOrigin() {
@@ -2448,11 +2454,24 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
     homePage.hidden = true;
-    progressionPage.hidden = true;
+    progressionPage.hidden = !tablePage;
     myPlayersLockedPage.hidden = true;
-    evaluationPage.hidden = true;
-    playerPage.hidden = true;
+    evaluationPage.hidden = !evaluationPageActive;
+    playerPage.hidden = !playerPageActive;
     changelogPage.hidden = true;
+
+    if (tablePage) {
+      tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
+      emptyState.hidden = false;
+      emptyState.textContent = "Loading players...";
+      tableBody.replaceChildren();
+    }
+
+    navButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.page === pageName);
+    });
+    revealAppShell();
+
     const loaded = await ensureProgressionData();
 
     if (!loaded) {
@@ -3169,7 +3188,7 @@ async function saveWalletPreferencesNow() {
 
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
-      body.tableState = currentTableState();
+      body.tableState = stripPersistentSortState(currentTableState());
     }
 
     const response = await fetch("/api/wallet-preferences", {
@@ -3262,9 +3281,34 @@ function currentTableState() {
   };
 }
 
+function stripPersistentSortState(savedState) {
+  if (!savedState || typeof savedState !== "object" || Array.isArray(savedState)) {
+    return savedState;
+  }
+
+  const sanitized = { ...savedState };
+  delete sanitized.sortKey;
+  delete sanitized.sortDirection;
+
+  if (sanitized.pages && typeof sanitized.pages === "object") {
+    sanitized.pages = Object.fromEntries(Object.entries(sanitized.pages).map(([pageName, pageState]) => {
+      if (!pageState || typeof pageState !== "object" || Array.isArray(pageState)) {
+        return [pageName, pageState];
+      }
+
+      const sanitizedPageState = { ...pageState };
+      delete sanitizedPageState.sortKey;
+      delete sanitizedPageState.sortDirection;
+      return [pageName, sanitizedPageState];
+    }));
+  }
+
+  return sanitized;
+}
+
 function saveTableStateLocally(savedState) {
   try {
-    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(savedState));
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(stripPersistentSortState(savedState)));
   } catch {
     // Filtering still works for this page even if the browser blocks storage.
   }
@@ -3429,10 +3473,12 @@ function restoreLinkedWalletState(savedState) {
 }
 
 function restoreTablePageStates(savedState) {
-  if (savedState?.pages) {
-    state.tablePageStates = { ...savedState.pages };
-  } else if (savedState) {
-    state.tablePageStates = { progression: { ...savedState } };
+  const sanitizedState = stripPersistentSortState(savedState);
+
+  if (sanitizedState?.pages) {
+    state.tablePageStates = { ...sanitizedState.pages };
+  } else if (sanitizedState) {
+    state.tablePageStates = { progression: { ...sanitizedState } };
   } else {
     state.tablePageStates = {};
   }
@@ -5787,9 +5833,7 @@ function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage
 }
 
 function restoreSavedTableState(pageName = tablePageKey() || "progression") {
-  const savedRoot = loadSavedTableState();
-  const savedState = savedRoot?.pages?.[pageName]
-    || (pageName === "progression" && !savedRoot?.pages ? savedRoot : null)
+  const savedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
 
   state.view = normalizeViewForPage(savedState.view, pageName);
@@ -5800,13 +5844,9 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
     pageSizeSelect.value = String(state.pageSize);
   }
 
-  if (savedState.sortKey && sortableColumns.has(savedState.sortKey)) {
-    state.sortKey = savedState.sortKey;
-  }
-
-  if (savedState.sortDirection === "asc" || savedState.sortDirection === "desc") {
-    state.sortDirection = savedState.sortDirection;
-  }
+  const defaultSortState = defaultTablePageState(pageName);
+  state.sortKey = sortableColumns.has(savedState.sortKey) ? savedState.sortKey : defaultSortState.sortKey;
+  state.sortDirection = savedState.sortDirection === "asc" || savedState.sortDirection === "desc" ? savedState.sortDirection : defaultSortState.sortDirection;
 
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
@@ -6803,8 +6843,13 @@ async function loadData(options = {}) {
     const progressEnd = options.progressEnd ?? 100;
     const phaseProgress = (percent) => progressStart + ((progressEnd - progressStart) * (percent / 100));
     const phaseRange = (start, end) => loadingRangeProgress(phaseProgress(start), phaseProgress(end), message);
-    const phaseSet = (percent) => setLoadingPercent(phaseProgress(percent), message);
+    const phaseSet = (percent, progressMessage = message) => setLoadingPercent(phaseProgress(percent), progressMessage);
     const phaseUpdate = (loaded, total) => updateLoadingProgress(loaded, total, message, { start: progressStart, end: progressEnd });
+    const prepareStep = async (percent, progressMessage) => {
+      phaseSet(percent, progressMessage);
+      await paintLoadingProgress();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    };
     const targetAccess = currentDataAccess();
     const upgradeFromPublic = targetAccess === "full"
       && state.dataAccess === "public"
@@ -6867,22 +6912,16 @@ async function loadData(options = {}) {
       }
     }
 
-    phaseSet(92);
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
-    loadingText.textContent = "Preparing search";
-    await paintLoadingProgress();
+    await prepareStep(92, "Preparing search");
     buildSearchIndex();
-    phaseSet(95);
-    loadingText.textContent = "Preparing filters";
-    await paintLoadingProgress();
+    await prepareStep(95, "Preparing filters");
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();
-    phaseSet(97);
-    loadingText.textContent = "Preparing table";
-    await paintLoadingProgress();
+    await prepareStep(98, "Preparing table");
     applyFilters();
-    phaseSet(100);
+    phaseSet(100, "Loading complete");
     state.dataLoaded = true;
     captureCurrentDataSnapshot();
     persistCurrentDataSnapshot();
