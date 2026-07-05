@@ -416,13 +416,23 @@ function loadTheme() {
   applyTheme(savedTheme || "dark");
 }
 
+function normalizeLoadingMessage(message) {
+  const text = String(message || "Loading data").trim();
+
+  if (text === "Loading complete") {
+    return text;
+  }
+
+  return text.endsWith("...") ? text : `${text.replace(/[.]+$/, "")}...`;
+}
+
 function setLoadingPercent(percent, message = "Loading data", options = {}) {
   const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
   const allowBackwards = Boolean(options.allowBackwards);
   const nextPercent = allowBackwards ? safePercent : Math.max(state.loadingPercent || 0, safePercent);
   state.loadingPercent = nextPercent;
   loadingBarFill.style.width = `${nextPercent}%`;
-  loadingText.textContent = message;
+  loadingText.textContent = normalizeLoadingMessage(message);
 }
 
 function updateLoadingProgress(loadedFiles, totalFiles, message = null, progressRange = null) {
@@ -453,7 +463,7 @@ function showLoadingError(message) {
   state.loadingPercent = 100;
   loadingBarFill.style.width = "100%";
   loadingScreen.classList.add("failed");
-  loadingText.textContent = message;
+  loadingText.textContent = normalizeLoadingMessage(message);
 }
 
 async function showUnauthorizedProgressionRedirect() {
@@ -771,15 +781,11 @@ function currentDataAccess(pageName = state.currentPage) {
     return state.dataAccessOverride;
   }
 
-  if (pageName === "player") {
+  if (pageRequiresData(pageName)) {
     return "full";
   }
 
-  if (hasProgressionAccess()) {
-    return "full";
-  }
-
-  return pageName === "myplayers" && hasWalletOptIn() ? "owned" : "public";
+  return "full";
 }
 
 function staticDataFileUrl(fileName) {
@@ -798,6 +804,8 @@ function dataFileUrl(fileName, options = {}) {
     query.set("access", "public-database");
   } else if (access === "owned") {
     query.set("access", "owned-progression");
+  } else if (access === "full") {
+    query.set("access", "full-progression");
   }
 
   if (access !== "public" && Array.isArray(options.columns) && options.columns.length) {
@@ -3485,7 +3493,7 @@ function restoreRecentEvaluationState(savedState) {
 }
 
 function playerCanViewProgression(row = null) {
-  return hasProgressionAccess() || (Boolean(row) && hasWalletOptIn() && rowIsOwnedByLinkedWallet(row));
+  return true;
 }
 
 function allowedPlayerAttributeViews(row = null) {

@@ -234,7 +234,7 @@ module.exports = async function handler(request, response) {
 
   const accessMode = String(request.query.access || "");
   const signedWallet = await signedWalletFromRequest(request);
-  const fullAccess = signedWallet ? await walletAllowed(signedWallet) : false;
+  const fullAccess = accessMode === "full-progression" || (signedWallet ? await walletAllowed(signedWallet) : false);
   const ownedProgression = accessMode === "owned-progression" && Boolean(signedWallet);
   const publicDatabase = accessMode === "public-database" || (!fullAccess && !ownedProgression);
   const fileName = String(request.query.file || "");
