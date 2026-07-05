@@ -25,17 +25,19 @@ alter table public.wallet_preferences add column if not exists table_state jsonb
 
 
 create table if not exists public.evaluation_saves (
-  id uuid primary key,
+  id text primary key,
   wallet_address text not null,
   player_id text not null,
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
+alter table public.evaluation_saves alter column id type text using id::text;
+
 create index if not exists evaluation_saves_wallet_created_idx on public.evaluation_saves (wallet_address, created_at desc);
 
 create table if not exists public.evaluation_shares (
-  id uuid primary key,
+  id text primary key,
   wallet_address text,
   player_id text not null,
   payload jsonb not null default '{}'::jsonb,
@@ -43,6 +45,7 @@ create table if not exists public.evaluation_shares (
   expires_at timestamptz not null
 );
 
+alter table public.evaluation_shares alter column id type text using id::text;
 alter table public.evaluation_shares add column if not exists wallet_address text;
 
 create index if not exists evaluation_shares_expires_at_idx on public.evaluation_shares (expires_at);

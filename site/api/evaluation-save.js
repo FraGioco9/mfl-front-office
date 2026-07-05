@@ -124,8 +124,12 @@ async function readBody(request) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function normalizeShareId(value) {
-  return String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+function normalizeEvaluationId(value) {
+  return String(value || "").trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 8);
+}
+
+function generateEvaluationId() {
+  return crypto.randomBytes(4).toString("hex");
 }
 
 function normalizeEvaluationPayload(payload) {
@@ -181,7 +185,7 @@ module.exports = async function handler(request, response) {
       const rawBody = await readBody(request);
       const body = rawBody ? JSON.parse(rawBody) : {};
       const payload = normalizeEvaluationPayload(body);
-      const requestedSavedId = normalizeShareId(body.savedId || body.id);
+      const requestedSavedId = normalizeEvaluationId(body.savedId || body.id);
 
       if (!payload) {
         response.status(400).json({ error: "Invalid evaluation save payload." });
@@ -221,7 +225,7 @@ module.exports = async function handler(request, response) {
         return;
       }
 
-      const id = crypto.randomUUID();
+      const id = generateEvaluationId();
       const rows = await supabaseRequest("evaluation_saves", {
         method: "POST",
         headers: {
@@ -245,7 +249,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "GET") {
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizeShareId(requestUrl.searchParams.get("id"));
+      const id = normalizeEvaluationId(requestUrl.searchParams.get("id"));
       const playerId = String(requestUrl.searchParams.get("player") || requestUrl.searchParams.get("playerId") || "").trim();
 
       if (id) {
@@ -282,7 +286,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "DELETE") {
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizeShareId(requestUrl.searchParams.get("id"));
+      const id = normalizeEvaluationId(requestUrl.searchParams.get("id"));
 
       if (!id) {
         response.status(400).json({ error: "Missing saved evaluation id." });

@@ -124,8 +124,12 @@ async function readBody(request) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function normalizeShareId(value) {
-  return String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+function normalizeEvaluationId(value) {
+  return String(value || "").trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 8);
+}
+
+function generateEvaluationId() {
+  return crypto.randomBytes(4).toString("hex");
 }
 
 function normalizeEvaluationPayload(payload) {
@@ -205,7 +209,7 @@ module.exports = async function handler(request, response) {
 
       await pruneOldestActiveShare(wallet);
 
-      const id = crypto.randomUUID();
+      const id = generateEvaluationId();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const rows = await supabaseRequest("evaluation_shares", {
         method: "POST",
@@ -231,7 +235,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "GET") {
       const requestUrl = new URL(request.url, "http://localhost");
-      const id = normalizeShareId(requestUrl.searchParams.get("id"));
+      const id = normalizeEvaluationId(requestUrl.searchParams.get("id"));
       const playerId = String(requestUrl.searchParams.get("player") || requestUrl.searchParams.get("playerId") || "").trim();
 
       if (!id) {
