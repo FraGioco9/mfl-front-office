@@ -1185,6 +1185,44 @@ button:disabled {
   line-height: 1;
 }
 
+
+.advancedLateSeasonRewardsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.advancedLateSeasonRewardSetting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.advancedPercentControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.advancedRewardRateInput {
+  width: 86px;
+  height: 42px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
+}
+
 .advancedSettingsFooter {
   flex: 0 0 auto;
 }

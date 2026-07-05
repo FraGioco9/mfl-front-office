@@ -37,6 +37,7 @@ const state = {
   evaluationIgnoreDiscountRate: false,
   evaluationIgnoreFirstSeason: false,
   evaluationMflPerUsd: 400,
+  evaluationLateSeasonRewardRates: [80, 80, 60],
   evaluationSummaryPositions: {},
   evaluationShareId: "",
   evaluationShareLoading: false,
@@ -367,6 +368,9 @@ const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetBu
 const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
 const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
 const advancedDiscountRateValue = document.querySelector("#advancedDiscountRateValue");
+const advancedThirdLastRewardInput = document.querySelector("#advancedThirdLastRewardInput");
+const advancedSecondLastRewardInput = document.querySelector("#advancedSecondLastRewardInput");
+const advancedFinalRewardInput = document.querySelector("#advancedFinalRewardInput");
 const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
@@ -1746,6 +1750,7 @@ function resetEvaluationToDefaultForPlayer(playerId = state.evaluationPlayerId) 
   state.evaluationSavedId = "";
   state.evaluationIgnoreDiscountRate = false;
   state.evaluationIgnoreFirstSeason = false;
+  state.evaluationLateSeasonRewardRates = [...DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES];
 
   if (id) {
     delete state.evaluationOverallRows[id];
@@ -1806,6 +1811,7 @@ function normalizeSharedEvaluationPayload(payload) {
     mflPerUsd,
     ignoreDiscountRate: Boolean(data.ignoreDiscountRate ?? data.ignore_discount_rate),
     ignoreFirstSeason: Boolean(data.ignoreFirstSeason ?? data.ignore_first_season),
+    lateSeasonRewardRates: evaluationLateSeasonRewardRatesFromPayload(data),
     overallValues,
     summaryPosition,
     summaryOverall: Number.isFinite(summaryOverall) ? summaryOverall : null,
@@ -1828,6 +1834,7 @@ function currentEvaluationSharePayload() {
     mflPerUsd: state.evaluationMflPerUsd,
     ignoreDiscountRate: state.evaluationIgnoreDiscountRate,
     ignoreFirstSeason: state.evaluationIgnoreFirstSeason,
+    lateSeasonRewardRates: normalizeEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates),
     overallValues,
     summaryPosition: row ? evaluationSummaryPosition(row) : "",
     summaryOverall: Number.isFinite(summaryOverall) ? summaryOverall : null,
@@ -1849,6 +1856,7 @@ function applySharedEvaluationPayload(payload) {
   }
   state.evaluationIgnoreDiscountRate = data.ignoreDiscountRate;
   state.evaluationIgnoreFirstSeason = data.ignoreFirstSeason;
+  state.evaluationLateSeasonRewardRates = normalizeEvaluationLateSeasonRewardRates(data.lateSeasonRewardRates);
 
   if (data.overallValues.length) {
     state.evaluationOverallRows[data.playerId] = data.overallValues;
@@ -2062,7 +2070,7 @@ function evaluationPresentValueTotalFromPayload(payload) {
   for (let rowIndex = 0; rowIndex < expectedSeasons; rowIndex += 1) {
     const season = rowIndex + 1 + seasonOffset;
     const overall = overallValues[season - 1] ?? overallValues[0];
-    const mflValue = evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons);
+    const mflValue = evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons, data.lateSeasonRewardRates);
     const usdValue = Number.isFinite(mflValue) ? mflValue / mflPerUsd : null;
     const discountFactor = evaluationDiscountFactor(discountRate, season);
     const presentValue = Number.isFinite(usdValue) && Number.isFinite(discountFactor) ? usdValue * discountFactor : null;
@@ -3975,6 +3983,8 @@ function buildSearchIndex() {
 
 const DEFAULT_EVALUATION_MFL_PER_USD = 400;
 const EVALUATION_MFL_PER_USD_STORAGE_KEY = "mfl-evaluation-mfl-per-usd";
+const DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES = [80, 80, 60];
+const EVALUATION_LATE_SEASON_REWARD_RATES_STORAGE_KEY = "mfl-evaluation-late-season-reward-rates";
 
 
 const evaluationTeamEarningsByOverall = {
@@ -4131,6 +4141,60 @@ function loadEvaluationMflPerUsd() {
   }
 }
 
+function parseEvaluationRewardRate(value) {
+  const parsedValue = Number.parseFloat(String(value).replace(",", "."));
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? Math.round(parsedValue * 100) / 100 : null;
+}
+
+function normalizeEvaluationLateSeasonRewardRates(value) {
+  const source = Array.isArray(value) ? value : [];
+  return DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES.map((defaultRate, index) => {
+    const parsedRate = parseEvaluationRewardRate(source[index]);
+    return parsedRate === null ? defaultRate : parsedRate;
+  });
+}
+
+function formatEvaluationRewardRate(value) {
+  const parsedRate = parseEvaluationRewardRate(value);
+  if (parsedRate === null) {
+    return "";
+  }
+  return Number.isInteger(parsedRate) ? String(parsedRate) : parsedRate.toFixed(2);
+}
+
+function saveEvaluationLateSeasonRewardRates(rates) {
+  const normalizedRates = normalizeEvaluationLateSeasonRewardRates(rates);
+  state.evaluationLateSeasonRewardRates = normalizedRates;
+
+  try {
+    if (normalizedRates.every((rate, index) => rate === DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[index])) {
+      localStorage.removeItem(EVALUATION_LATE_SEASON_REWARD_RATES_STORAGE_KEY);
+    } else {
+      localStorage.setItem(EVALUATION_LATE_SEASON_REWARD_RATES_STORAGE_KEY, JSON.stringify(normalizedRates));
+    }
+  } catch {
+    // Evaluation still recalculates for this page if the browser blocks storage.
+  }
+}
+
+function loadEvaluationLateSeasonRewardRates() {
+  try {
+    const savedRates = JSON.parse(localStorage.getItem(EVALUATION_LATE_SEASON_REWARD_RATES_STORAGE_KEY) || "null");
+    state.evaluationLateSeasonRewardRates = normalizeEvaluationLateSeasonRewardRates(savedRates);
+  } catch {
+    state.evaluationLateSeasonRewardRates = [...DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES];
+  }
+}
+
+function evaluationLateSeasonRewardRatesFromPayload(data) {
+  return normalizeEvaluationLateSeasonRewardRates(
+    data.lateSeasonRewardRates
+      ?? data.late_season_reward_rates
+      ?? data.lateCareerRewardRates
+      ?? data.late_career_reward_rates
+  );
+}
+
 function formatAdvancedPlayerTableValue(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue)
@@ -4192,6 +4256,10 @@ function syncAdvancedSettingsValues() {
   advancedMflUsdInput.value = state.evaluationMflPerUsd.toFixed(2);
   advancedMflUsdResetButton.hidden = state.evaluationMflPerUsd === DEFAULT_EVALUATION_MFL_PER_USD;
   advancedDiscountRateValue.textContent = evaluationDiscountRate.textContent || formatEvaluationRate(evaluationDiscountRateValue());
+  const rates = normalizeEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates);
+  advancedThirdLastRewardInput.value = formatEvaluationRewardRate(rates[0]);
+  advancedSecondLastRewardInput.value = formatEvaluationRewardRate(rates[1]);
+  advancedFinalRewardInput.value = formatEvaluationRewardRate(rates[2]);
 }
 
 function updateAdvancedMflUsdResetVisibility() {
@@ -4218,6 +4286,12 @@ function applyAdvancedSettings() {
   if (parsedValue) {
     saveEvaluationMflPerUsd(parsedValue);
   }
+
+  saveEvaluationLateSeasonRewardRates([
+    advancedThirdLastRewardInput.value,
+    advancedSecondLastRewardInput.value,
+    advancedFinalRewardInput.value,
+  ]);
 
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
@@ -4304,25 +4378,22 @@ const evaluationContractsTable = (() => {
   return table;
 })();
 
-function evaluationMflMultiplierForSeason(rowIndex, expectedSeasons) {
+function evaluationMflMultiplierForSeason(rowIndex, expectedSeasons, rates = state.evaluationLateSeasonRewardRates) {
   const seasonsFromEnd = expectedSeasons - rowIndex;
+  const normalizedRates = normalizeEvaluationLateSeasonRewardRates(rates);
 
-  if (seasonsFromEnd === 1) {
-    return 0.6;
-  }
-
-  if (seasonsFromEnd === 2 || seasonsFromEnd === 3) {
-    return 0.8;
+  if (seasonsFromEnd >= 1 && seasonsFromEnd <= 3) {
+    return normalizedRates[3 - seasonsFromEnd] / 100;
   }
 
   return 1;
 }
 
-function evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons) {
+function evaluationMflValueForOverall(overall, position, rowIndex, expectedSeasons, rates = state.evaluationLateSeasonRewardRates) {
   const roundedOverall = Math.round(Number(overall));
   const positionValues = evaluationContractsTable[roundedOverall] || {};
   const contractValue = positionValues[position] || 0;
-  return contractValue * evaluationMflMultiplierForSeason(rowIndex, expectedSeasons);
+  return contractValue * evaluationMflMultiplierForSeason(rowIndex, expectedSeasons, rates);
 }
 
 function formatEvaluationMfl(value) {
@@ -7132,7 +7203,7 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
-  } else if (event.key === "Enter" && !advancedSettingsModal.hidden && document.activeElement === advancedMflUsdInput) {
+  } else if (event.key === "Enter" && !advancedSettingsModal.hidden && [advancedMflUsdInput, advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].includes(document.activeElement)) {
     event.preventDefault();
     applyAdvancedSettings();
   }
@@ -7441,6 +7512,7 @@ async function startApp() {
   const initialPage = pageFromUrl();
   loadSavedTableState();
   loadEvaluationMflPerUsd();
+  loadEvaluationLateSeasonRewardRates();
   renderEvaluationMflPerUsdControl(false);
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
