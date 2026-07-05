@@ -2305,7 +2305,7 @@ async function ensureProgressionData() {
     return true;
   }
 
-  if (restoreDataSnapshot(targetAccess)) {
+  if (restoreDataSnapshot(targetAccess) || await restoreCachedDataForAccess(targetAccess)) {
     return true;
   }
 
@@ -6410,6 +6410,70 @@ function dataCacheVersionStorageKey(accessKey = dataCacheAccessKey()) {
   return `${DATA_CACHE_VERSION_KEY}:${accessKey}`;
 }
 
+function readCachedManifest() {
+  try {
+    const manifest = JSON.parse(localStorage.getItem(DATA_CACHE_MANIFEST_KEY) || "null");
+    return manifest && typeof manifest === "object" ? manifest : null;
+  } catch {
+    return null;
+  }
+}
+
+async function restoreCachedDataForAccess(access = currentDataAccess()) {
+  const manifest = readCachedManifest();
+
+  if (!manifest) {
+    return false;
+  }
+
+  const previousOverride = state.dataAccessOverride;
+  state.dataAccessOverride = access;
+
+  try {
+    const accessKey = dataCacheAccessKey(access);
+    const cacheVersion = dataCacheVersion(manifest, accessKey);
+    const cachedVersion = localStorage.getItem(dataCacheVersionStorageKey(accessKey));
+
+    if (cachedVersion !== cacheVersion) {
+      return false;
+    }
+
+    const publicChunk = await fetchDataFile(publicDataFile(manifest), { useCache: true });
+
+    if (!publicChunk || !Array.isArray(publicChunk.rows)) {
+      return false;
+    }
+
+    state.manifest = manifest;
+    state.columns = publicDataColumns(manifest);
+    state.rows = publicChunk.rows;
+    state.filteredRows = [];
+    state.page = 1;
+    state.dataAccess = access;
+
+    if (["full", "owned"].includes(access)) {
+      await upgradePublicDataToFull(manifest, { useCache: true });
+    }
+
+    statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
+    updateSummaryCounts(manifest.row_count, manifest.wallet_count);
+    buildSearchIndex();
+    populateAddFilterSelect();
+    restoreSavedTableState();
+    buildHeader();
+    applyFilters();
+    state.dataLoaded = true;
+    state.dataLoadPromise = null;
+    captureCurrentDataSnapshot();
+    updateAccountState();
+    return true;
+  } catch {
+    return false;
+  } finally {
+    state.dataAccessOverride = previousOverride;
+  }
+}
+
 function missingFullDataColumns(fullColumns) {
   return fullColumns.filter((column) => !state.columns.includes(column));
 }
@@ -6468,6 +6532,8 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
   const progressStart = progressOptions.startPercent ?? 55;
   const progressEnd = progressOptions.endPercent ?? 90;
   const progress = loadingRangeProgress(progressStart, progressEnd, message);
+  const useCache = Boolean(progressOptions.useCache);
+  const writeCache = Boolean(progressOptions.writeCache);
   await paintLoadingProgress();
 
   if (manifest?.files?.progression?.file) {
@@ -6476,6 +6542,8 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
     const progression = await fetchDataFile(progressionDataFile(manifest), {
       columns: requestColumns,
       onProgress: progress,
+      useCache,
+      writeCache,
     });
     mergeDataColumns(progression, columnsToMerge, rowMap);
     progress(1);
@@ -6485,7 +6553,11 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
       updateLoadingProgress(index, manifest.chunks.length, message);
       await paintLoadingProgress();
       const chunkInfo = manifest.chunks[index];
-      const chunk = await fetchDataFile(chunkInfo.file, { columns: requestColumns });
+      const chunk = await fetchDataFile(chunkInfo.file, {
+        columns: requestColumns,
+        useCache,
+        writeCache,
+      });
       mergeDataColumns(chunk, columnsToMerge, rowMap);
       updateLoadingProgress(index + 1, manifest.chunks.length, message);
     }
@@ -6530,44 +6602,19 @@ function loadingPhaseRange(index, total) {
 }
 
 async function preloadRefreshData(initialPage) {
-  showLoading();
-  const hasWallet = hasWalletOptIn();
-  const totalPhases = 1 + (hasWallet ? 3 : 0);
-  let phaseIndex = 0;
+  const targetAccess = currentDataAccess(initialPage);
+  const needsInitialData = pageRequiresData(initialPage);
 
-  await loadDataForAccess("public", "Loading player data", loadingPhaseRange(phaseIndex, totalPhases));
-  phaseIndex += 1;
-
-  if (hasWallet) {
-    await loadDataForAccess("owned", "Loading your players", loadingPhaseRange(phaseIndex, totalPhases));
-    phaseIndex += 1;
-
-    const permissionRange = loadingPhaseRange(phaseIndex, totalPhases);
-    setLoadingPercent(permissionRange.start, "Checking permissions");
-    await paintLoadingProgress();
-    const permissionResult = await loadWalletPermissions({ checkVersion: true });
-    setLoadingPercent(permissionRange.end, "Checking permissions");
-    await paintLoadingProgress();
-    phaseIndex += 1;
-    updateAccountState();
-    updateMenuVisibility();
-    syncHomeLoginButton();
-
-    if (permissionResult.changed) {
-      captureCurrentDataSnapshot();
-    }
-
-    if (hasProgressionAccess()) {
-      await loadDataForAccess("full", "Loading progression data", loadingPhaseRange(phaseIndex, totalPhases));
-      phaseIndex += 1;
-    }
+  if (!needsInitialData) {
+    return;
   }
 
-  const targetAccess = currentDataAccess(initialPage);
-  restoreDataSnapshot(targetAccess) || restoreDataSnapshot("public");
-  setLoadingPercent(100, "Loading complete");
-  await paintLoadingProgress();
-  await new Promise((resolve) => window.setTimeout(resolve, 450));
+  if (restoreDataSnapshot(targetAccess) || await restoreCachedDataForAccess(targetAccess)) {
+    return;
+  }
+
+  showLoading();
+  await loadDataForAccess(targetAccess, loadingMessageForAccess(targetAccess));
 }
 
 async function loadData(options = {}) {
@@ -6600,8 +6647,9 @@ async function loadData(options = {}) {
     if (upgradeFromPublic) {
       await upgradePublicDataToFull(manifest, { startPercent: phaseProgress(10), endPercent: phaseProgress(90), message });
     } else {
-      const cacheVersion = dataCacheVersion(manifest);
-      const cacheVersionKey = dataCacheVersionStorageKey();
+      const accessKey = dataCacheAccessKey(targetAccess);
+      const cacheVersion = dataCacheVersion(manifest, accessKey);
+      const cacheVersionKey = dataCacheVersionStorageKey(accessKey);
       const cachedVersion = localStorage.getItem(cacheVersionKey);
       const useCachedChunks = cachedVersion === cacheVersion;
 
@@ -6629,7 +6677,13 @@ async function loadData(options = {}) {
       publicProgress(1);
 
       if (["full", "owned"].includes(targetAccess)) {
-        await upgradePublicDataToFull(manifest, { startPercent: phaseProgress(55), endPercent: phaseProgress(90), message });
+        await upgradePublicDataToFull(manifest, {
+          startPercent: phaseProgress(55),
+          endPercent: phaseProgress(90),
+          message,
+          useCache: useCachedChunks,
+          writeCache: !useCachedChunks,
+        });
       }
     }
 

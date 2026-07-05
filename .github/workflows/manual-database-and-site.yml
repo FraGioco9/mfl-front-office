@@ -2,9 +2,13 @@ name: Manual database and site update
 
 on:
   schedule:
-    # GitHub cron is UTC. These cover Rome CET and CEST; the guard step keeps only Rome-time matches.
-    - cron: "20 8,9 * * *"
-    - cron: "5 17,18,21,22 * * *"
+    # GitHub cron is UTC. Separate CET/CEST candidates are gated against the intended Rome clock time.
+    - cron: "20 8 * * *"
+    - cron: "20 9 * * *"
+    - cron: "5 17 * * *"
+    - cron: "5 18 * * *"
+    - cron: "5 21 * * *"
+    - cron: "5 22 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -40,17 +44,24 @@ jobs:
         id: schedule_gate
         if: github.event_name == 'schedule'
         shell: bash
+        env:
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          from datetime import datetime
+          import os
+          from datetime import datetime, timezone
           from zoneinfo import ZoneInfo
 
-          now = datetime.now(ZoneInfo("Europe/Rome"))
-          targets = [(10, 20), (19, 5), (23, 5)]
-          should_run = any(
-              0 <= (now - now.replace(hour=hour, minute=minute, second=0, microsecond=0)).total_seconds() <= 20 * 60
-              for hour, minute in targets
-          )
+          cron = os.environ.get("SCHEDULE_CRON", "")
+          parts = cron.split()
+          should_run = False
+          if len(parts) >= 2:
+              minute = int(parts[0])
+              hour = int(parts[1])
+              now_utc = datetime.now(timezone.utc)
+              scheduled_utc = now_utc.replace(hour=hour, minute=minute, second=0, microsecond=0)
+              scheduled_rome = scheduled_utc.astimezone(ZoneInfo("Europe/Rome"))
+              should_run = (scheduled_rome.hour, scheduled_rome.minute) in {(10, 20), (19, 5), (23, 5)}
           print(f"should_run={'true' if should_run else 'false'}")
           PY
 
