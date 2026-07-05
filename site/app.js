@@ -2163,12 +2163,16 @@ function renderSavedEvaluationList(rows) {
 
     const loadEvaluation = () => {
       clearEvaluationSearchFocus();
+      const savedId = String(entry.id || "").trim();
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
-      url.searchParams.set("saved", entry.id);
+      url.searchParams.set("saved", savedId);
       window.history.replaceState({}, "", url.toString());
+      state.evaluationSavedId = savedId;
+      state.evaluationShareId = "";
       hideModal(evaluationLoadModal);
-      void loadSavedEvaluation(entry.id, playerId);
+      updateEvaluationFooterActions();
+      applySharedEvaluationPayload(entry.payload);
     };
 
     shareButton.addEventListener("click", async (event) => {
