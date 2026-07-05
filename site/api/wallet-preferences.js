@@ -5,6 +5,7 @@ fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 const PLAYER_NOTE_MAX_LENGTH = 200;
 const WATCHLIST_ID_LENGTH = 8;
 const MAX_WATCHLISTS = 5;
+const MAX_WATCHLIST_PLAYERS = 250;
 const DEFAULT_WATCHLIST_NAME = "Default";
 
 function normalizeWalletAddress(address) {
@@ -166,7 +167,7 @@ function normalizeIdList(ids, limit = Infinity) {
 }
 
 function normalizeWatchlistIds(ids) {
-  return normalizeIdList(ids);
+  return normalizeIdList(ids, MAX_WATCHLIST_PLAYERS);
 }
 
 function normalizeWatchlistName(name, fallback = DEFAULT_WATCHLIST_NAME) {

@@ -224,6 +224,7 @@ const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const WATCHLIST_ID_LENGTH = 8;
 const MAX_WATCHLISTS = 5;
+const MAX_WATCHLIST_PLAYERS = 250;
 const DEFAULT_WATCHLIST_NAME = "Default";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
 const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
@@ -342,7 +343,9 @@ const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
 const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
-const watchlistSelect = document.querySelector("#watchlistSelect");
+const watchlistButton = document.querySelector("#watchlistButton");
+const watchlistButtonText = document.querySelector("#watchlistButtonText");
+const watchlistDropdown = document.querySelector("#watchlistDropdown");
 const addWatchlistModal = document.querySelector("#addWatchlistModal");
 const addWatchlistNameInput = document.querySelector("#addWatchlistNameInput");
 const discardAddWatchlistButton = document.querySelector("#discardAddWatchlistButton");
@@ -3088,7 +3091,7 @@ function normalizeIdList(ids, limit = Infinity) {
 }
 
 function normalizeWatchlistIdList(ids) {
-  return normalizeIdList(ids);
+  return normalizeIdList(ids, MAX_WATCHLIST_PLAYERS);
 }
 
 
@@ -3196,34 +3199,87 @@ function updateWatchlistTitle() {
 }
 
 function renderWatchlistSwitcher() {
-  if (!watchlistSwitcher || !watchlistSelect) {
+  if (!watchlistSwitcher || !watchlistButton || !watchlistButtonText || !watchlistDropdown) {
     updateWatchlistTitle();
     return;
   }
 
-  watchlistSwitcher.hidden = state.currentPage !== "watchlist" || !hasWalletOptIn();
-  watchlistSelect.replaceChildren();
+  const visible = state.currentPage === "watchlist" && hasWalletOptIn();
+  watchlistSwitcher.hidden = !visible;
+  if (!visible) {
+    closeWatchlistDropdown();
+    updateWatchlistTitle();
+    return;
+  }
+
   const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
   state.watchlists = watchlists;
+  if (!watchlists.some((watchlist) => watchlist.id === state.currentWatchlistId)) {
+    state.currentWatchlistId = watchlists[0]?.id || "";
+    setActiveWatchlistIds(watchlists[0]?.playerIds || []);
+  }
+
+  watchlistButtonText.textContent = currentWatchlistName();
+  watchlistDropdown.replaceChildren();
 
   watchlists.forEach((watchlist) => {
-    const option = document.createElement("option");
-    option.value = watchlist.id;
-    option.textContent = watchlist.name;
-    watchlistSelect.appendChild(option);
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "watchlistDropdownItem";
+    item.classList.toggle("active", watchlist.id === state.currentWatchlistId);
+    item.dataset.watchlistId = watchlist.id;
+    item.textContent = watchlist.name;
+    item.addEventListener("click", () => {
+      closeWatchlistDropdown();
+      switchWatchlist(watchlist.id);
+    });
+    watchlistDropdown.appendChild(item);
   });
 
-  const separator = document.createElement("option");
-  separator.disabled = true;
-  separator.textContent = "────────";
-  watchlistSelect.appendChild(separator);
+  if (watchlists.length < MAX_WATCHLISTS) {
+    const separator = document.createElement("div");
+    separator.className = "watchlistDropdownSeparator";
+    watchlistDropdown.appendChild(separator);
 
-  const addOption = document.createElement("option");
-  addOption.value = "__add_watchlist__";
-  addOption.textContent = "Add Watchlist";
-  watchlistSelect.appendChild(addOption);
-  watchlistSelect.value = state.currentWatchlistId || watchlists[0]?.id || "";
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "watchlistDropdownItem watchlistDropdownAdd";
+    addButton.textContent = "Add Watchlist";
+    addButton.addEventListener("click", () => {
+      closeWatchlistDropdown();
+      openAddWatchlistModal();
+    });
+    watchlistDropdown.appendChild(addButton);
+  }
+
   updateWatchlistTitle();
+}
+
+function openWatchlistDropdown() {
+  if (!watchlistDropdown || !watchlistButton || watchlistSwitcher?.hidden) {
+    return;
+  }
+
+  renderWatchlistSwitcher();
+  watchlistDropdown.hidden = false;
+  watchlistButton.setAttribute("aria-expanded", "true");
+}
+
+function closeWatchlistDropdown() {
+  if (!watchlistDropdown || !watchlistButton) {
+    return;
+  }
+
+  watchlistDropdown.hidden = true;
+  watchlistButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleWatchlistDropdown() {
+  if (!watchlistDropdown || watchlistDropdown.hidden) {
+    openWatchlistDropdown();
+  } else {
+    closeWatchlistDropdown();
+  }
 }
 
 function showGenericToast(message) {
@@ -3474,6 +3530,14 @@ function trackWatchlistChange(playerId, added) {
     state.watchlistPlayerIdsAdded.delete(key);
   }
   syncActiveWatchlistFromSet();
+}
+
+function remainingWatchlistCapacity() {
+  return Math.max(0, MAX_WATCHLIST_PLAYERS - state.watchlistPlayerIds.size);
+}
+
+function showWatchlistFullToast() {
+  showGenericToast(`A watchlist can contain up to ${MAX_WATCHLIST_PLAYERS} players.`);
 }
 
 function refreshWatchlistPageAfterWalletSync() {
@@ -5354,6 +5418,10 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
   const added = !state.watchlistPlayerIds.has(key);
 
   if (added) {
+    if (state.watchlistPlayerIds.size >= MAX_WATCHLIST_PLAYERS) {
+      showWatchlistFullToast();
+      return;
+    }
     state.watchlistPlayerIds.add(key);
   } else {
     state.watchlistPlayerIds.delete(key);
@@ -6954,10 +7022,20 @@ function addSelectedToWatchlist() {
     return;
   }
 
+  let addedCount = 0;
+  let skippedCount = 0;
   state.selectedPlayerIds.forEach((playerId) => {
     const key = String(playerId);
+    if (state.watchlistPlayerIds.has(key)) {
+      return;
+    }
+    if (state.watchlistPlayerIds.size >= MAX_WATCHLIST_PLAYERS) {
+      skippedCount += 1;
+      return;
+    }
     state.watchlistPlayerIds.add(key);
     trackWatchlistChange(key, true);
+    addedCount += 1;
   });
   state.selectedPlayerIds.clear();
   state.selectionAnchorPlayerId = null;
@@ -6965,7 +7043,11 @@ function addSelectedToWatchlist() {
   saveTableState();
   renderTable();
   updateSelectionBar();
-  showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} added to`);
+  if (skippedCount) {
+    showWatchlistFullToast();
+  } else if (addedCount) {
+    showWatchlistToast(`${addedCount} player${addedCount === 1 ? "" : "s"} added to`);
+  }
 }
 
 
@@ -7729,13 +7811,10 @@ viewButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-watchlistSelect?.addEventListener("change", () => {
-  if (watchlistSelect.value === "__add_watchlist__") {
-    openAddWatchlistModal();
-    return;
-  }
-
-  switchWatchlist(watchlistSelect.value);
+watchlistButton?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  toggleWatchlistDropdown();
 });
 
 pageSizeSelect.addEventListener("change", () => {
@@ -7795,6 +7874,8 @@ document.addEventListener("keydown", (event) => {
     closeAddWatchlistModal();
   } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
     closeAdvancedSettings();
+  } else if (event.key === "Escape" && !watchlistDropdown?.hidden) {
+    closeWatchlistDropdown();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
   } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
@@ -7810,9 +7891,11 @@ document.addEventListener("keydown", (event) => {
 });
 
 let accountPointerStartedOutside = false;
+let watchlistPointerStartedOutside = false;
 
 document.addEventListener("pointerdown", (event) => {
   accountPointerStartedOutside = !accountMenu.contains(event.target);
+  watchlistPointerStartedOutside = !watchlistSwitcher?.contains(event.target);
 });
 
 document.addEventListener("click", (event) => {
@@ -7820,7 +7903,12 @@ document.addEventListener("click", (event) => {
     closeAccountMenu();
   }
 
+  if (watchlistPointerStartedOutside && watchlistDropdown && !watchlistDropdown.hidden && !watchlistSwitcher?.contains(event.target)) {
+    closeWatchlistDropdown();
+  }
+
   accountPointerStartedOutside = false;
+  watchlistPointerStartedOutside = false;
 });
 
 setupBackdropClickClose(searchModal, closeSearch);

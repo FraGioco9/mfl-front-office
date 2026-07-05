@@ -1015,31 +1015,102 @@ main {
 
 
 .watchlistSwitcher {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
+  width: 178px;
   margin-left: auto;
-  color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .watchlistSwitcher[hidden] {
   display: none;
 }
 
-.watchlistSwitcher select {
-  width: 178px;
+.watchlistButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   height: 40px;
+  padding: 0 10px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
   font-weight: 700;
+  text-align: left;
 }
 
-.watchlistSwitcher select:hover {
+.watchlistButton:hover {
   border-color: var(--primary);
   background: var(--surface-hover);
+}
+
+.watchlistButton span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistButtonChevron {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.watchlistDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: 100%;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--header-bg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+
+.watchlistDropdown[hidden] {
+  display: none;
+}
+
+.watchlistDropdownItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 34px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 0 9px;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.watchlistDropdownItem:hover,
+.watchlistDropdownItem.active {
+  background: var(--surface-hover);
+}
+
+.watchlistDropdownItem.active {
+  color: var(--primary);
+}
+
+.watchlistDropdownSeparator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--border);
+}
+
+.watchlistDropdownAdd {
+  color: var(--text);
 }
 
 .addWatchlistDialog {
