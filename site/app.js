@@ -2461,7 +2461,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
       evaluationSearchInput.value = "";
     }
 
-    renderEvaluationPage();
+    await renderEvaluationPage();
     if (document.body.classList.contains("loading")) {
       await finishLoading();
     }
@@ -4320,20 +4320,24 @@ function renderEvaluationTable(row) {
     button.addEventListener("click", () => adjustEvaluationOverall(evaluationOverallKey(row), Number(button.dataset.evaluationOverallSeason), Number(button.dataset.evaluationOverallDelta)));
   });
 }
-function renderEvaluationPage() {
+async function renderEvaluationPage() {
   const savedId = evaluationSavedIdFromUrl();
   if (savedId && !hasWalletOptIn()) {
     redirectSavedEvaluationLinkToBasicEvaluation();
   } else if (savedId && state.evaluationSavedId !== savedId) {
-    renderEmptyEvaluationSelection(true);
-    void loadSavedEvaluation(savedId);
+    if (!document.body.classList.contains("loading")) {
+      renderEmptyEvaluationSelection(true);
+    }
+    await loadSavedEvaluation(savedId);
     return;
   }
 
   const shareId = evaluationShareIdFromUrl();
   if (shareId && state.evaluationShareId !== shareId) {
-    renderEmptyEvaluationSelection(true);
-    void loadSharedEvaluation(shareId);
+    if (!document.body.classList.contains("loading")) {
+      renderEmptyEvaluationSelection(true);
+    }
+    await loadSharedEvaluation(shareId);
     return;
   }
 
