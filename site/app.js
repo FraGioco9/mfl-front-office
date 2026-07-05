@@ -2906,6 +2906,12 @@ function loadGuestWatchlist() {
   }
 }
 
+function normalizeWatchlistIdList(ids) {
+  return Array.isArray(ids)
+    ? [...new Set(ids.map((playerId) => String(playerId || "").trim()).filter(Boolean))]
+    : [];
+}
+
 function mergeGuestWatchlistIntoAccount() {
   const guestIds = loadGuestWatchlist();
 
@@ -2941,6 +2947,40 @@ function replaceWalletWatchlistIds(ids) {
 function clearSyncedWatchlistChanges(addedIds = [], removedIds = []) {
   addedIds.forEach((playerId) => state.watchlistPlayerIdsAdded.delete(String(playerId)));
   removedIds.forEach((playerId) => state.watchlistPlayerIdsRemoved.delete(String(playerId)));
+}
+
+function watchlistSetEquals(ids) {
+  if (!Array.isArray(ids) || ids.length !== state.watchlistPlayerIds.size) {
+    return false;
+  }
+
+  return ids.every((playerId) => state.watchlistPlayerIds.has(String(playerId)));
+}
+
+function hasPendingWatchlistChanges() {
+  return state.watchlistPlayerIdsAdded.size > 0 || state.watchlistPlayerIdsRemoved.size > 0;
+}
+
+function mergedWatchlistIdsWithPending(serverIds = []) {
+  const mergedIds = new Set(normalizeWatchlistIdList(serverIds));
+  state.watchlistPlayerIdsRemoved.forEach((playerId) => mergedIds.delete(String(playerId)));
+  state.watchlistPlayerIdsAdded.forEach((playerId) => mergedIds.add(String(playerId)));
+  return Array.from(mergedIds);
+}
+
+function applySyncedWatchlistIds(ids) {
+  if (!Array.isArray(ids)) {
+    return false;
+  }
+
+  const normalizedIds = normalizeWatchlistIdList(ids);
+  if (watchlistSetEquals(normalizedIds)) {
+    return false;
+  }
+
+  replaceWalletWatchlistIds(normalizedIds);
+  saveWalletWatchlistLocally();
+  return true;
 }
 
 function trackWatchlistChange(playerId, added) {
@@ -3041,11 +3081,13 @@ async function saveWalletPreferencesNow() {
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
-    const body = {
-      watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
-      watchlistPlayerIdsAdded: addedIds,
-      watchlistPlayerIdsRemoved: removedIds,
-    };
+    const body = {};
+
+    if (addedIds.length || removedIds.length) {
+      body.watchlistPlayerIdsAdded = addedIds;
+      body.watchlistPlayerIdsRemoved = removedIds;
+    }
+
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
       body.tableState = currentTableState();
@@ -3062,17 +3104,23 @@ async function saveWalletPreferencesNow() {
 
     if (response.ok) {
       const data = await response.json();
+      clearSyncedWatchlistChanges(addedIds, removedIds);
+
       if (Array.isArray(data.watchlistPlayerIds)) {
-        replaceWalletWatchlistIds(data.watchlistPlayerIds);
-        saveWalletWatchlistLocally();
-        clearSyncedWatchlistChanges(addedIds, removedIds);
-        if (state.currentPage === "watchlist") {
-          applyFilters();
-        } else if (tablePageKey()) {
-          renderTable();
-        }
-        if (state.currentPage === "player") {
-          renderPlayerPage(playerIdFromUrl());
+        const syncedIds = hasPendingWatchlistChanges()
+          ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
+          : data.watchlistPlayerIds;
+        const watchlistChanged = applySyncedWatchlistIds(syncedIds);
+
+        if (watchlistChanged) {
+          if (state.currentPage === "watchlist") {
+            applyFilters();
+          } else if (tablePageKey()) {
+            renderTable();
+          }
+          if (state.currentPage === "player") {
+            renderPlayerPage(playerIdFromUrl());
+          }
         }
       }
     }
