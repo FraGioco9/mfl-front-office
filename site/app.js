@@ -561,13 +561,6 @@ function pageCanUseProgressionData(pageName) {
 }
 
 async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {
-  const needsDataFirst = pageRequiresData(pageName) && !state.dataLoaded;
-
-  if (!needsDataFirst) {
-    document.body.classList.remove("loading");
-    loadingScreen.hidden = true;
-  }
-
   syncHomeLoginButton();
   updateAccountState();
   const result = await setPage(pageName, updateUrl, options);
@@ -2696,15 +2689,37 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
     renderPlayerPage(playerIdFromUrl());
   }
 }
+function defaultSortStateForView(viewName = defaultViewForPage(tablePageKey() || "progression")) {
+  return {
+    sortKey: "overall",
+    sortDirection: viewName === "next" ? "asc" : "desc",
+  };
+}
+
+function normalizedViewSortState(sortState, viewName = defaultViewForPage(tablePageKey() || "progression")) {
+  const defaultSortState = defaultSortStateForView(viewName);
+
+  return {
+    sortKey: sortableColumns.has(sortState?.sortKey) ? sortState.sortKey : defaultSortState.sortKey,
+    sortDirection: sortState?.sortDirection === "asc" || sortState?.sortDirection === "desc"
+      ? sortState.sortDirection
+      : defaultSortState.sortDirection,
+  };
+}
+
 function defaultTablePageState(pageName = tablePageKey() || "progression") {
+  const defaultView = defaultViewForPage(pageName);
+  const defaultSortState = defaultSortStateForView(defaultView);
+
   return {
     hideRetired: true,
     hideRetiring: false,
     newMints: false,
     pageSize: 100,
-    view: defaultViewForPage(pageName),
-    sortKey: "overall",
-    sortDirection: "desc",
+    view: defaultView,
+    viewSortStates: {},
+    sortKey: defaultSortState.sortKey,
+    sortDirection: defaultSortState.sortDirection,
     rules: [],
     selectedPlayerIds: [],
   };
@@ -3292,12 +3307,23 @@ function currentTablePageState() {
     };
   });
 
+  const pageKey = tablePageKey();
+  const existingPageState = pageKey ? state.tablePageStates?.[pageKey] : null;
+  const viewSortStates = {
+    ...((existingPageState && typeof existingPageState === "object" && existingPageState.viewSortStates) || {}),
+    [state.view]: {
+      sortKey: state.sortKey,
+      sortDirection: state.sortDirection,
+    },
+  };
+
   return {
     hideRetired: hideRetiredInput.checked,
     hideRetiring: hideRetiringInput.checked,
     newMints: newMintsInput.checked,
     pageSize: state.pageSize,
     view: state.view,
+    viewSortStates,
     sortKey: state.sortKey,
     sortDirection: state.sortDirection,
     rules,
@@ -3331,6 +3357,7 @@ function stripPersistentSortState(savedState) {
   const sanitized = { ...savedState };
   delete sanitized.sortKey;
   delete sanitized.sortDirection;
+  delete sanitized.viewSortStates;
 
   if (sanitized.pages && typeof sanitized.pages === "object") {
     sanitized.pages = Object.fromEntries(Object.entries(sanitized.pages).map(([pageName, pageState]) => {
@@ -3341,6 +3368,7 @@ function stripPersistentSortState(savedState) {
       const sanitizedPageState = { ...pageState };
       delete sanitizedPageState.sortKey;
       delete sanitizedPageState.sortDirection;
+      delete sanitizedPageState.viewSortStates;
       return [pageName, sanitizedPageState];
     }));
   }
@@ -5911,9 +5939,12 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
     pageSizeSelect.value = String(state.pageSize);
   }
 
-  const defaultSortState = defaultTablePageState(pageName);
-  state.sortKey = sortableColumns.has(savedState.sortKey) ? savedState.sortKey : defaultSortState.sortKey;
-  state.sortDirection = savedState.sortDirection === "asc" || savedState.sortDirection === "desc" ? savedState.sortDirection : defaultSortState.sortDirection;
+  const viewSortState = normalizedViewSortState(
+    savedState.viewSortStates?.[state.view] || savedState,
+    state.view,
+  );
+  state.sortKey = viewSortState.sortKey;
+  state.sortDirection = viewSortState.sortDirection;
 
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
@@ -6480,14 +6511,30 @@ async function setView(viewName) {
     return;
   }
 
-  const wasNextView = state.view === "next";
+  const pageKey = tablePageKey();
+  if (pageKey) {
+    const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
+    state.tablePageStates[pageKey] = {
+      ...existingPageState,
+      viewSortStates: {
+        ...(existingPageState.viewSortStates || {}),
+        [state.view]: {
+          sortKey: state.sortKey,
+          sortDirection: state.sortDirection,
+        },
+      },
+    };
+  }
+
   state.view = viewName;
   state.page = 1;
 
-  if (viewName === "next" && !wasNextView) {
-    state.sortKey = "overall";
-    state.sortDirection = "asc";
-  }
+  const targetSortState = normalizedViewSortState(
+    pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
+    viewName,
+  );
+  state.sortKey = targetSortState.sortKey;
+  state.sortDirection = targetSortState.sortDirection;
 
   removeUnavailableFilterRules();
   populateAddFilterSelect();
