@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.55">
+    <link rel="stylesheet" href="/styles.css?v=1.89.56">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -284,6 +284,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.56</span><p>Load progression with public data, speed up progression fetches, and sync evaluation settings to wallet preferences</p></li>
               <li><span>v1.89.55</span><p>Show player progression to everyone and unify loading messages</p></li>
               <li><span>v1.89.54</span><p>Load full individual-player data while keeping progression views permission-gated</p></li>
               <li><span>v1.89.53</span><p>Recreate Contracts Table with matched sticky headers and clipped scrolling rows</p></li>
@@ -700,7 +701,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.55</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.56</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -790,15 +791,15 @@
               <div class="advancedLateSeasonRewardsGrid">
                 <div class="advancedLateSeasonRewardSetting">
                   <span class="advancedLateSeasonRewardLabel">3rd-last season</span>
-                  <span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust third-to-last season earnings"><button id="advancedThirdLastRewardIncreaseButton" type="button" aria-label="Increase third-to-last season earnings rate">&#9650;</button><button id="advancedThirdLastRewardDecreaseButton" type="button" aria-label="Decrease third-to-last season earnings rate">&#9660;</button></span><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Third-to-last season earnings rate"><span>%</span></span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedThirdLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust third-to-last season earnings"><button id="advancedThirdLastRewardIncreaseButton" type="button" aria-label="Increase third-to-last season earnings rate">&#9650;</button><button id="advancedThirdLastRewardDecreaseButton" type="button" aria-label="Decrease third-to-last season earnings rate">&#9660;</button></span><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Third-to-last season earnings rate"><span>%</span></span></span>
                 </div>
                 <div class="advancedLateSeasonRewardSetting">
                   <span class="advancedLateSeasonRewardLabel">2nd-last season</span>
-                  <span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust second-to-last season earnings"><button id="advancedSecondLastRewardIncreaseButton" type="button" aria-label="Increase second-to-last season earnings rate">&#9650;</button><button id="advancedSecondLastRewardDecreaseButton" type="button" aria-label="Decrease second-to-last season earnings rate">&#9660;</button></span><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Second-to-last season earnings rate"><span>%</span></span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedSecondLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust second-to-last season earnings"><button id="advancedSecondLastRewardIncreaseButton" type="button" aria-label="Increase second-to-last season earnings rate">&#9650;</button><button id="advancedSecondLastRewardDecreaseButton" type="button" aria-label="Decrease second-to-last season earnings rate">&#9660;</button></span><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Second-to-last season earnings rate"><span>%</span></span></span>
                 </div>
                 <div class="advancedLateSeasonRewardSetting">
                   <span class="advancedLateSeasonRewardLabel">Final season</span>
-                  <span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedFinalRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span></span>
                 </div>
               </div>
             </div>
@@ -821,6 +822,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.55"></script>
+    <script src="/app.js?v=1.89.56"></script>
   </body>
 </html>

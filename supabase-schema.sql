@@ -15,12 +15,14 @@ create table if not exists public.wallet_preferences (
   watchlist_player_ids jsonb not null default '[]'::jsonb,
   player_notes jsonb not null default '{}'::jsonb,
   table_state jsonb not null default '{}'::jsonb,
+  evaluation_settings jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
 alter table public.wallet_preferences add column if not exists watchlist_player_ids jsonb not null default '[]'::jsonb;
 alter table public.wallet_preferences add column if not exists player_notes jsonb not null default '{}'::jsonb;
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;
+alter table public.wallet_preferences add column if not exists evaluation_settings jsonb not null default '{}'::jsonb;
 
 
 

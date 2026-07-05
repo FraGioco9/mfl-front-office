@@ -126,7 +126,7 @@ async function supabaseRequest(pathname, options = {}) {
 }
 
 function emptyPreferences() {
-  return { watchlistPlayerIds: [], playerNotes: {}, tableState: null };
+  return { watchlistPlayerIds: [], playerNotes: {}, tableState: null, evaluationSettings: null };
 }
 
 function normalizePlayerNotes(notes) {
@@ -166,6 +166,45 @@ function normalizeWatchlistIds(ids) {
   return normalizeIdList(ids);
 }
 
+function parsePositiveTwoDecimal(value) {
+  const parsedValue = Number.parseFloat(String(value ?? "").replace(",", "."));
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? Math.round(parsedValue * 100) / 100 : null;
+}
+
+function parseRatePercent(value) {
+  const parsedValue = Number.parseFloat(String(value ?? "").replace(",", "."));
+  return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 100 ? Math.round(parsedValue * 100) / 100 : null;
+}
+
+function normalizeLateSeasonRewardRates(value) {
+  const defaults = [80, 80, 60];
+  const source = Array.isArray(value) ? value : [];
+  return defaults.map((defaultRate, index) => {
+    const parsedRate = parseRatePercent(source[index]);
+    return parsedRate === null ? defaultRate : parsedRate;
+  });
+}
+
+function normalizeEvaluationSettings(settings) {
+  const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    mflPerUsd: parsePositiveTwoDecimal(data.mflPerUsd ?? data.mfl_per_usd) || 400,
+    ignoreDiscountRate: Boolean(data.ignoreDiscountRate ?? data.ignore_discount_rate),
+    ignoreFirstSeason: Boolean(data.ignoreFirstSeason ?? data.ignore_first_season),
+    lateSeasonRewardRates: normalizeLateSeasonRewardRates(
+      data.lateSeasonRewardRates
+        ?? data.late_season_reward_rates
+        ?? data.lateCareerRewardRates
+        ?? data.late_career_reward_rates
+    ),
+  };
+}
+
 function mergeRecentIds(incomingIds, currentIds) {
   return normalizeIdList([...(Array.isArray(incomingIds) ? incomingIds : []), ...(Array.isArray(currentIds) ? currentIds : [])], 5);
 }
@@ -196,6 +235,7 @@ function preferencesFromRow(row) {
     watchlistPlayerIds: normalizeWatchlistIds(row.watchlist_player_ids),
     playerNotes: normalizePlayerNotes(row.player_notes),
     tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? row.table_state : null,
+    evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
   };
 }
 
@@ -204,7 +244,7 @@ async function readPreferences(wallet) {
     return emptyPreferences();
   }
 
-  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes,table_state&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
@@ -231,8 +271,11 @@ async function writePreferences(wallet, preferences) {
     : currentPreferences.playerNotes;
 
   const tableState = mergeTableState(preferences.tableState, currentPreferences.tableState, watchlistPlayerIds);
+  const evaluationSettings = preferences.evaluationSettings
+    ? normalizeEvaluationSettings(preferences.evaluationSettings)
+    : currentPreferences.evaluationSettings;
 
-  const nextPreferences = { watchlistPlayerIds, playerNotes, tableState };
+  const nextPreferences = { watchlistPlayerIds, playerNotes, tableState, evaluationSettings };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -247,6 +290,7 @@ async function writePreferences(wallet, preferences) {
       watchlist_player_ids: watchlistPlayerIds,
       player_notes: playerNotes,
       table_state: tableState || {},
+      evaluation_settings: evaluationSettings || {},
     }]),
   });
 

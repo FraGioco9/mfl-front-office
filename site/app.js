@@ -375,10 +375,13 @@ const advancedSecondLastRewardInput = document.querySelector("#advancedSecondLas
 const advancedFinalRewardInput = document.querySelector("#advancedFinalRewardInput");
 const advancedThirdLastRewardIncreaseButton = document.querySelector("#advancedThirdLastRewardIncreaseButton");
 const advancedThirdLastRewardDecreaseButton = document.querySelector("#advancedThirdLastRewardDecreaseButton");
+const advancedThirdLastRewardResetButton = document.querySelector("#advancedThirdLastRewardResetButton");
 const advancedSecondLastRewardIncreaseButton = document.querySelector("#advancedSecondLastRewardIncreaseButton");
 const advancedSecondLastRewardDecreaseButton = document.querySelector("#advancedSecondLastRewardDecreaseButton");
+const advancedSecondLastRewardResetButton = document.querySelector("#advancedSecondLastRewardResetButton");
 const advancedFinalRewardIncreaseButton = document.querySelector("#advancedFinalRewardIncreaseButton");
 const advancedFinalRewardDecreaseButton = document.querySelector("#advancedFinalRewardDecreaseButton");
+const advancedFinalRewardResetButton = document.querySelector("#advancedFinalRewardResetButton");
 const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
@@ -949,7 +952,7 @@ async function fetchDataFile(fileName, options = {}) {
   const requestedUrl = dataFileUrl(fileName, { columns });
   const staticUrl = staticDataFileUrl(fileName);
   const cacheMode = fileName === "manifest.json" ? "no-store" : "default";
-  const preferStatic = currentDataAccess() === "public" && canUseStaticDataFile(fileName);
+  const preferStatic = !columns && canUseStaticDataFile(fileName);
   const fetchAttempts = preferStatic
     ? [
         { url: staticUrl, options: { cache: cacheMode } },
@@ -1770,7 +1773,6 @@ function resetEvaluationToDefaultForPlayer(playerId = state.evaluationPlayerId) 
   state.evaluationSavedId = "";
   state.evaluationIgnoreDiscountRate = false;
   state.evaluationIgnoreFirstSeason = false;
-  state.evaluationLateSeasonRewardRates = [...DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES];
 
   if (id) {
     delete state.evaluationOverallRows[id];
@@ -3231,6 +3233,14 @@ async function loadWalletPreferences(options = {}) {
       }
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
+      if (data.evaluationSettings) {
+        applyEvaluationSettingsPayload(data.evaluationSettings);
+        saveEvaluationSettingsLocally();
+        renderEvaluationMflPerUsdControl(false);
+        if (state.currentPage === "evaluation") {
+          renderEvaluationPage();
+        }
+      }
       saveWalletNotesLocally();
       if (tableStateChanged && tablePageKey()) {
         restoreSavedTableState(tablePageKey());
@@ -3272,6 +3282,7 @@ async function saveWalletPreferencesNow() {
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
       body.tableState = stripPersistentSortState(currentTableState());
+      body.evaluationSettings = currentEvaluationSettingsPayload();
     }
 
     const response = await fetch("/api/wallet-preferences", {
@@ -4253,6 +4264,35 @@ function evaluationLateSeasonRewardRatesFromPayload(data) {
   );
 }
 
+function currentEvaluationSettingsPayload() {
+  return {
+    mflPerUsd: state.evaluationMflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD,
+    ignoreDiscountRate: Boolean(state.evaluationIgnoreDiscountRate),
+    ignoreFirstSeason: Boolean(state.evaluationIgnoreFirstSeason),
+    lateSeasonRewardRates: normalizeEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates),
+  };
+}
+
+function applyEvaluationSettingsPayload(settings = {}) {
+  const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  const mflPerUsd = parseEvaluationMflPerUsd(data.mflPerUsd ?? data.mfl_per_usd);
+
+  state.evaluationMflPerUsd = mflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD;
+  state.evaluationIgnoreDiscountRate = Boolean(data.ignoreDiscountRate ?? data.ignore_discount_rate);
+  state.evaluationIgnoreFirstSeason = Boolean(data.ignoreFirstSeason ?? data.ignore_first_season);
+  state.evaluationLateSeasonRewardRates = evaluationLateSeasonRewardRatesFromPayload(data);
+}
+
+function saveEvaluationSettingsLocally() {
+  saveEvaluationMflPerUsd(state.evaluationMflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD);
+  saveEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates);
+}
+
+function queueEvaluationSettingsSave() {
+  saveEvaluationSettingsLocally();
+  queueCloudTableStateSave();
+}
+
 function formatAdvancedPlayerTableValue(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue)
@@ -4320,6 +4360,22 @@ function syncAdvancedSettingsValues() {
   advancedThirdLastRewardInput.value = formatEvaluationRewardRate(rates[0]);
   advancedSecondLastRewardInput.value = formatEvaluationRewardRate(rates[1]);
   advancedFinalRewardInput.value = formatEvaluationRewardRate(rates[2]);
+  updateAdvancedRewardRateResetVisibility();
+}
+
+function updateAdvancedRewardRateResetVisibility() {
+  const inputs = [advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput];
+  const buttons = [advancedThirdLastRewardResetButton, advancedSecondLastRewardResetButton, advancedFinalRewardResetButton];
+
+  inputs.forEach((input, index) => {
+    const button = buttons[index];
+    if (!button) {
+      return;
+    }
+
+    const parsedValue = parseEvaluationRewardRate(input?.value);
+    button.hidden = parsedValue === null || parsedValue === DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[index];
+  });
 }
 
 function updateAdvancedMflUsdResetVisibility() {
@@ -4365,6 +4421,7 @@ function syncAdvancedRewardRateDrafts() {
   syncAdvancedRewardRateDraft(advancedThirdLastRewardInput, currentRates[0]);
   syncAdvancedRewardRateDraft(advancedSecondLastRewardInput, currentRates[1]);
   syncAdvancedRewardRateDraft(advancedFinalRewardInput, currentRates[2]);
+  updateAdvancedRewardRateResetVisibility();
 }
 
 function applyAdvancedSettings() {
@@ -4383,6 +4440,7 @@ function applyAdvancedSettings() {
 
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
+  queueEvaluationSettingsSave();
   closeAdvancedSettings();
 }
 
@@ -4413,6 +4471,16 @@ function adjustAdvancedRewardRateDraft(input, delta) {
   const currentValue = clampEvaluationRewardRate(input.value, fallbackValue);
   const nextValue = Math.round(Math.max(0, Math.min(100, currentValue + delta)) * 100) / 100;
   input.value = nextValue.toFixed(2);
+  updateAdvancedRewardRateResetVisibility();
+}
+
+function resetAdvancedRewardRateDraft(input, index) {
+  if (!input) {
+    return;
+  }
+
+  input.value = DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[index].toFixed(2);
+  updateAdvancedRewardRateResetVisibility();
 }
 
 function renderEvaluationMflPerUsdControl(editing = false) {
@@ -4444,12 +4512,14 @@ function commitEvaluationMflPerUsd() {
 
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
+  queueEvaluationSettingsSave();
 }
 
 function resetEvaluationMflPerUsd() {
   saveEvaluationMflPerUsd(DEFAULT_EVALUATION_MFL_PER_USD);
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
+  queueEvaluationSettingsSave();
 }
 function adjustEvaluationMflPerUsdDraft(delta) {
   const currentValue = parseEvaluationMflPerUsd(evaluationMflUsdInput.value) || state.evaluationMflPerUsd;
@@ -6968,23 +7038,24 @@ async function restoreCachedDataForAccess(access = currentDataAccess()) {
       return false;
     }
 
-    const publicChunk = await fetchDataFile(publicDataFile(manifest), { useCache: true });
-
-    if (!publicChunk || !Array.isArray(publicChunk.rows)) {
-      return false;
-    }
-
     state.manifest = manifest;
-    state.columns = publicDataColumns(manifest);
-    rebuildColumnIndexMap();
-    state.rows = publicChunk.rows;
-    clearRowSortCache();
     state.filteredRows = [];
     state.page = 1;
     state.dataAccess = access;
 
     if (["full", "owned"].includes(access)) {
-      await upgradePublicDataToFull(manifest, { useCache: true });
+      await loadPublicAndProgressionData(manifest, { useCache: true });
+    } else {
+      const publicChunk = await fetchDataFile(publicDataFile(manifest), { useCache: true });
+
+      if (!publicChunk || !Array.isArray(publicChunk.rows)) {
+        return false;
+      }
+
+      state.columns = publicDataColumns(manifest);
+      rebuildColumnIndexMap();
+      state.rows = publicChunk.rows;
+      clearRowSortCache();
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
@@ -7045,6 +7116,60 @@ function mergeDataColumns(chunk, columnsToMerge, rowMap) {
       existingRow.push(chunkColumnIndex >= 0 ? chunkRow[chunkColumnIndex] : null);
     });
   });
+}
+
+async function loadPublicAndProgressionData(manifest, options = {}) {
+  const useCache = Boolean(options.useCache);
+  const writeCache = Boolean(options.writeCache);
+  const publicProgress = options.publicProgress || (() => {});
+  const progressionProgress = options.progressionProgress || (() => {});
+  const publicFile = publicDataFile(manifest);
+  const progressionFile = progressionDataFile(manifest);
+  const shouldLoadProgression = Boolean(manifest?.files?.progression?.file);
+
+  if (!shouldLoadProgression) {
+    publicProgress(0);
+    const publicChunk = await fetchDataFile(publicFile, {
+      useCache,
+      writeCache,
+      onProgress: publicProgress,
+    });
+    publicProgress(1);
+    state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
+    state.columns = publicDataColumns(manifest);
+    rebuildColumnIndexMap();
+    clearRowSortCache();
+    return;
+  }
+
+  publicProgress(0);
+  progressionProgress(0);
+  const [publicChunk, progressionChunk] = await Promise.all([
+    fetchDataFile(publicFile, {
+      useCache,
+      writeCache,
+      onProgress: publicProgress,
+    }),
+    fetchDataFile(progressionFile, {
+      useCache,
+      writeCache,
+      onProgress: progressionProgress,
+    }),
+  ]);
+
+  state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
+  state.columns = publicDataColumns(manifest);
+  rebuildColumnIndexMap();
+  clearRowSortCache();
+
+  const targetColumns = fullDataColumns(manifest);
+  const columnsToMerge = targetColumns.filter((column) => !state.columns.includes(column));
+  mergeDataColumns(progressionChunk, columnsToMerge, rowMapByPlayerId());
+  state.columns = targetColumns;
+  rebuildColumnIndexMap();
+  clearRowSortCache();
+  publicProgress(1);
+  progressionProgress(1);
 }
 
 async function upgradePublicDataToFull(manifest, progressOptions = {}) {
@@ -7138,7 +7263,7 @@ function loadingPhaseRange(index, total) {
 
 async function preloadRefreshData(initialPage) {
   const targetAccess = currentDataAccess(initialPage);
-  const needsInitialData = pageRequiresData(initialPage);
+  const needsInitialData = pageRequiresData(initialPage) || initialPage === "home";
 
   if (!needsInitialData) {
     return;
@@ -7199,33 +7324,33 @@ async function loadData(options = {}) {
       }
 
       state.manifest = manifest;
-      state.columns = publicDataColumns(manifest);
+      state.columns = ["full", "owned"].includes(targetAccess) ? fullDataColumns(manifest) : publicDataColumns(manifest);
       rebuildColumnIndexMap();
       updateSummaryCounts(manifest.row_count, manifest.wallet_count);
       await paintLoadingProgress();
 
-      const publicFile = publicDataFile(manifest);
-      const publicProgressEnd = ["full", "owned"].includes(targetAccess) ? 55 : 90;
-      const publicProgress = phaseRange(10, publicProgressEnd);
-      publicProgress(0);
-      await paintLoadingProgress();
-      const publicChunk = await fetchDataFile(publicFile, {
-        useCache: useCachedChunks,
-        writeCache: !useCachedChunks,
-        onProgress: publicProgress,
-      });
-      state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
-      clearRowSortCache();
-      publicProgress(1);
-
       if (["full", "owned"].includes(targetAccess)) {
-        await upgradePublicDataToFull(manifest, {
-          startPercent: phaseProgress(55),
-          endPercent: phaseProgress(90),
-          message,
+        await loadPublicAndProgressionData(manifest, {
           useCache: useCachedChunks,
           writeCache: !useCachedChunks,
+          publicProgress: phaseRange(10, 52),
+          progressionProgress: phaseRange(10, 90),
         });
+      } else {
+        const publicFile = publicDataFile(manifest);
+        const publicProgress = phaseRange(10, 90);
+        publicProgress(0);
+        await paintLoadingProgress();
+        const publicChunk = await fetchDataFile(publicFile, {
+          useCache: useCachedChunks,
+          writeCache: !useCachedChunks,
+          onProgress: publicProgress,
+        });
+        state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
+        state.columns = publicDataColumns(manifest);
+        rebuildColumnIndexMap();
+        clearRowSortCache();
+        publicProgress(1);
       }
     }
 
@@ -7412,8 +7537,14 @@ advancedSecondLastRewardIncreaseButton?.addEventListener("click", () => adjustAd
 advancedSecondLastRewardDecreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedSecondLastRewardInput, -1));
 advancedFinalRewardIncreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedFinalRewardInput, 1));
 advancedFinalRewardDecreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedFinalRewardInput, -1));
+advancedThirdLastRewardResetButton?.addEventListener("click", () => resetAdvancedRewardRateDraft(advancedThirdLastRewardInput, 0));
+advancedSecondLastRewardResetButton?.addEventListener("click", () => resetAdvancedRewardRateDraft(advancedSecondLastRewardInput, 1));
+advancedFinalRewardResetButton?.addEventListener("click", () => resetAdvancedRewardRateDraft(advancedFinalRewardInput, 2));
 [advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].forEach((input) => {
-  input.addEventListener("input", () => normalizeEvaluationRewardRateDraft(input));
+  input.addEventListener("input", () => {
+    normalizeEvaluationRewardRateDraft(input);
+    updateAdvancedRewardRateResetVisibility();
+  });
   input.addEventListener("blur", syncAdvancedRewardRateDrafts);
 });
 discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
@@ -7435,10 +7566,12 @@ evaluationSearchInput.addEventListener("blur", () => {
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
   renderEvaluationPage();
+  queueEvaluationSettingsSave();
 });
 ignoreFirstSeasonInput.addEventListener("change", () => {
   state.evaluationIgnoreFirstSeason = ignoreFirstSeasonInput.checked;
   renderEvaluationPage();
+  queueEvaluationSettingsSave();
 });
 evaluationMflUsdEditButton.addEventListener("mousedown", (event) => event.preventDefault());
 evaluationMflUsdEditButton.addEventListener("click", () => {
