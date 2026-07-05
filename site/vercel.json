@@ -25,6 +25,10 @@
       "destination": "/"
     },
     {
+      "source": "/watchlist/:id",
+      "destination": "/"
+    },
+    {
       "source": "/my-players",
       "destination": "/"
     },

@@ -24,6 +24,7 @@ const state = {
   watchlists: [],
   currentWatchlistId: "",
   pendingWatchlistRouteId: "",
+  editingWatchlistId: "",
   playerNotes: {},
   tablePageStates: {},
   toastTimer: null,
@@ -347,6 +348,7 @@ const watchlistButton = document.querySelector("#watchlistButton");
 const watchlistButtonText = document.querySelector("#watchlistButtonText");
 const watchlistDropdown = document.querySelector("#watchlistDropdown");
 const addWatchlistModal = document.querySelector("#addWatchlistModal");
+const addWatchlistTitle = document.querySelector("#addWatchlistTitle");
 const addWatchlistNameInput = document.querySelector("#addWatchlistNameInput");
 const discardAddWatchlistButton = document.querySelector("#discardAddWatchlistButton");
 const confirmAddWatchlistButton = document.querySelector("#confirmAddWatchlistButton");
@@ -2574,6 +2576,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (pageName === "watchlist" && hasWalletOptIn()) {
+    state.currentPage = pageName;
     state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
     await ensureWatchlistRoute(options);
   }
@@ -3223,16 +3226,47 @@ function renderWatchlistSwitcher() {
   watchlistDropdown.replaceChildren();
 
   watchlists.forEach((watchlist) => {
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement("div");
     item.className = "watchlistDropdownItem";
     item.classList.toggle("active", watchlist.id === state.currentWatchlistId);
     item.dataset.watchlistId = watchlist.id;
-    item.textContent = watchlist.name;
-    item.addEventListener("click", () => {
+
+    const nameButton = document.createElement("button");
+    nameButton.type = "button";
+    nameButton.className = "watchlistDropdownName";
+    nameButton.textContent = watchlist.name;
+    nameButton.addEventListener("click", () => {
       closeWatchlistDropdown();
       switchWatchlist(watchlist.id);
     });
+
+    const actions = document.createElement("span");
+    actions.className = "watchlistDropdownActions";
+
+    const renameButton = document.createElement("button");
+    renameButton.type = "button";
+    renameButton.className = "watchlistDropdownAction";
+    renameButton.textContent = "Rename";
+    renameButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeWatchlistDropdown();
+      openRenameWatchlistModal(watchlist.id);
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "watchlistDropdownAction watchlistDropdownDelete";
+    deleteButton.textContent = "Delete";
+    deleteButton.disabled = watchlists.length <= 1;
+    deleteButton.title = watchlists.length <= 1 ? "You need at least one watchlist" : "Delete watchlist";
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeWatchlistDropdown();
+      deleteWatchlist(watchlist.id);
+    });
+
+    actions.append(renameButton, deleteButton);
+    item.append(nameButton, actions);
     watchlistDropdown.appendChild(item);
   });
 
@@ -3297,8 +3331,8 @@ function showGenericToast(message) {
   }, 2400);
 }
 
-function updateWatchlistUrl(replace = false) {
-  if (state.currentPage !== "watchlist" || !state.currentWatchlistId) {
+function updateWatchlistUrl(replace = false, force = false) {
+  if ((!force && state.currentPage !== "watchlist") || !state.currentWatchlistId) {
     return;
   }
 
@@ -3327,7 +3361,7 @@ async function ensureWatchlistRoute(options = {}) {
     setActiveWatchlistIds(firstWatchlist?.playerIds || []);
     renderWatchlistSwitcher();
     showGenericToast("Watchlist not found.");
-    updateWatchlistUrl(true);
+    updateWatchlistUrl(true, true);
     return;
   }
 
@@ -3335,7 +3369,7 @@ async function ensureWatchlistRoute(options = {}) {
   state.currentWatchlistId = nextWatchlist?.id || "";
   setActiveWatchlistIds(nextWatchlist?.playerIds || []);
   renderWatchlistSwitcher();
-  updateWatchlistUrl(!routeId);
+  updateWatchlistUrl(!routeId, true);
   queueCloudTableStateSave();
 }
 
@@ -3370,6 +3404,13 @@ function openAddWatchlistModal() {
     return;
   }
 
+  state.editingWatchlistId = "";
+  if (addWatchlistTitle) {
+    addWatchlistTitle.textContent = "Add a watchlist";
+  }
+  if (confirmAddWatchlistButton) {
+    confirmAddWatchlistButton.textContent = "Confirm";
+  }
   if (addWatchlistNameInput) {
     addWatchlistNameInput.value = "";
   }
@@ -3377,7 +3418,32 @@ function openAddWatchlistModal() {
   window.setTimeout(() => addWatchlistNameInput?.focus(), 0);
 }
 
+function openRenameWatchlistModal(watchlistId) {
+  const watchlist = state.watchlists.find((item) => item.id === watchlistId);
+  if (!watchlist) {
+    renderWatchlistSwitcher();
+    return;
+  }
+
+  state.editingWatchlistId = watchlist.id;
+  if (addWatchlistTitle) {
+    addWatchlistTitle.textContent = "Rename watchlist";
+  }
+  if (confirmAddWatchlistButton) {
+    confirmAddWatchlistButton.textContent = "Confirm";
+  }
+  if (addWatchlistNameInput) {
+    addWatchlistNameInput.value = watchlist.name;
+  }
+  showModal(addWatchlistModal);
+  window.setTimeout(() => {
+    addWatchlistNameInput?.focus();
+    addWatchlistNameInput?.select();
+  }, 0);
+}
+
 function closeAddWatchlistModal() {
+  state.editingWatchlistId = "";
   hideModal(addWatchlistModal, renderWatchlistSwitcher);
 }
 
@@ -3386,6 +3452,22 @@ function confirmAddWatchlist() {
   if (!name) {
     addWatchlistNameInput?.focus();
     showGenericToast("Watchlist name cannot be blank.");
+    return;
+  }
+
+  if (state.editingWatchlistId) {
+    const watchlist = state.watchlists.find((item) => item.id === state.editingWatchlistId);
+    if (!watchlist) {
+      closeAddWatchlistModal();
+      renderWatchlistSwitcher();
+      return;
+    }
+
+    watchlist.name = name;
+    closeAddWatchlistModal();
+    renderWatchlistSwitcher();
+    saveTableState();
+    applyFilters();
     return;
   }
 
@@ -3408,6 +3490,37 @@ function confirmAddWatchlist() {
   closeAddWatchlistModal();
   renderWatchlistSwitcher();
   updateWatchlistUrl();
+  saveTableState();
+  applyFilters();
+}
+
+function deleteWatchlist(watchlistId) {
+  if (state.watchlists.length <= 1) {
+    renderWatchlistSwitcher();
+    showGenericToast("You need at least one watchlist.");
+    return;
+  }
+
+  syncActiveWatchlistFromSet();
+  const deleteIndex = state.watchlists.findIndex((watchlist) => watchlist.id === watchlistId);
+  if (deleteIndex < 0) {
+    renderWatchlistSwitcher();
+    return;
+  }
+
+  const wasActive = state.currentWatchlistId === watchlistId;
+  state.watchlists.splice(deleteIndex, 1);
+  if (wasActive) {
+    const nextWatchlist = state.watchlists[Math.max(0, deleteIndex - 1)] || state.watchlists[0] || ensureDefaultWatchlist();
+    state.currentWatchlistId = nextWatchlist.id;
+    state.watchlistPlayerIdsAdded.clear();
+    state.watchlistPlayerIdsRemoved.clear();
+    setActiveWatchlistIds(nextWatchlist.playerIds);
+    state.page = 1;
+    updateWatchlistUrl(true, true);
+  }
+
+  renderWatchlistSwitcher();
   saveTableState();
   applyFilters();
 }

@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.143.3">
+    <link rel="stylesheet" href="/styles.css?v=1.143.4">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -98,6 +98,7 @@
             <button class="viewButton active" type="button" data-view="current">Current Season</button>
             <button class="viewButton" type="button" data-view="all">All Time</button>
             <div id="watchlistSwitcher" class="watchlistSwitcher" hidden>
+              <span class="watchlistSwitcherLabel">Watchlist</span>
               <button id="watchlistButton" class="watchlistButton" type="button" aria-haspopup="true" aria-expanded="false">
                 <span id="watchlistButtonText">Default</span>
                 <span class="watchlistButtonChevron" aria-hidden="true">▾</span>
@@ -291,6 +292,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.143.4</span><p>Fix Watchlist deep links and add dropdown rename/delete actions</p></li>
               <li><span>v1.143.3</span><p>Fix Watchlist dropdown hover override</p></li>
               <li><span>v1.143.2</span><p>Match Watchlist dropdown hover style</p></li>
               <li><span>v1.143.1</span><p>Refine multiple Watchlist dropdown, routing, and player limits</p></li>
@@ -721,7 +723,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.3</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.4</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -863,6 +865,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.143.3"></script>
+    <script src="/app.js?v=1.143.4"></script>
   </body>
 </html>
