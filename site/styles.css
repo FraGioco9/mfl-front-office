@@ -500,6 +500,11 @@ body[data-page="home"] .topbar .stats {
   background: var(--row-hover);
 }
 
+.changelogMinorSection.is-expanded:hover {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
 .changelogMinorSection.is-expanded {
   border-color: var(--primary);
 }
@@ -509,6 +514,7 @@ body[data-page="home"] .topbar .stats {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
+  min-height: 44px;
   width: 100%;
   border: 0;
   background: transparent;
@@ -519,7 +525,8 @@ body[data-page="home"] .topbar .stats {
   transition: background 120ms ease, color 120ms ease;
 }
 
-.changelogMinorToggle:hover {
+.changelogMinorToggle:hover,
+.changelogMinorToggle:hover:not(:disabled) {
   background: transparent;
 }
 
@@ -528,10 +535,22 @@ body[data-page="home"] .topbar .stats {
   color: #ffffff;
 }
 
+.changelogMinorSection.is-expanded > .changelogMinorToggle:hover,
+.changelogMinorSection.is-expanded > .changelogMinorToggle:hover:not(:disabled) {
+  background: var(--primary);
+  border-color: transparent;
+  color: #ffffff;
+}
+
 .changelogMinorVersion {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
   color: var(--primary);
   font-weight: 800;
   font-size: 15px;
+  line-height: 1.1;
 }
 
 .changelogMinorSection.is-expanded > .changelogMinorToggle .changelogMinorVersion {
@@ -539,9 +558,14 @@ body[data-page="home"] .topbar .stats {
 }
 
 .changelogMinorMeta {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.1;
 }
 
 .changelogMinorSection.is-expanded > .changelogMinorToggle .changelogMinorMeta {
@@ -549,6 +573,10 @@ body[data-page="home"] .topbar .stats {
 }
 
 .changelogMinorChevron {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
   color: var(--text-soft);
   font-size: 18px;
   line-height: 1;
@@ -592,6 +620,7 @@ body[data-page="home"] .topbar .stats {
   grid-template-columns: 96px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  min-height: 34px;
   padding: 5px 10px;
   border: 0;
   border-radius: 0;
@@ -603,12 +632,22 @@ body[data-page="home"] .topbar .stats {
 }
 
 .changelogPatchList span {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 24px;
   color: var(--primary);
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .changelogPatchList p {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 24px;
   margin: 0;
+  line-height: 1.15;
 }
 
 .appShell.menuClosed .menuButton {
