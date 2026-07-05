@@ -18,6 +18,8 @@ const state = {
   selectionAnchorPlayerId: null,
   filterDraftRules: null,
   watchlistPlayerIds: new Set(),
+  watchlistPlayerIdsAdded: new Set(),
+  watchlistPlayerIdsRemoved: new Set(),
   playerNotes: {},
   tablePageStates: {},
   toastTimer: null,
@@ -2928,6 +2930,31 @@ function applyWalletWatchlistIds(ids) {
   ids.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
 }
 
+function replaceWalletWatchlistIds(ids) {
+  if (!Array.isArray(ids)) {
+    return;
+  }
+
+  state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
+}
+
+function clearSyncedWatchlistChanges(addedIds = [], removedIds = []) {
+  addedIds.forEach((playerId) => state.watchlistPlayerIdsAdded.delete(String(playerId)));
+  removedIds.forEach((playerId) => state.watchlistPlayerIdsRemoved.delete(String(playerId)));
+}
+
+function trackWatchlistChange(playerId, added) {
+  const key = String(playerId);
+
+  if (added) {
+    state.watchlistPlayerIdsAdded.add(key);
+    state.watchlistPlayerIdsRemoved.delete(key);
+  } else {
+    state.watchlistPlayerIdsRemoved.add(key);
+    state.watchlistPlayerIdsAdded.delete(key);
+  }
+}
+
 function refreshWatchlistPageAfterWalletSync() {
   if (state.currentPage !== "watchlist") {
     return;
@@ -2979,6 +3006,8 @@ async function loadWalletPreferences() {
     if (response.ok) {
       const data = await response.json();
       applyWalletWatchlistIds(data.watchlistPlayerIds);
+      state.watchlistPlayerIdsAdded.clear();
+      state.watchlistPlayerIdsRemoved.clear();
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
       saveWalletNotesLocally();
@@ -3010,15 +3039,19 @@ async function saveWalletPreferencesNow() {
   saveWalletNotesLocally();
 
   try {
+    const addedIds = Array.from(state.watchlistPlayerIdsAdded);
+    const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
     const body = {
       watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+      watchlistPlayerIdsAdded: addedIds,
+      watchlistPlayerIdsRemoved: removedIds,
     };
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
       body.tableState = currentTableState();
     }
 
-    await fetch("/api/wallet-preferences", {
+    const response = await fetch("/api/wallet-preferences", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -3026,6 +3059,23 @@ async function saveWalletPreferencesNow() {
       },
       body: JSON.stringify(body),
     });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.watchlistPlayerIds)) {
+        replaceWalletWatchlistIds(data.watchlistPlayerIds);
+        saveWalletWatchlistLocally();
+        clearSyncedWatchlistChanges(addedIds, removedIds);
+        if (state.currentPage === "watchlist") {
+          applyFilters();
+        } else if (tablePageKey()) {
+          renderTable();
+        }
+        if (state.currentPage === "player") {
+          renderPlayerPage(playerIdFromUrl());
+        }
+      }
+    }
   } catch {
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
   }
@@ -4383,6 +4433,7 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
   } else {
     state.watchlistPlayerIds.delete(key);
   }
+  trackWatchlistChange(key, added);
 
   saveTableState();
   showWatchlistToast(`${playerName} ${added ? "added to" : "removed from"}`);
@@ -5940,7 +5991,11 @@ function addSelectedToWatchlist() {
   }
 
   if (state.currentPage === "watchlist") {
-    state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.delete(String(playerId)));
+    state.selectedPlayerIds.forEach((playerId) => {
+      const key = String(playerId);
+      state.watchlistPlayerIds.delete(key);
+      trackWatchlistChange(key, false);
+    });
     state.selectedPlayerIds.clear();
     state.selectionAnchorPlayerId = null;
     saveTableState();
@@ -5949,7 +6004,11 @@ function addSelectedToWatchlist() {
     return;
   }
 
-  state.selectedPlayerIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  state.selectedPlayerIds.forEach((playerId) => {
+    const key = String(playerId);
+    state.watchlistPlayerIds.add(key);
+    trackWatchlistChange(key, true);
+  });
   state.selectedPlayerIds.clear();
   state.selectionAnchorPlayerId = null;
   saveTableState();

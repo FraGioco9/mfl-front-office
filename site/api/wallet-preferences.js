@@ -175,15 +175,31 @@ async function readPreferences(wallet) {
 
 async function writePreferences(wallet, preferences) {
   const currentPreferences = await readPreferences(wallet);
-  const watchlistPlayerIds = Array.isArray(preferences.watchlistPlayerIds)
-    ? normalizeWatchlistIds(preferences.watchlistPlayerIds)
-    : currentPreferences.watchlistPlayerIds;
+  const addedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsAdded);
+  const removedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsRemoved);
+  const hasWatchlistDeltas = addedWatchlistIds.length > 0 || removedWatchlistIds.length > 0;
+  let watchlistPlayerIds;
+
+  if (hasWatchlistDeltas) {
+    const mergedWatchlistIds = new Set(currentPreferences.watchlistPlayerIds);
+    removedWatchlistIds.forEach((playerId) => mergedWatchlistIds.delete(playerId));
+    addedWatchlistIds.forEach((playerId) => mergedWatchlistIds.add(playerId));
+    watchlistPlayerIds = normalizeWatchlistIds(Array.from(mergedWatchlistIds));
+  } else if (Array.isArray(preferences.watchlistPlayerIds)) {
+    watchlistPlayerIds = normalizeWatchlistIds(preferences.watchlistPlayerIds);
+  } else {
+    watchlistPlayerIds = currentPreferences.watchlistPlayerIds;
+  }
+
   const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
 
   const tableState = preferences.tableState && typeof preferences.tableState === "object" && !Array.isArray(preferences.tableState)
-    ? preferences.tableState
+    ? {
+        ...preferences.tableState,
+        watchlistPlayerIds,
+      }
     : currentPreferences.tableState;
 
   const nextPreferences = { watchlistPlayerIds, playerNotes, tableState };
