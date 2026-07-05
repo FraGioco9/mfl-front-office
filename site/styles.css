@@ -1105,11 +1105,6 @@ main {
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.watchlistDropdownItem:hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
-
 .watchlistDropdownItem.active {
   border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
@@ -1144,23 +1139,22 @@ main {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  gap: 4px;
+  gap: 6px;
 }
 
 .watchlistDropdownAction {
-  height: 28px;
   margin: 0;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-soft);
-  padding: 0 7px;
-  font-size: 12px;
-  font-weight: 700;
 }
 
-.watchlistDropdownAction:hover:not(:disabled),
-.watchlistDropdownAction:focus-visible:not(:disabled) {
+.watchlistDropdownRename {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.watchlistDropdownRename:hover:not(:disabled),
+.watchlistDropdownRename:focus-visible:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
@@ -1169,12 +1163,6 @@ main {
 .watchlistDropdownAction:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-}
-
-.watchlistDropdownDelete:hover:not(:disabled),
-.watchlistDropdownDelete:focus-visible:not(:disabled) {
-  border-color: var(--danger);
-  color: var(--danger);
 }
 
 .watchlistDropdownSeparator {
@@ -1190,9 +1178,64 @@ main {
   cursor: pointer;
 }
 
-.watchlistDropdownAdd:hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
+.watchlistDropdownAdd:hover,
+.watchlistDropdownAdd:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text);
+}
+
+.addWatchlistError {
+  min-height: 18px;
+  margin: 6px 0 0;
+  color: #e06b6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#addWatchlistNameInput[aria-invalid="true"] {
+  border-color: #e06b6b;
+}
+
+.deleteWatchlistDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  background: var(--primary-hover);
+  color: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.deleteWatchlistBody {
+  padding: 18px;
+}
+
+.deleteWatchlistBody p {
+  margin: 0;
+}
+
+.deleteWatchlistFooter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.deleteWatchlistFooter button {
+  width: 100%;
+}
+
+.deleteWatchlistConfirmButton {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.deleteWatchlistConfirmButton:hover,
+.deleteWatchlistConfirmButton:focus-visible {
+  border-color: #ffb3b3;
+  background: #a61e1e;
+  color: #ffffff;
 }
 
 .addWatchlistDialog {
@@ -1339,6 +1382,29 @@ button:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
+}
+
+.watchlistDropdownName:hover:not(:disabled),
+.watchlistDropdownName:focus-visible,
+.watchlistDropdownAdd:hover:not(:disabled),
+.watchlistDropdownAdd:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+.watchlistDropdownRename:hover:not(:disabled),
+.watchlistDropdownRename:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownDelete:hover:not(:disabled),
+.watchlistDropdownDelete:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
 }
 
 .viewButton.active:hover:not(:disabled) {

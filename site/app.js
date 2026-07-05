@@ -25,6 +25,7 @@ const state = {
   currentWatchlistId: "",
   pendingWatchlistRouteId: "",
   editingWatchlistId: "",
+  pendingDeleteWatchlistId: "",
   playerNotes: {},
   tablePageStates: {},
   toastTimer: null,
@@ -352,6 +353,12 @@ const addWatchlistTitle = document.querySelector("#addWatchlistTitle");
 const addWatchlistNameInput = document.querySelector("#addWatchlistNameInput");
 const discardAddWatchlistButton = document.querySelector("#discardAddWatchlistButton");
 const confirmAddWatchlistButton = document.querySelector("#confirmAddWatchlistButton");
+const addWatchlistError = document.querySelector("#addWatchlistError");
+const deleteWatchlistModal = document.querySelector("#deleteWatchlistModal");
+const deleteWatchlistName = document.querySelector("#deleteWatchlistName");
+const cancelDeleteWatchlistButton = document.querySelector("#cancelDeleteWatchlistButton");
+const confirmDeleteWatchlistButton = document.querySelector("#confirmDeleteWatchlistButton");
+const closeDeleteWatchlistButton = document.querySelector("#closeDeleteWatchlistButton");
 const closeAddWatchlistButton = document.querySelector("#closeAddWatchlistButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
@@ -3245,24 +3252,30 @@ function renderWatchlistSwitcher() {
 
     const renameButton = document.createElement("button");
     renameButton.type = "button";
-    renameButton.className = "watchlistDropdownAction";
-    renameButton.textContent = "Rename";
+    renameButton.className = "evaluationLoadIconButton watchlistDropdownAction watchlistDropdownRename";
+    renameButton.setAttribute("aria-label", "Rename watchlist");
+    renameButton.dataset.tooltip = "Rename";
+    renameButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>';
+    attachEvaluationLoadActionTooltip(renameButton);
     renameButton.addEventListener("click", (event) => {
       event.stopPropagation();
-      closeWatchlistDropdown();
       openRenameWatchlistModal(watchlist.id);
     });
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
-    deleteButton.className = "watchlistDropdownAction watchlistDropdownDelete";
-    deleteButton.textContent = "Delete";
+    deleteButton.className = "evaluationLoadIconButton evaluationLoadDeleteButton watchlistDropdownAction watchlistDropdownDelete";
+    deleteButton.setAttribute("aria-label", "Delete watchlist");
+    deleteButton.dataset.tooltip = watchlists.length <= 1 ? "You need at least one watchlist" : "Delete";
+    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
     deleteButton.disabled = watchlists.length <= 1;
-    deleteButton.title = watchlists.length <= 1 ? "You need at least one watchlist" : "Delete watchlist";
+    attachEvaluationLoadActionTooltip(deleteButton);
     deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
-      closeWatchlistDropdown();
-      deleteWatchlist(watchlist.id);
+      if (deleteButton.disabled) {
+        return;
+      }
+      openDeleteWatchlistModal(watchlist.id);
     });
 
     actions.append(renameButton, deleteButton);
@@ -3393,6 +3406,7 @@ function switchWatchlist(watchlistId) {
 }
 
 function openAddWatchlistModal() {
+  hideEvaluationLoadActionTooltip();
   if (!hasWalletOptIn()) {
     renderWatchlistSwitcher();
     return;
@@ -3413,12 +3427,18 @@ function openAddWatchlistModal() {
   }
   if (addWatchlistNameInput) {
     addWatchlistNameInput.value = "";
+    addWatchlistNameInput.removeAttribute("aria-invalid");
+  }
+  if (addWatchlistError) {
+    addWatchlistError.hidden = true;
+    addWatchlistError.textContent = "";
   }
   showModal(addWatchlistModal);
   window.setTimeout(() => addWatchlistNameInput?.focus(), 0);
 }
 
 function openRenameWatchlistModal(watchlistId) {
+  hideEvaluationLoadActionTooltip();
   const watchlist = state.watchlists.find((item) => item.id === watchlistId);
   if (!watchlist) {
     renderWatchlistSwitcher();
@@ -3434,6 +3454,11 @@ function openRenameWatchlistModal(watchlistId) {
   }
   if (addWatchlistNameInput) {
     addWatchlistNameInput.value = watchlist.name;
+    addWatchlistNameInput.removeAttribute("aria-invalid");
+  }
+  if (addWatchlistError) {
+    addWatchlistError.hidden = true;
+    addWatchlistError.textContent = "";
   }
   showModal(addWatchlistModal);
   window.setTimeout(() => {
@@ -3444,16 +3469,31 @@ function openRenameWatchlistModal(watchlistId) {
 
 function closeAddWatchlistModal() {
   state.editingWatchlistId = "";
+  if (addWatchlistError) {
+    addWatchlistError.hidden = true;
+    addWatchlistError.textContent = "";
+  }
+  addWatchlistNameInput?.removeAttribute("aria-invalid");
   hideModal(addWatchlistModal, renderWatchlistSwitcher);
 }
 
 function confirmAddWatchlist() {
   const name = normalizeWatchlistName(addWatchlistNameInput?.value, "");
   if (!name) {
+    if (addWatchlistError) {
+      addWatchlistError.textContent = "Watchlist name cannot be blank.";
+      addWatchlistError.hidden = false;
+    }
+    addWatchlistNameInput?.setAttribute("aria-invalid", "true");
     addWatchlistNameInput?.focus();
-    showGenericToast("Watchlist name cannot be blank.");
     return;
   }
+
+  if (addWatchlistError) {
+    addWatchlistError.hidden = true;
+    addWatchlistError.textContent = "";
+  }
+  addWatchlistNameInput?.removeAttribute("aria-invalid");
 
   if (state.editingWatchlistId) {
     const watchlist = state.watchlists.find((item) => item.id === state.editingWatchlistId);
@@ -3492,6 +3532,40 @@ function confirmAddWatchlist() {
   updateWatchlistUrl();
   saveTableState();
   applyFilters();
+}
+
+function openDeleteWatchlistModal(watchlistId) {
+  hideEvaluationLoadActionTooltip();
+  const watchlist = state.watchlists.find((item) => item.id === watchlistId);
+  if (!watchlist) {
+    renderWatchlistSwitcher();
+    return;
+  }
+
+  if (state.watchlists.length <= 1) {
+    renderWatchlistSwitcher();
+    showGenericToast("You need at least one watchlist.");
+    return;
+  }
+
+  state.pendingDeleteWatchlistId = watchlist.id;
+  if (deleteWatchlistName) {
+    deleteWatchlistName.textContent = watchlist.name;
+  }
+  showModal(deleteWatchlistModal);
+  window.setTimeout(() => cancelDeleteWatchlistButton?.focus(), 0);
+}
+
+function closeDeleteWatchlistModal() {
+  state.pendingDeleteWatchlistId = "";
+  hideModal(deleteWatchlistModal, renderWatchlistSwitcher);
+}
+
+function confirmDeleteWatchlist() {
+  const watchlistId = state.pendingDeleteWatchlistId;
+  state.pendingDeleteWatchlistId = "";
+  hideModal(deleteWatchlistModal, renderWatchlistSwitcher);
+  deleteWatchlist(watchlistId);
 }
 
 function deleteWatchlist(watchlistId) {
@@ -7985,6 +8059,8 @@ document.addEventListener("keydown", (event) => {
     closeFilters();
   } else if (event.key === "Escape" && !addWatchlistModal.hidden) {
     closeAddWatchlistModal();
+  } else if (event.key === "Escape" && !deleteWatchlistModal.hidden) {
+    closeDeleteWatchlistModal();
   } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
     closeAdvancedSettings();
   } else if (event.key === "Escape" && !watchlistDropdown?.hidden) {
@@ -7994,6 +8070,9 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
     event.preventDefault();
     confirmAddWatchlist();
+  } else if (event.key === "Enter" && !deleteWatchlistModal.hidden) {
+    event.preventDefault();
+    confirmDeleteWatchlist();
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
@@ -8028,6 +8107,7 @@ setupBackdropClickClose(searchModal, closeSearch);
 
 setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);
 setupBackdropClickClose(addWatchlistModal, closeAddWatchlistModal);
+setupBackdropClickClose(deleteWatchlistModal, closeDeleteWatchlistModal);
 
 applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
@@ -8041,7 +8121,15 @@ openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);
 discardAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
 closeAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
 confirmAddWatchlistButton?.addEventListener("click", confirmAddWatchlist);
+cancelDeleteWatchlistButton?.addEventListener("click", closeDeleteWatchlistModal);
+closeDeleteWatchlistButton?.addEventListener("click", closeDeleteWatchlistModal);
+confirmDeleteWatchlistButton?.addEventListener("click", confirmDeleteWatchlist);
 addWatchlistNameInput?.addEventListener("input", () => {
+  if (addWatchlistError) {
+    addWatchlistError.hidden = true;
+    addWatchlistError.textContent = "";
+  }
+  addWatchlistNameInput.removeAttribute("aria-invalid");
   if (addWatchlistNameInput.value.length > 20) {
     addWatchlistNameInput.value = addWatchlistNameInput.value.slice(0, 20);
   }

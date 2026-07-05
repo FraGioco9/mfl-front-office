@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.143.4">
+    <link rel="stylesheet" href="/styles.css?v=1.143.5">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -292,6 +292,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.143.5</span><p>Polish Watchlist dropdown actions and delete confirmation</p></li>
               <li><span>v1.143.4</span><p>Fix Watchlist deep links and add dropdown rename/delete actions</p></li>
               <li><span>v1.143.3</span><p>Fix Watchlist dropdown hover override</p></li>
               <li><span>v1.143.2</span><p>Match Watchlist dropdown hover style</p></li>
@@ -723,7 +724,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.4</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.5</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -787,12 +788,29 @@
         <section class="addWatchlistBody">
           <label class="field">
             <span>Name</span>
-            <input id="addWatchlistNameInput" type="text" maxlength="20" autocomplete="off" placeholder="Watchlist name">
+            <input id="addWatchlistNameInput" type="text" maxlength="20" autocomplete="off" placeholder="Watchlist name" aria-describedby="addWatchlistError">
           </label>
+          <p id="addWatchlistError" class="addWatchlistError" hidden></p>
         </section>
         <footer class="filtersFooter addWatchlistFooter">
           <button id="discardAddWatchlistButton" type="button">Discard</button>
           <button id="confirmAddWatchlistButton" type="button">Confirm</button>
+        </footer>
+      </section>
+    </div>
+
+    <div id="deleteWatchlistModal" class="modalBackdrop" hidden>
+      <section class="deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="deleteWatchlistTitle">Delete watchlist</h2>
+          <button id="closeDeleteWatchlistButton" class="iconButton" type="button" aria-label="Close delete watchlist">x</button>
+        </header>
+        <section class="deleteWatchlistBody">
+          <p>Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
+        </section>
+        <footer class="filtersFooter deleteWatchlistFooter">
+          <button id="cancelDeleteWatchlistButton" type="button">Cancel</button>
+          <button id="confirmDeleteWatchlistButton" class="deleteWatchlistConfirmButton" type="button">Delete</button>
         </footer>
       </section>
     </div>
@@ -865,6 +883,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.143.4"></script>
+    <script src="/app.js?v=1.143.5"></script>
   </body>
 </html>
