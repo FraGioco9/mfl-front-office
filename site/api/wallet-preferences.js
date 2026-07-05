@@ -146,10 +146,45 @@ function normalizePlayerNotes(notes) {
   return normalized;
 }
 
+function normalizeIdList(ids, limit = Infinity) {
+  if (!Array.isArray(ids)) {
+    return [];
+  }
+
+  const normalized = [];
+  ids.forEach((playerId) => {
+    const key = String(playerId || "").trim();
+    if (key && !normalized.includes(key)) {
+      normalized.push(key);
+    }
+  });
+
+  return Number.isFinite(limit) ? normalized.slice(0, limit) : normalized;
+}
+
 function normalizeWatchlistIds(ids) {
-  return Array.isArray(ids)
-    ? [...new Set(ids.map((playerId) => String(playerId || "").trim()).filter(Boolean))]
-    : [];
+  return normalizeIdList(ids);
+}
+
+function mergeRecentIds(incomingIds, currentIds) {
+  return normalizeIdList([...(Array.isArray(incomingIds) ? incomingIds : []), ...(Array.isArray(currentIds) ? currentIds : [])], 5);
+}
+
+function mergeTableState(tableState, currentTableState, watchlistPlayerIds) {
+  const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState) ? tableState : null;
+  const current = currentTableState && typeof currentTableState === "object" && !Array.isArray(currentTableState) ? currentTableState : {};
+
+  if (!incoming) {
+    return current;
+  }
+
+  return {
+    ...current,
+    ...incoming,
+    watchlistPlayerIds,
+    recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),
+    recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds),
+  };
 }
 
 function preferencesFromRow(row) {
@@ -195,12 +230,7 @@ async function writePreferences(wallet, preferences) {
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
 
-  const tableState = preferences.tableState && typeof preferences.tableState === "object" && !Array.isArray(preferences.tableState)
-    ? {
-        ...preferences.tableState,
-        watchlistPlayerIds,
-      }
-    : currentPreferences.tableState;
+  const tableState = mergeTableState(preferences.tableState, currentPreferences.tableState, watchlistPlayerIds);
 
   const nextPreferences = { watchlistPlayerIds, playerNotes, tableState };
   if (!supabaseConfig()) {

@@ -216,6 +216,8 @@ const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
+const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
+const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
 const PLAYER_NOTE_MAX_LENGTH = 200;
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
@@ -2437,7 +2439,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (pageName === "watchlist" && hasWalletOptIn()) {
-    await loadWalletPreferences({ force: true });
+    applyWalletWatchlistIds(loadLocalWalletWatchlist());
+    void loadWalletPreferences({ force: true }).then(refreshWatchlistPageAfterWalletSync);
   }
 
   state.currentPage = pageName;
@@ -2910,10 +2913,51 @@ function loadGuestWatchlist() {
   }
 }
 
+function normalizeIdList(ids, limit = Infinity) {
+  if (!Array.isArray(ids)) {
+    return [];
+  }
+
+  const normalized = [];
+  ids.forEach((playerId) => {
+    const key = String(playerId || "").trim();
+    if (key && !normalized.includes(key)) {
+      normalized.push(key);
+    }
+  });
+
+  return Number.isFinite(limit) ? normalized.slice(0, limit) : normalized;
+}
+
 function normalizeWatchlistIdList(ids) {
-  return Array.isArray(ids)
-    ? [...new Set(ids.map((playerId) => String(playerId || "").trim()).filter(Boolean))]
-    : [];
+  return normalizeIdList(ids);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function loadRecentIdsFromStorage(storageKey) {
+  try {
+    return normalizeIdList(JSON.parse(localStorage.getItem(storageKey) || "[]"), 5);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentIdsToStorage(storageKey, ids) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(normalizeIdList(ids, 5)));
+  } catch {
+    // Recent search sync is best-effort when browser storage is blocked.
+  }
+}
+
+function mergeRecentIdLists(...lists) {
+  return normalizeIdList(lists.flat(), 5);
 }
 
 function mergeGuestWatchlistIntoAccount() {
@@ -3143,6 +3187,8 @@ async function saveWalletPreferencesNow() {
 }
 
 function saveTableState() {
+  syncRecentSearchStateFromStorage();
+  persistRecentSearchStates();
   const savedState = currentTableState();
   saveTableStateLocally(savedState);
 
@@ -3211,10 +3257,13 @@ function applyWalletTableState(savedState) {
   restoreMenuState(savedState);
   restoreRecentSearchState(savedState);
   restoreRecentEvaluationState(savedState);
+  persistRecentSearchStates();
   restorePlayerAttributeView(savedState);
   saveTableStateLocally({
     ...savedState,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+    recentSearchPlayerIds: state.recentSearchPlayerIds,
+    recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     linkedWalletAddress: state.linkedWalletAddress,
   });
   updateMenuVisibility();
@@ -3243,13 +3292,15 @@ function restoreMenuState(savedState) {
 }
 
 function restoreRecentSearchState(savedState) {
-  const ids = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
-  state.recentSearchPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
+  const savedIds = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
+  state.recentSearchPlayerIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_SEARCH_STORAGE_KEY), savedIds);
+  saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
 }
 
 function restoreRecentEvaluationState(savedState) {
-  const ids = Array.isArray(savedState?.recentEvaluationPlayerIds) ? savedState.recentEvaluationPlayerIds : [];
-  state.recentEvaluationPlayerIds = ids.map((playerId) => String(playerId)).slice(0, 5);
+  const savedIds = Array.isArray(savedState?.recentEvaluationPlayerIds) ? savedState.recentEvaluationPlayerIds : [];
+  state.recentEvaluationPlayerIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY), savedIds);
+  saveRecentIdsToStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY, state.recentEvaluationPlayerIds);
 }
 
 function playerCanViewProgression(row = null) {
@@ -3270,6 +3321,33 @@ function normalizePlayerAttributeView(viewName, row = null) {
 function restorePlayerAttributeView(savedState) {
   if (["attributes", "training", "current", "all", "next"].includes(savedState?.playerAttributeView)) {
     state.playerAttributeView = savedState.playerAttributeView;
+  }
+}
+
+function persistRecentSearchStates() {
+  saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
+  saveRecentIdsToStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY, state.recentEvaluationPlayerIds);
+}
+
+function syncRecentSearchStateFromStorage(event = null) {
+  if (event && ![RECENT_SEARCH_STORAGE_KEY, RECENT_EVALUATION_SEARCH_STORAGE_KEY].includes(event.key)) {
+    return;
+  }
+
+  const nextSearchIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_SEARCH_STORAGE_KEY), state.recentSearchPlayerIds);
+  const nextEvaluationIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY), state.recentEvaluationPlayerIds);
+  const searchChanged = JSON.stringify(nextSearchIds) !== JSON.stringify(state.recentSearchPlayerIds);
+  const evaluationChanged = JSON.stringify(nextEvaluationIds) !== JSON.stringify(state.recentEvaluationPlayerIds);
+
+  state.recentSearchPlayerIds = nextSearchIds;
+  state.recentEvaluationPlayerIds = nextEvaluationIds;
+
+  if (searchChanged && searchModal && !searchModal.hidden && !playerSearchInput.value.trim()) {
+    renderSearchResultsNow();
+  }
+
+  if (evaluationChanged && state.currentPage === "evaluation" && !evaluationSearchInput.value.trim()) {
+    renderEvaluationSearchResults();
   }
 }
 
@@ -3684,8 +3762,8 @@ function rowByPlayerId(playerId) {
 function buildSearchIndex() {
   state.searchIndex = state.rows.map((row) => ({
     row,
-    id: String(getValue(row, "player_id") || "").toLowerCase(),
-    name: String(getValue(row, "name") || "").toLowerCase(),
+    id: normalizeSearchText(getValue(row, "player_id")),
+    name: normalizeSearchText(getValue(row, "name")),
     overall: Number(statDisplayValue(row, "overall") || 0),
     retired: getValue(row, "retirement_years") === 0,
   }));
@@ -4104,7 +4182,8 @@ function recentEvaluationRows() {
 
 function rememberEvaluationResult(playerId) {
   const key = String(playerId);
-  state.recentEvaluationPlayerIds = [key, ...state.recentEvaluationPlayerIds.filter((id) => id !== key)].slice(0, 5);
+  state.recentEvaluationPlayerIds = mergeRecentIdLists([key], state.recentEvaluationPlayerIds);
+  persistRecentSearchStates();
   saveTableState();
 }
 
@@ -4144,7 +4223,7 @@ function clearEvaluationSearchFocus() {
 }
 
 function renderEvaluationSearchResults() {
-  const query = evaluationSearchInput.value.trim().toLowerCase();
+  const query = normalizeSearchText(evaluationSearchInput.value.trim());
 
   if (!query && !shouldShowEvaluationRecentResults()) {
     evaluationSearchResults.hidden = true;
@@ -5139,12 +5218,13 @@ function recentSearchRows() {
 
 function rememberSearchResult(playerId) {
   const key = String(playerId);
-  state.recentSearchPlayerIds = [key, ...state.recentSearchPlayerIds.filter((id) => id !== key)].slice(0, 5);
+  state.recentSearchPlayerIds = mergeRecentIdLists([key], state.recentSearchPlayerIds);
+  persistRecentSearchStates();
   saveTableState();
 }
 
 function renderSearchResultsNow() {
-  const query = playerSearchInput.value.trim().toLowerCase();
+  const query = normalizeSearchText(playerSearchInput.value.trim());
   const results = query ? bestSearchResults(query) : recentSearchRows();
   playerSearchResults.classList.add("filledSearchResults");
 
@@ -5811,7 +5891,7 @@ function ruleMatches(row, rule) {
   }
 
   if (rule.column === "name" || rule.column === "wallet_name") {
-    return String(rawValue ?? "").toLowerCase().includes(filterValue.toLowerCase());
+    return normalizeSearchText(rawValue).includes(normalizeSearchText(filterValue));
   }
 
   if (isNumericColumn(rule.column)) {
@@ -5858,8 +5938,8 @@ function ruleMatches(row, rule) {
     }
   }
 
-  const rowText = String(rawValue ?? "").toLowerCase();
-  const filterText = filterValue.toLowerCase();
+  const rowText = normalizeSearchText(rawValue);
+  const filterText = normalizeSearchText(filterValue);
 
   if (rule.operator === "contains") {
     return rowText.includes(filterText);
@@ -6715,6 +6795,7 @@ closeSearchButton.addEventListener("click", closeSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
 advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });
+window.addEventListener("storage", syncRecentSearchStateFromStorage);
 window.addEventListener("resize", updateAdvancedPlayerTableClip);
 advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
 advancedMflUsdIncreaseButton.addEventListener("mousedown", (event) => event.preventDefault());
