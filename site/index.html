@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.51">
+    <link rel="stylesheet" href="/styles.css?v=1.89.54">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -284,6 +284,9 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.54</span><p>Load full individual-player data while keeping progression views permission-gated</p></li>
+              <li><span>v1.89.53</span><p>Recreate Contracts Table with matched sticky headers and clipped scrolling rows</p></li>
+              <li><span>v1.89.52</span><p>Prevent drag-outside modal closes and keep late-career reward header unhighlighted</p></li>
               <li><span>v1.89.51</span><p>Polish late-career reward rate controls and add collapse animation</p></li>
               <li><span>v1.89.50</span><p>Save late-career reward rates with evaluations and make Advanced Settings collapsible</p></li>
               <li><span>v1.89.49</span><p>Add configurable late-career reward rates to Evaluation advanced settings</p></li>
@@ -696,7 +699,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.51</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.54</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -804,12 +807,10 @@
             <div class="advancedSettingHeader">
               <h3 id="advancedPlayerTableTitle">Contracts Table</h3>
             </div>
-            <div class="advancedPlayerTableScroller">
-              <table class="advancedPlayerTable">
-                <thead id="advancedPlayerTableHead"></thead>
-                <tbody id="advancedPlayerTableBody"></tbody>
-              </table>
-            </div>
+            <table class="advancedPlayerTable">
+              <thead id="advancedPlayerTableHead"></thead>
+              <tbody id="advancedPlayerTableBody"></tbody>
+            </table>
           </section>
         </section>
 
@@ -819,6 +820,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.51"></script>
+    <script src="/app.js?v=1.89.54"></script>
   </body>
 </html>

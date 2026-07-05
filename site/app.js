@@ -771,11 +771,15 @@ function currentDataAccess(pageName = state.currentPage) {
     return state.dataAccessOverride;
   }
 
+  if (pageName === "player") {
+    return "full";
+  }
+
   if (hasProgressionAccess()) {
     return "full";
   }
 
-  return ["myplayers", "player"].includes(pageName) && hasWalletOptIn() ? "owned" : "public";
+  return pageName === "myplayers" && hasWalletOptIn() ? "owned" : "public";
 }
 
 function staticDataFileUrl(fileName) {
@@ -4257,13 +4261,10 @@ function renderAdvancedPlayerTable() {
   const headers = rows.shift();
   const headerRow = document.createElement("tr");
   const bodyFragment = document.createDocumentFragment();
-  const emptyHeader = document.createElement("th");
 
-  emptyHeader.textContent = "";
-  headerRow.appendChild(emptyHeader);
-
-  headers.slice(1).forEach((header) => {
+  headers.forEach((header, index) => {
     const cell = document.createElement("th");
+    cell.scope = "col";
     cell.textContent = header;
     headerRow.appendChild(cell);
   });
@@ -4272,10 +4273,15 @@ function renderAdvancedPlayerTable() {
 
   rows.forEach((row) => {
     const tableRow = document.createElement("tr");
+    const rowHeader = document.createElement("th");
 
-    row.forEach((value, index) => {
+    rowHeader.scope = "row";
+    rowHeader.textContent = row[0];
+    tableRow.appendChild(rowHeader);
+
+    row.slice(1).forEach((value) => {
       const cell = document.createElement("td");
-      cell.textContent = index === 0 ? value : formatAdvancedPlayerTableValue(value);
+      cell.textContent = formatAdvancedPlayerTableValue(value);
       tableRow.appendChild(cell);
     });
 
@@ -5520,6 +5526,26 @@ function hideModal(modal, afterClose) {
       afterClose();
     }
   }, 180);
+}
+
+function setupBackdropClickClose(modal, closeCallback) {
+  if (!modal || typeof closeCallback !== "function") {
+    return;
+  }
+
+  let pointerStartedOnBackdrop = false;
+
+  modal.addEventListener("pointerdown", (event) => {
+    pointerStartedOnBackdrop = event.target === modal;
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (pointerStartedOnBackdrop && event.target === modal) {
+      closeCallback();
+    }
+
+    pointerStartedOnBackdrop = false;
+  });
 }
 
 async function openSearch() {
@@ -7269,11 +7295,7 @@ addFilterSelect.addEventListener("change", () => {
   addFilterSelect.hidden = true;
 });
 
-filtersModal.addEventListener("click", (event) => {
-  if (event.target === filtersModal) {
-    closeFilters();
-  }
-});
+setupBackdropClickClose(filtersModal, () => closeFilters());
 
 document.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -7296,23 +7318,23 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+let accountPointerStartedOutside = false;
+
+document.addEventListener("pointerdown", (event) => {
+  accountPointerStartedOutside = !accountMenu.contains(event.target);
+});
+
 document.addEventListener("click", (event) => {
-  if (!accountMenu.hidden && !accountMenu.contains(event.target)) {
+  if (accountPointerStartedOutside && !accountDropdown.hidden && !accountMenu.contains(event.target)) {
     closeAccountMenu();
   }
+
+  accountPointerStartedOutside = false;
 });
 
-searchModal.addEventListener("click", (event) => {
-  if (event.target === searchModal) {
-    closeSearch();
-  }
-});
+setupBackdropClickClose(searchModal, closeSearch);
 
-advancedSettingsModal.addEventListener("click", (event) => {
-  if (event.target === advancedSettingsModal) {
-    closeAdvancedSettings();
-  }
-});
+setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);
 
 applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
@@ -7484,13 +7506,7 @@ if (closeEvaluationLoadButton) {
     hideModal(evaluationLoadModal);
   });
 }
-if (evaluationLoadModal) {
-  evaluationLoadModal.addEventListener("click", (event) => {
-    if (event.target === evaluationLoadModal) {
-      hideModal(evaluationLoadModal);
-    }
-  });
-}
+setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
 if (evaluationLoadList) {
   evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });
 }
