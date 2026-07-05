@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.142.7">
+    <link rel="stylesheet" href="/styles.css?v=1.143.0">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -97,6 +97,10 @@
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
             <button class="viewButton active" type="button" data-view="current">Current Season</button>
             <button class="viewButton" type="button" data-view="all">All Time</button>
+            <label id="watchlistSwitcher" class="watchlistSwitcher" hidden>
+              <span>Watchlist</span>
+              <select id="watchlistSelect" aria-label="Select watchlist"></select>
+            </label>
           </section>
 
           <section class="quickFilters" aria-label="Quick filters">
@@ -284,6 +288,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.143.0</span><p>Add multiple Supabase-synced Watchlists</p></li>
               <li><span>v1.142.7</span><p>Rename progression loading message</p></li>
               <li><span>v1.142.6</span><p>Tighten changelog patch list spacing</p></li>
               <li><span>v1.142.5</span><p>Vertically center changelog version and patch text</p></li>
@@ -710,7 +715,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.142.7</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -763,6 +768,26 @@
       </section>
     </div>
 
+
+
+    <div id="addWatchlistModal" class="modalBackdrop" hidden>
+      <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="addWatchlistTitle">Add a watchlist</h2>
+          <button id="closeAddWatchlistButton" class="iconButton" type="button" aria-label="Close add watchlist">x</button>
+        </header>
+        <section class="addWatchlistBody">
+          <label class="field">
+            <span>Name</span>
+            <input id="addWatchlistNameInput" type="text" maxlength="20" autocomplete="off" placeholder="Watchlist name">
+          </label>
+        </section>
+        <footer class="filtersFooter addWatchlistFooter">
+          <button id="discardAddWatchlistButton" type="button">Discard</button>
+          <button id="confirmAddWatchlistButton" type="button">Confirm</button>
+        </footer>
+      </section>
+    </div>
     <div id="advancedSettingsModal" class="modalBackdrop" hidden>
       <section class="advancedSettingsDialog" role="dialog" aria-modal="true" aria-labelledby="advancedSettingsTitle">
         <header class="filtersHeader">
@@ -832,6 +857,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.142.7"></script>
+    <script src="/app.js?v=1.143.0"></script>
   </body>
 </html>

@@ -3,6 +3,9 @@ const fcl = require("@onflow/fcl");
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
 const PLAYER_NOTE_MAX_LENGTH = 200;
+const WATCHLIST_ID_LENGTH = 8;
+const MAX_WATCHLISTS = 5;
+const DEFAULT_WATCHLIST_NAME = "Default";
 
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
@@ -126,7 +129,7 @@ async function supabaseRequest(pathname, options = {}) {
 }
 
 function emptyPreferences() {
-  return { watchlistPlayerIds: [], playerNotes: {}, tableState: null, evaluationSettings: null };
+  return { watchlistPlayerIds: [], watchlists: [], currentWatchlistId: "", playerNotes: {}, tableState: null, evaluationSettings: null };
 }
 
 function normalizePlayerNotes(notes) {
@@ -164,6 +167,37 @@ function normalizeIdList(ids, limit = Infinity) {
 
 function normalizeWatchlistIds(ids) {
   return normalizeIdList(ids);
+}
+
+function normalizeWatchlistName(name, fallback = DEFAULT_WATCHLIST_NAME) {
+  const value = String(name || "").trim().replace(/\s+/g, " ").slice(0, 20);
+  return value || fallback;
+}
+
+function normalizeWatchlists(watchlists, legacyIds = []) {
+  const normalized = [];
+  const source = Array.isArray(watchlists) ? watchlists : [];
+
+  source.forEach((watchlist) => {
+    const id = String(watchlist?.id || "").trim().slice(0, WATCHLIST_ID_LENGTH);
+    const name = normalizeWatchlistName(watchlist?.name, DEFAULT_WATCHLIST_NAME);
+    if (!id || normalized.some((item) => item.id === id) || normalized.length >= MAX_WATCHLISTS) {
+      return;
+    }
+
+    normalized.push({
+      id,
+      name,
+      playerIds: normalizeWatchlistIds(watchlist?.playerIds ?? watchlist?.player_ids ?? watchlist?.watchlistPlayerIds),
+    });
+  });
+
+  return normalized.length ? normalized : [{ id: "default0", name: DEFAULT_WATCHLIST_NAME, playerIds: normalizeWatchlistIds(legacyIds) }];
+}
+
+function normalizeCurrentWatchlistId(id, watchlists) {
+  const value = String(id || "").trim();
+  return watchlists.some((watchlist) => watchlist.id === value) ? value : watchlists[0]?.id || "";
 }
 
 function parsePositiveTwoDecimal(value) {
@@ -231,8 +265,15 @@ function preferencesFromRow(row) {
     return emptyPreferences();
   }
 
+  const watchlistPlayerIds = normalizeWatchlistIds(row.watchlist_player_ids);
+  const watchlists = Array.isArray(row.watchlists) && row.watchlists.length
+    ? normalizeWatchlists(row.watchlists, watchlistPlayerIds)
+    : [];
+
   return {
-    watchlistPlayerIds: normalizeWatchlistIds(row.watchlist_player_ids),
+    watchlistPlayerIds,
+    watchlists,
+    currentWatchlistId: normalizeCurrentWatchlistId(row.current_watchlist_id, watchlists),
     playerNotes: normalizePlayerNotes(row.player_notes),
     tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? row.table_state : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
@@ -244,7 +285,7 @@ async function readPreferences(wallet) {
     return emptyPreferences();
   }
 
-  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,watchlists,current_watchlist_id,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
@@ -266,6 +307,21 @@ async function writePreferences(wallet, preferences) {
     watchlistPlayerIds = currentPreferences.watchlistPlayerIds;
   }
 
+  let watchlists = Array.isArray(preferences.watchlists)
+    ? normalizeWatchlists(preferences.watchlists, watchlistPlayerIds)
+    : currentPreferences.watchlists;
+
+  let currentWatchlistId = normalizeCurrentWatchlistId(preferences.currentWatchlistId, watchlists);
+
+  if (hasWatchlistDeltas) {
+    watchlists = normalizeWatchlists(watchlists, watchlistPlayerIds).map((watchlist) => (watchlist.id === currentWatchlistId
+      ? { ...watchlist, playerIds: watchlistPlayerIds }
+      : watchlist));
+  }
+
+  const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
+  watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds || watchlistPlayerIds);
+
   const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
@@ -275,7 +331,7 @@ async function writePreferences(wallet, preferences) {
     ? normalizeEvaluationSettings(preferences.evaluationSettings)
     : currentPreferences.evaluationSettings;
 
-  const nextPreferences = { watchlistPlayerIds, playerNotes, tableState, evaluationSettings };
+  const nextPreferences = { watchlistPlayerIds, watchlists, currentWatchlistId, playerNotes, tableState, evaluationSettings };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -288,6 +344,8 @@ async function writePreferences(wallet, preferences) {
     body: JSON.stringify([{
       wallet_address: wallet,
       watchlist_player_ids: watchlistPlayerIds,
+      watchlists,
+      current_watchlist_id: currentWatchlistId,
       player_notes: playerNotes,
       table_state: tableState || {},
       evaluation_settings: evaluationSettings || {},

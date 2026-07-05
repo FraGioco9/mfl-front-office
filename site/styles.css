@@ -1013,6 +1013,62 @@ main {
   color: #ffffff;
 }
 
+
+.watchlistSwitcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.watchlistSwitcher[hidden] {
+  display: none;
+}
+
+.watchlistSwitcher select {
+  width: 178px;
+  height: 40px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.watchlistSwitcher select:hover {
+  border-color: var(--primary);
+  background: var(--surface-hover);
+}
+
+.addWatchlistDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.addWatchlistBody {
+  padding: 14px;
+}
+
+.addWatchlistBody .field {
+  width: 100%;
+}
+
+.addWatchlistBody input {
+  width: 100%;
+}
+
+.addWatchlistFooter button {
+  width: 104px;
+  justify-content: center;
+}
+
 .quickFilters {
   display: flex;
   align-items: center;
@@ -2032,7 +2088,8 @@ td a {
     width: 100%;
   }
 
-  .quickFilters {
+  
+.quickFilters {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;

@@ -21,6 +21,9 @@ const state = {
   watchlistPlayerIds: new Set(),
   watchlistPlayerIdsAdded: new Set(),
   watchlistPlayerIdsRemoved: new Set(),
+  watchlists: [],
+  currentWatchlistId: "",
+  pendingWatchlistRouteId: "",
   playerNotes: {},
   tablePageStates: {},
   toastTimer: null,
@@ -219,6 +222,9 @@ const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v
 const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
+const WATCHLIST_ID_LENGTH = 8;
+const MAX_WATCHLISTS = 5;
+const DEFAULT_WATCHLIST_NAME = "Default";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
 const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
 const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
@@ -335,6 +341,13 @@ const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
 const pageText = document.querySelector("#pageText");
 const viewButtons = document.querySelectorAll(".viewButton");
+const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
+const watchlistSelect = document.querySelector("#watchlistSelect");
+const addWatchlistModal = document.querySelector("#addWatchlistModal");
+const addWatchlistNameInput = document.querySelector("#addWatchlistNameInput");
+const discardAddWatchlistButton = document.querySelector("#discardAddWatchlistButton");
+const confirmAddWatchlistButton = document.querySelector("#confirmAddWatchlistButton");
+const closeAddWatchlistButton = document.querySelector("#closeAddWatchlistButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
@@ -2345,17 +2358,17 @@ function normalizedPageName(pageName) {
 }
 
 function pageFromUrl() {
-  const pageName = normalizedPageName(window.location.pathname.replace(/^\//, ""));
+  return pageTargetFromPath(`${window.location.pathname}${window.location.search}`).pageName;
+}
 
-  if (playerIdFromUrl()) {
-    return "player";
-  }
-
-  return ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "changelog"].includes(pageName) ? pageName : "home";
+function watchlistIdFromUrl() {
+  const match = window.location.pathname.match(/^\/watchlist\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 function pageTargetFromPath(path) {
-  const playerMatch = String(path || "").match(/^\/players\/([^/]+)$/);
+  const cleanPath = String(path || "").split("?")[0];
+  const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
 
   if (playerMatch) {
     return {
@@ -2364,7 +2377,16 @@ function pageTargetFromPath(path) {
     };
   }
 
-  const pageName = normalizedPageName(String(path || "").replace(/^\//, "") || "home");
+  const watchlistMatch = cleanPath.match(/^\/watchlist\/([^/]+)$/);
+
+  if (watchlistMatch) {
+    return {
+      pageName: "watchlist",
+      options: { watchlistId: decodeURIComponent(watchlistMatch[1]) },
+    };
+  }
+
+  const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
     pageName: ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
@@ -2413,6 +2435,11 @@ function pagePath(pageName, options = {}) {
     return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
   }
 
+  if (pageName === "watchlist") {
+    const watchlistId = options.watchlistId || state.currentWatchlistId || watchlistIdFromUrl();
+    return watchlistId ? `/watchlist/${encodeURIComponent(watchlistId)}` : "/watchlist";
+  }
+
   return pageName === "home" ? "/" : pageName === "myplayers" ? "/my-players" : `/${pageName}`;
 }
 
@@ -2445,7 +2472,7 @@ function renderTableLoadingShell(pageName) {
   restoreSavedTableState(pageName);
   updateViewButtons();
   tablePageTitle.textContent = pageName === "watchlist"
-    ? "Watchlist"
+    ? `Watchlist - ${currentWatchlistName()}`
     : pageName === "myplayers"
       ? "My Players"
       : pageName === "database"
@@ -2544,8 +2571,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (pageName === "watchlist" && hasWalletOptIn()) {
-    applyWalletWatchlistIds(loadLocalWalletWatchlist());
-    void loadWalletPreferences({ force: true }).then(refreshWatchlistPageAfterWalletSync);
+    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
+    await ensureWatchlistRoute(options);
   }
 
   state.currentPage = pageName;
@@ -2555,7 +2582,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
   changelogPage.hidden = pageName !== "changelog";
-  tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
+  tablePageTitle.textContent = pageName === "watchlist" ? `Watchlist - ${currentWatchlistName()}` : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
+  renderWatchlistSwitcher();
   if (tablePage) {
     restoreSavedTableState(pageName);
     updateViewButtons();
@@ -3011,7 +3039,7 @@ function saveWalletWatchlistLocally() {
   }
 
   try {
-    localStorage.setItem(key, JSON.stringify(Array.from(state.watchlistPlayerIds)));
+    localStorage.setItem(key, JSON.stringify(watchlistsPayload()));
   } catch {
     // Wallet watchlist sync is best-effort when browser storage is blocked.
   }
@@ -3024,8 +3052,11 @@ function loadLocalWalletWatchlist() {
   }
 
   try {
-    const ids = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(ids) ? ids.map((playerId) => String(playerId)) : [];
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    if (Array.isArray(value) && value.some((item) => item && typeof item === "object" && !Array.isArray(item))) {
+      return normalizeWatchlists(value);
+    }
+    return Array.isArray(value) ? value.map((playerId) => String(playerId)) : [];
   } catch {
     return [];
   }
@@ -3058,6 +3089,271 @@ function normalizeIdList(ids, limit = Infinity) {
 
 function normalizeWatchlistIdList(ids) {
   return normalizeIdList(ids);
+}
+
+
+function createWatchlistId() {
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(6);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, WATCHLIST_ID_LENGTH);
+  }
+
+  return Math.random().toString(16).slice(2, 10).padEnd(WATCHLIST_ID_LENGTH, "0").slice(0, WATCHLIST_ID_LENGTH);
+}
+
+function normalizeWatchlistName(name, fallback = DEFAULT_WATCHLIST_NAME) {
+  const value = String(name || "").trim().replace(/\s+/g, " ").slice(0, 20);
+  return value || fallback;
+}
+
+function normalizeWatchlists(watchlists, legacyIds = []) {
+  const normalized = [];
+  const source = Array.isArray(watchlists) ? watchlists : [];
+
+  source.forEach((watchlist) => {
+    const id = String(watchlist?.id || "").trim().slice(0, WATCHLIST_ID_LENGTH);
+    const name = normalizeWatchlistName(watchlist?.name, DEFAULT_WATCHLIST_NAME);
+    if (!id || normalized.some((item) => item.id === id) || normalized.length >= MAX_WATCHLISTS) {
+      return;
+    }
+
+    normalized.push({
+      id,
+      name,
+      playerIds: normalizeWatchlistIdList(watchlist?.playerIds ?? watchlist?.player_ids ?? watchlist?.watchlistPlayerIds),
+    });
+  });
+
+  if (!normalized.length) {
+    normalized.push({
+      id: createWatchlistId(),
+      name: DEFAULT_WATCHLIST_NAME,
+      playerIds: normalizeWatchlistIdList(legacyIds),
+    });
+  }
+
+  if (normalized[0]) {
+    normalized[0].name = normalizeWatchlistName(normalized[0].name, DEFAULT_WATCHLIST_NAME);
+  }
+
+  return normalized;
+}
+
+function activeWatchlist() {
+  return state.watchlists.find((watchlist) => watchlist.id === state.currentWatchlistId) || state.watchlists[0] || null;
+}
+
+function setActiveWatchlistIds(ids) {
+  const active = activeWatchlist();
+  if (active) {
+    active.playerIds = normalizeWatchlistIdList(ids);
+  }
+  state.watchlistPlayerIds = new Set(normalizeWatchlistIdList(ids));
+}
+
+function syncActiveWatchlistFromSet() {
+  const active = activeWatchlist();
+  if (active) {
+    active.playerIds = Array.from(state.watchlistPlayerIds);
+  }
+}
+
+function watchlistsPayload() {
+  syncActiveWatchlistFromSet();
+  return normalizeWatchlists(state.watchlists).map((watchlist) => ({
+    id: watchlist.id,
+    name: watchlist.name,
+    playerIds: normalizeWatchlistIdList(watchlist.playerIds),
+  }));
+}
+
+function applyWatchlists(nextWatchlists, currentWatchlistId = "", legacyIds = []) {
+  const normalized = normalizeWatchlists(nextWatchlists, legacyIds);
+  const requestedId = String(currentWatchlistId || "").trim();
+  const nextActive = normalized.find((watchlist) => watchlist.id === requestedId) || normalized[0];
+  state.watchlists = normalized;
+  state.currentWatchlistId = nextActive?.id || "";
+  state.watchlistPlayerIds = new Set(normalizeWatchlistIdList(nextActive?.playerIds));
+  renderWatchlistSwitcher();
+}
+
+function ensureDefaultWatchlist() {
+  if (!state.watchlists.length) {
+    applyWatchlists([], "", loadLocalWalletWatchlist());
+  }
+  return activeWatchlist();
+}
+
+function currentWatchlistName() {
+  return activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
+}
+
+function updateWatchlistTitle() {
+  if (state.currentPage === "watchlist" && tablePageTitle) {
+    tablePageTitle.textContent = `Watchlist - ${currentWatchlistName()}`;
+  }
+}
+
+function renderWatchlistSwitcher() {
+  if (!watchlistSwitcher || !watchlistSelect) {
+    updateWatchlistTitle();
+    return;
+  }
+
+  watchlistSwitcher.hidden = state.currentPage !== "watchlist" || !hasWalletOptIn();
+  watchlistSelect.replaceChildren();
+  const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+  state.watchlists = watchlists;
+
+  watchlists.forEach((watchlist) => {
+    const option = document.createElement("option");
+    option.value = watchlist.id;
+    option.textContent = watchlist.name;
+    watchlistSelect.appendChild(option);
+  });
+
+  const separator = document.createElement("option");
+  separator.disabled = true;
+  separator.textContent = "────────";
+  watchlistSelect.appendChild(separator);
+
+  const addOption = document.createElement("option");
+  addOption.value = "__add_watchlist__";
+  addOption.textContent = "Add Watchlist";
+  watchlistSelect.appendChild(addOption);
+  watchlistSelect.value = state.currentWatchlistId || watchlists[0]?.id || "";
+  updateWatchlistTitle();
+}
+
+function showGenericToast(message) {
+  const toast = document.querySelector("#toastMessage");
+  if (!toast) {
+    return;
+  }
+
+  window.clearTimeout(state.toastTimer);
+  toast.replaceChildren();
+  toast.textContent = message;
+  toast.classList.add("visible");
+  state.toastTimer = window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 2400);
+}
+
+function updateWatchlistUrl(replace = false) {
+  if (state.currentPage !== "watchlist" || !state.currentWatchlistId) {
+    return;
+  }
+
+  const targetPath = pagePath("watchlist", { watchlistId: state.currentWatchlistId });
+  if (`${window.location.pathname}${window.location.search}` === targetPath) {
+    return;
+  }
+
+  window.history[replace ? "replaceState" : "pushState"]({}, "", targetPath);
+}
+
+async function ensureWatchlistRoute(options = {}) {
+  if (!hasWalletOptIn()) {
+    return;
+  }
+
+  ensureDefaultWatchlist();
+  await loadWalletPreferences({ force: !state.walletPreferencesLoaded });
+  const routeId = String(options.watchlistId || watchlistIdFromUrl() || state.pendingWatchlistRouteId || "").trim();
+  state.pendingWatchlistRouteId = "";
+  const found = routeId ? state.watchlists.find((watchlist) => watchlist.id === routeId) : null;
+
+  if (routeId && !found) {
+    const firstWatchlist = state.watchlists[0] || ensureDefaultWatchlist();
+    state.currentWatchlistId = firstWatchlist?.id || "";
+    setActiveWatchlistIds(firstWatchlist?.playerIds || []);
+    renderWatchlistSwitcher();
+    showGenericToast("Watchlist not found.");
+    updateWatchlistUrl(true);
+    return;
+  }
+
+  const nextWatchlist = found || activeWatchlist() || ensureDefaultWatchlist();
+  state.currentWatchlistId = nextWatchlist?.id || "";
+  setActiveWatchlistIds(nextWatchlist?.playerIds || []);
+  renderWatchlistSwitcher();
+  updateWatchlistUrl(!routeId);
+  queueCloudTableStateSave();
+}
+
+function switchWatchlist(watchlistId) {
+  syncActiveWatchlistFromSet();
+  const nextWatchlist = state.watchlists.find((watchlist) => watchlist.id === watchlistId);
+  if (!nextWatchlist) {
+    renderWatchlistSwitcher();
+    return;
+  }
+
+  state.currentWatchlistId = nextWatchlist.id;
+  state.watchlistPlayerIdsAdded.clear();
+  state.watchlistPlayerIdsRemoved.clear();
+  setActiveWatchlistIds(nextWatchlist.playerIds);
+  state.page = 1;
+  renderWatchlistSwitcher();
+  updateWatchlistUrl();
+  saveTableState();
+  applyFilters();
+}
+
+function openAddWatchlistModal() {
+  if (!hasWalletOptIn()) {
+    renderWatchlistSwitcher();
+    return;
+  }
+
+  if (state.watchlists.length >= MAX_WATCHLISTS) {
+    renderWatchlistSwitcher();
+    showGenericToast("You can have up to 5 watchlists.");
+    return;
+  }
+
+  if (addWatchlistNameInput) {
+    addWatchlistNameInput.value = "";
+  }
+  showModal(addWatchlistModal);
+  window.setTimeout(() => addWatchlistNameInput?.focus(), 0);
+}
+
+function closeAddWatchlistModal() {
+  hideModal(addWatchlistModal, renderWatchlistSwitcher);
+}
+
+function confirmAddWatchlist() {
+  const name = normalizeWatchlistName(addWatchlistNameInput?.value, "");
+  if (!name) {
+    addWatchlistNameInput?.focus();
+    showGenericToast("Watchlist name cannot be blank.");
+    return;
+  }
+
+  if (state.watchlists.length >= MAX_WATCHLISTS) {
+    closeAddWatchlistModal();
+    showGenericToast("You can have up to 5 watchlists.");
+    return;
+  }
+
+  syncActiveWatchlistFromSet();
+  let id = createWatchlistId();
+  while (state.watchlists.some((watchlist) => watchlist.id === id)) {
+    id = createWatchlistId();
+  }
+  state.watchlists.push({ id, name, playerIds: [] });
+  state.currentWatchlistId = id;
+  state.watchlistPlayerIds = new Set();
+  state.watchlistPlayerIdsAdded.clear();
+  state.watchlistPlayerIdsRemoved.clear();
+  closeAddWatchlistModal();
+  renderWatchlistSwitcher();
+  updateWatchlistUrl();
+  saveTableState();
+  applyFilters();
 }
 
 function normalizeSearchText(value) {
@@ -3095,6 +3391,7 @@ function mergeGuestWatchlistIntoAccount() {
   }
 
   guestIds.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  syncActiveWatchlistFromSet();
   try {
     localStorage.removeItem(GUEST_WATCHLIST_STORAGE_KEY);
   } catch {
@@ -3108,7 +3405,13 @@ function applyWalletWatchlistIds(ids) {
     return;
   }
 
+  if (ids.some((item) => item && typeof item === "object" && !Array.isArray(item))) {
+    applyWatchlists(ids, state.currentWatchlistId, Array.from(state.watchlistPlayerIds));
+    return;
+  }
+
   ids.forEach((playerId) => state.watchlistPlayerIds.add(String(playerId)));
+  syncActiveWatchlistFromSet();
 }
 
 function replaceWalletWatchlistIds(ids) {
@@ -3116,7 +3419,7 @@ function replaceWalletWatchlistIds(ids) {
     return;
   }
 
-  state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
+  setActiveWatchlistIds(ids.map((playerId) => String(playerId)));
 }
 
 function clearSyncedWatchlistChanges(addedIds = [], removedIds = []) {
@@ -3154,6 +3457,8 @@ function applySyncedWatchlistIds(ids) {
   }
 
   replaceWalletWatchlistIds(normalizedIds);
+  syncActiveWatchlistFromSet();
+  renderWatchlistSwitcher();
   saveWalletWatchlistLocally();
   return true;
 }
@@ -3168,6 +3473,7 @@ function trackWatchlistChange(playerId, added) {
     state.watchlistPlayerIdsRemoved.add(key);
     state.watchlistPlayerIdsAdded.delete(key);
   }
+  syncActiveWatchlistFromSet();
 }
 
 function refreshWatchlistPageAfterWalletSync() {
@@ -3212,7 +3518,13 @@ async function loadWalletPreferences(options = {}) {
   state.walletPreferencesLoading = true;
   const previousNotes = JSON.stringify(normalizedPlayerNotes(state.playerNotes));
   try {
-    applyWalletWatchlistIds(loadLocalWalletWatchlist());
+    const localWatchlists = loadLocalWalletWatchlist();
+    if (Array.isArray(localWatchlists) && localWatchlists.some((item) => item && typeof item === "object" && !Array.isArray(item))) {
+      applyWatchlists(localWatchlists, state.currentWatchlistId, Array.from(state.watchlistPlayerIds));
+    } else {
+      applyWalletWatchlistIds(localWatchlists);
+      ensureDefaultWatchlist();
+    }
     state.playerNotes = {};
     applyWalletPlayerNotes(loadLocalWalletNotes());
     const response = await fetch("/api/wallet-preferences", {
@@ -3222,13 +3534,19 @@ async function loadWalletPreferences(options = {}) {
 
     if (response.ok) {
       const data = await response.json();
-      if (force) {
+      if (Array.isArray(data.watchlists) && data.watchlists.length) {
+        applyWatchlists(data.watchlists, data.currentWatchlistId || state.currentWatchlistId, data.watchlistPlayerIds);
+        state.watchlistPlayerIdsAdded.clear();
+        state.watchlistPlayerIdsRemoved.clear();
+      } else if (force) {
         const syncedIds = hasPendingWatchlistChanges()
           ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
           : data.watchlistPlayerIds;
         applySyncedWatchlistIds(syncedIds);
+        ensureDefaultWatchlist();
       } else {
         applyWalletWatchlistIds(data.watchlistPlayerIds);
+        ensureDefaultWatchlist();
         state.watchlistPlayerIdsAdded.clear();
         state.watchlistPlayerIdsRemoved.clear();
       }
@@ -3282,6 +3600,8 @@ async function saveWalletPreferencesNow() {
 
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
+      body.watchlists = watchlistsPayload();
+      body.currentWatchlistId = state.currentWatchlistId;
       body.tableState = stripPersistentSortState(currentTableState());
       body.evaluationSettings = currentEvaluationSettingsPayload();
     }
@@ -3299,21 +3619,25 @@ async function saveWalletPreferencesNow() {
       const data = await response.json();
       clearSyncedWatchlistChanges(addedIds, removedIds);
 
-      if (Array.isArray(data.watchlistPlayerIds)) {
+      let watchlistChanged = false;
+      if (Array.isArray(data.watchlists) && data.watchlists.length) {
+        applyWatchlists(data.watchlists, data.currentWatchlistId || state.currentWatchlistId, data.watchlistPlayerIds);
+        watchlistChanged = true;
+      } else if (Array.isArray(data.watchlistPlayerIds)) {
         const syncedIds = hasPendingWatchlistChanges()
           ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
           : data.watchlistPlayerIds;
-        const watchlistChanged = applySyncedWatchlistIds(syncedIds);
+        watchlistChanged = applySyncedWatchlistIds(syncedIds);
+      }
 
-        if (watchlistChanged) {
-          if (state.currentPage === "watchlist") {
-            applyFilters();
-          } else if (tablePageKey()) {
-            renderTable();
-          }
-          if (state.currentPage === "player") {
-            renderPlayerPage(playerIdFromUrl());
-          }
+      if (watchlistChanged) {
+        if (state.currentPage === "watchlist") {
+          applyFilters();
+        } else if (tablePageKey()) {
+          renderTable();
+        }
+        if (state.currentPage === "player") {
+          renderPlayerPage(playerIdFromUrl());
         }
       }
     }
@@ -3379,6 +3703,8 @@ function currentTableState() {
   return {
     pages: state.tablePageStates,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
+    watchlists: watchlistsPayload(),
+    currentWatchlistId: state.currentWatchlistId,
     menuOpen: state.menuOpen,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
@@ -3483,7 +3809,11 @@ function queueCloudTableStateSave() {
 
 function restoreWatchlistState(savedState) {
   const ids = Array.isArray(savedState?.watchlistPlayerIds) ? savedState.watchlistPlayerIds : [];
-  state.watchlistPlayerIds = new Set(ids.map((playerId) => String(playerId)));
+  if (Array.isArray(savedState?.watchlists)) {
+    applyWatchlists(savedState.watchlists, savedState.currentWatchlistId, ids);
+    return;
+  }
+  applyWatchlists([], savedState?.currentWatchlistId, ids);
 }
 
 function restoreMenuState(savedState) {
@@ -5029,6 +5359,7 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
     state.watchlistPlayerIds.delete(key);
   }
   trackWatchlistChange(key, added);
+  syncActiveWatchlistFromSet();
 
   saveTableState();
   showWatchlistToast(`${playerName} ${added ? "added to" : "removed from"}`);
@@ -6506,6 +6837,7 @@ function applyFilters() {
 
   state.filteredRows.sort(compareRows);
   updateFilterSummary();
+  syncActiveWatchlistFromSet();
   saveTableState();
   renderTable();
 }
@@ -6615,6 +6947,7 @@ function addSelectedToWatchlist() {
     });
     state.selectedPlayerIds.clear();
     state.selectionAnchorPlayerId = null;
+    syncActiveWatchlistFromSet();
     saveTableState();
     applyFilters();
     showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`);
@@ -6628,6 +6961,7 @@ function addSelectedToWatchlist() {
   });
   state.selectedPlayerIds.clear();
   state.selectionAnchorPlayerId = null;
+  syncActiveWatchlistFromSet();
   saveTableState();
   renderTable();
   updateSelectionBar();
@@ -7395,6 +7729,15 @@ viewButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
+watchlistSelect?.addEventListener("change", () => {
+  if (watchlistSelect.value === "__add_watchlist__") {
+    openAddWatchlistModal();
+    return;
+  }
+
+  switchWatchlist(watchlistSelect.value);
+});
+
 pageSizeSelect.addEventListener("change", () => {
   state.pageSize = Number(pageSizeSelect.value);
   state.page = 1;
@@ -7448,10 +7791,15 @@ document.addEventListener("keydown", (event) => {
     closeSearch();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
+  } else if (event.key === "Escape" && !addWatchlistModal.hidden) {
+    closeAddWatchlistModal();
   } else if (event.key === "Escape" && !advancedSettingsModal.hidden) {
     closeAdvancedSettings();
   } else if (event.key === "Escape" && !accountDropdown.hidden) {
     closeAccountMenu();
+  } else if (event.key === "Enter" && !addWatchlistModal.hidden) {
+    event.preventDefault();
+    confirmAddWatchlist();
   } else if (event.key === "Enter" && !filtersModal.hidden) {
     event.preventDefault();
     applyAdvancedFilters();
@@ -7478,6 +7826,7 @@ document.addEventListener("click", (event) => {
 setupBackdropClickClose(searchModal, closeSearch);
 
 setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);
+setupBackdropClickClose(addWatchlistModal, closeAddWatchlistModal);
 
 applyFiltersButton.addEventListener("click", applyAdvancedFilters);
 
@@ -7488,6 +7837,14 @@ clearFiltersButton.addEventListener("click", () => {
 clearSelectionButton.addEventListener("click", clearSelection);
 addToWatchlistButton.addEventListener("click", addSelectedToWatchlist);
 openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);
+discardAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
+closeAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
+confirmAddWatchlistButton?.addEventListener("click", confirmAddWatchlist);
+addWatchlistNameInput?.addEventListener("input", () => {
+  if (addWatchlistNameInput.value.length > 20) {
+    addWatchlistNameInput.value = addWatchlistNameInput.value.slice(0, 20);
+  }
+});
 
 
 prevButton.addEventListener("click", () => {
@@ -7763,10 +8120,8 @@ window.addEventListener("scroll", hidePlayerNoteTooltip, true);
 window.addEventListener("resize", hidePlayerNoteTooltip);
 
 window.addEventListener("popstate", () => {
-  const targetPage = pageFromUrl();
-
-
-  setPage(targetPage, false);
+  const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  setPage(target.pageName, false, target.options);
 });
 
 accountButton.addEventListener("click", (event) => {
@@ -7865,7 +8220,8 @@ function setupChangelogSections() {
 async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialPage = pageFromUrl();
+  const initialTarget = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+  const initialPage = initialTarget.pageName;
   loadSavedTableState();
   loadEvaluationMflPerUsd();
   loadEvaluationLateSeasonRewardRates();
@@ -7885,7 +8241,7 @@ async function startApp() {
   updateAccountState();
   await loadSummary();
   showAppShell();
-  await showHomeShell(initialPage, false);
+  await showHomeShell(initialPage, false, initialTarget.options);
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
