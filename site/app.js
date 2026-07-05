@@ -368,9 +368,17 @@ const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetBu
 const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
 const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
 const advancedDiscountRateValue = document.querySelector("#advancedDiscountRateValue");
+const advancedLateSeasonRewardsSection = document.querySelector(".advancedLateSeasonRewardsSection");
+const advancedLateSeasonRewardsToggle = document.querySelector("#advancedLateSeasonRewardsToggle");
 const advancedThirdLastRewardInput = document.querySelector("#advancedThirdLastRewardInput");
 const advancedSecondLastRewardInput = document.querySelector("#advancedSecondLastRewardInput");
 const advancedFinalRewardInput = document.querySelector("#advancedFinalRewardInput");
+const advancedThirdLastRewardIncreaseButton = document.querySelector("#advancedThirdLastRewardIncreaseButton");
+const advancedThirdLastRewardDecreaseButton = document.querySelector("#advancedThirdLastRewardDecreaseButton");
+const advancedSecondLastRewardIncreaseButton = document.querySelector("#advancedSecondLastRewardIncreaseButton");
+const advancedSecondLastRewardDecreaseButton = document.querySelector("#advancedSecondLastRewardDecreaseButton");
+const advancedFinalRewardIncreaseButton = document.querySelector("#advancedFinalRewardIncreaseButton");
+const advancedFinalRewardDecreaseButton = document.querySelector("#advancedFinalRewardDecreaseButton");
 const advancedPlayerTableHead = document.querySelector("#advancedPlayerTableHead");
 const advancedPlayerTableBody = document.querySelector("#advancedPlayerTableBody");
 const evaluationSummaryBody = document.querySelector("#evaluationSummaryBody");
@@ -4139,13 +4147,18 @@ function loadEvaluationMflPerUsd() {
   }
 }
 
+function periodDecimalString(value) {
+  return String(value ?? "").replace(/,/g, ".");
+}
+
 function parseEvaluationRewardRate(value) {
-  const parsedValue = Number.parseFloat(String(value).replace(",", "."));
+  const normalizedValue = periodDecimalString(value).trim();
+  const parsedValue = Number.parseFloat(normalizedValue);
   return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 100 ? Math.round(parsedValue * 100) / 100 : null;
 }
 
 function clampEvaluationRewardRate(value, fallbackValue = 100) {
-  const parsedValue = Number.parseFloat(String(value).replace(",", "."));
+  const parsedValue = Number.parseFloat(periodDecimalString(value));
   const fallback = parseEvaluationRewardRate(fallbackValue) ?? 100;
 
   if (!Number.isFinite(parsedValue)) {
@@ -4153,6 +4166,30 @@ function clampEvaluationRewardRate(value, fallbackValue = 100) {
   }
 
   return Math.round(Math.max(0, Math.min(100, parsedValue)) * 100) / 100;
+}
+
+function normalizeEvaluationRewardRateDraft(input) {
+  if (!input) {
+    return;
+  }
+
+  const originalValue = input.value;
+  const normalizedValue = periodDecimalString(originalValue).replace(/[^0-9.]/g, "");
+  const firstDotIndex = normalizedValue.indexOf(".");
+  const singleDecimalValue = firstDotIndex === -1
+    ? normalizedValue
+    : normalizedValue.slice(0, firstDotIndex + 1) + normalizedValue.slice(firstDotIndex + 1).replace(/\./g, "");
+  const [integerPart, decimalPart] = singleDecimalValue.split(".");
+  const integerNumber = integerPart === "" ? null : Number.parseInt(integerPart, 10);
+  const clampedIntegerPart = integerNumber === null ? "" : String(Math.min(100, integerNumber));
+  const clampedDecimalPart = integerNumber !== null && integerNumber >= 100 ? "" : decimalPart?.slice(0, 2);
+  const cleanedValue = decimalPart === undefined
+    ? clampedIntegerPart
+    : `${clampedIntegerPart}.${clampedDecimalPart}`;
+
+  if (originalValue !== cleanedValue) {
+    input.value = cleanedValue;
+  }
 }
 
 function normalizeEvaluationLateSeasonRewardRates(value) {
@@ -4289,11 +4326,23 @@ function closeAdvancedSettings() {
   advancedPlayerTableBody.style.webkitClipPath = "";
 }
 
+function toggleAdvancedLateSeasonRewards() {
+  if (!advancedLateSeasonRewardsSection || !advancedLateSeasonRewardsToggle) {
+    return;
+  }
+
+  const isExpanded = !advancedLateSeasonRewardsSection.classList.contains("is-expanded");
+  advancedLateSeasonRewardsSection.classList.toggle("is-expanded", isExpanded);
+  advancedLateSeasonRewardsToggle.setAttribute("aria-expanded", String(isExpanded));
+  window.setTimeout(updateAdvancedPlayerTableClip, 220);
+}
+
 function syncAdvancedRewardRateDraft(input, fallbackValue) {
   if (!input) {
     return;
   }
 
+  normalizeEvaluationRewardRateDraft(input);
   input.value = clampEvaluationRewardRate(input.value, fallbackValue).toFixed(2);
 }
 
@@ -4337,6 +4386,19 @@ function adjustAdvancedMflUsdDraft(delta) {
 function resetAdvancedMflUsd() {
   advancedMflUsdInput.value = DEFAULT_EVALUATION_MFL_PER_USD.toFixed(2);
   updateAdvancedMflUsdResetVisibility();
+}
+
+function adjustAdvancedRewardRateDraft(input, delta) {
+  if (!input) {
+    return;
+  }
+
+  const currentRates = normalizeEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates);
+  const inputIndex = [advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].indexOf(input);
+  const fallbackValue = currentRates[inputIndex] ?? 100;
+  const currentValue = clampEvaluationRewardRate(input.value, fallbackValue);
+  const nextValue = Math.round(Math.max(0, Math.min(100, currentValue + delta)) * 100) / 100;
+  input.value = nextValue.toFixed(2);
 }
 
 function renderEvaluationMflPerUsdControl(editing = false) {
@@ -7297,7 +7359,7 @@ closeSearchButton.addEventListener("click", closeSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
 advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });
-document.querySelector(".advancedLateSeasonRewardsSection")?.addEventListener("toggle", () => window.requestAnimationFrame(updateAdvancedPlayerTableClip));
+advancedLateSeasonRewardsToggle?.addEventListener("click", toggleAdvancedLateSeasonRewards);
 window.addEventListener("storage", syncRecentSearchStateFromStorage);
 window.addEventListener("resize", updateAdvancedPlayerTableClip);
 advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
@@ -7306,7 +7368,22 @@ advancedMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.prev
 advancedMflUsdIncreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(1));
 advancedMflUsdDecreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(-1));
 advancedMflUsdResetButton.addEventListener("click", resetAdvancedMflUsd);
+[
+  advancedThirdLastRewardIncreaseButton,
+  advancedThirdLastRewardDecreaseButton,
+  advancedSecondLastRewardIncreaseButton,
+  advancedSecondLastRewardDecreaseButton,
+  advancedFinalRewardIncreaseButton,
+  advancedFinalRewardDecreaseButton,
+].forEach((button) => button?.addEventListener("mousedown", (event) => event.preventDefault()));
+advancedThirdLastRewardIncreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedThirdLastRewardInput, 1));
+advancedThirdLastRewardDecreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedThirdLastRewardInput, -1));
+advancedSecondLastRewardIncreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedSecondLastRewardInput, 1));
+advancedSecondLastRewardDecreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedSecondLastRewardInput, -1));
+advancedFinalRewardIncreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedFinalRewardInput, 1));
+advancedFinalRewardDecreaseButton?.addEventListener("click", () => adjustAdvancedRewardRateDraft(advancedFinalRewardInput, -1));
 [advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].forEach((input) => {
+  input.addEventListener("input", () => normalizeEvaluationRewardRateDraft(input));
   input.addEventListener("blur", syncAdvancedRewardRateDrafts);
 });
 discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
