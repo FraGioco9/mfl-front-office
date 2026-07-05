@@ -776,8 +776,15 @@ function staticDataFileUrl(fileName) {
 }
 
 function canUseStaticDataFile(fileName, access = currentDataAccess()) {
-  return fileName === "manifest.json"
-    || (access === "public" && /^players_(public|\d{4})\.json$/.test(fileName));
+  if (fileName === "manifest.json") {
+    return true;
+  }
+
+  if (/^players_(public|\d{4})\.json$/.test(fileName)) {
+    return true;
+  }
+
+  return false;
 }
 
 function dataFileUrl(fileName, options = {}) {
