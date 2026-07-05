@@ -53,6 +53,7 @@ const state = {
   walletPreferencesLoaded: false,
   walletOptInInProgress: false,
   loadingPercent: 0,
+  rowSortCache: new WeakMap(),
   walletRows: [],
   walletNamesLoaded: false,
   walletNamesLoadPromise: null,
@@ -928,18 +929,29 @@ async function fetchDataFile(fileName, options = {}) {
 
   onProgress?.(0.03);
   const requestedUrl = dataFileUrl(fileName, { columns });
-  let response = await fetch(requestedUrl, {
-    cache: fileName === "manifest.json" ? "no-store" : "default",
-    headers: walletProofHeaders(),
-  });
+  const staticUrl = staticDataFileUrl(fileName);
+  const cacheMode = fileName === "manifest.json" ? "no-store" : "default";
+  const preferStatic = currentDataAccess() === "public" && canUseStaticDataFile(fileName);
+  const fetchAttempts = preferStatic
+    ? [
+        { url: staticUrl, options: { cache: cacheMode } },
+        { url: requestedUrl, options: { cache: cacheMode, headers: walletProofHeaders() } },
+      ]
+    : [
+        { url: requestedUrl, options: { cache: cacheMode, headers: walletProofHeaders() } },
+        ...(requestedUrl !== staticUrl && canUseStaticDataFile(fileName) ? [{ url: staticUrl, options: { cache: cacheMode } }] : []),
+      ];
+  let response = null;
 
-  if (!response.ok && requestedUrl !== staticDataFileUrl(fileName) && canUseStaticDataFile(fileName)) {
-    response = await fetch(staticDataFileUrl(fileName), {
-      cache: fileName === "manifest.json" ? "no-store" : "default",
-    });
+  for (const attempt of fetchAttempts) {
+    response = await fetch(attempt.url, attempt.options);
+
+    if (response.ok) {
+      break;
+    }
   }
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     let message = "Could not load exported data. Please refresh or try again in a moment.";
 
     try {
@@ -3701,6 +3713,27 @@ function precomputedValue(row, column) {
   return hasColumn(column) ? getValue(row, column) : null;
 }
 
+function clearRowSortCache() {
+  state.rowSortCache = new WeakMap();
+}
+
+function cachedRowSortValue(row, key, compute) {
+  let cache = state.rowSortCache.get(row);
+
+  if (!cache) {
+    cache = {};
+    state.rowSortCache.set(row, cache);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(cache, key)) {
+    return cache[key];
+  }
+
+  const value = compute();
+  cache[key] = value;
+  return value;
+}
+
 function tableNextOverallInfo(row, statColumn) {
   const precomputedGap = precomputedValue(row, "next_overall_gap");
   const gap = precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
@@ -5399,41 +5432,45 @@ function renderSearchResults() {
 }
 
 function tableNextOverallPreciseValue(row) {
-  const precomputedOverall = precomputedValue(row, "next_overall");
-  return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : Number(precomputedOverall);
+  return cachedRowSortValue(row, "next_overall_precise", () => {
+    const precomputedOverall = precomputedValue(row, "next_overall");
+    return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : Number(precomputedOverall);
+  });
 }
 
 function tableNextOverallNeededValue(row, statColumn) {
-  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+  return cachedRowSortValue(row, `next_overall_needed:${statColumn}`, () => {
+    const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
 
-  if (maxOverall) {
-    return null;
-  }
+    if (maxOverall) {
+      return null;
+    }
 
-  if (statColumn === "overall") {
-    const precomputedGap = precomputedValue(row, "next_overall_gap");
-    return precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
-  }
+    if (statColumn === "overall") {
+      const precomputedGap = precomputedValue(row, "next_overall_gap");
+      return precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
+    }
 
-  const precomputedColumn = `${statColumn}_to_next_overall`;
-  const precomputedNeeded = precomputedValue(row, precomputedColumn);
+    const precomputedColumn = `${statColumn}_to_next_overall`;
+    const precomputedNeeded = precomputedValue(row, precomputedColumn);
 
-  if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
-    return Number(precomputedNeeded);
-  }
+    if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
+      return Number(precomputedNeeded);
+    }
 
-  if (hasColumn(precomputedColumn)) {
-    return null;
-  }
+    if (hasColumn(precomputedColumn)) {
+      return null;
+    }
 
-  const primary = playerPositions(row)[0];
-  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
+    const primary = playerPositions(row)[0];
+    const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
 
-  if (!weight || Number(getValue(row, statColumn) || 0) >= 99) {
-    return null;
-  }
+    if (!weight || Number(getValue(row, statColumn) || 0) >= 99) {
+      return null;
+    }
 
-  return nextOverallGap(row) / (weight / 100);
+    return nextOverallGap(row) / (weight / 100);
+  });
 }
 
 function tableNextOverallSortValue(row, statColumn) {
@@ -5520,6 +5557,11 @@ function buildHeader() {
 
         state.page = 1;
         buildHeader();
+        if (state.view === "next") {
+          showTableBusyState("Preparing Next Overall...");
+          window.setTimeout(() => applyFilters(), 0);
+          return;
+        }
         applyFilters();
       });
     }
@@ -6431,15 +6473,22 @@ function csvEscape(value) {
 }
 
 
-function setView(viewName) {
+function showTableBusyState(message = "Loading players...") {
+  emptyState.hidden = false;
+  emptyState.textContent = message;
+  tableBody.replaceChildren();
+}
+
+async function setView(viewName) {
   if (!allowedViewsForPage().includes(viewName)) {
     return;
   }
 
+  const wasNextView = state.view === "next";
   state.view = viewName;
   state.page = 1;
 
-  if (viewName === "next") {
+  if (viewName === "next" && !wasNextView) {
     state.sortKey = "overall";
     state.sortDirection = "asc";
   }
@@ -6449,8 +6498,13 @@ function setView(viewName) {
   refreshRuleColumnSelects();
 
   updateViewButtons();
-
   buildHeader();
+
+  if (viewName === "next") {
+    showTableBusyState("Preparing Next Overall...");
+    await paintLoadingProgress();
+  }
+
   applyFilters();
 }
 
@@ -6552,6 +6606,7 @@ function applyDataSnapshot(snapshot) {
   state.columns = [...snapshot.columns];
   rebuildColumnIndexMap();
   state.rows = snapshot.rows;
+  clearRowSortCache();
   state.filteredRows = [];
   state.page = 1;
   state.dataAccess = snapshot.access;
@@ -6693,6 +6748,7 @@ async function restoreCachedDataForAccess(access = currentDataAccess()) {
     state.columns = publicDataColumns(manifest);
     rebuildColumnIndexMap();
     state.rows = publicChunk.rows;
+    clearRowSortCache();
     state.filteredRows = [];
     state.page = 1;
     state.dataAccess = access;
@@ -6813,6 +6869,7 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
   state.manifest = manifest;
   state.columns = targetColumns;
   rebuildColumnIndexMap();
+  clearRowSortCache();
   state.dataAccess = currentDataAccess();
   return true;
 }
@@ -6928,6 +6985,7 @@ async function loadData(options = {}) {
         onProgress: publicProgress,
       });
       state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
+      clearRowSortCache();
       publicProgress(1);
 
       if (["full", "owned"].includes(targetAccess)) {
@@ -6942,15 +7000,15 @@ async function loadData(options = {}) {
     }
 
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
-    await prepareStep(92, "Preparing search");
+    await prepareStep(92, "Preparing data");
     buildSearchIndex();
-    await prepareStep(95, "Preparing filters");
+    await prepareStep(95, "Preparing data");
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();
-    await prepareStep(98, "Preparing table");
+    await prepareStep(98, "Preparing data");
     applyFilters();
-    phaseSet(100, "Loading complete");
+    await prepareStep(100, "Loading complete");
     state.dataLoaded = true;
     captureCurrentDataSnapshot();
     persistCurrentDataSnapshot();
