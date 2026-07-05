@@ -771,11 +771,20 @@ function currentDataAccess(pageName = state.currentPage) {
   return ["myplayers", "player"].includes(pageName) && hasWalletOptIn() ? "owned" : "public";
 }
 
+function staticDataFileUrl(fileName) {
+  return `/data/${encodeURIComponent(fileName)}`;
+}
+
+function canUseStaticDataFile(fileName, access = currentDataAccess()) {
+  return fileName === "manifest.json"
+    || (access === "public" && /^players_(public|\d{4})\.json$/.test(fileName));
+}
+
 function dataFileUrl(fileName, options = {}) {
   const access = currentDataAccess();
 
-  if (access === "public" && (fileName === "manifest.json" || /^players_(public|\d{4})\.json$/.test(fileName))) {
-    return `/data/${encodeURIComponent(fileName)}`;
+  if (canUseStaticDataFile(fileName, access)) {
+    return staticDataFileUrl(fileName);
   }
 
   const query = new URLSearchParams({ file: fileName });
@@ -924,13 +933,20 @@ async function fetchDataFile(fileName, options = {}) {
   }
 
   onProgress?.(0.03);
-  const response = await fetch(dataFileUrl(fileName, { columns }), {
+  const requestedUrl = dataFileUrl(fileName, { columns });
+  let response = await fetch(requestedUrl, {
     cache: fileName === "manifest.json" ? "no-store" : "default",
     headers: walletProofHeaders(),
   });
 
+  if (!response.ok && requestedUrl !== staticDataFileUrl(fileName) && canUseStaticDataFile(fileName)) {
+    response = await fetch(staticDataFileUrl(fileName), {
+      cache: fileName === "manifest.json" ? "no-store" : "default",
+    });
+  }
+
   if (!response.ok) {
-    let message = "No exported data found yet.";
+    let message = "Could not load exported data. Please refresh or try again in a moment.";
 
     try {
       const body = await response.json();
@@ -2388,6 +2404,28 @@ function resetPageScroll() {
     mainContent.scrollTop = 0;
   }
 }
+
+function renderTableLoadingShell(pageName) {
+  state.currentPage = pageName;
+  const tablePage = tablePages.has(pageName);
+
+  if (!tablePage) {
+    return;
+  }
+
+  restoreSavedTableState(pageName);
+  updateViewButtons();
+  tablePageTitle.textContent = pageName === "watchlist"
+    ? "Watchlist"
+    : pageName === "myplayers"
+      ? "My Players"
+      : pageName === "database"
+        ? "Database"
+        : "Progression";
+  emptyState.hidden = false;
+  emptyState.textContent = "Loading players...";
+  tableBody.replaceChildren();
+}
 async function setPage(pageName, updateHash = true, options = {}) {
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
@@ -2461,10 +2499,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     changelogPage.hidden = true;
 
     if (tablePage) {
-      tablePageTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
-      emptyState.hidden = false;
-      emptyState.textContent = "Loading players...";
-      tableBody.replaceChildren();
+      renderTableLoadingShell(pageName);
     }
 
     navButtons.forEach((button) => {
