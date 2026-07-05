@@ -2176,6 +2176,7 @@ function showEvaluationLoadActionTooltip(button) {
   tooltip.className = "floatingActionTooltip";
   tooltip.textContent = text;
   document.body.appendChild(tooltip);
+  tooltip.style.maxWidth = `${Math.max(120, window.innerWidth - 16)}px`;
 
   const rect = button.getBoundingClientRect();
   const tooltipRect = tooltip.getBoundingClientRect();
@@ -3292,8 +3293,8 @@ function renderWatchlistSwitcher() {
     addButton.type = "button";
     addButton.className = "watchlistDropdownItem watchlistDropdownAdd";
     addButton.textContent = "Add Watchlist";
-    addButton.addEventListener("click", () => {
-      closeWatchlistDropdown();
+    addButton.addEventListener("click", (event) => {
+      event.stopPropagation();
       openAddWatchlistModal();
     });
     watchlistDropdown.appendChild(addButton);
@@ -3467,7 +3468,12 @@ function openRenameWatchlistModal(watchlistId) {
   }, 0);
 }
 
+function keepWatchlistDropdownOpenAfterModalClick() {
+  suppressWatchlistDropdownCloseOnce = true;
+}
+
 function closeAddWatchlistModal() {
+  keepWatchlistDropdownOpenAfterModalClick();
   state.editingWatchlistId = "";
   if (addWatchlistError) {
     addWatchlistError.hidden = true;
@@ -3557,11 +3563,13 @@ function openDeleteWatchlistModal(watchlistId) {
 }
 
 function closeDeleteWatchlistModal() {
+  keepWatchlistDropdownOpenAfterModalClick();
   state.pendingDeleteWatchlistId = "";
   hideModal(deleteWatchlistModal, renderWatchlistSwitcher);
 }
 
 function confirmDeleteWatchlist() {
+  keepWatchlistDropdownOpenAfterModalClick();
   const watchlistId = state.pendingDeleteWatchlistId;
   state.pendingDeleteWatchlistId = "";
   hideModal(deleteWatchlistModal, renderWatchlistSwitcher);
@@ -8084,6 +8092,7 @@ document.addEventListener("keydown", (event) => {
 
 let accountPointerStartedOutside = false;
 let watchlistPointerStartedOutside = false;
+let suppressWatchlistDropdownCloseOnce = false;
 
 document.addEventListener("pointerdown", (event) => {
   accountPointerStartedOutside = !accountMenu.contains(event.target);
@@ -8095,7 +8104,10 @@ document.addEventListener("click", (event) => {
     closeAccountMenu();
   }
 
-  if (watchlistPointerStartedOutside && watchlistDropdown && !watchlistDropdown.hidden && !watchlistSwitcher?.contains(event.target)) {
+  const watchlistModalOpen = (addWatchlistModal && !addWatchlistModal.hidden) || (deleteWatchlistModal && !deleteWatchlistModal.hidden);
+  if (suppressWatchlistDropdownCloseOnce) {
+    suppressWatchlistDropdownCloseOnce = false;
+  } else if (!watchlistModalOpen && watchlistPointerStartedOutside && watchlistDropdown && !watchlistDropdown.hidden && !watchlistSwitcher?.contains(event.target)) {
     closeWatchlistDropdown();
   }
 
