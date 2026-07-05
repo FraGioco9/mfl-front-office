@@ -51,6 +51,7 @@ const state = {
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
   walletOptInInProgress: false,
+  loadingPercent: 0,
   walletRows: [],
   walletNamesLoaded: false,
   walletNamesLoadPromise: null,
@@ -401,9 +402,12 @@ function loadTheme() {
   applyTheme(savedTheme || "dark");
 }
 
-function setLoadingPercent(percent, message = "Loading data") {
-  const safePercent = Number.isFinite(percent) ? percent : 0;
-  loadingBarFill.style.width = `${Math.max(0, Math.min(100, safePercent))}%`;
+function setLoadingPercent(percent, message = "Loading data", options = {}) {
+  const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+  const allowBackwards = Boolean(options.allowBackwards);
+  const nextPercent = allowBackwards ? safePercent : Math.max(state.loadingPercent || 0, safePercent);
+  state.loadingPercent = nextPercent;
+  loadingBarFill.style.width = `${nextPercent}%`;
   loadingText.textContent = message;
 }
 
@@ -432,6 +436,7 @@ function paintLoadingProgress() {
 }
 
 function showLoadingError(message) {
+  state.loadingPercent = 100;
   loadingBarFill.style.width = "100%";
   loadingScreen.classList.add("failed");
   loadingText.textContent = message;
@@ -579,7 +584,8 @@ function showLoading() {
   document.body.classList.add("booting", "loading");
   loadingScreen.hidden = false;
   loadingScreen.classList.remove("failed", "complete", "leaving");
-  updateLoadingProgress(0, 0);
+  state.loadingPercent = 0;
+  setLoadingPercent(0, "Preparing data...", { allowBackwards: true });
 }
 
 function appOrigin() {
@@ -830,14 +836,21 @@ function cacheRequestForDataFile(fileName, accessKey = dataCacheAccessKey()) {
   return new Request(`/data-cache/${accessKey}/${fileName}`);
 }
 
-async function readCachedDataFile(fileName) {
+async function readCachedDataFile(fileName, onProgress = null) {
   if (!("caches" in window)) {
     return null;
   }
 
   const cache = await caches.open(DATA_CACHE_NAME);
   const response = await cache.match(cacheRequestForDataFile(fileName));
-  return response ? response.json() : null;
+  if (!response) {
+    return null;
+  }
+
+  onProgress?.(0.08);
+  const data = await readJsonWithProgress(response, onProgress);
+  onProgress?.(1);
+  return data;
 }
 
 async function writeCachedDataFile(fileName, data) {
@@ -862,6 +875,7 @@ async function readJsonWithProgress(response, onProgress = null) {
 
   if (!response.body || !totalBytes) {
     onProgress?.(0.15);
+    await paintLoadingProgress();
     const data = await response.json();
     onProgress?.(1);
     return data;
@@ -894,7 +908,7 @@ async function fetchDataFile(fileName, options = {}) {
   const { useCache = false, writeCache = false, columns = null, onProgress = null } = options;
 
   if (useCache) {
-    const cached = await readCachedDataFile(fileName);
+    const cached = await readCachedDataFile(fileName, onProgress);
 
     if (cached) {
       onProgress?.(1);
@@ -3255,19 +3269,46 @@ function saveTableStateLocally(savedState) {
   }
 }
 
+function localTablePageStates() {
+  try {
+    const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+    return savedState?.pages && typeof savedState.pages === "object" ? savedState.pages : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeCloudTableStateWithLocalPages(savedState) {
+  const localPages = localTablePageStates();
+
+  if (!localPages) {
+    return savedState;
+  }
+
+  return {
+    ...(savedState || {}),
+    pages: {
+      ...((savedState && typeof savedState === "object" && savedState.pages) || {}),
+      ...localPages,
+    },
+  };
+}
+
 function applyWalletTableState(savedState) {
   if (!savedState || typeof savedState !== "object" || Array.isArray(savedState)) {
     return false;
   }
 
-  restoreTablePageStates(savedState);
-  restoreMenuState(savedState);
-  restoreRecentSearchState(savedState);
-  restoreRecentEvaluationState(savedState);
+  const mergedState = mergeCloudTableStateWithLocalPages(savedState);
+
+  restoreTablePageStates(mergedState);
+  restoreMenuState(mergedState);
+  restoreRecentSearchState(mergedState);
+  restoreRecentEvaluationState(mergedState);
   persistRecentSearchStates();
-  restorePlayerAttributeView(savedState);
+  restorePlayerAttributeView(mergedState);
   saveTableStateLocally({
-    ...savedState,
+    ...mergedState,
     watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
     recentSearchPlayerIds: state.recentSearchPlayerIds,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
@@ -6806,6 +6847,7 @@ async function loadData(options = {}) {
 
     phaseSet(92);
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
+    loadingText.textContent = "Preparing search and table";
     buildSearchIndex();
     phaseSet(95);
     populateAddFilterSelect();
