@@ -2436,6 +2436,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
     }
   }
 
+  if (pageName === "watchlist" && hasWalletOptIn()) {
+    await loadWalletPreferences({ force: true });
+  }
+
   state.currentPage = pageName;
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
@@ -3027,8 +3031,10 @@ async function upgradeCurrentPageAfterWalletOptIn() {
   return true;
 }
 
-async function loadWalletPreferences() {
-  if (!state.linkedWalletAddress || !hasWalletProof() || state.walletPreferencesLoading) {
+async function loadWalletPreferences(options = {}) {
+  const force = Boolean(options.force);
+
+  if (!state.linkedWalletAddress || !hasWalletProof() || state.walletPreferencesLoading || (state.walletPreferencesLoaded && !force)) {
     return;
   }
 
@@ -3045,9 +3051,16 @@ async function loadWalletPreferences() {
 
     if (response.ok) {
       const data = await response.json();
-      applyWalletWatchlistIds(data.watchlistPlayerIds);
-      state.watchlistPlayerIdsAdded.clear();
-      state.watchlistPlayerIdsRemoved.clear();
+      if (force) {
+        const syncedIds = hasPendingWatchlistChanges()
+          ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
+          : data.watchlistPlayerIds;
+        applySyncedWatchlistIds(syncedIds);
+      } else {
+        applyWalletWatchlistIds(data.watchlistPlayerIds);
+        state.watchlistPlayerIdsAdded.clear();
+        state.watchlistPlayerIdsRemoved.clear();
+      }
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
       saveWalletNotesLocally();
