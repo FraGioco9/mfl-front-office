@@ -1040,8 +1040,8 @@ main {
 }
 
 .watchlistButton:hover {
-  border-color: var(--primary);
-  background: var(--surface-hover);
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
 }
 
 .watchlistButton span:first-child {
