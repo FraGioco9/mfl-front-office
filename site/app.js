@@ -365,6 +365,7 @@ const advancedMflUsdInput = document.querySelector("#advancedMflUsdInput");
 const advancedMflUsdIncreaseButton = document.querySelector("#advancedMflUsdIncreaseButton");
 const advancedMflUsdDecreaseButton = document.querySelector("#advancedMflUsdDecreaseButton");
 const advancedMflUsdResetButton = document.querySelector("#advancedMflUsdResetButton");
+const resetAdvancedSettingsButton = document.querySelector("#resetAdvancedSettingsButton");
 const discardAdvancedSettingsButton = document.querySelector("#discardAdvancedSettingsButton");
 const applyAdvancedSettingsButton = document.querySelector("#applyAdvancedSettingsButton");
 const advancedDiscountRateValue = document.querySelector("#advancedDiscountRateValue");
@@ -4444,6 +4445,15 @@ function applyAdvancedSettings() {
   closeAdvancedSettings();
 }
 
+function resetAdvancedSettingsDraft() {
+  advancedMflUsdInput.value = DEFAULT_EVALUATION_MFL_PER_USD.toFixed(2);
+  advancedThirdLastRewardInput.value = DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[0].toFixed(2);
+  advancedSecondLastRewardInput.value = DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[1].toFixed(2);
+  advancedFinalRewardInput.value = DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES[2].toFixed(2);
+  updateAdvancedMflUsdResetVisibility();
+  updateAdvancedRewardRateResetVisibility();
+}
+
 function discardAdvancedSettings() {
   syncAdvancedSettingsValues();
   closeAdvancedSettings();
@@ -7547,6 +7557,7 @@ advancedFinalRewardResetButton?.addEventListener("click", () => resetAdvancedRew
   });
   input.addEventListener("blur", syncAdvancedRewardRateDrafts);
 });
+resetAdvancedSettingsButton.addEventListener("click", resetAdvancedSettingsDraft);
 discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);
