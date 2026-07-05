@@ -138,7 +138,7 @@ const linkColumn = "player_link";
 
 const tablePages = new Set(["database", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
-  database: ["attributes", "next"],
+  database: ["attributes"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "current", "all"],
   myplayers: ["attributes", "next", "current", "all"],
@@ -459,8 +459,9 @@ async function showUnauthorizedProgressionRedirect() {
 }
 
 async function finishLoading() {
+  setLoadingPercent(100, "Loading complete");
   await paintLoadingProgress();
-  await new Promise((resolve) => window.setTimeout(resolve, 300));
+  await new Promise((resolve) => window.setTimeout(resolve, 180));
   loadingScreen.classList.add("complete");
   loadingText.textContent = "Loading complete";
   await new Promise((resolve) => window.setTimeout(resolve, 450));
@@ -5557,11 +5558,6 @@ function buildHeader() {
 
         state.page = 1;
         buildHeader();
-        if (state.view === "next") {
-          showTableBusyState("Preparing Next Overall...");
-          window.setTimeout(() => applyFilters(), 0);
-          return;
-        }
         applyFilters();
       });
     }
@@ -6499,11 +6495,6 @@ async function setView(viewName) {
 
   updateViewButtons();
   buildHeader();
-
-  if (viewName === "next") {
-    showTableBusyState("Preparing Next Overall...");
-    await paintLoadingProgress();
-  }
 
   applyFilters();
 }
