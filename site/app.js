@@ -776,24 +776,11 @@ function staticDataFileUrl(fileName) {
 }
 
 function canUseStaticDataFile(fileName, access = currentDataAccess()) {
-  if (fileName === "manifest.json") {
-    return true;
-  }
-
-  if (/^players_(public|\d{4})\.json$/.test(fileName)) {
-    return true;
-  }
-
-  return false;
+  return /^(manifest\.json|players_(public|progression|\d{4})\.json|wallets\.json)$/.test(fileName);
 }
 
 function dataFileUrl(fileName, options = {}) {
   const access = currentDataAccess();
-
-  if (canUseStaticDataFile(fileName, access)) {
-    return staticDataFileUrl(fileName);
-  }
-
   const query = new URLSearchParams({ file: fileName });
 
   if (access === "public") {
