@@ -7245,7 +7245,7 @@ function loadingMessageForAccess(access) {
   }
 
   if (access === "full") {
-    return "Loading progression data";
+    return "Loading data";
   }
 
   return "Loading player data";
