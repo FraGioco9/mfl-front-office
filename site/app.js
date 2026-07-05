@@ -1,5 +1,6 @@
 const state = {
   columns: [],
+  columnIndexMap: null,
   rows: [],
   filteredRows: [],
   page: 1,
@@ -3526,8 +3527,25 @@ function availableFilterColumns(pageName = tablePageKey() || state.currentPage |
   return columns.filter((column) => state.columns.includes(column));
 }
 
+function rebuildColumnIndexMap() {
+  const map = Object.create(null);
+  state.columns.forEach((column, index) => {
+    map[column] = index;
+  });
+  state.columnIndexMap = map;
+}
+
+function columnIndex(column) {
+  if (!state.columnIndexMap) {
+    rebuildColumnIndexMap();
+  }
+
+  const index = state.columnIndexMap[column];
+  return Number.isInteger(index) ? index : -1;
+}
+
 function getValue(row, column) {
-  const index = state.columns.indexOf(column);
+  const index = columnIndex(column);
   return index >= 0 ? row[index] : null;
 }
 
@@ -3601,7 +3619,7 @@ function formatStatValue(row, statColumn) {
 }
 
 function hasColumn(column) {
-  return state.columns.includes(column);
+  return columnIndex(column) >= 0;
 }
 
 function precomputedValue(row, column) {
@@ -6463,6 +6481,7 @@ function applyDataSnapshot(snapshot) {
 
   state.manifest = snapshot.manifest;
   state.columns = [...snapshot.columns];
+  rebuildColumnIndexMap();
   state.rows = snapshot.rows;
   state.filteredRows = [];
   state.page = 1;
@@ -6603,6 +6622,7 @@ async function restoreCachedDataForAccess(access = currentDataAccess()) {
 
     state.manifest = manifest;
     state.columns = publicDataColumns(manifest);
+    rebuildColumnIndexMap();
     state.rows = publicChunk.rows;
     state.filteredRows = [];
     state.page = 1;
@@ -6723,6 +6743,7 @@ async function upgradePublicDataToFull(manifest, progressOptions = {}) {
 
   state.manifest = manifest;
   state.columns = targetColumns;
+  rebuildColumnIndexMap();
   state.dataAccess = currentDataAccess();
   return true;
 }
@@ -6818,6 +6839,7 @@ async function loadData(options = {}) {
 
       state.manifest = manifest;
       state.columns = publicDataColumns(manifest);
+      rebuildColumnIndexMap();
       updateSummaryCounts(manifest.row_count, manifest.wallet_count);
       await paintLoadingProgress();
 
@@ -6847,12 +6869,18 @@ async function loadData(options = {}) {
 
     phaseSet(92);
     statusText.textContent = `Updated ${new Date(manifest.generated_at).toLocaleString()}`;
-    loadingText.textContent = "Preparing search and table";
+    loadingText.textContent = "Preparing search";
+    await paintLoadingProgress();
     buildSearchIndex();
     phaseSet(95);
+    loadingText.textContent = "Preparing filters";
+    await paintLoadingProgress();
     populateAddFilterSelect();
     restoreSavedTableState();
     buildHeader();
+    phaseSet(97);
+    loadingText.textContent = "Preparing table";
+    await paintLoadingProgress();
     applyFilters();
     phaseSet(100);
     state.dataLoaded = true;
