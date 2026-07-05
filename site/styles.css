@@ -609,9 +609,9 @@ body[data-page="home"] .topbar .stats {
 
 .changelogPatchList {
   display: grid;
-  gap: 8px;
+  gap: 2px;
   margin: 0;
-  padding: 0 10px 10px;
+  padding: 2px 10px;
   list-style: none;
 }
 
