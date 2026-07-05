@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.89.49">
+    <link rel="stylesheet" href="/styles.css?v=1.89.50">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -284,6 +284,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.89.50</span><p>Save late-career reward rates with evaluations and make Advanced Settings collapsible</p></li>
               <li><span>v1.89.49</span><p>Add configurable late-career reward rates to Evaluation advanced settings</p></li>
               <li><span>v1.89.48</span><p>Keep table view sorting independent, update the footer version, and finish successful loading bars at 100%</p></li>
               <li><span>v1.89.47</span><p>Remove Database Next Overall, keep Next Overall sorting instant, and finish preparing-data loading at 100%</p></li>
@@ -694,7 +695,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.49</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.89.50</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -775,25 +776,26 @@
             </div>
           </section>
 
-          <section class="advancedSettingsSection advancedLateSeasonRewardsSection" aria-labelledby="advancedLateSeasonRewardsTitle">
-            <div class="advancedSettingHeader">
+          <details class="advancedSettingsSection advancedLateSeasonRewardsSection" aria-labelledby="advancedLateSeasonRewardsTitle" open>
+            <summary class="advancedSettingHeader advancedSettingSummary">
               <h3 id="advancedLateSeasonRewardsTitle">Late-Career Reward Rates</h3>
-            </div>
+              <span class="advancedSettingChevron" aria-hidden="true">⌄</span>
+            </summary>
             <div class="advancedLateSeasonRewardsGrid">
               <label class="advancedLateSeasonRewardSetting" for="advancedThirdLastRewardInput">
-                <span>Third-to-last season reward rate</span>
-                <span class="advancedPercentControl"><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Third-to-last season reward rate"><span>%</span></span>
+                <span>Third-to-last season earnings</span>
+                <span class="advancedPercentControl"><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" autocomplete="off" aria-label="Third-to-last season earnings rate"><span>%</span></span>
               </label>
               <label class="advancedLateSeasonRewardSetting" for="advancedSecondLastRewardInput">
-                <span>Second-to-last season reward rate</span>
-                <span class="advancedPercentControl"><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Second-to-last season reward rate"><span>%</span></span>
+                <span>Second-to-last season earnings</span>
+                <span class="advancedPercentControl"><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" autocomplete="off" aria-label="Second-to-last season earnings rate"><span>%</span></span>
               </label>
               <label class="advancedLateSeasonRewardSetting" for="advancedFinalRewardInput">
-                <span>Final-season reward rate</span>
-                <span class="advancedPercentControl"><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season reward rate"><span>%</span></span>
+                <span>Final-season earnings</span>
+                <span class="advancedPercentControl"><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span>
               </label>
             </div>
-          </section>
+          </details>
 
           <section class="advancedSettingsSection advancedPlayerTableSection" aria-labelledby="advancedPlayerTableTitle">
             <div class="advancedSettingHeader">
@@ -814,6 +816,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.89.49"></script>
+    <script src="/app.js?v=1.89.50"></script>
   </body>
 </html>

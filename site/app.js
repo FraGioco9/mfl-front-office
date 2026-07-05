@@ -1851,9 +1851,7 @@ function applySharedEvaluationPayload(payload) {
   }
 
   state.evaluationPlayerId = data.playerId;
-  if (data.mflPerUsd) {
-    state.evaluationMflPerUsd = data.mflPerUsd;
-  }
+  state.evaluationMflPerUsd = data.mflPerUsd || DEFAULT_EVALUATION_MFL_PER_USD;
   state.evaluationIgnoreDiscountRate = data.ignoreDiscountRate;
   state.evaluationIgnoreFirstSeason = data.ignoreFirstSeason;
   state.evaluationLateSeasonRewardRates = normalizeEvaluationLateSeasonRewardRates(data.lateSeasonRewardRates);
@@ -4143,7 +4141,18 @@ function loadEvaluationMflPerUsd() {
 
 function parseEvaluationRewardRate(value) {
   const parsedValue = Number.parseFloat(String(value).replace(",", "."));
-  return Number.isFinite(parsedValue) && parsedValue >= 0 ? Math.round(parsedValue * 100) / 100 : null;
+  return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 100 ? Math.round(parsedValue * 100) / 100 : null;
+}
+
+function clampEvaluationRewardRate(value, fallbackValue = 100) {
+  const parsedValue = Number.parseFloat(String(value).replace(",", "."));
+  const fallback = parseEvaluationRewardRate(fallbackValue) ?? 100;
+
+  if (!Number.isFinite(parsedValue)) {
+    return fallback;
+  }
+
+  return Math.round(Math.max(0, Math.min(100, parsedValue)) * 100) / 100;
 }
 
 function normalizeEvaluationLateSeasonRewardRates(value) {
@@ -4159,7 +4168,7 @@ function formatEvaluationRewardRate(value) {
   if (parsedRate === null) {
     return "";
   }
-  return Number.isInteger(parsedRate) ? String(parsedRate) : parsedRate.toFixed(2);
+  return parsedRate.toFixed(2);
 }
 
 function saveEvaluationLateSeasonRewardRates(rates) {
@@ -4280,6 +4289,21 @@ function closeAdvancedSettings() {
   advancedPlayerTableBody.style.webkitClipPath = "";
 }
 
+function syncAdvancedRewardRateDraft(input, fallbackValue) {
+  if (!input) {
+    return;
+  }
+
+  input.value = clampEvaluationRewardRate(input.value, fallbackValue).toFixed(2);
+}
+
+function syncAdvancedRewardRateDrafts() {
+  const currentRates = normalizeEvaluationLateSeasonRewardRates(state.evaluationLateSeasonRewardRates);
+  syncAdvancedRewardRateDraft(advancedThirdLastRewardInput, currentRates[0]);
+  syncAdvancedRewardRateDraft(advancedSecondLastRewardInput, currentRates[1]);
+  syncAdvancedRewardRateDraft(advancedFinalRewardInput, currentRates[2]);
+}
+
 function applyAdvancedSettings() {
   const parsedValue = parseEvaluationMflPerUsd(advancedMflUsdInput.value);
 
@@ -4287,6 +4311,7 @@ function applyAdvancedSettings() {
     saveEvaluationMflPerUsd(parsedValue);
   }
 
+  syncAdvancedRewardRateDrafts();
   saveEvaluationLateSeasonRewardRates([
     advancedThirdLastRewardInput.value,
     advancedSecondLastRewardInput.value,
@@ -7272,6 +7297,7 @@ closeSearchButton.addEventListener("click", closeSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
 advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });
+document.querySelector(".advancedLateSeasonRewardsSection")?.addEventListener("toggle", () => window.requestAnimationFrame(updateAdvancedPlayerTableClip));
 window.addEventListener("storage", syncRecentSearchStateFromStorage);
 window.addEventListener("resize", updateAdvancedPlayerTableClip);
 advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);
@@ -7280,6 +7306,9 @@ advancedMflUsdDecreaseButton.addEventListener("mousedown", (event) => event.prev
 advancedMflUsdIncreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(1));
 advancedMflUsdDecreaseButton.addEventListener("click", () => adjustAdvancedMflUsdDraft(-1));
 advancedMflUsdResetButton.addEventListener("click", resetAdvancedMflUsd);
+[advancedThirdLastRewardInput, advancedSecondLastRewardInput, advancedFinalRewardInput].forEach((input) => {
+  input.addEventListener("blur", syncAdvancedRewardRateDrafts);
+});
 discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);

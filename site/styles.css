@@ -1126,6 +1126,27 @@ button:disabled {
   font-size: 16px;
 }
 
+.advancedSettingsSection summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.advancedSettingsSection summary::-webkit-details-marker {
+  display: none;
+}
+
+.advancedSettingChevron {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 800;
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+
+.advancedLateSeasonRewardsSection:not([open]) .advancedSettingChevron {
+  transform: rotate(-90deg);
+}
+
 .advancedSettingHeader {
   display: flex;
   align-items: center;
@@ -1188,16 +1209,17 @@ button:disabled {
 
 .advancedLateSeasonRewardsGrid {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .advancedLateSeasonRewardSetting {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 42px;
+  gap: 12px;
+  min-height: 34px;
   color: var(--text);
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -1210,15 +1232,15 @@ button:disabled {
 }
 
 .advancedRewardRateInput {
-  width: 86px;
-  height: 42px;
-  padding: 4px 10px;
+  width: 76px;
+  height: 34px;
+  padding: 4px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 800;
   text-align: right;
 }

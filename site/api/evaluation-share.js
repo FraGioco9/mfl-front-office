@@ -132,6 +132,31 @@ function generateEvaluationId() {
   return crypto.randomBytes(4).toString("hex");
 }
 
+const DEFAULT_EVALUATION_MFL_PER_USD = 400;
+const DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES = [80, 80, 60];
+
+function parseEvaluationRewardRate(value) {
+  const parsedValue = Number.parseFloat(String(value).replace(",", "."));
+  return Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 100 ? Math.round(parsedValue * 100) / 100 : null;
+}
+
+function normalizeEvaluationLateSeasonRewardRates(data) {
+  const source = Array.isArray(data?.lateSeasonRewardRates)
+    ? data.lateSeasonRewardRates
+    : Array.isArray(data?.late_season_reward_rates)
+      ? data.late_season_reward_rates
+      : Array.isArray(data?.lateCareerRewardRates)
+        ? data.lateCareerRewardRates
+        : Array.isArray(data?.late_career_reward_rates)
+          ? data.late_career_reward_rates
+          : [];
+
+  return DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES.map((defaultRate, index) => {
+    const parsedRate = parseEvaluationRewardRate(source[index]);
+    return parsedRate === null ? defaultRate : parsedRate;
+  });
+}
+
 function normalizeEvaluationPayload(payload) {
   const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
   const playerId = String(data.playerId || "").trim();
@@ -147,9 +172,10 @@ function normalizeEvaluationPayload(payload) {
 
   return {
     playerId,
-    mflPerUsd: Number.isFinite(mflPerUsd) && mflPerUsd > 0 ? Math.round(mflPerUsd * 100) / 100 : 400,
+    mflPerUsd: Number.isFinite(mflPerUsd) && mflPerUsd > 0 ? Math.round(mflPerUsd * 100) / 100 : DEFAULT_EVALUATION_MFL_PER_USD,
     ignoreDiscountRate: Boolean(data.ignoreDiscountRate),
     ignoreFirstSeason: Boolean(data.ignoreFirstSeason),
+    lateSeasonRewardRates: normalizeEvaluationLateSeasonRewardRates(data),
     overallValues,
     summaryPosition,
   };
