@@ -2176,11 +2176,14 @@ function showEvaluationLoadActionTooltip(button) {
   tooltip.className = "floatingActionTooltip";
   tooltip.textContent = text;
   document.body.appendChild(tooltip);
-  tooltip.style.maxWidth = `${Math.max(120, window.innerWidth - 16)}px`;
+  tooltip.style.maxWidth = `${Math.min(240, Math.max(120, window.innerWidth - 16))}px`;
 
   const rect = button.getBoundingClientRect();
   const tooltipRect = tooltip.getBoundingClientRect();
-  const left = Math.min(Math.max(rect.left + rect.width / 2 - tooltipRect.width / 2, 8), window.innerWidth - tooltipRect.width - 8);
+  const preferredLeft = button.dataset.tooltipPlacement === "left"
+    ? rect.right - tooltipRect.width - 6
+    : rect.left + rect.width / 2 - tooltipRect.width / 2;
+  const left = Math.min(Math.max(preferredLeft, 8), window.innerWidth - tooltipRect.width - 8);
   const top = Math.max(8, rect.top - tooltipRect.height - 8);
 
   tooltip.style.left = `${left}px`;
@@ -3268,6 +3271,9 @@ function renderWatchlistSwitcher() {
     deleteButton.className = "evaluationLoadIconButton evaluationLoadDeleteButton watchlistDropdownAction watchlistDropdownDelete";
     deleteButton.setAttribute("aria-label", "Delete watchlist");
     deleteButton.dataset.tooltip = watchlists.length <= 1 ? "You need at least one watchlist" : "Delete";
+    if (watchlists.length <= 1) {
+      deleteButton.dataset.tooltipPlacement = "left";
+    }
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
     deleteButton.disabled = watchlists.length <= 1;
     attachEvaluationLoadActionTooltip(deleteButton);
