@@ -1426,8 +1426,7 @@ button:hover:not(:disabled) {
 }
 
 .watchlistButton:hover:not(:disabled),
-.watchlistButton:focus-visible,
-.watchlistButton[aria-expanded="true"] {
+.watchlistButton:focus-visible {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
@@ -4476,105 +4475,4 @@ td a {
   .watchlistPlayerCount {
     margin-left: 0;
   }
-}
-
-/* v1.144.7 */
-.watchlistButton,
-.watchlistButton:hover:not(:disabled),
-.watchlistButton:focus-visible,
-.watchlistButton[aria-expanded="true"] {
-  box-sizing: border-box;
-}
-
-.watchlistButton[aria-expanded="true"],
-.watchlistButton[aria-expanded="true"]:hover:not(:disabled),
-.watchlistButton[aria-expanded="true"]:focus-visible {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-  color: var(--text);
-}
-
-/* v1.144.7 */
-.watchlistDropdownItem:hover,
-.watchlistDropdownItem.active:hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
-
-.watchlistDropdownItem.active {
-  color: var(--primary);
-}
-
-.watchlistDropdownAction {
-  position: relative;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  border-color: var(--border);
-  background: var(--surface-muted);
-  color: var(--text-soft);
-  transform: none;
-}
-
-.watchlistDropdownAction:hover,
-.watchlistDropdownAction:focus-visible {
-  transform: none;
-}
-
-.watchlistDropdownRename:hover:not(.is-disabled),
-.watchlistDropdownRename:focus-visible:not(.is-disabled) {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-  color: var(--text);
-}
-
-.watchlistDropdownDelete:hover:not(.is-disabled),
-.watchlistDropdownDelete:focus-visible:not(.is-disabled) {
-  border-color: #ff8a8a;
-  background: #c92a2a;
-  color: #fff7f7;
-}
-
-.watchlistDropdownAction.is-disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.watchlistDropdownAction[data-tooltip]::after {
-  display: block;
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 10030;
-  box-sizing: border-box;
-  width: max-content;
-  max-width: min(220px, calc(100vw - 16px));
-  padding: 7px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  background: #171717;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: center;
-  text-transform: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  content: attr(data-tooltip);
-}
-
-.watchlistDropdownAction[data-tooltip]:hover::after,
-.watchlistDropdownAction[data-tooltip]:focus-visible::after {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.watchlistDropdownDelete[data-tooltip-placement="left"]::after {
-  right: -12px;
 }
