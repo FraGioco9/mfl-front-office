@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.143.13">
+    <link rel="stylesheet" href="/styles.css?v=1.144.0">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -178,6 +178,7 @@
               <button id="clearSelectionButton" class="textButton" type="button">Clear</button>
             </div>
             <div class="selectionActions">
+              <button id="moveToWatchlistButton" type="button" hidden>Move to watchlist</button>
               <button id="addToWatchlistButton" type="button">Add to watchlist</button>
               <button id="openSelectedLinksButton" type="button">Open links</button>
             </div>
@@ -292,6 +293,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.144.0</span><p>Add multi-watchlist add and move chooser flows</p></li>
               <li><span>v1.143.13</span><p>Remove saved active Watchlist state from Supabase</p></li>
               <li><span>v1.143.12</span><p>Store opted-in Watchlists through the Supabase watchlists column</p></li>
               <li><span>v1.143.11</span><p>Add Watchlist creation toast</p></li>
@@ -732,7 +734,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.143.13</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.144.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -786,6 +788,16 @@
     </div>
 
 
+
+    <div id="watchlistChoiceModal" class="modalBackdrop" hidden>
+      <section class="watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
+        <header class="filtersHeader">
+          <h2 id="watchlistChoiceTitle">Add to watchlist</h2>
+          <button id="closeWatchlistChoiceButton" class="iconButton" type="button" aria-label="Close watchlist chooser">x</button>
+        </header>
+        <section id="watchlistChoiceList" class="watchlistChoiceList" aria-label="Choose watchlist"></section>
+      </section>
+    </div>
 
     <div id="addWatchlistModal" class="modalBackdrop" hidden>
       <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
@@ -891,6 +903,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.143.13"></script>
+    <script src="/app.js?v=1.144.0"></script>
   </body>
 </html>

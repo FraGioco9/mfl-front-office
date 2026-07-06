@@ -4351,3 +4351,43 @@ td a {
 .watchlistDropdownSeparator {
   margin-top: 2px;
 }
+
+.watchlistChoiceDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.watchlistChoiceList {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.watchlistChoiceItem {
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.watchlistChoiceItem:hover:not(:disabled),
+.watchlistChoiceItem:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistChoiceAddNew {
+  margin-top: 5px;
+  border-top-color: var(--border-strong);
+}

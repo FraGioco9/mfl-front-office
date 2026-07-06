@@ -26,6 +26,9 @@ const state = {
   pendingWatchlistRouteId: "",
   editingWatchlistId: "",
   pendingDeleteWatchlistId: "",
+  pendingWatchlistChoiceAction: "",
+  pendingWatchlistChoicePlayerIds: [],
+  pendingAddWatchlistContext: "",
   pendingPostLoadingToast: "",
   playerNotes: {},
   tablePageStates: {},
@@ -349,6 +352,11 @@ const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
 const watchlistButton = document.querySelector("#watchlistButton");
 const watchlistButtonText = document.querySelector("#watchlistButtonText");
 const watchlistDropdown = document.querySelector("#watchlistDropdown");
+const watchlistChoiceModal = document.querySelector("#watchlistChoiceModal");
+const watchlistChoiceTitle = document.querySelector("#watchlistChoiceTitle");
+const watchlistChoiceList = document.querySelector("#watchlistChoiceList");
+const closeWatchlistChoiceButton = document.querySelector("#closeWatchlistChoiceButton");
+const addWatchlistFromChoiceButton = document.querySelector("#addWatchlistFromChoiceButton");
 const addWatchlistModal = document.querySelector("#addWatchlistModal");
 const addWatchlistTitle = document.querySelector("#addWatchlistTitle");
 const addWatchlistNameInput = document.querySelector("#addWatchlistNameInput");
@@ -420,6 +428,7 @@ const selectionBar = document.querySelector("#selectionBar");
 const selectionCount = document.querySelector("#selectionCount");
 const clearSelectionButton = document.querySelector("#clearSelectionButton");
 const addToWatchlistButton = document.querySelector("#addToWatchlistButton");
+const moveToWatchlistButton = document.querySelector("#moveToWatchlistButton");
 const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton");
 
 function applyTheme(theme) {
@@ -3428,7 +3437,180 @@ function switchWatchlist(watchlistId) {
   applyFilters();
 }
 
-function openAddWatchlistModal() {
+
+function selectedPlayerIdsArray() {
+  return Array.from(state.selectedPlayerIds).map((playerId) => String(playerId));
+}
+
+function watchlistNameById(watchlistId) {
+  return state.watchlists.find((watchlist) => watchlist.id === watchlistId)?.name || DEFAULT_WATCHLIST_NAME;
+}
+
+function targetWatchlistsForAction(action) {
+  const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+  return action === "move"
+    ? watchlists.filter((watchlist) => watchlist.id !== state.currentWatchlistId)
+    : watchlists;
+}
+
+function closeWatchlistChoiceModal() {
+  state.pendingWatchlistChoiceAction = "";
+  state.pendingWatchlistChoicePlayerIds = [];
+  hideModal(watchlistChoiceModal);
+}
+
+function openWatchlistChoiceModal(action, playerIds) {
+  if (!watchlistChoiceModal || !watchlistChoiceList) {
+    performWatchlistChoiceAction(action, activeWatchlist()?.id || "", playerIds);
+    return;
+  }
+
+  const ids = normalizeWatchlistIdList(playerIds);
+  if (!ids.length) {
+    return;
+  }
+
+  const targetWatchlists = targetWatchlistsForAction(action);
+  if (action === "move" && !targetWatchlists.length && state.watchlists.length >= MAX_WATCHLISTS) {
+    showGenericToast("Create another watchlist first.");
+    return;
+  }
+
+  state.pendingWatchlistChoiceAction = action;
+  state.pendingWatchlistChoicePlayerIds = ids;
+  if (watchlistChoiceTitle) {
+    watchlistChoiceTitle.textContent = action === "move" ? "Move to watchlist" : "Add to watchlist";
+  }
+  watchlistChoiceList.replaceChildren();
+
+  targetWatchlists.forEach((watchlist) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "watchlistChoiceItem";
+    button.textContent = watchlist.name;
+    button.addEventListener("click", () => {
+      const currentAction = state.pendingWatchlistChoiceAction;
+      const currentIds = Array.from(state.pendingWatchlistChoicePlayerIds);
+      closeWatchlistChoiceModal();
+      performWatchlistChoiceAction(currentAction, watchlist.id, currentIds);
+    });
+    watchlistChoiceList.appendChild(button);
+  });
+
+  if (state.watchlists.length < MAX_WATCHLISTS) {
+    const addNewButton = document.createElement("button");
+    addNewButton.type = "button";
+    addNewButton.className = "watchlistChoiceItem watchlistChoiceAddNew";
+    addNewButton.textContent = "Add to new watchlist";
+    addNewButton.addEventListener("click", () => {
+      const context = state.pendingWatchlistChoiceAction === "move" ? "move-selected" : "add-selected";
+      hideModal(watchlistChoiceModal);
+      openAddWatchlistModal(context);
+    });
+    watchlistChoiceList.appendChild(addNewButton);
+  }
+
+  showModal(watchlistChoiceModal);
+}
+
+function addPlayerIdsToWatchlist(watchlistId, playerIds) {
+  const watchlist = state.watchlists.find((item) => item.id === watchlistId);
+  if (!watchlist) {
+    renderWatchlistSwitcher();
+    return { addedCount: 0, skippedCount: 0 };
+  }
+
+  const ids = normalizeWatchlistIdList(playerIds);
+  const nextIds = normalizeWatchlistIdList(watchlist.playerIds);
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  ids.forEach((playerId) => {
+    const key = String(playerId);
+    if (nextIds.includes(key)) {
+      return;
+    }
+    if (nextIds.length >= MAX_WATCHLIST_PLAYERS) {
+      skippedCount += 1;
+      return;
+    }
+    nextIds.push(key);
+    addedCount += 1;
+  });
+
+  watchlist.playerIds = nextIds;
+  if (watchlist.id === state.currentWatchlistId) {
+    state.watchlistPlayerIds = new Set(nextIds);
+  }
+
+  return { addedCount, skippedCount };
+}
+
+function movePlayerIdsToWatchlist(watchlistId, playerIds) {
+  const active = activeWatchlist();
+  const target = state.watchlists.find((item) => item.id === watchlistId);
+  if (!active || !target || active.id === target.id) {
+    renderWatchlistSwitcher();
+    return { movedCount: 0, skippedCount: 0 };
+  }
+
+  const ids = normalizeWatchlistIdList(playerIds);
+  const sourceIds = normalizeWatchlistIdList(active.playerIds).filter((playerId) => !ids.includes(String(playerId)));
+  active.playerIds = sourceIds;
+  state.watchlistPlayerIds = new Set(sourceIds);
+
+  const { addedCount, skippedCount } = addPlayerIdsToWatchlist(target.id, ids);
+  return { movedCount: ids.length - skippedCount, addedCount, skippedCount };
+}
+
+function finishWatchlistSelectionAction() {
+  state.selectedPlayerIds.clear();
+  state.selectionAnchorPlayerId = null;
+  syncActiveWatchlistFromSet();
+  saveTableState();
+  renderWatchlistSwitcher();
+  if (state.currentPage === "watchlist") {
+    applyFilters();
+  } else {
+    renderTable();
+  }
+  updateSelectionBar();
+  if (state.currentPage === "player") {
+    renderPlayerPage(playerIdFromUrl());
+  }
+}
+
+function performWatchlistChoiceAction(action, watchlistId, playerIds) {
+  state.pendingWatchlistChoiceAction = "";
+  state.pendingWatchlistChoicePlayerIds = [];
+  const ids = normalizeWatchlistIdList(playerIds);
+  if (!ids.length || !watchlistId) {
+    return;
+  }
+
+  if (action === "move") {
+    const targetName = watchlistNameById(watchlistId);
+    const result = movePlayerIdsToWatchlist(watchlistId, ids);
+    finishWatchlistSelectionAction();
+    if (result.skippedCount) {
+      showWatchlistFullToast();
+    } else if (result.movedCount) {
+      showGenericToast(`${result.movedCount} player${result.movedCount === 1 ? "" : "s"} moved to ${targetName}.`);
+    }
+    return;
+  }
+
+  const targetName = watchlistNameById(watchlistId);
+  const result = addPlayerIdsToWatchlist(watchlistId, ids);
+  finishWatchlistSelectionAction();
+  if (result.skippedCount) {
+    showWatchlistFullToast();
+  } else if (result.addedCount) {
+    showGenericToast(`${result.addedCount} player${result.addedCount === 1 ? "" : "s"} added to ${targetName}.`);
+  }
+}
+
+function openAddWatchlistModal(context = "standard") {
   hideEvaluationLoadActionTooltip();
   if (!hasWalletOptIn()) {
     renderWatchlistSwitcher();
@@ -3442,6 +3624,7 @@ function openAddWatchlistModal() {
   }
 
   state.editingWatchlistId = "";
+  state.pendingAddWatchlistContext = context;
   if (addWatchlistTitle) {
     addWatchlistTitle.textContent = "Add a watchlist";
   }
@@ -3469,6 +3652,7 @@ function openRenameWatchlistModal(watchlistId) {
   }
 
   state.editingWatchlistId = watchlist.id;
+  state.pendingAddWatchlistContext = "rename";
   if (addWatchlistTitle) {
     addWatchlistTitle.textContent = "Rename watchlist";
   }
@@ -3496,7 +3680,13 @@ function keepWatchlistDropdownOpenAfterModalClick() {
 
 function closeAddWatchlistModal() {
   keepWatchlistDropdownOpenAfterModalClick();
+  const closingContext = state.pendingAddWatchlistContext;
   state.editingWatchlistId = "";
+  state.pendingAddWatchlistContext = "";
+  if (closingContext === "add-selected" || closingContext === "move-selected") {
+    state.pendingWatchlistChoiceAction = "";
+    state.pendingWatchlistChoicePlayerIds = [];
+  }
   if (addWatchlistError) {
     addWatchlistError.hidden = true;
     addWatchlistError.textContent = "";
@@ -3551,7 +3741,18 @@ function confirmAddWatchlist() {
   while (state.watchlists.some((watchlist) => watchlist.id === id)) {
     id = createWatchlistId();
   }
-  state.watchlists.push({ id, name, playerIds: [] });
+  const newWatchlist = { id, name, playerIds: [] };
+  state.watchlists.push(newWatchlist);
+
+  if (state.pendingAddWatchlistContext === "add-selected" || state.pendingAddWatchlistContext === "move-selected") {
+    const action = state.pendingAddWatchlistContext === "move-selected" ? "move" : "add";
+    const playerIds = Array.from(state.pendingWatchlistChoicePlayerIds);
+    closeAddWatchlistModal();
+    performWatchlistChoiceAction(action, id, playerIds);
+    showGenericToast("Watchlist created.");
+    return;
+  }
+
   state.currentWatchlistId = id;
   state.watchlistPlayerIds = new Set();
   state.watchlistPlayerIdsAdded.clear();
@@ -5615,6 +5816,12 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
   const added = !state.watchlistPlayerIds.has(key);
 
   if (added) {
+    const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+    state.watchlists = watchlists;
+    if (hasWalletOptIn() && watchlists.length > 1) {
+      openWatchlistChoiceModal("add", [key]);
+      return;
+    }
     if (state.watchlistPlayerIds.size >= MAX_WATCHLIST_PLAYERS) {
       showWatchlistFullToast();
       return;
@@ -7134,6 +7341,9 @@ function updateSelectionBar() {
   selectionBar.classList.toggle("visible", selectedCount > 0);
   selectionCount.textContent = `${selectedCount} selected`;
   addToWatchlistButton.textContent = state.currentPage === "watchlist" ? "Remove from watchlist" : "Add to watchlist";
+  if (moveToWatchlistButton) {
+    moveToWatchlistButton.hidden = state.currentPage !== "watchlist" || selectedCount <= 0;
+  }
   updateSelectionHeader();
 }
 
@@ -7219,32 +7429,24 @@ function addSelectedToWatchlist() {
     return;
   }
 
-  let addedCount = 0;
-  let skippedCount = 0;
-  state.selectedPlayerIds.forEach((playerId) => {
-    const key = String(playerId);
-    if (state.watchlistPlayerIds.has(key)) {
-      return;
-    }
-    if (state.watchlistPlayerIds.size >= MAX_WATCHLIST_PLAYERS) {
-      skippedCount += 1;
-      return;
-    }
-    state.watchlistPlayerIds.add(key);
-    trackWatchlistChange(key, true);
-    addedCount += 1;
-  });
-  state.selectedPlayerIds.clear();
-  state.selectionAnchorPlayerId = null;
-  syncActiveWatchlistFromSet();
-  saveTableState();
-  renderTable();
-  updateSelectionBar();
-  if (skippedCount) {
-    showWatchlistFullToast();
-  } else if (addedCount) {
-    showWatchlistToast(`${addedCount} player${addedCount === 1 ? "" : "s"} added to`);
+  const selectedIds = selectedPlayerIdsArray();
+  const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+  state.watchlists = watchlists;
+
+  if (hasWalletOptIn() && watchlists.length > 1) {
+    openWatchlistChoiceModal("add", selectedIds);
+    return;
   }
+
+  performWatchlistChoiceAction("add", activeWatchlist()?.id || ensureDefaultWatchlist()?.id || "", selectedIds);
+}
+
+function moveSelectedToWatchlist() {
+  if (state.currentPage !== "watchlist" || !state.selectedPlayerIds.size) {
+    return;
+  }
+
+  openWatchlistChoiceModal("move", selectedPlayerIdsArray());
 }
 
 
@@ -8067,6 +8269,8 @@ document.addEventListener("keydown", (event) => {
     closeSearch();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
     closeFilters();
+  } else if (event.key === "Escape" && !watchlistChoiceModal?.hidden) {
+    closeWatchlistChoiceModal();
   } else if (event.key === "Escape" && !addWatchlistModal.hidden) {
     closeAddWatchlistModal();
   } else if (event.key === "Escape" && !deleteWatchlistModal.hidden) {
@@ -8120,6 +8324,7 @@ document.addEventListener("click", (event) => {
 setupBackdropClickClose(searchModal, closeSearch);
 
 setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);
+setupBackdropClickClose(watchlistChoiceModal, closeWatchlistChoiceModal);
 setupBackdropClickClose(addWatchlistModal, closeAddWatchlistModal);
 setupBackdropClickClose(deleteWatchlistModal, closeDeleteWatchlistModal);
 
@@ -8131,6 +8336,7 @@ clearFiltersButton.addEventListener("click", () => {
 
 clearSelectionButton.addEventListener("click", clearSelection);
 addToWatchlistButton.addEventListener("click", addSelectedToWatchlist);
+moveToWatchlistButton?.addEventListener("click", moveSelectedToWatchlist);
 openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);
 discardAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
 closeAddWatchlistButton?.addEventListener("click", closeAddWatchlistModal);
@@ -8138,6 +8344,8 @@ confirmAddWatchlistButton?.addEventListener("click", confirmAddWatchlist);
 cancelDeleteWatchlistButton?.addEventListener("click", closeDeleteWatchlistModal);
 closeDeleteWatchlistButton?.addEventListener("click", closeDeleteWatchlistModal);
 confirmDeleteWatchlistButton?.addEventListener("click", confirmDeleteWatchlist);
+closeWatchlistChoiceButton?.addEventListener("click", closeWatchlistChoiceModal);
+addWatchlistFromChoiceButton?.addEventListener("click", () => openAddWatchlistModal(state.pendingWatchlistChoiceAction === "move" ? "move-selected" : "add-selected"));
 addWatchlistNameInput?.addEventListener("input", () => {
   if (addWatchlistError) {
     addWatchlistError.hidden = true;
