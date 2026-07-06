@@ -2286,7 +2286,6 @@ function renderSavedEvaluationList(rows) {
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
 
     attachEvaluationLoadActionTooltip(shareButton);
-    attachEvaluationLoadActionTooltip(deleteButton);
 
     const loadEvaluation = () => {
       clearEvaluationSearchFocus();
@@ -3327,7 +3326,6 @@ function renderWatchlistSwitcher() {
     renameButton.setAttribute("aria-label", "Rename watchlist");
     renameButton.dataset.tooltip = "Rename";
     renameButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>';
-    attachEvaluationLoadActionTooltip(renameButton);
     renameButton.addEventListener("click", (event) => {
       event.stopPropagation();
       openRenameWatchlistModal(watchlist.id);
@@ -3343,7 +3341,6 @@ function renderWatchlistSwitcher() {
     }
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
     deleteButton.disabled = watchlists.length <= 1;
-    attachEvaluationLoadActionTooltip(deleteButton);
     deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
       if (deleteButton.disabled) {

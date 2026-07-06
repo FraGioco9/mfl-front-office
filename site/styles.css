@@ -4493,3 +4493,58 @@ td a {
   background: var(--row-hover);
   color: var(--text);
 }
+
+/* v1.144.7 */
+.watchlistDropdownAction[data-tooltip] {
+  position: relative;
+}
+
+.watchlistDropdownAction[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 10040;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.watchlistDropdownAction[data-tooltip]:hover::after,
+.watchlistDropdownAction[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.watchlistDropdownAction[data-tooltip-placement="left"]::after {
+  left: auto;
+  right: -2px;
+  transform: translateY(4px);
+}
+
+.watchlistDropdownAction[data-tooltip-placement="left"]:hover::after,
+.watchlistDropdownAction[data-tooltip-placement="left"]:focus-visible::after {
+  transform: translateY(0);
+}
+
+.watchlistDropdownAction:hover:not(:disabled),
+.watchlistDropdownAction:focus-visible:not(:disabled) {
+  transform: none;
+}
