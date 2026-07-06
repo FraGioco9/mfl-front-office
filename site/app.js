@@ -990,7 +990,7 @@ async function fetchDataFile(fileName, options = {}) {
   onProgress?.(0.03);
   const requestedUrl = dataFileUrl(fileName, { columns });
   const staticUrl = staticDataFileUrl(fileName);
-  const cacheMode = fileName === "manifest.json" ? "no-store" : "default";
+  const cacheMode = fileName === "manifest.json" || !useCache || writeCache ? "no-store" : "default";
   const preferStatic = !columns && canUseStaticDataFile(fileName);
   const fetchAttempts = preferStatic
     ? [
@@ -2436,7 +2436,21 @@ async function ensureProgressionData() {
     return true;
   }
 
-  if (restoreDataSnapshot(targetAccess) || await restorePersistentDataSnapshot(targetAccess) || await restoreCachedDataForAccess(targetAccess)) {
+  const currentManifest = await fetchCurrentManifestForCacheCheck();
+
+  if (currentManifest && (
+    restoreDataSnapshot(targetAccess, currentManifest)
+    || await restorePersistentDataSnapshot(targetAccess, currentManifest)
+    || await restoreCachedDataForAccess(targetAccess, currentManifest)
+  )) {
+    return true;
+  }
+
+  if (!currentManifest && (
+    restoreDataSnapshot(targetAccess)
+    || await restorePersistentDataSnapshot(targetAccess)
+    || await restoreCachedDataForAccess(targetAccess)
+  )) {
     return true;
   }
 
@@ -7899,7 +7913,7 @@ function applyDataSnapshot(snapshot) {
   return true;
 }
 
-async function restorePersistentDataSnapshot(access = currentDataAccess()) {
+async function restorePersistentDataSnapshot(access = currentDataAccess(), currentManifest = null) {
   const accessKey = dataCacheAccessKey(access);
   const snapshot = await readDataSnapshotRecord(accessKey);
 
@@ -7907,15 +7921,19 @@ async function restorePersistentDataSnapshot(access = currentDataAccess()) {
     return false;
   }
 
-  const expectedVersion = dataCacheVersion(snapshot.manifest, accessKey);
+  const manifest = currentManifest || snapshot.manifest;
+  const expectedVersion = dataCacheVersion(manifest, accessKey);
 
   if (snapshot.version !== expectedVersion) {
     return false;
   }
 
   localStorage.setItem(dataCacheVersionStorageKey(accessKey), snapshot.version);
-  localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(snapshot.manifest));
-  return applyDataSnapshot(snapshot);
+  localStorage.setItem(DATA_CACHE_MANIFEST_KEY, JSON.stringify(manifest));
+  return applyDataSnapshot({
+    ...snapshot,
+    manifest,
+  });
 }
 
 function persistCurrentDataSnapshot() {
@@ -7957,16 +7975,40 @@ function captureCurrentDataSnapshot() {
   };
 }
 
-function restoreDataSnapshot(access = currentDataAccess()) {
-  const snapshot = state.dataSnapshots[currentDataSnapshotKey(access)];
-  return snapshot ? applyDataSnapshot(snapshot) : false;
+function restoreDataSnapshot(access = currentDataAccess(), currentManifest = null) {
+  const accessKey = currentDataSnapshotKey(access);
+  const snapshot = state.dataSnapshots[accessKey];
+
+  if (!snapshot) {
+    return false;
+  }
+
+  if (currentManifest) {
+    const expectedVersion = dataCacheVersion(currentManifest, accessKey);
+
+    if (snapshot.version !== expectedVersion) {
+      return false;
+    }
+
+    return applyDataSnapshot({
+      ...snapshot,
+      manifest: currentManifest,
+    });
+  }
+
+  return applyDataSnapshot(snapshot);
 }
 
-function manifestDataFiles(manifest) {
+function dataAccessFromCacheKey(accessKey = dataCacheAccessKey()) {
+  const normalizedKey = String(accessKey || "public");
+  return normalizedKey.split(":")[0] || "public";
+}
+
+function manifestDataFiles(manifest, access = currentDataAccess()) {
   if (manifest?.files?.public?.file) {
     const files = [manifest.files.public.file];
 
-    if (["full", "owned"].includes(currentDataAccess()) && manifest?.files?.progression?.file) {
+    if (["full", "owned"].includes(access) && manifest?.files?.progression?.file) {
       files.push(manifest.files.progression.file);
     }
 
@@ -7977,7 +8019,8 @@ function manifestDataFiles(manifest) {
 }
 
 function dataCacheVersion(manifest, accessKey = dataCacheAccessKey()) {
-  return `${accessKey}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest).join("|")}`;
+  const access = dataAccessFromCacheKey(accessKey);
+  return `${accessKey}:${manifest.generated_at || ""}:${manifest.row_count || 0}:${manifestDataFiles(manifest, access).join("|")}`;
 }
 
 function dataCacheVersionStorageKey(accessKey = dataCacheAccessKey()) {
@@ -7993,8 +8036,16 @@ function readCachedManifest() {
   }
 }
 
-async function restoreCachedDataForAccess(access = currentDataAccess()) {
-  const manifest = readCachedManifest();
+async function fetchCurrentManifestForCacheCheck() {
+  try {
+    return await fetchDataFile("manifest.json");
+  } catch {
+    return null;
+  }
+}
+
+async function restoreCachedDataForAccess(access = currentDataAccess(), currentManifest = null) {
+  const manifest = currentManifest || readCachedManifest();
 
   if (!manifest) {
     return false;
@@ -8243,7 +8294,21 @@ async function preloadRefreshData(initialPage) {
     return;
   }
 
-  if (restoreDataSnapshot(targetAccess) || await restorePersistentDataSnapshot(targetAccess) || await restoreCachedDataForAccess(targetAccess)) {
+  const currentManifest = await fetchCurrentManifestForCacheCheck();
+
+  if (currentManifest && (
+    restoreDataSnapshot(targetAccess, currentManifest)
+    || await restorePersistentDataSnapshot(targetAccess, currentManifest)
+    || await restoreCachedDataForAccess(targetAccess, currentManifest)
+  )) {
+    return;
+  }
+
+  if (!currentManifest && (
+    restoreDataSnapshot(targetAccess)
+    || await restorePersistentDataSnapshot(targetAccess)
+    || await restoreCachedDataForAccess(targetAccess)
+  )) {
     return;
   }
 
