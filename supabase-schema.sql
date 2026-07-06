@@ -23,6 +23,7 @@ create table if not exists public.wallet_preferences (
 
 alter table public.wallet_preferences add column if not exists watchlist_player_ids jsonb not null default '[]'::jsonb;
 alter table public.wallet_preferences add column if not exists watchlists jsonb not null default '[]'::jsonb;
+comment on column public.wallet_preferences.watchlists is 'Opted-in user watchlists stored as an array of objects: [{"id":"7b1e706b","name":"Default","playerIds":["328858"]}]';
 alter table public.wallet_preferences add column if not exists current_watchlist_id text not null default '';
 alter table public.wallet_preferences add column if not exists player_notes jsonb not null default '{}'::jsonb;
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;

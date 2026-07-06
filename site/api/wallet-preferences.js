@@ -266,15 +266,16 @@ function preferencesFromRow(row) {
     return emptyPreferences();
   }
 
-  const watchlistPlayerIds = normalizeWatchlistIds(row.watchlist_player_ids);
-  const watchlists = Array.isArray(row.watchlists) && row.watchlists.length
-    ? normalizeWatchlists(row.watchlists, watchlistPlayerIds)
-    : [];
+  const legacyWatchlistPlayerIds = normalizeWatchlistIds(row.watchlist_player_ids);
+  const watchlists = normalizeWatchlists(row.watchlists, legacyWatchlistPlayerIds);
+  const currentWatchlistId = normalizeCurrentWatchlistId(row.current_watchlist_id, watchlists);
+  const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
+  const watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds || legacyWatchlistPlayerIds);
 
   return {
     watchlistPlayerIds,
     watchlists,
-    currentWatchlistId: normalizeCurrentWatchlistId(row.current_watchlist_id, watchlists),
+    currentWatchlistId,
     playerNotes: normalizePlayerNotes(row.player_notes),
     tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? row.table_state : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
@@ -295,33 +296,36 @@ async function writePreferences(wallet, preferences) {
   const addedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsAdded);
   const removedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsRemoved);
   const hasWatchlistDeltas = addedWatchlistIds.length > 0 || removedWatchlistIds.length > 0;
-  let watchlistPlayerIds;
-
-  if (hasWatchlistDeltas) {
-    const mergedWatchlistIds = new Set(currentPreferences.watchlistPlayerIds);
-    removedWatchlistIds.forEach((playerId) => mergedWatchlistIds.delete(playerId));
-    addedWatchlistIds.forEach((playerId) => mergedWatchlistIds.add(playerId));
-    watchlistPlayerIds = normalizeWatchlistIds(Array.from(mergedWatchlistIds));
-  } else if (Array.isArray(preferences.watchlistPlayerIds)) {
-    watchlistPlayerIds = normalizeWatchlistIds(preferences.watchlistPlayerIds);
-  } else {
-    watchlistPlayerIds = currentPreferences.watchlistPlayerIds;
-  }
 
   let watchlists = Array.isArray(preferences.watchlists)
-    ? normalizeWatchlists(preferences.watchlists, watchlistPlayerIds)
-    : currentPreferences.watchlists;
+    ? normalizeWatchlists(preferences.watchlists, currentPreferences.watchlistPlayerIds)
+    : normalizeWatchlists(currentPreferences.watchlists, currentPreferences.watchlistPlayerIds);
 
-  let currentWatchlistId = normalizeCurrentWatchlistId(preferences.currentWatchlistId, watchlists);
+  let currentWatchlistId = normalizeCurrentWatchlistId(
+    preferences.currentWatchlistId || currentPreferences.currentWatchlistId,
+    watchlists
+  );
 
-  if (hasWatchlistDeltas) {
-    watchlists = normalizeWatchlists(watchlists, watchlistPlayerIds).map((watchlist) => (watchlist.id === currentWatchlistId
-      ? { ...watchlist, playerIds: watchlistPlayerIds }
+  if (hasWatchlistDeltas || (!Array.isArray(preferences.watchlists) && Array.isArray(preferences.watchlistPlayerIds))) {
+    const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
+    const mergedWatchlistIds = new Set(normalizeWatchlistIds(
+      Array.isArray(preferences.watchlistPlayerIds) && !hasWatchlistDeltas
+        ? preferences.watchlistPlayerIds
+        : activeWatchlist?.playerIds
+    ));
+
+    removedWatchlistIds.forEach((playerId) => mergedWatchlistIds.delete(playerId));
+    addedWatchlistIds.forEach((playerId) => mergedWatchlistIds.add(playerId));
+
+    const activeWatchlistId = activeWatchlist?.id || currentWatchlistId;
+    watchlists = normalizeWatchlists(watchlists).map((watchlist) => (watchlist.id === activeWatchlistId
+      ? { ...watchlist, playerIds: normalizeWatchlistIds(Array.from(mergedWatchlistIds)) }
       : watchlist));
+    currentWatchlistId = normalizeCurrentWatchlistId(activeWatchlistId, watchlists);
   }
 
   const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
-  watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds || watchlistPlayerIds);
+  const watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds);
 
   const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
     ? normalizePlayerNotes(preferences.playerNotes)
@@ -344,9 +348,9 @@ async function writePreferences(wallet, preferences) {
     },
     body: JSON.stringify([{
       wallet_address: wallet,
-      watchlist_player_ids: watchlistPlayerIds,
       watchlists,
       current_watchlist_id: currentWatchlistId,
+      watchlist_player_ids: watchlistPlayerIds,
       player_notes: playerNotes,
       table_state: tableState || {},
       evaluation_settings: evaluationSettings || {},
