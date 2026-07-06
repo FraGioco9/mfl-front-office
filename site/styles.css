@@ -1107,7 +1107,7 @@ main {
   color: var(--text);
   padding: 2px 4px 2px 9px;
   line-height: 1.25;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: none;
 }
 
 
@@ -1191,7 +1191,7 @@ main {
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text-soft);
-  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+  transition: none;
 }
 
 .watchlistDropdownRename:hover:not(:disabled),
@@ -4478,87 +4478,79 @@ td a {
 }
 
 /* v1.144.6 */
-.watchlistDropdownItem,
-.watchlistDropdownName,
-.watchlistDropdownAction,
-.watchlistDropdownAdd {
-  transition: none;
+.watchlistButton,
+.watchlistButton:hover:not(:disabled),
+.watchlistButton:focus-visible,
+.watchlistButton[aria-expanded="true"] {
+  box-sizing: border-box;
 }
 
-.watchlistDropdownItem:hover,
-.watchlistDropdownItem:focus-within,
-.watchlistDropdownItem:hover:not(.active),
-.watchlistDropdownItem:focus-within:not(.active),
-.watchlistDropdownAdd:hover:not(:disabled),
-.watchlistDropdownAdd:focus-visible {
+.watchlistButton[aria-expanded="true"],
+.watchlistButton[aria-expanded="true"]:hover:not(:disabled),
+.watchlistButton[aria-expanded="true"]:focus-visible {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
 }
 
-.watchlistDropdownItem.active,
-.watchlistDropdownItem.active:hover,
-.watchlistDropdownItem.active:focus-within {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
+.watchlistDropdownItem,
+.watchlistDropdownName,
+.watchlistDropdownAction,
+.watchlistDropdownAdd {
+  transition: none !important;
 }
 
-.watchlistDropdownName:hover,
-.watchlistDropdownName:focus-visible,
+.watchlistDropdownItem:hover:not(.active),
+.watchlistDropdownItem:focus-within:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownItem:hover .watchlistDropdownName,
+.watchlistDropdownItem:focus-within .watchlistDropdownName,
 .watchlistDropdownName:hover:not(:disabled),
-.watchlistDropdownName:focus-visible:not(:disabled) {
-  border-color: transparent;
-  background: transparent;
-  color: inherit;
+.watchlistDropdownName:focus-visible {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: inherit !important;
 }
 
-.watchlistDropdownAction {
+.watchlistDropdownAction[data-tooltip] {
   position: relative;
-  overflow: visible;
 }
 
 .watchlistDropdownAction[data-tooltip]::after {
   content: attr(data-tooltip);
-  display: block;
   position: absolute;
-  left: 50%;
+  right: 50%;
   bottom: calc(100% + 8px);
-  z-index: 10030;
-  box-sizing: border-box;
+  z-index: 30;
+  display: block;
   width: max-content;
-  max-width: min(220px, calc(100vw - 16px));
-  padding: 7px 10px;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 5px 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 5px;
+  border-radius: 6px;
   background: #171717;
   color: #ffffff;
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: normal;
   text-align: center;
-  text-transform: none;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   pointer-events: none;
   opacity: 0;
-  transform: translate(-50%, 4px);
+  transform: translateX(50%);
+}
+
+.watchlistDropdownAction[data-tooltip][data-tooltip-placement="left"]::after {
+  right: -6px;
+  transform: none;
 }
 
 .watchlistDropdownAction[data-tooltip]:hover::after,
 .watchlistDropdownAction[data-tooltip]:focus-visible::after {
   opacity: 1;
-  transform: translate(-50%, 0);
 }
 
-.watchlistDropdownAction[data-tooltip-placement="left"]::after {
-  left: auto;
-  right: -2px;
-  transform: translate(0, 4px);
-}
-
-.watchlistDropdownAction[data-tooltip-placement="left"]:hover::after,
-.watchlistDropdownAction[data-tooltip-placement="left"]:focus-visible::after {
-  transform: translate(0, 0);
-}
