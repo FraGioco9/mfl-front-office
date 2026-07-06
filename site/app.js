@@ -2864,22 +2864,32 @@ function showToast(message, options = {}) {
   }
 }
 
-function showWatchlistToast(prefix) {
+function showWatchlistToast(prefix, watchlistId = state.currentWatchlistId, watchlistName = currentWatchlistName()) {
   const content = document.createElement("span");
   const watchlistLink = document.createElement("button");
+  const targetId = String(watchlistId || state.currentWatchlistId || "").trim();
 
   content.className = "toastWatchlistContent";
   content.append(document.createTextNode(`${prefix} `));
   watchlistLink.type = "button";
   watchlistLink.className = "toastLink";
-  watchlistLink.textContent = "watchlist";
+  watchlistLink.textContent = watchlistName || "watchlist";
   watchlistLink.addEventListener("click", () => {
     hideToast();
-    setPage("watchlist");
+    setPage("watchlist", true, targetId ? { watchlistId: targetId } : {});
   });
   content.appendChild(watchlistLink);
   content.append(document.createTextNode("."));
   showToast(content);
+}
+
+function showWatchlistActionToast(prefix, watchlistId) {
+  const watchlist = state.watchlists.find((item) => item.id === watchlistId) || activeWatchlist();
+  if (!watchlist) {
+    showGenericToast(prefix.trim());
+    return;
+  }
+  showWatchlistToast(prefix.trim(), watchlist.id, watchlist.name);
 }
 function walletWatchlistStorageKey(address = state.linkedWalletAddress) {
   const wallet = normalizeWalletAddress(address).toLowerCase();
@@ -3288,7 +3298,8 @@ function renderWatchlistSwitcher() {
     const nameButton = document.createElement("button");
     nameButton.type = "button";
     nameButton.className = "watchlistDropdownName";
-    nameButton.textContent = watchlist.name;
+    const playerCount = normalizeWatchlistIdList(watchlist.playerIds).length;
+    nameButton.innerHTML = `<span class="watchlistDropdownNameText">${escapeHtml(watchlist.name)}</span><span class="watchlistDropdownCount">${playerCount} player${playerCount === 1 ? "" : "s"}</span>`;
     nameButton.addEventListener("click", () => {
       closeWatchlistDropdown();
       switchWatchlist(watchlist.id);
@@ -3546,12 +3557,12 @@ function addPlayerIdsToWatchlist(watchlistId, playerIds) {
   const watchlist = state.watchlists.find((item) => item.id === watchlistId);
   if (!watchlist) {
     renderWatchlistSwitcher();
-    return { addedCount: 0, skippedCount: 0 };
+    return { addedCount: 0, skippedCount: 0, addedIds: [] };
   }
 
   const ids = normalizeWatchlistIdList(playerIds);
   const nextIds = normalizeWatchlistIdList(watchlist.playerIds);
-  let addedCount = 0;
+  const addedIds = [];
   let skippedCount = 0;
 
   ids.forEach((playerId) => {
@@ -3564,7 +3575,7 @@ function addPlayerIdsToWatchlist(watchlistId, playerIds) {
       return;
     }
     nextIds.push(key);
-    addedCount += 1;
+    addedIds.push(key);
   });
 
   watchlist.playerIds = nextIds;
@@ -3572,7 +3583,7 @@ function addPlayerIdsToWatchlist(watchlistId, playerIds) {
     state.watchlistPlayerIds = new Set(nextIds);
   }
 
-  return { addedCount, skippedCount };
+  return { addedCount: addedIds.length, skippedCount, addedIds };
 }
 
 function movePlayerIdsToWatchlist(watchlistId, playerIds) {
@@ -3580,16 +3591,19 @@ function movePlayerIdsToWatchlist(watchlistId, playerIds) {
   const target = state.watchlists.find((item) => item.id === watchlistId);
   if (!active || !target || active.id === target.id) {
     renderWatchlistSwitcher();
-    return { movedCount: 0, skippedCount: 0 };
+    return { movedCount: 0, addedCount: 0, skippedCount: 0, addedIds: [] };
   }
 
   const ids = normalizeWatchlistIdList(playerIds);
-  const sourceIds = normalizeWatchlistIdList(active.playerIds).filter((playerId) => !ids.includes(String(playerId)));
-  active.playerIds = sourceIds;
-  state.watchlistPlayerIds = new Set(sourceIds);
+  const { addedCount, skippedCount, addedIds } = addPlayerIdsToWatchlist(target.id, ids);
+  if (addedIds.length) {
+    const movedSet = new Set(addedIds.map((playerId) => String(playerId)));
+    const sourceIds = normalizeWatchlistIdList(active.playerIds).filter((playerId) => !movedSet.has(String(playerId)));
+    active.playerIds = sourceIds;
+    state.watchlistPlayerIds = new Set(sourceIds);
+  }
 
-  const { addedCount, skippedCount } = addPlayerIdsToWatchlist(target.id, ids);
-  return { movedCount: ids.length - skippedCount, addedCount, skippedCount };
+  return { movedCount: addedIds.length, addedCount, skippedCount, addedIds };
 }
 
 function finishWatchlistSelectionAction() {
@@ -3618,24 +3632,24 @@ function performWatchlistChoiceAction(action, watchlistId, playerIds) {
   }
 
   if (action === "move") {
-    const targetName = watchlistNameById(watchlistId);
     const result = movePlayerIdsToWatchlist(watchlistId, ids);
     finishWatchlistSelectionAction();
+    if (result.movedCount) {
+      showWatchlistActionToast(`${result.movedCount} player${result.movedCount === 1 ? "" : "s"} moved to`, watchlistId);
+    }
     if (result.skippedCount) {
       showWatchlistFullToast();
-    } else if (result.movedCount) {
-      showGenericToast(`${result.movedCount} player${result.movedCount === 1 ? "" : "s"} moved to ${targetName}.`);
     }
     return;
   }
 
-  const targetName = watchlistNameById(watchlistId);
   const result = addPlayerIdsToWatchlist(watchlistId, ids);
   finishWatchlistSelectionAction();
+  if (result.addedCount) {
+    showWatchlistActionToast(`${result.addedCount} player${result.addedCount === 1 ? "" : "s"} added to`, watchlistId);
+  }
   if (result.skippedCount) {
     showWatchlistFullToast();
-  } else if (result.addedCount) {
-    showGenericToast(`${result.addedCount} player${result.addedCount === 1 ? "" : "s"} added to ${targetName}.`);
   }
 }
 
@@ -5840,31 +5854,64 @@ function openPlayerPage(playerId) {
   setPage("player", true, { playerId: String(playerId) });
 }
 
+function removePlayerIdFromAllWatchlists(playerId) {
+  const key = String(playerId);
+  const removedFrom = [];
+
+  state.watchlists.forEach((watchlist) => {
+    const ids = normalizeWatchlistIdList(watchlist.playerIds);
+    if (!ids.includes(key)) {
+      return;
+    }
+    watchlist.playerIds = ids.filter((item) => String(item) !== key);
+    removedFrom.push(watchlist);
+  });
+
+  if (removedFrom.some((watchlist) => watchlist.id === state.currentWatchlistId)) {
+    state.watchlistPlayerIds.delete(key);
+    syncActiveWatchlistFromSet();
+  }
+
+  return removedFrom;
+}
+
 function toggleWatchlistPlayer(playerId, rerender = false) {
   const key = String(playerId);
   const playerName = rowByPlayerId(key) ? formatCellValue(rowByPlayerId(key), "name") : `Player ${key}`;
-  const added = !state.watchlistPlayerIds.has(key);
+  const inAnyWatchlist = playerIsInAnyWatchlist(key);
 
-  if (added) {
+  if (inAnyWatchlist) {
+    const removedFrom = removePlayerIdFromAllWatchlists(key);
+    state.watchlistPlayerIdsAdded.delete(key);
+    state.watchlistPlayerIdsRemoved.add(key);
+    saveTableState();
+    if (removedFrom.length === 1) {
+      showWatchlistToast(`${playerName} removed from`, removedFrom[0].id, removedFrom[0].name);
+    } else if (removedFrom.length > 1) {
+      showGenericToast(`${playerName} removed from ${removedFrom.length} watchlists.`);
+    }
+  } else {
     const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
     state.watchlists = watchlists;
     if (hasWalletOptIn() && watchlists.length > 1) {
       openWatchlistChoiceModal("add", [key]);
       return;
     }
-    if (state.watchlistPlayerIds.size >= MAX_WATCHLIST_PLAYERS) {
+    const target = activeWatchlist() || ensureDefaultWatchlist();
+    const result = addPlayerIdsToWatchlist(target?.id || "", [key]);
+    if (result.addedCount) {
+      state.watchlistPlayerIdsAdded.add(key);
+      state.watchlistPlayerIdsRemoved.delete(key);
+      saveTableState();
+      showWatchlistToast(`${playerName} added to`, target.id, target.name);
+    }
+    if (result.skippedCount) {
       showWatchlistFullToast();
       return;
     }
-    state.watchlistPlayerIds.add(key);
-  } else {
-    state.watchlistPlayerIds.delete(key);
   }
-  trackWatchlistChange(key, added);
-  syncActiveWatchlistFromSet();
 
-  saveTableState();
-  showWatchlistToast(`${playerName} ${added ? "added to" : "removed from"}`);
+  syncActiveWatchlistFromSet();
 
   if (state.currentPage === "watchlist") {
     applyFilters();
@@ -5876,6 +5923,7 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
     renderPlayerPage(key);
   }
 }
+
 
 function createWatchlistStar(playerId, labelText = "player") {
   const key = String(playerId);
@@ -6362,15 +6410,10 @@ function renderPlayerPage(playerId) {
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const inAnyWatchlist = playerIsInAnyWatchlist(id);
-  const inActiveWatchlist = state.watchlistPlayerIds.has(String(id));
   watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
   watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "★" : "☆"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => {
-    if (inActiveWatchlist || !inAnyWatchlist) {
-      toggleWatchlistPlayer(id, true);
-      return;
-    }
-    openWatchlistChoiceModal("add", [id]);
+    toggleWatchlistPlayer(id, true);
   });
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
   const openEvaluationForPlayer = (event) => {
@@ -7463,7 +7506,8 @@ function addSelectedToWatchlist() {
     renderWatchlistSwitcher();
     saveTableState();
     applyFilters();
-    showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`);
+    const removedWatchlist = activeWatchlist();
+    showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`, removedWatchlist?.id, removedWatchlist?.name);
     return;
   }
 

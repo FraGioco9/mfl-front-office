@@ -1041,7 +1041,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  width: 250px;
+  width: 350px;
   height: 40px;
   padding: 0 10px;
   border-color: var(--border-strong);
@@ -1078,8 +1078,8 @@ main {
   right: 0;
   z-index: 20;
   box-sizing: border-box;
-  width: 250px;
-  min-width: 250px;
+  width: 350px;
+  min-width: 350px;
   max-width: calc(100vw - 24px);
   padding: 5px;
   border: 1px solid var(--border-strong);
@@ -1144,6 +1144,21 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.watchlistDropdownNameText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistDropdownCount {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .watchlistDropdownName:hover,
@@ -4393,7 +4408,7 @@ td a {
 }
 
 
-/* v1.144.1 */
+/* v1.144.2 */
 .watchlistPlayerCount {
   margin-left: auto;
   color: var(--text-soft);
