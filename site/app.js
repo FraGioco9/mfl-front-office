@@ -3494,6 +3494,14 @@ function watchlistNameById(watchlistId) {
   return state.watchlists.find((watchlist) => watchlist.id === watchlistId)?.name || DEFAULT_WATCHLIST_NAME;
 }
 
+function watchlistNameExists(name, excludeWatchlistId = "") {
+  const normalizedName = normalizeSearchText(normalizeWatchlistName(name, ""));
+  const excludeId = String(excludeWatchlistId || "").trim();
+  return Boolean(normalizedName) && state.watchlists.some((watchlist) =>
+    watchlist.id !== excludeId && normalizeSearchText(normalizeWatchlistName(watchlist.name, "")) === normalizedName
+  );
+}
+
 function targetWatchlistsForAction(action) {
   const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
   return action === "move"
@@ -3759,6 +3767,17 @@ function confirmAddWatchlist() {
     }
     addWatchlistNameInput?.setAttribute("aria-invalid", "true");
     addWatchlistNameInput?.focus();
+    return;
+  }
+
+  if (watchlistNameExists(name, state.editingWatchlistId)) {
+    if (addWatchlistError) {
+      addWatchlistError.textContent = "A watchlist with this name already exists.";
+      addWatchlistError.hidden = false;
+    }
+    addWatchlistNameInput?.setAttribute("aria-invalid", "true");
+    addWatchlistNameInput?.focus();
+    addWatchlistNameInput?.select();
     return;
   }
 
@@ -7506,7 +7525,9 @@ function addSelectedToWatchlist() {
   }
 
   if (state.currentPage === "watchlist") {
-    state.selectedPlayerIds.forEach((playerId) => {
+    const removedIds = selectedPlayerIdsArray();
+    const removedWatchlist = activeWatchlist();
+    removedIds.forEach((playerId) => {
       const key = String(playerId);
       state.watchlistPlayerIds.delete(key);
       trackWatchlistChange(key, false);
@@ -7517,8 +7538,7 @@ function addSelectedToWatchlist() {
     renderWatchlistSwitcher();
     saveTableState();
     applyFilters();
-    const removedWatchlist = activeWatchlist();
-    showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`, removedWatchlist?.id, removedWatchlist?.name);
+    showWatchlistActionToast(removedIds, removedIds.length, "removed from", removedWatchlist?.id);
     return;
   }
 
