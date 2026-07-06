@@ -1426,7 +1426,8 @@ button:hover:not(:disabled) {
 }
 
 .watchlistButton:hover:not(:disabled),
-.watchlistButton:focus-visible {
+.watchlistButton:focus-visible,
+.watchlistButton[aria-expanded="true"] {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
@@ -4475,4 +4476,20 @@ td a {
   .watchlistPlayerCount {
     margin-left: 0;
   }
+}
+
+/* v1.144.6 */
+.watchlistButton,
+.watchlistButton:hover:not(:disabled),
+.watchlistButton:focus-visible,
+.watchlistButton[aria-expanded="true"] {
+  box-sizing: border-box;
+}
+
+.watchlistButton[aria-expanded="true"],
+.watchlistButton[aria-expanded="true"]:hover:not(:disabled),
+.watchlistButton[aria-expanded="true"]:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
 }
