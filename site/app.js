@@ -2286,6 +2286,7 @@ function renderSavedEvaluationList(rows) {
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
 
     attachEvaluationLoadActionTooltip(shareButton);
+    attachEvaluationLoadActionTooltip(deleteButton);
 
     const loadEvaluation = () => {
       clearEvaluationSearchFocus();
@@ -3340,10 +3341,12 @@ function renderWatchlistSwitcher() {
       deleteButton.dataset.tooltipPlacement = "left";
     }
     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>';
-    deleteButton.disabled = watchlists.length <= 1;
+    const deleteLocked = watchlists.length <= 1;
+    deleteButton.classList.toggle("is-disabled", deleteLocked);
+    deleteButton.setAttribute("aria-disabled", deleteLocked ? "true" : "false");
     deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
-      if (deleteButton.disabled) {
+      if (deleteLocked) {
         return;
       }
       openDeleteWatchlistModal(watchlist.id);
