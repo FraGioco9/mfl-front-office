@@ -12,21 +12,20 @@ create table if not exists public.wallet_permissions (
 
 create table if not exists public.wallet_preferences (
   wallet_address text primary key,
-  watchlist_player_ids jsonb not null default '[]'::jsonb,
   watchlists jsonb not null default '[]'::jsonb,
-  current_watchlist_id text not null default '',
   player_notes jsonb not null default '{}'::jsonb,
   table_state jsonb not null default '{}'::jsonb,
   evaluation_settings jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
-alter table public.wallet_preferences add column if not exists watchlist_player_ids jsonb not null default '[]'::jsonb;
 alter table public.wallet_preferences add column if not exists watchlists jsonb not null default '[]'::jsonb;
+alter table public.wallet_preferences drop column if exists watchlist_player_ids;
+alter table public.wallet_preferences drop column if exists current_watchlist_id;
 comment on column public.wallet_preferences.watchlists is 'Opted-in user watchlists stored as an array of objects: [{"id":"7b1e706b","name":"Default","playerIds":["328858"]}]';
-alter table public.wallet_preferences add column if not exists current_watchlist_id text not null default '';
 alter table public.wallet_preferences add column if not exists player_notes jsonb not null default '{}'::jsonb;
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;
+update public.wallet_preferences set table_state = coalesce(table_state, '{}'::jsonb) - 'watchlistPlayerIds' - 'watchlists' - 'currentWatchlistId';
 alter table public.wallet_preferences add column if not exists evaluation_settings jsonb not null default '{}'::jsonb;
 
 

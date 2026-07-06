@@ -130,7 +130,7 @@ async function supabaseRequest(pathname, options = {}) {
 }
 
 function emptyPreferences() {
-  return { watchlistPlayerIds: [], watchlists: [], currentWatchlistId: "", playerNotes: {}, tableState: null, evaluationSettings: null };
+  return { watchlists: [], playerNotes: {}, tableState: null, evaluationSettings: null };
 }
 
 function normalizePlayerNotes(notes) {
@@ -175,7 +175,7 @@ function normalizeWatchlistName(name, fallback = DEFAULT_WATCHLIST_NAME) {
   return value || fallback;
 }
 
-function normalizeWatchlists(watchlists, legacyIds = []) {
+function normalizeWatchlists(watchlists) {
   const normalized = [];
   const source = Array.isArray(watchlists) ? watchlists : [];
 
@@ -193,13 +193,9 @@ function normalizeWatchlists(watchlists, legacyIds = []) {
     });
   });
 
-  return normalized.length ? normalized : [{ id: "default0", name: DEFAULT_WATCHLIST_NAME, playerIds: normalizeWatchlistIds(legacyIds) }];
+  return normalized;
 }
 
-function normalizeCurrentWatchlistId(id, watchlists) {
-  const value = String(id || "").trim();
-  return watchlists.some((watchlist) => watchlist.id === value) ? value : watchlists[0]?.id || "";
-}
 
 function parsePositiveTwoDecimal(value) {
   const parsedValue = Number.parseFloat(String(value ?? "").replace(",", "."));
@@ -244,9 +240,21 @@ function mergeRecentIds(incomingIds, currentIds) {
   return normalizeIdList([...(Array.isArray(incomingIds) ? incomingIds : []), ...(Array.isArray(currentIds) ? currentIds : [])], 5);
 }
 
-function mergeTableState(tableState, currentTableState, watchlistPlayerIds) {
-  const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState) ? tableState : null;
-  const current = currentTableState && typeof currentTableState === "object" && !Array.isArray(currentTableState) ? currentTableState : {};
+function stripWatchlistStateFromTableState(tableState) {
+  if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
+    return {};
+  }
+
+  const sanitized = { ...tableState };
+  delete sanitized.watchlistPlayerIds;
+  delete sanitized.watchlists;
+  delete sanitized.currentWatchlistId;
+  return sanitized;
+}
+
+function mergeTableState(tableState, currentTableState) {
+  const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState) ? stripWatchlistStateFromTableState(tableState) : null;
+  const current = stripWatchlistStateFromTableState(currentTableState);
 
   if (!incoming) {
     return current;
@@ -255,7 +263,6 @@ function mergeTableState(tableState, currentTableState, watchlistPlayerIds) {
   return {
     ...current,
     ...incoming,
-    watchlistPlayerIds,
     recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),
     recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds),
   };
@@ -266,18 +273,10 @@ function preferencesFromRow(row) {
     return emptyPreferences();
   }
 
-  const legacyWatchlistPlayerIds = normalizeWatchlistIds(row.watchlist_player_ids);
-  const watchlists = normalizeWatchlists(row.watchlists, legacyWatchlistPlayerIds);
-  const currentWatchlistId = normalizeCurrentWatchlistId(row.current_watchlist_id, watchlists);
-  const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
-  const watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds || legacyWatchlistPlayerIds);
-
   return {
-    watchlistPlayerIds,
-    watchlists,
-    currentWatchlistId,
+    watchlists: normalizeWatchlists(row.watchlists),
     playerNotes: normalizePlayerNotes(row.player_notes),
-    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? row.table_state : null,
+    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? stripWatchlistStateFromTableState(row.table_state) : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
   };
 }
@@ -287,56 +286,27 @@ async function readPreferences(wallet) {
     return emptyPreferences();
   }
 
-  const rows = await supabaseRequest(`wallet_preferences?select=watchlist_player_ids,watchlists,current_watchlist_id,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
 async function writePreferences(wallet, preferences) {
   const currentPreferences = await readPreferences(wallet);
-  const addedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsAdded);
-  const removedWatchlistIds = normalizeWatchlistIds(preferences.watchlistPlayerIdsRemoved);
-  const hasWatchlistDeltas = addedWatchlistIds.length > 0 || removedWatchlistIds.length > 0;
 
-  let watchlists = Array.isArray(preferences.watchlists)
-    ? normalizeWatchlists(preferences.watchlists, currentPreferences.watchlistPlayerIds)
-    : normalizeWatchlists(currentPreferences.watchlists, currentPreferences.watchlistPlayerIds);
-
-  let currentWatchlistId = normalizeCurrentWatchlistId(
-    preferences.currentWatchlistId || currentPreferences.currentWatchlistId,
-    watchlists
-  );
-
-  if (hasWatchlistDeltas || (!Array.isArray(preferences.watchlists) && Array.isArray(preferences.watchlistPlayerIds))) {
-    const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
-    const mergedWatchlistIds = new Set(normalizeWatchlistIds(
-      Array.isArray(preferences.watchlistPlayerIds) && !hasWatchlistDeltas
-        ? preferences.watchlistPlayerIds
-        : activeWatchlist?.playerIds
-    ));
-
-    removedWatchlistIds.forEach((playerId) => mergedWatchlistIds.delete(playerId));
-    addedWatchlistIds.forEach((playerId) => mergedWatchlistIds.add(playerId));
-
-    const activeWatchlistId = activeWatchlist?.id || currentWatchlistId;
-    watchlists = normalizeWatchlists(watchlists).map((watchlist) => (watchlist.id === activeWatchlistId
-      ? { ...watchlist, playerIds: normalizeWatchlistIds(Array.from(mergedWatchlistIds)) }
-      : watchlist));
-    currentWatchlistId = normalizeCurrentWatchlistId(activeWatchlistId, watchlists);
-  }
-
-  const activeWatchlist = watchlists.find((watchlist) => watchlist.id === currentWatchlistId) || watchlists[0];
-  const watchlistPlayerIds = normalizeWatchlistIds(activeWatchlist?.playerIds);
+  const watchlists = Array.isArray(preferences.watchlists)
+    ? normalizeWatchlists(preferences.watchlists)
+    : normalizeWatchlists(currentPreferences.watchlists);
 
   const playerNotes = preferences.playerNotes && typeof preferences.playerNotes === "object"
     ? normalizePlayerNotes(preferences.playerNotes)
     : currentPreferences.playerNotes;
 
-  const tableState = mergeTableState(preferences.tableState, currentPreferences.tableState, watchlistPlayerIds);
+  const tableState = mergeTableState(preferences.tableState, currentPreferences.tableState);
   const evaluationSettings = preferences.evaluationSettings
     ? normalizeEvaluationSettings(preferences.evaluationSettings)
     : currentPreferences.evaluationSettings;
 
-  const nextPreferences = { watchlistPlayerIds, watchlists, currentWatchlistId, playerNotes, tableState, evaluationSettings };
+  const nextPreferences = { watchlists, playerNotes, tableState, evaluationSettings };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -349,8 +319,6 @@ async function writePreferences(wallet, preferences) {
     body: JSON.stringify([{
       wallet_address: wallet,
       watchlists,
-      current_watchlist_id: currentWatchlistId,
-      watchlist_player_ids: watchlistPlayerIds,
       player_notes: playerNotes,
       table_state: tableState || {},
       evaluation_settings: evaluationSettings || {},

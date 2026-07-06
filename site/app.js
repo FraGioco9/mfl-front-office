@@ -1223,7 +1223,15 @@ function optOutWallet() {
     renderEvaluationPage();
   }
 
-  if (state.currentPage === "myplayers" || state.currentPage === "watchlist") {
+  if (state.currentPage === "watchlist") {
+    if (window.location.pathname !== "/watchlist" || window.location.search) {
+      window.history.replaceState({}, "", "/watchlist");
+    }
+    setPage("watchlist", false, { plain: true });
+    return;
+  }
+
+  if (state.currentPage === "myplayers") {
     setPage(state.currentPage, false);
     return;
   }
@@ -3393,7 +3401,7 @@ async function ensureWatchlistRoute(options = {}) {
     return;
   }
 
-  const nextWatchlist = found || activeWatchlist() || ensureDefaultWatchlist();
+  const nextWatchlist = found || state.watchlists[0] || ensureDefaultWatchlist();
   state.currentWatchlistId = nextWatchlist?.id || "";
   setActiveWatchlistIds(nextWatchlist?.playerIds || []);
   renderWatchlistSwitcher();
@@ -3811,17 +3819,11 @@ async function loadWalletPreferences(options = {}) {
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data.watchlists) && data.watchlists.length) {
-        applyWatchlists(data.watchlists, data.currentWatchlistId || state.currentWatchlistId, data.watchlistPlayerIds);
+        const requestedId = String(watchlistIdFromUrl() || state.pendingWatchlistRouteId || "").trim();
+        applyWatchlists(data.watchlists, requestedId, []);
         state.watchlistPlayerIdsAdded.clear();
         state.watchlistPlayerIdsRemoved.clear();
-      } else if (force) {
-        const syncedIds = hasPendingWatchlistChanges()
-          ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
-          : data.watchlistPlayerIds;
-        applySyncedWatchlistIds(syncedIds);
-        ensureDefaultWatchlist();
       } else {
-        applyWalletWatchlistIds(data.watchlistPlayerIds);
         ensureDefaultWatchlist();
         state.watchlistPlayerIdsAdded.clear();
         state.watchlistPlayerIdsRemoved.clear();
@@ -3869,15 +3871,9 @@ async function saveWalletPreferencesNow() {
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
     const body = {};
 
-    if (addedIds.length || removedIds.length) {
-      body.watchlistPlayerIdsAdded = addedIds;
-      body.watchlistPlayerIdsRemoved = removedIds;
-    }
-
     if (state.walletPreferencesLoaded) {
       body.playerNotes = normalizedPlayerNotes(state.playerNotes);
       body.watchlists = watchlistsPayload();
-      body.currentWatchlistId = state.currentWatchlistId;
       body.tableState = stripPersistentSortState(currentTableState());
       body.evaluationSettings = currentEvaluationSettingsPayload();
     }
@@ -3897,13 +3893,8 @@ async function saveWalletPreferencesNow() {
 
       let watchlistChanged = false;
       if (Array.isArray(data.watchlists) && data.watchlists.length) {
-        applyWatchlists(data.watchlists, data.currentWatchlistId || state.currentWatchlistId, data.watchlistPlayerIds);
+        applyWatchlists(data.watchlists, state.currentWatchlistId, []);
         watchlistChanged = true;
-      } else if (Array.isArray(data.watchlistPlayerIds)) {
-        const syncedIds = hasPendingWatchlistChanges()
-          ? mergedWatchlistIdsWithPending(data.watchlistPlayerIds)
-          : data.watchlistPlayerIds;
-        watchlistChanged = applySyncedWatchlistIds(syncedIds);
       }
 
       if (watchlistChanged) {
@@ -3978,9 +3969,6 @@ function currentTableState() {
 
   return {
     pages: state.tablePageStates,
-    watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
-    watchlists: watchlistsPayload(),
-    currentWatchlistId: state.currentWatchlistId,
     menuOpen: state.menuOpen,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
@@ -3998,6 +3986,9 @@ function stripPersistentSortState(savedState) {
   delete sanitized.sortKey;
   delete sanitized.sortDirection;
   delete sanitized.viewSortStates;
+  delete sanitized.watchlistPlayerIds;
+  delete sanitized.watchlists;
+  delete sanitized.currentWatchlistId;
 
   if (sanitized.pages && typeof sanitized.pages === "object") {
     sanitized.pages = Object.fromEntries(Object.entries(sanitized.pages).map(([pageName, pageState]) => {
@@ -4064,7 +4055,6 @@ function applyWalletTableState(savedState) {
   restorePlayerAttributeView(mergedState);
   saveTableStateLocally({
     ...mergedState,
-    watchlistPlayerIds: Array.from(state.watchlistPlayerIds),
     recentSearchPlayerIds: state.recentSearchPlayerIds,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     linkedWalletAddress: state.linkedWalletAddress,
@@ -4083,13 +4073,8 @@ function queueCloudTableStateSave() {
   }, 500);
 }
 
-function restoreWatchlistState(savedState) {
-  const ids = Array.isArray(savedState?.watchlistPlayerIds) ? savedState.watchlistPlayerIds : [];
-  if (Array.isArray(savedState?.watchlists)) {
-    applyWatchlists(savedState.watchlists, savedState.currentWatchlistId, ids);
-    return;
-  }
-  applyWatchlists([], savedState?.currentWatchlistId, ids);
+function restoreWatchlistState() {
+  ensureDefaultWatchlist();
 }
 
 function restoreMenuState(savedState) {
@@ -4210,7 +4195,7 @@ function loadSavedTableState() {
   try {
     const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
     restoreTablePageStates(savedState);
-    restoreWatchlistState(savedState);
+    restoreWatchlistState();
     restoreMenuState(savedState);
     restoreRecentSearchState(savedState);
     restoreRecentEvaluationState(savedState);
