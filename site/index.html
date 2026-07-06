@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.144.0">
+    <link rel="stylesheet" href="/styles.css?v=1.144.1">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -120,6 +120,7 @@
               <input id="newMintsInput" type="checkbox">
               <span>Only new mints</span>
             </label>
+            <span id="watchlistPlayerCount" class="watchlistPlayerCount" hidden>0 players</span>
           </section>
 
           <section class="controlsBar" aria-label="Table controls">
@@ -293,6 +294,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.144.1</span><p>Polish Watchlist chooser, counts, and player button state</p></li>
               <li><span>v1.144.0</span><p>Add multi-watchlist add and move chooser flows</p></li>
               <li><span>v1.143.13</span><p>Remove saved active Watchlist state from Supabase</p></li>
               <li><span>v1.143.12</span><p>Store opted-in Watchlists through the Supabase watchlists column</p></li>
@@ -734,7 +736,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.144.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.144.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -903,6 +905,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.144.0"></script>
+    <script src="/app.js?v=1.144.1"></script>
   </body>
 </html>

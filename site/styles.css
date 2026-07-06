@@ -4391,3 +4391,64 @@ td a {
   margin-top: 5px;
   border-top-color: var(--border-strong);
 }
+
+
+/* v1.144.1 */
+.watchlistPlayerCount {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.watchlistChoiceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.watchlistChoiceName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistChoiceCount {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.watchlistChoiceSeparator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+.watchlistChoiceAddNew {
+  justify-content: center;
+  margin-top: 0;
+}
+
+.deleteWatchlistConfirmButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+@media (max-width: 760px) {
+  .watchlistPlayerCount {
+    margin-left: 0;
+  }
+}

@@ -352,6 +352,7 @@ const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
 const watchlistButton = document.querySelector("#watchlistButton");
 const watchlistButtonText = document.querySelector("#watchlistButtonText");
 const watchlistDropdown = document.querySelector("#watchlistDropdown");
+const watchlistPlayerCount = document.querySelector("#watchlistPlayerCount");
 const watchlistChoiceModal = document.querySelector("#watchlistChoiceModal");
 const watchlistChoiceTitle = document.querySelector("#watchlistChoiceTitle");
 const watchlistChoiceList = document.querySelector("#watchlistChoiceList");
@@ -3231,6 +3232,28 @@ function updateWatchlistTitle() {
   }
 }
 
+function updateWatchlistPlayerCount() {
+  if (!watchlistPlayerCount) {
+    return;
+  }
+
+  const visible = state.currentPage === "watchlist" && hasWalletOptIn();
+  watchlistPlayerCount.hidden = !visible;
+  if (!visible) {
+    return;
+  }
+
+  const count = normalizeWatchlistIdList(activeWatchlist()?.playerIds || Array.from(state.watchlistPlayerIds)).length;
+  watchlistPlayerCount.textContent = `${count} player${count === 1 ? "" : "s"}`;
+}
+
+function playerIsInAnyWatchlist(playerId) {
+  const key = String(playerId);
+  return normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds)).some((watchlist) =>
+    normalizeWatchlistIdList(watchlist.playerIds).includes(key)
+  );
+}
+
 function renderWatchlistSwitcher() {
   if (!watchlistSwitcher || !watchlistButton || !watchlistButtonText || !watchlistDropdown) {
     updateWatchlistTitle();
@@ -3242,6 +3265,7 @@ function renderWatchlistSwitcher() {
   if (!visible) {
     closeWatchlistDropdown();
     updateWatchlistTitle();
+    updateWatchlistPlayerCount();
     return;
   }
 
@@ -3326,6 +3350,7 @@ function renderWatchlistSwitcher() {
   }
 
   updateWatchlistTitle();
+  updateWatchlistPlayerCount();
 }
 
 function openWatchlistDropdown() {
@@ -3487,7 +3512,8 @@ function openWatchlistChoiceModal(action, playerIds) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "watchlistChoiceItem";
-    button.textContent = watchlist.name;
+    const count = normalizeWatchlistIdList(watchlist.playerIds).length;
+    button.innerHTML = `<span class="watchlistChoiceName">${escapeHtml(watchlist.name)}</span><span class="watchlistChoiceCount">${count} player${count === 1 ? "" : "s"}</span>`;
     button.addEventListener("click", () => {
       const currentAction = state.pendingWatchlistChoiceAction;
       const currentIds = Array.from(state.pendingWatchlistChoicePlayerIds);
@@ -3498,13 +3524,16 @@ function openWatchlistChoiceModal(action, playerIds) {
   });
 
   if (state.watchlists.length < MAX_WATCHLISTS) {
+    const separator = document.createElement("div");
+    separator.className = "watchlistChoiceSeparator";
+    watchlistChoiceList.appendChild(separator);
+
     const addNewButton = document.createElement("button");
     addNewButton.type = "button";
     addNewButton.className = "watchlistChoiceItem watchlistChoiceAddNew";
     addNewButton.textContent = "Add to new watchlist";
     addNewButton.addEventListener("click", () => {
       const context = state.pendingWatchlistChoiceAction === "move" ? "move-selected" : "add-selected";
-      hideModal(watchlistChoiceModal);
       openAddWatchlistModal(context);
     });
     watchlistChoiceList.appendChild(addNewButton);
@@ -3683,7 +3712,7 @@ function closeAddWatchlistModal() {
   const closingContext = state.pendingAddWatchlistContext;
   state.editingWatchlistId = "";
   state.pendingAddWatchlistContext = "";
-  if (closingContext === "add-selected" || closingContext === "move-selected") {
+  if ((closingContext === "add-selected" || closingContext === "move-selected") && watchlistChoiceModal?.hidden) {
     state.pendingWatchlistChoiceAction = "";
     state.pendingWatchlistChoicePlayerIds = [];
   }
@@ -3749,6 +3778,7 @@ function confirmAddWatchlist() {
     const playerIds = Array.from(state.pendingWatchlistChoicePlayerIds);
     closeAddWatchlistModal();
     performWatchlistChoiceAction(action, id, playerIds);
+    hideModal(watchlistChoiceModal);
     showGenericToast("Watchlist created.");
     return;
   }
@@ -6331,10 +6361,17 @@ function renderPlayerPage(playerId) {
     </section>`;
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
-  const star = createWatchlistStar(id, playerName);
-  watchButton.className = `playerWatchlistButton ${star.classList.contains("active") ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar">${star.textContent}</span><span>${star.classList.contains("active") ? "In watchlist" : "Add to watchlist"}</span>`;
-  watchButton.addEventListener("click", () => toggleWatchlistPlayer(id, true));
+  const inAnyWatchlist = playerIsInAnyWatchlist(id);
+  const inActiveWatchlist = state.watchlistPlayerIds.has(String(id));
+  watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "★" : "☆"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+  watchButton.addEventListener("click", () => {
+    if (inActiveWatchlist || !inAnyWatchlist) {
+      toggleWatchlistPlayer(id, true);
+      return;
+    }
+    openWatchlistChoiceModal("add", [id]);
+  });
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });
@@ -7423,6 +7460,7 @@ function addSelectedToWatchlist() {
     state.selectedPlayerIds.clear();
     state.selectionAnchorPlayerId = null;
     syncActiveWatchlistFromSet();
+    renderWatchlistSwitcher();
     saveTableState();
     applyFilters();
     showWatchlistToast(`${selectedCount} player${selectedCount === 1 ? "" : "s"} removed from`);
