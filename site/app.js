@@ -3553,6 +3553,7 @@ function confirmAddWatchlist() {
   updateWatchlistUrl();
   saveTableState();
   applyFilters();
+  showGenericToast("Watchlist created.");
 }
 
 function openDeleteWatchlistModal(watchlistId) {
