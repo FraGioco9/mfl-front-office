@@ -58,6 +58,7 @@ const state = {
   flowWalletModule: null,
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
+  walletPreferencesSaveSequence: 0,
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -3630,7 +3631,7 @@ function finishWatchlistSelectionAction() {
   state.selectedPlayerIds.clear();
   state.selectionAnchorPlayerId = null;
   syncActiveWatchlistFromSet();
-  saveTableState();
+  saveWatchlistStateAfterAction();
   renderWatchlistSwitcher();
   if (state.currentPage === "watchlist") {
     applyFilters();
@@ -3798,7 +3799,7 @@ function confirmAddWatchlist() {
     watchlist.name = name;
     closeAddWatchlistModal();
     renderWatchlistSwitcher();
-    saveTableState();
+    saveWatchlistStateAfterAction();
     applyFilters();
     showGenericToast("Watchlist renamed.");
     return;
@@ -3834,7 +3835,7 @@ function confirmAddWatchlist() {
   closeAddWatchlistModal();
   renderWatchlistSwitcher();
   updateWatchlistUrl();
-  saveTableState();
+  saveWatchlistStateAfterAction();
   applyFilters();
   showGenericToast("Watchlist created.");
 }
@@ -3875,6 +3876,29 @@ function confirmDeleteWatchlist() {
   deleteWatchlist(watchlistId);
 }
 
+function clearSelectionsForDeletedWatchlist(deletedPlayerIds = [], wasActive = false) {
+  const deletedIdSet = new Set(normalizeWatchlistIdList(deletedPlayerIds));
+
+  if (wasActive) {
+    state.selectedPlayerIds.clear();
+    state.selectionAnchorPlayerId = null;
+  } else if (deletedIdSet.size) {
+    deletedIdSet.forEach((playerId) => state.selectedPlayerIds.delete(String(playerId)));
+    if (state.selectionAnchorPlayerId && !state.selectedPlayerIds.has(String(state.selectionAnchorPlayerId))) {
+      state.selectionAnchorPlayerId = null;
+    }
+  }
+
+  const watchlistPageState = state.tablePageStates?.watchlist;
+  if (watchlistPageState && typeof watchlistPageState === "object" && !Array.isArray(watchlistPageState)) {
+    if (wasActive) {
+      watchlistPageState.selectedPlayerIds = [];
+    } else if (Array.isArray(watchlistPageState.selectedPlayerIds) && deletedIdSet.size) {
+      watchlistPageState.selectedPlayerIds = watchlistPageState.selectedPlayerIds.filter((playerId) => !deletedIdSet.has(String(playerId)));
+    }
+  }
+}
+
 function deleteWatchlist(watchlistId) {
   if (state.watchlists.length <= 1) {
     renderWatchlistSwitcher();
@@ -3889,7 +3913,9 @@ function deleteWatchlist(watchlistId) {
     return;
   }
 
+  const deletedPlayerIds = normalizeWatchlistIdList(state.watchlists[deleteIndex]?.playerIds);
   const wasActive = state.currentWatchlistId === watchlistId;
+  clearSelectionsForDeletedWatchlist(deletedPlayerIds, wasActive);
   state.watchlists.splice(deleteIndex, 1);
   if (wasActive) {
     const nextWatchlist = state.watchlists[Math.max(0, deleteIndex - 1)] || state.watchlists[0] || ensureDefaultWatchlist();
@@ -3902,8 +3928,9 @@ function deleteWatchlist(watchlistId) {
   }
 
   renderWatchlistSwitcher();
-  saveTableState();
+  saveWatchlistStateAfterAction();
   applyFilters();
+  updateSelectionBar();
   showGenericToast("Watchlist deleted.");
 }
 
@@ -4141,17 +4168,17 @@ async function saveWalletPreferencesNow() {
   saveWalletWatchlistLocally();
   saveWalletNotesLocally();
 
+  const saveSequence = ++state.walletPreferencesSaveSequence;
+
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
-    const body = {};
-
-    if (state.walletPreferencesLoaded) {
-      body.playerNotes = normalizedPlayerNotes(state.playerNotes);
-      body.watchlists = watchlistsPayload();
-      body.tableState = stripPersistentSortState(currentTableState());
-      body.evaluationSettings = currentEvaluationSettingsPayload();
-    }
+    const body = {
+      playerNotes: normalizedPlayerNotes(state.playerNotes),
+      watchlists: watchlistsPayload(),
+      tableState: stripPersistentSortState(currentTableState()),
+      evaluationSettings: currentEvaluationSettingsPayload(),
+    };
 
     const response = await fetch("/api/wallet-preferences", {
       method: "PUT",
@@ -4164,6 +4191,9 @@ async function saveWalletPreferencesNow() {
 
     if (response.ok) {
       const data = await response.json();
+      if (saveSequence !== state.walletPreferencesSaveSequence) {
+        return;
+      }
       clearSyncedWatchlistChanges(addedIds, removedIds);
 
       let watchlistChanged = false;
@@ -4196,6 +4226,15 @@ function saveTableState() {
 
   saveGuestWatchlist();
   queueCloudTableStateSave(savedState);
+}
+
+function saveWatchlistStateAfterAction() {
+  saveTableState();
+  if (state.linkedWalletAddress && hasWalletProof()) {
+    window.clearTimeout(state.walletPreferencesSaveTimer);
+    state.walletPreferencesSaveTimer = null;
+    void saveWalletPreferencesNow();
+  }
 }
 
 function currentTablePageState() {
@@ -7536,7 +7575,7 @@ function addSelectedToWatchlist() {
     state.selectionAnchorPlayerId = null;
     syncActiveWatchlistFromSet();
     renderWatchlistSwitcher();
-    saveTableState();
+    saveWatchlistStateAfterAction();
     applyFilters();
     showWatchlistActionToast(removedIds, removedIds.length, "removed from", removedWatchlist?.id);
     return;
