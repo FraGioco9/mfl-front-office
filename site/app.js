@@ -2181,7 +2181,7 @@ function showEvaluationLoadActionTooltip(button) {
   const rect = button.getBoundingClientRect();
   const tooltipRect = tooltip.getBoundingClientRect();
   const preferredLeft = button.dataset.tooltipPlacement === "left"
-    ? rect.right - tooltipRect.width - 6
+    ? rect.right - tooltipRect.width + 8
     : rect.left + rect.width / 2 - tooltipRect.width / 2;
   const left = Math.min(Math.max(preferredLeft, 8), window.innerWidth - tooltipRect.width - 8);
   const top = Math.max(8, rect.top - tooltipRect.height - 8);
@@ -3337,18 +3337,7 @@ function toggleWatchlistDropdown() {
 }
 
 function showGenericToast(message) {
-  const toast = document.querySelector("#toastMessage");
-  if (!toast) {
-    return;
-  }
-
-  window.clearTimeout(state.toastTimer);
-  toast.replaceChildren();
-  toast.textContent = message;
-  toast.classList.add("visible");
-  state.toastTimer = window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2400);
+  showToast(message);
 }
 
 function updateWatchlistUrl(replace = false, force = false) {

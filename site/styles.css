@@ -1110,6 +1110,11 @@ main {
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
+
+.watchlistDropdownItem:not(.watchlistDropdownAdd) + .watchlistDropdownItem:not(.watchlistDropdownAdd) {
+  margin-top: 2px;
+}
+
 .watchlistDropdownItem:hover,
 .watchlistDropdownItem:focus-within {
   border-color: var(--primary-hover);
@@ -1179,7 +1184,7 @@ main {
 
 .watchlistDropdownSeparator {
   height: 1px;
-  margin: 5px 4px;
+  margin: 2px 4px 5px;
   background: var(--border);
 }
 
@@ -1245,16 +1250,16 @@ main {
 }
 
 .deleteWatchlistConfirmButton {
-  border-color: #ff8a8a;
-  background: #c92a2a;
-  color: #fff7f7;
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
 }
 
 .deleteWatchlistConfirmButton:hover,
 .deleteWatchlistConfirmButton:focus-visible {
-  border-color: #ffb3b3;
-  background: #a61e1e;
-  color: #ffffff;
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
 }
 
 .addWatchlistDialog {
@@ -4321,6 +4326,15 @@ td a {
 
 .evaluationFooterDeleteButton:hover:not(:disabled),
 .evaluationFooterDeleteButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+
+/* v1.143.9 */
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
   border-color: #ff8a8a;
   background: #c92a2a;
   color: #fff7f7;
