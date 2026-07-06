@@ -26,6 +26,7 @@ const state = {
   pendingWatchlistRouteId: "",
   editingWatchlistId: "",
   pendingDeleteWatchlistId: "",
+  pendingPostLoadingToast: "",
   playerNotes: {},
   tablePageStates: {},
   toastTimer: null,
@@ -522,6 +523,7 @@ async function finishLoading() {
   loadingScreen.classList.remove("complete", "leaving");
   document.body.classList.remove("loading");
   revealAppShell();
+  flushPostLoadingToast();
 }
 
 function revealAppShell() {
@@ -3340,6 +3342,23 @@ function showGenericToast(message) {
   showToast(message);
 }
 
+function flushPostLoadingToast() {
+  const message = state.pendingPostLoadingToast;
+  state.pendingPostLoadingToast = "";
+  if (message) {
+    showGenericToast(message);
+  }
+}
+
+function showToastAfterLoading(message) {
+  if (document.body.classList.contains("loading") || !loadingScreen.hidden) {
+    state.pendingPostLoadingToast = message;
+    return;
+  }
+
+  showGenericToast(message);
+}
+
 function updateWatchlistUrl(replace = false, force = false) {
   if ((!force && state.currentPage !== "watchlist") || !state.currentWatchlistId) {
     return;
@@ -3369,7 +3388,7 @@ async function ensureWatchlistRoute(options = {}) {
     state.currentWatchlistId = firstWatchlist?.id || "";
     setActiveWatchlistIds(firstWatchlist?.playerIds || []);
     renderWatchlistSwitcher();
-    showGenericToast("Watchlist not found.");
+    showToastAfterLoading("Watchlist not found.");
     updateWatchlistUrl(true, true);
     return;
   }
@@ -3509,6 +3528,7 @@ function confirmAddWatchlist() {
     renderWatchlistSwitcher();
     saveTableState();
     applyFilters();
+    showGenericToast("Watchlist renamed.");
     return;
   }
 
@@ -3600,6 +3620,7 @@ function deleteWatchlist(watchlistId) {
   renderWatchlistSwitcher();
   saveTableState();
   applyFilters();
+  showGenericToast("Watchlist deleted.");
 }
 
 function normalizeSearchText(value) {

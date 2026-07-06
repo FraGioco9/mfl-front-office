@@ -1252,7 +1252,7 @@ main {
 .deleteWatchlistConfirmButton {
   border-color: var(--border);
   background: var(--surface-muted);
-  color: #e06b6b;
+  color: var(--text-soft);
 }
 
 .deleteWatchlistConfirmButton:hover,
@@ -4338,4 +4338,16 @@ td a {
   border-color: #ff8a8a;
   background: #c92a2a;
   color: #fff7f7;
+}
+
+/* v1.143.10 */
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.watchlistDropdownSeparator {
+  margin-top: 2px;
 }
