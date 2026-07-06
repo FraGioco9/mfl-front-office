@@ -2883,13 +2883,25 @@ function showWatchlistToast(prefix, watchlistId = state.currentWatchlistId, watc
   showToast(content);
 }
 
-function showWatchlistActionToast(prefix, watchlistId) {
+function watchlistActionSubject(playerIds, count) {
+  const ids = normalizeWatchlistIdList(playerIds);
+  if (count === 1 && ids.length) {
+    const row = rowByPlayerId(ids[0]);
+    return row ? formatCellValue(row, "name") : `Player ${ids[0]}`;
+  }
+
+  return `${count} player${count === 1 ? "" : "s"}`;
+}
+
+function showWatchlistActionToast(playerIds, count, actionText, watchlistId) {
   const watchlist = state.watchlists.find((item) => item.id === watchlistId) || activeWatchlist();
+  const subject = watchlistActionSubject(playerIds, count);
+  const prefix = `${subject} ${actionText}`.trim();
   if (!watchlist) {
-    showGenericToast(prefix.trim());
+    showGenericToast(prefix);
     return;
   }
-  showWatchlistToast(prefix.trim(), watchlist.id, watchlist.name);
+  showWatchlistToast(prefix, watchlist.id, watchlist.name);
 }
 function walletWatchlistStorageKey(address = state.linkedWalletAddress) {
   const wallet = normalizeWalletAddress(address).toLowerCase();
@@ -3635,7 +3647,7 @@ function performWatchlistChoiceAction(action, watchlistId, playerIds) {
     const result = movePlayerIdsToWatchlist(watchlistId, ids);
     finishWatchlistSelectionAction();
     if (result.movedCount) {
-      showWatchlistActionToast(`${result.movedCount} player${result.movedCount === 1 ? "" : "s"} moved to`, watchlistId);
+      showWatchlistActionToast(result.addedIds, result.movedCount, "moved to", watchlistId);
     }
     if (result.skippedCount) {
       showWatchlistFullToast();
@@ -3646,7 +3658,7 @@ function performWatchlistChoiceAction(action, watchlistId, playerIds) {
   const result = addPlayerIdsToWatchlist(watchlistId, ids);
   finishWatchlistSelectionAction();
   if (result.addedCount) {
-    showWatchlistActionToast(`${result.addedCount} player${result.addedCount === 1 ? "" : "s"} added to`, watchlistId);
+    showWatchlistActionToast(result.addedIds, result.addedCount, "added to", watchlistId);
   }
   if (result.skippedCount) {
     showWatchlistFullToast();
@@ -3793,7 +3805,6 @@ function confirmAddWatchlist() {
     closeAddWatchlistModal();
     performWatchlistChoiceAction(action, id, playerIds);
     hideModal(watchlistChoiceModal);
-    showGenericToast("Watchlist created.");
     return;
   }
 

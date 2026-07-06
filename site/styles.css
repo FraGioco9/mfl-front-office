@@ -1141,9 +1141,12 @@ main {
   font-weight: 700;
   text-align: left;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .watchlistDropdownNameText {
@@ -1155,9 +1158,11 @@ main {
 
 .watchlistDropdownCount {
   flex: 0 0 auto;
+  margin-left: auto;
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 700;
+  text-align: right;
   white-space: nowrap;
 }
 
