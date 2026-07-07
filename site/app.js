@@ -5877,7 +5877,6 @@ function renderEvaluationTable(row) {
     });
     select.addEventListener("change", () => {
       state.evaluationSummaryPositions[String(getValue(row, "player_id") || "")] = select.value;
-      setEvaluationOverallValues(row, evaluationSummaryOverall(row, select.value, currentOverall));
       renderEvaluationTable(row);
     });
   });
