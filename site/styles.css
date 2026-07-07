@@ -1558,6 +1558,11 @@ button:disabled {
   border-bottom: 0;
 }
 
+.filtersFooter button {
+  min-width: 92px;
+  width: 92px;
+}
+
 .filtersHeader h2 {
   margin: 0;
   font-size: 20px;
@@ -4477,7 +4482,7 @@ td a {
   }
 }
 
-/* v1.144.8 */
+/* v1.144.9 */
 .watchlistButton,
 .watchlistButton:hover:not(:disabled),
 .watchlistButton:focus-visible,
