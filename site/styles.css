@@ -4558,31 +4558,33 @@ td a {
 .watchlistDropdownAction[data-tooltip]:focus-visible::after {
   opacity: 1;
 }
-
-
-
 /* v1.144.10 */
+body[data-page="watchlist"] #tableBody tr,
+body[data-page="watchlist"] #tableBody td,
+body[data-page="watchlist"] #tableBody .playerNameCell,
+body[data-page="watchlist"] #tableBody .playerNameLink,
+body[data-page="watchlist"] #tableBody .playerNameMarkers,
+body[data-page="watchlist"] #tableBody .playerNoteIcon,
+body[data-page="watchlist"] #tableBody .retirementMarker,
+body[data-page="watchlist"] #tableBody .newMintMarker {
+  transition: none !important;
+  animation: none !important;
+}
+
 body[data-page="watchlist"] #tableBody tr:hover {
   background: transparent !important;
 }
 
 body[data-page="watchlist"] #tableBody tr:hover > td {
-  background-color: var(--row-hover) !important;
+  background: var(--row-hover) !important;
 }
 
-body[data-page="watchlist"] #tableBody tr,
-body[data-page="watchlist"] #tableBody tr > td,
-body[data-page="watchlist"] #tableBody .playerNameLink,
-body[data-page="watchlist"] #tableBody .playerNameMarkers,
-body[data-page="watchlist"] #tableBody .retirementMarker,
-body[data-page="watchlist"] #tableBody .newMintMarker,
-body[data-page="watchlist"] #tableBody .playerNoteIcon {
-  transition: none !important;
+body[data-page="watchlist"] #tableBody td.nameCell,
+body[data-page="watchlist"] #tableBody td.col-id {
+  background-clip: padding-box;
 }
 
-body[data-page="watchlist"] #tableBody .retirementMarker[data-tooltip]::after,
-body[data-page="watchlist"] #tableBody .newMintMarker[data-tooltip]::after,
-body[data-page="watchlist"] #tableBody .playerNoteIcon[data-tooltip]::after,
-body[data-page="watchlist"] #tableBody .playerNoteFloatingTooltip {
-  transition: none !important;
+body[data-page="watchlist"] #tableBody .playerNameLink:hover {
+  background: transparent !important;
 }
+
