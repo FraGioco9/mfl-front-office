@@ -6776,7 +6776,12 @@ function buildHeader() {
   selectVisibleInput.id = "selectVisiblePlayersInput";
   selectVisibleInput.type = "checkbox";
   selectVisibleInput.setAttribute("aria-label", "Select visible players");
-  selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
+  
+tableBody?.addEventListener("pointerover", handleWatchlistTablePointerOver);
+tableBody?.addEventListener("pointerout", handleWatchlistTablePointerOut);
+tableBody?.addEventListener("pointerleave", clearWatchlistTableHover);
+
+selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
   selectionHeader.appendChild(selectVisibleInput);
   headerRow.appendChild(selectionHeader);
 
@@ -7649,6 +7654,47 @@ function openSelectedPlayerLinks() {
     tab.location.href = playerUrls[index];
   });
 }
+
+function clearWatchlistTableHover() {
+  tableBody?.querySelectorAll("tr.watchlistTableHover").forEach((row) => row.classList.remove("watchlistTableHover"));
+}
+
+function handleWatchlistTablePointerOver(event) {
+  if (state.currentPage !== "watchlist") {
+    return;
+  }
+
+  const row = event.target?.closest?.("tr");
+  if (!row || !tableBody?.contains(row)) {
+    return;
+  }
+
+  if (row.classList.contains("watchlistTableHover")) {
+    return;
+  }
+
+  clearWatchlistTableHover();
+  row.classList.add("watchlistTableHover");
+}
+
+function handleWatchlistTablePointerOut(event) {
+  if (state.currentPage !== "watchlist") {
+    return;
+  }
+
+  const row = event.target?.closest?.("tr");
+  if (!row || !tableBody?.contains(row)) {
+    return;
+  }
+
+  const nextTarget = event.relatedTarget;
+  if (nextTarget && row.contains(nextTarget)) {
+    return;
+  }
+
+  row.classList.remove("watchlistTableHover");
+}
+
 function renderTable() {
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -7735,6 +7781,7 @@ function renderTable() {
   });
 
   tableBody.replaceChildren(fragment);
+  clearWatchlistTableHover();
   emptyState.hidden = pageRows.length > 0;
   totalPlayers.textContent = formatCount(state.rows.length);
   pageText.textContent = `Page ${state.page} of ${totalPages}`;

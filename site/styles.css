@@ -4482,7 +4482,7 @@ td a {
   }
 }
 
-/* v1.144.9 */
+/* v1.144.10 */
 .watchlistButton,
 .watchlistButton:hover:not(:disabled),
 .watchlistButton:focus-visible,
@@ -4558,33 +4558,32 @@ td a {
 .watchlistDropdownAction[data-tooltip]:focus-visible::after {
   opacity: 1;
 }
+
+
+
 /* v1.144.10 */
 body[data-page="watchlist"] #tableBody tr,
+body[data-page="watchlist"] #tableBody tr *,
 body[data-page="watchlist"] #tableBody td,
-body[data-page="watchlist"] #tableBody .playerNameCell,
-body[data-page="watchlist"] #tableBody .playerNameLink,
-body[data-page="watchlist"] #tableBody .playerNameMarkers,
-body[data-page="watchlist"] #tableBody .playerNoteIcon,
-body[data-page="watchlist"] #tableBody .retirementMarker,
-body[data-page="watchlist"] #tableBody .newMintMarker {
+body[data-page="watchlist"] #tableBody td * {
   transition: none !important;
   animation: none !important;
 }
 
-body[data-page="watchlist"] #tableBody tr:hover {
+body[data-page="watchlist"] #tableBody tr:hover,
+body[data-page="watchlist"] #tableBody tr:hover > td,
+body[data-page="watchlist"] #tableBody tr:hover > th {
   background: transparent !important;
+  background-image: none !important;
 }
 
-body[data-page="watchlist"] #tableBody tr:hover > td {
+body[data-page="watchlist"] #tableBody tr.watchlistTableHover > td,
+body[data-page="watchlist"] #tableBody tr.watchlistTableHover > th {
   background: var(--row-hover) !important;
+  background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
-body[data-page="watchlist"] #tableBody td.nameCell,
-body[data-page="watchlist"] #tableBody td.col-id {
-  background-clip: padding-box;
+body[data-page="watchlist"] #tableBody tr.watchlistTableHover .playerNameLink:hover,
+body[data-page="watchlist"] #tableBody tr.watchlistTableHover a:hover {
+  transition: none !important;
 }
-
-body[data-page="watchlist"] #tableBody .playerNameLink:hover {
-  background: transparent !important;
-}
-
