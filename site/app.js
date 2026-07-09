@@ -6777,9 +6777,6 @@ function buildHeader() {
   selectVisibleInput.type = "checkbox";
   selectVisibleInput.setAttribute("aria-label", "Select visible players");
   
-tableBody?.addEventListener("pointerover", handleWatchlistTablePointerOver);
-tableBody?.addEventListener("pointerout", handleWatchlistTablePointerOut);
-tableBody?.addEventListener("pointerleave", clearWatchlistTableHover);
 
 selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
   selectionHeader.appendChild(selectVisibleInput);

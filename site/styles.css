@@ -1120,6 +1120,7 @@ main {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--primary-hover);
 }
 
 .watchlistDropdownItem.active {
@@ -1432,6 +1433,8 @@ button:hover:not(:disabled) {
   color: var(--text);
 }
 
+.watchlistDropdownItem:hover .watchlistDropdownName,
+.watchlistDropdownItem:focus-within .watchlistDropdownName,
 .watchlistDropdownName:hover:not(:disabled),
 .watchlistDropdownName:focus-visible {
   border-color: transparent;
@@ -1446,6 +1449,7 @@ button:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--primary-hover);
 }
 
 .watchlistDropdownRename:hover:not(:disabled),
@@ -4570,20 +4574,13 @@ body[data-page="watchlist"] #tableBody td * {
   animation: none !important;
 }
 
-body[data-page="watchlist"] #tableBody tr:hover,
 body[data-page="watchlist"] #tableBody tr:hover > td,
 body[data-page="watchlist"] #tableBody tr:hover > th {
-  background: transparent !important;
-  background-image: none !important;
-}
-
-body[data-page="watchlist"] #tableBody tr.watchlistTableHover > td,
-body[data-page="watchlist"] #tableBody tr.watchlistTableHover > th {
   background: var(--row-hover) !important;
   background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
-body[data-page="watchlist"] #tableBody tr.watchlistTableHover .playerNameLink:hover,
-body[data-page="watchlist"] #tableBody tr.watchlistTableHover a:hover {
+body[data-page="watchlist"] #tableBody tr:hover .playerNameLink:hover,
+body[data-page="watchlist"] #tableBody tr:hover a:hover {
   transition: none !important;
 }
