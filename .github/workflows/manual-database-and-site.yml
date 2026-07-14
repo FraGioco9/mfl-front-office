@@ -5,10 +5,10 @@ on:
     # GitHub cron is UTC. Separate CET/CEST candidates are gated against the intended Rome clock time.
     - cron: "20 8 * * *"
     - cron: "20 9 * * *"
-    - cron: "5 17 * * *"
-    - cron: "5 18 * * *"
-    - cron: "5 21 * * *"
-    - cron: "5 22 * * *"
+    - cron: "15 17 * * *"
+    - cron: "15 18 * * *"
+    - cron: "15 21 * * *"
+    - cron: "15 22 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -61,7 +61,7 @@ jobs:
               now_utc = datetime.now(timezone.utc)
               scheduled_utc = now_utc.replace(hour=hour, minute=minute, second=0, microsecond=0)
               scheduled_rome = scheduled_utc.astimezone(ZoneInfo("Europe/Rome"))
-              should_run = (scheduled_rome.hour, scheduled_rome.minute) in {(10, 20), (19, 5), (23, 5)}
+              should_run = (scheduled_rome.hour, scheduled_rome.minute) in {(10, 20), (19, 15), (23, 15)}
           print(f"should_run={'true' if should_run else 'false'}")
           PY
 
