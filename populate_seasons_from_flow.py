@@ -20,7 +20,7 @@ SLEEP_SECONDS_BETWEEN_WALLETS = 0.15
 FLOW_REQUESTS_PER_SECOND_LIMIT = 80
 MAX_FLOW_REQUEST_RETRIES = 3
 FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
-FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit",)
+FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit", "max interaction with storage has exceeded the limit")
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 25
@@ -261,7 +261,7 @@ def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_
     return json.loads(decoded_response)
 
 
-def is_flow_computation_limit_error(error: Exception) -> bool:
+def is_flow_batch_limit_error(error: Exception) -> bool:
     message = str(error).lower()
     return any(marker in message for marker in FLOW_RETRY_ERROR_MARKERS)
 
@@ -311,10 +311,10 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
         try:
             response = execute_flow_script(wallet_address, offset, batch_size)
         except RuntimeError as error:
-            if is_flow_computation_limit_error(error) and batch_size > 1:
+            if is_flow_batch_limit_error(error) and batch_size > 1:
                 next_batch_size = max(1, batch_size // 2)
                 print(
-                    f"{wallet_address}: Flow batch offset {offset} size {batch_size} exceeded computation limit; "
+                    f"{wallet_address}: Flow batch offset {offset} size {batch_size} exceeded a Flow batch limit; "
                     f"retrying with size {next_batch_size}"
                 )
                 batch_size = next_batch_size
