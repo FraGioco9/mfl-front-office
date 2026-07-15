@@ -350,6 +350,7 @@ const filterRules = document.querySelector("#filterRules");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
 const newMintsInput = document.querySelector("#newMintsInput");
+const newMintsLabel = document.querySelector("#newMintsLabel");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
 const tableHead = document.querySelector("#tableHead");
 const tableBody = document.querySelector("#tableBody");
@@ -2545,6 +2546,7 @@ function tableTitleForPage(pageName) {
 
 function renderTableLoadingShell(pageName) {
   state.currentPage = pageName;
+  syncQuickFilterLabels();
   const tablePage = tablePages.has(pageName);
 
   if (!tablePage) {
@@ -2658,6 +2660,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   state.currentPage = pageName;
+  syncQuickFilterLabels();
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
   myPlayersLockedPage.hidden = true;
@@ -4714,7 +4717,9 @@ function uniquePositions() {
 
 function availableFilterColumns(pageName = tablePageKey() || state.currentPage || "progression", viewName = state.view) {
   const normalizedView = normalizeViewForPage(viewName, pageName);
-  const columns = [...baseFilterColumns];
+  const columns = pageName === "mfl"
+    ? baseFilterColumns.filter((column) => column !== agentColumn)
+    : [...baseFilterColumns];
 
   if (normalizedView === "current") {
     columns.push(...statColumns.map((column) => `${column}_prog_current_season`));
@@ -7561,6 +7566,14 @@ function rowIsMflWalletPlayer(row) {
   return normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === mflWalletAddress;
 }
 
+function syncQuickFilterLabels() {
+  if (!newMintsLabel) {
+    return;
+  }
+
+  newMintsLabel.textContent = state.currentPage === "mfl" ? "Only aged players" : "Only new mints";
+}
+
 function applyFilters() {
   const rules = readFilterRules();
   const retirementIndex = state.columns.indexOf("retirement_years");
@@ -7595,8 +7608,15 @@ function applyFilters() {
       return false;
     }
 
-    if (newMintsInput.checked && row[seasonsIndex] !== 1) {
-      return false;
+    if (newMintsInput.checked) {
+      const playerSeasons = Number(row[seasonsIndex]);
+      if (state.currentPage === "mfl") {
+        if (!Number.isFinite(playerSeasons) || playerSeasons < 2) {
+          return false;
+        }
+      } else if (row[seasonsIndex] !== 1) {
+        return false;
+      }
     }
 
     if (!rowMatchesRules(row, rules)) {
