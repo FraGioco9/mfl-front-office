@@ -25,10 +25,9 @@ MFL_API_LIMIT = 1500
 PROGRESSION_BATCH_SIZE = 1000
 REQUEST_TIMEOUT_SECONDS = 60
 SLEEP_SECONDS_BETWEEN_REQUESTS = 0.15
-SLEEP_SECONDS_BETWEEN_MFL_REQUESTS = 2.0
-SLEEP_SECONDS_BEFORE_MFL_WALLET = 90.0
+SLEEP_SECONDS_BETWEEN_MFL_REQUESTS = 0.15
 MAX_REQUEST_RETRIES = 3
-MFL_MAX_REQUEST_RETRIES = 10
+MFL_MAX_REQUEST_RETRIES = 3
 RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 
 
@@ -963,14 +962,12 @@ def refresh_players(
 
     total_players = 0
     refreshed_player_ids = []
-    mfl_wallets = [wallet for wallet in wallets if is_mfl_wallet(wallet["wallet_address"])]
-    regular_wallets = [wallet for wallet in wallets if not is_mfl_wallet(wallet["wallet_address"])]
 
-    if workers > 1 and regular_wallets:
+    if workers > 1:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_wallet = {
                 executor.submit(fetch_wallet_players, wallet["wallet_address"]): wallet
-                for wallet in regular_wallets
+                for wallet in wallets
             }
 
             for index, future in enumerate(as_completed(future_to_wallet), start=1):
@@ -983,26 +980,17 @@ def refresh_players(
                 total_players += len(players)
                 refreshed_player_ids.extend(player_ids)
                 print(f"{index}/{len(wallets)} {current_wallet_address}: saved {len(players)} players")
+    else:
+        for index, wallet in enumerate(wallets, start=1):
+            current_wallet_address = wallet["wallet_address"]
+            saved_count, player_ids = save_wallet_players(connection, wallet)
 
-    start_index = len(regular_wallets) + 1 if workers > 1 else 1
-    sequential_wallets = mfl_wallets if workers > 1 else wallets
+            total_players += saved_count
+            refreshed_player_ids.extend(player_ids)
+            print(f"{index}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
 
-    for offset, wallet in enumerate(sequential_wallets, start=0):
-        index = start_index + offset
-        current_wallet_address = wallet["wallet_address"]
-
-        if is_mfl_wallet(current_wallet_address) and regular_wallets and SLEEP_SECONDS_BEFORE_MFL_WALLET > 0:
-            print(f"MFL wallet refresh: waiting {SLEEP_SECONDS_BEFORE_MFL_WALLET:.0f}s before fetching large wallet.")
-            time.sleep(SLEEP_SECONDS_BEFORE_MFL_WALLET)
-
-        saved_count, player_ids = save_wallet_players(connection, wallet)
-
-        total_players += saved_count
-        refreshed_player_ids.extend(player_ids)
-        print(f"{index}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
-
-        if not is_mfl_wallet(current_wallet_address) and SLEEP_SECONDS_BETWEEN_REQUESTS > 0:
-            time.sleep(SLEEP_SECONDS_BETWEEN_REQUESTS)
+            if SLEEP_SECONDS_BETWEEN_REQUESTS > 0:
+                time.sleep(SLEEP_SECONDS_BETWEEN_REQUESTS)
 
     refreshed_next = update_next_overall_columns(connection, refreshed_player_ids)
     connection.commit()

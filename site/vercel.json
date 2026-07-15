@@ -49,6 +49,10 @@
       "destination": "/"
     },
     {
+      "source": "/players",
+      "destination": "/"
+    },
+    {
       "source": "/players/:id",
       "destination": "/"
     },

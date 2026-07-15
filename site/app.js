@@ -2425,6 +2425,13 @@ function agentWalletAddressFromUrl() {
 
 function pageTargetFromPath(path) {
   const cleanPath = String(path || "").split("?")[0];
+  if (cleanPath === "/players" || cleanPath === "/agents") {
+    return {
+      pageName: "home",
+      options: {},
+    };
+  }
+
   const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
 
   if (playerMatch) {
@@ -6629,13 +6636,15 @@ function renderPlayerPage(playerId) {
   const ageMarkerHtml = ageMarker
     ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.emoji}</span>`
     : "";
+  const agentWalletAddress = getValue(row, "wallet_address");
+  const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}">${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
   const infoCards = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
     ["Height", escapeHtml(heightLabel)],
     ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
-    ["Agent", escapeHtml(formatCellValue(row, "wallet_name"))],
+    ["Agent", agentLinkHtml],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
@@ -6700,6 +6709,13 @@ function renderPlayerPage(playerId) {
     copyPlayerId(id);
     event.currentTarget.blur();
   });
+  const playerAgentLink = playerDetail.querySelector(".playerAgentLink");
+  if (playerAgentLink) {
+    playerAgentLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      openAgentPage(agentWalletAddress);
+    });
+  }
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
       state.playerAttributeView = button.dataset.playerAttributeView;
@@ -7927,17 +7943,19 @@ function renderTable() {
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
       } else if (column === agentColumn) {
-        const walletAddress = getValue(row, "wallet_address");
-        const agentLabel = formatCellValue(row, column);
-        const link = document.createElement("a");
-        link.href = agentRoute(walletAddress);
-        link.className = "agentTableLink";
-        link.textContent = agentLabel;
-        link.addEventListener("click", (event) => {
-          event.preventDefault();
-          openAgentPage(walletAddress);
-        });
-        cell.appendChild(link);
+        if (!["myplayers", "agents"].includes(state.currentPage)) {
+          const walletAddress = getValue(row, "wallet_address");
+          const agentLabel = formatCellValue(row, column);
+          const link = document.createElement("a");
+          link.href = agentRoute(walletAddress);
+          link.className = "agentTableLink";
+          link.textContent = agentLabel;
+          link.addEventListener("click", (event) => {
+            event.preventDefault();
+            openAgentPage(walletAddress);
+          });
+          cell.appendChild(link);
+        }
       } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);
