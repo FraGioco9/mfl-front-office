@@ -2455,9 +2455,17 @@ function pageTargetFromPath(path) {
   const agentMatch = cleanPath.match(/^\/agents\/([^/]+)$/);
 
   if (agentMatch) {
+    const walletAddress = normalizeWalletAddress(decodeURIComponent(agentMatch[1])).toLowerCase();
+    if (walletAddress === mflWalletAddress) {
+      return {
+        pageName: "mfl",
+        options: { replaceUrl: "/mfl" },
+      };
+    }
+
     return {
       pageName: "agents",
-      options: { walletAddress: normalizeWalletAddress(decodeURIComponent(agentMatch[1])).toLowerCase() },
+      options: { walletAddress },
     };
   }
 
@@ -2531,6 +2539,9 @@ function pagePath(pageName, options = {}) {
 
   if (pageName === "agents") {
     const walletAddress = normalizeWalletAddress(options.walletAddress || state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    if (walletAddress === mflWalletAddress) {
+      return "/mfl";
+    }
     return walletAddress ? `/agents/${encodeURIComponent(walletAddress)}` : "/agents";
   }
 
@@ -5110,12 +5121,21 @@ function playerRoute(playerId) {
 
 function agentRoute(walletAddress) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  if (normalizedWalletAddress === mflWalletAddress) {
+    return "/mfl";
+  }
+
   return normalizedWalletAddress ? `/agents/${encodeURIComponent(normalizedWalletAddress)}` : "#";
 }
 
 function openAgentPage(walletAddress) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (!normalizedWalletAddress) {
+    return;
+  }
+
+  if (normalizedWalletAddress === mflWalletAddress) {
+    setPage("mfl", true);
     return;
   }
 
