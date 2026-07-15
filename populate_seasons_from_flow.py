@@ -20,7 +20,7 @@ SLEEP_SECONDS_BETWEEN_WALLETS = 0.15
 FLOW_REQUESTS_PER_SECOND_LIMIT = 80
 MAX_FLOW_REQUEST_RETRIES = 3
 FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
-FLOW_SKIP_ERROR_MARKERS = ("computation exceeds limit",)
+FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit",)
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
@@ -197,11 +197,15 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
         except HTTPError as error:
             error_body = error.read().decode("utf-8", errors="replace")
 
-            if error.code not in FLOW_RETRY_STATUS_CODES or attempt == MAX_FLOW_REQUEST_RETRIES:
+            retryable_error_body = any(marker in error_body.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
+            if (error.code not in FLOW_RETRY_STATUS_CODES and not retryable_error_body) or attempt == MAX_FLOW_REQUEST_RETRIES:
                 raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
 
+            reason = f"Flow API returned {error.code}"
+            if retryable_error_body:
+                reason += " with a retryable computation-limit error"
             print(
-                f"Flow API returned {error.code}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
+                f"{reason}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
                 f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
@@ -219,24 +223,6 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
 
     decoded_response = base64.b64decode(encoded_response).decode("utf-8")
     return json.loads(decoded_response)
-
-
-def is_skippable_flow_error(error: Exception) -> bool:
-    message = str(error).lower()
-    return any(marker in message for marker in FLOW_SKIP_ERROR_MARKERS)
-
-
-def print_flow_wallet_skip_status(
-    connection: sqlite3.Connection,
-    index: int,
-    total_wallets: int,
-    wallet_address: str,
-) -> None:
-    database_player_count = get_database_player_count(connection, wallet_address)
-    print(
-        f"{index}/{total_wallets} {wallet_address}: skipped player_seasons "
-        f"(Flow computation limit; kept existing values; database has {database_player_count} players)"
-    )
 
 
 def cadence_value(value: dict[str, Any]) -> Any:
@@ -374,13 +360,7 @@ def populate_flow_static_fields(
 
             for index, future in enumerate(as_completed(future_to_wallet), start=1):
                 current_wallet_address = future_to_wallet[future]
-                try:
-                    players = future.result()
-                except RuntimeError as error:
-                    if is_skippable_flow_error(error):
-                        print_flow_wallet_skip_status(connection, index, len(wallets), current_wallet_address)
-                        continue
-                    raise
+                players = future.result()
 
                 updated_count = update_flow_static_fields(connection, players, force)
                 connection.commit()
@@ -398,13 +378,7 @@ def populate_flow_static_fields(
         return total_updated
 
     for index, current_wallet_address in enumerate(wallets, start=1):
-        try:
-            players = fetch_wallet_flow_static_players(current_wallet_address)
-        except RuntimeError as error:
-            if is_skippable_flow_error(error):
-                print_flow_wallet_skip_status(connection, index, len(wallets), current_wallet_address)
-                continue
-            raise
+        players = fetch_wallet_flow_static_players(current_wallet_address)
 
         updated_count = update_flow_static_fields(connection, players, force)
         connection.commit()
