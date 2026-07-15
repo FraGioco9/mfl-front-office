@@ -453,9 +453,11 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
     players: list[dict[str, Any]] = []
     index = 0
     batch_size = FLOW_STATIC_PLAYER_BATCH_SIZE
+    completed_batches = 0
 
     while index < len(player_ids):
         batch = player_ids[index:index + batch_size]
+        estimated_batches = max(1, (len(player_ids) + batch_size - 1) // batch_size)
         try:
             response = execute_flow_ids_script(MFL_WALLET_ADDRESS, batch)
         except RuntimeError as error:
@@ -466,10 +468,13 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
                     f"exceeded a Flow batch limit; retrying with size {next_batch_size}"
                 )
                 batch_size = next_batch_size
+                completed_batches = index // batch_size
                 continue
             if is_flow_batch_limit_error(error) and batch_size == 1:
+                completed_batches += 1
                 print(
-                    f"{MFL_WALLET_ADDRESS}: Flow ID {batch[0]} exceeded a Flow batch limit; skipping"
+                    f"MFL Flow seasons batch {completed_batches}/{len(player_ids)}: "
+                    f"player {batch[0]} exceeded a Flow batch limit; skipped, total {len(players)} players"
                 )
                 index += 1
                 continue
@@ -478,6 +483,11 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
         batch_players = parse_flow_static_player_response(response)
         players.extend(batch_players)
         index += batch_size
+        completed_batches += 1
+        print(
+            f"MFL Flow seasons batch {completed_batches}/{estimated_batches}: "
+            f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
+        )
 
     return players
 
