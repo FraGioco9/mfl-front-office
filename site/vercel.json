@@ -51,6 +51,14 @@
     {
       "source": "/players/:id",
       "destination": "/"
+    },
+    {
+      "source": "/agents",
+      "destination": "/"
+    },
+    {
+      "source": "/agents/:wallet",
+      "destination": "/"
     }
   ],
   "ignoreCommand": "node vercel-ignore-git-deploy.js"

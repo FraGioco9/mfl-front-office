@@ -2274,6 +2274,17 @@ td a {
   text-decoration: none;
 }
 
+.agentTableLink {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.agentTableLink:hover {
+  color: var(--primary);
+  text-decoration: none;
+}
+
 .watchlistStar {
   width: 18px;
   height: 18px;

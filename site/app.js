@@ -23,6 +23,7 @@ const state = {
   watchlistPlayerIdsRemoved: new Set(),
   watchlists: [],
   currentWatchlistId: "",
+  currentAgentWalletAddress: "",
   pendingWatchlistRouteId: "",
   editingWatchlistId: "",
   pendingDeleteWatchlistId: "",
@@ -149,10 +150,11 @@ const agentColumn = "wallet_name";
 const linkColumn = "player_link";
 const mflWalletAddress = "0xff8d2bbed8164db0";
 
-const tablePages = new Set(["database", "mfl", "progression", "watchlist", "myplayers"]);
+const tablePages = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
   database: ["attributes"],
   mfl: ["attributes"],
+  agents: ["attributes", "next", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "current", "all"],
   myplayers: ["attributes", "next", "current", "all"],
@@ -160,6 +162,7 @@ const pageViewOptions = {
 const defaultPageViews = {
   database: "attributes",
   mfl: "attributes",
+  agents: "attributes",
   progression: "current",
   watchlist: "current",
   myplayers: "attributes",
@@ -2415,6 +2418,11 @@ function watchlistIdFromUrl() {
   return match ? decodeURIComponent(match[1]) : "";
 }
 
+function agentWalletAddressFromUrl() {
+  const match = window.location.pathname.match(/^\/agents\/([^/]+)$/);
+  return match ? normalizeWalletAddress(decodeURIComponent(match[1])).toLowerCase() : "";
+}
+
 function pageTargetFromPath(path) {
   const cleanPath = String(path || "").split("?")[0];
   const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
@@ -2435,9 +2443,18 @@ function pageTargetFromPath(path) {
     };
   }
 
+  const agentMatch = cleanPath.match(/^\/agents\/([^/]+)$/);
+
+  if (agentMatch) {
+    return {
+      pageName: "agents",
+      options: { walletAddress: normalizeWalletAddress(decodeURIComponent(agentMatch[1])).toLowerCase() },
+    };
+  }
+
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "database", "mfl", "progression", "evaluation", "watchlist", "myplayers", "settings", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "database", "mfl", "agents", "progression", "evaluation", "watchlist", "myplayers", "settings", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -2503,6 +2520,11 @@ function pagePath(pageName, options = {}) {
     return watchlistId ? `/watchlist/${encodeURIComponent(watchlistId)}` : "/watchlist";
   }
 
+  if (pageName === "agents") {
+    const walletAddress = normalizeWalletAddress(options.walletAddress || state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    return walletAddress ? `/agents/${encodeURIComponent(walletAddress)}` : "/agents";
+  }
+
   return pageName === "home" ? "/" : pageName === "myplayers" ? "/my-players" : `/${pageName}`;
 }
 
@@ -2541,6 +2563,10 @@ function tableTitleForPage(pageName) {
     return "MFL";
   }
 
+  if (pageName === "agents") {
+    return agentNameForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
+
   return "Progression";
 }
 
@@ -2563,6 +2589,9 @@ function renderTableLoadingShell(pageName) {
 async function setPage(pageName, updateHash = true, options = {}) {
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
+  if (pageName === "agents") {
+    state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
+  }
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash });
 
@@ -2681,7 +2710,9 @@ async function setPage(pageName, updateHash = true, options = {}) {
       ? "No owned players match the current filters."
       : pageName === "mfl"
         ? "No MFL players match the current filters."
-        : "No players match the current filters.";
+        : pageName === "agents"
+          ? "No agent players match the current filters."
+          : "No players match the current filters.";
 
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
@@ -4717,7 +4748,7 @@ function uniquePositions() {
 
 function availableFilterColumns(pageName = tablePageKey() || state.currentPage || "progression", viewName = state.view) {
   const normalizedView = normalizeViewForPage(viewName, pageName);
-  const columns = pageName === "mfl"
+  const columns = (pageName === "mfl" || pageName === "agents")
     ? baseFilterColumns.filter((column) => column !== agentColumn)
     : [...baseFilterColumns];
 
@@ -5042,6 +5073,20 @@ function appendNameMarker(cell, marker, className) {
 
 function playerRoute(playerId) {
   return `/players/${encodeURIComponent(playerId)}`;
+}
+
+function agentRoute(walletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  return normalizedWalletAddress ? `/agents/${encodeURIComponent(normalizedWalletAddress)}` : "#";
+}
+
+function openAgentPage(walletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  if (!normalizedWalletAddress) {
+    return;
+  }
+
+  setPage("agents", true, { walletAddress: normalizedWalletAddress });
 }
 
 function rowByPlayerId(playerId) {
@@ -7587,6 +7632,9 @@ function applyFilters() {
     sourceRows = state.rows.filter(rowIsOwnedByLinkedWallet);
   } else if (state.currentPage === "mfl") {
     sourceRows = state.rows.filter(rowIsMflWalletPlayer);
+  } else if (state.currentPage === "agents") {
+    const agentWalletAddress = normalizeWalletAddress(state.currentAgentWalletAddress).toLowerCase();
+    sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress);
   } else if (state.currentPage === "progression") {
     sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row));
   }
@@ -7597,7 +7645,9 @@ function applyFilters() {
       ? (sourceRows.length ? "No owned players match the current filters." : "No players found for this wallet.")
       : state.currentPage === "mfl"
         ? (sourceRows.length ? "No MFL players match the current filters." : "No MFL players found.")
-        : "No players match the current filters.";
+        : state.currentPage === "agents"
+          ? (sourceRows.length ? "No agent players match the current filters." : "No players found for this agent.")
+          : "No players match the current filters.";
 
   state.filteredRows = sourceRows.filter((row) => {
     if (hideRetiredInput.checked && row[retirementIndex] === 0) {
@@ -7876,6 +7926,18 @@ function renderTable() {
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+      } else if (column === agentColumn) {
+        const walletAddress = getValue(row, "wallet_address");
+        const agentLabel = formatCellValue(row, column);
+        const link = document.createElement("a");
+        link.href = agentRoute(walletAddress);
+        link.className = "agentTableLink";
+        link.textContent = agentLabel;
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          openAgentPage(walletAddress);
+        });
+        cell.appendChild(link);
       } else if (column === linkColumn) {
         const link = document.createElement("a");
         link.href = formatCellValue(row, column);
