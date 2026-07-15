@@ -4672,6 +4672,12 @@ td a {
   transform: translate(-50%, 0) !important;
 }
 
+#tableBody .retirementMarker[data-tooltip]::after,
+#tableBody .newMintMarker[data-tooltip]::after,
+#tableBody .copyPlayerIdButton[data-tooltip]::after {
+  display: none;
+}
+
 /* v1.144.16 */
 #tableBody tr,
 #tableBody tr *,

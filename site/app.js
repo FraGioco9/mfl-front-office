@@ -5090,9 +5090,14 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.textContent = label;
   button.dataset.tooltip = "Click to copy";
   button.setAttribute("aria-label", "Click to copy");
+  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));
+  button.addEventListener("focus", () => showPlayerNoteTooltip(button));
+  button.addEventListener("mouseleave", hidePlayerNoteTooltip);
+  button.addEventListener("blur", hidePlayerNoteTooltip);
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    hidePlayerNoteTooltip();
     copyPlayerId(playerId);
     button.blur();
   });
@@ -5168,6 +5173,10 @@ function appendNameMarker(cell, marker, className) {
   markerElement.textContent = marker.emoji;
   markerElement.dataset.tooltip = marker.label;
   markerElement.setAttribute("aria-label", marker.label);
+  markerElement.addEventListener("mouseenter", () => showPlayerNoteTooltip(markerElement));
+  markerElement.addEventListener("focus", () => showPlayerNoteTooltip(markerElement));
+  markerElement.addEventListener("mouseleave", hidePlayerNoteTooltip);
+  markerElement.addEventListener("blur", hidePlayerNoteTooltip);
   cell.appendChild(markerElement);
 }
 
