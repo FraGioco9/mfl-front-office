@@ -2793,7 +2793,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
   if (tablePage && state.rows.length) {
     state.page = 1;
-    applyFilters();
+    applyFilters({ save: false });
   }
 
   if (document.body.classList.contains("loading")) {
@@ -4401,7 +4401,7 @@ async function loadWalletPreferences(options = {}) {
       saveWalletNotesLocally();
       if (tableStateChanged && tablePageKey()) {
         restoreSavedTableState(tablePageKey());
-        applyFilters();
+        applyFilters({ save: false });
       }
     }
   } catch {
@@ -4412,7 +4412,7 @@ async function loadWalletPreferences(options = {}) {
     if (previousNotes !== JSON.stringify(normalizedPlayerNotes(state.playerNotes))) {
       refreshPlayerPageAfterWalletSync();
       if (tablePageKey()) {
-        applyFilters();
+        applyFilters({ save: false });
       }
     }
   }
@@ -7749,7 +7749,7 @@ function syncQuickFilterLabels() {
   newMintsLabel.textContent = state.currentPage === "mfl" ? "Only aged players" : "Only new mints";
 }
 
-function applyFilters() {
+function applyFilters(options = {}) {
   const rules = readFilterRules();
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
@@ -7816,7 +7816,9 @@ function applyFilters() {
   state.filteredRows.sort(compareRows);
   updateFilterSummary();
   syncActiveWatchlistFromSet();
-  saveTableState();
+  if (options.save !== false) {
+    saveTableState();
+  }
   renderTable();
 }
 
