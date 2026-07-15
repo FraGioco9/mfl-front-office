@@ -17,6 +17,10 @@
       "destination": "/"
     },
     {
+      "source": "/mfl",
+      "destination": "/"
+    },
+    {
       "source": "/progression",
       "destination": "/"
     },

@@ -800,6 +800,18 @@ body[data-page="home"] .topbar .stats {
   stroke-width: 2.8;
 }
 
+.navMflIcon {
+  width: 26px;
+  flex-basis: 26px;
+  height: auto;
+  fill: currentColor;
+  stroke: none;
+}
+
+.appShell.menuClosed .navMflIcon {
+  width: 26px;
+}
+
 .navEvaluationIcon {
   fill: none;
   stroke: currentColor;

@@ -18,6 +18,8 @@ DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 LEADERBOARD_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
 PLAYERS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players"
 PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players/progressions"
+MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
+MFL_WALLET_NAME = "MFL"
 API_LIMIT = 1500
 PROGRESSION_BATCH_SIZE = 1000
 REQUEST_TIMEOUT_SECONDS = 60
@@ -146,6 +148,7 @@ def refresh_wallets(connection: sqlite3.Connection) -> int:
     data = fetch_leaderboard_data()
     users = data["users"]
     saved_count = 0
+    mfl_wallet_seen = False
 
     recreate_wallet_table(connection)
 
@@ -157,6 +160,9 @@ def refresh_wallets(connection: sqlite3.Connection) -> int:
         if not wallet_address:
             continue
 
+        if wallet_address == MFL_WALLET_ADDRESS:
+            mfl_wallet_seen = True
+
         connection.execute(
             """
             INSERT INTO wallets (
@@ -167,7 +173,23 @@ def refresh_wallets(connection: sqlite3.Connection) -> int:
             """,
             (
                 wallet_address,
-                to_text(user.get("name")),
+                MFL_WALLET_NAME if wallet_address == MFL_WALLET_ADDRESS else to_text(user.get("name")),
+            ),
+        )
+        saved_count += 1
+
+    if not mfl_wallet_seen:
+        connection.execute(
+            """
+            INSERT INTO wallets (
+                wallet_address,
+                name
+            )
+            VALUES (?, ?)
+            """,
+            (
+                MFL_WALLET_ADDRESS,
+                MFL_WALLET_NAME,
             ),
         )
         saved_count += 1
@@ -265,6 +287,16 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
             connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
 
 
+def append_mfl_wallet(wallets: list[dict[str, str]]) -> list[dict[str, str]]:
+    for wallet in wallets:
+        if wallet["wallet_address"].lower() == MFL_WALLET_ADDRESS:
+            wallet["wallet_name"] = MFL_WALLET_NAME
+            return wallets
+
+    wallets.append({"wallet_address": MFL_WALLET_ADDRESS, "wallet_name": MFL_WALLET_NAME})
+    return wallets
+
+
 def get_wallets(
     connection: sqlite3.Connection,
     limit: int | None,
@@ -301,7 +333,8 @@ def get_wallets(
         parameters,
     ).fetchall()
 
-    return [{"wallet_address": row[0], "wallet_name": row[1]} for row in rows]
+    wallets = [{"wallet_address": row[0], "wallet_name": row[1]} for row in rows]
+    return append_mfl_wallet(wallets)
 
 
 def fetch_players_page(wallet_address: str, before_player_id: int | None) -> list[dict[str, Any]]:
@@ -844,6 +877,7 @@ def get_player_ids_requiring_progression(
             SELECT player_id
             FROM players
             WHERE player_id IN ({placeholders})
+                AND lower(wallet_address) != ?
                 AND (
                     retirement_years IS NULL
                     OR retirement_years != 0
@@ -866,7 +900,7 @@ def get_player_ids_requiring_progression(
                 )
             ORDER BY player_id
             """,
-            batch,
+            [*batch, MFL_WALLET_ADDRESS],
         ).fetchall()
         required_ids.extend(row[0] for row in rows)
 
