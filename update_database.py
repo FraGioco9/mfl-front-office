@@ -21,7 +21,7 @@ PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/p
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 MFL_WALLET_NAME = "MFL"
 API_LIMIT = 1500
-MFL_API_LIMIT = 500
+MFL_API_LIMIT = 1500
 PROGRESSION_BATCH_SIZE = 1000
 REQUEST_TIMEOUT_SECONDS = 60
 SLEEP_SECONDS_BETWEEN_REQUESTS = 0.15
@@ -305,21 +305,26 @@ def get_wallets(
     connection: sqlite3.Connection,
     limit: int | None,
     wallet_address: str | None,
+    include_mfl_wallet: bool,
 ) -> list[dict[str, str]]:
     if wallet_address:
+        normalized_wallet_address = wallet_address.lower()
+        if is_mfl_wallet(normalized_wallet_address) and not include_mfl_wallet:
+            return []
+
         row = connection.execute(
             """
             SELECT wallet_address, name
             FROM wallets
             WHERE wallet_address = ?
             """,
-            (wallet_address.lower(),),
+            (normalized_wallet_address,),
         ).fetchone()
 
         if row:
             return [{"wallet_address": row[0], "wallet_name": row[1]}]
 
-        return [{"wallet_address": wallet_address.lower(), "wallet_name": ""}]
+        return [{"wallet_address": normalized_wallet_address, "wallet_name": ""}]
 
     limit_sql = ""
     parameters: list[Any] = []
@@ -338,7 +343,11 @@ def get_wallets(
     ).fetchall()
 
     wallets = [{"wallet_address": row[0], "wallet_name": row[1]} for row in rows]
-    return append_mfl_wallet(wallets)
+
+    if include_mfl_wallet:
+        return append_mfl_wallet(wallets)
+
+    return [wallet for wallet in wallets if not is_mfl_wallet(wallet["wallet_address"])]
 
 
 def is_mfl_wallet(wallet_address: str) -> bool:
@@ -947,8 +956,9 @@ def refresh_players(
     limit: int | None,
     wallet_address: str | None,
     workers: int,
+    refresh_mfl_wallet: bool,
 ) -> int:
-    wallets = get_wallets(connection, limit, wallet_address)
+    wallets = get_wallets(connection, limit, wallet_address, refresh_mfl_wallet)
     create_players_table(connection)
 
     total_players = 0
@@ -1026,6 +1036,12 @@ def parse_args() -> argparse.Namespace:
         default="no",
         help="Use Flow to calculate missing player_seasons after the main refresh.",
     )
+    parser.add_argument(
+        "--mfl-wallet",
+        choices=["yes", "no", "true", "false"],
+        default="false",
+        help="Refresh the large MFL wallet. Defaults to false so existing MFL rows are preserved.",
+    )
     return parser.parse_args()
 
 
@@ -1054,7 +1070,8 @@ def main() -> int:
         with sqlite3.connect(DATABASE_PATH) as connection:
             saved_wallets = refresh_wallets(connection)
             print(f"Wallet refresh complete: saved {saved_wallets} wallets.")
-            total_players = refresh_players(connection, args.limit, args.wallet, args.workers)
+            refresh_mfl_wallet = args.mfl_wallet in {"yes", "true"}
+            total_players = refresh_players(connection, args.limit, args.wallet, args.workers, refresh_mfl_wallet)
 
             if args.seasons == "yes":
                 total_seasons = populate_flow_static_fields(
@@ -1063,6 +1080,7 @@ def main() -> int:
                     args.wallet,
                     True,
                     args.workers,
+                    refresh_mfl_wallet,
                 )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")
 

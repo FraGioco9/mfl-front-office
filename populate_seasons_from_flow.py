@@ -21,6 +21,7 @@ FLOW_REQUESTS_PER_SECOND_LIMIT = 80
 MAX_FLOW_REQUEST_RETRIES = 3
 FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit",)
+MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 25
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
@@ -126,9 +127,13 @@ def get_wallets_to_process(
     limit: int | None,
     wallet_address: str | None,
     force: bool,
+    include_mfl_wallet: bool = True,
 ) -> list[str]:
     if wallet_address:
-        return [wallet_address.lower()]
+        normalized_wallet_address = wallet_address.lower()
+        if normalized_wallet_address == MFL_WALLET_ADDRESS and not include_mfl_wallet:
+            return []
+        return [normalized_wallet_address]
 
     where_sql = ""
     parameters: list[Any] = []
@@ -151,7 +156,12 @@ def get_wallets_to_process(
         """,
         parameters,
     ).fetchall()
-    return [row[0] for row in rows]
+    wallets = [row[0] for row in rows]
+
+    if include_mfl_wallet:
+        return wallets
+
+    return [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
 
 
 def encode_cadence_argument(argument: dict[str, str]) -> str:
@@ -402,9 +412,10 @@ def populate_flow_static_fields(
     wallet_address: str | None,
     force: bool,
     workers: int = 100,
+    include_mfl_wallet: bool = True,
 ) -> int:
     ensure_flow_static_columns(connection)
-    wallets = get_wallets_to_process(connection, limit, wallet_address, force)
+    wallets = get_wallets_to_process(connection, limit, wallet_address, force, include_mfl_wallet)
     total_updated = 0
 
     if workers > 1:

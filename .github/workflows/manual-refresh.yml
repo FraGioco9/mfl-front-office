@@ -15,6 +15,14 @@ on:
         description: "Number of workers to use."
         required: false
         default: "100"
+      mfl_wallet:
+        description: "Refresh the large MFL wallet too. Leave false to preserve current MFL rows."
+        required: true
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
 
 jobs:
   refresh:
@@ -33,7 +41,7 @@ jobs:
       - name: Run database refresh
         shell: bash
         run: |
-          COMMAND=(python update_database.py --workers "${{ inputs.workers }}" --seasons yes)
+          COMMAND=(python update_database.py --workers "${{ inputs.workers }}" --seasons yes --mfl-wallet "${{ inputs.mfl_wallet }}")
 
           if [ -n "${{ inputs.limit }}" ]; then
             COMMAND+=(--limit "${{ inputs.limit }}")
