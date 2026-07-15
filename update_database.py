@@ -464,12 +464,19 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
     page_limit = MFL_API_LIMIT if is_mfl_wallet(wallet_address) else API_LIMIT
     request_sleep = SLEEP_SECONDS_BETWEEN_MFL_REQUESTS if is_mfl_wallet(wallet_address) else SLEEP_SECONDS_BETWEEN_REQUESTS
     max_retries = MFL_MAX_REQUEST_RETRIES if is_mfl_wallet(wallet_address) else MAX_REQUEST_RETRIES
+    batch_number = 0
 
     while True:
         page = fetch_players_page(wallet_address, before_player_id, page_limit, max_retries)
+        batch_number += 1
 
         if not page:
+            if is_mfl_wallet(wallet_address):
+                print(f"MFL wallet batch {batch_number}: no players returned, total {len(all_players)} players.")
             break
+
+        if is_mfl_wallet(wallet_address):
+            print(f"MFL wallet batch {batch_number}: read {len(page)} players, total {len(all_players) + len(page)} players.")
 
         for player in page:
             player_id = player.get("id")
