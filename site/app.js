@@ -2428,7 +2428,7 @@ function pageTargetFromPath(path) {
   if (cleanPath === "/players" || cleanPath === "/agents") {
     return {
       pageName: "home",
-      options: {},
+      options: { replaceUrl: "/" },
     };
   }
 
@@ -2599,8 +2599,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "agents") {
     state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
   }
+  if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+    window.history.replaceState({}, "", options.replaceUrl);
+  }
   document.body.dataset.page = pageName;
-  updatePageUrl(pageName, { ...options, updateUrl: updateHash });
+  updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
