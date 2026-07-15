@@ -352,6 +352,8 @@ const addFilterSelect = document.querySelector("#addFilterSelect");
 const filterRules = document.querySelector("#filterRules");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
+const packablePlayersFilter = document.querySelector("#packablePlayersFilter");
+const packablePlayersInput = document.querySelector("#packablePlayersInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const newMintsLabel = document.querySelector("#newMintsLabel");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
@@ -2914,6 +2916,7 @@ function defaultTablePageState(pageName = tablePageKey() || "progression") {
   return {
     hideRetired: true,
     hideRetiring: false,
+    mflPackable: pageName === "mfl",
     newMints: false,
     pageSize: 100,
     view: defaultView,
@@ -4465,6 +4468,7 @@ function currentTablePageState() {
   return {
     hideRetired: hideRetiredInput.checked,
     hideRetiring: hideRetiringInput.checked,
+    mflPackable: Boolean(packablePlayersInput?.checked),
     newMints: newMintsInput.checked,
     pageSize: state.pageSize,
     view: state.view,
@@ -7400,7 +7404,15 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
 
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
+  if (packablePlayersInput) {
+    packablePlayersInput.checked = savedState.mflPackable !== undefined
+      ? Boolean(savedState.mflPackable)
+      : pageName === "mfl";
+  }
   newMintsInput.checked = Boolean(savedState.newMints);
+  if (pageName === "mfl" && newMintsInput.checked && packablePlayersInput) {
+    packablePlayersInput.checked = false;
+  }
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
 
   const allowedColumns = new Set(availableFilterColumns(pageName));
@@ -7650,6 +7662,10 @@ function rowIsMflWalletPlayer(row) {
 }
 
 function syncQuickFilterLabels() {
+  if (packablePlayersFilter) {
+    packablePlayersFilter.hidden = state.currentPage !== "mfl";
+  }
+
   if (!newMintsLabel) {
     return;
   }
@@ -7696,8 +7712,15 @@ function applyFilters() {
       return false;
     }
 
+    const playerSeasons = Number(row[seasonsIndex]);
+
+    if (state.currentPage === "mfl" && packablePlayersInput?.checked) {
+      if (playerSeasons !== 1) {
+        return false;
+      }
+    }
+
     if (newMintsInput.checked) {
-      const playerSeasons = Number(row[seasonsIndex]);
       if (state.currentPage === "mfl") {
         if (!Number.isFinite(playerSeasons) || playerSeasons < 2) {
           return false;
@@ -8708,7 +8731,18 @@ hideRetiringInput.addEventListener("change", () => {
   applyFilters();
 });
 
+packablePlayersInput?.addEventListener("change", () => {
+  if (state.currentPage === "mfl" && packablePlayersInput.checked) {
+    newMintsInput.checked = false;
+  }
+  state.page = 1;
+  applyFilters();
+});
+
 newMintsInput.addEventListener("change", () => {
+  if (state.currentPage === "mfl" && newMintsInput.checked && packablePlayersInput) {
+    packablePlayersInput.checked = false;
+  }
   state.page = 1;
   applyFilters();
 });

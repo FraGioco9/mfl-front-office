@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.147.7">
+    <link rel="stylesheet" href="/styles.css?v=1.147.8">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -118,6 +118,10 @@
             <label>
               <input id="hideRetiringInput" type="checkbox">
               <span>Hide retiring players</span>
+            </label>
+            <label id="packablePlayersFilter" hidden>
+              <input id="packablePlayersInput" type="checkbox" checked>
+              <span>Only packable players</span>
             </label>
             <label>
               <input id="newMintsInput" type="checkbox">
@@ -316,6 +320,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.147.8</span><p>Add packable filter and seed MFL parallel batches</p></li>
               <li><span>v1.147.7</span><p>Fetch MFL wallet batches in parallel</p></li>
               <li><span>v1.147.6</span><p>Save Settings changes immediately to Supabase</p></li>
               <li><span>v1.147.5</span><p>Redirect bare player and Agent URLs to Home</p></li>
@@ -793,7 +798,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.147.7</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.147.8</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -962,6 +967,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.147.7"></script>
+    <script src="/app.js?v=1.147.8"></script>
   </body>
 </html>

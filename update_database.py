@@ -509,7 +509,7 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
     return all_players
 
 
-def mfl_wallet_page_anchors(connection: sqlite3.Connection) -> list[int | None]:
+def mfl_wallet_page_anchors(connection: sqlite3.Connection) -> list[int]:
     rows = connection.execute(
         """
         SELECT player_id
@@ -521,25 +521,51 @@ def mfl_wallet_page_anchors(connection: sqlite3.Connection) -> list[int | None]:
     ).fetchall()
     player_ids = [int(row[0]) for row in rows]
 
-    if not player_ids:
-        return []
+    return [player_ids[index - 1] for index in range(MFL_API_LIMIT, len(player_ids), MFL_API_LIMIT)]
 
-    anchors: list[int | None] = [None]
-    anchors.extend(player_ids[index - 1] for index in range(MFL_API_LIMIT, len(player_ids), MFL_API_LIMIT))
-    return anchors
+
+def append_unique_players(
+    destination: list[dict[str, Any]],
+    seen_player_ids: set[Any],
+    players: list[dict[str, Any]],
+) -> int:
+    saved_count = 0
+    for player in players:
+        player_id = player.get("id")
+        if player_id in seen_player_ids:
+            continue
+        seen_player_ids.add(player_id)
+        destination.append(player)
+        saved_count += 1
+
+    return saved_count
 
 
 def fetch_mfl_wallet_players_parallel(connection: sqlite3.Connection, workers: int) -> list[dict[str, Any]]:
-    anchors = mfl_wallet_page_anchors(connection)
-    if len(anchors) <= 1:
-        print("MFL wallet parallel anchors unavailable; using sequential fetch.")
-        return fetch_wallet_players(MFL_WALLET_ADDRESS)
-
-    worker_count = min(MFL_BATCH_WORKERS, max(1, workers), len(anchors))
     all_players: list[dict[str, Any]] = []
     seen_player_ids = set()
+    first_page = fetch_players_page(MFL_WALLET_ADDRESS, None, MFL_API_LIMIT, MFL_MAX_REQUEST_RETRIES)
+    append_unique_players(all_players, seen_player_ids, first_page)
+    print(f"MFL wallet seed batch: read {len(first_page)} players, total {len(all_players)} players.")
 
-    print(f"MFL wallet: fetching {len(anchors)} batches with {worker_count} workers.")
+    if len(first_page) < MFL_API_LIMIT:
+        return all_players
+
+    first_page_anchor_value = first_page[-1].get("id")
+    first_page_anchor = int(first_page_anchor_value) if first_page_anchor_value is not None else None
+    anchors = []
+    if first_page_anchor is not None:
+        anchors.append(first_page_anchor)
+
+    anchors.extend(anchor for anchor in mfl_wallet_page_anchors(connection) if anchor not in anchors)
+
+    if not anchors:
+        return all_players
+
+    worker_count = min(MFL_BATCH_WORKERS, max(1, workers), len(anchors))
+    sequential_tail_anchor: int | None = None
+
+    print(f"MFL wallet: fetching {len(anchors)} seeded batches with {worker_count} workers.")
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         future_to_batch = {
             executor.submit(
@@ -548,30 +574,44 @@ def fetch_mfl_wallet_players_parallel(connection: sqlite3.Connection, workers: i
                 before_player_id,
                 MFL_API_LIMIT,
                 MFL_MAX_REQUEST_RETRIES,
-            ): batch_number
-            for batch_number, before_player_id in enumerate(anchors, start=1)
+            ): (batch_number, before_player_id)
+            for batch_number, before_player_id in enumerate(anchors, start=2)
         }
 
         for completed_count, future in enumerate(as_completed(future_to_batch), start=1):
-            batch_number = future_to_batch[future]
+            batch_number, before_player_id = future_to_batch[future]
             page = future.result()
-            saved_count = 0
-            for player in page:
-                player_id = player.get("id")
-                if player_id in seen_player_ids:
-                    continue
-                seen_player_ids.add(player_id)
-                all_players.append(player)
-                saved_count += 1
+            saved_count = append_unique_players(all_players, seen_player_ids, page)
+            if before_player_id == first_page_anchor and len(anchors) == 1 and len(page) == MFL_API_LIMIT:
+                next_anchor = page[-1].get("id")
+                sequential_tail_anchor = int(next_anchor) if next_anchor is not None else None
 
             print(
                 f"MFL wallet batch {completed_count}/{len(anchors)} "
                 f"(page {batch_number}): read {len(page)} players, saved {saved_count}, total {len(all_players)} players."
             )
 
+    tail_batch_number = len(anchors) + 2
+    while sequential_tail_anchor is not None:
+        page = fetch_players_page(MFL_WALLET_ADDRESS, sequential_tail_anchor, MFL_API_LIMIT, MFL_MAX_REQUEST_RETRIES)
+        saved_count = append_unique_players(all_players, seen_player_ids, page)
+        print(
+            f"MFL wallet tail batch {tail_batch_number}: read {len(page)} players, "
+            f"saved {saved_count}, total {len(all_players)} players."
+        )
+
+        if len(page) < MFL_API_LIMIT:
+            break
+
+        next_anchor = page[-1].get("id")
+        if next_anchor is None or int(next_anchor) == sequential_tail_anchor:
+            break
+
+        sequential_tail_anchor = int(next_anchor)
+        tail_batch_number += 1
+
     all_players.sort(key=lambda player: int(player.get("id") or 0), reverse=True)
     return all_players
-
 
 def to_int(value: Any) -> int | None:
     if value is None or value == "":
