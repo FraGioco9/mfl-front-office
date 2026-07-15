@@ -632,12 +632,15 @@ def insert_players(
         if numeric_player_id is None:
             continue
 
+        owner_name = str(owned_by.get("name") or "").strip()
+        saved_wallet_name = owner_name if is_mfl_wallet(wallet_address) else (wallet_name or owner_name)
+
         player_ids.append(numeric_player_id)
         rows.append(
             (
                 numeric_player_id,
                 str(owned_by.get("walletAddress") or wallet_address).lower(),
-                wallet_name or str(owned_by.get("name") or ""),
+                saved_wallet_name,
                 player_name(metadata),
                 join_values(metadata.get("positions")),
                 to_int(metadata.get("age")),
