@@ -2097,6 +2097,39 @@ td {
   font-size: 14px;
 }
 
+#tableBody td {
+  line-height: 1.2;
+}
+
+#tableBody .selectionCell,
+#tableBody .flagCell,
+#tableBody td.col-id,
+#tableBody td.nameCell {
+  vertical-align: middle;
+}
+
+#tableBody .selectionCell input {
+  display: block;
+  margin: 0 auto;
+}
+
+#tableBody .flagCell .flagImage {
+  display: block;
+  margin: 0 auto;
+}
+
+#tableBody .copyPlayerIdButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  vertical-align: middle;
+}
+
+#tableBody .playerNameCell {
+  min-height: 38px;
+  align-items: center;
+}
+
 td.nameCell,
 td.col-id {
   overflow: visible;
