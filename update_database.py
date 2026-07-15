@@ -21,10 +21,14 @@ PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/p
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 MFL_WALLET_NAME = "MFL"
 API_LIMIT = 1500
+MFL_API_LIMIT = 500
 PROGRESSION_BATCH_SIZE = 1000
 REQUEST_TIMEOUT_SECONDS = 60
 SLEEP_SECONDS_BETWEEN_REQUESTS = 0.15
+SLEEP_SECONDS_BETWEEN_MFL_REQUESTS = 2.0
+SLEEP_SECONDS_BEFORE_MFL_WALLET = 90.0
 MAX_REQUEST_RETRIES = 3
+MFL_MAX_REQUEST_RETRIES = 10
 RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 
 
@@ -337,9 +341,18 @@ def get_wallets(
     return append_mfl_wallet(wallets)
 
 
-def fetch_players_page(wallet_address: str, before_player_id: int | None) -> list[dict[str, Any]]:
+def is_mfl_wallet(wallet_address: str) -> bool:
+    return wallet_address.lower() == MFL_WALLET_ADDRESS
+
+
+def fetch_players_page(
+    wallet_address: str,
+    before_player_id: int | None,
+    limit: int = API_LIMIT,
+    max_retries: int = MAX_REQUEST_RETRIES,
+) -> list[dict[str, Any]]:
     query = {
-        "limit": API_LIMIT,
+        "limit": limit,
         "ownerWalletAddress": wallet_address,
     }
 
@@ -356,7 +369,7 @@ def fetch_players_page(wallet_address: str, before_player_id: int | None) -> lis
     )
 
     try:
-        data = fetch_json_with_retries(request, "MFL players API")
+        data = fetch_json_with_retries(request, "MFL players API", max_retries=max_retries)
     except URLError as error:
         raise RuntimeError(f"Could not connect to MFL players API: {error.reason}") from error
     except json.JSONDecodeError as error:
@@ -403,8 +416,9 @@ def fetch_json_with_retries(
     request: Request,
     api_name: str,
     too_large_message: str | None = None,
+    max_retries: int = MAX_REQUEST_RETRIES,
 ) -> Any:
-    for attempt in range(MAX_REQUEST_RETRIES + 1):
+    for attempt in range(max_retries + 1):
         try:
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))
@@ -412,23 +426,23 @@ def fetch_json_with_retries(
             if error.code == 414 and too_large_message is not None:
                 raise ProgressionRequestTooLargeError(too_large_message) from error
 
-            if error.code not in RETRY_STATUS_CODES or attempt == MAX_REQUEST_RETRIES:
+            if error.code not in RETRY_STATUS_CODES or attempt == max_retries:
                 raise RuntimeError(f"{api_name} returned status code {error.code}") from error
 
             sleep_seconds = retry_delay_seconds(attempt)
             print(
                 f"{api_name} returned {error.code}; retrying in {sleep_seconds:.1f}s "
-                f"({attempt + 1}/{MAX_REQUEST_RETRIES})"
+                f"({attempt + 1}/{max_retries})"
             )
             time.sleep(sleep_seconds)
         except URLError:
-            if attempt == MAX_REQUEST_RETRIES:
+            if attempt == max_retries:
                 raise
 
             sleep_seconds = retry_delay_seconds(attempt)
             print(
                 f"{api_name} connection failed; retrying in {sleep_seconds:.1f}s "
-                f"({attempt + 1}/{MAX_REQUEST_RETRIES})"
+                f"({attempt + 1}/{max_retries})"
             )
             time.sleep(sleep_seconds)
 
@@ -447,9 +461,12 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
     all_players = []
     seen_player_ids = set()
     before_player_id = None
+    page_limit = MFL_API_LIMIT if is_mfl_wallet(wallet_address) else API_LIMIT
+    request_sleep = SLEEP_SECONDS_BETWEEN_MFL_REQUESTS if is_mfl_wallet(wallet_address) else SLEEP_SECONDS_BETWEEN_REQUESTS
+    max_retries = MFL_MAX_REQUEST_RETRIES if is_mfl_wallet(wallet_address) else MAX_REQUEST_RETRIES
 
     while True:
-        page = fetch_players_page(wallet_address, before_player_id)
+        page = fetch_players_page(wallet_address, before_player_id, page_limit, max_retries)
 
         if not page:
             break
@@ -463,7 +480,7 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
             seen_player_ids.add(player_id)
             all_players.append(player)
 
-        if len(page) < API_LIMIT:
+        if len(page) < page_limit:
             break
 
         next_before_player_id = page[-1].get("id")
@@ -471,7 +488,7 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
             break
 
         before_player_id = int(next_before_player_id)
-        time.sleep(SLEEP_SECONDS_BETWEEN_REQUESTS)
+        time.sleep(request_sleep)
 
     return all_players
 
@@ -907,6 +924,17 @@ def get_player_ids_requiring_progression(
     return required_ids
 
 
+def save_wallet_players(
+    connection: sqlite3.Connection,
+    wallet: dict[str, str],
+) -> tuple[int, list[int]]:
+    current_wallet_address = wallet["wallet_address"]
+    players = fetch_wallet_players(current_wallet_address)
+    player_ids = insert_players(connection, players, current_wallet_address, wallet["wallet_name"])
+    connection.commit()
+    return len(players), player_ids
+
+
 def refresh_players(
     connection: sqlite3.Connection,
     limit: int | None,
@@ -918,12 +946,14 @@ def refresh_players(
 
     total_players = 0
     refreshed_player_ids = []
+    mfl_wallets = [wallet for wallet in wallets if is_mfl_wallet(wallet["wallet_address"])]
+    regular_wallets = [wallet for wallet in wallets if not is_mfl_wallet(wallet["wallet_address"])]
 
-    if workers > 1:
+    if workers > 1 and regular_wallets:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_wallet = {
                 executor.submit(fetch_wallet_players, wallet["wallet_address"]): wallet
-                for wallet in wallets
+                for wallet in regular_wallets
             }
 
             for index, future in enumerate(as_completed(future_to_wallet), start=1):
@@ -937,23 +967,24 @@ def refresh_players(
                 refreshed_player_ids.extend(player_ids)
                 print(f"{index}/{len(wallets)} {current_wallet_address}: saved {len(players)} players")
 
-        refreshed_next = update_next_overall_columns(connection, refreshed_player_ids)
-        connection.commit()
-        print(f"Next Overall refresh complete: updated {refreshed_next} players.")
-        refresh_progressions(connection, refreshed_player_ids, workers)
-        return total_players
+    start_index = len(regular_wallets) + 1 if workers > 1 else 1
+    sequential_wallets = mfl_wallets if workers > 1 else wallets
 
-    for index, wallet in enumerate(wallets, start=1):
+    for offset, wallet in enumerate(sequential_wallets, start=0):
+        index = start_index + offset
         current_wallet_address = wallet["wallet_address"]
-        players = fetch_wallet_players(current_wallet_address)
-        player_ids = insert_players(connection, players, current_wallet_address, wallet["wallet_name"])
-        connection.commit()
 
-        total_players += len(players)
+        if is_mfl_wallet(current_wallet_address) and regular_wallets and SLEEP_SECONDS_BEFORE_MFL_WALLET > 0:
+            print(f"MFL wallet refresh: waiting {SLEEP_SECONDS_BEFORE_MFL_WALLET:.0f}s before fetching large wallet.")
+            time.sleep(SLEEP_SECONDS_BEFORE_MFL_WALLET)
+
+        saved_count, player_ids = save_wallet_players(connection, wallet)
+
+        total_players += saved_count
         refreshed_player_ids.extend(player_ids)
-        print(f"{index}/{len(wallets)} {current_wallet_address}: saved {len(players)} players")
+        print(f"{index}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
 
-        if SLEEP_SECONDS_BETWEEN_REQUESTS > 0:
+        if not is_mfl_wallet(current_wallet_address) and SLEEP_SECONDS_BETWEEN_REQUESTS > 0:
             time.sleep(SLEEP_SECONDS_BETWEEN_REQUESTS)
 
     refreshed_next = update_next_overall_columns(connection, refreshed_player_ids)
