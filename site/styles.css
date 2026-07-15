@@ -801,15 +801,15 @@ body[data-page="home"] .topbar .stats {
 }
 
 .navMflIcon {
-  width: 26px;
-  flex-basis: 26px;
+  width: 18px;
+  flex-basis: 18px;
   height: auto;
   fill: currentColor;
   stroke: none;
 }
 
 .appShell.menuClosed .navMflIcon {
-  width: 26px;
+  width: 18px;
 }
 
 .navEvaluationIcon {
