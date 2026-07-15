@@ -1365,6 +1365,10 @@ main {
   font-weight: 700;
 }
 
+.quickFilters label[hidden] {
+  display: none;
+}
+
 .quickFilters input {
   width: 16px;
   height: 16px;
