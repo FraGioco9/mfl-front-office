@@ -6984,7 +6984,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
     }
     const isSorted = state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = columnLabels[column];
+    label.textContent = column === agentColumn && ["myplayers", "agents"].includes(state.currentPage) ? "" : columnLabels[column];
     cell.appendChild(label);
 
     if (sortableColumns.has(column)) {
