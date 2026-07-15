@@ -3146,9 +3146,14 @@ function showPlayerNoteTooltip(icon) {
   let left = iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
 
-  let top = iconRect.top - tooltipRect.height - 10;
+  const tableIdButton = icon.classList.contains("copyPlayerIdButton") && icon.closest("#tableBody");
+  const anchorHeight = tableIdButton ? 14 : iconRect.height;
+  const anchorTop = iconRect.top + Math.max(0, (iconRect.height - anchorHeight) / 2);
+  const anchorBottom = anchorTop + anchorHeight;
+
+  let top = anchorTop - tooltipRect.height - 10;
   if (top < margin) {
-    top = iconRect.bottom + 10;
+    top = anchorBottom + 10;
   }
   if (top + tooltipRect.height > viewportHeight - margin) {
     top = Math.max(margin, viewportHeight - tooltipRect.height - margin);
