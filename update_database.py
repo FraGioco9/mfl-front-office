@@ -28,6 +28,7 @@ SLEEP_SECONDS_BETWEEN_REQUESTS = 0.15
 SLEEP_SECONDS_BETWEEN_MFL_REQUESTS = 0.15
 MAX_REQUEST_RETRIES = 3
 MFL_MAX_REQUEST_RETRIES = 3
+MFL_BATCH_WORKERS = 100
 RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 
 
@@ -508,6 +509,70 @@ def fetch_wallet_players(wallet_address: str) -> list[dict[str, Any]]:
     return all_players
 
 
+def mfl_wallet_page_anchors(connection: sqlite3.Connection) -> list[int | None]:
+    rows = connection.execute(
+        """
+        SELECT player_id
+        FROM players
+        WHERE lower(wallet_address) = lower(?)
+        ORDER BY player_id DESC
+        """,
+        (MFL_WALLET_ADDRESS,),
+    ).fetchall()
+    player_ids = [int(row[0]) for row in rows]
+
+    if not player_ids:
+        return []
+
+    anchors: list[int | None] = [None]
+    anchors.extend(player_ids[index - 1] for index in range(MFL_API_LIMIT, len(player_ids), MFL_API_LIMIT))
+    return anchors
+
+
+def fetch_mfl_wallet_players_parallel(connection: sqlite3.Connection, workers: int) -> list[dict[str, Any]]:
+    anchors = mfl_wallet_page_anchors(connection)
+    if len(anchors) <= 1:
+        print("MFL wallet parallel anchors unavailable; using sequential fetch.")
+        return fetch_wallet_players(MFL_WALLET_ADDRESS)
+
+    worker_count = min(MFL_BATCH_WORKERS, max(1, workers), len(anchors))
+    all_players: list[dict[str, Any]] = []
+    seen_player_ids = set()
+
+    print(f"MFL wallet: fetching {len(anchors)} batches with {worker_count} workers.")
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_to_batch = {
+            executor.submit(
+                fetch_players_page,
+                MFL_WALLET_ADDRESS,
+                before_player_id,
+                MFL_API_LIMIT,
+                MFL_MAX_REQUEST_RETRIES,
+            ): batch_number
+            for batch_number, before_player_id in enumerate(anchors, start=1)
+        }
+
+        for completed_count, future in enumerate(as_completed(future_to_batch), start=1):
+            batch_number = future_to_batch[future]
+            page = future.result()
+            saved_count = 0
+            for player in page:
+                player_id = player.get("id")
+                if player_id in seen_player_ids:
+                    continue
+                seen_player_ids.add(player_id)
+                all_players.append(player)
+                saved_count += 1
+
+            print(
+                f"MFL wallet batch {completed_count}/{len(anchors)} "
+                f"(page {batch_number}): read {len(page)} players, saved {saved_count}, total {len(all_players)} players."
+            )
+
+    all_players.sort(key=lambda player: int(player.get("id") or 0), reverse=True)
+    return all_players
+
+
 def to_int(value: Any) -> int | None:
     if value is None or value == "":
         return None
@@ -962,15 +1027,19 @@ def refresh_players(
 
     total_players = 0
     refreshed_player_ids = []
+    mfl_wallets = [wallet for wallet in wallets if is_mfl_wallet(wallet["wallet_address"])]
+    standard_wallets = [wallet for wallet in wallets if not is_mfl_wallet(wallet["wallet_address"])]
+    completed_wallets = 0
 
     if workers > 1:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_wallet = {
                 executor.submit(fetch_wallet_players, wallet["wallet_address"]): wallet
-                for wallet in wallets
+                for wallet in standard_wallets
             }
 
-            for index, future in enumerate(as_completed(future_to_wallet), start=1):
+            for future in as_completed(future_to_wallet):
+                completed_wallets += 1
                 wallet = future_to_wallet[future]
                 current_wallet_address = wallet["wallet_address"]
                 players = future.result()
@@ -979,18 +1048,34 @@ def refresh_players(
 
                 total_players += len(players)
                 refreshed_player_ids.extend(player_ids)
-                print(f"{index}/{len(wallets)} {current_wallet_address}: saved {len(players)} players")
+                print(f"{completed_wallets}/{len(wallets)} {current_wallet_address}: saved {len(players)} players")
     else:
-        for index, wallet in enumerate(wallets, start=1):
+        for wallet in standard_wallets:
+            completed_wallets += 1
             current_wallet_address = wallet["wallet_address"]
             saved_count, player_ids = save_wallet_players(connection, wallet)
 
             total_players += saved_count
             refreshed_player_ids.extend(player_ids)
-            print(f"{index}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
+            print(f"{completed_wallets}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
 
             if SLEEP_SECONDS_BETWEEN_REQUESTS > 0:
                 time.sleep(SLEEP_SECONDS_BETWEEN_REQUESTS)
+
+    for wallet in mfl_wallets:
+        completed_wallets += 1
+        current_wallet_address = wallet["wallet_address"]
+        if workers > 1:
+            players = fetch_mfl_wallet_players_parallel(connection, workers)
+            player_ids = insert_players(connection, players, current_wallet_address, wallet["wallet_name"])
+            connection.commit()
+            saved_count = len(players)
+        else:
+            saved_count, player_ids = save_wallet_players(connection, wallet)
+
+        total_players += saved_count
+        refreshed_player_ids.extend(player_ids)
+        print(f"{completed_wallets}/{len(wallets)} {current_wallet_address}: saved {saved_count} players")
 
     refreshed_next = update_next_overall_columns(connection, refreshed_player_ids)
     connection.commit()
