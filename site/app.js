@@ -3383,7 +3383,17 @@ function updateSettingsEmailOption(optionId, checked) {
     nextOptions.delete(optionId);
   }
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(Array.from(nextOptions));
-  queueCloudTableStateSave();
+  saveSettingsPreferencesAfterChange();
+}
+
+function saveSettingsPreferencesAfterChange() {
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+
+  window.clearTimeout(state.walletPreferencesSaveTimer);
+  state.walletPreferencesSaveTimer = null;
+  void saveWalletPreferencesNow({ refreshAfterSave: true });
 }
 function renderSettingsPage() {
   if (!settingsPage) {
@@ -4342,7 +4352,7 @@ async function loadWalletPreferences(options = {}) {
   }
 }
 
-async function saveWalletPreferencesNow() {
+async function saveWalletPreferencesNow(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     return;
   }
@@ -4360,7 +4370,7 @@ async function saveWalletPreferencesNow() {
       watchlists: watchlistsPayload(),
       tableState: stripPersistentSortState(currentTableState()),
       evaluationSettings: currentEvaluationSettingsPayload(),
-          settings: currentSettingsPayload(),
+      settings: currentSettingsPayload(),
     };
 
     const response = await fetch("/api/wallet-preferences", {
@@ -4385,6 +4395,10 @@ async function saveWalletPreferencesNow() {
         watchlistChanged = true;
       }
 
+      if (data.settings) {
+        applySettingsPayload(data.settings);
+      }
+
       if (watchlistChanged) {
         if (state.currentPage === "watchlist") {
           applyFilters();
@@ -4394,6 +4408,11 @@ async function saveWalletPreferencesNow() {
         if (state.currentPage === "player") {
           renderPlayerPage(playerIdFromUrl());
         }
+      }
+
+      if (options.refreshAfterSave) {
+        state.walletPreferencesLoaded = false;
+        await loadWalletPreferences({ force: true });
       }
     }
   } catch {
