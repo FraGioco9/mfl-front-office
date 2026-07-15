@@ -15,6 +15,7 @@ from populate_seasons_from_flow import populate_flow_static_fields
 
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
+MFL_DATABASE_PATH = Path(__file__).with_name("mfl_players.db")
 LEADERBOARD_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
 PLAYERS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players"
 PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players/progressions"
@@ -1090,6 +1091,47 @@ def refresh_players(
     return total_players
 
 
+def move_mfl_rows_to_separate_database(connection: sqlite3.Connection) -> int:
+    create_players_table(connection)
+    cursor = connection.execute(
+        """
+        SELECT *
+        FROM players
+        WHERE lower(wallet_address) = ?
+        ORDER BY player_id
+        """,
+        (MFL_WALLET_ADDRESS,),
+    )
+    rows = cursor.fetchall()
+    columns = [description[0] for description in cursor.description or []]
+
+    if not rows:
+        connection.execute("DELETE FROM wallets WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
+        connection.commit()
+        return 0
+
+    with sqlite3.connect(MFL_DATABASE_PATH) as mfl_connection:
+        create_players_table(mfl_connection)
+        mfl_connection.execute("DELETE FROM players")
+        column_sql = ", ".join(columns)
+        placeholders = ", ".join("?" for _ in columns)
+        mfl_connection.executemany(
+            f"INSERT INTO players ({column_sql}) VALUES ({placeholders})",
+            rows,
+        )
+        recreate_wallet_table(mfl_connection)
+        mfl_connection.execute(
+            "INSERT OR REPLACE INTO wallets (wallet_address, name) VALUES (?, ?)",
+            (MFL_WALLET_ADDRESS, MFL_WALLET_NAME),
+        )
+        mfl_connection.commit()
+
+    connection.execute("DELETE FROM players WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
+    connection.execute("DELETE FROM wallets WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
+    connection.commit()
+    return len(rows)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Refresh MFL player data from the MFL API.")
     parser.add_argument(
@@ -1163,8 +1205,12 @@ def main() -> int:
                 )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")
 
+            moved_mfl_players = move_mfl_rows_to_separate_database(connection)
+            print(f"MFL database split complete: moved {moved_mfl_players} players.")
+
         print(f"Player refresh complete: saved {total_players} players.")
         print(f"Database file: {DATABASE_PATH}")
+        print(f"MFL database file: {MFL_DATABASE_PATH}")
         print(f"Total time: {format_duration(time.monotonic() - started_at)}")
         return 0
     except Exception as error:

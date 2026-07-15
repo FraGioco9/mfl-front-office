@@ -2,6 +2,11 @@ const state = {
   columns: [],
   columnIndexMap: null,
   rows: [],
+  mflRows: [],
+  mflColumns: [],
+  mflManifest: null,
+  mflDataLoaded: false,
+  mflDataLoadPromise: null,
   filteredRows: [],
   page: 1,
   pageSize: 100,
@@ -851,7 +856,7 @@ function staticDataFileUrl(fileName) {
 }
 
 function canUseStaticDataFile(fileName, access = currentDataAccess()) {
-  return /^(manifest\.json|players_(public|progression|\d{4})\.json|wallets\.json)$/.test(fileName);
+  return /^(manifest\.json|mfl_manifest\.json|players_(public|progression|\d{4})\.json|mfl_players_(public|progression)\.json|wallets\.json)$/.test(fileName);
 }
 
 function dataFileUrl(fileName, options = {}) {
@@ -2791,7 +2796,15 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
     return;
   }
-  if (tablePage && state.rows.length) {
+  if (pageName === "mfl" && state.dataLoaded && !state.mflDataLoaded) {
+    const loaded = await ensureMflData();
+
+    if (!loaded) {
+      return;
+    }
+  }
+
+  if (tablePage && (pageName === "mfl" ? state.mflRows.length : state.rows.length)) {
     state.page = 1;
     applyFilters({ save: false });
   }
@@ -7761,7 +7774,7 @@ function applyFilters(options = {}) {
   } else if (state.currentPage === "myplayers") {
     sourceRows = state.rows.filter(rowIsOwnedByLinkedWallet);
   } else if (state.currentPage === "mfl") {
-    sourceRows = state.rows.filter(rowIsMflWalletPlayer);
+    sourceRows = state.mflRows;
   } else if (state.currentPage === "agents") {
     const agentWalletAddress = normalizeWalletAddress(state.currentAgentWalletAddress).toLowerCase();
     sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress);
@@ -8100,7 +8113,8 @@ function renderTable() {
 
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
-  totalPlayers.textContent = formatCount(state.rows.length);
+  const tableSourceCount = state.currentPage === "mfl" ? state.mflRows.length : state.rows.length;
+  totalPlayers.textContent = formatCount(tableSourceCount);
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
@@ -8173,6 +8187,10 @@ function publicDataColumns(manifest) {
 
 function progressionDataColumns(manifest) {
   return manifest?.files?.progression?.columns || [];
+}
+
+function mflDataCacheVersion(manifest) {
+  return `mfl:${manifest?.generated_at || ""}:${manifest?.row_count || 0}:${manifestDataFiles(manifest, "full").join("|")}`;
 }
 
 function fullDataColumns(manifest) {
@@ -8504,6 +8522,164 @@ function mergeDataColumns(chunk, columnsToMerge, rowMap) {
       existingRow.push(chunkColumnIndex >= 0 ? chunkRow[chunkColumnIndex] : null);
     });
   });
+}
+
+function rowMapByPlayerIdForRows(rows, columns) {
+  const playerIdIndex = columns.indexOf("player_id");
+  const rowMap = new Map();
+
+  if (playerIdIndex < 0) {
+    return rowMap;
+  }
+
+  rows.forEach((row) => {
+    rowMap.set(String(row[playerIdIndex]), row);
+  });
+
+  return rowMap;
+}
+
+function mergeDataColumnsIntoRows(rows, baseColumns, chunk, targetColumns) {
+  const rowMap = rowMapByPlayerIdForRows(rows, baseColumns);
+  const columnsToMerge = targetColumns.filter((column) => !baseColumns.includes(column));
+  const chunkPlayerIdIndex = chunk.columns.indexOf("player_id");
+  const chunkColumnIndexes = columnsToMerge.map((column) => chunk.columns.indexOf(column));
+
+  if (chunkPlayerIdIndex < 0) {
+    return baseColumns;
+  }
+
+  chunk.rows.forEach((chunkRow) => {
+    const existingRow = rowMap.get(String(chunkRow[chunkPlayerIdIndex]));
+
+    if (!existingRow) {
+      return;
+    }
+
+    chunkColumnIndexes.forEach((chunkColumnIndex) => {
+      existingRow.push(chunkColumnIndex >= 0 ? chunkRow[chunkColumnIndex] : null);
+    });
+  });
+
+  return targetColumns;
+}
+
+async function loadRowsFromManifest(manifest, options = {}) {
+  const useCache = Boolean(options.useCache);
+  const writeCache = Boolean(options.writeCache);
+  const publicProgress = options.publicProgress || (() => {});
+  const progressionProgress = options.progressionProgress || (() => {});
+  const publicFile = publicDataFile(manifest);
+  const progressionFile = progressionDataFile(manifest);
+  const shouldLoadProgression = Boolean(manifest?.files?.progression?.file);
+
+  publicProgress(0);
+
+  if (!shouldLoadProgression) {
+    const publicChunk = await fetchDataFile(publicFile, {
+      useCache,
+      writeCache,
+      onProgress: publicProgress,
+    });
+    publicProgress(1);
+    return {
+      columns: publicDataColumns(manifest),
+      rows: Array.isArray(publicChunk.rows) ? publicChunk.rows : [],
+    };
+  }
+
+  progressionProgress(0);
+  const [publicChunk, progressionChunk] = await Promise.all([
+    fetchDataFile(publicFile, {
+      useCache,
+      writeCache,
+      onProgress: publicProgress,
+    }),
+    fetchDataFile(progressionFile, {
+      useCache,
+      writeCache,
+      onProgress: progressionProgress,
+    }),
+  ]);
+  const rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
+  const baseColumns = publicDataColumns(manifest);
+  const columns = mergeDataColumnsIntoRows(rows, baseColumns, progressionChunk, fullDataColumns(manifest));
+  publicProgress(1);
+  progressionProgress(1);
+
+  return { columns, rows };
+}
+
+async function loadMflData(options = {}) {
+  if (state.mflDataLoaded) {
+    return true;
+  }
+
+  if (state.mflDataLoadPromise) {
+    return state.mflDataLoadPromise;
+  }
+
+  state.mflDataLoadPromise = (async () => {
+    const message = options.message || "Loading MFL data";
+    const progressStart = options.progressStart ?? 0;
+    const progressEnd = options.progressEnd ?? 100;
+    const phaseProgress = (percent) => progressStart + ((progressEnd - progressStart) * (percent / 100));
+    const phaseRange = (start, end) => loadingRangeProgress(phaseProgress(start), phaseProgress(end), message);
+    const phaseSet = (percent, progressMessage = message) => setLoadingPercent(phaseProgress(percent), progressMessage);
+
+    phaseSet(0);
+    const manifest = await fetchDataFile("mfl_manifest.json", {
+      onProgress: phaseRange(2, 10),
+    });
+    const cacheVersionKey = `${DATA_CACHE_VERSION_KEY}:mfl`;
+    const cacheVersion = mflDataCacheVersion(manifest);
+    const useCachedChunks = localStorage.getItem(cacheVersionKey) === cacheVersion;
+
+    if (!useCachedChunks) {
+      localStorage.setItem(cacheVersionKey, cacheVersion);
+    }
+
+    const result = await loadRowsFromManifest(manifest, {
+      useCache: useCachedChunks,
+      writeCache: !useCachedChunks,
+      publicProgress: phaseRange(10, 60),
+      progressionProgress: phaseRange(10, 90),
+    });
+
+    state.mflManifest = manifest;
+    state.mflColumns = result.columns;
+    state.mflRows = result.rows;
+    state.mflDataLoaded = true;
+    phaseSet(100, "Loading complete");
+    return true;
+  })()
+    .catch((error) => {
+      const message = error.message || "Could not load MFL data.";
+      emptyState.hidden = false;
+      emptyState.textContent = message;
+      showLoadingError(message);
+      return false;
+    })
+    .finally(() => {
+      state.mflDataLoadPromise = null;
+    });
+
+  return state.mflDataLoadPromise;
+}
+
+async function ensureMflData() {
+  if (state.mflDataLoaded) {
+    return true;
+  }
+
+  showLoading();
+  const loaded = await loadMflData({ message: "Loading MFL data" });
+
+  if (loaded) {
+    await finishLoading();
+  }
+
+  return loaded;
 }
 
 async function loadPublicAndProgressionData(manifest, options = {}) {

@@ -7,6 +7,9 @@ from typing import Any
 
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
+MFL_DATABASE_PATH = Path(__file__).with_name("mfl_players.db")
+MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
+MFL_WALLET_NAME = "MFL"
 SITE_PATH = Path(__file__).with_name("site")
 SITE_DATA_PATH = SITE_PATH / "data"
 
@@ -86,7 +89,10 @@ def clean_output_folder(output_path: Path) -> None:
     for old_file in output_path.glob("players_*.json"):
         old_file.unlink()
 
-    for old_file_name in ("players_public.json", "players_progression.json", "manifest.json"):
+    for old_file in output_path.glob("mfl_players_*.json"):
+        old_file.unlink()
+
+    for old_file_name in ("players_public.json", "players_progression.json", "manifest.json", "mfl_manifest.json"):
         old_file = output_path / old_file_name
         if old_file.exists():
             old_file.unlink()
@@ -115,8 +121,10 @@ def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
         """
         SELECT wallet_address, name AS wallet_name
         FROM wallets
+        WHERE lower(wallet_address) != ?
         ORDER BY wallet_address
-        """
+        """,
+        (MFL_WALLET_ADDRESS,),
     ).fetchall()
 
     with (output_path / "wallets.json").open("w", encoding="utf-8") as file:
@@ -133,19 +141,98 @@ def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
     return len(rows)
 
 
+def table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
+    row = connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def fetch_player_rows(connection: sqlite3.Connection, where_sql: str = "", parameters: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
+    if not table_exists(connection, "players"):
+        return []
+
+    return connection.execute(
+        f"""
+        SELECT {", ".join(PLAYER_COLUMNS)}
+        FROM players
+        {where_sql}
+        ORDER BY player_id
+        """,
+        parameters,
+    ).fetchall()
+
+
+def write_manifest(output_path: Path, file_name: str, generated_at: str, total_players: int, total_wallets: int, public_file: str, progression_file: str | None) -> dict[str, Any]:
+    files: dict[str, Any] = {
+        "public": {
+            "file": public_file,
+            "rows": total_players,
+            "columns": PUBLIC_COLUMNS,
+        },
+    }
+
+    if progression_file:
+        files["progression"] = {
+            "file": progression_file,
+            "rows": total_players,
+            "columns": PROGRESSION_COLUMNS,
+        }
+
+    manifest = {
+        "generated_at": generated_at,
+        "row_count": total_players,
+        "wallet_count": total_wallets,
+        "files": files,
+    }
+
+    with (output_path / file_name).open("w", encoding="utf-8") as file:
+        json.dump(manifest, file, indent=2)
+
+    return manifest
+
+
+def export_mfl_players(output_path: Path, generated_at: str, fallback_rows: list[sqlite3.Row]) -> dict[str, Any]:
+    rows = fallback_rows
+
+    if MFL_DATABASE_PATH.exists():
+        mfl_connection = sqlite3.connect(MFL_DATABASE_PATH)
+        mfl_connection.row_factory = sqlite3.Row
+        rows = fetch_player_rows(mfl_connection)
+        mfl_connection.close()
+
+    total_players = len(rows)
+    write_player_file(output_path, "mfl_players_public.json", PUBLIC_COLUMNS, rows)
+    write_player_file(output_path, "mfl_players_progression.json", PROGRESSION_COLUMNS, rows)
+
+    return write_manifest(
+        output_path,
+        "mfl_manifest.json",
+        generated_at,
+        total_players,
+        1 if total_players else 0,
+        "mfl_players_public.json",
+        "mfl_players_progression.json",
+    )
+
+
 def export_players(output_path: Path) -> dict[str, Any]:
     clean_output_folder(output_path)
 
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
-    rows = connection.execute(
-        f"""
-        SELECT {", ".join(PLAYER_COLUMNS)}
-        FROM players
-        ORDER BY player_id
-        """
-    ).fetchall()
+    rows = fetch_player_rows(
+        connection,
+        "WHERE lower(wallet_address) != ?",
+        (MFL_WALLET_ADDRESS,),
+    )
+    mfl_fallback_rows = fetch_player_rows(
+        connection,
+        "WHERE lower(wallet_address) = ?",
+        (MFL_WALLET_ADDRESS,),
+    )
 
     total_players = len(rows)
     total_wallets = export_wallets(connection, output_path)
@@ -155,30 +242,21 @@ def export_players(output_path: Path) -> dict[str, Any]:
 
     connection.close()
 
-    manifest = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "row_count": total_players,
-        "wallet_count": total_wallets,
-        "files": {
-            "public": {
-                "file": "players_public.json",
-                "rows": total_players,
-                "columns": PUBLIC_COLUMNS,
-            },
-            "progression": {
-                "file": "players_progression.json",
-                "rows": total_players,
-                "columns": PROGRESSION_COLUMNS,
-            },
-        },
-    }
-
-    with (output_path / "manifest.json").open("w", encoding="utf-8") as file:
-        json.dump(manifest, file, indent=2)
+    generated_at = datetime.now(timezone.utc).isoformat()
+    manifest = write_manifest(
+        output_path,
+        "manifest.json",
+        generated_at,
+        total_players,
+        total_wallets,
+        "players_public.json",
+        "players_progression.json",
+    )
+    mfl_manifest = export_mfl_players(output_path, generated_at, mfl_fallback_rows)
 
     public_summary = {
-        "playerCount": total_players,
-        "walletCount": total_wallets,
+        "playerCount": total_players + mfl_manifest["row_count"],
+        "walletCount": total_wallets + (1 if mfl_manifest["row_count"] else 0),
         "generatedAt": manifest["generated_at"],
     }
 
@@ -201,7 +279,7 @@ def main() -> int:
     started_at = time.monotonic()
 
     manifest = export_players(SITE_DATA_PATH)
-    print(f"Website export complete: {manifest['row_count']} players in 2 files.")
+    print(f"Website export complete: {manifest['row_count']} main players plus separate MFL files.")
     print(f"Output folder: {SITE_DATA_PATH}")
     print(f"Total time: {format_duration(time.monotonic() - started_at)}")
     return 0
