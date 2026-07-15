@@ -313,6 +313,10 @@ const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 const playerPage = document.querySelector("#playerPage");
 const evaluationPage = document.querySelector("#evaluationPage");
 const playerDetail = document.querySelector("#playerDetail");
+const settingsPage = document.querySelector("#settingsPage");
+const settingsAgentName = document.querySelector("#settingsAgentName");
+const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
+const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
 const brandLinks = document.querySelectorAll(".brandLink");
@@ -325,6 +329,7 @@ const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
 const accountDropdown = document.querySelector("#accountDropdown");
 const accountEmail = document.querySelector("#accountEmail");
+const accountSettingsButton = document.querySelector("#accountSettingsButton");
 const linkWalletButton = document.querySelector("#linkWalletButton");
 const homeOptInButton = document.querySelector("#homeOptInButton");
 const themeButton = document.querySelector("#themeButton");
@@ -605,7 +610,7 @@ function hasWalletOptIn() {
 }
 
 function pageRequiresData(pageName) {
-  if ((pageName === "myplayers" || pageName === "watchlist") && !hasWalletOptIn()) {
+  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
     return false;
   }
 
@@ -1194,6 +1199,9 @@ function updateAccountState() {
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
   linkWalletButton.title = walletLinked ? "Opt out of Dapper wallet access" : "Opt in with Dapper";
+  if (accountSettingsButton) {
+    accountSettingsButton.hidden = !walletLinked;
+  }
   updateEvaluationFooterActions();
   if (evaluationLoadButton) {
     evaluationLoadButton.hidden = Boolean(state.evaluationPlayerId) || !walletLinked;
@@ -1242,7 +1250,7 @@ function optOutWallet() {
     return;
   }
 
-  if (state.currentPage === "myplayers") {
+  if (state.currentPage === "myplayers" || state.currentPage === "settings") {
     setPage(state.currentPage, false);
     return;
   }
@@ -2424,7 +2432,7 @@ function pageTargetFromPath(path) {
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "database", "progression", "evaluation", "watchlist", "myplayers", "settings", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -2542,21 +2550,24 @@ async function setPage(pageName, updateHash = true, options = {}) {
     return showUnauthorizedProgressionRedirect();
   }
 
-  if ((pageName === "myplayers" || pageName === "watchlist") && !hasWalletOptIn()) {
+  if ((pageName === "myplayers" || pageName === "watchlist" || pageName === "settings") && !hasWalletOptIn()) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
     myPlayersLockedPage.hidden = false;
     evaluationPage.hidden = true;
     playerPage.hidden = true;
+    settingsPage.hidden = true;
     changelogPage.hidden = true;
     if (optInLockedTitle) {
-      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : "My Players";
+      optInLockedTitle.textContent = pageName === "watchlist" ? "Watchlist" : pageName === "settings" ? "Settings" : "My Players";
     }
     if (optInLockedMessage) {
       optInLockedMessage.textContent = pageName === "watchlist"
         ? "In order to use the watchlist, you need to opt in."
-        : "In order to see your players, you need to opt in.";
+        : pageName === "settings"
+          ? "In order to view settings, you need to opt in."
+          : "In order to see your players, you need to opt in.";
     }
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === pageName);
@@ -2580,6 +2591,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
+  const settingsPageActive = pageName === "settings";
   const targetDataAccess = currentDataAccess(pageName);
 
   if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && pageRequiresData(pageName)) {
@@ -2602,6 +2614,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
+    settingsPage.hidden = true;
     changelogPage.hidden = true;
 
     if (tablePage) {
@@ -2632,6 +2645,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
+  settingsPage.hidden = !settingsPageActive;
   changelogPage.hidden = pageName !== "changelog";
   tablePageTitle.textContent = pageName === "watchlist" ? `Watchlist - ${currentWatchlistName()}` : pageName === "myplayers" ? "My Players" : pageName === "database" ? "Database" : "Progression";
   renderWatchlistSwitcher();
@@ -2649,6 +2663,20 @@ async function setPage(pageName, updateHash = true, options = {}) {
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
+
+  if (settingsPageActive) {
+    renderSettingsPage();
+    if (document.body.classList.contains("loading")) {
+      await finishLoading();
+    }
+
+    syncHomeLoginButton();
+    if (shouldResetScroll) {
+      resetPageScroll();
+    }
+
+    return;
+  }
 
   if (evaluationPageActive) {
     if (options.plain) {
@@ -3258,6 +3286,45 @@ function ensureDefaultWatchlist() {
   return activeWatchlist();
 }
 
+function renderSettingsPage() {
+  if (!settingsPage) {
+    return;
+  }
+
+  const walletAddress = normalizeWalletAddress(state.linkedWalletAddress || "");
+  if (settingsAgentName) {
+    settingsAgentName.textContent = accountName();
+  }
+  if (settingsWalletAddress) {
+    settingsWalletAddress.textContent = walletAddress || "-";
+    settingsWalletAddress.title = walletAddress || "";
+  }
+  if (!settingsEmailOptions) {
+    return;
+  }
+
+  settingsEmailOptions.replaceChildren();
+  const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+  const options = [
+    { id: "myplayers", label: "My Players progression" },
+    ...watchlists.map((watchlist) => ({
+      id: `watchlist-${watchlist.id}`,
+      label: `Watchlist ${watchlist.name} progression`,
+    })),
+  ];
+
+  options.forEach((option) => {
+    const label = document.createElement("label");
+    label.className = "settingsCheckbox";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.settingsEmailOption = option.id;
+    const span = document.createElement("span");
+    span.textContent = option.label;
+    label.append(input, span);
+    settingsEmailOptions.appendChild(label);
+  });
+}
 function currentWatchlistName() {
   return activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
 }
@@ -8856,6 +8923,13 @@ accountButton.addEventListener("click", (event) => {
   toggleAccountMenu();
 });
 linkWalletButton.addEventListener("click", linkWallet);
+if (accountSettingsButton) {
+  accountSettingsButton.addEventListener("click", () => {
+    accountDropdown.hidden = true;
+    accountButton.setAttribute("aria-expanded", "false");
+    setPage("settings");
+  });
+}
 if (homeOptInButton) {
   homeOptInButton.addEventListener("click", linkWallet);
 }

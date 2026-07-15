@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.144.18">
+    <link rel="stylesheet" href="/styles.css?v=1.145.0">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -52,6 +52,7 @@
           <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
           <div id="accountDropdown" class="accountDropdown" hidden>
             <div id="accountEmail" class="accountDropdownItem">Guest</div>
+            <button id="accountSettingsButton" class="accountDropdownItem accountSettingsButton" type="button" hidden>Settings</button>
             <button id="linkWalletButton" class="accountDropdownItem" type="button">Opt In</button>
           </div>
         </div>
@@ -67,6 +68,7 @@
           <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span class="navText">Evaluation</span></a>
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
           <a class="navButton" href="/my-players" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
+          <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2.8v2.1"></path><path d="M12 19.1v2.1"></path><path d="M4.2 4.2l1.5 1.5"></path><path d="M18.3 18.3l1.5 1.5"></path><path d="M2.8 12h2.1"></path><path d="M19.1 12h2.1"></path><path d="M4.2 19.8l1.5-1.5"></path><path d="M18.3 5.7l1.5-1.5"></path></svg><span class="navText">Settings</span></a>
         </aside>
       </div>
 
@@ -290,10 +292,30 @@
           <div id="playerDetail" class="playerDetail"></div>
         </section>
 
+        <section id="settingsPage" class="pageView settingsPage" hidden>
+          <h2 class="tablePageTitle">Settings</h2>
+          <section class="settingsPanel" aria-label="Settings">
+            <section class="settingsIdentity" aria-label="Linked agent">
+              <div>
+                <span>Agent</span>
+                <strong id="settingsAgentName">-</strong>
+              </div>
+              <div>
+                <span>Wallet Address</span>
+                <strong id="settingsWalletAddress">-</strong>
+              </div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailTitle">
+              <h3 id="settingsEmailTitle">Receive emails for</h3>
+              <div id="settingsEmailOptions" class="settingsEmailOptions"></div>
+            </section>
+          </section>
+        </section>
         <section id="changelogPage" class="pageView changelogPage" hidden>
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.145.0</span><p>Add opted-in Settings page and shortcuts</p></li>
               <li><span>v1.144.18</span><p>Align player table ID values</p></li>
               <li><span>v1.144.17</span><p>Align player table row contents</p></li>
               <li><span>v1.144.16</span><p>Stabilize player table hover after refresh</p></li>
@@ -753,7 +775,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.144.18</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.145.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -922,6 +944,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.144.18"></script>
+    <script src="/app.js?v=1.145.0"></script>
   </body>
 </html>
