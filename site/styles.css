@@ -308,27 +308,23 @@ p {
 }
 
 #linkWalletButton:not(:disabled) {
-  border-color: #2fbf62;
-  background: #2fbf62;
-  color: #ffffff;
+  background: transparent;
+  color: #2fbf62;
 }
 
 #linkWalletButton:hover:not(:disabled) {
-  border-color: #249b50;
-  background: #249b50;
-  color: #ffffff;
+  background: var(--row-hover);
+  color: #249b50;
 }
 
 #linkWalletButton.walletOptOut {
-  border-color: #d84b4b;
-  background: #d84b4b;
-  color: #ffffff;
+  background: transparent;
+  color: #d84b4b;
 }
 
 #linkWalletButton.walletOptOut:hover {
-  border-color: #b93a3a;
-  background: #b93a3a;
-  color: #ffffff;
+  background: var(--row-hover);
+  color: #ff6b6b;
 }
 .accountDropdownItem + .accountDropdownItem {
   margin-top: 2px;
@@ -782,7 +778,7 @@ body[data-page="home"] .topbar .stats {
 .navSettingsIcon {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.2;
+  stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -4650,7 +4646,8 @@ td a {
 }
 
 .settingsPage {
-  max-width: 780px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
 }
 
 .settingsPanel {
