@@ -16,6 +16,7 @@ create table if not exists public.wallet_preferences (
   player_notes jsonb not null default '{}'::jsonb,
   table_state jsonb not null default '{}'::jsonb,
   evaluation_settings jsonb not null default '{}'::jsonb,
+  settings jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
@@ -27,6 +28,7 @@ alter table public.wallet_preferences add column if not exists player_notes json
 alter table public.wallet_preferences add column if not exists table_state jsonb not null default '{}'::jsonb;
 update public.wallet_preferences set table_state = coalesce(table_state, '{}'::jsonb) - 'watchlistPlayerIds' - 'watchlists' - 'currentWatchlistId';
 alter table public.wallet_preferences add column if not exists evaluation_settings jsonb not null default '{}'::jsonb;
+alter table public.wallet_preferences add column if not exists settings jsonb not null default '{}'::jsonb;
 
 
 

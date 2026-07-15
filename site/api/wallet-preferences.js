@@ -130,7 +130,7 @@ async function supabaseRequest(pathname, options = {}) {
 }
 
 function emptyPreferences() {
-  return { watchlists: [], playerNotes: {}, tableState: null, evaluationSettings: null };
+  return { watchlists: [], playerNotes: {}, tableState: null, evaluationSettings: null, settings: null };
 }
 
 function normalizePlayerNotes(notes) {
@@ -216,6 +216,20 @@ function normalizeLateSeasonRewardRates(value) {
   });
 }
 
+function normalizeSettings(settings) {
+  const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
+  const values = Array.isArray(data?.receiveEmailsFor) ? data.receiveEmailsFor : [];
+  const receiveEmailsFor = [];
+
+  values.forEach((value) => {
+    const key = String(value || "").trim();
+    if ((key === "myplayers" || /^watchlist-[a-zA-Z0-9_-]{1,40}$/.test(key)) && !receiveEmailsFor.includes(key)) {
+      receiveEmailsFor.push(key);
+    }
+  });
+
+  return { receiveEmailsFor };
+}
 function normalizeEvaluationSettings(settings) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
 
@@ -278,6 +292,7 @@ function preferencesFromRow(row) {
     playerNotes: normalizePlayerNotes(row.player_notes),
     tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? stripWatchlistStateFromTableState(row.table_state) : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
+    settings: normalizeSettings(row.settings),
   };
 }
 
@@ -286,7 +301,7 @@ async function readPreferences(wallet) {
     return emptyPreferences();
   }
 
-  const rows = await supabaseRequest(`wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
+  const rows = await supabaseRequest(`wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings&wallet_address=eq.${encodeURIComponent(wallet)}&limit=1`);
   return preferencesFromRow(Array.isArray(rows) ? rows[0] : null);
 }
 
@@ -306,7 +321,11 @@ async function writePreferences(wallet, preferences) {
     ? normalizeEvaluationSettings(preferences.evaluationSettings)
     : currentPreferences.evaluationSettings;
 
-  const nextPreferences = { watchlists, playerNotes, tableState, evaluationSettings };
+  const settings = preferences.settings
+    ? normalizeSettings(preferences.settings)
+    : currentPreferences.settings;
+
+  const nextPreferences = { watchlists, playerNotes, tableState, evaluationSettings, settings };
   if (!supabaseConfig()) {
     return nextPreferences;
   }
@@ -322,6 +341,7 @@ async function writePreferences(wallet, preferences) {
       player_notes: playerNotes,
       table_state: tableState || {},
       evaluation_settings: evaluationSettings || {},
+          settings: settings || {},
     }]),
   });
 

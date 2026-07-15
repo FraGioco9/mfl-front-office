@@ -31,6 +31,7 @@ const state = {
   pendingAddWatchlistContext: "",
   pendingPostLoadingToast: "",
   playerNotes: {},
+    settingsReceiveEmailsFor: [],
   tablePageStates: {},
   toastTimer: null,
   menuAnimationTimer: null,
@@ -3286,6 +3287,41 @@ function ensureDefaultWatchlist() {
   return activeWatchlist();
 }
 
+function normalizeSettingsReceiveEmailsFor(values) {
+  const normalized = [];
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const key = String(value || "").trim();
+    if ((key === "myplayers" || /^watchlist-[a-zA-Z0-9_-]{1,40}$/.test(key)) && !normalized.includes(key)) {
+      normalized.push(key);
+    }
+  });
+  return normalized;
+}
+
+function applySettingsPayload(settings = {}) {
+  const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
+  if (state.currentPage === "settings") {
+    renderSettingsPage();
+  }
+}
+
+function currentSettingsPayload() {
+  return {
+    receiveEmailsFor: normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor),
+  };
+}
+
+function updateSettingsEmailOption(optionId, checked) {
+  const nextOptions = new Set(normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor));
+  if (checked) {
+    nextOptions.add(optionId);
+  } else {
+    nextOptions.delete(optionId);
+  }
+  state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(Array.from(nextOptions));
+  queueCloudTableStateSave();
+}
 function renderSettingsPage() {
   if (!settingsPage) {
     return;
@@ -3318,7 +3354,9 @@ function renderSettingsPage() {
     label.className = "settingsCheckbox";
     const input = document.createElement("input");
     input.type = "checkbox";
+        input.checked = state.settingsReceiveEmailsFor.includes(option.id);
     input.dataset.settingsEmailOption = option.id;
+    input.addEventListener("change", () => updateSettingsEmailOption(option.id, input.checked));
     const span = document.createElement("span");
     span.textContent = option.label;
     label.append(input, span);
@@ -4210,6 +4248,9 @@ async function loadWalletPreferences(options = {}) {
       }
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
+      if (data.settings) {
+        applySettingsPayload(data.settings);
+      }
       if (data.evaluationSettings) {
         applyEvaluationSettingsPayload(data.evaluationSettings);
         saveEvaluationSettingsLocally();
@@ -4256,6 +4297,7 @@ async function saveWalletPreferencesNow() {
       watchlists: watchlistsPayload(),
       tableState: stripPersistentSortState(currentTableState()),
       evaluationSettings: currentEvaluationSettingsPayload(),
+          settings: currentSettingsPayload(),
     };
 
     const response = await fetch("/api/wallet-preferences", {

@@ -37,6 +37,10 @@
       "destination": "/"
     },
     {
+      "source": "/settings",
+      "destination": "/"
+    },
+    {
       "source": "/changelog",
       "destination": "/"
     },
