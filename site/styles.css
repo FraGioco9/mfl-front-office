@@ -2162,11 +2162,7 @@ td.col-id {
 
 td.col-id {
   position: relative;
-  z-index: 2;
-}
-
-td.col-id:hover {
-  z-index: 90;
+  z-index: 4;
 }
 
 .flagCell {
@@ -4624,6 +4620,30 @@ td a {
 }
 
 
+
+/* v1.145.3 */
+#tableBody tr {
+  isolation: isolate;
+}
+
+
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover,
+#tableBody tr:hover button:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+#tableBody .copyPlayerIdButton[data-tooltip]::after {
+  transform: translate(-50%, 0) !important;
+  transition: opacity 80ms linear !important;
+}
+
+#tableBody .copyPlayerIdButton[data-tooltip]:hover::after,
+#tableBody .copyPlayerIdButton[data-tooltip]:focus::after {
+  transform: translate(-50%, 0) !important;
+}
 
 /* v1.144.16 */
 #tableBody tr,
