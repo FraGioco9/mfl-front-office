@@ -6984,7 +6984,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
     }
     const isSorted = state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === agentColumn && ["myplayers", "agents"].includes(state.currentPage) ? "" : columnLabels[column];
+    label.textContent = column === agentColumn && ["myplayers", "agents", "mfl"].includes(state.currentPage) ? "" : columnLabels[column];
     cell.appendChild(label);
 
     if (sortableColumns.has(column)) {
@@ -7943,7 +7943,7 @@ function renderTable() {
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
       } else if (column === agentColumn) {
-        if (!["myplayers", "agents"].includes(state.currentPage)) {
+        if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
           const walletAddress = getValue(row, "wallet_address");
           const agentLabel = formatCellValue(row, column);
           const link = document.createElement("a");
