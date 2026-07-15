@@ -2335,8 +2335,12 @@ td a {
   left: 50%;
   bottom: calc(100% + 10px);
   z-index: 80;
+  display: flex;
+  align-items: center;
   width: max-content;
   max-width: 320px;
+  min-height: 34px;
+  box-sizing: border-box;
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
@@ -2931,7 +2935,11 @@ td a {
   bottom: calc(100% + 10px);
   z-index: 80;
   width: max-content;
+  display: flex;
+  align-items: center;
   max-width: 320px;
+  min-height: 34px;
+  box-sizing: border-box;
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
