@@ -10,6 +10,7 @@ DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 MFL_DATABASE_PATH = Path(__file__).with_name("mfl_players.db")
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 MFL_WALLET_NAME = "MFL"
+MFL_AGENT_NAME = MFL_WALLET_NAME.lower()
 SITE_PATH = Path(__file__).with_name("site")
 SITE_DATA_PATH = SITE_PATH / "data"
 
@@ -121,10 +122,10 @@ def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
         """
         SELECT wallet_address, name AS wallet_name
         FROM wallets
-        WHERE lower(wallet_address) != ?
+        WHERE lower(trim(name)) != ?
         ORDER BY wallet_address
         """,
-        (MFL_WALLET_ADDRESS,),
+        (MFL_AGENT_NAME,),
     ).fetchall()
 
     with (output_path / "wallets.json").open("w", encoding="utf-8") as file:
@@ -225,13 +226,13 @@ def export_players(output_path: Path) -> dict[str, Any]:
 
     rows = fetch_player_rows(
         connection,
-        "WHERE lower(wallet_address) != ?",
-        (MFL_WALLET_ADDRESS,),
+        "WHERE lower(trim(wallet_name)) != ?",
+        (MFL_AGENT_NAME,),
     )
     mfl_fallback_rows = fetch_player_rows(
         connection,
-        "WHERE lower(wallet_address) = ?",
-        (MFL_WALLET_ADDRESS,),
+        "WHERE lower(trim(wallet_name)) = ?",
+        (MFL_AGENT_NAME,),
     )
 
     total_players = len(rows)

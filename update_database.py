@@ -21,6 +21,7 @@ PLAYERS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/p
 PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players/progressions"
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 MFL_WALLET_NAME = "MFL"
+MFL_AGENT_NAME = MFL_WALLET_NAME.lower()
 API_LIMIT = 1500
 MFL_API_LIMIT = 1500
 PROGRESSION_BATCH_SIZE = 1000
@@ -1097,16 +1098,16 @@ def move_mfl_rows_to_separate_database(connection: sqlite3.Connection) -> int:
         """
         SELECT *
         FROM players
-        WHERE lower(wallet_address) = ?
+        WHERE lower(trim(wallet_name)) = ?
         ORDER BY player_id
         """,
-        (MFL_WALLET_ADDRESS,),
+        (MFL_AGENT_NAME,),
     )
     rows = cursor.fetchall()
     columns = [description[0] for description in cursor.description or []]
 
     if not rows:
-        connection.execute("DELETE FROM wallets WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
+        connection.execute("DELETE FROM wallets WHERE lower(trim(name)) = ?", (MFL_AGENT_NAME,))
         connection.commit()
         return 0
 
@@ -1126,8 +1127,8 @@ def move_mfl_rows_to_separate_database(connection: sqlite3.Connection) -> int:
         )
         mfl_connection.commit()
 
-    connection.execute("DELETE FROM players WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
-    connection.execute("DELETE FROM wallets WHERE lower(wallet_address) = ?", (MFL_WALLET_ADDRESS,))
+    connection.execute("DELETE FROM players WHERE lower(trim(wallet_name)) = ?", (MFL_AGENT_NAME,))
+    connection.execute("DELETE FROM wallets WHERE lower(trim(name)) = ?", (MFL_AGENT_NAME,))
     connection.commit()
     return len(rows)
 

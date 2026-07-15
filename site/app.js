@@ -7746,8 +7746,8 @@ function rowIsOwnedByLinkedWallet(row) {
   return Boolean(walletAddress && linkedWalletAddressesForOwnedPlayers().has(walletAddress));
 }
 
-function rowIsMflWalletPlayer(row) {
-  return normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === mflWalletAddress;
+function rowIsMflAgentPlayer(row) {
+  return normalizedAgentName(getValue(row, "wallet_name")).toLowerCase() === "mfl";
 }
 
 function syncQuickFilterLabels() {
@@ -7779,7 +7779,7 @@ function applyFilters(options = {}) {
     const agentWalletAddress = normalizeWalletAddress(state.currentAgentWalletAddress).toLowerCase();
     sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress);
   } else if (state.currentPage === "progression") {
-    sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row));
+    sourceRows = state.rows.filter((row) => !rowIsMflAgentPlayer(row));
   }
 
   emptyState.textContent = state.currentPage === "watchlist"
