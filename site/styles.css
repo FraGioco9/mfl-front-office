@@ -2160,8 +2160,10 @@ th.sortable:hover {
   border-top: 6px solid var(--text);
 }
 
-tbody tr:hover {
+#tableBody tr:hover > td,
+#tableBody tr:hover > th {
   background: var(--row-hover);
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
 }
 
 .selectionCell {
@@ -4565,46 +4567,22 @@ td a {
 
 
 
-/* v1.144.11 */
-body[data-page="database"] #tableBody tr,
-body[data-page="database"] #tableBody tr *,
-body[data-page="database"] #tableBody td,
-body[data-page="database"] #tableBody td *,
-body[data-page="progression"] #tableBody tr,
-body[data-page="progression"] #tableBody tr *,
-body[data-page="progression"] #tableBody td,
-body[data-page="progression"] #tableBody td *,
-body[data-page="watchlist"] #tableBody tr,
-body[data-page="watchlist"] #tableBody tr *,
-body[data-page="watchlist"] #tableBody td,
-body[data-page="watchlist"] #tableBody td *,
-body[data-page="myplayers"] #tableBody tr,
-body[data-page="myplayers"] #tableBody tr *,
-body[data-page="myplayers"] #tableBody td,
-body[data-page="myplayers"] #tableBody td * {
+/* v1.144.16 */
+#tableBody tr,
+#tableBody tr *,
+#tableBody td,
+#tableBody td * {
   transition: none !important;
   animation: none !important;
 }
 
-body[data-page="database"] #tableBody tr:hover > td,
-body[data-page="database"] #tableBody tr:hover > th,
-body[data-page="progression"] #tableBody tr:hover > td,
-body[data-page="progression"] #tableBody tr:hover > th,
-body[data-page="watchlist"] #tableBody tr:hover > td,
-body[data-page="watchlist"] #tableBody tr:hover > th,
-body[data-page="myplayers"] #tableBody tr:hover > td,
-body[data-page="myplayers"] #tableBody tr:hover > th {
+#tableBody tr:hover > td,
+#tableBody tr:hover > th {
   background: var(--row-hover) !important;
   background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
-body[data-page="database"] #tableBody tr:hover .playerNameLink:hover,
-body[data-page="database"] #tableBody tr:hover a:hover,
-body[data-page="progression"] #tableBody tr:hover .playerNameLink:hover,
-body[data-page="progression"] #tableBody tr:hover a:hover,
-body[data-page="watchlist"] #tableBody tr:hover .playerNameLink:hover,
-body[data-page="watchlist"] #tableBody tr:hover a:hover,
-body[data-page="myplayers"] #tableBody tr:hover .playerNameLink:hover,
-body[data-page="myplayers"] #tableBody tr:hover a:hover {
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover {
   transition: none !important;
 }
