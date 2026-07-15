@@ -22,6 +22,7 @@ MAX_FLOW_REQUEST_RETRIES = 3
 FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit",)
 FLOW_RETRY_DELAY_SECONDS = 90.0
+FLOW_STATIC_PLAYER_BATCH_SIZE = 25
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -48,7 +49,7 @@ access(all) struct FlowStaticPlayer {
     }
 }
 
-access(all) fun main(address: Address): [FlowStaticPlayer] {
+access(all) fun main(address: Address, offset: Int, limit: Int): [FlowStaticPlayer] {
     let account = getAccount(address)
     let collection = account.capabilities.borrow<&{NonFungibleToken.CollectionPublic, ViewResolver.ResolverCollection}>(MFLPlayer.CollectionPublicPath)
 
@@ -56,14 +57,27 @@ access(all) fun main(address: Address): [FlowStaticPlayer] {
         return []
     }
 
+    if limit <= 0 {
+        return []
+    }
+
     let ids = collection!.getIDs()
     let results: [FlowStaticPlayer] = []
+    var index = 0
 
     for id in ids {
-        if let resolver = collection!.borrowViewResolver(id: id) {
-            if let view = resolver.resolveView(Type<MFLViews.PlayerDataViewV1>()) as? MFLViews.PlayerDataViewV1 {
-                results.append(FlowStaticPlayer(view: view))
+        if index >= offset && results.length < limit {
+            if let resolver = collection!.borrowViewResolver(id: id) {
+                if let view = resolver.resolveView(Type<MFLViews.PlayerDataViewV1>()) as? MFLViews.PlayerDataViewV1 {
+                    results.append(FlowStaticPlayer(view: view))
+                }
             }
+        }
+
+        index = index + 1
+
+        if results.length >= limit {
+            break
         }
     }
 
@@ -162,7 +176,7 @@ def wait_for_flow_rate_limit() -> None:
         time.sleep(max(sleep_seconds, 0.01))
 
 
-def execute_flow_script(wallet_address: str) -> dict[str, Any]:
+def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_STATIC_PLAYER_BATCH_SIZE) -> dict[str, Any]:
     body = json.dumps(
         {
             "script": base64.b64encode(CADENCE_SCRIPT.encode("utf-8")).decode("utf-8"),
@@ -172,7 +186,19 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
                         "type": "Address",
                         "value": wallet_address,
                     }
-                )
+                ),
+                encode_cadence_argument(
+                    {
+                        "type": "Int",
+                        "value": str(offset),
+                    }
+                ),
+                encode_cadence_argument(
+                    {
+                        "type": "Int",
+                        "value": str(limit),
+                    }
+                ),
             ],
         }
     ).encode("utf-8")
@@ -198,14 +224,14 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
             error_body = error.read().decode("utf-8", errors="replace")
 
             retryable_error_body = any(marker in error_body.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
-            if (error.code not in FLOW_RETRY_STATUS_CODES and not retryable_error_body) or attempt == MAX_FLOW_REQUEST_RETRIES:
+            if retryable_error_body:
                 raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
 
-            reason = f"Flow API returned {error.code}"
-            if retryable_error_body:
-                reason += " with a retryable computation-limit error"
+            if error.code not in FLOW_RETRY_STATUS_CODES or attempt == MAX_FLOW_REQUEST_RETRIES:
+                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
+
             print(
-                f"{reason}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
+                f"Flow API returned {error.code}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
                 f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
@@ -223,6 +249,11 @@ def execute_flow_script(wallet_address: str) -> dict[str, Any]:
 
     decoded_response = base64.b64decode(encoded_response).decode("utf-8")
     return json.loads(decoded_response)
+
+
+def is_flow_computation_limit_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return any(marker in message for marker in FLOW_RETRY_ERROR_MARKERS)
 
 
 def cadence_value(value: dict[str, Any]) -> Any:
@@ -254,14 +285,39 @@ def cadence_struct_to_dict(struct_value: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
-    response = execute_flow_script(wallet_address)
-
+def parse_flow_static_player_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     if response["type"] != "Array":
         raise RuntimeError(f"Expected Flow script to return an array, got {response['type']}")
 
     return [cadence_struct_to_dict(item) for item in response["value"]]
 
+
+def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
+    players: list[dict[str, Any]] = []
+    offset = 0
+    batch_size = FLOW_STATIC_PLAYER_BATCH_SIZE
+
+    while True:
+        try:
+            response = execute_flow_script(wallet_address, offset, batch_size)
+        except RuntimeError as error:
+            if is_flow_computation_limit_error(error) and batch_size > 1:
+                next_batch_size = max(1, batch_size // 2)
+                print(
+                    f"{wallet_address}: Flow batch offset {offset} size {batch_size} exceeded computation limit; "
+                    f"retrying with size {next_batch_size}"
+                )
+                batch_size = next_batch_size
+                continue
+            raise
+
+        batch_players = parse_flow_static_player_response(response)
+        players.extend(batch_players)
+
+        if len(batch_players) < batch_size:
+            return players
+
+        offset += batch_size
 
 def update_flow_static_fields(
     connection: sqlite3.Connection,
