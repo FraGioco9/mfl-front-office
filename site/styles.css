@@ -2122,6 +2122,8 @@ td {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
+  height: 38px;
+  line-height: 1;
   vertical-align: middle;
 }
 
