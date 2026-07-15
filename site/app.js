@@ -241,6 +241,7 @@ const MAX_WATCHLISTS = 5;
 const MAX_WATCHLIST_PLAYERS = 250;
 const DEFAULT_WATCHLIST_NAME = "Default";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
+const WALLET_PENDING_SETTINGS_STORAGE_PREFIX = "mfl-wallet-pending-settings-v1:";
 const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
 const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
 const PLAYER_NOTE_MAX_LENGTH = 200;
@@ -3389,6 +3390,51 @@ function currentSettingsPayload() {
   };
 }
 
+function pendingSettingsStorageKey(walletAddress = state.linkedWalletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress || "").toLowerCase();
+  return normalizedWalletAddress ? `${WALLET_PENDING_SETTINGS_STORAGE_PREFIX}${normalizedWalletAddress}` : "";
+}
+
+function savePendingSettingsLocally(settings = currentSettingsPayload()) {
+  const key = pendingSettingsStorageKey();
+  if (!key) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(settings));
+  } catch {
+    // Settings still save to Supabase when storage is unavailable.
+  }
+}
+
+function loadPendingSettingsLocally() {
+  const key = pendingSettingsStorageKey();
+  if (!key) {
+    return null;
+  }
+
+  try {
+    const settings = JSON.parse(localStorage.getItem(key) || "null");
+    return settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingSettingsLocally() {
+  const key = pendingSettingsStorageKey();
+  if (!key) {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Nothing to clear if storage is unavailable.
+  }
+}
+
 function updateSettingsEmailOption(optionId, checked) {
   const nextOptions = new Set(normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor));
   if (checked) {
@@ -3397,6 +3443,7 @@ function updateSettingsEmailOption(optionId, checked) {
     nextOptions.delete(optionId);
   }
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(Array.from(nextOptions));
+  savePendingSettingsLocally();
   saveSettingsPreferencesAfterChange();
 }
 
@@ -4338,6 +4385,11 @@ async function loadWalletPreferences(options = {}) {
       if (data.settings) {
         applySettingsPayload(data.settings);
       }
+      const pendingSettings = loadPendingSettingsLocally();
+      if (pendingSettings) {
+        applySettingsPayload(pendingSettings);
+        void saveWalletPreferencesNow({ refreshAfterSave: true });
+      }
       if (data.evaluationSettings) {
         applyEvaluationSettingsPayload(data.evaluationSettings);
         saveEvaluationSettingsLocally();
@@ -4412,6 +4464,7 @@ async function saveWalletPreferencesNow(options = {}) {
       if (data.settings) {
         applySettingsPayload(data.settings);
       }
+      clearPendingSettingsLocally();
 
       if (watchlistChanged) {
         if (state.currentPage === "watchlist") {
@@ -4479,7 +4532,7 @@ function currentTablePageState() {
   return {
     hideRetired: hideRetiredInput.checked,
     hideRetiring: hideRetiringInput.checked,
-    mflPackable: Boolean(packablePlayersInput?.checked),
+    ...(pageKey === "mfl" ? { mflPackable: Boolean(packablePlayersInput?.checked) } : {}),
     newMints: newMintsInput.checked,
     pageSize: state.pageSize,
     view: state.view,
@@ -4531,6 +4584,9 @@ function stripPersistentSortState(savedState) {
       delete sanitizedPageState.sortKey;
       delete sanitizedPageState.sortDirection;
       delete sanitizedPageState.viewSortStates;
+      if (pageName !== "mfl") {
+        delete sanitizedPageState.mflPackable;
+      }
       return [pageName, sanitizedPageState];
     }));
   }
@@ -7425,9 +7481,9 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
   if (packablePlayersInput) {
-    packablePlayersInput.checked = savedState.mflPackable !== undefined
-      ? Boolean(savedState.mflPackable)
-      : pageName === "mfl";
+    packablePlayersInput.checked = pageName === "mfl"
+      ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
+      : false;
   }
   newMintsInput.checked = Boolean(savedState.newMints);
   if (pageName === "mfl" && newMintsInput.checked && packablePlayersInput) {
