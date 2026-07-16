@@ -23,7 +23,7 @@ FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit", "max interaction with storage has exceeded the limit")
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
-FLOW_STATIC_PLAYER_BATCH_SIZE = 25
+FLOW_STATIC_PLAYER_BATCH_SIZE = 50
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -597,13 +597,7 @@ def populate_flow_static_fields(
 ) -> int:
     ensure_flow_static_columns(connection)
     wallets = get_wallets_to_process(connection, limit, wallet_address, force, include_mfl_wallet)
-    normalized_requested_wallet = wallet_address.lower() if wallet_address else None
-    should_process_mfl = include_mfl_wallet and (
-        normalized_requested_wallet is None or normalized_requested_wallet == MFL_WALLET_ADDRESS
-    )
-    normal_wallets = [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
-    mfl_player_ids = get_mfl_player_ids_to_process(connection, force) if should_process_mfl else []
-    total_jobs = len(normal_wallets) + (1 if mfl_player_ids else 0)
+    total_jobs = len(wallets)
     total_updated = 0
 
     if total_jobs == 0:
@@ -613,10 +607,8 @@ def populate_flow_static_fields(
         with ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_wallet = {
                 executor.submit(fetch_wallet_flow_static_players, current_wallet_address): current_wallet_address
-                for current_wallet_address in normal_wallets
+                for current_wallet_address in wallets
             }
-            if mfl_player_ids:
-                future_to_wallet[executor.submit(fetch_mfl_flow_static_players_by_ids, mfl_player_ids)] = MFL_WALLET_ADDRESS
 
             for index, future in enumerate(as_completed(future_to_wallet), start=1):
                 current_wallet_address = future_to_wallet[future]
@@ -637,7 +629,7 @@ def populate_flow_static_fields(
 
         return total_updated
 
-    for index, current_wallet_address in enumerate(normal_wallets, start=1):
+    for index, current_wallet_address in enumerate(wallets, start=1):
         players = fetch_wallet_flow_static_players(current_wallet_address)
 
         updated_count = update_flow_static_fields(connection, players, force)
@@ -655,21 +647,6 @@ def populate_flow_static_fields(
 
         if SLEEP_SECONDS_BETWEEN_WALLETS > 0:
             time.sleep(SLEEP_SECONDS_BETWEEN_WALLETS)
-
-    if mfl_player_ids:
-        players = fetch_mfl_flow_static_players_by_ids(mfl_player_ids)
-        updated_count = update_flow_static_fields(connection, players, force)
-        connection.commit()
-
-        total_updated += updated_count
-        print_flow_wallet_status(
-            connection,
-            len(normal_wallets) + 1,
-            total_jobs,
-            MFL_WALLET_ADDRESS,
-            players,
-            updated_count,
-        )
 
     return total_updated
 
