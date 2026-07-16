@@ -423,10 +423,14 @@ def parse_flow_static_player_response(response: dict[str, Any]) -> list[dict[str
     return [cadence_struct_to_dict(item) for item in response["value"]]
 
 
+def flow_batch_size_for_wallet(wallet_address: str) -> int:
+    return MFL_FLOW_STATIC_PLAYER_BATCH_SIZE if wallet_address.lower() == MFL_WALLET_ADDRESS else FLOW_STATIC_PLAYER_BATCH_SIZE
+
+
 def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     offset = 0
-    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE if wallet_address.lower() == MFL_WALLET_ADDRESS else FLOW_STATIC_PLAYER_BATCH_SIZE
+    batch_size = flow_batch_size_for_wallet(wallet_address)
 
     while True:
         try:
@@ -449,6 +453,54 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
             return players
 
         offset += batch_size
+
+
+def fetch_flow_static_player_range(wallet_address: str, offset: int, limit: int) -> list[dict[str, Any]]:
+    try:
+        response = execute_flow_script(wallet_address, offset, limit)
+    except RuntimeError as error:
+        if is_flow_batch_limit_error(error) and limit > 1:
+            left_limit = max(1, limit // 2)
+            right_limit = limit - left_limit
+            print(
+                f"{wallet_address}: Flow batch offset {offset} size {limit} exceeded a Flow batch limit; "
+                f"retrying as {left_limit} + {right_limit}"
+            )
+            return (
+                fetch_flow_static_player_range(wallet_address, offset, left_limit)
+                + fetch_flow_static_player_range(wallet_address, offset + left_limit, right_limit)
+            )
+        raise
+
+    return parse_flow_static_player_response(response)
+
+
+def fetch_mfl_wallet_flow_static_players_parallel(player_count: int, workers: int) -> list[dict[str, Any]]:
+    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
+    total_batches = max(1, (max(1, player_count) + batch_size - 1) // batch_size)
+    offsets = [index * batch_size for index in range(total_batches)]
+    players: list[dict[str, Any]] = []
+    completed_batches = 0
+
+    with ThreadPoolExecutor(max_workers=max(1, min(workers, len(offsets)))) as executor:
+        future_to_offset = {
+            executor.submit(fetch_flow_static_player_range, MFL_WALLET_ADDRESS, offset, batch_size): offset
+            for offset in offsets
+        }
+
+        for future in as_completed(future_to_offset):
+            offset = future_to_offset[future]
+            batch_players = future.result()
+            players.extend(batch_players)
+            completed_batches += 1
+            print(
+                f"MFL Flow seasons batch {completed_batches}/{total_batches}: "
+                f"offset {offset}, returned {len(batch_players)} players, total {len(players)} players"
+            )
+
+    players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
+    return list(players_by_id.values())
+
 
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
@@ -606,10 +658,14 @@ def populate_flow_static_fields(
 
     if workers > 1:
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_to_wallet = {
-                executor.submit(fetch_wallet_flow_static_players, current_wallet_address): current_wallet_address
-                for current_wallet_address in wallets
-            }
+            future_to_wallet = {}
+            for current_wallet_address in wallets:
+                if current_wallet_address.lower() == MFL_WALLET_ADDRESS:
+                    player_count = get_database_player_count(connection, current_wallet_address)
+                    future = executor.submit(fetch_mfl_wallet_flow_static_players_parallel, player_count, workers)
+                else:
+                    future = executor.submit(fetch_wallet_flow_static_players, current_wallet_address)
+                future_to_wallet[future] = current_wallet_address
 
             for index, future in enumerate(as_completed(future_to_wallet), start=1):
                 current_wallet_address = future_to_wallet[future]
