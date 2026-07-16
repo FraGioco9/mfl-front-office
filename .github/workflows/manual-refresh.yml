@@ -24,6 +24,10 @@ on:
           - "true"
         default: "false"
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -37,6 +41,42 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Restore previous database artifact
+        if: inputs.mfl_wallet != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-database
+
+          {
+            gh run list --workflow manual-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh run list --workflow manual-database-and-site.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            if [ -z "$RUN_ID" ]; then
+              continue
+            fi
+
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
+              echo "$RUN_ID" > previous_database_run_id.txt
+              break
+            fi
+
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+          done
+
+          if [ ! -f previous_database_run_id.txt ]; then
+            echo "No previous database artifact found; MFL wallet rows cannot be preserved."
+            exit 0
+          fi
+
+          DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
+          echo "Restoring database artifact from run $DATABASE_RUN_ID to preserve MFL wallet rows."
+          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
+          cp previous-database/*.db . 2>/dev/null || true
 
       - name: Run database refresh
         shell: bash

@@ -1159,7 +1159,7 @@ def main() -> int:
                     args.wallet,
                     True,
                     args.workers,
-                    True,
+                    refresh_mfl_wallet,
                 )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")
 
