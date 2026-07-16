@@ -24,6 +24,7 @@ FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit", "max interaction with s
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 50
+MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 25
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -425,7 +426,7 @@ def parse_flow_static_player_response(response: dict[str, Any]) -> list[dict[str
 def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     offset = 0
-    batch_size = FLOW_STATIC_PLAYER_BATCH_SIZE
+    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE if wallet_address.lower() == MFL_WALLET_ADDRESS else FLOW_STATIC_PLAYER_BATCH_SIZE
 
     while True:
         try:
@@ -452,7 +453,7 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     index = 0
-    batch_size = FLOW_STATIC_PLAYER_BATCH_SIZE
+    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
     completed_batches = 0
 
     while index < len(player_ids):
