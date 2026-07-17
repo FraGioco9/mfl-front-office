@@ -2021,6 +2021,15 @@ button:disabled {
   width: 100%;
 }
 
+.dateValue {
+  width: 136px;
+}
+
+.dateRangeValue {
+  grid-template-columns: repeat(2, 136px);
+  justify-content: start;
+}
+
 .connectorSelect:disabled {
   opacity: 0;
 }
@@ -2104,7 +2113,7 @@ table {
 }
 
 .col-stat {
-  width: 82px;
+  width: 76px;
 }
 
 .col-overall {
@@ -2112,7 +2121,7 @@ table {
 }
 
 .col-agent {
-  width: 78px;
+  width: 132px;
 }
 
 .col-link {
@@ -4758,9 +4767,14 @@ td a {
   color: var(--text);
   font-size: 13px;
   font-weight: 800;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
-.settingsToggleButton:hover,
+.settingsToggleButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
 .settingsToggleButton.active {
   border-color: var(--primary);
   background: var(--primary);
@@ -4785,4 +4799,9 @@ td a {
 .settingsCheckbox input {
   width: 15px;
   height: 15px;
+}
+
+
+.playerIdText[data-tooltip]::after {
+  display: none;
 }

@@ -302,13 +302,16 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
 
 
 def append_mfl_wallet(wallets: list[dict[str, str]]) -> list[dict[str, str]]:
+    remaining_wallets: list[dict[str, str]] = []
+    mfl_wallet = {"wallet_address": MFL_WALLET_ADDRESS, "wallet_name": MFL_WALLET_NAME}
+
     for wallet in wallets:
         if wallet["wallet_address"].lower() == MFL_WALLET_ADDRESS:
-            wallet["wallet_name"] = MFL_WALLET_NAME
-            return wallets
+            mfl_wallet = {**wallet, "wallet_name": MFL_WALLET_NAME}
+        else:
+            remaining_wallets.append(wallet)
 
-    wallets.append({"wallet_address": MFL_WALLET_ADDRESS, "wallet_name": MFL_WALLET_NAME})
-    return wallets
+    return [mfl_wallet, *remaining_wallets]
 
 
 def get_wallets(

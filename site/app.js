@@ -34,6 +34,7 @@ const state = {
   playerNotes: {},
   settingsReceiveEmailsFor: [],
   settingsDateFormat: "DMY",
+  settingsTimeFormat: "24h",
   tablePageStates: {},
   toastTimer: null,
   menuAnimationTimer: null,
@@ -203,7 +204,7 @@ const tableColumnClasses = {
 };
 
 function joinedAgencyPages() {
-  return new Set(["myplayers", "agents"]);
+  return new Set(["myplayers", "agents", "mfl"]);
 }
 
 function displayColumnForPage(column, pageName = state.currentPage) {
@@ -241,9 +242,9 @@ const columnLabels = {
   player_link: "",
 };
 
-const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
-const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
-const baseFilterColumns = ["player_id", "wallet_name", "owned_since", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
+const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, ...statColumns]);
+const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, ...statColumns]);
+const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, "owned_since"];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
@@ -341,6 +342,7 @@ const settingsPage = document.querySelector("#settingsPage");
 const settingsAgentName = document.querySelector("#settingsAgentName");
 const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
 const settingsDateFormatOptions = document.querySelector("#settingsDateFormatOptions");
+const settingsTimeFormatOptions = document.querySelector("#settingsTimeFormatOptions");
 const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
@@ -3155,16 +3157,18 @@ function showPlayerNoteTooltip(icon) {
   document.body.appendChild(tooltip);
 
   const iconRect = icon.getBoundingClientRect();
+  const horizontalAnchor = icon.classList.contains("agentTableLink") && icon.closest("td")
+    ? icon.closest("td").getBoundingClientRect()
+    : iconRect;
   const tooltipRect = tooltip.getBoundingClientRect();
   const margin = 8;
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
 
-  let left = iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
+  let left = horizontalAnchor.left + horizontalAnchor.width / 2 - tooltipRect.width / 2;
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
 
-  const tableIdButton = icon.classList.contains("copyPlayerIdButton") && icon.closest("#tableBody");
-  const anchorHeight = tableIdButton ? 14 : iconRect.height;
+  const anchorHeight = 14;
   const anchorTop = iconRect.top + Math.max(0, (iconRect.height - anchorHeight) / 2);
   const anchorBottom = anchorTop + anchorHeight;
 
@@ -3402,6 +3406,7 @@ function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
   state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
+  state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
   if (state.currentPage === "settings") {
     renderSettingsPage();
   }
@@ -3411,6 +3416,7 @@ function currentSettingsPayload() {
   return {
     receiveEmailsFor: normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
+    timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
   };
 }
 
@@ -3475,6 +3481,22 @@ function updateSettingsDateFormat(format) {
   }
 }
 
+function updateSettingsTimeFormat(format) {
+  state.settingsTimeFormat = normalizeSettingsTimeFormat(format);
+  savePendingSettingsLocally();
+  saveSettingsPreferencesAfterChange();
+  if (state.currentPage === "settings") {
+    renderSettingsPage();
+  } else if (tablePageKey()) {
+    renderTable();
+  } else if (state.currentPage === "player") {
+    const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
+    if (match) {
+      renderPlayerPage(decodeURIComponent(match[1]));
+    }
+  }
+}
+
 function updateSettingsEmailOption(optionId, checked) {
   const nextOptions = new Set(normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor));
   if (checked) {
@@ -3521,6 +3543,21 @@ function renderSettingsPage() {
       button.textContent = label;
       button.addEventListener("click", () => updateSettingsDateFormat(value));
       settingsDateFormatOptions.appendChild(button);
+    });
+  }
+
+  if (settingsTimeFormatOptions) {
+    settingsTimeFormatOptions.replaceChildren();
+    [
+      ["24h", "24h"],
+      ["12h", "12h"],
+    ].forEach(([value, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `settingsToggleButton ${normalizeSettingsTimeFormat(state.settingsTimeFormat) === value ? "active" : ""}`;
+      button.textContent = label;
+      button.addEventListener("click", () => updateSettingsTimeFormat(value));
+      settingsTimeFormatOptions.appendChild(button);
     });
   }
 
@@ -4865,6 +4902,25 @@ function dateFormatLabel(value = state.settingsDateFormat) {
   return normalizeSettingsDateFormat(value) === "MDY" ? "MM/DD/YYYY" : "DD/MM/YYYY";
 }
 
+function normalizeSettingsTimeFormat(value) {
+  return String(value || "").trim().toLowerCase() === "12h" ? "12h" : "24h";
+}
+
+function formatOwnedSinceTime(date) {
+  if (normalizeSettingsTimeFormat(state.settingsTimeFormat) === "12h") {
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const suffix = hours >= 12 ? "PM" : "AM";
+    hours %= 12;
+    if (hours === 0) {
+      hours = 12;
+    }
+    return `${hours}:${minutes} ${suffix}`;
+  }
+
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function parseEpochMillis(value) {
   if (value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL") {
     return null;
@@ -4892,9 +4948,10 @@ function formatOwnedSinceDate(row) {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
-  return normalizeSettingsDateFormat(state.settingsDateFormat) === "MDY"
+  const dateText = normalizeSettingsDateFormat(state.settingsDateFormat) === "MDY"
     ? `${month}/${day}/${year}`
     : `${day}/${month}/${year}`;
+  return `${dateText} ${formatOwnedSinceTime(date)}`;
 }
 
 function joinedAgencyTooltip(row) {
@@ -6946,7 +7003,12 @@ function renderPlayerPage(playerId) {
       openEvaluationForPlayer(event);
     }
   });
-  playerDetail.querySelector("#copyPlayerIdButton").addEventListener("click", (event) => {
+  const playerIdButton = playerDetail.querySelector("#copyPlayerIdButton");
+  playerIdButton.addEventListener("mouseenter", () => showPlayerNoteTooltip(playerIdButton));
+  playerIdButton.addEventListener("focus", () => showPlayerNoteTooltip(playerIdButton));
+  playerIdButton.addEventListener("mouseleave", hidePlayerNoteTooltip);
+  playerIdButton.addEventListener("blur", hidePlayerNoteTooltip);
+  playerIdButton.addEventListener("click", (event) => {
     copyPlayerId(id);
     event.currentTarget.blur();
   });
@@ -7427,6 +7489,7 @@ function buildNumberInput(value = "", placeholder = "Value") {
 function buildDateInput(value = "") {
   const input = document.createElement("input");
   input.type = "date";
+  input.className = "dateValue";
   input.dataset.filterValue = "true";
   input.value = value;
   return input;
@@ -7435,7 +7498,7 @@ function buildDateInput(value = "") {
 function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
   if (column === joinedAgencyColumn && operator === "during") {
     const group = document.createElement("div");
-    group.className = "betweenValue";
+    group.className = "betweenValue dateRangeValue";
     group.dataset.filterValueGroup = "true";
     group.appendChild(buildDateInput(savedValue));
     group.appendChild(buildDateInput(savedValueTo));

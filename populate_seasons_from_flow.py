@@ -204,10 +204,12 @@ def get_wallets_to_process(
     ).fetchall()
     wallets = [row[0] for row in rows]
 
+    without_mfl_wallet = [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
     if include_mfl_wallet:
-        return wallets
+        mfl_wallets = [wallet for wallet in wallets if wallet.lower() == MFL_WALLET_ADDRESS]
+        return [*mfl_wallets, *without_mfl_wallet]
 
-    return [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
+    return without_mfl_wallet
 
 
 def encode_cadence_argument(argument: dict[str, str]) -> str:
