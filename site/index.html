@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.148.15">
+    <link rel="stylesheet" href="/styles.css?v=1.148.17">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -328,6 +328,8 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.148.17</span><p>Restore parallel Flow seasons workers</p></li>
+              <li><span>v1.148.16</span><p>Make sequential MFL Flow batches truly one-at-a-time</p></li>
               <li><span>v1.148.15</span><p>Show Flow request starts and shorten stalled request timeout</p></li>
               <li><span>v1.148.14</span><p>Split player and seasons database refresh workflows</p></li>
               <li><span>v1.148.13</span><p>Run Flow seasons sequentially and clarify retry logs</p></li>
@@ -837,7 +839,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.15</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.17</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1006,6 +1008,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.148.15"></script>
+    <script src="/app.js?v=1.148.17"></script>
   </body>
 </html>

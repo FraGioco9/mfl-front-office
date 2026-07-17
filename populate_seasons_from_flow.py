@@ -25,7 +25,7 @@ MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 25
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 25
-FLOW_WORKERS = 1
+FLOW_WORKERS = 20
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -465,6 +465,19 @@ def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dic
     players: list[dict[str, Any]] = []
     completed_batches = 0
 
+    if FLOW_WORKERS <= 1:
+        for offset in offsets:
+            batch_players = fetch_flow_static_player_range(MFL_WALLET_ADDRESS, offset, batch_size)
+            players.extend(batch_players)
+            completed_batches += 1
+            print(
+                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
+                f"offset {offset}, returned {len(batch_players)} players, total {len(players)} players"
+            )
+
+        players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
+        return list(players_by_id.values())
+
     with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(offsets)))) as executor:
         future_to_offset = {
             executor.submit(fetch_flow_static_player_range, MFL_WALLET_ADDRESS, offset, batch_size): offset
@@ -483,7 +496,6 @@ def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dic
 
     players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
     return list(players_by_id.values())
-
 
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
