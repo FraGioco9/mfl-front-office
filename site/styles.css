@@ -4878,6 +4878,20 @@ td a {
   transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
+.settingsEmailDiscardButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.settingsEmailDiscardButton:hover:not(:disabled),
+.settingsEmailDiscardButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
 .settingsEmailActionButton.primary {
   border-color: var(--primary);
   background: var(--primary);

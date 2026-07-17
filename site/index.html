@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.149.10">
+    <link rel="stylesheet" href="/styles.css?v=1.149.11">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -307,7 +307,7 @@
             </section>
             <section class="settingsSection" aria-labelledby="settingsEmailAddressTitle">
               <h3 id="settingsEmailAddressTitle">Email address</h3>
-              <div class="settingsEmailAddressRow"><input id="settingsEmailAddressInput" class="settingsEmailAddressInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><button id="settingsEmailDiscardButton" class="settingsEmailActionButton" type="button">Discard</button><button id="settingsEmailSaveButton" class="settingsEmailActionButton primary" type="button">Save</button></div>
+              <div class="settingsEmailAddressRow"><input id="settingsEmailAddressInput" class="settingsEmailAddressInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><button id="settingsEmailDiscardButton" class="settingsEmailActionButton settingsEmailDiscardButton" type="button">Discard</button><button id="settingsEmailSaveButton" class="settingsEmailActionButton primary" type="button">Save</button></div>
             </section>
             <section class="settingsSection" aria-labelledby="settingsEmailTitle">
               <h3 id="settingsEmailTitle">Receive emails for</h3>
@@ -319,6 +319,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.149.11</span><p>Match Settings Discard button to Evaluation delete styling</p></li>
               <li><span>v1.149.10</span><p>Stop Settings email draft flicker while typing</p></li>
               <li><span>v1.149.9</span><p>Clean up encoded UI characters</p></li>
               <li><span>v1.149.8</span><p>Fix changelog section toggle characters</p></li>
@@ -872,7 +873,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.10</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.11</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1041,6 +1042,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.149.10"></script>
+    <script src="/app.js?v=1.149.11"></script>
   </body>
 </html>
