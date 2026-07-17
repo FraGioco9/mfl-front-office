@@ -90,6 +90,11 @@ def create_players_table(connection: sqlite3.Connection) -> None:
             preferred_foot TEXT,
             height INTEGER,
             retirement_years INTEGER,
+            owned_since INTEGER,
+            active_contract_revenue_share INTEGER,
+            active_contract_club_id TEXT,
+            active_contract_club_name TEXT,
+            active_contract_club_division TEXT,
             overall INTEGER,
             pace INTEGER,
             shooting INTEGER,
@@ -236,6 +241,11 @@ def ensure_players_columns(connection: sqlite3.Connection) -> None:
         "defense": "INTEGER",
         "physical": "INTEGER",
         "goalkeeping": "INTEGER",
+        "owned_since": "INTEGER",
+        "active_contract_revenue_share": "INTEGER",
+        "active_contract_club_id": "TEXT",
+        "active_contract_club_name": "TEXT",
+        "active_contract_club_division": "TEXT",
         "player_seasons": "INTEGER",
         "overall_prog_all": "INTEGER",
         "pace_prog_all": "INTEGER",
@@ -630,6 +640,13 @@ def insert_players(
         if numeric_player_id is None:
             continue
 
+        active_contract = player.get("activeContract") or {}
+        if not isinstance(active_contract, dict):
+            active_contract = {}
+        active_contract_club = active_contract.get("club") or {}
+        if not isinstance(active_contract_club, dict):
+            active_contract_club = {}
+
         player_ids.append(numeric_player_id)
         rows.append(
             (
@@ -643,6 +660,11 @@ def insert_players(
                 str(metadata.get("preferredFoot") or ""),
                 to_int(metadata.get("height")),
                 to_int(metadata.get("retirementYears")),
+                to_int(player.get("ownedSince") or player.get("ownedsince")),
+                to_int(active_contract.get("revenueShare")),
+                to_text(active_contract_club.get("id")),
+                to_text(active_contract_club.get("name")),
+                to_text(active_contract_club.get("division")),
                 to_int(metadata.get("overall")),
                 to_int(metadata.get("pace")),
                 to_int(metadata.get("shooting")),
@@ -667,6 +689,11 @@ def insert_players(
             preferred_foot,
             height,
             retirement_years,
+            owned_since,
+            active_contract_revenue_share,
+            active_contract_club_id,
+            active_contract_club_name,
+            active_contract_club_division,
             overall,
             pace,
             shooting,
@@ -676,7 +703,7 @@ def insert_players(
             physical,
             goalkeeping
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(player_id) DO UPDATE SET
             wallet_address = excluded.wallet_address,
             wallet_name = excluded.wallet_name,
@@ -687,6 +714,11 @@ def insert_players(
             preferred_foot = excluded.preferred_foot,
             height = excluded.height,
             retirement_years = excluded.retirement_years,
+            owned_since = excluded.owned_since,
+            active_contract_revenue_share = excluded.active_contract_revenue_share,
+            active_contract_club_id = excluded.active_contract_club_id,
+            active_contract_club_name = excluded.active_contract_club_name,
+            active_contract_club_division = excluded.active_contract_club_division,
             overall = excluded.overall,
             pace = excluded.pace,
             shooting = excluded.shooting,
