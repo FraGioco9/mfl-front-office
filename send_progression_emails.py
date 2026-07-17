@@ -230,9 +230,12 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>{html.escape(scope_name)} improvements</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
   </head>
-  <body style="margin:0;background:#0f151a;color:#eef6ff;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f151a;padding:28px 14px;">
+  <body style="margin:0;background:#0f151a;color:#eef6ff;font-family:'Titillium Web',Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f151a;padding:28px 14px;font-family:'Titillium Web',Arial,Helvetica,sans-serif;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:760px;background:#141c23;border:1px solid #2d3a45;border-radius:14px;overflow:hidden;">
