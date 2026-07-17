@@ -3134,11 +3134,11 @@ td a {
 
 
 .playerAttributeCard.featured {
-  min-height: 70px;
+  min-height: 56px;
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 32px;
+  font-size: 30px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
@@ -3172,7 +3172,7 @@ td a {
 .playerStack {
   display: grid;
   gap: 6px;
-  grid-template-rows: auto auto minmax(130px, 1fr);
+  grid-template-rows: auto auto minmax(110px, 1fr);
 }
 
 .playerInfoPanel {
@@ -3203,8 +3203,8 @@ td a {
 }
 
 .playerInfoPanel .detailGrid {
-  min-height: 132px;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  min-height: 168px;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 
 .attributeGrid {
@@ -3221,8 +3221,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 44px;
-  padding: 6px 10px;
+  min-height: 36px;
+  padding: 4px 10px;
 }
 
 .detailGrid strong {
@@ -3232,8 +3232,8 @@ td a {
 }
 
 .playerAttributeCard {
-  min-height: 44px;
-  padding: 6px 10px;
+  min-height: 38px;
+  padding: 4px 10px;
 }
 
 .detailGrid span,

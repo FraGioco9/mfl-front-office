@@ -7189,6 +7189,8 @@ function renderPlayerPage(playerId) {
   const agentTooltip = joinedAgencyTooltip(row);
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
+  const contractLabel = escapeHtml(formatContractClubName(row));
+  const revenueShareLabel = rowHasActiveContract(row) ? escapeHtml(formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) || "-") : "";
   const infoCards = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
@@ -7196,6 +7198,8 @@ function renderPlayerPage(playerId) {
     ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", agentLinkHtml],
+    ["Contract", contractLabel],
+    ["Rev Share", revenueShareLabel],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
