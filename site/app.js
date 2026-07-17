@@ -156,7 +156,7 @@ const mflWalletAddress = "0xff8d2bbed8164db0";
 
 const tablePages = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
-  database: ["attributes", "next", "contracts"],
+  database: ["attributes", "contracts"],
   mfl: ["attributes"],
   agents: ["attributes", "next", "contracts", "current", "all"],
   progression: ["contracts", "current", "all"],
@@ -254,7 +254,7 @@ const columnLabels = {
 };
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
-const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division", ...statColumns]);
+const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, "owned_since"];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
@@ -5211,6 +5211,11 @@ function formatContractDivision(value) {
   return division ? division.name : "NULL";
 }
 
+function contractDivisionSortValue(value) {
+  const division = Number(value);
+  return Number.isFinite(division) && contractDivisionNames[division] ? division : null;
+}
+
 function formatStatValue(row, statColumn) {
   const value = getValue(row, statColumn);
   const progressionColumn = getProgressionColumn(statColumn);
@@ -7364,6 +7369,10 @@ function compareNextOverallRows(a, b, column, direction) {
 }
 
 function sortableValue(row, column) {
+  if (column === "active_contract_club_division") {
+    return contractDivisionSortValue(getValue(row, column));
+  }
+
   if (state.view === "next" && statColumns.includes(column)) {
     return tableNextOverallSortValue(row, column);
   }
@@ -7415,7 +7424,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
       }
 
       cell.addEventListener("click", () => {
-        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
+        const defaultDirection = column === "active_contract_club_division" ? "asc" : state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
         const resetDirection = state.view === "next" ? "asc" : "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
 
