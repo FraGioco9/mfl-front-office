@@ -3498,15 +3498,24 @@ function validSettingsEmailAddress(value) {
   const email = normalizeSettingsEmailAddress(value);
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+function settingsEmailDraftIsActive() {
+  return state.currentPage === "settings"
+    && settingsEmailAddressInput
+    && (document.activeElement === settingsEmailAddressInput || state.settingsEmailAddressDraft !== state.settingsEmailAddress);
+}
+
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  const draftIsActive = settingsEmailDraftIsActive();
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
   state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
-  state.settingsEmailAddressDraft = state.settingsEmailAddress;
+  if (!draftIsActive) {
+    state.settingsEmailAddressDraft = state.settingsEmailAddress;
+  }
   state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
   state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
   if (state.currentPage === "settings") {
-    renderSettingsPage();
+    renderSettingsPage({ preserveEmailDraft: draftIsActive });
   }
 }
 
@@ -3598,7 +3607,7 @@ function updateSettingsTimeFormat(format) {
 
 function setSettingsEmailAddressDraft(value) {
   state.settingsEmailAddressDraft = String(value || "").slice(0, 254);
-  renderSettingsEmailControls(false);
+  updateSettingsEmailDraftActions();
 }
 
 function discardSettingsEmailAddressDraft() {
@@ -3654,25 +3663,15 @@ function saveSettingsPreferencesAfterChange() {
   state.walletPreferencesSaveTimer = null;
   void saveWalletPreferencesNow({ refreshAfterSave: true });
 }
-function renderSettingsEmailControls(syncInput = true) {
-  if (!settingsEmailAddressInput) {
-    return;
-  }
-
+function updateSettingsEmailDraftActions() {
   const draft = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
   const saved = normalizeSettingsEmailAddress(state.settingsEmailAddress);
   const changed = draft !== saved;
   const draftIsValid = !draft || validSettingsEmailAddress(draft);
-  if (syncInput) {
-    settingsEmailAddressInput.value = draft;
-  }
-  settingsEmailAddressInput.classList.toggle("invalid", Boolean(draft && !draftIsValid));
-  settingsEmailAddressInput.oninput = () => setSettingsEmailAddressDraft(settingsEmailAddressInput.value);
-  settingsEmailAddressInput.onblur = () => {
-    state.settingsEmailAddressDraft = normalizeSettingsEmailAddress(settingsEmailAddressInput.value);
-    renderSettingsEmailControls();
-  };
 
+  if (settingsEmailAddressInput) {
+    settingsEmailAddressInput.classList.toggle("invalid", Boolean(draft && !draftIsValid));
+  }
   if (settingsEmailDiscardButton) {
     settingsEmailDiscardButton.hidden = !changed;
     settingsEmailDiscardButton.disabled = !changed;
@@ -3685,7 +3684,24 @@ function renderSettingsEmailControls(syncInput = true) {
   }
 }
 
-function renderSettingsPage() {
+function renderSettingsEmailControls(syncInput = true) {
+  if (!settingsEmailAddressInput) {
+    return;
+  }
+
+  const draft = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
+  if (syncInput && document.activeElement !== settingsEmailAddressInput) {
+    settingsEmailAddressInput.value = draft;
+  }
+  settingsEmailAddressInput.oninput = () => setSettingsEmailAddressDraft(settingsEmailAddressInput.value);
+  settingsEmailAddressInput.onblur = () => {
+    state.settingsEmailAddressDraft = normalizeSettingsEmailAddress(settingsEmailAddressInput.value);
+    renderSettingsEmailControls();
+  };
+  updateSettingsEmailDraftActions();
+}
+
+function renderSettingsPage(renderOptions = {}) {
   if (!settingsPage) {
     return;
   }
@@ -3728,7 +3744,7 @@ function renderSettingsPage() {
     });
   }
 
-  renderSettingsEmailControls();
+  renderSettingsEmailControls(!renderOptions.preserveEmailDraft);
 
   if (!settingsEmailOptions) {
     return;
@@ -3736,7 +3752,7 @@ function renderSettingsPage() {
 
   settingsEmailOptions.replaceChildren();
   const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
-  const options = [
+  const emailOptions = [
     { id: "myplayers", label: "My Players progression" },
     ...watchlists.map((watchlist) => ({
       id: `watchlist-${watchlist.id}`,
@@ -3744,7 +3760,7 @@ function renderSettingsPage() {
     })),
   ];
 
-  options.forEach((option) => {
+  emailOptions.forEach((option) => {
     const label = document.createElement("label");
     const emailReady = validSettingsEmailAddress(state.settingsEmailAddress);
     label.className = `settingsCheckbox ${emailReady ? "" : "disabled"}`;
