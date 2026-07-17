@@ -1,0 +1,130 @@
+name: Test progression email
+
+on:
+  workflow_dispatch:
+    inputs:
+      player_id:
+        description: "Player ID to simulate as +1 overall. Use a player you own or one in an email-enabled watchlist."
+        required: true
+      stat:
+        description: "Stat to increase for the email test."
+        required: true
+        type: choice
+        options:
+          - overall
+          - pace
+          - shooting
+          - passing
+          - dribbling
+          - defense
+          - physical
+          - goalkeeping
+        default: overall
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: test-progression-email
+  cancel-in-progress: false
+
+jobs:
+  send-test-email:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore latest database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-database
+
+          {
+            gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow manual-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow manual-database-and-site.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow manual-populate-seasons.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            if [ -z "$RUN_ID" ]; then
+              continue
+            fi
+
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
+              echo "$RUN_ID" > previous_database_run_id.txt
+              break
+            fi
+
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+          done
+
+          if [ ! -f previous_database_run_id.txt ]; then
+            echo "No previous database artifact found; cannot test progression email."
+            exit 1
+          fi
+
+          DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
+          echo "Restoring database artifact from run $DATABASE_RUN_ID."
+          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
+          cp previous-database/*.db mfl_progression.db
+
+      - name: Simulate player improvement
+        shell: bash
+        env:
+          PLAYER_ID: ${{ inputs.player_id }}
+          STAT: ${{ inputs.stat }}
+        run: |
+          python - <<'PY'
+          import os
+          import sqlite3
+          import sys
+
+          player_id = os.environ["PLAYER_ID"].strip()
+          stat = os.environ["STAT"].strip()
+          allowed_stats = {"overall", "pace", "shooting", "passing", "dribbling", "defense", "physical", "goalkeeping"}
+          if stat not in allowed_stats:
+              print(f"Invalid stat: {stat}")
+              sys.exit(1)
+
+          conn = sqlite3.connect("mfl_progression.db")
+          try:
+              row = conn.execute(f"SELECT player_id, name, {stat} FROM players WHERE CAST(player_id AS TEXT) = ?", (player_id,)).fetchone()
+              if not row:
+                  print(f"Player {player_id} not found in the restored database.")
+                  sys.exit(1)
+
+              old_value = row[2]
+              if old_value is None:
+                  old_value = 0
+              conn.execute(f"UPDATE players SET {stat} = ? WHERE CAST(player_id AS TEXT) = ?", (int(old_value) + 1, player_id))
+              conn.commit()
+              print(f"Simulated {row[1]} #{row[0]}: {stat} {old_value} -> {int(old_value) + 1}")
+          finally:
+              conn.close()
+          PY
+
+      - name: Send test progression email
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
+          EMAIL_BASE_URL: https://mfl-front-office.vercel.app
+        run: python send_progression_emails.py --previous-db previous-database/mfl_progression.db --current-db mfl_progression.db
