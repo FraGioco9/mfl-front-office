@@ -171,14 +171,46 @@ def email_configured() -> bool:
 
 
 def format_stat_name(column: str) -> str:
-    return "Goalkeeping" if column == "goalkeeping" else column.replace("_", " ").title()
+    if column == "overall":
+        return "OVERALL"
+    return column.replace("_", " ")
 
 
-def format_changes(player: PlayerImprovement) -> str:
-    return ", ".join(
-        f"{format_stat_name(column)} +{new_value - old_value} ({old_value} -> {new_value})"
+def overall_delta(player: PlayerImprovement) -> int:
+    for column, old_value, new_value in player.changes:
+        if column == "overall":
+            return new_value - old_value
+    return 0
+
+
+def improvement_count(player: PlayerImprovement) -> int:
+    return len(player.changes)
+
+
+def player_sort_key(player: PlayerImprovement) -> tuple[int, int, str, int]:
+    numeric_id = int(player.player_id) if player.player_id.isdigit() else 0
+    return (-overall_delta(player), -improvement_count(player), player.name.lower(), numeric_id)
+
+
+def format_text_changes(player: PlayerImprovement) -> str:
+    return "\n".join(
+        f"{format_stat_name(column)}: {new_value} (+{new_value - old_value})"
         for column, old_value, new_value in player.changes
     )
+
+
+def format_html_changes(player: PlayerImprovement) -> str:
+    lines = []
+    for column, old_value, new_value in player.changes:
+        label = html.escape(format_stat_name(column))
+        value = html.escape(str(new_value))
+        delta = html.escape(f"+{new_value - old_value}")
+        lines.append(
+            f'<div style="margin:0 0 5px;color:#bdd0df;line-height:1.35;">{label}: '
+            f'<strong style="color:#ffffff;font-weight:800;">{value}</strong> '
+            f'<span style="color:#2fbf62;font-weight:inherit;">({delta})</span></div>'
+        )
+    return "".join(lines)
 
 
 def player_url(player_id: str) -> str:
@@ -198,11 +230,8 @@ def build_text(scope_name: str, players: list[PlayerImprovement]) -> str:
         "",
     ]
     for player in players:
-        overall = ""
-        if player.old_overall is not None and player.new_overall is not None:
-            overall = f" | OVR {player.old_overall} -> {player.new_overall}"
-        lines.append(f"#{player.player_id} {player.name}{overall}")
-        lines.append(f"{format_changes(player)}")
+        lines.append(f"#{player.player_id} {player.name}")
+        lines.append(format_text_changes(player))
         lines.append(player_url(player.player_id))
         lines.append("")
     return "\n".join(lines).strip()
@@ -211,15 +240,11 @@ def build_text(scope_name: str, players: list[PlayerImprovement]) -> str:
 def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
     rows = []
     for player in players:
-        overall = "-"
-        if player.old_overall is not None and player.new_overall is not None:
-            overall = f"{player.old_overall} -> <strong>{player.new_overall}</strong>"
         rows.append(
             "<tr style=\"border-top:1px solid #2d3a45;\">"
             f"<td style=\"padding:14px 12px;vertical-align:top;white-space:nowrap;\"><a style=\"color:#54d3ff;font-weight:800;text-decoration:none;\" href=\"{html.escape(player_url(player.player_id))}\">#{html.escape(player.player_id)}</a></td>"
             f"<td style=\"padding:14px 12px;vertical-align:top;\"><strong style=\"display:block;color:#ffffff;\">{html.escape(player.name)}</strong><span style=\"display:block;margin-top:3px;color:#8fa6b8;font-size:12px;\">{html.escape(player.positions)}</span></td>"
-            f"<td style=\"padding:14px 12px;vertical-align:top;white-space:nowrap;color:#ffffff;font-weight:800;\">{overall}</td>"
-            f"<td style=\"padding:14px 12px;vertical-align:top;color:#bdd0df;line-height:1.45;\">{html.escape(format_changes(player))}</td>"
+            f"<td style=\"padding:14px 12px;vertical-align:top;color:#bdd0df;line-height:1.45;\">{format_html_changes(player)}</td>"
             "</tr>"
         )
 
@@ -253,7 +278,6 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
                     <tr style="background:#202c35;color:#ffffff;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;">
                       <th style="padding:12px;">ID</th>
                       <th style="padding:12px;">Player</th>
-                      <th style="padding:12px;">OVR</th>
                       <th style="padding:12px;">Improvement</th>
                     </tr>
                   </thead>
@@ -304,7 +328,7 @@ def send_email(recipient: str, subject: str, text_body: str, html_body: str) -> 
 def unique_players(players: list[PlayerImprovement]) -> list[PlayerImprovement]:
     seen: set[str] = set()
     unique: list[PlayerImprovement] = []
-    for player in sorted(players, key=lambda item: (-(item.new_overall or 0), item.name.lower(), int(item.player_id) if item.player_id.isdigit() else 0)):
+    for player in sorted(players, key=player_sort_key):
         if player.player_id in seen:
             continue
         seen.add(player.player_id)
