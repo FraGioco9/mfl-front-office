@@ -44,6 +44,7 @@ const state = {
   trainingAdjustments: {},
   searchRenderTimer: null,
   searchIndex: [],
+  agentSearchIndex: [],
   recentSearchPlayerIds: [],
   recentEvaluationPlayerIds: [],
   evaluationPlayerId: null,
@@ -5587,6 +5588,27 @@ function buildSearchIndex() {
     overall: Number(statDisplayValue(row, "overall") || 0),
     retired: getValue(row, "retirement_years") === 0,
   }));
+
+  const agentsByWallet = new Map();
+  const addAgent = (walletAddress, name) => {
+    const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+    if (!normalizedWalletAddress || agentsByWallet.has(normalizedWalletAddress)) {
+      return;
+    }
+
+    const agentName = normalizedAgentName(name) || normalizedWalletAddress;
+    agentsByWallet.set(normalizedWalletAddress, {
+      type: "agent",
+      walletAddress: normalizedWalletAddress,
+      name: agentName,
+      nameText: normalizeSearchText(agentName),
+      walletText: normalizeSearchText(normalizedWalletAddress),
+    });
+  };
+
+  state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
+  state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));
+  state.agentSearchIndex = Array.from(agentsByWallet.values());
 }
 
 
@@ -7301,41 +7323,68 @@ function closeSearch() {
   hideModal(searchModal);
 }
 
-function bestSearchResults(query) {
-  const bestRows = [];
+function playerSearchResult(row) {
+  return { type: "player", row };
+}
 
-  if (!state.searchIndex.length && state.rows.length) {
+function searchMatchScore(query, primaryText, secondaryText = "") {
+  if (primaryText === query || secondaryText === query) {
+    return 100;
+  }
+
+  if (primaryText.startsWith(query)) {
+    return 80;
+  }
+
+  if (secondaryText.startsWith(query)) {
+    return 70;
+  }
+
+  if (primaryText.includes(query)) {
+    return 50;
+  }
+
+  if (secondaryText.includes(query)) {
+    return 40;
+  }
+
+  return 0;
+}
+
+function bestSearchResults(query) {
+  if ((!state.searchIndex.length && state.rows.length) || (!state.agentSearchIndex.length && (state.rows.length || state.walletRows.length))) {
     buildSearchIndex();
   }
 
-  state.searchIndex.forEach((entry) => {
-    if (!entry.id.includes(query) && !entry.name.includes(query)) {
-      return;
-    }
+  const playerResults = state.searchIndex
+    .map((entry) => ({
+      type: "player",
+      row: entry.row,
+      score: Math.max(searchMatchScore(query, entry.name, entry.id), searchMatchScore(query, entry.id, entry.name)),
+      overall: entry.overall,
+      label: formatCellValue(entry.row, "name"),
+    }))
+    .filter((result) => result.score > 0);
 
-    const insertAt = bestRows.findIndex((candidate) => entry.overall > candidate.overall);
+  const agentResults = state.agentSearchIndex
+    .map((entry) => ({
+      ...entry,
+      score: Math.max(searchMatchScore(query, entry.nameText, entry.walletText), searchMatchScore(query, entry.walletText, entry.nameText)),
+      overall: -1,
+      label: entry.name,
+    }))
+    .filter((result) => result.score > 0);
 
-    if (insertAt === -1) {
-      if (bestRows.length < 5) {
-        bestRows.push(entry);
-      }
-      return;
-    }
-
-    bestRows.splice(insertAt, 0, entry);
-
-    if (bestRows.length > 5) {
-      bestRows.pop();
-    }
-  });
-
-  return bestRows.map((entry) => entry.row);
+  return [...playerResults, ...agentResults]
+    .sort((a, b) => b.score - a.score || b.overall - a.overall || String(a.label).localeCompare(String(b.label)))
+    .slice(0, 5);
 }
 
 function recentSearchRows() {
   return state.recentSearchPlayerIds
     .map((playerId) => rowByPlayerId(playerId))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(playerSearchResult);
 }
 
 function rememberSearchResult(playerId) {
@@ -7352,16 +7401,28 @@ function renderSearchResultsNow() {
 
   if (!results.length) {
     playerSearchResults.classList.remove("filledSearchResults");
-    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players found." : "Recent players will appear here."}</div>`;
+    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players or agents found." : "Recent players will appear here."}</div>`;
     return;
   }
 
   const fragment = document.createDocumentFragment();
-  results.forEach((row) => {
-    const id = String(getValue(row, "player_id"));
+  results.forEach((result) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "searchResult";
+
+    if (result.type === "agent") {
+      button.innerHTML = `<strong>${escapeHtml(result.name)}</strong><span>${escapeHtml(result.walletAddress)}</span>`;
+      button.addEventListener("click", () => {
+        closeSearch();
+        openAgentPage(result.walletAddress);
+      });
+      fragment.appendChild(button);
+      return;
+    }
+
+    const row = result.row;
+    const id = String(getValue(row, "player_id"));
     const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
     button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
