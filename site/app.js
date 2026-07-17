@@ -3157,15 +3157,14 @@ function showPlayerNoteTooltip(icon) {
   document.body.appendChild(tooltip);
 
   const iconRect = icon.getBoundingClientRect();
-  const horizontalAnchor = icon.classList.contains("agentTableLink") && icon.closest("td")
-    ? icon.closest("td").getBoundingClientRect()
-    : iconRect;
   const tooltipRect = tooltip.getBoundingClientRect();
   const margin = 8;
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
 
-  let left = horizontalAnchor.left + horizontalAnchor.width / 2 - tooltipRect.width / 2;
+  let left = icon.classList.contains("agentTableLink")
+    ? iconRect.left
+    : iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
 
   const anchorHeight = 14;

@@ -2022,12 +2022,12 @@ button:disabled {
 }
 
 .dateValue {
-  width: 136px;
+  width: 100%;
 }
 
 .dateRangeValue {
-  grid-template-columns: repeat(2, 136px);
-  justify-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
 }
 
 .connectorSelect:disabled {
@@ -4770,7 +4770,8 @@ td a {
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.settingsToggleButton:hover {
+.settingsToggleButton:hover,
+.settingsToggleButton:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
 }
