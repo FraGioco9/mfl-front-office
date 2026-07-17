@@ -1,0 +1,105 @@
+name: Manual populate seasons
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of wallets to populate. Leave empty for all wallets."
+        required: false
+        default: ""
+      wallet:
+        description: "Single wallet address to populate. Leave empty to use database wallets."
+        required: false
+        default: ""
+      force:
+        description: "Update player_seasons even when already filled."
+        required: true
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "true"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: populate-seasons
+  cancel-in-progress: false
+
+jobs:
+  populate-seasons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore latest database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-database
+
+          {
+            gh run list --workflow manual-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh run list --workflow manual-database-and-site.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+            gh run list --workflow manual-populate-seasons.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv'
+          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            if [ -z "$RUN_ID" ]; then
+              continue
+            fi
+
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
+              echo "$RUN_ID" > previous_database_run_id.txt
+              break
+            fi
+
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+          done
+
+          if [ ! -f previous_database_run_id.txt ]; then
+            echo "No previous database artifact found. Run a database refresh first."
+            exit 1
+          fi
+
+          DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
+          echo "Restoring database artifact from run $DATABASE_RUN_ID."
+          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
+          cp previous-database/*.db .
+
+      - name: Populate player seasons from Flow
+        shell: bash
+        run: |
+          COMMAND=(python populate_seasons_from_flow.py)
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            COMMAND+=(--force)
+          fi
+
+          if [ -n "${{ inputs.limit }}" ]; then
+            COMMAND+=(--limit "${{ inputs.limit }}")
+          fi
+
+          if [ -n "${{ inputs.wallet }}" ]; then
+            COMMAND+=(--wallet "${{ inputs.wallet }}")
+          fi
+
+          "${COMMAND[@]}"
+
+      - name: Upload database
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl_progression_database
+          path: mfl_progression.db
+          if-no-files-found: error
