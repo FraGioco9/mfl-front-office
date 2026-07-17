@@ -3143,6 +3143,23 @@ function hidePlayerNoteTooltip() {
   document.querySelectorAll(".playerNoteFloatingTooltip").forEach((tooltip) => tooltip.remove());
 }
 
+function measureTooltipAnchorWidth(icon, sample = "0000000000") {
+  const style = getComputedStyle(icon);
+  const ruler = document.createElement("span");
+  ruler.style.position = "fixed";
+  ruler.style.left = "-9999px";
+  ruler.style.top = "-9999px";
+  ruler.style.visibility = "hidden";
+  ruler.style.whiteSpace = "nowrap";
+  ruler.style.font = style.font;
+  ruler.style.letterSpacing = style.letterSpacing;
+  ruler.textContent = sample;
+  document.body.appendChild(ruler);
+  const width = ruler.getBoundingClientRect().width;
+  ruler.remove();
+  return width;
+}
+
 function showPlayerNoteTooltip(icon) {
   const note = icon?.dataset?.noteTooltip || icon?.dataset?.tooltip || "";
   if (!note) {
@@ -3162,11 +3179,19 @@ function showPlayerNoteTooltip(icon) {
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
 
-  const tableAgentTooltip = icon.classList.contains("agentTableLink") && icon.closest("#tableBody");
-  const agentTooltipAnchorWidth = Number.parseFloat(getComputedStyle(icon).fontSize || "14") * 10;
-  let left = tableAgentTooltip
-    ? iconRect.left + agentTooltipAnchorWidth / 2 - tooltipRect.width / 2
-    : iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
+  const tableAgentCell = icon.classList.contains("agentTableLink") ? icon.closest("#tableBody td") : null;
+  const agentTooltipAnchorWidth = measureTooltipAnchorWidth(icon);
+  let left;
+  if (tableAgentCell) {
+    const cellRect = tableAgentCell.getBoundingClientRect();
+    const cellStyle = getComputedStyle(tableAgentCell);
+    const cellPaddingLeft = Number.parseFloat(cellStyle.paddingLeft || "0") || 0;
+    const agentAnchorLeft = cellRect.left + cellPaddingLeft;
+    const agentAnchorCenter = agentAnchorLeft + agentTooltipAnchorWidth / 2;
+    left = agentAnchorCenter - tooltipRect.width / 2;
+  } else {
+    left = iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
+  }
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
 
   const anchorHeight = 14;
