@@ -216,6 +216,15 @@ function normalizeLateSeasonRewardRates(value) {
   });
 }
 
+function normalizeSettingsDateFormat(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return normalized === "MDY" || normalized === "MM/DD/YYYY" ? "MDY" : "DMY";
+}
+
+function normalizeSettingsTimeFormat(value) {
+  return String(value || "").trim().toLowerCase() === "12h" ? "12h" : "24h";
+}
+
 function normalizeSettings(settings) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
   const values = Array.isArray(data?.receiveEmailsFor) ? data.receiveEmailsFor : [];
@@ -228,7 +237,11 @@ function normalizeSettings(settings) {
     }
   });
 
-  return { receiveEmailsFor };
+  return {
+    receiveEmailsFor,
+    dateFormat: normalizeSettingsDateFormat(data?.dateFormat ?? data?.date_format),
+    timeFormat: normalizeSettingsTimeFormat(data?.timeFormat ?? data?.time_format),
+  };
 }
 function normalizeEvaluationSettings(settings) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;

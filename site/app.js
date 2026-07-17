@@ -1731,7 +1731,7 @@ async function linkWallet() {
     await loadWalletPreferences();
     mergeGuestWatchlistIntoAccount();
     let upgradedCurrentPage = false;
-    if ((state.currentPage === "myplayers" || state.currentPage === "watchlist") && !myPlayersLockedPage.hidden) {
+    if ((state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") && !myPlayersLockedPage.hidden) {
       await setPage(state.currentPage, false);
       upgradedCurrentPage = true;
     } else {
