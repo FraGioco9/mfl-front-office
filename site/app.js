@@ -211,6 +211,30 @@ const tableColumnClasses = {
   player_link: "col-link",
 };
 
+const tableColumnWidths = {
+  selection: 36,
+  player_id: 48,
+  nationality_flag: 32,
+  name: 150,
+  nationality: 100,
+  age: 46,
+  positions: 84,
+  player_seasons: 58,
+  overall: 76,
+  pace: 76,
+  shooting: 76,
+  passing: 76,
+  dribbling: 76,
+  defense: 76,
+  physical: 76,
+  wallet_name: 132,
+  owned_since: 132,
+  active_contract_revenue_share: 120,
+  active_contract_club_name: 397.16,
+  active_contract_club_division: 130,
+  player_link: 34,
+};
+
 function joinedAgencyPages() {
   return new Set(["myplayers", "agents", "mfl"]);
 }
@@ -7389,10 +7413,24 @@ function sortableValue(row, column) {
   return getValue(row, column);
 }
 
+function applyTableColWidth(col, width) {
+  if (!Number.isFinite(width)) {
+    return 0;
+  }
+
+  const pixelWidth = `${width}px`;
+  col.style.width = pixelWidth;
+  col.style.minWidth = pixelWidth;
+  col.style.maxWidth = pixelWidth;
+  return width;
+}
+
 function buildTableColGroup() {
   const fragment = document.createDocumentFragment();
   const selectionCol = document.createElement("col");
+  let totalWidth = 0;
   selectionCol.className = "col-select";
+  totalWidth += applyTableColWidth(selectionCol, tableColumnWidths.selection);
   fragment.appendChild(selectionCol);
 
   currentViewColumns().forEach((column) => {
@@ -7401,8 +7439,16 @@ function buildTableColGroup() {
     if (columnClass) {
       col.classList.add(...columnClass.split(" "));
     }
+    totalWidth += applyTableColWidth(col, tableColumnWidths[column]);
     fragment.appendChild(col);
   });
+
+  const table = tableColGroup.closest("table");
+  if (table) {
+    const pixelWidth = `${totalWidth}px`;
+    table.style.width = pixelWidth;
+    table.style.minWidth = pixelWidth;
+  }
 
   tableColGroup.replaceChildren(fragment);
 }
