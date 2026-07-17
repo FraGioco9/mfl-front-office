@@ -7192,8 +7192,8 @@ function renderPlayerPage(playerId) {
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, "active_contract_club_division")) : null;
   const contractDivisionHtml = contractDivision ? ` <span class="playerContractDivision"><span class="playerContractSeparator">-</span> <span style="color: ${escapeHtml(contractDivision.color)}">${escapeHtml(contractDivision.name)}</span></span>` : "";
   const contractLabel = `${escapeHtml(formatContractClubName(row))}${contractDivisionHtml}`;
-  const revenueShareLabel = rowHasActiveContract(row) ? escapeHtml(formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) || "-") : "";
-  const infoCards = [
+  const revenueShare = rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) : "";
+  const infoCardsData = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
     ["Height", escapeHtml(heightLabel)],
@@ -7201,8 +7201,11 @@ function renderPlayerPage(playerId) {
     ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
     ["Agent", agentLinkHtml],
     ["Contract", contractLabel],
-    ["Rev Share", revenueShareLabel],
-  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
+  ];
+  if (revenueShare) {
+    infoCardsData.push(["Rev Share", escapeHtml(revenueShare)]);
+  }
+  const infoCards = infoCardsData.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
