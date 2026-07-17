@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.148.10">
+    <link rel="stylesheet" href="/styles.css?v=1.148.11">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -104,7 +104,7 @@
               <span class="watchlistSwitcherLabel">Watchlist</span>
               <button id="watchlistButton" class="watchlistButton" type="button" aria-haspopup="true" aria-expanded="false">
                 <span id="watchlistButtonText">Default</span>
-                <span class="watchlistButtonChevron" aria-hidden="true">▾</span>
+                <span class="watchlistButtonChevron" aria-hidden="true">â–¾</span>
               </button>
               <div id="watchlistDropdown" class="watchlistDropdown" hidden></div>
             </div>
@@ -328,6 +328,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.148.11</span><p>Reduce Flow workers after repeated API errors</p></li>
               <li><span>v1.148.10</span><p>Restore Flow batch size to 25</p></li>
               <li><span>v1.148.9</span><p>Process MFL first and clarify refresh logs</p></li>
               <li><span>v1.148.8</span><p>Fix Flow seasons workers and keep Flow batch sizes stable</p></li>
@@ -832,7 +833,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.10</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.11</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -963,7 +964,7 @@
           <section class="advancedSettingsSection advancedLateSeasonRewardsSection is-expanded" aria-labelledby="advancedLateSeasonRewardsTitle">
             <button id="advancedLateSeasonRewardsToggle" class="advancedSettingHeader advancedSettingSummary" type="button" aria-expanded="true" aria-controls="advancedLateSeasonRewardsContent">
               <h3 id="advancedLateSeasonRewardsTitle">Late-Career Reward Rates</h3>
-              <span class="advancedSettingChevron" aria-hidden="true">⌄</span>
+              <span class="advancedSettingChevron" aria-hidden="true">âŒ„</span>
             </button>
             <div id="advancedLateSeasonRewardsContent" class="advancedLateSeasonRewardsContent">
               <div class="advancedLateSeasonRewardsGrid">
@@ -1001,6 +1002,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.148.10"></script>
+    <script src="/app.js?v=1.148.11"></script>
   </body>
 </html>
