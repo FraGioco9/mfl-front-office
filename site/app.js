@@ -372,7 +372,9 @@ const addFilterSelect = document.querySelector("#addFilterSelect");
 const filterRules = document.querySelector("#filterRules");
 const hideRetiredInput = document.querySelector("#hideRetiredInput");
 const hideRetiringInput = document.querySelector("#hideRetiringInput");
+const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
 const packablePlayersFilter = document.querySelector("#packablePlayersFilter");
+const hideMflPlayersInput = document.querySelector("#hideMflPlayersInput");
 const packablePlayersInput = document.querySelector("#packablePlayersInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const newMintsLabel = document.querySelector("#newMintsLabel");
@@ -2949,6 +2951,7 @@ function defaultTablePageState(pageName = tablePageKey() || "progression") {
   return {
     hideRetired: true,
     hideRetiring: false,
+    hideMflPlayers: pageName === "database",
     mflPackable: pageName === "mfl",
     newMints: false,
     pageSize: 100,
@@ -4652,6 +4655,7 @@ function currentTablePageState() {
   return {
     hideRetired: hideRetiredInput.checked,
     hideRetiring: hideRetiringInput.checked,
+    ...(pageKey === "database" ? { hideMflPlayers: Boolean(hideMflPlayersInput?.checked) } : {}),
     ...(pageKey === "mfl" ? { mflPackable: Boolean(packablePlayersInput?.checked) } : {}),
     newMints: newMintsInput.checked,
     pageSize: state.pageSize,
@@ -7743,6 +7747,11 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression") {
 
   hideRetiredInput.checked = savedState.hideRetired !== false;
   hideRetiringInput.checked = Boolean(savedState.hideRetiring);
+  if (hideMflPlayersInput) {
+    hideMflPlayersInput.checked = pageName === "database"
+      ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+      : false;
+  }
   if (packablePlayersInput) {
     packablePlayersInput.checked = pageName === "mfl"
       ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
@@ -8029,7 +8038,20 @@ function rowIsMflWalletPlayer(row) {
   return normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === mflWalletAddress;
 }
 
+function rowHasHiddenMflJoinedAgencyDate(row) {
+  if (!rowIsMflWalletPlayer(row)) {
+    return false;
+  }
+
+  const joinedDay = ownedSinceDay(row);
+  return joinedDay !== null && [parseFilterDateDay("2025-10-09"), parseFilterDateDay("2025-10-10")].includes(joinedDay);
+}
+
 function syncQuickFilterLabels() {
+  if (hideMflPlayersFilter) {
+    hideMflPlayersFilter.hidden = state.currentPage !== "database";
+  }
+
   if (packablePlayersFilter) {
     packablePlayersFilter.hidden = state.currentPage !== "mfl";
   }
@@ -8049,16 +8071,16 @@ function applyFilters(options = {}) {
   let sourceRows = state.rows;
 
   if (state.currentPage === "watchlist") {
-    sourceRows = state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))));
+    sourceRows = state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))) && !rowHasHiddenMflJoinedAgencyDate(row));
   } else if (state.currentPage === "myplayers") {
-    sourceRows = state.rows.filter(rowIsOwnedByLinkedWallet);
+    sourceRows = state.rows.filter((row) => rowIsOwnedByLinkedWallet(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   } else if (state.currentPage === "mfl") {
-    sourceRows = state.rows.filter(rowIsMflWalletPlayer);
+    sourceRows = state.rows.filter((row) => rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   } else if (state.currentPage === "agents") {
     const agentWalletAddress = normalizeWalletAddress(state.currentAgentWalletAddress).toLowerCase();
-    sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress);
+    sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress && !rowHasHiddenMflJoinedAgencyDate(row));
   } else if (state.currentPage === "progression") {
-    sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row));
+    sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   }
 
   emptyState.textContent = state.currentPage === "watchlist"
@@ -8072,6 +8094,10 @@ function applyFilters(options = {}) {
           : "No players match the current filters.";
 
   state.filteredRows = sourceRows.filter((row) => {
+    if (rowHasHiddenMflJoinedAgencyDate(row)) {
+      return false;
+    }
+
     if (hideRetiredInput.checked && row[retirementIndex] === 0) {
       return false;
     }
@@ -8080,6 +8106,10 @@ function applyFilters(options = {}) {
       return false;
     }
 
+
+    if (state.currentPage === "database" && hideMflPlayersInput?.checked && rowIsMflWalletPlayer(row)) {
+      return false;
+    }
     const playerSeasons = Number(row[seasonsIndex]);
 
     if (state.currentPage === "mfl" && packablePlayersInput?.checked) {
@@ -9111,6 +9141,11 @@ hideRetiringInput.addEventListener("change", () => {
   applyFilters();
 });
 
+
+hideMflPlayersInput?.addEventListener("change", () => {
+  state.page = 1;
+  applyFilters();
+});
 packablePlayersInput?.addEventListener("change", () => {
   if (state.currentPage === "mfl" && packablePlayersInput.checked) {
     newMintsInput.checked = false;
