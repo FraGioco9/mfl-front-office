@@ -3245,12 +3245,12 @@ td a {
   pointer-events: none;
 }
 
-.detailGrid .playerContractTeam {
-  color: var(--text);
-  font-size: inherit;
+.detailGrid .contractDetailCard strong .playerContractTeam {
+  color: var(--text) !important;
+  font-size: 1rem !important;
   font-weight: 600;
   text-decoration: none;
-  text-transform: none;
+  text-transform: none !important;
 }
 
 .playerContractDivision {

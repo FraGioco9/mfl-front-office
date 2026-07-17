@@ -7205,7 +7205,7 @@ function renderPlayerPage(playerId) {
   if (revenueShare) {
     infoCardsData.push(["Rev Share", escapeHtml(revenueShare)]);
   }
-  const infoCards = infoCardsData.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
+  const infoCards = infoCardsData.map(([label, value]) => `<div${label === "Contract" ? " class=\"contractDetailCard\"" : ""}><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("");
   state.playerAttributeView = normalizePlayerAttributeView(state.playerAttributeView, row);
   const displayRow = state.playerAttributeView === "training" ? trainingRow(row) : row;
   const viewButtons = allowedPlayerAttributeViews(row)
