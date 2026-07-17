@@ -469,7 +469,7 @@ def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dic
             players.extend(batch_players)
             completed_batches += 1
             print(
-                f"MFL Flow seasons batch {completed_batches}/{total_batches}: "
+                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
                 f"offset {offset}, returned {len(batch_players)} players, total {len(players)} players"
             )
 
@@ -492,7 +492,7 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
         index += batch_size
         completed_batches += 1
         print(
-            f"MFL Flow seasons batch {completed_batches}/{estimated_batches}: "
+            f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{estimated_batches}: "
             f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
         )
 
@@ -578,7 +578,7 @@ def print_flow_wallet_status(
     updated_count: int,
 ) -> None:
     message = (
-        f"{index}/{total_wallets} {wallet_address}: "
+        f"Flow players mint age {index}/{total_wallets} {wallet_address}: "
         f"read {len(players)} players, updated {updated_count}"
     )
 
@@ -608,18 +608,38 @@ def populate_flow_static_fields(
     if total_jobs == 0:
         return 0
 
+    print("\n=== Flow players mint age ===")
+    completed_wallets = 0
+    mfl_wallets = [current_wallet_address for current_wallet_address in wallets if current_wallet_address.lower() == MFL_WALLET_ADDRESS]
+    standard_wallets = [current_wallet_address for current_wallet_address in wallets if current_wallet_address.lower() != MFL_WALLET_ADDRESS]
+
+    for current_wallet_address in mfl_wallets:
+        completed_wallets += 1
+        player_count = get_database_player_count(connection, current_wallet_address)
+        players = fetch_mfl_wallet_flow_static_players_parallel(player_count)
+
+        updated_count = update_flow_static_fields(connection, players, force)
+        connection.commit()
+
+        total_updated += updated_count
+        print_flow_wallet_status(
+            connection,
+            completed_wallets,
+            total_jobs,
+            current_wallet_address,
+            players,
+            updated_count,
+        )
+
     if FLOW_WORKERS > 1:
         with ThreadPoolExecutor(max_workers=FLOW_WORKERS) as executor:
-            future_to_wallet = {}
-            for current_wallet_address in wallets:
-                if current_wallet_address.lower() == MFL_WALLET_ADDRESS:
-                    player_count = get_database_player_count(connection, current_wallet_address)
-                    future = executor.submit(fetch_mfl_wallet_flow_static_players_parallel, player_count)
-                else:
-                    future = executor.submit(fetch_wallet_flow_static_players, current_wallet_address)
-                future_to_wallet[future] = current_wallet_address
+            future_to_wallet = {
+                executor.submit(fetch_wallet_flow_static_players, current_wallet_address): current_wallet_address
+                for current_wallet_address in standard_wallets
+            }
 
-            for index, future in enumerate(as_completed(future_to_wallet), start=1):
+            for future in as_completed(future_to_wallet):
+                completed_wallets += 1
                 current_wallet_address = future_to_wallet[future]
                 players = future.result()
 
@@ -629,7 +649,7 @@ def populate_flow_static_fields(
                 total_updated += updated_count
                 print_flow_wallet_status(
                     connection,
-                    index,
+                    completed_wallets,
                     total_jobs,
                     current_wallet_address,
                     players,
@@ -638,7 +658,8 @@ def populate_flow_static_fields(
 
         return total_updated
 
-    for index, current_wallet_address in enumerate(wallets, start=1):
+    for current_wallet_address in standard_wallets:
+        completed_wallets += 1
         players = fetch_wallet_flow_static_players(current_wallet_address)
 
         updated_count = update_flow_static_fields(connection, players, force)
@@ -647,7 +668,7 @@ def populate_flow_static_fields(
         total_updated += updated_count
         print_flow_wallet_status(
             connection,
-            index,
+            completed_wallets,
             total_jobs,
             current_wallet_address,
             players,
@@ -658,7 +679,6 @@ def populate_flow_static_fields(
             time.sleep(SLEEP_SECONDS_BETWEEN_WALLETS)
 
     return total_updated
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="One-time population of static MFL player fields from Flow.")
