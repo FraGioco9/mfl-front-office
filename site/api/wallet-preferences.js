@@ -225,6 +225,10 @@ function normalizeSettingsTimeFormat(value) {
   return String(value || "").trim().toLowerCase() === "12h" ? "12h" : "24h";
 }
 
+function normalizeSettingsEmailAddress(value) {
+  return String(value || "").trim().slice(0, 254);
+}
+
 function normalizeSettings(settings) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : null;
   const values = Array.isArray(data?.receiveEmailsFor) ? data.receiveEmailsFor : [];
@@ -239,6 +243,7 @@ function normalizeSettings(settings) {
 
   return {
     receiveEmailsFor,
+    emailAddress: normalizeSettingsEmailAddress(data?.emailAddress ?? data?.email_address),
     dateFormat: normalizeSettingsDateFormat(data?.dateFormat ?? data?.date_format),
     timeFormat: normalizeSettingsTimeFormat(data?.timeFormat ?? data?.time_format),
   };

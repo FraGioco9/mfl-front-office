@@ -34,6 +34,7 @@ const state = {
   pendingPostLoadingToast: "",
   playerNotes: {},
   settingsReceiveEmailsFor: [],
+  settingsEmailAddress: "",
   settingsDateFormat: "DMY",
   settingsTimeFormat: "24h",
   tablePageStates: {},
@@ -391,6 +392,7 @@ const settingsAgentName = document.querySelector("#settingsAgentName");
 const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
 const settingsDateFormatOptions = document.querySelector("#settingsDateFormatOptions");
 const settingsTimeFormatOptions = document.querySelector("#settingsTimeFormatOptions");
+const settingsEmailAddressInput = document.querySelector("#settingsEmailAddressInput");
 const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
@@ -2351,7 +2353,7 @@ function renderSavedEvaluationList(rows) {
       `#${playerId}`,
       summaryPosition,
       ageText ? `${ageText} yo` : "",
-    ].filter(Boolean).join(" · ");
+    ].filter(Boolean).join(" Â· ");
     main.append(name, details);
 
     const value = document.createElement("strong");
@@ -3183,7 +3185,7 @@ function playerNoteIconHtml(playerId, includeTooltip = false) {
 
   const note = playerNote(playerId);
   const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
-  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">📝</span>`;
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ðŸ“</span>`;
 }
 
 function updatePlayerNoteCount(input) {
@@ -3482,9 +3484,13 @@ function normalizeSettingsReceiveEmailsFor(values) {
   return normalized;
 }
 
+function normalizeSettingsEmailAddress(value) {
+  return String(value || "").trim().slice(0, 254);
+}
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
+  state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
   state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
   state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
   if (state.currentPage === "settings") {
@@ -3495,6 +3501,7 @@ function applySettingsPayload(settings = {}) {
 function currentSettingsPayload() {
   return {
     receiveEmailsFor: normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor),
+    emailAddress: normalizeSettingsEmailAddress(state.settingsEmailAddress),
     dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
     timeFormat: normalizeSettingsTimeFormat(state.settingsTimeFormat),
   };
@@ -3577,6 +3584,12 @@ function updateSettingsTimeFormat(format) {
   }
 }
 
+function updateSettingsEmailAddress(value) {
+  state.settingsEmailAddress = normalizeSettingsEmailAddress(value);
+  savePendingSettingsLocally();
+  saveSettingsPreferencesAfterChange();
+}
+
 function updateSettingsEmailOption(optionId, checked) {
   const nextOptions = new Set(normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor));
   if (checked) {
@@ -3639,6 +3652,14 @@ function renderSettingsPage() {
       button.addEventListener("click", () => updateSettingsTimeFormat(value));
       settingsTimeFormatOptions.appendChild(button);
     });
+  }
+
+  if (settingsEmailAddressInput) {
+    settingsEmailAddressInput.value = state.settingsEmailAddress || "";
+    settingsEmailAddressInput.onchange = () => updateSettingsEmailAddress(settingsEmailAddressInput.value);
+    settingsEmailAddressInput.onblur = () => {
+      settingsEmailAddressInput.value = normalizeSettingsEmailAddress(settingsEmailAddressInput.value);
+    };
   }
 
   if (!settingsEmailOptions) {
@@ -7237,7 +7258,7 @@ function renderPlayerPage(playerId) {
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const inAnyWatchlist = playerIsInAnyWatchlist(id);
   watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "★" : "☆"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "â˜…" : "â˜†"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => {
     toggleWatchlistPlayer(id, true);
   });
@@ -8736,7 +8757,7 @@ function renderTable() {
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
-          noteIcon.textContent = "📝";
+          noteIcon.textContent = "ðŸ“";
           noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
@@ -10015,7 +10036,7 @@ function setupChangelogSections() {
     const chevron = document.createElement("span");
     chevron.className = "changelogMinorChevron";
     chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "⌄";
+    chevron.textContent = "âŒ„";
 
     toggle.append(title, meta, chevron);
 

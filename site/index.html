@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.148.48">
+    <link rel="stylesheet" href="/styles.css?v=1.149.0">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -305,6 +305,10 @@
               <h3 id="settingsTimeFormatTitle">Time format</h3>
               <div id="settingsTimeFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Time format"></div>
             </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailAddressTitle">
+              <h3 id="settingsEmailAddressTitle">Email address</h3>
+              <input id="settingsEmailAddressInput" class="settingsEmailAddressInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+            </section>
             <section class="settingsSection" aria-labelledby="settingsEmailTitle">
               <h3 id="settingsEmailTitle">Receive emails for</h3>
               <div id="settingsEmailOptions" class="settingsEmailOptions"></div>
@@ -315,6 +319,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.149.0</span><p>Add progression improvement email notifications</p></li>
               <li><span>v1.148.48</span><p>Match player contract team styling to Agent text</p></li>
               <li><span>v1.148.47</span><p>Align player contract division suffix baseline</p></li>
               <li><span>v1.148.46</span><p>Hide empty player profile Rev Share card</p></li>
@@ -857,7 +862,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.48</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1026,6 +1031,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.148.48"></script>
+    <script src="/app.js?v=1.149.0"></script>
   </body>
 </html>
