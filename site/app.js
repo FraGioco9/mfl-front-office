@@ -5105,7 +5105,7 @@ function uniquePositions() {
 function availableFilterColumns(pageName = tablePageKey() || state.currentPage || "progression", viewName = state.view) {
   const normalizedView = normalizeViewForPage(viewName, pageName);
   const columns = (pageName === "mfl" || pageName === "agents")
-    ? baseFilterColumns.filter((column) => column !== agentColumn)
+    ? baseFilterColumns.filter((column) => column !== agentColumn && (pageName !== "mfl" || column !== contractStatusFilterColumn))
     : [...baseFilterColumns];
 
   if (normalizedView === "current") {
