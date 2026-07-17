@@ -241,7 +241,7 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
     for player in players:
         rows.append(
             "<tr style=\"border-top:1px solid #2d3a45;\">"
-            f"<td style=\"padding:14px 12px;vertical-align:top;white-space:nowrap;\"><a style=\"color:#54d3ff;font-weight:800;text-decoration:none;\" href=\"{html.escape(player_url(player.player_id))}\">#{html.escape(player.player_id)}</a></td>"
+            f"<td style=\"padding:14px 12px;vertical-align:top;white-space:nowrap;\"><a style=\"color:#54d3ff;font-weight:inherit;text-decoration:none;\" href=\"{html.escape(player_url(player.player_id))}\">#{html.escape(player.player_id)}</a></td>"
             f"<td style=\"padding:14px 12px;vertical-align:top;\"><strong style=\"display:block;color:#ffffff;\">{html.escape(player.name)}</strong><span style=\"display:block;margin-top:3px;color:#8fa6b8;font-size:12px;\">{html.escape(player.positions)}</span></td>"
             f"<td style=\"padding:14px 12px;vertical-align:top;color:#bdd0df;line-height:1.45;\">{format_html_changes(player)}</td>"
             "</tr>"
