@@ -69,6 +69,7 @@ const state = {
   flowWalletModulePromise: null,
   walletPreferencesSaveTimer: null,
   walletPreferencesSaveSequence: 0,
+  settingsSaveInFlight: false,
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -3504,10 +3505,17 @@ function settingsEmailDraftIsActive() {
     && (document.activeElement === settingsEmailAddressInput || state.settingsEmailAddressDraft !== state.settingsEmailAddress);
 }
 
+function settingsEmailOptionsDraftIsActive() {
+  return state.currentPage === "settings" && state.settingsSaveInFlight;
+}
+
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   const draftIsActive = settingsEmailDraftIsActive();
-  state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
+  const emailOptionsDraftIsActive = settingsEmailOptionsDraftIsActive();
+  if (!emailOptionsDraftIsActive) {
+    state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
+  }
   state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
   if (!draftIsActive) {
     state.settingsEmailAddressDraft = state.settingsEmailAddress;
@@ -4666,6 +4674,7 @@ async function loadWalletPreferences(options = {}) {
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
       if (data.settings) {
+        state.settingsSaveInFlight = false;
         applySettingsPayload(data.settings);
       }
       const pendingSettings = loadPendingSettingsLocally();
@@ -4745,6 +4754,7 @@ async function saveWalletPreferencesNow(options = {}) {
       }
 
       if (data.settings) {
+        state.settingsSaveInFlight = false;
         applySettingsPayload(data.settings);
       }
       clearPendingSettingsLocally();
