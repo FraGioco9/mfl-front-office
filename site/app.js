@@ -2356,7 +2356,7 @@ function renderSavedEvaluationList(rows) {
       `#${playerId}`,
       summaryPosition,
       ageText ? `${ageText} yo` : "",
-    ].filter(Boolean).join(" Ãƒâ€šÃ‚Â· ");
+    ].filter(Boolean).join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
     main.append(name, details);
 
     const value = document.createElement("strong");
@@ -3191,7 +3191,7 @@ function playerNoteIconHtml(playerId, includeTooltip = false) {
 
   const note = playerNote(playerId);
   const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
-  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â</span>`;
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</span>`;
 }
 
 function updatePlayerNoteCount(input) {
@@ -6820,7 +6820,7 @@ function toggleWatchlistPlayer(playerId, rerender = false) {
 
   if (state.currentPage === "watchlist") {
     applyFilters();
-  } else if (rerender) {
+  } else if (rerender && tablePageKey()) {
     renderTable();
   }
 
@@ -7329,7 +7329,7 @@ function renderPlayerPage(playerId) {
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const inAnyWatchlist = playerIsInAnyWatchlist(id);
   watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¦" : "ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â "}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar" aria-hidden="true">${inAnyWatchlist ? "\u2605" : "\u2606"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => {
     toggleWatchlistPlayer(id, true);
   });
@@ -8828,7 +8828,7 @@ function renderTable() {
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
-          noteIcon.textContent = "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â";
+          noteIcon.textContent = "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
           noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
@@ -10107,7 +10107,7 @@ function setupChangelogSections() {
     const chevron = document.createElement("span");
     chevron.className = "changelogMinorChevron";
     chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "ÃƒÂ¢Ã…â€™Ã¢â‚¬Å¾";
+    chevron.textContent = "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾";
 
     toggle.append(title, meta, chevron);
 
