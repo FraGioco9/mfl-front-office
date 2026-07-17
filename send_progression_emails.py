@@ -207,7 +207,7 @@ def format_html_changes(player: PlayerImprovement) -> str:
         delta = html.escape(f"+{new_value - old_value}")
         lines.append(
             f'<div style="margin:0 0 5px;color:#bdd0df;line-height:1.35;">{label}: '
-            f'<strong style="color:#ffffff;font-weight:800;">{value}</strong> '
+            f'<span style="color:#ffffff;font-weight:inherit;">{value}</span> '
             f'<span style="color:#2fbf62;font-weight:inherit;">({delta})</span></div>'
         )
     return "".join(lines)
@@ -218,8 +218,7 @@ def player_url(player_id: str) -> str:
 
 
 def build_subject(scope_name: str, players: list[PlayerImprovement]) -> str:
-    noun = "player" if len(players) == 1 else "players"
-    return f"MFL Front Office: {len(players)} improved {noun} in {scope_name}"
+    return f"{scope_name} Progression Update"
 
 
 def build_text(scope_name: str, players: list[PlayerImprovement]) -> str:
