@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 FLOW_SCRIPT_URL = "https://rest-mainnet.onflow.org/v1/scripts?block_height=sealed"
-REQUEST_TIMEOUT_SECONDS = 120
+REQUEST_TIMEOUT_SECONDS = 30
 SLEEP_SECONDS_BETWEEN_WALLETS = 0.15
 FLOW_REQUESTS_PER_SECOND_LIMIT = 80
 MAX_FLOW_REQUEST_RETRIES = 3
@@ -276,6 +276,10 @@ def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_
         try:
             wait_for_flow_rate_limit()
 
+            print(
+                f"Flow API {wallet_address} offset {offset} limit {limit}: "
+                f"request {attempt + 1}/{MAX_FLOW_REQUEST_RETRIES + 1}"
+            )
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 encoded_response = json.loads(response.read().decode("utf-8"))
                 break
@@ -351,6 +355,10 @@ def execute_flow_ids_script(wallet_address: str, player_ids: list[int]) -> dict[
         try:
             wait_for_flow_rate_limit()
 
+            print(
+                f"Flow API {wallet_address} ids {len(player_ids)}: "
+                f"request {attempt + 1}/{MAX_FLOW_REQUEST_RETRIES + 1}"
+            )
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 encoded_response = json.loads(response.read().decode("utf-8"))
                 break
