@@ -8047,6 +8047,18 @@ function rowHasHiddenMflJoinedAgencyDate(row) {
   return joinedDay !== null && [parseFilterDateDay("2025-10-09"), parseFilterDateDay("2025-10-10")].includes(joinedDay);
 }
 
+function rowIsHiddenFromTableAsMflPlayer(row) {
+  if (!rowIsMflWalletPlayer(row)) {
+    return false;
+  }
+
+  if (rowHasHiddenMflJoinedAgencyDate(row)) {
+    return true;
+  }
+
+  return state.currentPage === "database" && Boolean(hideMflPlayersInput?.checked);
+}
+
 function syncQuickFilterLabels() {
   if (hideMflPlayersFilter) {
     hideMflPlayersFilter.hidden = state.currentPage !== "database";
@@ -8094,7 +8106,7 @@ function applyFilters(options = {}) {
           : "No players match the current filters.";
 
   state.filteredRows = sourceRows.filter((row) => {
-    if (rowHasHiddenMflJoinedAgencyDate(row)) {
+    if (rowIsHiddenFromTableAsMflPlayer(row)) {
       return false;
     }
 
@@ -8107,9 +8119,6 @@ function applyFilters(options = {}) {
     }
 
 
-    if (state.currentPage === "database" && hideMflPlayersInput?.checked && rowIsMflWalletPlayer(row)) {
-      return false;
-    }
     const playerSeasons = Number(row[seasonsIndex]);
 
     if (state.currentPage === "mfl" && packablePlayersInput?.checked) {
