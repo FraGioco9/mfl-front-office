@@ -3241,12 +3241,16 @@ td a {
 
 .playerContractTeam {
   display: inline-block;
-  color: var(--text);
-  font-size: 1em;
-  font-weight: 600;
   line-height: inherit;
-  text-decoration: none;
   pointer-events: none;
+}
+
+.detailGrid .playerContractTeam {
+  color: var(--text);
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: none;
 }
 
 .playerContractDivision {
