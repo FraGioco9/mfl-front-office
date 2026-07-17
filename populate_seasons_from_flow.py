@@ -25,7 +25,7 @@ MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 25
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 25
-FLOW_WORKERS = 5
+FLOW_WORKERS = 1
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -290,8 +290,8 @@ def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_
                 raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
 
             print(
-                f"Flow API returned {error.code}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
-                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+                f"Flow API {wallet_address} offset {offset} limit {limit} returned {error.code}; "
+                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
         except URLError as error:
@@ -299,8 +299,8 @@ def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_
                 raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
 
             print(
-                f"Flow API connection failed; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
-                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+                f"Flow API {wallet_address} offset {offset} limit {limit} connection failed; "
+                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
         except json.JSONDecodeError as error:
@@ -365,8 +365,8 @@ def execute_flow_ids_script(wallet_address: str, player_ids: list[int]) -> dict[
                 raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
 
             print(
-                f"Flow API returned {error.code}; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
-                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+                f"Flow API {wallet_address} ids {len(player_ids)} returned {error.code}; "
+                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
         except URLError as error:
@@ -374,8 +374,8 @@ def execute_flow_ids_script(wallet_address: str, player_ids: list[int]) -> dict[
                 raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
 
             print(
-                f"Flow API connection failed; retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s "
-                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+                f"Flow API {wallet_address} ids {len(player_ids)} connection failed; "
+                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
             time.sleep(FLOW_RETRY_DELAY_SECONDS)
         except json.JSONDecodeError as error:
