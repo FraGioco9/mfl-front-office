@@ -7190,8 +7190,8 @@ function renderPlayerPage(playerId) {
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, "active_contract_club_division")) : null;
-  const contractDivisionHtml = contractDivision ? ` <span class="playerContractDivision"><span class="playerContractSeparator">-</span> <span style="color: ${escapeHtml(contractDivision.color)}">${escapeHtml(contractDivision.name)}</span></span>` : "";
-  const contractLabel = `${escapeHtml(formatContractClubName(row))}${contractDivisionHtml}`;
+  const contractDivisionHtml = contractDivision ? `<span class="playerContractDivision" style="color: ${escapeHtml(contractDivision.color)}">${escapeHtml(contractDivision.name)}</span>` : "";
+  const contractLabel = `<span class="playerContractLine"><span class="playerContractTeam">${escapeHtml(formatContractClubName(row))}</span>${contractDivisionHtml}</span>`;
   const revenueShare = rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) : "";
   const infoCardsData = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],

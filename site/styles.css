@@ -3231,21 +3231,30 @@ td a {
   gap: 6px;
 }
 
+.playerContractLine {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1;
+}
+
+.playerContractTeam {
+  display: inline-block;
+  line-height: 1;
+}
+
 .playerContractDivision {
   display: inline-flex;
-  align-items: baseline;
-  align-self: baseline;
+  align-items: flex-end;
   gap: 3px;
   font-size: 0.9em;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
-  transform: translateY(0.22em);
+  transform: translateY(-0.01em);
 }
 
-.playerContractSeparator {
-  color: var(--text);
-}
 
 .playerAttributeCard {
   min-height: 30px;
