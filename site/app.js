@@ -274,12 +274,19 @@ const columnLabels = {
   active_contract_revenue_share: "Rev. Share",
   active_contract_club_name: "Club Name",
   active_contract_club_division: "Division",
+  contract_status: "Contract",
   player_link: "",
 };
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
-const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, "owned_since"];
+const contractStatusFilterColumn = "contract_status";
+const contractStatusOptions = [
+  { value: "under_contract", label: "Under Contract" },
+  { value: "free_agent", label: "Free Agent" },
+  { value: "development_center", label: "Development Center" },
+];
+const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, contractStatusFilterColumn, "owned_since"];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
@@ -5107,7 +5114,7 @@ function availableFilterColumns(pageName = tablePageKey() || state.currentPage |
     columns.push(...statColumns.map((column) => `${column}_prog_all`));
   }
 
-  return columns.filter((column) => state.columns.includes(column));
+  return columns.filter((column) => column === contractStatusFilterColumn || state.columns.includes(column));
 }
 
 function rebuildColumnIndexMap() {
@@ -5246,6 +5253,15 @@ function formatContractRevenueShare(value) {
   }
 
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage)}%`;
+}
+
+function contractStatusValue(row) {
+  const clubName = getValue(row, "active_contract_club_name");
+  if (isDevelopmentCenterClubName(clubName)) {
+    return "development_center";
+  }
+
+  return rowHasActiveContract(row) ? "under_contract" : "free_agent";
 }
 
 function formatContractClubName(row) {
@@ -7658,6 +7674,9 @@ function buildOperatorSelect(column) {
       ["after", "after"],
       ["during", "during"],
     ];
+  } else if (column === contractStatusFilterColumn) {
+    operators = [["=", "is"]];
+    select.hidden = true;
   } else if (column === "nationality") {
     operators = [["=", "is"]];
     select.hidden = true;
@@ -7727,10 +7746,10 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
     return buildDateInput(savedValue);
   }
 
-  if (column === "nationality" || column === "positions") {
+  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn) {
     const select = document.createElement("select");
     select.dataset.filterValue = "true";
-    const values = column === "nationality" ? uniqueNationalityValues() : uniquePositions();
+    const values = column === "nationality" ? uniqueNationalityValues() : column === contractStatusFilterColumn ? contractStatusOptions : uniquePositions();
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = "Select...";
@@ -8057,8 +8076,12 @@ function readFilterRules() {
 }
 
 function ruleMatches(row, rule) {
-  const rawValue = getValue(row, rule.column);
+  const rawValue = rule.column === contractStatusFilterColumn ? contractStatusValue(row) : getValue(row, rule.column);
   const filterValue = rule.value;
+
+  if (rule.column === contractStatusFilterColumn) {
+    return rawValue === filterValue;
+  }
 
   if (rawValue === null || rawValue === undefined || rawValue === "") {
     return false;
