@@ -19,10 +19,6 @@ on:
         description: "Single wallet address to refresh. Leave empty to use leaderboard wallets."
         required: false
         default: ""
-      workers:
-        description: "Number of workers to use."
-        required: false
-        default: "100"
       mfl_wallet:
         description: "Refresh the large MFL wallet too. Leave false to preserve current MFL rows."
         required: true
@@ -120,9 +116,8 @@ jobs:
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
-          WORKERS="${{ inputs.workers || '100' }}"
           MFL_WALLET="${{ inputs.mfl_wallet || 'false' }}"
-          COMMAND=(python update_database.py --workers "$WORKERS" --seasons yes --mfl-wallet "$MFL_WALLET")
+          COMMAND=(python update_database.py --seasons yes --mfl-wallet "$MFL_WALLET")
 
           if [ -n "${{ inputs.limit }}" ]; then
             COMMAND+=(--limit "${{ inputs.limit }}")

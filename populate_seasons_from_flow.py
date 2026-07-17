@@ -25,6 +25,7 @@ MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 50
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 25
+FLOW_WORKERS = 20
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
 
@@ -435,19 +436,7 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
     batch_size = flow_batch_size_for_wallet(wallet_address)
 
     while True:
-        try:
-            response = execute_flow_script(wallet_address, offset, batch_size)
-        except RuntimeError as error:
-            if is_flow_batch_limit_error(error) and batch_size > 1:
-                next_batch_size = max(1, batch_size // 2)
-                print(
-                    f"{wallet_address}: Flow batch offset {offset} size {batch_size} exceeded a Flow batch limit; "
-                    f"retrying with size {next_batch_size}"
-                )
-                batch_size = next_batch_size
-                continue
-            raise
-
+        response = execute_flow_script(wallet_address, offset, batch_size)
         batch_players = parse_flow_static_player_response(response)
         players.extend(batch_players)
 
@@ -458,33 +447,17 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
 
 
 def fetch_flow_static_player_range(wallet_address: str, offset: int, limit: int) -> list[dict[str, Any]]:
-    try:
-        response = execute_flow_script(wallet_address, offset, limit)
-    except RuntimeError as error:
-        if is_flow_batch_limit_error(error) and limit > 1:
-            left_limit = max(1, limit // 2)
-            right_limit = limit - left_limit
-            print(
-                f"{wallet_address}: Flow batch offset {offset} size {limit} exceeded a Flow batch limit; "
-                f"retrying as {left_limit} + {right_limit}"
-            )
-            return (
-                fetch_flow_static_player_range(wallet_address, offset, left_limit)
-                + fetch_flow_static_player_range(wallet_address, offset + left_limit, right_limit)
-            )
-        raise
-
+    response = execute_flow_script(wallet_address, offset, limit)
     return parse_flow_static_player_response(response)
 
-
-def fetch_mfl_wallet_flow_static_players_parallel(player_count: int, workers: int) -> list[dict[str, Any]]:
+def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dict[str, Any]]:
     batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
     total_batches = max(1, (max(1, player_count) + batch_size - 1) // batch_size)
     offsets = [index * batch_size for index in range(total_batches)]
     players: list[dict[str, Any]] = []
     completed_batches = 0
 
-    with ThreadPoolExecutor(max_workers=max(1, min(workers, len(offsets)))) as executor:
+    with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(offsets)))) as executor:
         future_to_offset = {
             executor.submit(fetch_flow_static_player_range, MFL_WALLET_ADDRESS, offset, batch_size): offset
             for offset in offsets
@@ -513,28 +486,7 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
     while index < len(player_ids):
         batch = player_ids[index:index + batch_size]
         estimated_batches = max(1, (len(player_ids) + batch_size - 1) // batch_size)
-        try:
-            response = execute_flow_ids_script(MFL_WALLET_ADDRESS, batch)
-        except RuntimeError as error:
-            if is_flow_batch_limit_error(error) and batch_size > 1:
-                next_batch_size = max(1, batch_size // 2)
-                print(
-                    f"{MFL_WALLET_ADDRESS}: Flow ID batch starting at {index} size {batch_size} "
-                    f"exceeded a Flow batch limit; retrying with size {next_batch_size}"
-                )
-                batch_size = next_batch_size
-                completed_batches = index // batch_size
-                continue
-            if is_flow_batch_limit_error(error) and batch_size == 1:
-                completed_batches += 1
-                print(
-                    f"MFL Flow seasons batch {completed_batches}/{len(player_ids)}: "
-                    f"player {batch[0]} exceeded a Flow batch limit; skipped, total {len(players)} players"
-                )
-                index += 1
-                continue
-            raise
-
+        response = execute_flow_ids_script(MFL_WALLET_ADDRESS, batch)
         batch_players = parse_flow_static_player_response(response)
         players.extend(batch_players)
         index += batch_size
@@ -545,7 +497,6 @@ def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str
         )
 
     return players
-
 
 def get_mfl_player_ids_to_process(connection: sqlite3.Connection, force: bool) -> list[int]:
     where_sql = ""
@@ -647,7 +598,6 @@ def populate_flow_static_fields(
     limit: int | None,
     wallet_address: str | None,
     force: bool,
-    workers: int = 100,
     include_mfl_wallet: bool = True,
 ) -> int:
     ensure_flow_static_columns(connection)
@@ -658,13 +608,13 @@ def populate_flow_static_fields(
     if total_jobs == 0:
         return 0
 
-    if workers > 1:
-        with ThreadPoolExecutor(max_workers=workers) as executor:
+    if FLOW_WORKERS > 1:
+        with ThreadPoolExecutor(max_workers=FLOW_WORKERS) as executor:
             future_to_wallet = {}
             for current_wallet_address in wallets:
                 if current_wallet_address.lower() == MFL_WALLET_ADDRESS:
                     player_count = get_database_player_count(connection, current_wallet_address)
-                    future = executor.submit(fetch_mfl_wallet_flow_static_players_parallel, player_count, workers)
+                    future = executor.submit(fetch_mfl_wallet_flow_static_players_parallel, player_count)
                 else:
                     future = executor.submit(fetch_wallet_flow_static_players, current_wallet_address)
                 future_to_wallet[future] = current_wallet_address
@@ -728,12 +678,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Update static Flow fields even when player_seasons is already filled.",
     )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=100,
-        help="Number of wallets to fetch from Flow at the same time.",
-    )
     return parser.parse_args()
 
 
@@ -760,7 +704,6 @@ def main() -> int:
                 args.limit,
                 args.wallet,
                 args.force,
-                args.workers,
             )
 
         print(f"Flow static field population complete: updated {total_updated} players.")

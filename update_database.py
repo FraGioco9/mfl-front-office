@@ -29,6 +29,7 @@ SLEEP_SECONDS_BETWEEN_MFL_REQUESTS = 0.15
 MAX_REQUEST_RETRIES = 3
 MFL_MAX_REQUEST_RETRIES = 3
 MFL_BATCH_WORKERS = 100
+DEFAULT_WORKERS = 100
 RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 
 
@@ -1139,12 +1140,6 @@ def parse_args() -> argparse.Namespace:
         help="Only refresh one wallet address. Useful for testing.",
     )
     parser.add_argument(
-        "--workers",
-        type=int,
-        default=100,
-        help="Number of wallets/progression batches to fetch at the same time.",
-    )
-    parser.add_argument(
         "--seasons",
         choices=["yes", "no"],
         default="no",
@@ -1185,7 +1180,7 @@ def main() -> int:
             saved_wallets = refresh_wallets(connection)
             print(f"Wallet refresh complete: saved {saved_wallets} wallets.")
             refresh_mfl_wallet = args.mfl_wallet in {"yes", "true"}
-            total_players = refresh_players(connection, args.limit, args.wallet, args.workers, refresh_mfl_wallet)
+            total_players = refresh_players(connection, args.limit, args.wallet, DEFAULT_WORKERS, refresh_mfl_wallet)
 
             if args.seasons == "yes":
                 total_seasons = populate_flow_static_fields(
@@ -1193,7 +1188,6 @@ def main() -> int:
                     args.limit,
                     args.wallet,
                     True,
-                    args.workers,
                     refresh_mfl_wallet,
                 )
                 print(f"Player seasons refresh complete: updated {total_seasons} players.")
