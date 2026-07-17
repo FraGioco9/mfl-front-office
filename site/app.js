@@ -390,6 +390,7 @@ const packablePlayersInput = document.querySelector("#packablePlayersInput");
 const newMintsInput = document.querySelector("#newMintsInput");
 const newMintsLabel = document.querySelector("#newMintsLabel");
 const pageSizeSelect = document.querySelector("#pageSizeSelect");
+const tableColGroup = document.querySelector("#tableColGroup");
 const tableHead = document.querySelector("#tableHead");
 const tableBody = document.querySelector("#tableBody");
 const emptyState = document.querySelector("#emptyState");
@@ -7388,7 +7389,25 @@ function sortableValue(row, column) {
   return getValue(row, column);
 }
 
+function buildTableColGroup() {
+  const fragment = document.createDocumentFragment();
+  const selectionCol = document.createElement("col");
+  selectionCol.className = "col-select";
+  fragment.appendChild(selectionCol);
+
+  currentViewColumns().forEach((column) => {
+    const col = document.createElement("col");
+    const columnClass = tableColumnClass(column);
+    if (columnClass) {
+      col.classList.add(...columnClass.split(" "));
+    }
+    fragment.appendChild(col);
+  });
+
+  tableColGroup.replaceChildren(fragment);
+}
 function buildHeader() {
+  buildTableColGroup();
   const headerRow = document.createElement("tr");
   const selectionHeader = document.createElement("th");
   const selectVisibleInput = document.createElement("input");
