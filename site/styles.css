@@ -2126,15 +2126,21 @@ table {
 }
 
 .col-contract-revenue {
-  width: 77px;
+  width: 154px;
+  min-width: 154px;
+  max-width: 154px;
 }
 
 .col-contract-club {
-  width: 77px;
+  width: 154px;
+  min-width: 154px;
+  max-width: 154px;
 }
 
 .col-contract-division {
-  width: 77px;
+  width: 154px;
+  min-width: 154px;
+  max-width: 154px;
 }
 
 .contractDivisionLabel {
