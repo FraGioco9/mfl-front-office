@@ -7370,7 +7370,8 @@ function compareNextOverallRows(a, b, column, direction) {
 
 function sortableValue(row, column) {
   if (column === "active_contract_club_division") {
-    return contractDivisionSortValue(getValue(row, column));
+    const divisionRank = contractDivisionSortValue(getValue(row, column));
+    return divisionRank === null ? null : -divisionRank;
   }
 
   if (state.view === "next" && statColumns.includes(column)) {
@@ -7424,7 +7425,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
       }
 
       cell.addEventListener("click", () => {
-        const defaultDirection = column === "active_contract_club_division" ? "asc" : state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
+        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
         const resetDirection = state.view === "next" ? "asc" : "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
 
