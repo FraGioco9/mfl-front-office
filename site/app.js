@@ -3667,8 +3667,12 @@ function saveSettingsPreferencesAfterChange() {
     return;
   }
 
+  state.settingsSaveInFlight = true;
+
   window.clearTimeout(state.walletPreferencesSaveTimer);
+
   state.walletPreferencesSaveTimer = null;
+
   void saveWalletPreferencesNow({ refreshAfterSave: true });
 }
 function updateSettingsEmailDraftActions() {
