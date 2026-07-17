@@ -1225,6 +1225,8 @@ function updateEvaluationFooterActions() {
 function updateAccountState() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
   accountEmail.textContent = accountName();
+  accountEmail.disabled = !walletLinked;
+  accountEmail.title = walletLinked ? "Open My Players" : "";
   linkWalletButton.textContent = walletLinked ? "Opt Out" : "Opt In";
   linkWalletButton.disabled = state.walletOptInInProgress;
   linkWalletButton.classList.toggle("walletOptOut", walletLinked);
@@ -9526,6 +9528,13 @@ window.addEventListener("popstate", () => {
 accountButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleAccountMenu();
+});
+accountEmail.addEventListener("click", () => {
+  if (!state.linkedWalletAddress || !hasWalletProof()) {
+    return;
+  }
+  closeAccountMenu();
+  setPage("myplayers");
 });
 linkWalletButton.addEventListener("click", linkWallet);
 if (accountSettingsButton) {

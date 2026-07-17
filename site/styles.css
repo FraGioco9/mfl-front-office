@@ -298,10 +298,11 @@ p {
 
 .accountSettingsButton:not(:disabled) {
   border-color: var(--border-strong);
-  background: var(--surface-muted);
+  background: transparent;
   color: var(--text);
 }
 
+.accountUserButton:hover:not(:disabled),
 .accountSettingsButton:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
