@@ -3,6 +3,7 @@ const state = {
   columnIndexMap: null,
   rows: [],
   filteredRows: [],
+  tableSourceRowsCount: 0,
   page: 1,
   pageSize: 100,
   view: "current",
@@ -3673,19 +3674,20 @@ function updateWatchlistTitle() {
   }
 }
 
-function updateWatchlistPlayerCount() {
+function updateTablePlayerCount() {
   if (!watchlistPlayerCount) {
     return;
   }
 
-  const visible = state.currentPage === "watchlist" && hasWalletOptIn();
+  const visible = tablePages.has(state.currentPage);
   watchlistPlayerCount.hidden = !visible;
   if (!visible) {
     return;
   }
 
-  const count = normalizeWatchlistIdList(activeWatchlist()?.playerIds || Array.from(state.watchlistPlayerIds)).length;
-  watchlistPlayerCount.textContent = `${count} player${count === 1 ? "" : "s"}`;
+  const visibleCount = state.filteredRows.length;
+  const totalCount = state.tableSourceRowsCount;
+  watchlistPlayerCount.textContent = `Showing ${formatCount(visibleCount)}/${formatCount(totalCount)} players`;
 }
 
 function playerIsInAnyWatchlist(playerId) {
@@ -3706,7 +3708,7 @@ function renderWatchlistSwitcher() {
   if (!visible) {
     closeWatchlistDropdown();
     updateWatchlistTitle();
-    updateWatchlistPlayerCount();
+    updateTablePlayerCount();
     return;
   }
 
@@ -3790,7 +3792,7 @@ function renderWatchlistSwitcher() {
   }
 
   updateWatchlistTitle();
-  updateWatchlistPlayerCount();
+  updateTablePlayerCount();
 }
 
 function openWatchlistDropdown() {
@@ -8280,7 +8282,7 @@ function applyFilters(options = {}) {
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
-  let sourceRows = state.rows;
+  let sourceRows = state.rows.filter((row) => !rowHasHiddenMflJoinedAgencyDate(row));
 
   if (state.currentPage === "watchlist") {
     sourceRows = state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))) && !rowHasHiddenMflJoinedAgencyDate(row));
@@ -8294,6 +8296,8 @@ function applyFilters(options = {}) {
   } else if (state.currentPage === "progression") {
     sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
   }
+
+  state.tableSourceRowsCount = sourceRows.length;
 
   emptyState.textContent = state.currentPage === "watchlist"
     ? (sourceRows.length ? "No watchlist players match the current filters." : "No players in your watchlist yet.")
@@ -8652,7 +8656,7 @@ function renderTable() {
 
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
-  totalPlayers.textContent = formatCount(state.rows.length);
+  updateTablePlayerCount();
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
   nextButton.disabled = state.page >= totalPages;
