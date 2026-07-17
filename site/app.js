@@ -32,7 +32,8 @@ const state = {
   pendingAddWatchlistContext: "",
   pendingPostLoadingToast: "",
   playerNotes: {},
-    settingsReceiveEmailsFor: [],
+  settingsReceiveEmailsFor: [],
+  settingsDateFormat: "DMY",
   tablePageStates: {},
   toastTimer: null,
   menuAnimationTimer: null,
@@ -147,6 +148,7 @@ const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	R
 31	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 30	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0`;
 const agentColumn = "wallet_name";
+const joinedAgencyColumn = "owned_since";
 const linkColumn = "player_link";
 const mflWalletAddress = "0xff8d2bbed8164db0";
 
@@ -196,8 +198,21 @@ const tableColumnClasses = {
   positions: "col-positions",
   player_seasons: "col-seasons",
   wallet_name: "col-agent",
+  owned_since: "col-agent",
   player_link: "col-link",
 };
+
+function joinedAgencyPages() {
+  return new Set(["myplayers", "agents"]);
+}
+
+function displayColumnForPage(column, pageName = state.currentPage) {
+  return column === agentColumn && joinedAgencyPages().has(pageName) ? joinedAgencyColumn : column;
+}
+
+function currentViewColumns(pageName = state.currentPage, viewName = state.view) {
+  return (views[viewName]?.columns || []).map((column) => displayColumnForPage(column, pageName));
+}
 
 function tableColumnClass(column) {
   if (column === "overall") {
@@ -210,6 +225,7 @@ const columnLabels = {
   player_id: "ID",
   nationality_flag: "",
   wallet_name: "Agent",
+  owned_since: "Joined Agency",
   name: "Name",
   nationality: "Nationality",
   age: "Age",
@@ -227,7 +243,7 @@ const columnLabels = {
 
 const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", ...statColumns]);
 const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", ...statColumns]);
-const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
+const baseFilterColumns = ["player_id", "wallet_name", "owned_since", "name", "positions", "age", "player_seasons", "nationality", ...statColumns];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
@@ -324,6 +340,7 @@ const playerDetail = document.querySelector("#playerDetail");
 const settingsPage = document.querySelector("#settingsPage");
 const settingsAgentName = document.querySelector("#settingsAgentName");
 const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
+const settingsDateFormatOptions = document.querySelector("#settingsDateFormatOptions");
 const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
@@ -3384,6 +3401,7 @@ function normalizeSettingsReceiveEmailsFor(values) {
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
+  state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
   if (state.currentPage === "settings") {
     renderSettingsPage();
   }
@@ -3392,6 +3410,7 @@ function applySettingsPayload(settings = {}) {
 function currentSettingsPayload() {
   return {
     receiveEmailsFor: normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor),
+    dateFormat: normalizeSettingsDateFormat(state.settingsDateFormat),
   };
 }
 
@@ -3440,6 +3459,22 @@ function clearPendingSettingsLocally() {
   }
 }
 
+function updateSettingsDateFormat(format) {
+  state.settingsDateFormat = normalizeSettingsDateFormat(format);
+  savePendingSettingsLocally();
+  saveSettingsPreferencesAfterChange();
+  if (state.currentPage === "settings") {
+    renderSettingsPage();
+  } else if (tablePageKey()) {
+    renderTable();
+  } else if (state.currentPage === "player") {
+    const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
+    if (match) {
+      renderPlayerPage(decodeURIComponent(match[1]));
+    }
+  }
+}
+
 function updateSettingsEmailOption(optionId, checked) {
   const nextOptions = new Set(normalizeSettingsReceiveEmailsFor(state.settingsReceiveEmailsFor));
   if (checked) {
@@ -3474,6 +3509,21 @@ function renderSettingsPage() {
     settingsWalletAddress.textContent = walletAddress || "-";
     settingsWalletAddress.title = walletAddress || "";
   }
+  if (settingsDateFormatOptions) {
+    settingsDateFormatOptions.replaceChildren();
+    [
+      ["DMY", "DD/MM/YYYY"],
+      ["MDY", "MM/DD/YYYY"],
+    ].forEach(([value, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `settingsToggleButton ${normalizeSettingsDateFormat(state.settingsDateFormat) === value ? "active" : ""}`;
+      button.textContent = label;
+      button.addEventListener("click", () => updateSettingsDateFormat(value));
+      settingsDateFormatOptions.appendChild(button);
+    });
+  }
+
   if (!settingsEmailOptions) {
     return;
   }
@@ -4806,6 +4856,75 @@ function formatCount(value) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
+function normalizeSettingsDateFormat(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return normalized === "MDY" || normalized === "MM/DD/YYYY" ? "MDY" : "DMY";
+}
+
+function dateFormatLabel(value = state.settingsDateFormat) {
+  return normalizeSettingsDateFormat(value) === "MDY" ? "MM/DD/YYYY" : "DD/MM/YYYY";
+}
+
+function parseEpochMillis(value) {
+  if (value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL") {
+    return null;
+  }
+
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return null;
+  }
+
+  return number < 100000000000 ? number * 1000 : number;
+}
+
+function formatOwnedSinceDate(row) {
+  const timestamp = parseEpochMillis(getValue(row, joinedAgencyColumn));
+  if (timestamp === null) {
+    return "";
+  }
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return normalizeSettingsDateFormat(state.settingsDateFormat) === "MDY"
+    ? `${month}/${day}/${year}`
+    : `${day}/${month}/${year}`;
+}
+
+function joinedAgencyTooltip(row) {
+  const date = formatOwnedSinceDate(row);
+  return date ? `Since ${date}` : "";
+}
+
+function parseFilterDateDay(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day);
+  return Number.isNaN(date.getTime()) ? null : Math.floor(date.getTime() / 86400000);
+}
+
+function ownedSinceDay(row) {
+  const timestamp = parseEpochMillis(getValue(row, joinedAgencyColumn));
+  if (timestamp === null) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : Math.floor(new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() / 86400000);
+}
+
 function filterLabel(column) {
   if (column.endsWith("_prog_current_season")) {
     return `${filterLabel(column.replace("_prog_current_season", ""))} Progression`;
@@ -5124,6 +5243,10 @@ function formatCellValue(row, column) {
 
   if (statColumns.includes(column)) {
     return formatStatValue(row, column);
+  }
+
+  if (column === joinedAgencyColumn) {
+    return formatOwnedSinceDate(row) || "NULL";
   }
 
   if (column === agentColumn) {
@@ -6753,7 +6876,9 @@ function renderPlayerPage(playerId) {
     ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.emoji}</span>`
     : "";
   const agentWalletAddress = getValue(row, "wallet_address");
-  const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}">${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
+  const agentTooltip = joinedAgencyTooltip(row);
+  const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
+  const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
   const infoCards = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
     ["Age", `${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}`],
@@ -6827,6 +6952,12 @@ function renderPlayerPage(playerId) {
   });
   const playerAgentLink = playerDetail.querySelector(".playerAgentLink");
   if (playerAgentLink) {
+    if (playerAgentLink.dataset.tooltip) {
+      playerAgentLink.addEventListener("mouseenter", () => showPlayerNoteTooltip(playerAgentLink));
+      playerAgentLink.addEventListener("focus", () => showPlayerNoteTooltip(playerAgentLink));
+      playerAgentLink.addEventListener("mouseleave", hidePlayerNoteTooltip);
+      playerAgentLink.addEventListener("blur", hidePlayerNoteTooltip);
+    }
     playerAgentLink.addEventListener("click", (event) => {
       event.preventDefault();
       openAgentPage(agentWalletAddress);
@@ -7092,7 +7223,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
   selectionHeader.appendChild(selectVisibleInput);
   headerRow.appendChild(selectionHeader);
 
-  views[state.view].columns.forEach((column) => {
+  currentViewColumns().forEach((column) => {
     const cell = document.createElement("th");
     const columnClass = tableColumnClass(column);
     if (columnClass) {
@@ -7100,7 +7231,7 @@ selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(se
     }
     const isSorted = state.sortKey === column;
     const label = document.createElement("span");
-    label.textContent = column === agentColumn && ["myplayers", "agents", "mfl"].includes(state.currentPage) ? "" : columnLabels[column];
+    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
     cell.appendChild(label);
 
     if (sortableColumns.has(column)) {
@@ -7201,7 +7332,7 @@ function activeFilterCount() {
     const operator = rule.querySelector("[data-filter-operator]").value;
     const values = readRuleValues(rule);
 
-    if ((operator === "between" && values.value && values.valueTo) || (operator !== "between" && values.value)) {
+    if (((operator === "between" || operator === "during") && values.value && values.valueTo) || (operator !== "between" && operator !== "during" && values.value)) {
       count += 1;
     }
   }
@@ -7250,6 +7381,12 @@ function buildOperatorSelect(column) {
       ["primary_is", "primary is"],
       ["can_play", "can play"],
     ];
+  } else if (column === joinedAgencyColumn) {
+    operators = [
+      ["before", "before"],
+      ["after", "after"],
+      ["during", "during"],
+    ];
   } else if (column === "nationality") {
     operators = [["=", "is"]];
     select.hidden = true;
@@ -7287,7 +7424,24 @@ function buildNumberInput(value = "", placeholder = "Value") {
   return input;
 }
 
+function buildDateInput(value = "") {
+  const input = document.createElement("input");
+  input.type = "date";
+  input.dataset.filterValue = "true";
+  input.value = value;
+  return input;
+}
+
 function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
+  if (column === joinedAgencyColumn && operator === "during") {
+    const group = document.createElement("div");
+    group.className = "betweenValue";
+    group.dataset.filterValueGroup = "true";
+    group.appendChild(buildDateInput(savedValue));
+    group.appendChild(buildDateInput(savedValueTo));
+    return group;
+  }
+
   if (isNumericColumn(column) && operator === "between") {
     const group = document.createElement("div");
     group.className = "betweenValue";
@@ -7295,6 +7449,10 @@ function buildValueControl(column, savedValue = "", savedValueTo = "", operator 
     group.appendChild(buildNumberInput(savedValue, "From"));
     group.appendChild(buildNumberInput(savedValueTo, "To"));
     return group;
+  }
+
+  if (column === joinedAgencyColumn) {
+    return buildDateInput(savedValue);
   }
 
   if (column === "nationality" || column === "positions") {
@@ -7618,7 +7776,7 @@ function readFilterRules() {
         valueTo: values.valueTo,
       };
     })
-    .filter((rule) => rule.operator === "between" ? rule.value && rule.valueTo : rule.value);
+    .filter((rule) => (rule.operator === "between" || rule.operator === "during") ? rule.value && rule.valueTo : rule.value);
 }
 
 function ruleMatches(row, rule) {
@@ -7626,6 +7784,35 @@ function ruleMatches(row, rule) {
   const filterValue = rule.value;
 
   if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return false;
+  }
+
+  if (rule.column === joinedAgencyColumn) {
+    const rowDay = ownedSinceDay(row);
+    const filterDay = parseFilterDateDay(filterValue);
+
+    if (rowDay === null || filterDay === null) {
+      return false;
+    }
+
+    if (rule.operator === "before") {
+      return rowDay < filterDay;
+    }
+
+    if (rule.operator === "after") {
+      return rowDay > filterDay;
+    }
+
+    if (rule.operator === "during") {
+      const filterDayTo = parseFilterDateDay(rule.valueTo);
+      if (filterDayTo === null) {
+        return false;
+      }
+      const min = Math.min(filterDay, filterDayTo);
+      const max = Math.max(filterDay, filterDayTo);
+      return rowDay >= min && rowDay <= max;
+    }
+
     return false;
   }
 
@@ -8034,7 +8221,7 @@ function renderTable() {
     selectionCell.appendChild(selectionInput);
     tableRow.appendChild(selectionCell);
 
-    views[state.view].columns.forEach((column) => {
+    currentViewColumns().forEach((column) => {
       const cell = document.createElement("td");
       const columnClass = tableColumnClass(column);
       if (columnClass) {
@@ -8079,6 +8266,8 @@ function renderTable() {
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+      } else if (column === joinedAgencyColumn) {
+        cell.textContent = formatCellValue(row, column);
       } else if (column === agentColumn) {
         if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
           const walletAddress = getValue(row, "wallet_address");
@@ -8087,6 +8276,14 @@ function renderTable() {
           link.href = agentRoute(walletAddress);
           link.className = "agentTableLink";
           link.textContent = agentLabel;
+          const tooltip = joinedAgencyTooltip(row);
+          if (tooltip) {
+            link.dataset.tooltip = tooltip;
+            link.addEventListener("mouseenter", () => showPlayerNoteTooltip(link));
+            link.addEventListener("focus", () => showPlayerNoteTooltip(link));
+            link.addEventListener("mouseleave", hidePlayerNoteTooltip);
+            link.addEventListener("blur", hidePlayerNoteTooltip);
+          }
           link.addEventListener("click", (event) => {
             event.preventDefault();
             openAgentPage(walletAddress);

@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.148.0">
+    <link rel="stylesheet" href="/styles.css?v=1.148.1">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -310,6 +310,10 @@
                 <strong id="settingsWalletAddress">-</strong>
               </div>
             </section>
+            <section class="settingsSection" aria-labelledby="settingsDateFormatTitle">
+              <h3 id="settingsDateFormatTitle">Date format</h3>
+              <div id="settingsDateFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Date format"></div>
+            </section>
             <section class="settingsSection" aria-labelledby="settingsEmailTitle">
               <h3 id="settingsEmailTitle">Receive emails for</h3>
               <div id="settingsEmailOptions" class="settingsEmailOptions"></div>
@@ -320,6 +324,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.148.1</span><p>Add Joined Agency dates, date format settings, and ownership date filters</p></li>
               <li><span>v1.148.0</span><p>Store ownership and active contract fields</p></li>
               <li><span>v1.147.23</span><p>Fetch MFL Flow season batches in parallel</p></li>
               <li><span>v1.147.22</span><p>Use smaller Flow season batches for MFL wallet</p></li>
@@ -814,7 +819,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.148.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -983,6 +988,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.148.0"></script>
+    <script src="/app.js?v=1.148.1"></script>
   </body>
 </html>
