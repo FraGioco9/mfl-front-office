@@ -2356,7 +2356,7 @@ function renderSavedEvaluationList(rows) {
       `#${playerId}`,
       summaryPosition,
       ageText ? `${ageText} yo` : "",
-    ].filter(Boolean).join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+    ].filter(Boolean).join(" \u00b7 ");
     main.append(name, details);
 
     const value = document.createElement("strong");
@@ -3191,7 +3191,7 @@ function playerNoteIconHtml(playerId, includeTooltip = false) {
 
   const note = playerNote(playerId);
   const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
-  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</span>`;
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">\u{1F4DD}</span>`;
 }
 
 function updatePlayerNoteCount(input) {
@@ -8828,7 +8828,7 @@ function renderTable() {
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
-          noteIcon.textContent = "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
+          noteIcon.textContent = "\u{1F4DD}";
           noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
@@ -10107,7 +10107,7 @@ function setupChangelogSections() {
     const chevron = document.createElement("span");
     chevron.className = "changelogMinorChevron";
     chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾";
+    chevron.textContent = ">";
 
     toggle.append(title, meta, chevron);
 
