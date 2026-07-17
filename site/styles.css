@@ -3241,7 +3241,10 @@ td a {
 
 .playerContractTeam {
   display: inline-block;
+  color: var(--text);
+  font-weight: 600;
   line-height: 1;
+  text-decoration: none;
 }
 
 .playerContractDivision {
