@@ -3597,8 +3597,8 @@ function updateSettingsTimeFormat(format) {
 }
 
 function setSettingsEmailAddressDraft(value) {
-  state.settingsEmailAddressDraft = normalizeSettingsEmailAddress(value);
-  renderSettingsEmailControls();
+  state.settingsEmailAddressDraft = String(value || "").slice(0, 254);
+  renderSettingsEmailControls(false);
 }
 
 function discardSettingsEmailAddressDraft() {
@@ -3654,7 +3654,7 @@ function saveSettingsPreferencesAfterChange() {
   state.walletPreferencesSaveTimer = null;
   void saveWalletPreferencesNow({ refreshAfterSave: true });
 }
-function renderSettingsEmailControls() {
+function renderSettingsEmailControls(syncInput = true) {
   if (!settingsEmailAddressInput) {
     return;
   }
@@ -3663,7 +3663,9 @@ function renderSettingsEmailControls() {
   const saved = normalizeSettingsEmailAddress(state.settingsEmailAddress);
   const changed = draft !== saved;
   const draftIsValid = !draft || validSettingsEmailAddress(draft);
-  settingsEmailAddressInput.value = draft;
+  if (syncInput) {
+    settingsEmailAddressInput.value = draft;
+  }
   settingsEmailAddressInput.classList.toggle("invalid", Boolean(draft && !draftIsValid));
   settingsEmailAddressInput.oninput = () => setSettingsEmailAddressDraft(settingsEmailAddressInput.value);
   settingsEmailAddressInput.onblur = () => {
