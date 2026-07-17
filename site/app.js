@@ -35,6 +35,7 @@ const state = {
   playerNotes: {},
   settingsReceiveEmailsFor: [],
   settingsEmailAddress: "",
+  settingsEmailAddressDraft: "",
   settingsDateFormat: "DMY",
   settingsTimeFormat: "24h",
   tablePageStates: {},
@@ -393,6 +394,8 @@ const settingsWalletAddress = document.querySelector("#settingsWalletAddress");
 const settingsDateFormatOptions = document.querySelector("#settingsDateFormatOptions");
 const settingsTimeFormatOptions = document.querySelector("#settingsTimeFormatOptions");
 const settingsEmailAddressInput = document.querySelector("#settingsEmailAddressInput");
+const settingsEmailDiscardButton = document.querySelector("#settingsEmailDiscardButton");
+const settingsEmailSaveButton = document.querySelector("#settingsEmailSaveButton");
 const settingsEmailOptions = document.querySelector("#settingsEmailOptions");
 const changelogPage = document.querySelector("#changelogPage");
 const navButtons = document.querySelectorAll(".navButton");
@@ -2353,7 +2356,7 @@ function renderSavedEvaluationList(rows) {
       `#${playerId}`,
       summaryPosition,
       ageText ? `${ageText} yo` : "",
-    ].filter(Boolean).join(" Â· ");
+    ].filter(Boolean).join(" Ã‚Â· ");
     main.append(name, details);
 
     const value = document.createElement("strong");
@@ -3185,7 +3188,7 @@ function playerNoteIconHtml(playerId, includeTooltip = false) {
 
   const note = playerNote(playerId);
   const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
-  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ðŸ“</span>`;
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">Ã°Å¸â€œÂ</span>`;
 }
 
 function updatePlayerNoteCount(input) {
@@ -3487,10 +3490,16 @@ function normalizeSettingsReceiveEmailsFor(values) {
 function normalizeSettingsEmailAddress(value) {
   return String(value || "").trim().slice(0, 254);
 }
+
+function validSettingsEmailAddress(value) {
+  const email = normalizeSettingsEmailAddress(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
   state.settingsReceiveEmailsFor = normalizeSettingsReceiveEmailsFor(data.receiveEmailsFor);
   state.settingsEmailAddress = normalizeSettingsEmailAddress(data.emailAddress || data.email_address);
+  state.settingsEmailAddressDraft = state.settingsEmailAddress;
   state.settingsDateFormat = normalizeSettingsDateFormat(data.dateFormat || data.date_format);
   state.settingsTimeFormat = normalizeSettingsTimeFormat(data.timeFormat || data.time_format);
   if (state.currentPage === "settings") {
@@ -3584,10 +3593,31 @@ function updateSettingsTimeFormat(format) {
   }
 }
 
-function updateSettingsEmailAddress(value) {
-  state.settingsEmailAddress = normalizeSettingsEmailAddress(value);
+function setSettingsEmailAddressDraft(value) {
+  state.settingsEmailAddressDraft = normalizeSettingsEmailAddress(value);
+  renderSettingsEmailControls();
+}
+
+function discardSettingsEmailAddressDraft() {
+  state.settingsEmailAddressDraft = state.settingsEmailAddress;
+  renderSettingsEmailControls();
+}
+
+function saveSettingsEmailAddressDraft() {
+  const email = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
+  if (email && !validSettingsEmailAddress(email)) {
+    showToast("Enter a valid email address.");
+    renderSettingsEmailControls();
+    return;
+  }
+  state.settingsEmailAddress = email;
+  state.settingsEmailAddressDraft = email;
+  if (!validSettingsEmailAddress(email)) {
+    state.settingsReceiveEmailsFor = [];
+  }
   savePendingSettingsLocally();
   saveSettingsPreferencesAfterChange();
+  renderSettingsPage();
 }
 
 function updateSettingsEmailOption(optionId, checked) {
@@ -3611,6 +3641,33 @@ function saveSettingsPreferencesAfterChange() {
   state.walletPreferencesSaveTimer = null;
   void saveWalletPreferencesNow({ refreshAfterSave: true });
 }
+function renderSettingsEmailControls() {
+  if (!settingsEmailAddressInput) {
+    return;
+  }
+
+  const draft = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
+  const saved = normalizeSettingsEmailAddress(state.settingsEmailAddress);
+  const changed = draft !== saved;
+  const draftIsValid = !draft || validSettingsEmailAddress(draft);
+  settingsEmailAddressInput.value = draft;
+  settingsEmailAddressInput.classList.toggle("invalid", Boolean(draft && !draftIsValid));
+  settingsEmailAddressInput.oninput = () => setSettingsEmailAddressDraft(settingsEmailAddressInput.value);
+  settingsEmailAddressInput.onblur = () => {
+    state.settingsEmailAddressDraft = normalizeSettingsEmailAddress(settingsEmailAddressInput.value);
+    renderSettingsEmailControls();
+  };
+
+  if (settingsEmailDiscardButton) {
+    settingsEmailDiscardButton.disabled = !changed;
+    settingsEmailDiscardButton.onclick = discardSettingsEmailAddressDraft;
+  }
+  if (settingsEmailSaveButton) {
+    settingsEmailSaveButton.disabled = !changed || !draftIsValid;
+    settingsEmailSaveButton.onclick = saveSettingsEmailAddressDraft;
+  }
+}
+
 function renderSettingsPage() {
   if (!settingsPage) {
     return;
@@ -3654,13 +3711,7 @@ function renderSettingsPage() {
     });
   }
 
-  if (settingsEmailAddressInput) {
-    settingsEmailAddressInput.value = state.settingsEmailAddress || "";
-    settingsEmailAddressInput.onchange = () => updateSettingsEmailAddress(settingsEmailAddressInput.value);
-    settingsEmailAddressInput.onblur = () => {
-      settingsEmailAddressInput.value = normalizeSettingsEmailAddress(settingsEmailAddressInput.value);
-    };
-  }
+  renderSettingsEmailControls();
 
   if (!settingsEmailOptions) {
     return;
@@ -3678,10 +3729,12 @@ function renderSettingsPage() {
 
   options.forEach((option) => {
     const label = document.createElement("label");
-    label.className = "settingsCheckbox";
+    const emailReady = validSettingsEmailAddress(state.settingsEmailAddress);
+    label.className = `settingsCheckbox ${emailReady ? "" : "disabled"}`;
     const input = document.createElement("input");
     input.type = "checkbox";
-        input.checked = state.settingsReceiveEmailsFor.includes(option.id);
+    input.checked = emailReady && state.settingsReceiveEmailsFor.includes(option.id);
+    input.disabled = !emailReady;
     input.dataset.settingsEmailOption = option.id;
     input.addEventListener("change", () => updateSettingsEmailOption(option.id, input.checked));
     const span = document.createElement("span");
@@ -7258,7 +7311,7 @@ function renderPlayerPage(playerId) {
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const inAnyWatchlist = playerIsInAnyWatchlist(id);
   watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "â˜…" : "â˜†"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "Ã¢Ëœâ€¦" : "Ã¢Ëœâ€ "}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => {
     toggleWatchlistPlayer(id, true);
   });
@@ -8757,7 +8810,7 @@ function renderTable() {
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
-          noteIcon.textContent = "ðŸ“";
+          noteIcon.textContent = "Ã°Å¸â€œÂ";
           noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
@@ -10036,7 +10089,7 @@ function setupChangelogSections() {
     const chevron = document.createElement("span");
     chevron.className = "changelogMinorChevron";
     chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "âŒ„";
+    chevron.textContent = "Ã¢Å’â€ž";
 
     toggle.append(title, meta, chevron);
 
