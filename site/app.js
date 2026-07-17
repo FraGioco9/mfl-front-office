@@ -230,8 +230,8 @@ const tableColumnWidths = {
   wallet_name: 187.34,
   owned_since: 187.34,
   active_contract_revenue_share: 120,
-  active_contract_club_name: 397.16,
-  active_contract_club_division: 130,
+  active_contract_club_name: 327.16,
+  active_contract_club_division: 200,
   player_link: 48.39,
 };
 
