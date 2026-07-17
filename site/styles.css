@@ -3233,14 +3233,14 @@ td a {
 
 .playerContractDivision {
   display: inline-flex;
-  align-items: center;
-  align-self: center;
+  align-items: baseline;
+  align-self: baseline;
   gap: 3px;
   font-size: 0.9em;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
-  transform: translateY(1px);
+  transform: translateY(0);
 }
 
 .playerContractSeparator {
