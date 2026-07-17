@@ -45,7 +45,9 @@ const state = {
   searchRenderTimer: null,
   searchIndex: [],
   agentSearchIndex: [],
+  recentSearchItems: [],
   recentSearchPlayerIds: [],
+  recentSearchAgentWallets: [],
   recentEvaluationPlayerIds: [],
   evaluationPlayerId: null,
   evaluationOverallRows: {},
@@ -304,6 +306,8 @@ const DEFAULT_WATCHLIST_NAME = "Default";
 const WALLET_NOTES_STORAGE_PREFIX = "mfl-wallet-player-notes-v1:";
 const WALLET_PENDING_SETTINGS_STORAGE_PREFIX = "mfl-wallet-pending-settings-v1:";
 const RECENT_SEARCH_STORAGE_KEY = "mfl-recent-player-searches-v1";
+const RECENT_AGENT_SEARCH_STORAGE_KEY = "mfl-recent-agent-searches-v1";
+const RECENT_MIXED_SEARCH_STORAGE_KEY = "mfl-recent-searches-v1";
 const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
 const PLAYER_NOTE_MAX_LENGTH = 200;
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
@@ -4724,7 +4728,9 @@ function currentTableState() {
   return {
     pages: state.tablePageStates,
     menuOpen: state.menuOpen,
+    recentSearchItems: state.recentSearchItems,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
+    recentSearchAgentWallets: state.recentSearchAgentWallets,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     playerAttributeView: state.playerAttributeView,
     linkedWalletAddress: state.linkedWalletAddress,
@@ -4812,7 +4818,9 @@ function applyWalletTableState(savedState) {
   restorePlayerAttributeView(mergedState);
   saveTableStateLocally({
     ...mergedState,
+    recentSearchItems: state.recentSearchItems,
     recentSearchPlayerIds: state.recentSearchPlayerIds,
+    recentSearchAgentWallets: state.recentSearchAgentWallets,
     recentEvaluationPlayerIds: state.recentEvaluationPlayerIds,
     linkedWalletAddress: state.linkedWalletAddress,
   });
@@ -4840,10 +4848,36 @@ function restoreMenuState(savedState) {
   }
 }
 
+function recentPlayerKey(playerId) {
+  return `player:${String(playerId).trim()}`;
+}
+
+function recentAgentKey(walletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  return normalizedWalletAddress ? `agent:${normalizedWalletAddress}` : "";
+}
+
+function recentSearchItemsFromLegacy(playerIds = [], agentWallets = []) {
+  return [
+    ...normalizeIdList(playerIds, 5).map(recentPlayerKey),
+    ...normalizeIdList(agentWallets, 5).map(recentAgentKey).filter(Boolean),
+  ];
+}
+
 function restoreRecentSearchState(savedState) {
-  const savedIds = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
-  state.recentSearchPlayerIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_SEARCH_STORAGE_KEY), savedIds);
+  const savedPlayerIds = Array.isArray(savedState?.recentSearchPlayerIds) ? savedState.recentSearchPlayerIds : [];
+  const savedAgentWallets = Array.isArray(savedState?.recentSearchAgentWallets) ? savedState.recentSearchAgentWallets : [];
+  const savedMixedItems = Array.isArray(savedState?.recentSearchItems) ? savedState.recentSearchItems : [];
+  state.recentSearchPlayerIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_SEARCH_STORAGE_KEY), savedPlayerIds);
+  state.recentSearchAgentWallets = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_AGENT_SEARCH_STORAGE_KEY), savedAgentWallets);
+  state.recentSearchItems = mergeRecentIdLists(
+    loadRecentIdsFromStorage(RECENT_MIXED_SEARCH_STORAGE_KEY),
+    savedMixedItems,
+    recentSearchItemsFromLegacy(state.recentSearchPlayerIds, state.recentSearchAgentWallets)
+  );
   saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
+  saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
+  saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
 }
 
 function restoreRecentEvaluationState(savedState) {
@@ -4874,21 +4908,31 @@ function restorePlayerAttributeView(savedState) {
 }
 
 function persistRecentSearchStates() {
+  saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
   saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
+  saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
   saveRecentIdsToStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY, state.recentEvaluationPlayerIds);
 }
 
 function syncRecentSearchStateFromStorage(event = null) {
-  if (event && ![RECENT_SEARCH_STORAGE_KEY, RECENT_EVALUATION_SEARCH_STORAGE_KEY].includes(event.key)) {
+  if (event && ![RECENT_MIXED_SEARCH_STORAGE_KEY, RECENT_SEARCH_STORAGE_KEY, RECENT_AGENT_SEARCH_STORAGE_KEY, RECENT_EVALUATION_SEARCH_STORAGE_KEY].includes(event.key)) {
     return;
   }
 
   const nextSearchIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_SEARCH_STORAGE_KEY), state.recentSearchPlayerIds);
+  const nextAgentWallets = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_AGENT_SEARCH_STORAGE_KEY), state.recentSearchAgentWallets);
+  const nextSearchItems = mergeRecentIdLists(
+    loadRecentIdsFromStorage(RECENT_MIXED_SEARCH_STORAGE_KEY),
+    state.recentSearchItems,
+    recentSearchItemsFromLegacy(nextSearchIds, nextAgentWallets)
+  );
   const nextEvaluationIds = mergeRecentIdLists(loadRecentIdsFromStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY), state.recentEvaluationPlayerIds);
-  const searchChanged = JSON.stringify(nextSearchIds) !== JSON.stringify(state.recentSearchPlayerIds);
+  const searchChanged = JSON.stringify(nextSearchItems) !== JSON.stringify(state.recentSearchItems);
   const evaluationChanged = JSON.stringify(nextEvaluationIds) !== JSON.stringify(state.recentEvaluationPlayerIds);
 
   state.recentSearchPlayerIds = nextSearchIds;
+  state.recentSearchAgentWallets = nextAgentWallets;
+  state.recentSearchItems = nextSearchItems;
   state.recentEvaluationPlayerIds = nextEvaluationIds;
 
   if (searchChanged && searchModal && !searchModal.hidden && !playerSearchInput.value.trim()) {
@@ -5564,6 +5608,11 @@ function agentRoute(walletAddress) {
 function openAgentPage(walletAddress) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (!normalizedWalletAddress) {
+    return;
+  }
+
+  if (normalizedWalletAddress === normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()) {
+    setPage("myplayers", true);
     return;
   }
 
@@ -7380,16 +7429,47 @@ function bestSearchResults(query) {
     .slice(0, 5);
 }
 
+function agentSearchResultByWallet(walletAddress) {
+  if (!state.agentSearchIndex.length && (state.rows.length || state.walletRows.length)) {
+    buildSearchIndex();
+  }
+
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  return state.agentSearchIndex.find((entry) => entry.walletAddress === normalizedWalletAddress) || null;
+}
+
 function recentSearchRows() {
-  return state.recentSearchPlayerIds
-    .map((playerId) => rowByPlayerId(playerId))
-    .filter(Boolean)
-    .map(playerSearchResult);
+  const items = state.recentSearchItems.length
+    ? state.recentSearchItems
+    : recentSearchItemsFromLegacy(state.recentSearchPlayerIds, state.recentSearchAgentWallets);
+
+  return items.map((item) => {
+    if (item.startsWith("agent:")) {
+      return agentSearchResultByWallet(item.slice(6));
+    }
+
+    const playerId = item.startsWith("player:") ? item.slice(7) : item;
+    const row = rowByPlayerId(playerId);
+    return row ? playerSearchResult(row) : null;
+  }).filter(Boolean);
 }
 
 function rememberSearchResult(playerId) {
   const key = String(playerId);
   state.recentSearchPlayerIds = mergeRecentIdLists([key], state.recentSearchPlayerIds);
+  state.recentSearchItems = mergeRecentIdLists([recentPlayerKey(key)], state.recentSearchItems);
+  persistRecentSearchStates();
+  saveTableState();
+}
+
+function rememberAgentSearchResult(walletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  if (!normalizedWalletAddress) {
+    return;
+  }
+
+  state.recentSearchAgentWallets = mergeRecentIdLists([normalizedWalletAddress], state.recentSearchAgentWallets);
+  state.recentSearchItems = mergeRecentIdLists([recentAgentKey(normalizedWalletAddress)], state.recentSearchItems);
   persistRecentSearchStates();
   saveTableState();
 }
@@ -7401,7 +7481,7 @@ function renderSearchResultsNow() {
 
   if (!results.length) {
     playerSearchResults.classList.remove("filledSearchResults");
-    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players or agents found." : "Recent players will appear here."}</div>`;
+    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players or agents found." : "Recent searches will appear here."}</div>`;
     return;
   }
 
@@ -7414,6 +7494,7 @@ function renderSearchResultsNow() {
     if (result.type === "agent") {
       button.innerHTML = `<strong>${escapeHtml(result.name)}</strong><span>${escapeHtml(result.walletAddress)}</span>`;
       button.addEventListener("click", () => {
+        rememberAgentSearchResult(result.walletAddress);
         closeSearch();
         openAgentPage(result.walletAddress);
       });
