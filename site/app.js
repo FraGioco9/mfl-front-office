@@ -7474,6 +7474,11 @@ function rememberAgentSearchResult(walletAddress) {
   saveTableState();
 }
 
+function navigateFromSearch(callback) {
+  closeSearch();
+  window.requestAnimationFrame(() => callback());
+}
+
 function renderSearchResultsNow() {
   const query = normalizeSearchText(playerSearchInput.value.trim());
   const results = query ? bestSearchResults(query) : recentSearchRows();
@@ -7495,8 +7500,7 @@ function renderSearchResultsNow() {
       button.innerHTML = `<strong>${escapeHtml(result.name)}</strong><span>${escapeHtml(result.walletAddress)}</span>`;
       button.addEventListener("click", () => {
         rememberAgentSearchResult(result.walletAddress);
-        closeSearch();
-        openAgentPage(result.walletAddress);
+        navigateFromSearch(() => openAgentPage(result.walletAddress));
       });
       fragment.appendChild(button);
       return;
@@ -7508,8 +7512,7 @@ function renderSearchResultsNow() {
     button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
     button.addEventListener("click", () => {
       rememberSearchResult(id);
-      closeSearch();
-      openPlayerPage(id);
+      navigateFromSearch(() => openPlayerPage(id));
     });
     fragment.appendChild(button);
   });
