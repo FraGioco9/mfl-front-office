@@ -4770,8 +4770,8 @@ td a {
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.settingsToggleButton:hover,
-.settingsToggleButton:hover:not(:disabled) {
+.settingsToggleButton:not(.active):hover,
+.settingsToggleButton:not(.active):hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
 }
