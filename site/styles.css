@@ -2938,8 +2938,8 @@ td a {
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  font-size: 24px;
-  line-height: 1.05;
+  font-size: 20px;
+  line-height: 1;
   color: #111820;
   text-shadow: none;
 }
@@ -3022,11 +3022,11 @@ td a {
 .playerAttributeCard .progressionValue,
 .playerAttributeCard .nextOverallValue {
   color: #2fbf62;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .playerAttributeCard .trainingDelta {
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .playerAttributeCard .trainingDelta.positive {
@@ -3067,7 +3067,7 @@ td a {
 
 .playerAttributeCard.featured .progressionValue,
 .playerAttributeCard.featured .nextOverallValue {
-  font-size: 16px;
+  font-size: 13px;
 }
 
 .playerAttributeCard.trainingCard strong {
@@ -3134,11 +3134,11 @@ td a {
 
 
 .playerAttributeCard.featured {
-  min-height: 56px;
+  min-height: 44px;
 }
 
 .playerAttributeCard.featured strong {
-  font-size: 30px;
+  font-size: 26px;
 }
 
 .playerAttributeCard.featured .attributeValueText {
@@ -3194,8 +3194,8 @@ td a {
 .detailGrid,
 .attributeGrid {
   display: grid;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .detailGrid {
@@ -3203,7 +3203,7 @@ td a {
 }
 
 .playerInfoPanel .detailGrid {
-  min-height: 168px;
+  min-height: 152px;
   grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 
@@ -3221,8 +3221,8 @@ td a {
 }
 
 .detailGrid div {
-  min-height: 36px;
-  padding: 4px 10px;
+  min-height: 32px;
+  padding: 3px 10px;
 }
 
 .detailGrid strong {
@@ -3231,15 +3231,21 @@ td a {
   gap: 6px;
 }
 
+.playerContractDivision {
+  font-size: 0.9em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .playerAttributeCard {
-  min-height: 38px;
-  padding: 4px 10px;
+  min-height: 30px;
+  padding: 3px 10px;
 }
 
 .detailGrid span,
 .playerAttributeCard span {
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
 }

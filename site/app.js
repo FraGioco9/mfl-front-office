@@ -7189,7 +7189,9 @@ function renderPlayerPage(playerId) {
   const agentTooltip = joinedAgencyTooltip(row);
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
-  const contractLabel = escapeHtml(formatContractClubName(row));
+  const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, "active_contract_club_division")) : null;
+  const contractDivisionHtml = contractDivision ? ` <span class="playerContractDivision" style="color: ${escapeHtml(contractDivision.color)}">- ${escapeHtml(contractDivision.name)}</span>` : "";
+  const contractLabel = `${escapeHtml(formatContractClubName(row))}${contractDivisionHtml}`;
   const revenueShareLabel = rowHasActiveContract(row) ? escapeHtml(formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) || "-") : "";
   const infoCards = [
     ["Nationality", `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
