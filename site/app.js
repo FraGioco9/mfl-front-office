@@ -5217,23 +5217,45 @@ function contractDivisionInfo(value) {
   };
 }
 
+function isBlankValue(value) {
+  return value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL";
+}
+
+function isDevelopmentCenterClubName(value) {
+  return String(value || "").trim().toLowerCase() === "development center";
+}
+
+function rowHasActiveContract(row) {
+  const clubName = getValue(row, "active_contract_club_name");
+  if (isDevelopmentCenterClubName(clubName)) {
+    return false;
+  }
+
+  return !isBlankValue(clubName) || !isBlankValue(getValue(row, "active_contract_club_id"));
+}
+
 function formatContractRevenueShare(value) {
-  if (value === null || value === undefined || value === "") {
-    return "NULL";
+  if (isBlankValue(value)) {
+    return "";
   }
 
   const percentage = Number(value) / 100;
 
   if (!Number.isFinite(percentage)) {
-    return "NULL";
+    return "";
   }
 
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage)}%`;
 }
 
+function formatContractClubName(row) {
+  const clubName = getValue(row, "active_contract_club_name");
+  return isBlankValue(clubName) ? "Free Agent" : String(clubName);
+}
+
 function formatContractDivision(value) {
   const division = contractDivisionInfo(value);
-  return division ? division.name : "NULL";
+  return division ? division.name : "";
 }
 
 function contractDivisionSortValue(value) {
@@ -5429,11 +5451,15 @@ function formatCellValue(row, column) {
   }
 
   if (column === "active_contract_revenue_share") {
-    return formatContractRevenueShare(getValue(row, column));
+    return rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, column)) : "";
+  }
+
+  if (column === "active_contract_club_name") {
+    return formatContractClubName(row);
   }
 
   if (column === "active_contract_club_division") {
-    return formatContractDivision(getValue(row, column));
+    return rowHasActiveContract(row) ? formatContractDivision(getValue(row, column)) : "";
   }
 
   if (statColumns.includes(column)) {
@@ -8550,7 +8576,7 @@ function renderTable() {
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
       } else if (column === "active_contract_club_division") {
-        const division = contractDivisionInfo(getValue(row, column));
+        const division = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, column)) : null;
         if (division) {
           const divisionLabel = document.createElement("span");
           divisionLabel.className = "contractDivisionLabel";
@@ -8558,7 +8584,7 @@ function renderTable() {
           divisionLabel.textContent = division.name;
           cell.appendChild(divisionLabel);
         } else {
-          cell.textContent = "NULL";
+          cell.textContent = "";
         }
       } else if (column === agentColumn) {
         if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
