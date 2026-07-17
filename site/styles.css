@@ -3232,12 +3232,15 @@ td a {
 }
 
 .playerContractDivision {
-  display: inline;
+  display: inline-flex;
+  align-items: baseline;
+  align-self: baseline;
+  gap: 3px;
   font-size: 0.9em;
   font-weight: 800;
-  line-height: 1;
+  line-height: inherit;
   white-space: nowrap;
-  vertical-align: text-bottom;
+  transform: translateY(0.08em);
 }
 
 .playerContractSeparator {
