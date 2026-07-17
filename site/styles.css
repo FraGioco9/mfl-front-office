@@ -4863,8 +4863,7 @@ td a {
 }
 
 .settingsEmailAddressInput:focus {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .settingsEmailActionButton {
@@ -4877,11 +4876,6 @@ td a {
   font-size: 13px;
   font-weight: 800;
   transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
-}
-
-.settingsEmailActionButton:not(:disabled):hover {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
 }
 
 .settingsEmailActionButton.primary {
@@ -4913,7 +4907,6 @@ td a {
 .settingsCheckbox.disabled {
   color: var(--text-soft);
   cursor: not-allowed;
-  opacity: 0.62;
 }
 
 .settingsCheckbox.disabled[data-tooltip] {
@@ -4924,18 +4917,18 @@ td a {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 8px);
-  z-index: 40;
+  bottom: calc(100% + 10px);
+  z-index: 80;
   width: max-content;
-  max-width: 240px;
-  padding: 8px 10px;
+  max-width: 320px;
+  padding: 9px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-soft);
+  background: #171717;
+  color: #ffffff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.35;
   opacity: 0;
   pointer-events: none;
@@ -4948,6 +4941,11 @@ td a {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+.settingsCheckbox.disabled input,
+.settingsCheckbox.disabled span {
+  opacity: 0.62;
+}
+
 .settingsCheckbox.disabled input {
   cursor: not-allowed;
 }

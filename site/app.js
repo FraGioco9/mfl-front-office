@@ -2687,6 +2687,9 @@ function renderTableLoadingShell(pageName) {
 async function setPage(pageName, updateHash = true, options = {}) {
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
+  if (previousPage === "settings" && pageName !== "settings") {
+    discardSettingsEmailAddressDraftSilently();
+  }
   if (pageName === "agents") {
     state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
   }
@@ -3603,6 +3606,15 @@ function discardSettingsEmailAddressDraft() {
   renderSettingsEmailControls();
 }
 
+function discardSettingsEmailAddressDraftSilently() {
+  if (state.settingsEmailAddressDraft !== state.settingsEmailAddress) {
+    state.settingsEmailAddressDraft = state.settingsEmailAddress;
+    if (state.currentPage === "settings") {
+      renderSettingsEmailControls();
+    }
+  }
+}
+
 function saveSettingsEmailAddressDraft() {
   const email = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
   if (email && !validSettingsEmailAddress(email)) {
@@ -3618,6 +3630,7 @@ function saveSettingsEmailAddressDraft() {
   savePendingSettingsLocally();
   saveSettingsPreferencesAfterChange();
   renderSettingsPage();
+  showToast(email ? "Email address saved." : "Email address removed.");
 }
 
 function updateSettingsEmailOption(optionId, checked) {
@@ -3659,10 +3672,12 @@ function renderSettingsEmailControls() {
   };
 
   if (settingsEmailDiscardButton) {
+    settingsEmailDiscardButton.hidden = !changed;
     settingsEmailDiscardButton.disabled = !changed;
     settingsEmailDiscardButton.onclick = discardSettingsEmailAddressDraft;
   }
   if (settingsEmailSaveButton) {
+    settingsEmailSaveButton.hidden = !changed;
     settingsEmailSaveButton.disabled = !changed || !draftIsValid;
     settingsEmailSaveButton.onclick = saveSettingsEmailAddressDraft;
   }
