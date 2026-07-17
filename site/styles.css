@@ -3233,8 +3233,8 @@ td a {
 
 .playerContractDivision {
   display: inline-flex;
-  align-items: flex-end;
-  align-self: flex-end;
+  align-items: baseline;
+  align-self: baseline;
   gap: 3px;
   font-size: 0.9em;
   font-weight: 800;
