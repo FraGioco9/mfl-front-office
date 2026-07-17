@@ -2356,7 +2356,7 @@ function renderSavedEvaluationList(rows) {
       `#${playerId}`,
       summaryPosition,
       ageText ? `${ageText} yo` : "",
-    ].filter(Boolean).join(" Ã‚Â· ");
+    ].filter(Boolean).join(" Ãƒâ€šÃ‚Â· ");
     main.append(name, details);
 
     const value = document.createElement("strong");
@@ -3188,7 +3188,7 @@ function playerNoteIconHtml(playerId, includeTooltip = false) {
 
   const note = playerNote(playerId);
   const tooltip = includeTooltip ? ` data-tooltip="${escapeHtml(note)}"` : "";
-  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">Ã°Å¸â€œÂ</span>`;
+  return `<span class="playerNoteIcon"${tooltip} aria-label="Player note">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â</span>`;
 }
 
 function updatePlayerNoteCount(input) {
@@ -3731,6 +3731,9 @@ function renderSettingsPage() {
     const label = document.createElement("label");
     const emailReady = validSettingsEmailAddress(state.settingsEmailAddress);
     label.className = `settingsCheckbox ${emailReady ? "" : "disabled"}`;
+    if (!emailReady) {
+      label.dataset.tooltip = "You need to set a valid email address";
+    }
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = emailReady && state.settingsReceiveEmailsFor.includes(option.id);
@@ -7311,7 +7314,7 @@ function renderPlayerPage(playerId) {
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
   const inAnyWatchlist = playerIsInAnyWatchlist(id);
   watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "Ã¢Ëœâ€¦" : "Ã¢Ëœâ€ "}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+  watchButton.innerHTML = `<span class="watchlistButtonStar">${inAnyWatchlist ? "ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¦" : "ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â "}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
   watchButton.addEventListener("click", () => {
     toggleWatchlistPlayer(id, true);
   });
@@ -8810,7 +8813,7 @@ function renderTable() {
           noteIcon.className = "playerNoteIcon";
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
-          noteIcon.textContent = "Ã°Å¸â€œÂ";
+          noteIcon.textContent = "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â";
           noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
           noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
@@ -10089,7 +10092,7 @@ function setupChangelogSections() {
     const chevron = document.createElement("span");
     chevron.className = "changelogMinorChevron";
     chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "Ã¢Å’â€ž";
+    chevron.textContent = "ÃƒÂ¢Ã…â€™Ã¢â‚¬Å¾";
 
     toggle.append(title, meta, chevron);
 
