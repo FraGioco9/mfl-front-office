@@ -3162,8 +3162,9 @@ function showPlayerNoteTooltip(icon) {
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
 
+  const tableAgentTooltip = icon.classList.contains("agentTableLink") && icon.closest("#tableBody");
   const agentTooltipAnchorWidth = Number.parseFloat(getComputedStyle(icon).fontSize || "14") * 10;
-  let left = icon.classList.contains("agentTableLink")
+  let left = tableAgentTooltip
     ? iconRect.left + agentTooltipAnchorWidth / 2 - tooltipRect.width / 2
     : iconRect.left + iconRect.width / 2 - tooltipRect.width / 2;
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
