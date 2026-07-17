@@ -77,6 +77,7 @@ const state = {
 const flagColumn = "nationality_flag";
 const baseColumns = ["player_id", flagColumn, "name", "nationality", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
+const contractColumns = ["overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division"];
 const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
 99	84000	84000	84000	112000	56000	56000	70000	112000	112000	112000	70000	42000	84000	84000	112000
 98	78000	78000	78000	104000	52000	52000	65000	104000	104000	104000	65000	39000	78000	78000	104000
@@ -155,12 +156,12 @@ const mflWalletAddress = "0xff8d2bbed8164db0";
 
 const tablePages = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
-  database: ["attributes"],
+  database: ["attributes", "next", "contracts"],
   mfl: ["attributes"],
-  agents: ["attributes", "next", "current", "all"],
-  progression: ["current", "all"],
-  watchlist: ["attributes", "next", "current", "all"],
-  myplayers: ["attributes", "next", "current", "all"],
+  agents: ["attributes", "next", "contracts", "current", "all"],
+  progression: ["contracts", "current", "all"],
+  watchlist: ["attributes", "next", "contracts", "current", "all"],
+  myplayers: ["attributes", "next", "contracts", "current", "all"],
 };
 const defaultPageViews = {
   database: "attributes",
@@ -188,6 +189,10 @@ const views = {
     columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
     progressionSuffix: null,
   },
+  contracts: {
+    columns: [...baseColumns, ...contractColumns, agentColumn, linkColumn],
+    progressionSuffix: null,
+  },
 };
 
 const tableColumnClasses = {
@@ -200,6 +205,9 @@ const tableColumnClasses = {
   player_seasons: "col-seasons",
   wallet_name: "col-agent",
   owned_since: "col-agent",
+  active_contract_revenue_share: "col-contract-revenue",
+  active_contract_club_name: "col-contract-club",
+  active_contract_club_division: "col-contract-division",
   player_link: "col-link",
 };
 
@@ -239,11 +247,14 @@ const columnLabels = {
   dribbling: "Dribbling",
   defense: "Defense",
   physical: "Physical",
+  active_contract_revenue_share: "Rev. Share",
+  active_contract_club_name: "Club Name",
+  active_contract_club_division: "Division",
   player_link: "",
 };
 
-const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, ...statColumns]);
-const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, ...statColumns]);
+const numberColumns = new Set(["player_id", "age", "height", "retirement_years", "player_seasons", "goalkeeping", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_division", ...statColumns]);
+const sortableColumns = new Set(["player_id", "name", "age", "player_seasons", joinedAgencyColumn, "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division", ...statColumns]);
 const baseFilterColumns = ["player_id", "wallet_name", "name", "positions", "age", "player_seasons", "nationality", ...statColumns, "owned_since"];
 const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
@@ -2881,7 +2892,7 @@ function tablePageKey(pageName = state.currentPage) {
 
 function allowedViewsForPage(pageName = tablePageKey() || "progression") {
   if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return ["attributes", "next"];
+    return ["attributes", "next", "contracts"];
   }
 
   return pageViewOptions[pageName] || pageViewOptions.progression;
@@ -5142,6 +5153,63 @@ function formatNationality(value) {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+const contractDivisionNames = {
+  1: "Diamond",
+  2: "Platinum",
+  3: "Gold",
+  4: "Silver",
+  5: "Bronze",
+  6: "Iron",
+  7: "Stone",
+  8: "Ice",
+  9: "Spark",
+  10: "Flint",
+};
+
+const contractDivisionColors = {
+  1: "#3be9f8",
+  2: "#13d389",
+  3: "#ffd23e",
+  4: "#dbe4eb",
+  5: "#fd7a00",
+  6: "#865e3f",
+  7: "#b7b09c",
+  8: "#b0cce1",
+  9: "#ffb136",
+  10: "#757061",
+};
+
+function contractDivisionInfo(value) {
+  const division = Number(value);
+
+  if (!Number.isFinite(division) || !contractDivisionNames[division]) {
+    return null;
+  }
+
+  return {
+    name: contractDivisionNames[division],
+    color: contractDivisionColors[division],
+  };
+}
+
+function formatContractRevenueShare(value) {
+  if (value === null || value === undefined || value === "") {
+    return "NULL";
+  }
+
+  const percentage = Number(value) / 100;
+
+  if (!Number.isFinite(percentage)) {
+    return "NULL";
+  }
+
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(percentage)}%`;
+}
+
+function formatContractDivision(value) {
+  const division = contractDivisionInfo(value);
+  return division ? division.name : "NULL";
+}
 
 function formatStatValue(row, statColumn) {
   const value = getValue(row, statColumn);
@@ -5328,6 +5396,14 @@ function formatCellValue(row, column) {
 
   if (column === "nationality") {
     return formatNationality(getValue(row, column));
+  }
+
+  if (column === "active_contract_revenue_share") {
+    return formatContractRevenueShare(getValue(row, column));
+  }
+
+  if (column === "active_contract_club_division") {
+    return formatContractDivision(getValue(row, column));
   }
 
   if (statColumns.includes(column)) {
@@ -8398,6 +8474,17 @@ function renderTable() {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
+      } else if (column === "active_contract_club_division") {
+        const division = contractDivisionInfo(getValue(row, column));
+        if (division) {
+          const divisionLabel = document.createElement("span");
+          divisionLabel.className = "contractDivisionLabel";
+          divisionLabel.style.color = division.color;
+          divisionLabel.textContent = division.name;
+          cell.appendChild(divisionLabel);
+        } else {
+          cell.textContent = "NULL";
+        }
       } else if (column === agentColumn) {
         if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
           const walletAddress = getValue(row, "wallet_address");

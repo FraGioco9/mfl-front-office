@@ -2125,6 +2125,22 @@ table {
   width: 132px;
 }
 
+.col-contract-revenue {
+  width: 74px;
+}
+
+.col-contract-club {
+  width: 132px;
+}
+
+.col-contract-division {
+  width: 82px;
+}
+
+.contractDivisionLabel {
+  font-weight: 700;
+}
+
 .col-link {
   width: 34px;
 }
