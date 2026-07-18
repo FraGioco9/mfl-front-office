@@ -71,6 +71,7 @@ const state = {
   walletPreferencesSaveSequence: 0,
   settingsSaveInFlight: false,
   tooltipSuppressedUntil: 0,
+  hoveredTablePlayerId: "",
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -8842,6 +8843,9 @@ function renderTable() {
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
     const playerId = getValue(row, "player_id");
+    if (state.hoveredTablePlayerId && String(playerId) === state.hoveredTablePlayerId) {
+      tableRow.classList.add("tableRowHovered");
+    }
 
     selectionCell.className = "selectionCell";
     selectionInput.type = "checkbox";
@@ -10072,6 +10076,23 @@ navButtons.forEach((button) => {
   });
 });
 
+
+tableBody?.addEventListener("pointermove", (event) => {
+  const row = event.target?.closest?.("#tableBody tr");
+  const idButton = row?.querySelector?.(".copyPlayerIdButton");
+  const nextId = String(idButton?.textContent || "").trim();
+  if (!row || !nextId || state.hoveredTablePlayerId === nextId) {
+    return;
+  }
+  state.hoveredTablePlayerId = nextId;
+  tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
+  row.classList.add("tableRowHovered");
+});
+
+tableBody?.addEventListener("pointerleave", () => {
+  state.hoveredTablePlayerId = "";
+  tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
+});
 window.addEventListener("scroll", hidePlayerNoteTooltip, true);
 window.addEventListener("resize", hidePlayerNoteTooltip);
 
