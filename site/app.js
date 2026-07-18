@@ -80,6 +80,7 @@ const state = {
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
+  walletSettingsLoaded: false,
   walletOptInInProgress: false,
   loadingPercent: 0,
   rowSortCache: new WeakMap(),
@@ -1368,6 +1369,7 @@ function optOutWallet() {
   state.linkedWalletAddress = "";
   state.linkedWalletProof = null;
   state.walletPermissionAllowed = false;
+  state.walletSettingsLoaded = false;
 
   try {
     localStorage.removeItem(LINKED_WALLET_STORAGE_KEY);
@@ -1838,6 +1840,7 @@ async function linkWallet() {
 
     state.linkedWalletAddress = dapperAddress;
     state.linkedWalletProof = linkedWalletProof;
+    state.walletSettingsLoaded = false;
     try {
       localStorage.setItem(LINKED_WALLET_STORAGE_KEY, dapperAddress);
       localStorage.setItem(LINKED_WALLET_PROOF_STORAGE_KEY, JSON.stringify(state.linkedWalletProof));
@@ -3788,6 +3791,7 @@ function settingsEmailOptionsDraftIsActive() {
 
 function applySettingsPayload(settings = {}) {
   const data = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  state.walletSettingsLoaded = true;
   const draftIsActive = settingsEmailDraftIsActive();
   const emailOptionsDraftIsActive = settingsEmailOptionsDraftIsActive();
   if (!emailOptionsDraftIsActive) {
@@ -3940,6 +3944,7 @@ function updateSettingsEmailOption(optionId, checked) {
 }
 
 function saveSettingsPreferencesAfterChange() {
+  state.walletSettingsLoaded = true;
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     return;
   }
@@ -5002,13 +5007,15 @@ async function saveWalletPreferencesNow(options = {}) {
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
-    const settingsPayload = currentSettingsPayload();
+    const pendingSettings = loadPendingSettingsLocally();
+    const shouldSaveSettings = state.walletSettingsLoaded || state.settingsSaveInFlight || Boolean(pendingSettings);
+    const settingsPayload = pendingSettings || currentSettingsPayload();
     const body = {
       playerNotes: normalizedPlayerNotes(state.playerNotes),
       watchlists: watchlistsPayload(),
       tableState: stripPersistentSortState(currentTableState()),
       evaluationSettings: currentEvaluationSettingsPayload(),
-      settings: settingsPayload,
+      ...(shouldSaveSettings ? { settings: settingsPayload } : {}),
     };
 
     const response = await fetch("/api/wallet-preferences", {
@@ -5033,7 +5040,7 @@ async function saveWalletPreferencesNow(options = {}) {
         watchlistChanged = true;
       }
 
-      if (state.settingsSaveInFlight) {
+      if (shouldSaveSettings && (state.settingsSaveInFlight || pendingSettings)) {
         applySettingsPayload(settingsPayload);
       } else if (data.settings) {
         applySettingsPayload(data.settings);
