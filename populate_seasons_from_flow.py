@@ -497,26 +497,57 @@ def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dic
     players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
     return list(players_by_id.values())
 
+def fetch_mfl_flow_static_player_ids_batch(player_ids: list[int]) -> list[dict[str, Any]]:
+    response = execute_flow_ids_script(MFL_WALLET_ADDRESS, player_ids)
+    return parse_flow_static_player_response(response)
+
+
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
-    players: list[dict[str, Any]] = []
-    index = 0
     batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
+    batches = [player_ids[index:index + batch_size] for index in range(0, len(player_ids), batch_size)]
+    total_batches = len(batches)
+    players: list[dict[str, Any]] = []
     completed_batches = 0
 
-    while index < len(player_ids):
-        batch = player_ids[index:index + batch_size]
-        estimated_batches = max(1, (len(player_ids) + batch_size - 1) // batch_size)
-        response = execute_flow_ids_script(MFL_WALLET_ADDRESS, batch)
-        batch_players = parse_flow_static_player_response(response)
-        players.extend(batch_players)
-        index += batch_size
-        completed_batches += 1
-        print(
-            f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{estimated_batches}: "
-            f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
-        )
+    if not batches:
+        print(f"Flow players mint age {MFL_WALLET_ADDRESS}: no database player IDs need updating")
+        return []
 
-    return players
+    worker_count = max(1, min(FLOW_WORKERS, total_batches))
+    print(
+        f"Flow players mint age {MFL_WALLET_ADDRESS}: fetching {len(player_ids)} database player IDs "
+        f"in {total_batches} batches with {worker_count} workers"
+    )
+
+    if worker_count <= 1:
+        for batch in batches:
+            batch_players = fetch_mfl_flow_static_player_ids_batch(batch)
+            players.extend(batch_players)
+            completed_batches += 1
+            print(
+                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
+                f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
+            )
+        return players
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_to_batch = {
+            executor.submit(fetch_mfl_flow_static_player_ids_batch, batch): batch
+            for batch in batches
+        }
+
+        for future in as_completed(future_to_batch):
+            batch = future_to_batch[future]
+            batch_players = future.result()
+            players.extend(batch_players)
+            completed_batches += 1
+            print(
+                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
+                f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
+            )
+
+    players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
+    return list(players_by_id.values())
 
 def get_mfl_player_ids_to_process(connection: sqlite3.Connection, force: bool) -> list[int]:
     where_sql = ""
@@ -635,8 +666,8 @@ def populate_flow_static_fields(
 
     for current_wallet_address in mfl_wallets:
         completed_wallets += 1
-        player_count = get_database_player_count(connection, current_wallet_address)
-        players = fetch_mfl_wallet_flow_static_players_parallel(player_count)
+        player_ids = get_mfl_player_ids_to_process(connection, force)
+        players = fetch_mfl_flow_static_players_by_ids(player_ids)
 
         updated_count = update_flow_static_fields(connection, players, force)
         connection.commit()
