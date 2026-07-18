@@ -411,6 +411,13 @@ const menuRail = document.querySelector("#menuRail");
 const sidebar = document.querySelector("#sidebar");
 const homePage = document.querySelector("#homePage");
 const progressionPage = document.querySelector("#progressionPage");
+const mflStatsPage = document.querySelector("#mflStatsPage");
+const mflStatsOverallFilters = document.querySelector("#mflStatsOverallFilters");
+const mflStatsTotalPlayers = document.querySelector("#mflStatsTotalPlayers");
+const mflStatsPackablePlayers = document.querySelector("#mflStatsPackablePlayers");
+const mflStatsAgedPlayers = document.querySelector("#mflStatsAgedPlayers");
+const mflStatsOtherPlayers = document.querySelector("#mflStatsOtherPlayers");
+const mflStatsAgeDistribution = document.querySelector("#mflStatsAgeDistribution");
 const myPlayersLockedPage = document.querySelector("#myPlayersLockedPage");
 const optInLockedTitle = document.querySelector("#optInLockedTitle");
 const optInLockedMessage = document.querySelector("#optInLockedMessage");
@@ -732,7 +739,7 @@ function pageRequiresData(pageName) {
     return false;
   }
 
-  return tablePages.has(pageName) || pageName === "player" || pageName === "evaluation";
+  return tablePages.has(pageName) || pageName === "mflstats" || pageName === "player" || pageName === "evaluation";
 }
 
 function pageRequiresProgressionPermission(pageName) {
@@ -947,7 +954,7 @@ function currentDataAccess(pageName = state.currentPage) {
     return state.dataAccessOverride;
   }
 
-  if (pageName === "mfl") {
+  if (pageName === "mfl" || pageName === "mflstats") {
     return "mfl";
   }
 
@@ -2619,6 +2626,13 @@ function pageTargetFromPath(path) {
 
   const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
 
+  if (cleanPath === "/mfl/stats") {
+    return {
+      pageName: "mflstats",
+      options: {},
+    };
+  }
+
   if (playerMatch) {
     return {
       pageName: "player",
@@ -2743,6 +2757,10 @@ function pagePath(pageName, options = {}) {
     return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
   }
 
+  if (pageName === "mflstats") {
+    return "/mfl/stats";
+  }
+
   if (tablePages.has(pageName)) {
     const viewName = normalizeViewForPage(options.view || (pageName === state.currentPage ? state.view : defaultViewForPage(pageName)), pageName);
     const slug = viewSlug(viewName);
@@ -2851,6 +2869,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = true;
+    mflStatsPage.hidden = true;
     myPlayersLockedPage.hidden = false;
     evaluationPage.hidden = true;
     playerPage.hidden = true;
@@ -2880,6 +2899,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   const tablePage = tablePages.has(pageName);
+  const mflStatsActive = pageName === "mflstats";
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
@@ -2887,8 +2907,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const needsPageData = pageRequiresData(pageName);
   const shouldShowNavigationLoading = needsPageData
     && shouldResetScroll
-    && (tablePage || playerPageActive || evaluationPageActive)
-    && (tablePage || !state.dataLoaded || state.dataAccess !== targetDataAccess);
+    && (tablePage || mflStatsActive || playerPageActive || evaluationPageActive)
+    && (tablePage || mflStatsActive || !state.dataLoaded || state.dataAccess !== targetDataAccess);
 
   if (shouldShowNavigationLoading || (needsPageData && (!state.dataLoaded || state.dataAccess !== targetDataAccess))) {
     showLoading();
@@ -2914,10 +2934,11 @@ async function setPage(pageName, updateHash = true, options = {}) {
     state.dataLoaded = restoreDataSnapshot(targetDataAccess);
   }
 
-  if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
+  if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = !tablePage;
+    mflStatsPage.hidden = !mflStatsActive;
     myPlayersLockedPage.hidden = true;
     evaluationPage.hidden = !evaluationPageActive;
     playerPage.hidden = !playerPageActive;
@@ -2950,6 +2971,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   syncQuickFilterLabels();
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
+  mflStatsPage.hidden = !mflStatsActive;
   myPlayersLockedPage.hidden = true;
   evaluationPage.hidden = !evaluationPageActive;
   playerPage.hidden = !playerPageActive;
@@ -2975,6 +2997,23 @@ async function setPage(pageName, updateHash = true, options = {}) {
   navButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
+
+  if (mflStatsActive) {
+    renderMflStatsPage();
+    navButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.page === "mfl");
+    });
+    if (document.body.classList.contains("loading")) {
+      await finishLoading();
+    }
+
+    syncHomeLoginButton();
+    if (shouldResetScroll) {
+      resetPageScroll();
+    }
+
+    return;
+  }
 
   if (settingsPageActive) {
     renderSettingsPage();
@@ -8865,6 +8904,139 @@ function rowIsOwnedByLinkedWallet(row) {
 
 function rowIsMflWalletPlayer(row) {
   return normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === mflWalletAddress;
+}
+
+const mflStatsOverallFilterOptions = [
+  { id: "all", label: "All", min: null, max: null },
+  { id: "common", label: "Common", min: null, max: 54 },
+  { id: "limited", label: "Limited", min: 55, max: 64 },
+  { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
+  { id: "rare", label: "Rare", min: 75, max: 84 },
+  { id: "legendary", label: "Legendary", min: 85, max: 94 },
+  { id: "50-54", label: "50-54", min: 50, max: 54 },
+  { id: "55-59", label: "55-59", min: 55, max: 59 },
+  { id: "60-64", label: "60-64", min: 60, max: 64 },
+  { id: "65-69", label: "65-69", min: 65, max: 69 },
+  { id: "70-74", label: "70-74", min: 70, max: 74 },
+  { id: "75-79", label: "75-79", min: 75, max: 79 },
+  { id: "80-84", label: "80-84", min: 80, max: 84 },
+  { id: "85-89", label: "85-89", min: 85, max: 89 },
+  { id: "90-94", label: "90-94", min: 90, max: 94 },
+];
+
+function mflStatsFilterById(filterId = state.mflStatsOverallFilter) {
+  return mflStatsOverallFilterOptions.find((filter) => filter.id === filterId) || mflStatsOverallFilterOptions[0];
+}
+
+function rowMatchesMflStatsOverallFilter(row, filter = mflStatsFilterById()) {
+  const overall = Number(statDisplayValue(row, "overall"));
+  if (!Number.isFinite(overall)) {
+    return false;
+  }
+
+  return (filter.min === null || overall >= filter.min) && (filter.max === null || overall <= filter.max);
+}
+
+function mflStatsCategory(row) {
+  if (rowHasHiddenMflJoinedAgencyDate(row)) {
+    return "other";
+  }
+
+  const seasons = Number(getValue(row, "player_seasons"));
+  if (seasons === 1) {
+    return "packable";
+  }
+
+  if (Number.isFinite(seasons) && seasons >= 2) {
+    return "aged";
+  }
+
+  return "other";
+}
+
+function mflStatsRows() {
+  const filter = mflStatsFilterById();
+  return state.rows
+    .filter((row) => rowIsMflWalletPlayer(row))
+    .filter((row) => rowMatchesMflStatsOverallFilter(row, filter));
+}
+
+function renderMflStatsFilterButtons() {
+  if (!mflStatsOverallFilters) {
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  mflStatsOverallFilterOptions.forEach((filter) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mflStatsFilterButton";
+    button.classList.toggle("active", filter.id === state.mflStatsOverallFilter);
+    button.textContent = filter.label;
+    button.addEventListener("click", () => {
+      state.mflStatsOverallFilter = filter.id;
+      renderMflStatsPage();
+    });
+    fragment.appendChild(button);
+  });
+
+  mflStatsOverallFilters.replaceChildren(fragment);
+}
+
+function renderMflStatsAgeDistribution(packableRows) {
+  if (!mflStatsAgeDistribution) {
+    return;
+  }
+
+  const countsByAge = new Map();
+  packableRows.forEach((row) => {
+    const age = Number(getValue(row, "age"));
+    if (Number.isFinite(age)) {
+      countsByAge.set(age, (countsByAge.get(age) || 0) + 1);
+    }
+  });
+
+  if (!countsByAge.size) {
+    mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this overall filter.</p>';
+    return;
+  }
+
+  const maxCount = Math.max(...countsByAge.values());
+  const rows = Array.from(countsByAge.entries()).sort((a, b) => a[0] - b[0]);
+  const fragment = document.createDocumentFragment();
+
+  rows.forEach(([age, count]) => {
+    const row = document.createElement("div");
+    row.className = "mflStatsAgeRow";
+    const percent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+    row.innerHTML = `<span class="mflStatsAgeLabel">${escapeHtml(age)}</span><div class="mflStatsAgeBar"><span style="width:${percent}%"></span></div><strong>${escapeHtml(formatCount(count))}</strong>`;
+    fragment.appendChild(row);
+  });
+
+  mflStatsAgeDistribution.replaceChildren(fragment);
+}
+
+function renderMflStatsPage() {
+  renderMflStatsFilterButtons();
+  const rows = mflStatsRows();
+  const packableRows = rows.filter((row) => mflStatsCategory(row) === "packable");
+  const agedRows = rows.filter((row) => mflStatsCategory(row) === "aged");
+  const otherRows = rows.filter((row) => mflStatsCategory(row) === "other");
+
+  if (mflStatsTotalPlayers) {
+    mflStatsTotalPlayers.textContent = formatCount(rows.length);
+  }
+  if (mflStatsPackablePlayers) {
+    mflStatsPackablePlayers.textContent = formatCount(packableRows.length);
+  }
+  if (mflStatsAgedPlayers) {
+    mflStatsAgedPlayers.textContent = formatCount(agedRows.length);
+  }
+  if (mflStatsOtherPlayers) {
+    mflStatsOtherPlayers.textContent = formatCount(otherRows.length);
+  }
+
+  renderMflStatsAgeDistribution(packableRows);
 }
 
 function rowHasHiddenMflJoinedAgencyDate(row) {

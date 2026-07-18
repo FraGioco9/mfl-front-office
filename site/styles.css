@@ -4802,6 +4802,182 @@ td a {
   transition: none !important;
 }
 
+
+.mflStatsPage {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding-top: 8px;
+}
+
+.mflStatsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.mflStatsTableLink {
+  text-decoration: none;
+}
+
+.mflStatsFilters {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.mflStatsFilters > span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mflStatsFilterButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mflStatsFilterButton {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mflStatsFilterButton:hover:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.mflStatsFilterButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.mflStatsCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mflStatsCards article,
+.mflStatsDistribution {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.mflStatsCards article {
+  min-height: 98px;
+  padding: 13px 14px;
+}
+
+.mflStatsCards span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.mflStatsCards strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mflStatsCards small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mflStatsDistribution {
+  padding: 14px;
+}
+
+.mflStatsDistribution h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.mflStatsAgeDistribution {
+  display: grid;
+  gap: 7px;
+}
+
+.mflStatsAgeRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.mflStatsAgeLabel,
+.mflStatsAgeRow strong {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mflStatsAgeBar {
+  height: 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.mflStatsAgeBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.mflStatsEmpty {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .mflStatsCards {
+    grid-template-columns: 1fr;
+  }
+
+  .mflStatsHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .settingsPage {
   width: min(1180px, 100%);
   margin: 0 auto;
