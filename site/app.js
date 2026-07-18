@@ -5617,13 +5617,27 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));
   button.addEventListener("mouseleave", hidePlayerNoteTooltip);
   button.addEventListener("blur", hidePlayerNoteTooltip);
-  button.addEventListener("click", (event) => {
+  const copyFromButton = (event) => {
     event.preventDefault();
     event.stopPropagation();
     state.tooltipSuppressedUntil = Date.now() + 350;
     hidePlayerNoteTooltip();
     button.blur();
     copyPlayerId(playerId);
+  };
+  button.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+    copyFromButton(event);
+  });
+  button.addEventListener("click", (event) => {
+    if (Date.now() < state.tooltipSuppressedUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    copyFromButton(event);
   });
   return button;
 }

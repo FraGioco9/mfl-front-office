@@ -2262,13 +2262,10 @@ th.sortable:hover {
   border-top: 6px solid var(--text);
 }
 
-#tableBody tr:hover {
-  background: var(--row-hover);
-}
-
 #tableBody tr:hover > td,
 #tableBody tr:hover > th {
-  background: transparent;
+  background: var(--row-hover);
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
 }
 
 .selectionCell {
@@ -4756,14 +4753,10 @@ td a {
   animation: none !important;
 }
 
-#tableBody tr:hover {
-  background: var(--row-hover) !important;
-}
-
 #tableBody tr:hover > td,
 #tableBody tr:hover > th {
-  background: transparent !important;
-  background-image: none !important;
+  background: var(--row-hover) !important;
+  background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
 #tableBody tr:hover .playerNameLink:hover,
