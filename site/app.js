@@ -6131,7 +6131,11 @@ function buildAgentSearchEntry(walletAddress, name) {
   };
 }
 
-function buildSearchIndex() {
+function buildSearchIndex(options = {}) {
+  if (state.searchIndexesLoaded && state.searchIndex.length && !options.force) {
+    return;
+  }
+
   state.searchIndex = state.rows.map((row) => buildPlayerSearchEntryFromRow(row));
 
   const agentsByWallet = new Map();
@@ -6160,11 +6164,6 @@ async function ensureSearchIndexes() {
   }
 
   state.searchIndexesLoadPromise = (async () => {
-    if (state.rows.length) {
-      buildSearchIndex();
-      return true;
-    }
-
     const manifest = state.manifest || await fetchCurrentManifestForCacheCheck() || readCachedManifest();
     if (!manifest) {
       await loadWalletNames();
@@ -9718,8 +9717,6 @@ function applyDataSnapshot(snapshot) {
   state.dataLoaded = true;
   state.dataLoadPromise = null;
 
-  state.searchIndex = [];
-  state.searchIndexesLoaded = false;
   updateSummaryCounts(state.manifest.row_count, state.manifest.wallet_count);
   statusText.textContent = `Updated ${new Date(state.manifest.generated_at).toLocaleString()}`;
   buildSearchIndex();
