@@ -53,8 +53,8 @@ jobs:
           {
             gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow manual-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow manual-database-and-site.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow manual-populate-seasons.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
           } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
             if [ -z "$RUN_ID" ]; then
