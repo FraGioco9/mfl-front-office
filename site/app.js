@@ -70,6 +70,7 @@ const state = {
   walletPreferencesSaveTimer: null,
   walletPreferencesSaveSequence: 0,
   settingsSaveInFlight: false,
+  tooltipSuppressedUntil: 0,
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -3224,6 +3225,9 @@ function measureTooltipAnchorWidth(icon, sample = "0000000000") {
 }
 
 function showPlayerNoteTooltip(icon) {
+  if (Date.now() < state.tooltipSuppressedUntil) {
+    return;
+  }
   const note = icon?.dataset?.noteTooltip || icon?.dataset?.tooltip || "";
   if (!note) {
     return;
@@ -5617,9 +5621,10 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    state.tooltipSuppressedUntil = Date.now() + 350;
     hidePlayerNoteTooltip();
-    copyPlayerId(playerId);
     button.blur();
+    copyPlayerId(playerId);
   });
   return button;
 }
@@ -8821,6 +8826,8 @@ function renderTable() {
 
   pageRows.forEach((row) => {
     const tableRow = document.createElement("tr");
+    tableRow.addEventListener("pointerenter", () => tableRow.classList.add("tableRowHovered"));
+    tableRow.addEventListener("pointerleave", () => tableRow.classList.remove("tableRowHovered"));
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
     const playerId = getValue(row, "player_id");

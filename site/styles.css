@@ -2262,8 +2262,8 @@ th.sortable:hover {
   border-top: 6px solid var(--text);
 }
 
-#tableBody tr:hover > td,
-#tableBody tr:hover > th {
+#tableBody tr.tableRowHovered > td,
+#tableBody tr.tableRowHovered > th {
   background: var(--row-hover);
   background-image: linear-gradient(var(--row-hover), var(--row-hover));
 }
@@ -4720,9 +4720,9 @@ td a {
 }
 
 
-#tableBody tr:hover .playerNameLink:hover,
-#tableBody tr:hover a:hover,
-#tableBody tr:hover button:hover {
+#tableBody tr.tableRowHovered .playerNameLink:hover,
+#tableBody tr.tableRowHovered a:hover,
+#tableBody tr.tableRowHovered button:hover {
   background: transparent !important;
   box-shadow: none !important;
   transition: none !important;
@@ -4753,14 +4753,14 @@ td a {
   animation: none !important;
 }
 
-#tableBody tr:hover > td,
-#tableBody tr:hover > th {
+#tableBody tr.tableRowHovered > td,
+#tableBody tr.tableRowHovered > th {
   background: var(--row-hover) !important;
   background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
-#tableBody tr:hover .playerNameLink:hover,
-#tableBody tr:hover a:hover {
+#tableBody tr.tableRowHovered .playerNameLink:hover,
+#tableBody tr.tableRowHovered a:hover {
   transition: none !important;
 }
 
