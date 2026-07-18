@@ -73,6 +73,8 @@ const state = {
   tooltipSuppressedUntil: 0,
   hoveredTablePlayerId: "",
   hoveredTableInteractiveKey: "",
+  playerNoteTooltipHideTimer: null,
+  playerNoteTooltipText: "",
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -3205,8 +3207,26 @@ function updatePlayerNoteCount(input) {
   }
 }
 
-function hidePlayerNoteTooltip() {
+function removePlayerNoteTooltip() {
+  if (state.playerNoteTooltipHideTimer) {
+    window.clearTimeout(state.playerNoteTooltipHideTimer);
+    state.playerNoteTooltipHideTimer = null;
+  }
+  state.playerNoteTooltipText = "";
   document.querySelectorAll(".playerNoteFloatingTooltip").forEach((tooltip) => tooltip.remove());
+}
+
+function hidePlayerNoteTooltip(options = {}) {
+  const immediate = Boolean(options.immediate);
+  if (state.playerNoteTooltipHideTimer) {
+    window.clearTimeout(state.playerNoteTooltipHideTimer);
+    state.playerNoteTooltipHideTimer = null;
+  }
+  if (immediate) {
+    removePlayerNoteTooltip();
+    return;
+  }
+  state.playerNoteTooltipHideTimer = window.setTimeout(removePlayerNoteTooltip, 90);
 }
 
 function measureTooltipAnchorWidth(icon, sample = "0000000000") {
@@ -3234,13 +3254,20 @@ function showPlayerNoteTooltip(icon) {
   if (!note) {
     return;
   }
+  if (state.playerNoteTooltipHideTimer) {
+    window.clearTimeout(state.playerNoteTooltipHideTimer);
+    state.playerNoteTooltipHideTimer = null;
+  }
 
-  hidePlayerNoteTooltip();
-
-  const tooltip = document.createElement("div");
-  tooltip.className = "playerNoteFloatingTooltip";
-  tooltip.textContent = note;
-  document.body.appendChild(tooltip);
+  let tooltip = document.querySelector(".playerNoteFloatingTooltip");
+  if (!tooltip || state.playerNoteTooltipText !== note) {
+    removePlayerNoteTooltip();
+    tooltip = document.createElement("div");
+    tooltip.className = "playerNoteFloatingTooltip";
+    tooltip.textContent = note;
+    document.body.appendChild(tooltip);
+  }
+  state.playerNoteTooltipText = note;
 
   const iconRect = icon.getBoundingClientRect();
   const tooltipRect = tooltip.getBoundingClientRect();
@@ -5639,7 +5666,7 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
     event.preventDefault();
     event.stopPropagation();
     state.tooltipSuppressedUntil = Date.now() + 350;
-    hidePlayerNoteTooltip();
+    hidePlayerNoteTooltip({ immediate: true });
     button.blur();
     copyPlayerId(playerId);
   };
@@ -10124,8 +10151,8 @@ tableBody?.addEventListener("pointerleave", () => {
   tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
   tableBody.querySelectorAll(".tableInteractiveHovered").forEach((element) => element.classList.remove("tableInteractiveHovered"));
 });
-window.addEventListener("scroll", hidePlayerNoteTooltip, true);
-window.addEventListener("resize", hidePlayerNoteTooltip);
+window.addEventListener("scroll", () => hidePlayerNoteTooltip({ immediate: true }), true);
+window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true }));
 
 window.addEventListener("popstate", () => {
   const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
