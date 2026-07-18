@@ -5002,12 +5002,13 @@ async function saveWalletPreferencesNow(options = {}) {
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
+    const settingsPayload = currentSettingsPayload();
     const body = {
       playerNotes: normalizedPlayerNotes(state.playerNotes),
       watchlists: watchlistsPayload(),
       tableState: stripPersistentSortState(currentTableState()),
       evaluationSettings: currentEvaluationSettingsPayload(),
-      settings: currentSettingsPayload(),
+      settings: settingsPayload,
     };
 
     const response = await fetch("/api/wallet-preferences", {
@@ -5032,7 +5033,9 @@ async function saveWalletPreferencesNow(options = {}) {
         watchlistChanged = true;
       }
 
-      if (data.settings) {
+      if (state.settingsSaveInFlight) {
+        applySettingsPayload(settingsPayload);
+      } else if (data.settings) {
         applySettingsPayload(data.settings);
       }
       state.settingsSaveInFlight = false;
