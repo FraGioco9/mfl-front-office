@@ -2821,11 +2821,8 @@ function tableTitleForPage(pageName) {
     return "Database";
   }
 
-  if (pageName === "mfl") {
-    return "MFL";
-  }
-  if (pageName === "mflstats") {
-    return "MFL Wallet Stats";
+  if (pageName === "mfl" || pageName === "mflstats") {
+    return "MFL Wallet";
   }
 
   if (pageName === "agents") {
