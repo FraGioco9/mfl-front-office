@@ -4907,42 +4907,100 @@ td a {
   padding: 8px 10px;
 }
 
+.mflStatsDistributionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
 .mflStatsDistribution h3 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 15px;
 }
 
-.mflStatsAgeDistribution {
-  display: grid;
-  gap: 4px;
+.mflStatsDistributionModeButtons {
+  display: flex;
+  gap: 6px;
 }
 
-.mflStatsAgeRow {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 112px;
-  align-items: center;
-  gap: 7px;
-  min-height: 21px;
-}
-
-.mflStatsAgeLabel,
-.mflStatsAgeRow strong {
+.mflStatsDistributionModeButton {
+  height: 28px;
+  min-width: 78px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
 }
 
-.mflStatsAgeBar {
-  height: 8px;
+.mflStatsDistributionModeButton:hover:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.mflStatsDistributionModeButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.mflStatsAgeDistribution {
+  min-height: 196px;
+}
+
+.mflStatsHistogram {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(28px, 1fr);
+  align-items: end;
+  gap: 5px;
+  height: 196px;
+}
+
+.mflStatsHistogramItem {
+  display: grid;
+  grid-template-rows: 34px 1fr 18px;
+  align-items: end;
+  min-width: 0;
+  gap: 4px;
+  text-align: center;
+}
+
+.mflStatsHistogramItem strong {
+  align-self: start;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.mflStatsHistogramBar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 6px 6px 3px 3px;
   background: var(--surface-muted);
 }
 
-.mflStatsAgeBar span {
+.mflStatsHistogramBar span {
   display: block;
-  height: 100%;
+  width: 100%;
   border-radius: inherit;
   background: var(--primary);
+}
+
+.mflStatsHistogramLabel {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .mflStatsEmpty {

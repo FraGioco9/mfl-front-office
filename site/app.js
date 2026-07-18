@@ -87,6 +87,7 @@ const state = {
   walletNamesLoaded: false,
   walletNamesLoadPromise: null,
   mflStatsOverallFilter: "all",
+  mflStatsDistributionMode: "overall",
 };
 
 const flagColumn = "nationality_flag";
@@ -419,6 +420,8 @@ const mflStatsTotalPlayers = document.querySelector("#mflStatsTotalPlayers");
 const mflStatsPackablePlayers = document.querySelector("#mflStatsPackablePlayers");
 const mflStatsAgedPlayers = document.querySelector("#mflStatsAgedPlayers");
 const mflStatsOtherPlayers = document.querySelector("#mflStatsOtherPlayers");
+const mflStatsDistributionTitle = document.querySelector("#mflStatsDistributionTitle");
+const mflStatsDistributionModeButtons = document.querySelector("#mflStatsDistributionModeButtons");
 const mflStatsAgeDistribution = document.querySelector("#mflStatsAgeDistribution");
 const myPlayersLockedPage = document.querySelector("#myPlayersLockedPage");
 const optInLockedTitle = document.querySelector("#optInLockedTitle");
@@ -8998,38 +9001,69 @@ function renderMflStatsFilterButtons() {
   mflStatsOverallFilters.replaceChildren(fragment);
 }
 
-function renderMflStatsAgeDistribution(packableRows) {
+function mflStatsDistributionValue(row) {
+  if (state.mflStatsDistributionMode === "age") {
+    const age = Number(getValue(row, "age"));
+    return Number.isFinite(age) ? age : null;
+  }
+
+  const overall = Number(statDisplayValue(row, "overall"));
+  return Number.isFinite(overall) ? Math.trunc(overall) : null;
+}
+
+function renderMflStatsDistributionModeButtons() {
+  if (!mflStatsDistributionModeButtons) {
+    return;
+  }
+
+  mflStatsDistributionModeButtons.querySelectorAll("button").forEach((button) => {
+    const active = button.dataset.distribution === state.mflStatsDistributionMode;
+    button.classList.toggle("active", active);
+  });
+}
+
+function renderMflStatsDistribution(packableRows) {
   if (!mflStatsAgeDistribution) {
     return;
   }
 
-  const countsByAge = new Map();
+  renderMflStatsDistributionModeButtons();
+  if (mflStatsDistributionTitle) {
+    mflStatsDistributionTitle.textContent = state.mflStatsDistributionMode === "age"
+      ? "Packable Age Distribution"
+      : "Packable Overall Distribution";
+  }
+
+  const counts = new Map();
   packableRows.forEach((row) => {
-    const age = Number(getValue(row, "age"));
-    if (Number.isFinite(age)) {
-      countsByAge.set(age, (countsByAge.get(age) || 0) + 1);
+    const value = mflStatsDistributionValue(row);
+    if (value !== null) {
+      counts.set(value, (counts.get(value) || 0) + 1);
     }
   });
 
-  if (!countsByAge.size) {
+  if (!counts.size) {
     mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this overall filter.</p>';
     return;
   }
 
-  const maxCount = Math.max(...countsByAge.values());
-  const rows = Array.from(countsByAge.entries()).sort((a, b) => a[0] - b[0]);
-  const fragment = document.createDocumentFragment();
-
+  const maxCount = Math.max(...counts.values());
+  const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
   const totalPackable = packableRows.length;
-  rows.forEach(([age, count]) => {
-    const row = document.createElement("div");
-    row.className = "mflStatsAgeRow";
-    const barPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+  const fragment = document.createDocumentFragment();
+  const histogram = document.createElement("div");
+  histogram.className = "mflStatsHistogram";
+
+  rows.forEach(([value, count]) => {
+    const barHeight = maxCount > 0 ? Math.max(6, (count / maxCount) * 100) : 0;
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
-    row.innerHTML = `<span class="mflStatsAgeLabel">${escapeHtml(age)}</span><div class="mflStatsAgeBar"><span style="width:${barPercent}%"></span></div><strong>${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)</strong>`;
-    fragment.appendChild(row);
+    const item = document.createElement("div");
+    item.className = "mflStatsHistogramItem";
+    item.innerHTML = `<strong>${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)</strong><div class="mflStatsHistogramBar"><span style="height:${barHeight}%"></span></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    histogram.appendChild(item);
   });
 
+  fragment.appendChild(histogram);
   mflStatsAgeDistribution.replaceChildren(fragment);
 }
 
@@ -9053,7 +9087,7 @@ function renderMflStatsPage() {
     mflStatsOtherPlayers.textContent = formatCount(otherRows.length);
   }
 
-  renderMflStatsAgeDistribution(packableRows);
+  renderMflStatsDistribution(packableRows);
 }
 
 function rowHasHiddenMflJoinedAgencyDate(row) {
@@ -10179,6 +10213,16 @@ async function loadData(options = {}) {
     return false;
   }
 }
+
+mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-distribution]");
+  if (!button) {
+    return;
+  }
+
+  state.mflStatsDistributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+  renderMflStatsPage();
+});
 
 viewButtons.forEach((button) => {
   button.addEventListener("click", () => {

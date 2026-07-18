@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.149.41">
+    <link rel="stylesheet" href="/styles.css?v=1.149.42">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -215,8 +215,14 @@
             </article>
           </section>
 
-          <section class="mflStatsDistribution" aria-label="Packable players age distribution">
-            <h3>Packable Age Distribution</h3>
+          <section class="mflStatsDistribution" aria-label="Packable players distribution">
+            <div class="mflStatsDistributionHeader">
+              <h3 id="mflStatsDistributionTitle">Packable Overall Distribution</h3>
+              <div id="mflStatsDistributionModeButtons" class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+                <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+                <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+              </div>
+            </div>
             <div id="mflStatsAgeDistribution" class="mflStatsAgeDistribution"></div>
           </section>
         </section>
@@ -360,6 +366,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.149.42</span><p>Add MFL wallet distribution toggle</p></li>
               <li><span>v1.149.41</span><p>Rename MFL wallet stats labels</p></li>
               <li><span>v1.149.40</span><p>Align MFL stats page controls</p></li>
               <li><span>v1.149.39</span><p>Compact MFL wallet stats layout</p></li>
@@ -944,7 +951,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.41</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.42</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1113,6 +1120,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.149.41"></script>
+    <script src="/app.js?v=1.149.42"></script>
   </body>
 </html>
