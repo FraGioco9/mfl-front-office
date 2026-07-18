@@ -10415,17 +10415,29 @@ evaluationPlayerPageButton.addEventListener("auxclick", preventEvaluationPlayerP
 evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
+async function paintLoadingOverlayNow(message = "Loading data") {
+  showLoading();
+  setLoadingPercent(5, message, { allowBackwards: true });
+  await paintLoadingProgress();
+  await paintLoadingProgress();
+}
+
 navButtons.forEach((button) => {
-  button.addEventListener("click", (event) => {
+  button.addEventListener("click", async (event) => {
     event.preventDefault();
 
     if (button.dataset.page === "evaluation") {
-      setPage("evaluation", true, { plain: true });
+      await paintLoadingOverlayNow("Loading player data");
+      await setPage("evaluation", true, { plain: true });
       return;
     }
 
     const pageName = button.dataset.page;
-    setPage(pageName, true, tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {});
+    const options = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
+    if (pageRequiresData(pageName) || tablePages.has(pageName)) {
+      await paintLoadingOverlayNow(loadingMessageForAccess(currentDataAccess(pageName)));
+    }
+    await setPage(pageName, true, options);
   });
 });
 
