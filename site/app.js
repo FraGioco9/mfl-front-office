@@ -9069,7 +9069,7 @@ function renderMflStatsDistribution(packableRows) {
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
   histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
-  const barWidth = rows.length <= 8 ? 76 : rows.length <= 12 ? 60 : rows.length <= 18 ? 46 : rows.length <= 28 ? 34 : 24;
+  const barWidth = rows.length <= 4 ? 150 : rows.length <= 6 ? 120 : rows.length <= 8 ? 96 : rows.length <= 12 ? 74 : rows.length <= 18 ? 54 : rows.length <= 28 ? 38 : 26;
   histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
 
   rows.forEach(([value, count]) => {

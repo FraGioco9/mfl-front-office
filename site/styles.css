@@ -4978,7 +4978,7 @@ td a {
 
 .mflStatsHistogramBar {
   position: relative;
-  width: min(92%, var(--mfl-stats-bar-width, 24px));
+  width: min(96%, var(--mfl-stats-bar-width, 26px));
   flex: 1 1 auto;
   min-height: 120px;
   overflow: visible;
