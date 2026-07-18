@@ -1358,6 +1358,7 @@ main {
 }
 
 .quickFilters label {
+  cursor: pointer;
   user-select: none;
   display: inline-flex;
   align-items: center;
@@ -1371,6 +1372,7 @@ main {
 }
 
 .quickFilters input {
+  cursor: pointer;
   width: 16px;
   height: 16px;
   padding: 0;
@@ -2154,6 +2156,8 @@ table {
 
 th,
 td {
+  cursor: default;
+  user-select: none;
   height: 38px;
   border-bottom: 1px solid var(--border);
   padding: 0 6px;
@@ -2167,6 +2171,12 @@ td {
 
 td {
   font-size: 14px;
+}
+
+#tableBody a,
+#tableBody button,
+#tableBody input {
+  cursor: pointer;
 }
 
 #tableBody td {
@@ -3038,6 +3048,15 @@ td a {
   color: #2fbf62;
 }
 
+
+.playerAttributeCard {
+  cursor: default;
+  user-select: none;
+}
+
+.playerAttributeCard button {
+  cursor: pointer;
+}
 .playerAttributeCard .trainingDelta.negative {
   color: #d92d20;
 }
