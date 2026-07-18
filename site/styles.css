@@ -4966,17 +4966,18 @@ td a {
 }
 
 .mflStatsHistogramItem {
-  display: grid;
-  grid-template-rows: 42px 1fr 16px;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-width: 0;
+  height: 100%;
   gap: 3px;
   text-align: center;
 }
 
 .mflStatsHistogramItem strong {
-  align-self: start;
   min-width: 0;
+  min-height: 42px;
   color: var(--text);
   font-size: clamp(7px, 0.58vw, 10px);
   font-weight: 800;
@@ -4985,17 +4986,31 @@ td a {
 }
 
 .mflStatsHistogramBar {
+  position: relative;
   width: min(100%, 20px);
-  height: 100%;
-  justify-self: center;
+  flex: 1 1 auto;
+  min-height: 120px;
   overflow: hidden;
   border: 1px solid var(--border-soft);
   border-radius: 6px 6px 3px 3px;
-  background: linear-gradient(to top, var(--primary) 0 var(--bar-height, 0%), var(--surface-muted) var(--bar-height, 0%) 100%);
+  background: var(--surface-muted);
+}
+
+.mflStatsHistogramBar::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--bar-height, 0%);
+  min-height: 2px;
+  border-radius: inherit;
+  background: #4db4ee;
+  content: "";
 }
 
 .mflStatsHistogramLabel {
   min-width: 0;
+  min-height: 16px;
   color: var(--text-soft);
   font-size: clamp(8px, 0.72vw, 11px);
   font-weight: 800;
