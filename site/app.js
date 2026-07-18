@@ -186,6 +186,27 @@ const defaultPageViews = {
   myplayers: "attributes",
 };
 
+const viewSlugs = {
+  attributes: "attributes",
+  next: "next-overall",
+  contracts: "contracts",
+  current: "current-season",
+  all: "all-time",
+};
+const viewsBySlug = Object.fromEntries(Object.entries(viewSlugs).map(([view, slug]) => [slug, view]));
+
+function viewSlug(viewName) {
+  return viewSlugs[viewName] || viewSlugs.current;
+}
+
+function viewFromSlug(slug) {
+  return viewsBySlug[String(slug || "").trim().toLowerCase()] || "";
+}
+
+function defaultViewSlugForPage(pageName) {
+  return viewSlug(defaultPageViews[pageName] || "current");
+}
+
 const views = {
   attributes: {
     columns: [...baseColumns, ...statColumns, agentColumn, linkColumn],
@@ -2524,14 +2545,66 @@ function pageFromUrl() {
   return pageTargetFromPath(`${window.location.pathname}${window.location.search}`).pageName;
 }
 
+function watchlistTargetFromUrl(pathName = window.location.pathname) {
+  const match = String(pathName || "").match(/^\/watchlist(?:\/([^/]+))?(?:\/([^/]+))?$/);
+
+  if (!match) {
+    return { watchlistId: "", view: "" };
+  }
+
+  const firstSegment = decodeURIComponent(match[1] || "");
+  const secondSegment = decodeURIComponent(match[2] || "");
+  const firstView = viewFromSlug(firstSegment);
+
+  if (firstView) {
+    return { watchlistId: "", view: firstView };
+  }
+
+  return {
+    watchlistId: firstSegment,
+    view: viewFromSlug(secondSegment),
+  };
+}
+
 function watchlistIdFromUrl() {
-  const match = window.location.pathname.match(/^\/watchlist\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]) : "";
+  return watchlistTargetFromUrl().watchlistId;
+}
+
+function agentTargetFromUrl(pathName = window.location.pathname) {
+  const match = String(pathName || "").match(/^\/agents\/([^/]+)(?:\/([^/]+))?$/);
+
+  if (!match) {
+    return { walletAddress: "", view: "" };
+  }
+
+  return {
+    walletAddress: normalizeWalletAddress(decodeURIComponent(match[1])).toLowerCase(),
+    view: viewFromSlug(decodeURIComponent(match[2] || "")),
+  };
 }
 
 function agentWalletAddressFromUrl() {
-  const match = window.location.pathname.match(/^\/agents\/([^/]+)$/);
-  return match ? normalizeWalletAddress(decodeURIComponent(match[1])).toLowerCase() : "";
+  return agentTargetFromUrl().walletAddress;
+}
+
+function tablePageTarget(pageName, cleanPath, basePath) {
+  const match = cleanPath.match(new RegExp(`^${basePath}(?:/([^/]+))?$`));
+
+  if (!match) {
+    return null;
+  }
+
+  const view = viewFromSlug(decodeURIComponent(match[1] || ""));
+  const normalizedView = normalizeViewForPage(view, pageName);
+  const canonicalPath = `${basePath}/${viewSlug(normalizedView)}`;
+
+  return {
+    pageName,
+    options: {
+      view: normalizedView,
+      ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+    },
+  };
 }
 
 function pageTargetFromPath(path) {
@@ -2552,35 +2625,58 @@ function pageTargetFromPath(path) {
     };
   }
 
-  const watchlistMatch = cleanPath.match(/^\/watchlist\/([^/]+)$/);
+  for (const [pageName, basePath] of [["database", "/database"], ["mfl", "/mfl"], ["progression", "/progression"], ["myplayers", "/my-players"]]) {
+    const target = tablePageTarget(pageName, cleanPath, basePath);
+    if (target) {
+      return target;
+    }
+  }
+
+  const watchlistMatch = cleanPath.match(/^\/watchlist(?:\/[^/]+)?(?:\/[^/]+)?$/);
 
   if (watchlistMatch) {
+    const target = watchlistTargetFromUrl(cleanPath);
+    const normalizedView = normalizeViewForPage(target.view, "watchlist");
+    const canonicalPath = target.watchlistId
+      ? `/watchlist/${encodeURIComponent(target.watchlistId)}/${viewSlug(normalizedView)}`
+      : `/watchlist/${viewSlug(normalizedView)}`;
     return {
       pageName: "watchlist",
-      options: { watchlistId: decodeURIComponent(watchlistMatch[1]) },
+      options: {
+        watchlistId: target.watchlistId,
+        view: normalizedView,
+        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
     };
   }
 
-  const agentMatch = cleanPath.match(/^\/agents\/([^/]+)$/);
+  const agentMatch = cleanPath.match(/^\/agents\/([^/]+)(?:\/([^/]+))?$/);
 
   if (agentMatch) {
     const walletAddress = normalizeWalletAddress(decodeURIComponent(agentMatch[1])).toLowerCase();
+    const normalizedView = normalizeViewForPage(viewFromSlug(decodeURIComponent(agentMatch[2] || "")), "agents");
     if (walletAddress === mflWalletAddress) {
+      const canonicalPath = `/mfl/${viewSlug(normalizeViewForPage(normalizedView, "mfl"))}`;
       return {
         pageName: "mfl",
-        options: { replaceUrl: "/mfl" },
+        options: { view: normalizeViewForPage(normalizedView, "mfl"), replaceUrl: canonicalPath },
       };
     }
 
+    const canonicalPath = `/agents/${encodeURIComponent(walletAddress)}/${viewSlug(normalizedView)}`;
     return {
       pageName: "agents",
-      options: { walletAddress },
+      options: {
+        walletAddress,
+        view: normalizedView,
+        ...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
     };
   }
 
   const pageName = normalizedPageName(cleanPath.replace(/^\//, "") || "home");
   return {
-    pageName: ["home", "database", "mfl", "agents", "progression", "evaluation", "watchlist", "myplayers", "settings", "changelog"].includes(pageName) ? pageName : "home",
+    pageName: ["home", "evaluation", "settings", "changelog"].includes(pageName) ? pageName : "home",
     options: {},
   };
 }
@@ -2646,20 +2742,31 @@ function pagePath(pageName, options = {}) {
     return playerId ? `/evaluation?player=${encodeURIComponent(playerId)}` : "/evaluation";
   }
 
-  if (pageName === "watchlist") {
-    const watchlistId = options.watchlistId || state.currentWatchlistId || watchlistIdFromUrl();
-    return watchlistId ? `/watchlist/${encodeURIComponent(watchlistId)}` : "/watchlist";
-  }
+  if (tablePages.has(pageName)) {
+    const viewName = normalizeViewForPage(options.view || (pageName === state.currentPage ? state.view : defaultViewForPage(pageName)), pageName);
+    const slug = viewSlug(viewName);
 
-  if (pageName === "agents") {
-    const walletAddress = normalizeWalletAddress(options.walletAddress || state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
-    if (walletAddress === mflWalletAddress) {
-      return "/mfl";
+    if (pageName === "watchlist") {
+      const watchlistId = options.watchlistId || state.currentWatchlistId || watchlistIdFromUrl();
+      return watchlistId ? `/watchlist/${encodeURIComponent(watchlistId)}/${slug}` : `/watchlist/${slug}`;
     }
-    return walletAddress ? `/agents/${encodeURIComponent(walletAddress)}` : "/agents";
+
+    if (pageName === "agents") {
+      const walletAddress = normalizeWalletAddress(options.walletAddress || state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+      if (walletAddress === mflWalletAddress) {
+        return `/mfl/${viewSlug(normalizeViewForPage(viewName, "mfl"))}`;
+      }
+      return walletAddress ? `/agents/${encodeURIComponent(walletAddress)}/${slug}` : "/";
+    }
+
+    if (pageName === "myplayers") {
+      return `/my-players/${slug}`;
+    }
+
+    return `/${pageName}/${slug}`;
   }
 
-  return pageName === "home" ? "/" : pageName === "myplayers" ? "/my-players" : `/${pageName}`;
+  return pageName === "home" ? "/" : `/${pageName}`;
 }
 
 function updatePageUrl(pageName, options = {}) {
@@ -2850,7 +2957,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   tablePageTitle.textContent = tableTitleForPage(pageName);
   renderWatchlistSwitcher();
   if (tablePage) {
-    restoreSavedTableState(pageName);
+    restoreSavedTableState(pageName, { view: options.view });
     updateViewButtons();
     buildHeader();
   }
@@ -8419,11 +8526,11 @@ function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage
   }
 }
 
-function restoreSavedTableState(pageName = tablePageKey() || "progression") {
+function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {
   const savedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
 
-  state.view = normalizeViewForPage(savedState.view, pageName);
+  state.view = normalizeViewForPage(options.view || savedState.view, pageName);
   updateViewButtons();
 
   if (Number(savedState.pageSize)) {
@@ -9197,6 +9304,9 @@ async function setView(viewName) {
 
   state.view = viewName;
   state.page = 1;
+  if (pageKey) {
+    updatePageUrl(pageKey, { updateUrl: true, view: viewName });
+  }
 
   const targetSortState = normalizedViewSortState(
     pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
