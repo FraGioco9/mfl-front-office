@@ -4804,17 +4804,17 @@ td a {
 
 
 .mflStatsPage {
-  width: min(1180px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto;
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .mflStatsHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 9px;
 }
 
 .mflStatsTableLink {
@@ -4823,9 +4823,9 @@ td a {
 
 .mflStatsFilters {
   display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  gap: 6px;
+  margin-bottom: 9px;
+  padding: 8px 10px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface);
@@ -4841,17 +4841,17 @@ td a {
 .mflStatsFilterButtons {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 5px;
 }
 
 .mflStatsFilterButton {
-  height: 32px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface-muted);
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -4870,8 +4870,8 @@ td a {
 .mflStatsCards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 9px;
+  margin-bottom: 9px;
 }
 
 .mflStatsCards article,
@@ -4882,8 +4882,8 @@ td a {
 }
 
 .mflStatsCards article {
-  min-height: 98px;
-  padding: 13px 14px;
+  min-height: 78px;
+  padding: 10px 12px;
 }
 
 .mflStatsCards span {
@@ -4897,41 +4897,41 @@ td a {
 
 .mflStatsCards strong {
   display: block;
-  margin-top: 7px;
+  margin-top: 5px;
   color: var(--text);
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 800;
   line-height: 1;
 }
 
 .mflStatsCards small {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 700;
 }
 
 .mflStatsDistribution {
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .mflStatsDistribution h3 {
-  margin: 0 0 12px;
-  font-size: 18px;
+  margin: 0 0 8px;
+  font-size: 16px;
 }
 
 .mflStatsAgeDistribution {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 
 .mflStatsAgeRow {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 70px;
+  grid-template-columns: 42px minmax(0, 1fr) 112px;
   align-items: center;
-  gap: 10px;
-  min-height: 28px;
+  gap: 8px;
+  min-height: 24px;
 }
 
 .mflStatsAgeLabel,
@@ -4941,7 +4941,7 @@ td a {
 }
 
 .mflStatsAgeBar {
-  height: 11px;
+  height: 9px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface-muted);

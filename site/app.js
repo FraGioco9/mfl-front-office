@@ -86,6 +86,7 @@ const state = {
   walletRows: [],
   walletNamesLoaded: false,
   walletNamesLoadPromise: null,
+  mflStatsOverallFilter: "all",
 };
 
 const flagColumn = "nationality_flag";
@@ -9021,11 +9022,13 @@ function renderMflStatsAgeDistribution(packableRows) {
   const rows = Array.from(countsByAge.entries()).sort((a, b) => a[0] - b[0]);
   const fragment = document.createDocumentFragment();
 
+  const totalPackable = packableRows.length;
   rows.forEach(([age, count]) => {
     const row = document.createElement("div");
     row.className = "mflStatsAgeRow";
-    const percent = maxCount > 0 ? (count / maxCount) * 100 : 0;
-    row.innerHTML = `<span class="mflStatsAgeLabel">${escapeHtml(age)}</span><div class="mflStatsAgeBar"><span style="width:${percent}%"></span></div><strong>${escapeHtml(formatCount(count))}</strong>`;
+    const barPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+    const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
+    row.innerHTML = `<span class="mflStatsAgeLabel">${escapeHtml(age)}</span><div class="mflStatsAgeBar"><span style="width:${barPercent}%"></span></div><strong>${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)</strong>`;
     fragment.appendChild(row);
   });
 
