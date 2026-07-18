@@ -4836,8 +4836,10 @@ td a {
 }
 
 .mflStatsFilterButton {
+  width: 86px;
   height: 26px;
-  padding: 0 7px;
+  justify-content: center;
+  padding: 0 6px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface-muted);
