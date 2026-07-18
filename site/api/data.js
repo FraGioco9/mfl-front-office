@@ -4,7 +4,7 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json|players_public\.json|players_progression\.json)$/;
+const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json|players_public\.json|players_mfl_public\.json|players_progression\.json)$/;
 const PUBLIC_DATABASE_COLUMNS = [
   "player_id",
   "wallet_address",
@@ -279,7 +279,7 @@ module.exports = async function handler(request, response) {
     const dataColumns = Array.isArray(data.columns) ? data.columns : [];
     let dataRows = Array.isArray(data.rows) ? data.rows : [];
 
-    if (ownedProgression && !fullAccess && fileName !== publicDataFile(await readDataJson("manifest.json", request))) {
+    if (ownedProgression && !fullAccess) {
       const ownedPlayerIds = await ownedPlayerIdsForWallet(request, signedWallet);
       const playerIdIndex = dataColumns.indexOf("player_id");
       dataRows = playerIdIndex >= 0

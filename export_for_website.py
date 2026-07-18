@@ -9,6 +9,7 @@ from typing import Any
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 SITE_PATH = Path(__file__).with_name("site")
 SITE_DATA_PATH = SITE_PATH / "data"
+MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 
 PLAYER_COLUMNS = [
     "player_id",
@@ -91,7 +92,7 @@ def clean_output_folder(output_path: Path) -> None:
     for old_file in output_path.glob("players_*.json"):
         old_file.unlink()
 
-    for old_file_name in ("players_public.json", "players_progression.json", "manifest.json"):
+    for old_file_name in ("players_public.json", "players_progression.json", "players_mfl_public.json", "manifest.json"):
         old_file = output_path / old_file_name
         if old_file.exists():
             old_file.unlink()
@@ -155,8 +156,11 @@ def export_players(output_path: Path) -> dict[str, Any]:
     total_players = len(rows)
     total_wallets = export_wallets(connection, output_path)
 
+    mfl_rows = [row for row in rows if str(row["wallet_address"] or "").lower() == MFL_WALLET_ADDRESS]
+
     write_player_file(output_path, "players_public.json", PUBLIC_COLUMNS, rows)
     write_player_file(output_path, "players_progression.json", PROGRESSION_COLUMNS, rows)
+    write_player_file(output_path, "players_mfl_public.json", PUBLIC_COLUMNS, mfl_rows)
 
     connection.close()
 
@@ -174,6 +178,11 @@ def export_players(output_path: Path) -> dict[str, Any]:
                 "file": "players_progression.json",
                 "rows": total_players,
                 "columns": PROGRESSION_COLUMNS,
+            },
+            "mfl_public": {
+                "file": "players_mfl_public.json",
+                "rows": len(mfl_rows),
+                "columns": PUBLIC_COLUMNS,
             },
         },
     }
@@ -206,7 +215,7 @@ def main() -> int:
     started_at = time.monotonic()
 
     manifest = export_players(SITE_DATA_PATH)
-    print(f"Website export complete: {manifest['row_count']} players in 2 files.")
+    print(f"Website export complete: {manifest['row_count']} players in 3 files.")
     print(f"Output folder: {SITE_DATA_PATH}")
     print(f"Total time: {format_duration(time.monotonic() - started_at)}")
     return 0

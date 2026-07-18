@@ -920,11 +920,30 @@ function currentDataAccess(pageName = state.currentPage) {
     return state.dataAccessOverride;
   }
 
-  if (pageRequiresData(pageName)) {
-    return "full";
+  if (pageName === "mfl") {
+    return "mfl";
   }
 
-  return "full";
+  if (pageName === "progression") {
+    return hasProgressionAccess() ? "full" : "public";
+  }
+
+  if (pageName === "myplayers") {
+    return hasWalletOptIn() ? "owned" : "public";
+  }
+
+  if (pageName === "player") {
+    if (hasProgressionAccess()) {
+      return "full";
+    }
+    return hasWalletOptIn() ? "owned" : "public";
+  }
+
+  if (pageName === "watchlist") {
+    return hasProgressionAccess() ? "full" : "public";
+  }
+
+  return "public";
 }
 
 function staticDataFileUrl(fileName) {
@@ -932,14 +951,14 @@ function staticDataFileUrl(fileName) {
 }
 
 function canUseStaticDataFile(fileName, access = currentDataAccess()) {
-  return /^(manifest\.json|players_(public|progression|\d{4})\.json|wallets\.json)$/.test(fileName);
+  return /^(manifest\.json|players_(public|progression|mfl_public|\d{4})\.json|wallets\.json)$/.test(fileName);
 }
 
 function dataFileUrl(fileName, options = {}) {
   const access = currentDataAccess();
   const query = new URLSearchParams({ file: fileName });
 
-  if (access === "public") {
+  if (access === "public" || access === "mfl") {
     query.set("access", "public-database");
   } else if (access === "owned") {
     query.set("access", "owned-progression");
@@ -947,7 +966,7 @@ function dataFileUrl(fileName, options = {}) {
     query.set("access", "full-progression");
   }
 
-  if (access !== "public" && Array.isArray(options.columns) && options.columns.length) {
+  if (!["public", "mfl"].includes(access) && Array.isArray(options.columns) && options.columns.length) {
     query.set("columns", options.columns.join(","));
   }
 
@@ -955,7 +974,7 @@ function dataFileUrl(fileName, options = {}) {
 }
 
 function walletProofHeaders(force = false) {
-  if ((!force && currentDataAccess() === "public") || !hasWalletProof()) {
+  if ((!force && ["public", "mfl"].includes(currentDataAccess())) || !hasWalletProof()) {
     return {};
   }
 
@@ -1088,7 +1107,7 @@ async function fetchDataFile(fileName, options = {}) {
   const requestedUrl = dataFileUrl(fileName, { columns });
   const staticUrl = staticDataFileUrl(fileName);
   const cacheMode = fileName === "manifest.json" || !useCache || writeCache ? "no-store" : "default";
-  const preferStatic = !columns && canUseStaticDataFile(fileName);
+  const preferStatic = !columns && ["public", "mfl"].includes(currentDataAccess()) && canUseStaticDataFile(fileName);
   const fetchAttempts = preferStatic
     ? [
         { url: staticUrl, options: { cache: cacheMode } },
@@ -9065,6 +9084,10 @@ function publicDataFile(manifest) {
   return manifest?.files?.public?.file || manifest?.chunks?.[0]?.file || "players_public.json";
 }
 
+function mflPublicDataFile(manifest) {
+  return manifest?.files?.mfl_public?.file || "players_mfl_public.json";
+}
+
 function progressionDataFile(manifest) {
   return manifest?.files?.progression?.file || "players_progression.json";
 }
@@ -9271,7 +9294,7 @@ function dataAccessFromCacheKey(accessKey = dataCacheAccessKey()) {
 
 function manifestDataFiles(manifest, access = currentDataAccess()) {
   if (manifest?.files?.public?.file) {
-    const files = [manifest.files.public.file];
+    const files = access === "mfl" ? [mflPublicDataFile(manifest)] : [manifest.files.public.file];
 
     if (["full", "owned"].includes(access) && manifest?.files?.progression?.file) {
       files.push(manifest.files.progression.file);
@@ -9334,9 +9357,9 @@ async function restoreCachedDataForAccess(access = currentDataAccess(), currentM
     state.dataAccess = access;
 
     if (["full", "owned"].includes(access)) {
-      await loadPublicAndProgressionData(manifest, { useCache: true });
+      await loadPublicAndProgressionData(manifest, { access, useCache: true });
     } else {
-      const publicChunk = await fetchDataFile(publicDataFile(manifest), { useCache: true });
+      const publicChunk = await fetchDataFile(access === "mfl" ? mflPublicDataFile(manifest) : publicDataFile(manifest), { useCache: true });
 
       if (!publicChunk || !Array.isArray(publicChunk.rows)) {
         return false;
@@ -9409,11 +9432,12 @@ function mergeDataColumns(chunk, columnsToMerge, rowMap) {
 }
 
 async function loadPublicAndProgressionData(manifest, options = {}) {
+  const access = options.access || currentDataAccess();
   const useCache = Boolean(options.useCache);
   const writeCache = Boolean(options.writeCache);
   const publicProgress = options.publicProgress || (() => {});
   const progressionProgress = options.progressionProgress || (() => {});
-  const publicFile = publicDataFile(manifest);
+  const publicFile = access === "mfl" ? mflPublicDataFile(manifest) : publicDataFile(manifest);
   const progressionFile = progressionDataFile(manifest);
   const shouldLoadProgression = Boolean(manifest?.files?.progression?.file);
 
@@ -9553,7 +9577,7 @@ function loadingPhaseRange(index, total) {
 
 async function preloadRefreshData(initialPage) {
   const targetAccess = currentDataAccess(initialPage);
-  const needsInitialData = pageRequiresData(initialPage) || initialPage === "home";
+  const needsInitialData = pageRequiresData(initialPage);
 
   if (!needsInitialData) {
     return;
@@ -9635,13 +9659,14 @@ async function loadData(options = {}) {
 
       if (["full", "owned"].includes(targetAccess)) {
         await loadPublicAndProgressionData(manifest, {
+          access: targetAccess,
           useCache: useCachedChunks,
           writeCache: !useCachedChunks,
           publicProgress: phaseRange(10, 52),
           progressionProgress: phaseRange(10, 90),
         });
       } else {
-        const publicFile = publicDataFile(manifest);
+        const publicFile = targetAccess === "mfl" ? mflPublicDataFile(manifest) : publicDataFile(manifest);
         const publicProgress = phaseRange(10, 90);
         publicProgress(0);
         await paintLoadingProgress();
