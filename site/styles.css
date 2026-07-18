@@ -4952,7 +4952,7 @@ td a {
 }
 
 .mflStatsAgeDistribution {
-  height: clamp(220px, calc(100vh - 430px), 300px);
+  height: clamp(240px, calc(100vh - 380px), 450px);
   overflow: hidden;
 }
 
@@ -4985,22 +4985,13 @@ td a {
 }
 
 .mflStatsHistogramBar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  width: min(100%, 18px);
+  width: min(100%, 20px);
   height: 100%;
   justify-self: center;
   overflow: hidden;
+  border: 1px solid var(--border-soft);
   border-radius: 6px 6px 3px 3px;
-  background: var(--surface-muted);
-}
-
-.mflStatsHistogramBar span {
-  display: block;
-  width: 100%;
-  border-radius: inherit;
-  background: var(--primary);
+  background: linear-gradient(to top, var(--primary) 0 var(--bar-height, 0%), var(--surface-muted) var(--bar-height, 0%) 100%);
 }
 
 .mflStatsHistogramLabel {
