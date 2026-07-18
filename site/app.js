@@ -2592,6 +2592,11 @@ async function ensureProgressionData() {
     return true;
   }
 
+  if (!document.body.classList.contains("loading")) {
+    showLoading();
+  }
+  await paintLoadingProgress();
+
   const currentManifest = await fetchCurrentManifestForCacheCheck();
 
   if (currentManifest && (
@@ -2777,8 +2782,14 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
   const targetDataAccess = currentDataAccess(pageName);
+  const needsPageData = pageRequiresData(pageName);
 
-  if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && pageRequiresData(pageName)) {
+  if (needsPageData && (!state.dataLoaded || state.dataAccess !== targetDataAccess)) {
+    showLoading();
+    await paintLoadingProgress();
+  }
+
+  if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && needsPageData) {
     captureCurrentDataSnapshot();
     state.dataLoaded = restoreDataSnapshot(targetDataAccess);
     if (!state.dataLoaded) {
