@@ -2771,22 +2771,26 @@ async function setPage(pageName, updateHash = true, options = {}) {
     return;
   }
 
-  const previousTablePage = tablePageKey();
-  if (previousTablePage) {
-    state.tablePageStates[previousTablePage] = currentTablePageState();
-    saveTableState();
-  }
-
   const tablePage = tablePages.has(pageName);
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
   const targetDataAccess = currentDataAccess(pageName);
   const needsPageData = pageRequiresData(pageName);
+  const shouldShowNavigationLoading = needsPageData
+    && shouldResetScroll
+    && (tablePage || playerPageActive || evaluationPageActive)
+    && (tablePage || !state.dataLoaded || state.dataAccess !== targetDataAccess);
 
-  if (needsPageData && (!state.dataLoaded || state.dataAccess !== targetDataAccess)) {
+  if (shouldShowNavigationLoading || (needsPageData && (!state.dataLoaded || state.dataAccess !== targetDataAccess))) {
     showLoading();
     await paintLoadingProgress();
+  }
+
+  const previousTablePage = tablePageKey();
+  if (previousTablePage) {
+    state.tablePageStates[previousTablePage] = currentTablePageState();
+    saveTableState();
   }
 
   if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && needsPageData) {
