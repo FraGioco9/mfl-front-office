@@ -17,11 +17,23 @@
       "destination": "/"
     },
     {
+      "source": "/database/:view",
+      "destination": "/"
+    },
+    {
       "source": "/mfl",
       "destination": "/"
     },
     {
+      "source": "/mfl/:view",
+      "destination": "/"
+    },
+    {
       "source": "/progression",
+      "destination": "/"
+    },
+    {
+      "source": "/progression/:view",
       "destination": "/"
     },
     {
@@ -33,7 +45,15 @@
       "destination": "/"
     },
     {
+      "source": "/watchlist/:id/:view",
+      "destination": "/"
+    },
+    {
       "source": "/my-players",
+      "destination": "/"
+    },
+    {
+      "source": "/my-players/:view",
       "destination": "/"
     },
     {
@@ -62,6 +82,10 @@
     },
     {
       "source": "/agents/:wallet",
+      "destination": "/"
+    },
+    {
+      "source": "/agents/:wallet/:view",
       "destination": "/"
     }
   ],

@@ -1383,10 +1383,11 @@ function optOutWallet() {
   }
 
   if (state.currentPage === "watchlist") {
-    if (window.location.pathname !== "/watchlist" || window.location.search) {
-      window.history.replaceState({}, "", "/watchlist");
+    const targetPath = pagePath("watchlist", { view: defaultViewForPage("watchlist") });
+    if (`${window.location.pathname}${window.location.search}` !== targetPath) {
+      window.history.replaceState({}, "", targetPath);
     }
-    setPage("watchlist", false, { plain: true });
+    setPage("watchlist", false, { plain: true, view: defaultViewForPage("watchlist") });
     return;
   }
 
@@ -5958,10 +5959,10 @@ function playerRoute(playerId) {
 function agentRoute(walletAddress) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (normalizedWalletAddress === mflWalletAddress) {
-    return "/mfl";
+    return pagePath("mfl", { view: preferredViewForPage("mfl") });
   }
 
-  return normalizedWalletAddress ? `/agents/${encodeURIComponent(normalizedWalletAddress)}` : "#";
+  return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: preferredViewForPage("agents") }) : "#";
 }
 
 function openAgentPage(walletAddress) {
