@@ -4953,16 +4953,17 @@ td a {
 
 .mflStatsAgeDistribution {
   height: clamp(240px, calc(100vh - 380px), 450px);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .mflStatsHistogram {
   display: grid;
   grid-template-columns: repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr));
   align-items: end;
-  gap: clamp(1px, 0.35vw, 4px);
+  gap: clamp(2px, 0.35vw, 5px);
   width: 100%;
   height: 100%;
+  padding-top: 34px;
 }
 
 .mflStatsHistogramItem {
@@ -4977,11 +4978,11 @@ td a {
 
 .mflStatsHistogramBar {
   position: relative;
-  width: min(86%, var(--mfl-stats-bar-width, 18px));
+  width: min(92%, var(--mfl-stats-bar-width, 24px));
   flex: 1 1 auto;
   min-height: 120px;
   overflow: visible;
-  cursor: help;
+  cursor: default;
 }
 
 .mflStatsHistogramBar::after {
@@ -5003,26 +5004,20 @@ td a {
   z-index: 10;
   width: max-content;
   max-width: 140px;
-  padding: 5px 8px;
+  padding: 4px 7px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
   content: attr(data-tooltip);
-  font-size: 12px;
+  font-size: clamp(8px, 0.58vw, 11px);
   font-weight: 800;
   line-height: 1.1;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  white-space: nowrap;
-}
-
-.mflStatsHistogramBar:hover::before {
   opacity: 1;
+  pointer-events: none;
   transform: translate(-50%, 0);
+  white-space: nowrap;
 }
 
 .mflStatsHistogramLabel {
