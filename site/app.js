@@ -3746,7 +3746,7 @@ function saveSettingsPreferencesAfterChange() {
 
   state.walletPreferencesSaveTimer = null;
 
-  void saveWalletPreferencesNow({ refreshAfterSave: true });
+  void saveWalletPreferencesNow();
 }
 function updateSettingsEmailDraftActions() {
   const draft = normalizeSettingsEmailAddress(state.settingsEmailAddressDraft);
@@ -4750,14 +4750,12 @@ async function loadWalletPreferences(options = {}) {
       }
       const tableStateChanged = applyWalletTableState(data.tableState);
       applyWalletPlayerNotes(data.playerNotes);
-      if (data.settings) {
-        state.settingsSaveInFlight = false;
-        applySettingsPayload(data.settings);
-      }
       const pendingSettings = loadPendingSettingsLocally();
-      if (pendingSettings) {
-        applySettingsPayload(pendingSettings);
-        void saveWalletPreferencesNow({ refreshAfterSave: true });
+      if (pendingSettings || state.settingsSaveInFlight) {
+        applySettingsPayload(pendingSettings || currentSettingsPayload());
+        void saveWalletPreferencesNow();
+      } else if (data.settings) {
+        applySettingsPayload(data.settings);
       }
       if (data.evaluationSettings) {
         applyEvaluationSettingsPayload(data.evaluationSettings);
@@ -4831,9 +4829,9 @@ async function saveWalletPreferencesNow(options = {}) {
       }
 
       if (data.settings) {
-        state.settingsSaveInFlight = false;
         applySettingsPayload(data.settings);
       }
+      state.settingsSaveInFlight = false;
       clearPendingSettingsLocally();
 
       if (watchlistChanged) {
@@ -4853,6 +4851,9 @@ async function saveWalletPreferencesNow(options = {}) {
       }
     }
   } catch {
+    if (saveSequence === state.walletPreferencesSaveSequence) {
+      state.settingsSaveInFlight = false;
+    }
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
   }
 }
