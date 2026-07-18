@@ -5615,7 +5615,6 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.dataset.tooltip = "Click to copy";
   button.setAttribute("aria-label", "Click to copy");
   button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));
-  button.addEventListener("focus", () => showPlayerNoteTooltip(button));
   button.addEventListener("mouseleave", hidePlayerNoteTooltip);
   button.addEventListener("blur", hidePlayerNoteTooltip);
   button.addEventListener("click", (event) => {
@@ -8826,8 +8825,6 @@ function renderTable() {
 
   pageRows.forEach((row) => {
     const tableRow = document.createElement("tr");
-    tableRow.addEventListener("pointerenter", () => tableRow.classList.add("tableRowHovered"));
-    tableRow.addEventListener("pointerleave", () => tableRow.classList.remove("tableRowHovered"));
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
     const playerId = getValue(row, "player_id");

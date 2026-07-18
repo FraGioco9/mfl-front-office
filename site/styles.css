@@ -2262,10 +2262,13 @@ th.sortable:hover {
   border-top: 6px solid var(--text);
 }
 
-#tableBody tr.tableRowHovered > td,
-#tableBody tr.tableRowHovered > th {
+#tableBody tr:hover {
   background: var(--row-hover);
-  background-image: linear-gradient(var(--row-hover), var(--row-hover));
+}
+
+#tableBody tr:hover > td,
+#tableBody tr:hover > th {
+  background: transparent;
 }
 
 .selectionCell {
@@ -4720,9 +4723,9 @@ td a {
 }
 
 
-#tableBody tr.tableRowHovered .playerNameLink:hover,
-#tableBody tr.tableRowHovered a:hover,
-#tableBody tr.tableRowHovered button:hover {
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover,
+#tableBody tr:hover button:hover {
   background: transparent !important;
   box-shadow: none !important;
   transition: none !important;
@@ -4753,14 +4756,18 @@ td a {
   animation: none !important;
 }
 
-#tableBody tr.tableRowHovered > td,
-#tableBody tr.tableRowHovered > th {
+#tableBody tr:hover {
   background: var(--row-hover) !important;
-  background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
 }
 
-#tableBody tr.tableRowHovered .playerNameLink:hover,
-#tableBody tr.tableRowHovered a:hover {
+#tableBody tr:hover > td,
+#tableBody tr:hover > th {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover {
   transition: none !important;
 }
 
