@@ -3109,6 +3109,29 @@ function normalizeViewForPage(viewName, pageName = tablePageKey() || "progressio
   return allowedViewsForPage(pageName).includes(viewName) ? viewName : defaultViewForPage(pageName);
 }
 
+function preferredViewForPage(pageName) {
+  if (!tablePages.has(pageName)) {
+    return "";
+  }
+
+  if (pageName === state.currentPage) {
+    return normalizeViewForPage(state.view, pageName);
+  }
+
+  return normalizeViewForPage(state.tablePageStates?.[pageName]?.view, pageName);
+}
+
+function updateNavigationLinks() {
+  navButtons.forEach((button) => {
+    const pageName = button.dataset.page;
+    if (!pageName || !tablePages.has(pageName)) {
+      return;
+    }
+
+    button.href = pagePath(pageName, { view: preferredViewForPage(pageName) });
+  });
+}
+
 function updateViewButtons() {
   const allowedViews = allowedViewsForPage();
 
@@ -3117,6 +3140,7 @@ function updateViewButtons() {
     button.hidden = !allowed;
     button.classList.toggle("active", allowed && button.dataset.view === state.view);
   });
+  updateNavigationLinks();
 }
 
 function normalizeCurrentViewsAfterProgressionAccessLoss() {
@@ -10399,7 +10423,8 @@ navButtons.forEach((button) => {
       return;
     }
 
-    setPage(button.dataset.page);
+    const pageName = button.dataset.page;
+    setPage(pageName, true, tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {});
   });
 });
 
