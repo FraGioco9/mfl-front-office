@@ -284,7 +284,7 @@ def build_html(scope_name: str, players: list[PlayerImprovement]) -> str:
                     {''.join(rows)}
                   </tbody>
                 </table>
-                <p style="margin:18px 0 0;color:#8fa6b8;font-size:12px;line-height:1.5;">You received this because this notification is enabled in Settings. Manage it from MFL Front Office at any time.</p>
+                <p style="margin:18px 0 0;color:#8fa6b8;font-size:12px;line-height:1.5;">You received this because this notification is enabled in Settings. <a style="color:#54d3ff;text-decoration:none;" href="https://mfl-front-office.vercel.app/settings">Unsubscribe or manage emails</a>.</p>
               </td>
             </tr>
           </table>
