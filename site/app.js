@@ -3006,6 +3006,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
 
   if (mflStatsActive) {
     state.view = "stats";
+    rememberMflStatsView();
     updateViewButtons();
     renderMflStatsPage();
     navButtons.forEach((button) => {
@@ -3175,6 +3176,15 @@ function preferredViewForPage(pageName) {
   }
 
   return normalizeViewForPage(state.tablePageStates?.[pageName]?.view, pageName);
+}
+
+function rememberMflStatsView() {
+  const existingPageState = state.tablePageStates?.mfl || defaultTablePageState("mfl");
+  state.tablePageStates.mfl = {
+    ...existingPageState,
+    view: "stats",
+  };
+  saveTableState();
 }
 
 function updateNavigationLinks() {
