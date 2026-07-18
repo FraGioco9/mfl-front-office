@@ -171,7 +171,7 @@ const mflWalletAddress = "0xff8d2bbed8164db0";
 const tablePages = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
   database: ["attributes", "contracts"],
-  mfl: ["attributes"],
+  mfl: ["attributes", "stats"],
   agents: ["attributes", "next", "contracts", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "contracts", "current", "all"],
@@ -192,6 +192,7 @@ const viewSlugs = {
   contracts: "contracts",
   current: "current-season",
   all: "all-time",
+  stats: "stats",
 };
 const viewsBySlug = Object.fromEntries(Object.entries(viewSlugs).map(([view, slug]) => [slug, view]));
 
@@ -2822,6 +2823,9 @@ function tableTitleForPage(pageName) {
   if (pageName === "mfl") {
     return "MFL";
   }
+  if (pageName === "mflstats") {
+    return "MFL Wallet Stats";
+  }
 
   if (pageName === "agents") {
     return agentNameForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
@@ -2999,6 +3003,8 @@ async function setPage(pageName, updateHash = true, options = {}) {
   });
 
   if (mflStatsActive) {
+    state.view = "stats";
+    updateViewButtons();
     renderMflStatsPage();
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === "mfl");
@@ -3149,9 +3155,17 @@ function normalizeViewForPage(viewName, pageName = tablePageKey() || "progressio
   return allowedViewsForPage(pageName).includes(viewName) ? viewName : defaultViewForPage(pageName);
 }
 
+function pageNameForViewButton(button) {
+  return button?.dataset?.page || (state.currentPage === "mflstats" ? "mfl" : tablePageKey() || "progression");
+}
+
 function preferredViewForPage(pageName) {
   if (!tablePages.has(pageName)) {
     return "";
+  }
+
+  if (pageName === "mfl" && state.currentPage === "mflstats") {
+    return "stats";
   }
 
   if (pageName === state.currentPage) {
@@ -3173,12 +3187,14 @@ function updateNavigationLinks() {
 }
 
 function updateViewButtons() {
-  const allowedViews = allowedViewsForPage();
-
   viewButtons.forEach((button) => {
-    const allowed = allowedViews.includes(button.dataset.view);
+    const pageName = pageNameForViewButton(button);
+    const allowedViews = allowedViewsForPage(pageName);
+    const buttonView = button.dataset.view;
+    const activeView = state.currentPage === "mflstats" && pageName === "mfl" ? "stats" : state.view;
+    const allowed = allowedViews.includes(buttonView);
     button.hidden = !allowed;
-    button.classList.toggle("active", allowed && button.dataset.view === state.view);
+    button.classList.toggle("active", allowed && buttonView === activeView);
   });
   updateNavigationLinks();
 }
@@ -8908,20 +8924,20 @@ function rowIsMflWalletPlayer(row) {
 
 const mflStatsOverallFilterOptions = [
   { id: "all", label: "All", min: null, max: null },
-  { id: "common", label: "Common", min: null, max: 54 },
-  { id: "limited", label: "Limited", min: 55, max: 64 },
-  { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
-  { id: "rare", label: "Rare", min: 75, max: 84 },
-  { id: "legendary", label: "Legendary", min: 85, max: 94 },
-  { id: "50-54", label: "50-54", min: 50, max: 54 },
-  { id: "55-59", label: "55-59", min: 55, max: 59 },
-  { id: "60-64", label: "60-64", min: 60, max: 64 },
-  { id: "65-69", label: "65-69", min: 65, max: 69 },
-  { id: "70-74", label: "70-74", min: 70, max: 74 },
-  { id: "75-79", label: "75-79", min: 75, max: 79 },
-  { id: "80-84", label: "80-84", min: 80, max: 84 },
-  { id: "85-89", label: "85-89", min: 85, max: 89 },
   { id: "90-94", label: "90-94", min: 90, max: 94 },
+  { id: "legendary", label: "Legendary", min: 85, max: 94 },
+  { id: "85-89", label: "85-89", min: 85, max: 89 },
+  { id: "80-84", label: "80-84", min: 80, max: 84 },
+  { id: "rare", label: "Rare", min: 75, max: 84 },
+  { id: "75-79", label: "75-79", min: 75, max: 79 },
+  { id: "70-74", label: "70-74", min: 70, max: 74 },
+  { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
+  { id: "65-69", label: "65-69", min: 65, max: 69 },
+  { id: "60-64", label: "60-64", min: 60, max: 64 },
+  { id: "limited", label: "Limited", min: 55, max: 64 },
+  { id: "55-59", label: "55-59", min: 55, max: 59 },
+  { id: "50-54", label: "50-54", min: 50, max: 54 },
+  { id: "common", label: "Common", min: null, max: 54 },
 ];
 
 function mflStatsFilterById(filterId = state.mflStatsOverallFilter) {
@@ -10164,7 +10180,19 @@ async function loadData(options = {}) {
 }
 
 viewButtons.forEach((button) => {
-  button.addEventListener("click", () => setView(button.dataset.view));
+  button.addEventListener("click", () => {
+    const pageName = pageNameForViewButton(button);
+    const viewName = button.dataset.view;
+    if (pageName === "mfl" && viewName === "stats") {
+      setPage("mflstats", true);
+      return;
+    }
+    if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
+      setPage("mfl", true, { view: "attributes" });
+      return;
+    }
+    setView(viewName);
+  });
 });
 
 watchlistButton?.addEventListener("click", (event) => {
@@ -10598,18 +10626,24 @@ navButtons.forEach((button) => {
   button.addEventListener("click", async (event) => {
     event.preventDefault();
 
+    const pageName = button.dataset.page;
+    const targetOptions = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
+    const targetPath = pagePath(pageName, targetOptions);
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (button.classList.contains("active") && targetPath === currentPath) {
+      return;
+    }
+
     if (button.dataset.page === "evaluation") {
       await paintLoadingOverlayNow("Loading player data");
       await setPage("evaluation", true, { plain: true });
       return;
     }
 
-    const pageName = button.dataset.page;
-    const options = tablePages.has(pageName) ? { view: preferredViewForPage(pageName) } : {};
     if (pageRequiresData(pageName) || tablePages.has(pageName)) {
       await paintLoadingOverlayNow(loadingMessageForAccess(currentDataAccess(pageName)));
     }
-    await setPage(pageName, true, options);
+    await setPage(pageName, true, targetOptions);
   });
 });
 

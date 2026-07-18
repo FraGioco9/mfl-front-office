@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.149.37">
+    <link rel="stylesheet" href="/styles.css?v=1.149.38">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -97,6 +97,7 @@
           <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
           <section class="views" aria-label="Table views">
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="stats">Stats</button>
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
             <button class="viewButton" type="button" data-view="contracts">Contracts</button>
             <button class="viewButton active" type="button" data-view="current">Current Season</button>
@@ -183,8 +184,11 @@
 
         <section id="mflStatsPage" class="pageView mflStatsPage" hidden>
           <div class="mflStatsHeader">
-            <h2 class="tablePageTitle">MFL Stats</h2>
-            <a class="compactButton mflStatsTableLink" href="/mfl/attributes" data-page="mfl">Players</a>
+            <h2 class="tablePageTitle">MFL Wallet Stats</h2>
+            <section class="views mflStatsViews" aria-label="MFL views">
+              <button class="viewButton" type="button" data-page="mfl" data-view="attributes">Attributes</button>
+              <button class="viewButton active" type="button" data-page="mfl" data-view="stats">Stats</button>
+            </section>
           </div>
 
           <section class="mflStatsFilters" aria-label="MFL stats overall filters">
@@ -358,6 +362,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.149.38</span><p>Polish MFL wallet stats navigation</p></li>
               <li><span>v1.149.37</span><p>Add MFL wallet statistics page</p></li>
               <li><span>v1.149.36</span><p>Paint loading overlay before sidebar navigation work</p></li>
               <li><span>v1.149.35</span><p>Support refreshed table view URLs on Vercel</p></li>
@@ -938,7 +943,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.37</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.149.38</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1107,6 +1112,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.149.37"></script>
+    <script src="/app.js?v=1.149.38"></script>
   </body>
 </html>
