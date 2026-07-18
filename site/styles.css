@@ -4952,41 +4952,45 @@ td a {
 }
 
 .mflStatsAgeDistribution {
-  min-height: 196px;
+  min-height: 218px;
+  overflow: hidden;
 }
 
 .mflStatsHistogram {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(28px, 1fr);
+  grid-template-columns: repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr));
   align-items: end;
-  gap: 5px;
-  height: 196px;
+  gap: clamp(1px, 0.35vw, 4px);
+  width: 100%;
+  height: 218px;
 }
 
 .mflStatsHistogramItem {
   display: grid;
-  grid-template-rows: 34px 1fr 18px;
+  grid-template-rows: 42px 1fr 16px;
   align-items: end;
   min-width: 0;
-  gap: 4px;
+  gap: 3px;
   text-align: center;
 }
 
 .mflStatsHistogramItem strong {
   align-self: start;
+  min-width: 0;
   color: var(--text);
-  font-size: 10px;
+  font-size: clamp(7px, 0.58vw, 10px);
   font-weight: 800;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .mflStatsHistogramBar {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: 100%;
+  width: min(100%, 18px);
   height: 100%;
+  justify-self: center;
   overflow: hidden;
   border-radius: 6px 6px 3px 3px;
   background: var(--surface-muted);
@@ -5000,8 +5004,9 @@ td a {
 }
 
 .mflStatsHistogramLabel {
+  min-width: 0;
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: clamp(8px, 0.72vw, 11px);
   font-weight: 800;
 }
 

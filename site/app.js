@@ -9068,6 +9068,7 @@ function renderMflStatsDistribution(packableRows) {
   const fragment = document.createDocumentFragment();
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
+  histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
 
   rows.forEach(([value, count]) => {
     const barHeight = maxCount > 0 ? Math.max(6, (count / maxCount) * 100) : 0;
