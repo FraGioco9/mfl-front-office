@@ -2852,6 +2852,11 @@ function renderTableLoadingShell(pageName) {
   tableBody.replaceChildren();
 }
 async function setPage(pageName, updateHash = true, options = {}) {
+  if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
+    await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
+    return;
+  }
+
   const previousPage = state.currentPage;
   const shouldResetScroll = previousPage !== pageName;
   if (previousPage === "settings" && pageName !== "settings") {
