@@ -72,6 +72,7 @@ const state = {
   settingsSaveInFlight: false,
   tooltipSuppressedUntil: 0,
   hoveredTablePlayerId: "",
+  hoveredTableInteractiveKey: "",
   walletNotesSaveTimer: null,
   walletPreferencesLoading: false,
   walletPreferencesLoaded: false,
@@ -5608,6 +5609,21 @@ function appendStatValue(cell, row, statColumn) {
   cell.appendChild(progressionElement);
 }
 
+function tableInteractiveKey(type, id) {
+  const key = String(id || "").trim();
+  return key ? `${type}:${key}` : "";
+}
+
+function markTableInteractiveHover(element, type, id) {
+  const key = tableInteractiveKey(type, id);
+  if (!element || !key) {
+    return;
+  }
+  element.dataset.tableInteractiveKey = key;
+  if (state.hoveredTableInteractiveKey === key) {
+    element.classList.add("tableInteractiveHovered");
+  }
+}
 function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   const button = document.createElement("button");
   button.type = "button";
@@ -5615,6 +5631,7 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.textContent = label;
   button.dataset.tooltip = "Click to copy";
   button.setAttribute("aria-label", "Click to copy");
+  markTableInteractiveHover(button, "id", playerId);
   button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));
   button.addEventListener("mouseleave", hidePlayerNoteTooltip);
   button.addEventListener("blur", hidePlayerNoteTooltip);
@@ -8869,6 +8886,7 @@ function renderTable() {
         nameWrap.className = "playerNameCell";
         nameLink.href = playerRoute(playerId);
         nameLink.className = "playerNameLink";
+        markTableInteractiveHover(nameLink, "name", playerId);
         nameLink.textContent = formatCellValue(row, column);
         nameLink.addEventListener("click", (event) => {
           event.preventDefault();
@@ -8920,6 +8938,7 @@ function renderTable() {
           const link = document.createElement("a");
           link.href = agentRoute(walletAddress);
           link.className = "agentTableLink";
+          markTableInteractiveHover(link, "agent", walletAddress);
           link.textContent = agentLabel;
           const tooltip = joinedAgencyTooltip(row);
           if (tooltip) {
@@ -10081,17 +10100,29 @@ tableBody?.addEventListener("pointermove", (event) => {
   const row = event.target?.closest?.("#tableBody tr");
   const idButton = row?.querySelector?.(".copyPlayerIdButton");
   const nextId = String(idButton?.textContent || "").trim();
-  if (!row || !nextId || state.hoveredTablePlayerId === nextId) {
-    return;
+  const interactive = event.target?.closest?.("[data-table-interactive-key]");
+  const interactiveKey = String(interactive?.dataset?.tableInteractiveKey || "");
+
+  if (row && nextId && state.hoveredTablePlayerId !== nextId) {
+    state.hoveredTablePlayerId = nextId;
+    tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
+    row.classList.add("tableRowHovered");
   }
-  state.hoveredTablePlayerId = nextId;
-  tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
-  row.classList.add("tableRowHovered");
+
+  if (state.hoveredTableInteractiveKey !== interactiveKey) {
+    state.hoveredTableInteractiveKey = interactiveKey;
+    tableBody.querySelectorAll(".tableInteractiveHovered").forEach((element) => element.classList.remove("tableInteractiveHovered"));
+    if (interactive) {
+      interactive.classList.add("tableInteractiveHovered");
+    }
+  }
 });
 
 tableBody?.addEventListener("pointerleave", () => {
   state.hoveredTablePlayerId = "";
+  state.hoveredTableInteractiveKey = "";
   tableBody.querySelectorAll("tr.tableRowHovered").forEach((tableRow) => tableRow.classList.remove("tableRowHovered"));
+  tableBody.querySelectorAll(".tableInteractiveHovered").forEach((element) => element.classList.remove("tableInteractiveHovered"));
 });
 window.addEventListener("scroll", hidePlayerNoteTooltip, true);
 window.addEventListener("resize", hidePlayerNoteTooltip);

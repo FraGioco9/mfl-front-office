@@ -2080,6 +2080,7 @@ table {
 
 .copyPlayerIdButton:hover,
 .copyPlayerIdButton:focus,
+.copyPlayerIdButton.tableInteractiveHovered,
 .copyPlayerIdButton:hover:not(:disabled) {
   border-color: transparent !important;
   background: transparent !important;
@@ -2307,7 +2308,8 @@ td a {
   white-space: nowrap;
 }
 
-.playerNameLink:hover {
+.playerNameLink:hover,
+.playerNameLink.tableInteractiveHovered {
   color: var(--primary);
   text-decoration: none;
 }
@@ -2318,7 +2320,8 @@ td a {
   text-decoration: none;
 }
 
-.agentTableLink:hover {
+.agentTableLink:hover,
+.agentTableLink.tableInteractiveHovered {
   color: var(--primary);
   text-decoration: none;
 }
