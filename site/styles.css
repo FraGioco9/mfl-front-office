@@ -4975,25 +4975,13 @@ td a {
   text-align: center;
 }
 
-.mflStatsHistogramItem strong {
-  min-width: 0;
-  min-height: 42px;
-  color: var(--text);
-  font-size: clamp(7px, 0.58vw, 10px);
-  font-weight: 800;
-  line-height: 1.05;
-  overflow-wrap: anywhere;
-}
-
 .mflStatsHistogramBar {
   position: relative;
-  width: min(100%, 20px);
+  width: min(86%, var(--mfl-stats-bar-width, 18px));
   flex: 1 1 auto;
   min-height: 120px;
-  overflow: hidden;
-  border: 1px solid var(--border-soft);
-  border-radius: 6px 6px 3px 3px;
-  background: var(--surface-muted);
+  overflow: visible;
+  cursor: help;
 }
 
 .mflStatsHistogramBar::after {
@@ -5003,9 +4991,38 @@ td a {
   left: 0;
   height: var(--bar-height, 0%);
   min-height: 2px;
-  border-radius: inherit;
+  border-radius: 6px 6px 3px 3px;
   background: #4db4ee;
   content: "";
+}
+
+.mflStatsHistogramBar::before {
+  position: absolute;
+  left: 50%;
+  bottom: min(calc(var(--bar-height, 0%) + 8px), calc(100% - 28px));
+  z-index: 10;
+  width: max-content;
+  max-width: 140px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.mflStatsHistogramBar:hover::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .mflStatsHistogramLabel {

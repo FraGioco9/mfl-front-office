@@ -9069,13 +9069,15 @@ function renderMflStatsDistribution(packableRows) {
   const histogram = document.createElement("div");
   histogram.className = "mflStatsHistogram";
   histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
+  const barWidth = rows.length <= 8 ? 46 : rows.length <= 12 ? 38 : rows.length <= 18 ? 30 : rows.length <= 28 ? 24 : 18;
+  histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
 
   rows.forEach(([value, count]) => {
     const barHeight = maxCount > 0 ? Math.max(6, (count / maxCount) * 100) : 0;
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
     const item = document.createElement("div");
     item.className = "mflStatsHistogramItem";
-    item.innerHTML = `<strong>${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)</strong><div class="mflStatsHistogramBar" style="--bar-height:${barHeight}%"></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    item.innerHTML = `<div class="mflStatsHistogramBar" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
     histogram.appendChild(item);
   });
 
