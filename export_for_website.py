@@ -92,7 +92,7 @@ def clean_output_folder(output_path: Path) -> None:
     for old_file in output_path.glob("players_*.json"):
         old_file.unlink()
 
-    for old_file_name in ("players_public.json", "players_progression.json", "players_mfl_public.json", "manifest.json"):
+    for old_file_name in ("players_public.json", "players_progression.json", "players_mfl_public.json", "players_search.json", "agents_search.json", "manifest.json"):
         old_file = output_path / old_file_name
         if old_file.exists():
             old_file.unlink()
@@ -116,8 +116,41 @@ def write_player_file(output_path: Path, file_name: str, columns: list[str], row
     print(f"Exported {file_name}: {len(rows)} players")
 
 
-def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
-    rows = connection.execute(
+SEARCH_PLAYER_COLUMNS = [
+    "player_id",
+    "name",
+    "overall",
+    "nationality",
+    "positions",
+]
+
+
+def write_compact_table(output_path: Path, file_name: str, columns: list[str], rows: list[list[Any]]) -> None:
+    with (output_path / file_name).open("w", encoding="utf-8") as file:
+        json.dump(
+            {
+                "columns": columns,
+                "rows": rows,
+            },
+            file,
+            separators=(",", ":"),
+        )
+
+
+def write_search_indexes(output_path: Path, player_rows: list[sqlite3.Row], wallet_rows: list[sqlite3.Row]) -> dict[str, int]:
+    player_search_rows = [row_to_json_values(row, SEARCH_PLAYER_COLUMNS) for row in player_rows]
+    agent_rows = [[row["wallet_address"], row["wallet_name"]] for row in wallet_rows]
+
+    write_compact_table(output_path, "players_search.json", SEARCH_PLAYER_COLUMNS, player_search_rows)
+    write_compact_table(output_path, "agents_search.json", ["wallet_address", "wallet_name"], agent_rows)
+
+    print(f"Exported players_search.json: {len(player_search_rows)} players")
+    print(f"Exported agents_search.json: {len(agent_rows)} agents")
+    return {"players": len(player_search_rows), "agents": len(agent_rows)}
+
+
+def fetch_wallet_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
         """
         SELECT wallet_address, name AS wallet_name
         FROM wallets
@@ -125,15 +158,14 @@ def export_wallets(connection: sqlite3.Connection, output_path: Path) -> int:
         """
     ).fetchall()
 
-    with (output_path / "wallets.json").open("w", encoding="utf-8") as file:
-        json.dump(
-            {
-                "columns": ["wallet_address", "wallet_name"],
-                "rows": [[row["wallet_address"], row["wallet_name"]] for row in rows],
-            },
-            file,
-            separators=(",", ":"),
-        )
+
+def export_wallets(output_path: Path, rows: list[sqlite3.Row]) -> int:
+    write_compact_table(
+        output_path,
+        "wallets.json",
+        ["wallet_address", "wallet_name"],
+        [[row["wallet_address"], row["wallet_name"]] for row in rows],
+    )
 
     print(f"Exported wallets.json: {len(rows)} wallets")
     return len(rows)
@@ -154,13 +186,15 @@ def export_players(output_path: Path) -> dict[str, Any]:
     ).fetchall()
 
     total_players = len(rows)
-    total_wallets = export_wallets(connection, output_path)
+    wallet_rows = fetch_wallet_rows(connection)
+    total_wallets = export_wallets(output_path, wallet_rows)
 
     mfl_rows = [row for row in rows if str(row["wallet_address"] or "").lower() == MFL_WALLET_ADDRESS]
 
     write_player_file(output_path, "players_public.json", PUBLIC_COLUMNS, rows)
     write_player_file(output_path, "players_progression.json", PROGRESSION_COLUMNS, rows)
     write_player_file(output_path, "players_mfl_public.json", PUBLIC_COLUMNS, mfl_rows)
+    search_counts = write_search_indexes(output_path, rows, wallet_rows)
 
     connection.close()
 
@@ -183,6 +217,16 @@ def export_players(output_path: Path) -> dict[str, Any]:
                 "file": "players_mfl_public.json",
                 "rows": len(mfl_rows),
                 "columns": PUBLIC_COLUMNS,
+            },
+            "search_players": {
+                "file": "players_search.json",
+                "rows": search_counts["players"],
+                "columns": SEARCH_PLAYER_COLUMNS,
+            },
+            "search_agents": {
+                "file": "agents_search.json",
+                "rows": search_counts["agents"],
+                "columns": ["wallet_address", "wallet_name"],
             },
         },
     }
@@ -215,7 +259,7 @@ def main() -> int:
     started_at = time.monotonic()
 
     manifest = export_players(SITE_DATA_PATH)
-    print(f"Website export complete: {manifest['row_count']} players in 3 files.")
+    print(f"Website export complete: {manifest['row_count']} players in optimized data files.")
     print(f"Output folder: {SITE_DATA_PATH}")
     print(f"Total time: {format_duration(time.monotonic() - started_at)}")
     return 0

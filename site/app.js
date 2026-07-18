@@ -47,6 +47,8 @@ const state = {
   searchRenderTimer: null,
   searchIndex: [],
   agentSearchIndex: [],
+  searchIndexesLoaded: false,
+  searchIndexesLoadPromise: null,
   recentSearchItems: [],
   recentSearchPlayerIds: [],
   recentSearchAgentWallets: [],
@@ -321,6 +323,7 @@ const PLAYER_NOTE_MAX_LENGTH = 200;
 const DATA_CACHE_NAME = "mfl-front-office-data-v1";
 const DATA_CACHE_VERSION_KEY = "mfl-data-cache-version";
 const DATA_CACHE_MANIFEST_KEY = "mfl-data-cache-manifest";
+const SEARCH_CACHE_VERSION_KEY = "mfl-search-cache-version";
 const DATA_SNAPSHOT_DB_NAME = "mfl-front-office-data-snapshots";
 const DATA_SNAPSHOT_DB_VERSION = 1;
 const DATA_SNAPSHOT_STORE_NAME = "snapshots";
@@ -615,6 +618,7 @@ async function showUnauthorizedProgressionRedirect() {
   loadingScreen.hidden = true;
   loadingScreen.classList.remove("failed", "complete", "leaving");
   document.body.classList.remove("loading");
+  document.documentElement.classList.remove("loading");
   return setPage("home", false);
 }
 
@@ -629,8 +633,9 @@ async function finishLoading() {
   await new Promise((resolve) => window.setTimeout(resolve, 220));
   loadingScreen.hidden = true;
   loadingScreen.classList.remove("complete", "leaving");
-  document.body.classList.remove("loading");
   revealAppShell();
+  document.body.classList.remove("loading");
+  document.documentElement.classList.remove("loading");
   flushPostLoadingToast();
 }
 
@@ -738,6 +743,7 @@ function showAppShell() {
 }
 
 function showLoading() {
+  document.documentElement.classList.add("loading");
   document.body.classList.add("booting", "loading");
   loadingScreen.hidden = false;
   loadingScreen.classList.remove("failed", "complete", "leaving");
@@ -951,7 +957,7 @@ function staticDataFileUrl(fileName) {
 }
 
 function canUseStaticDataFile(fileName, access = currentDataAccess()) {
-  return /^(manifest\.json|players_(public|progression|mfl_public|\d{4})\.json|wallets\.json)$/.test(fileName);
+  return /^(manifest\.json|players_(public|progression|mfl_public|search|\d{4})\.json|agents_search\.json|wallets\.json)$/.test(fileName);
 }
 
 function dataFileUrl(fileName, options = {}) {
@@ -5835,35 +5841,142 @@ function rowByPlayerId(playerId) {
   return state.rows.find((row) => String(getValue(row, "player_id")) === key) || null;
 }
 
-function buildSearchIndex() {
-  state.searchIndex = state.rows.map((row) => ({
+function buildPlayerSearchEntryFromRow(row) {
+  const playerId = String(getValue(row, "player_id") ?? "");
+  const nameDisplay = formatCellValue(row, "name");
+  const nationalityDisplay = formatCellValue(row, "nationality");
+  const positionsDisplay = formatCellValue(row, "positions");
+
+  return {
+    type: "player",
     row,
-    id: normalizeSearchText(getValue(row, "player_id")),
-    name: normalizeSearchText(getValue(row, "name")),
+    playerId,
+    id: normalizeSearchText(playerId),
+    name: normalizeSearchText(nameDisplay),
+    nameDisplay,
+    nationalityDisplay,
+    positionsDisplay,
     overall: Number(statDisplayValue(row, "overall") || 0),
     retired: getValue(row, "retirement_years") === 0,
-  }));
+  };
+}
+
+function compactSearchValue(row, columns, column) {
+  const index = columns.indexOf(column);
+  return index >= 0 ? row[index] : null;
+}
+
+function buildPlayerSearchEntryFromCompactRow(row, columns) {
+  const playerId = String(compactSearchValue(row, columns, "player_id") ?? "");
+  const nameDisplay = String(compactSearchValue(row, columns, "name") || "NULL");
+  const nationalityDisplay = formatNationality(compactSearchValue(row, columns, "nationality"));
+  const positionsDisplay = String(compactSearchValue(row, columns, "positions") || "NULL");
+
+  return {
+    type: "player",
+    playerId,
+    id: normalizeSearchText(playerId),
+    name: normalizeSearchText(nameDisplay),
+    nameDisplay,
+    nationalityDisplay,
+    positionsDisplay,
+    overall: Number(compactSearchValue(row, columns, "overall") || 0),
+    retired: false,
+  };
+}
+
+function buildAgentSearchEntry(walletAddress, name) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
+  if (!normalizedWalletAddress) {
+    return null;
+  }
+
+  const agentName = normalizedAgentName(name) || normalizedWalletAddress;
+  return {
+    type: "agent",
+    walletAddress: normalizedWalletAddress,
+    name: agentName,
+    nameText: normalizeSearchText(agentName),
+    walletText: normalizeSearchText(normalizedWalletAddress),
+  };
+}
+
+function buildSearchIndex() {
+  state.searchIndex = state.rows.map((row) => buildPlayerSearchEntryFromRow(row));
 
   const agentsByWallet = new Map();
   const addAgent = (walletAddress, name) => {
-    const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
-    if (!normalizedWalletAddress || agentsByWallet.has(normalizedWalletAddress)) {
+    const entry = buildAgentSearchEntry(walletAddress, name);
+    if (!entry || agentsByWallet.has(entry.walletAddress)) {
       return;
     }
 
-    const agentName = normalizedAgentName(name) || normalizedWalletAddress;
-    agentsByWallet.set(normalizedWalletAddress, {
-      type: "agent",
-      walletAddress: normalizedWalletAddress,
-      name: agentName,
-      nameText: normalizeSearchText(agentName),
-      walletText: normalizeSearchText(normalizedWalletAddress),
-    });
+    agentsByWallet.set(entry.walletAddress, entry);
   };
 
   state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
   state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));
   state.agentSearchIndex = Array.from(agentsByWallet.values());
+  state.searchIndexesLoaded = true;
+}
+
+async function ensureSearchIndexes() {
+  if (state.searchIndexesLoaded && state.searchIndex.length) {
+    return true;
+  }
+
+  if (state.searchIndexesLoadPromise) {
+    return state.searchIndexesLoadPromise;
+  }
+
+  state.searchIndexesLoadPromise = (async () => {
+    if (state.rows.length) {
+      buildSearchIndex();
+      return true;
+    }
+
+    const manifest = state.manifest || await fetchCurrentManifestForCacheCheck() || readCachedManifest();
+    if (!manifest) {
+      await loadWalletNames();
+      return false;
+    }
+
+    const playerFile = searchPlayersDataFile(manifest);
+    const agentFile = searchAgentsDataFile(manifest);
+    const searchVersion = `${manifest.generated_at || ""}:${playerFile}:${agentFile}:${manifest.row_count || 0}:${manifest.wallet_count || 0}`;
+    const cachedVersion = localStorage.getItem(SEARCH_CACHE_VERSION_KEY);
+    const useCache = cachedVersion === searchVersion;
+
+    const [playersData, agentsData] = await Promise.all([
+      fetchDataFile(playerFile, { useCache, writeCache: !useCache }),
+      fetchDataFile(agentFile, { useCache, writeCache: !useCache }),
+    ]);
+
+    state.searchIndex = Array.isArray(playersData?.rows)
+      ? playersData.rows.map((row) => buildPlayerSearchEntryFromCompactRow(row, playersData.columns || []))
+      : [];
+    state.agentSearchIndex = Array.isArray(agentsData?.rows)
+      ? agentsData.rows
+          .map((row) => buildAgentSearchEntry(compactSearchValue(row, agentsData.columns || [], "wallet_address"), compactSearchValue(row, agentsData.columns || [], "wallet_name")))
+          .filter(Boolean)
+      : [];
+    state.walletRows = state.agentSearchIndex.map((entry) => ({ wallet_address: entry.walletAddress, wallet_name: entry.name }));
+    state.walletNamesLoaded = true;
+    state.searchIndexesLoaded = true;
+    localStorage.setItem(SEARCH_CACHE_VERSION_KEY, searchVersion);
+    return true;
+  })().catch(async () => {
+    await loadWalletNames();
+    if (state.rows.length) {
+      buildSearchIndex();
+      return true;
+    }
+    return false;
+  }).finally(() => {
+    state.searchIndexesLoadPromise = null;
+  });
+
+  return state.searchIndexesLoadPromise;
 }
 
 
@@ -7570,10 +7683,7 @@ function setupBackdropClickClose(modal, closeCallback) {
 }
 
 async function openSearch() {
-  const loaded = await ensureProgressionData();
-  if (!loaded) {
-    return;
-  }
+  await ensureSearchIndexes();
   if (document.body.classList.contains("loading")) {
     await finishLoading();
   }
@@ -7623,10 +7733,11 @@ function bestSearchResults(query) {
   const playerResults = state.searchIndex
     .map((entry) => ({
       type: "player",
-      row: entry.row,
+      entry,
+      row: entry.row || null,
       score: Math.max(searchMatchScore(query, entry.name, entry.id), searchMatchScore(query, entry.id, entry.name)),
       overall: entry.overall,
-      label: formatCellValue(entry.row, "name"),
+      label: entry.nameDisplay,
     }))
     .filter((result) => result.score > 0);
 
@@ -7664,6 +7775,10 @@ function recentSearchRows() {
     }
 
     const playerId = item.startsWith("player:") ? item.slice(7) : item;
+    const entry = state.searchIndex.find((searchEntry) => String(searchEntry.playerId) === String(playerId));
+    if (entry) {
+      return { type: "player", entry, row: entry.row || null };
+    }
     const row = rowByPlayerId(playerId);
     return row ? playerSearchResult(row) : null;
   }).filter(Boolean);
@@ -7722,9 +7837,13 @@ function renderSearchResultsNow() {
     }
 
     const row = result.row;
-    const id = String(getValue(row, "player_id"));
-    const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
-    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
+    const entry = result.entry || (row ? buildPlayerSearchEntryFromRow(row) : null);
+    if (!entry) {
+      return;
+    }
+    const id = String(entry.playerId);
+    const ovr = formatPlainValue(entry.overall, "overall");
+    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(entry.nationalityDisplay)} &middot; ${escapeHtml(entry.positionsDisplay)}</span>`;
     button.addEventListener("click", () => {
       rememberSearchResult(id);
       navigateFromSearch(() => openPlayerPage(id));
@@ -9088,6 +9207,14 @@ function mflPublicDataFile(manifest) {
   return manifest?.files?.mfl_public?.file || "players_mfl_public.json";
 }
 
+function searchPlayersDataFile(manifest) {
+  return manifest?.files?.search_players?.file || "players_search.json";
+}
+
+function searchAgentsDataFile(manifest) {
+  return manifest?.files?.search_agents?.file || "agents_search.json";
+}
+
 function progressionDataFile(manifest) {
   return manifest?.files?.progression?.file || "players_progression.json";
 }
@@ -9190,6 +9317,7 @@ function applyDataSnapshot(snapshot) {
   state.dataLoadPromise = null;
 
   state.searchIndex = [];
+  state.searchIndexesLoaded = false;
   updateSummaryCounts(state.manifest.row_count, state.manifest.wallet_count);
   statusText.textContent = `Updated ${new Date(state.manifest.generated_at).toLocaleString()}`;
   buildSearchIndex();
@@ -9583,6 +9711,9 @@ async function preloadRefreshData(initialPage) {
     return;
   }
 
+  showLoading();
+  await paintLoadingProgress();
+
   const currentManifest = await fetchCurrentManifestForCacheCheck();
 
   if (currentManifest && (
@@ -9601,7 +9732,6 @@ async function preloadRefreshData(initialPage) {
     return;
   }
 
-  showLoading();
   await loadDataForAccess(targetAccess, loadingMessageForAccess(targetAccess));
 }
 

@@ -4,7 +4,7 @@ const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
 
-const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json|players_public\.json|players_mfl_public\.json|players_progression\.json)$/;
+const DATA_FILE_PATTERN = /^(manifest\.json|players_\d{4}\.json|players_public\.json|players_mfl_public\.json|players_progression\.json|players_search\.json|agents_search\.json)$/;
 const PUBLIC_DATABASE_COLUMNS = [
   "player_id",
   "wallet_address",
