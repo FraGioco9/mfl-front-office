@@ -9043,7 +9043,7 @@ function renderMflStatsDistribution(packableRows) {
   });
 
   if (!counts.size) {
-    mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this overall filter.</p>';
+    mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">No packable players match this filter.</p>';
     return;
   }
 
