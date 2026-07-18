@@ -434,11 +434,18 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
     players: list[dict[str, Any]] = []
     offset = 0
     batch_size = flow_batch_size_for_wallet(wallet_address)
+    completed_batches = 0
 
     while True:
         response = execute_flow_script(wallet_address, offset, batch_size)
         batch_players = parse_flow_static_player_response(response)
         players.extend(batch_players)
+        completed_batches += 1
+        estimated_batches = completed_batches if len(batch_players) < batch_size else completed_batches + 1
+        print(
+            f"Flow players mint age {wallet_address} batch {completed_batches}/{estimated_batches}: "
+            f"read {batch_size} IDs, returned {len(batch_players)} players, total {len(players)} players"
+        )
 
         if len(batch_players) < batch_size:
             return players
