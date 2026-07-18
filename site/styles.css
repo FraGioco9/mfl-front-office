@@ -4804,28 +4804,19 @@ td a {
 
 
 .mflStatsPage {
-  width: min(1120px, 100%);
-  margin: 0 auto;
-  padding-top: 6px;
+  width: 100%;
+  margin: 0;
 }
 
-.mflStatsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 9px;
-}
-
-.mflStatsTableLink {
-  text-decoration: none;
+.mflStatsViews {
+  margin-bottom: 7px;
 }
 
 .mflStatsFilters {
   display: grid;
-  gap: 6px;
-  margin-bottom: 9px;
-  padding: 8px 10px;
+  gap: 5px;
+  margin-bottom: 7px;
+  padding: 7px 9px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface);
@@ -4845,8 +4836,8 @@ td a {
 }
 
 .mflStatsFilterButton {
-  height: 28px;
-  padding: 0 8px;
+  height: 26px;
+  padding: 0 7px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface-muted);
@@ -4870,8 +4861,8 @@ td a {
 .mflStatsCards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
-  margin-bottom: 9px;
+  gap: 7px;
+  margin-bottom: 7px;
 }
 
 .mflStatsCards article,
@@ -4882,14 +4873,14 @@ td a {
 }
 
 .mflStatsCards article {
-  min-height: 78px;
-  padding: 10px 12px;
+  min-height: 68px;
+  padding: 8px 10px;
 }
 
 .mflStatsCards span {
   display: block;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1.1;
   text-transform: uppercase;
@@ -4897,51 +4888,51 @@ td a {
 
 .mflStatsCards strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--text);
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1;
 }
 
 .mflStatsCards small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .mflStatsDistribution {
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .mflStatsDistribution h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
+  margin: 0 0 6px;
+  font-size: 15px;
 }
 
 .mflStatsAgeDistribution {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .mflStatsAgeRow {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 112px;
+  grid-template-columns: 40px minmax(0, 1fr) 112px;
   align-items: center;
-  gap: 8px;
-  min-height: 24px;
+  gap: 7px;
+  min-height: 21px;
 }
 
 .mflStatsAgeLabel,
 .mflStatsAgeRow strong {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .mflStatsAgeBar {
-  height: 9px;
+  height: 8px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface-muted);
@@ -4972,10 +4963,6 @@ td a {
     grid-template-columns: 1fr;
   }
 
-  .mflStatsHeader {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 .settingsPage {

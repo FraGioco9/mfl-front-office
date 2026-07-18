@@ -2912,6 +2912,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const needsPageData = pageRequiresData(pageName);
   const shouldShowNavigationLoading = needsPageData
     && shouldResetScroll
+    && !options.skipNavigationLoading
     && (tablePage || mflStatsActive || playerPageActive || evaluationPageActive)
     && (tablePage || mflStatsActive || !state.dataLoaded || state.dataAccess !== targetDataAccess);
 
@@ -10187,11 +10188,11 @@ viewButtons.forEach((button) => {
     const pageName = pageNameForViewButton(button);
     const viewName = button.dataset.view;
     if (pageName === "mfl" && viewName === "stats") {
-      setPage("mflstats", true);
+      setPage("mflstats", true, { skipNavigationLoading: true });
       return;
     }
     if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
-      setPage("mfl", true, { view: "attributes" });
+      setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
       return;
     }
     setView(viewName);
