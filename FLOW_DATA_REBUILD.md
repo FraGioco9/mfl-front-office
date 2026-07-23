@@ -143,7 +143,7 @@ The validation report records the exact sealed snapshot block, wallet counts, re
 
 The MFL progressions API uses:
 
-- no requests-per-minute limiter;
+- no requests-per-minute limiter or other request-rate cap;
 - batches of 1,000 player IDs;
 - 100 worker threads for the standard rebuild command;
 - three retries after the initial request;
