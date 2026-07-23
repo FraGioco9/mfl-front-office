@@ -1,6 +1,6 @@
 # Flow data rebuild
 
-This pipeline rebuilds the existing `players` and `wallets` data without changing the exported player columns.
+This pipeline builds a validated candidate from the existing `players` and `wallets` data without changing the exported player columns or replacing the active database.
 
 ## Sources and order
 
@@ -134,7 +134,7 @@ The original MFL treasury wallet is handled separately because its collection is
 
 `MFL Trade` is read through its public collection like other normal-sized wallets, while still being treated as MFL-controlled for naming, progression, and validation.
 
-A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` is stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table.
+A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` is stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table inside the candidate.
 
 The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, and the detected current Flow season.
 
@@ -152,8 +152,15 @@ The MFL progressions API uses:
 
 Players with `NULL` ownership are included in progression requests because they are not known to belong to either MFL-controlled wallet.
 
-## Atomic replacement
+## Candidate-only output
 
-The previous database is copied to `mfl_progression_candidate.db`. The candidate replaces `mfl_progression.db` only after validation succeeds. The validation report is written to `flow_rebuild_validation.json`.
+At the beginning of a run, `mfl_progression.db` is copied to `mfl_progression_candidate.db`. All rebuilding and validation happen only inside the candidate.
 
-On Windows, a running site, SQLite viewer, editor extension, antivirus scan, or OneDrive may temporarily lock either database file. The final atomic replacement retries a lock every five seconds for up to 60 seconds. If the file remains locked, the validated candidate is retained so it can be promoted after the locking process is closed.
+After successful validation:
+
+- `mfl_progression_candidate.db` remains available as the result;
+- `mfl_progression.db` remains unchanged;
+- `flow_rebuild_validation.json` is written beside the databases;
+- no automatic promotion or file replacement is performed.
+
+The GitHub candidate workflow restores its input only from active-database workflows, verifies that the active database hash is unchanged after the run, and uploads the candidate under the separate artifact name `mfl_progression_candidate_database`.
