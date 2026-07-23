@@ -1,13 +1,16 @@
+import inspect
 import unittest
 from urllib.error import URLError
 from unittest.mock import patch
 
 import progression_rebuild
+from mfl_wallet_config import refresh_progressions_excluding_mfl_wallets
 from progression_rebuild import (
     PROGRESSION_RETRIES,
     PROGRESSION_RETRY_DELAY_SECONDS,
     PROGRESSION_WORKERS,
     ProgressionClient,
+    refresh_progressions,
 )
 
 
@@ -16,6 +19,14 @@ class ProgressionPolicyTests(unittest.TestCase):
         self.assertEqual(PROGRESSION_WORKERS, 100)
         self.assertFalse(hasattr(progression_rebuild, "PROGRESSION_REQUESTS_PER_MINUTE"))
         self.assertFalse(hasattr(progression_rebuild, "SlidingWindowRateLimiter"))
+        self.assertEqual(
+            inspect.signature(refresh_progressions).parameters["workers"].default,
+            100,
+        )
+        self.assertEqual(
+            inspect.signature(refresh_progressions_excluding_mfl_wallets).parameters["workers"].default,
+            100,
+        )
 
     def test_failed_request_retries_three_times_after_61_seconds(self):
         client = ProgressionClient()
