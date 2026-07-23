@@ -4,6 +4,7 @@ import sys
 
 import rebuild_database
 from flow_block_height import install_block_height_hook
+from flow_metadata_config import install_flow_metadata_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 
 
@@ -20,6 +21,7 @@ def main() -> int:
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     install_block_height_hook(rebuild_database)
+    install_flow_metadata_config(rebuild_database)
     return rebuild_database.main()
 
 
