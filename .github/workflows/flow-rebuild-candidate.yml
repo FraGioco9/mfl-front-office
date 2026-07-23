@@ -17,6 +17,7 @@ on:
       - "rebuild_database.py"
       - "leaderboard_rebuild.py"
       - "run_flow_rebuild.py"
+      - "FLOW_DATA_REBUILD.md"
       - "tests/**"
       - ".github/workflows/flow-rebuild-candidate.yml"
   pull_request:
@@ -35,6 +36,7 @@ on:
       - "rebuild_database.py"
       - "leaderboard_rebuild.py"
       - "run_flow_rebuild.py"
+      - "FLOW_DATA_REBUILD.md"
       - "tests/**"
       - ".github/workflows/flow-rebuild-candidate.yml"
   workflow_dispatch:
