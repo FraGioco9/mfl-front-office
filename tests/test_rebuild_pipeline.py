@@ -1,6 +1,5 @@
 import sqlite3
 import threading
-import time
 import unittest
 from unittest.mock import patch
 
@@ -30,9 +29,8 @@ class RebuildPipelineTests(unittest.TestCase):
         self.assertEqual(decode_cadence(node), {"overall": 85, "positions": ["ST"]})
 
     def test_flow_metadata_batches_run_in_parallel(self):
+        barrier = threading.Barrier(2)
         lock = threading.Lock()
-        all_started = threading.Event()
-        release_requests = threading.Event()
         active_requests = 0
         maximum_active_requests = 0
 
@@ -41,12 +39,8 @@ class RebuildPipelineTests(unittest.TestCase):
             with lock:
                 active_requests += 1
                 maximum_active_requests = max(maximum_active_requests, active_requests)
-                if active_requests >= 2:
-                    all_started.set()
-            all_started.wait(timeout=1)
-            release_requests.set()
-            release_requests.wait(timeout=1)
-            time.sleep(0.01)
+            if player_ids[0] <= 2:
+                barrier.wait(timeout=1)
             with lock:
                 active_requests -= 1
             return [FlowPlayer(player_id=player_ids[0], metadata={"name": str(player_ids[0])}, season=1)]
