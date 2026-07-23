@@ -34,7 +34,7 @@ class FlowMetadataConfigTests(unittest.TestCase):
             workers=FLOW_PLAYER_WORKERS,
         )
         self.assertEqual(FLOW_PLAYER_BATCH_SIZE, 3000)
-        self.assertEqual(FLOW_PLAYER_WORKERS, 50)
+        self.assertEqual(FLOW_PLAYER_WORKERS, 30)
 
     def test_flow_batch_size_is_not_a_command_line_option(self):
         rebuild_module = self.rebuild_module()
