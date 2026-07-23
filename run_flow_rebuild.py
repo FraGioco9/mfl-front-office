@@ -9,6 +9,7 @@ from flow_metadata_config import (
     FLOW_PLAYER_WORKERS,
     install_flow_metadata_config,
 )
+from flow_spork_replay import install_spork_ownership_hook
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 
 
@@ -30,6 +31,7 @@ def main() -> int:
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     install_block_height_hook(rebuild_database)
+    install_spork_ownership_hook(rebuild_database)
     install_flow_metadata_config(rebuild_database)
     return rebuild_database.main()
 
