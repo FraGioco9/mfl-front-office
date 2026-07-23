@@ -5,19 +5,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import ModuleType
 from typing import Any
 
+from mfl_wallets import MFL_TRADE_WALLET_ADDRESS, MFL_WALLET_ADDRESSES, MFL_WALLET_NAMES
 from progression_rebuild import (
     PROGRESSION_BATCH_SIZE,
-    PROGRESSION_COLUMNS if False else ProgressionClient,
+    ProgressionClient,
+    chunks,
+    update_progression_rows,
 )
-from progression_rebuild import chunks, update_progression_rows
 
-MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
-MFL_TRADE_WALLET_ADDRESS = "0x6fec8986261ecf49"
-MFL_WALLET_NAMES = {
-    MFL_WALLET_ADDRESS: "MFL",
-    MFL_TRADE_WALLET_ADDRESS: "MFL Trade",
-}
-MFL_WALLET_ADDRESSES = frozenset(MFL_WALLET_NAMES)
 ATTRIBUTES_SUFFIXES = (("ALL", "all"), ("CURRENT_SEASON", "current_season"))
 
 
