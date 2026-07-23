@@ -39,8 +39,8 @@ class ProgressionPolicyTests(unittest.TestCase):
 
         self.assertEqual(PROGRESSION_RETRIES, 3)
         self.assertEqual(PROGRESSION_RETRY_DELAY_SECONDS, 61)
-        self.assertEqual(request.call_count, 4)
-        self.assertEqual(sleep.call_count, 3)
+        self.assertEqual(request.call_count, 1 + PROGRESSION_RETRIES)
+        self.assertEqual(sleep.call_count, PROGRESSION_RETRIES)
         sleep.assert_called_with(61)
 
 
