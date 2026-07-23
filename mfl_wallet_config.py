@@ -8,6 +8,7 @@ from typing import Any
 from mfl_wallets import MFL_TRADE_WALLET_ADDRESS, MFL_WALLET_ADDRESSES, MFL_WALLET_NAMES
 from progression_rebuild import (
     PROGRESSION_BATCH_SIZE,
+    PROGRESSION_WORKERS,
     ProgressionClient,
     chunks,
     update_progression_rows,
@@ -23,7 +24,7 @@ def add_mfl_wallet_names(wallet_names: dict[str, str]) -> None:
 def refresh_progressions_excluding_mfl_wallets(
     connection: sqlite3.Connection,
     *,
-    workers: int = 16,
+    workers: int = PROGRESSION_WORKERS,
     batch_size: int = PROGRESSION_BATCH_SIZE,
 ) -> int:
     addresses = sorted(MFL_WALLET_ADDRESSES)
