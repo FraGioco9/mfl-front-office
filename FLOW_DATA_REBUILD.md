@@ -2,13 +2,14 @@
 
 This pipeline rebuilds the existing `players` and `wallets` data without changing the exported player columns.
 
-## Sources
+## Sources and order
 
-1. The MFL players API is used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
-2. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches.
-3. `MFLPlayer.Deposit` events supply the latest wallet owner for every player.
-4. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for every player outside `0xff8d2bbed8164db0`.
-5. Next Overall is calculated with the existing position weights and formulas.
+1. The global MFL leaderboard is imported first to build the current `wallet_address` to wallet-name map.
+2. The MFL players API is then used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
+3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches.
+4. `MFLPlayer.Deposit` events supply the latest wallet owner for every player.
+5. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for every player outside `0xff8d2bbed8164db0`.
+6. Next Overall is calculated with the existing position weights and formulas.
 
 ## Preserved columns
 
@@ -25,7 +26,13 @@ The following values are copied unchanged from the previous database because the
 
 For a player not present in the previous database, `age` starts from `ageAtMint` and `player_seasons` starts at `1`; the other preserved fields remain `NULL`.
 
-Known wallet names are preserved. A newly discovered wallet uses its `wallet_address` as `wallet_name`.
+Wallet names use this priority order:
+
+1. the name from the newly imported leaderboard;
+2. the previous database name, when the leaderboard has no usable name;
+3. the wallet address itself.
+
+The rebuilt `wallets` table includes every leaderboard wallet plus every current Flow owner, including newly discovered owners that are not present in the leaderboard.
 
 ## Ownership replay
 
