@@ -10,7 +10,11 @@ from flow_metadata_config import (
     FLOW_PLAYER_WORKERS,
     install_flow_metadata_config,
 )
-from flow_spork_replay import install_spork_ownership_hook
+from flow_wallet_ownership import (
+    FLOW_WALLET_BATCH_SIZE,
+    FLOW_WALLET_WORKERS,
+    install_wallet_ownership_hook,
+)
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 
 
@@ -31,9 +35,15 @@ def main() -> int:
         f"up to {FLOW_PLAYER_WORKERS} parallel requests",
         flush=True,
     )
+    print(
+        f"Flow ownership settings: leaderboard and previous-owner wallets, "
+        f"fixed batches of {FLOW_WALLET_BATCH_SIZE} wallets, "
+        f"up to {FLOW_WALLET_WORKERS} parallel requests",
+        flush=True,
+    )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     install_block_height_hook(rebuild_database)
-    install_spork_ownership_hook(rebuild_database)
+    install_wallet_ownership_hook(rebuild_database, leaderboard_names)
     install_flow_metadata_config(rebuild_database)
     return rebuild_database.main()
 
