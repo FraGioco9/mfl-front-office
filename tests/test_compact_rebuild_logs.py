@@ -31,8 +31,8 @@ class CompactRebuildLogsTests(unittest.TestCase):
         cases = {
             "Flow player batch 42-3041 failed; retrying in 15s (1/3)":
                 "Metadata retry 1/3 in 15s",
-            "Progression ALL request failed; retrying in 60s (2/3)":
-                "Progression ALL retry 2/3 in 60s",
+            "Progression ALL request failed; retrying in 61s (2/3)":
+                "Progression ALL retry 2/3 in 61s",
             "Flow wallet ownership snapshot complete: resolved 402991 player owners":
                 "Ownership complete: 402991 players",
             "Progression refresh complete: 805982 interval rows updated":
