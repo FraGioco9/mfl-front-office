@@ -4,7 +4,11 @@ import sys
 
 import rebuild_database
 from flow_block_height import install_block_height_hook
-from flow_metadata_config import install_flow_metadata_config
+from flow_metadata_config import (
+    FLOW_PLAYER_BATCH_SIZE,
+    FLOW_PLAYER_WORKERS,
+    install_flow_metadata_config,
+)
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 
 
@@ -17,6 +21,11 @@ def main() -> int:
 
     print(
         f"Leaderboard import complete: loaded {len(leaderboard_names)} wallet addresses and names",
+        flush=True,
+    )
+    print(
+        f"Flow metadata settings: fixed batches of {FLOW_PLAYER_BATCH_SIZE} IDs, "
+        f"up to {FLOW_PLAYER_WORKERS} parallel requests",
         flush=True,
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
