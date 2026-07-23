@@ -5,6 +5,7 @@ on:
     branches:
       - agent/rebuild-flow-data-pipeline
     paths:
+      - "candidate_only_rebuild.py"
       - "compact_rebuild_logs.py"
       - "flow_age_seasons.py"
       - "flow_data.py"
@@ -17,7 +18,6 @@ on:
       - "mfl_wallets.py"
       - "mfl_wallet_config.py"
       - "progression_rebuild.py"
-      - "windows_database_replace.py"
       - "next_overall.py"
       - "rebuild_database.py"
       - "leaderboard_rebuild.py"
@@ -29,6 +29,7 @@ on:
     branches:
       - main
     paths:
+      - "candidate_only_rebuild.py"
       - "compact_rebuild_logs.py"
       - "flow_age_seasons.py"
       - "flow_data.py"
@@ -41,7 +42,6 @@ on:
       - "mfl_wallets.py"
       - "mfl_wallet_config.py"
       - "progression_rebuild.py"
-      - "windows_database_replace.py"
       - "next_overall.py"
       - "rebuild_database.py"
       - "leaderboard_rebuild.py"
@@ -78,7 +78,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Restore latest database artifact
+      - name: Restore latest active database artifact
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,7 +86,6 @@ jobs:
           mkdir -p previous-database
 
           {
-            gh run list --workflow flow-rebuild-candidate.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
@@ -98,18 +97,19 @@ jobs:
               echo "$RUN_ID" > previous_database_run_id.txt
               break
             fi
-            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable active database artifact."
           done
 
           if [ ! -f previous_database_run_id.txt ]; then
-            echo "No previous database artifact found. The Flow rebuild must preserve unavailable columns." >&2
+            echo "No active database artifact found. The Flow candidate needs the current database as input." >&2
             exit 1
           fi
 
           DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
-          echo "Restoring database artifact from run $DATABASE_RUN_ID."
+          echo "Restoring active database artifact from run $DATABASE_RUN_ID."
           gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
           cp previous-database/*.db mfl_progression.db
+          sha256sum mfl_progression.db > active_database.sha256
 
       - name: Test rebuild code
         run: python -m unittest discover -s tests -p 'test_*.py' -v
@@ -125,11 +125,14 @@ jobs:
 
           "${COMMAND[@]}"
 
+      - name: Verify active database unchanged
+        run: sha256sum -c active_database.sha256
+
       - name: Upload candidate database
         uses: actions/upload-artifact@v4
         with:
-          name: mfl_progression_database
-          path: mfl_progression.db
+          name: mfl_progression_candidate_database
+          path: mfl_progression_candidate.db
           if-no-files-found: error
 
       - name: Upload validation report
