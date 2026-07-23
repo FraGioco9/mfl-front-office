@@ -22,6 +22,12 @@ from flow_worker_config import FLOW_PARALLEL_WORKERS, install_flow_worker_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 from mfl_wallet_config import add_mfl_wallet_names, install_mfl_wallet_config
 from ownership_tolerance import install_ownership_tolerance
+from progression_rebuild import (
+    PROGRESSION_BATCH_SIZE,
+    PROGRESSION_RETRIES,
+    PROGRESSION_RETRY_DELAY_SECONDS,
+    PROGRESSION_WORKERS,
+)
 
 
 def main() -> int:
@@ -51,6 +57,11 @@ def main() -> int:
         f"{FLOW_PARALLEL_WORKERS} parallel requests; MFL wallet membership in "
         f"fixed batches of {MFL_MEMBERSHIP_BATCH_SIZE} player IDs with up to "
         f"{FLOW_PARALLEL_WORKERS} parallel requests",
+        flush=True,
+    )
+    print(
+        f"Progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {PROGRESSION_WORKERS}, "
+        f"retries {PROGRESSION_RETRIES}, delay {PROGRESSION_RETRY_DELAY_SECONDS}s",
         flush=True,
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
