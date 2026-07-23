@@ -34,6 +34,10 @@ Wallet names use this priority order:
 
 The rebuilt `wallets` table includes every leaderboard wallet plus every current Flow owner, including newly discovered owners that are not present in the leaderboard.
 
+## Flow metadata concurrency
+
+Top-level Flow player-ID batches run in parallel with up to 20 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order.
+
 ## Ownership replay
 
 The first rebuild has no ownership checkpoint, so it replays Flow deposit events from block `0`. The successful ending block is stored in `pipeline_state`. Later incremental runs begin at the following block.
