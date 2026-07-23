@@ -1,0 +1,112 @@
+name: Flow rebuild candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_player_id:
+        description: "Optional maximum player ID override for a test run. Leave empty to read /players?limit=1."
+        required: false
+        default: ""
+      flow_batch_size:
+        description: "Player IDs requested in each initial Flow metadata batch. Oversized batches split automatically."
+        required: true
+        default: "5000"
+      ownership_start_height:
+        description: "Optional first Flow block for ownership replay. Leave empty for the first stored checkpoint or block 0."
+        required: false
+        default: ""
+      ownership_window_size:
+        description: "Initial Flow event block window. Rejected ranges split automatically."
+        required: true
+        default: "1000000"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: flow-rebuild-candidate
+  cancel-in-progress: false
+
+jobs:
+  rebuild-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore latest database artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-database
+
+          {
+            gh run list --workflow flow-rebuild-candidate.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+            [ -n "$RUN_ID" ] || continue
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
+              echo "$RUN_ID" > previous_database_run_id.txt
+              break
+            fi
+            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+          done
+
+          if [ ! -f previous_database_run_id.txt ]; then
+            echo "No previous database artifact found. The Flow rebuild must preserve unavailable columns." >&2
+            exit 1
+          fi
+
+          DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
+          echo "Restoring database artifact from run $DATABASE_RUN_ID."
+          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
+          cp previous-database/*.db mfl_progression.db
+
+      - name: Test rebuild code
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run full Flow rebuild candidate
+        shell: bash
+        run: |
+          COMMAND=(
+            python rebuild_database.py
+            --ownership-mode full
+            --flow-batch-size "${{ inputs.flow_batch_size }}"
+            --ownership-window-size "${{ inputs.ownership_window_size }}"
+          )
+
+          if [ -n "${{ inputs.max_player_id }}" ]; then
+            COMMAND+=(--max-player-id "${{ inputs.max_player_id }}")
+          fi
+          if [ -n "${{ inputs.ownership_start_height }}" ]; then
+            COMMAND+=(--ownership-start-height "${{ inputs.ownership_start_height }}")
+          fi
+
+          "${COMMAND[@]}"
+
+      - name: Upload candidate database
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl_progression_database
+          path: mfl_progression.db
+          if-no-files-found: error
+
+      - name: Upload validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow_rebuild_validation
+          path: flow_rebuild_validation.json
+          if-no-files-found: error
