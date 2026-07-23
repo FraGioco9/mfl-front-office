@@ -1,7 +1,10 @@
 import sqlite3
+import threading
+import time
 import unittest
+from unittest.mock import patch
 
-from flow_data import decode_cadence
+from flow_data import FlowPlayer, decode_cadence, fetch_all_players
 from next_overall import next_overall_target, next_overall_values
 from progression_rebuild import progression_value
 
@@ -25,6 +28,27 @@ class RebuildPipelineTests(unittest.TestCase):
             ],
         }
         self.assertEqual(decode_cadence(node), {"overall": 85, "positions": ["ST"]})
+
+    def test_flow_metadata_batches_run_in_parallel(self):
+        lock = threading.Lock()
+        active_requests = 0
+        maximum_active_requests = 0
+
+        def fake_fetch(player_ids):
+            nonlocal active_requests, maximum_active_requests
+            with lock:
+                active_requests += 1
+                maximum_active_requests = max(maximum_active_requests, active_requests)
+            time.sleep(0.02)
+            with lock:
+                active_requests -= 1
+            return [FlowPlayer(player_id=player_ids[0], metadata={"name": str(player_ids[0])}, season=1)]
+
+        with patch("flow_data.fetch_player_batch", side_effect=fake_fetch):
+            players = fetch_all_players(4, 1, workers=4)
+
+        self.assertEqual(list(players), [1, 2, 3, 4])
+        self.assertGreater(maximum_active_requests, 1)
 
     def test_progression_missing_values_become_zero(self):
         self.assertEqual(progression_value(None, "overall"), 0)
