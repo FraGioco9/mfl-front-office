@@ -67,7 +67,7 @@ class FlowMetadataConfigTests(unittest.TestCase):
         with patch.object(sys, "argv", ["run_flow_rebuild.py"]):
             args = parse_rebuild_args(rebuild_module)
         self.assertEqual(args.flow_batch_size, 3000)
-        self.assertEqual(args.progression_workers, PROGRESSION_WORKERS)
+        self.assertEqual(args.progression_workers, 100)
         self.assertEqual(PROGRESSION_WORKERS, 100)
 
         with patch.object(
