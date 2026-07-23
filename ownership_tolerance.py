@@ -14,10 +14,6 @@ def install_ownership_tolerance(rebuild_module: ModuleType) -> None:
     original_replace_players = rebuild_module.replace_players
     original_validate_database = rebuild_module.validate_database
 
-    state: dict[str, Any] = {
-        "missing_owner_ids": [],
-    }
-
     def create_players_table(connection: sqlite3.Connection) -> None:
         original_create_players_table(connection)
         row = connection.execute(
@@ -75,35 +71,6 @@ def install_ownership_tolerance(rebuild_module: ModuleType) -> None:
             )
             connection.commit()
 
-        state["missing_owner_ids"] = missing_owner_ids
-
-    def rebuild_wallets(connection: sqlite3.Connection, wallet_names: dict[str, str]) -> None:
-        connection.execute("DROP TABLE IF EXISTS wallets")
-        connection.execute(
-            """
-            CREATE TABLE wallets (
-                wallet_address TEXT PRIMARY KEY,
-                name TEXT NOT NULL DEFAULT ''
-            )
-            """
-        )
-        addresses = [
-            str(row[0])
-            for row in connection.execute(
-                """
-                SELECT DISTINCT wallet_address
-                FROM players
-                WHERE wallet_address IS NOT NULL AND trim(wallet_address) != ''
-                ORDER BY wallet_address
-                """
-            ).fetchall()
-        ]
-        connection.executemany(
-            "INSERT INTO wallets(wallet_address, name) VALUES (?, ?)",
-            [(address, wallet_names.get(address) or address) for address in addresses],
-        )
-        connection.commit()
-
     def validate_database(*args: Any, **kwargs: Any) -> dict[str, Any]:
         connection = args[0] if args else kwargs["connection"]
         report = original_validate_database(*args, **kwargs)
@@ -159,5 +126,4 @@ def install_ownership_tolerance(rebuild_module: ModuleType) -> None:
 
     rebuild_module.create_players_table = create_players_table
     rebuild_module.replace_players = replace_players
-    rebuild_module.rebuild_wallets = rebuild_wallets
     rebuild_module.validate_database = validate_database
