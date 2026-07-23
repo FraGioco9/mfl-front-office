@@ -1,6 +1,16 @@
 name: Flow rebuild candidate
 
 on:
+  push:
+    branches:
+      - agent/rebuild-flow-data-pipeline
+    paths:
+      - "flow_data.py"
+      - "progression_rebuild.py"
+      - "next_overall.py"
+      - "rebuild_database.py"
+      - "tests/**"
+      - ".github/workflows/flow-rebuild-candidate.yml"
   pull_request:
     branches:
       - main
