@@ -51,8 +51,8 @@ def main() -> int:
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     install_block_height_hook(rebuild_database)
     install_wallet_ownership_hook(rebuild_database, leaderboard_names)
-    install_mfl_wallet_membership_hook(rebuild_database)
     install_flow_metadata_config(rebuild_database)
+    install_mfl_wallet_membership_hook(rebuild_database)
     return rebuild_database.main()
 
 
