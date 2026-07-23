@@ -6,7 +6,7 @@ This pipeline rebuilds the existing `players` and `wallets` data without changin
 
 1. The global MFL leaderboard is imported first to build the current `wallet_address` to wallet-name map.
 2. The MFL players API is then used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
-3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches.
+3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches, beginning at player ID `42`.
 4. `MFLPlayer.Deposit` events supply the latest wallet owner for every player.
 5. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for every player outside `0xff8d2bbed8164db0`.
 6. Next Overall is calculated with the existing position weights and formulas.
@@ -36,11 +36,13 @@ The rebuilt `wallets` table includes every leaderboard wallet plus every current
 
 ## Flow metadata concurrency
 
-The supported `run_flow_rebuild.py` entrypoint always uses batches of exactly 3,000 player IDs. This batch size is fixed and is not exposed as a command-line or GitHub Actions option.
+The supported `run_flow_rebuild.py` entrypoint always requests player IDs from `42` through the inclusive live maximum. Rows below player ID `42` are ignored when reading the previous database snapshot.
 
-Top-level Flow player-ID batches run in parallel with up to 30 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order. Ownership event windows remain sequential so their block order stays explicit.
+Flow metadata uses batches of exactly 3,000 player IDs. This batch size is fixed and is not exposed as a command-line or GitHub Actions option.
 
-At startup, the rebuild prints the fixed batch size and parallel-request limit so the active settings are visible in the logs.
+Top-level Flow player-ID batches run in parallel with up to 25 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order. Ownership event windows remain sequential so their block order stays explicit.
+
+At startup, the rebuild prints the minimum player ID, fixed batch size, and parallel-request limit so the active settings are visible in the logs.
 
 ## Ownership replay
 
