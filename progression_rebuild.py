@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import threading
 import time
-from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -14,11 +12,10 @@ from urllib.request import Request, urlopen
 PROGRESSIONS_API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players/progressions"
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 PROGRESSION_BATCH_SIZE = 1000
-PROGRESSION_REQUESTS_PER_MINUTE = 80
+PROGRESSION_WORKERS = 100
 PROGRESSION_RETRIES = 3
-PROGRESSION_RETRY_DELAY_SECONDS = 60
+PROGRESSION_RETRY_DELAY_SECONDS = 61
 REQUEST_TIMEOUT_SECONDS = 60
-RETRYABLE_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 ATTRIBUTES = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical", "goalkeeping"]
 
 
@@ -26,32 +23,7 @@ class ProgressionRequestTooLarge(RuntimeError):
     pass
 
 
-class SlidingWindowRateLimiter:
-    def __init__(self, limit: int = PROGRESSION_REQUESTS_PER_MINUTE, window_seconds: float = 60.0) -> None:
-        if limit <= 0 or window_seconds <= 0:
-            raise ValueError("Rate limiter values must be positive")
-        self.limit = limit
-        self.window_seconds = window_seconds
-        self._timestamps: deque[float] = deque()
-        self._lock = threading.Lock()
-
-    def acquire(self) -> None:
-        while True:
-            with self._lock:
-                now = time.monotonic()
-                while self._timestamps and now - self._timestamps[0] >= self.window_seconds:
-                    self._timestamps.popleft()
-                if len(self._timestamps) < self.limit:
-                    self._timestamps.append(now)
-                    return
-                sleep_seconds = self.window_seconds - (now - self._timestamps[0])
-            time.sleep(max(0.01, sleep_seconds))
-
-
 class ProgressionClient:
-    def __init__(self, limiter: SlidingWindowRateLimiter | None = None) -> None:
-        self.limiter = limiter or SlidingWindowRateLimiter()
-
     def fetch(self, player_ids: list[int], interval: str) -> dict[str, Any]:
         query = urlencode(
             {
@@ -64,26 +36,29 @@ class ProgressionClient:
             headers={"Accept": "application/json", "User-Agent": "mfl-front-office-flow-rebuild/1.0"},
         )
 
+        last_error: RuntimeError | None = None
         for attempt in range(PROGRESSION_RETRIES + 1):
-            self.limiter.acquire()
             try:
                 with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                     data = json.loads(response.read().decode("utf-8"))
                 if not isinstance(data, dict):
-                    raise RuntimeError("Progression response was not an object")
+                    raise RuntimeError("Progression API response was not an object")
                 return data
             except HTTPError as error:
                 if error.code == 414:
                     raise ProgressionRequestTooLarge(
                         f"Progression request with {len(player_ids)} IDs was too large"
                     ) from error
-                if error.code not in RETRYABLE_STATUS_CODES or attempt == PROGRESSION_RETRIES:
-                    raise RuntimeError(f"Progression API returned {error.code}") from error
+                last_error = RuntimeError(f"Progression API returned {error.code}")
             except (URLError, TimeoutError) as error:
-                if attempt == PROGRESSION_RETRIES:
-                    raise RuntimeError(f"Progression API connection failed: {error}") from error
-            except json.JSONDecodeError as error:
-                raise RuntimeError("Progression API returned invalid JSON") from error
+                last_error = RuntimeError(f"Progression API connection failed: {error}")
+            except json.JSONDecodeError:
+                last_error = RuntimeError("Progression API returned invalid JSON")
+            except RuntimeError as error:
+                last_error = error
+
+            if attempt == PROGRESSION_RETRIES:
+                raise last_error
 
             print(
                 f"Progression {interval} request failed; retrying in {PROGRESSION_RETRY_DELAY_SECONDS}s "
@@ -92,7 +67,7 @@ class ProgressionClient:
             )
             time.sleep(PROGRESSION_RETRY_DELAY_SECONDS)
 
-        raise RuntimeError("Progression request failed after retries")
+        raise last_error or RuntimeError("Progression request failed after retries")
 
     def fetch_with_split(self, player_ids: list[int], interval: str) -> dict[str, Any]:
         try:
@@ -153,7 +128,7 @@ def update_progression_rows(
 def refresh_progressions(
     connection: sqlite3.Connection,
     *,
-    workers: int = 16,
+    workers: int = PROGRESSION_WORKERS,
     batch_size: int = PROGRESSION_BATCH_SIZE,
 ) -> int:
     player_ids = [
