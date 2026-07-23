@@ -44,9 +44,13 @@ At startup, the rebuild prints the fixed batch size and parallel-request limit s
 
 ## Ownership replay
 
-The first rebuild has no ownership checkpoint, so it replays Flow deposit events from block `0`. The successful ending block is stored in `pipeline_state`. Later incremental runs begin at the following block.
+The rebuild starts with the previous database's wallet owner for every existing player. It then replays Flow deposit events to apply every ownership change available from the configured access node.
 
-A manual starting height can be supplied while the contract deployment height is being confirmed.
+A full replay initially requests block `0`. If the current Flow access node reports that older blocks are below its spork root, the rebuild automatically restarts at the reported spork root. In that case, ownership before the root remains seeded from the previous database, while Flow deposit events are authoritative from the spork root onward.
+
+The validation report records the requested start height, effective start height, reported spork root, and whether this fallback was used. The impossible all-history event-coverage assertion is disabled only for this fallback; ownerless-player and all other validation checks remain active.
+
+The successful ending block is stored in `pipeline_state`. Later incremental runs begin at the following block. A manual starting height can still be supplied when required.
 
 ## Progression request policy
 
