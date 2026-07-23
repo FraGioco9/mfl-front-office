@@ -11,22 +11,26 @@ on:
     - cron: "15 22 * * *"
   workflow_dispatch:
     inputs:
-      limit:
-        description: "Number of leaderboard wallets to refresh. Leave empty for all wallets."
+      max_player_id:
+        description: "Optional maximum player ID override for a test run."
         required: false
         default: ""
-      wallet:
-        description: "Single wallet address to refresh. Leave empty to use leaderboard wallets."
-        required: false
-        default: ""
-      mfl_wallet:
-        description: "Refresh the large MFL wallet too. Leave false to preserve current MFL rows."
+      flow_batch_size:
+        description: "Player IDs requested per initial Flow metadata batch."
+        required: true
+        default: "5000"
+      ownership_mode:
+        description: "Use the stored ownership checkpoint, or replay all Flow deposit events."
         required: true
         type: choice
         options:
-          - "false"
-          - "true"
-        default: "false"
+          - "incremental"
+          - "full"
+        default: "incremental"
+      ownership_start_height:
+        description: "Optional first Flow block for ownership replay."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -77,58 +81,52 @@ jobs:
           python-version: "3.12"
 
       - name: Restore previous database artifact
-        if: (github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true') && (github.event_name == 'schedule' || inputs.mfl_wallet != 'true')
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p previous-database
-
           {
+            gh run list --workflow flow-rebuild-candidate.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
+            gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
           } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
-            if [ -z "$RUN_ID" ]; then
-              continue
-            fi
-
+            [ -n "$RUN_ID" ] || continue
             HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
-
             if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
               echo "$RUN_ID" > previous_database_run_id.txt
               break
             fi
-
-            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
           done
 
           if [ ! -f previous_database_run_id.txt ]; then
-            echo "No previous database artifact found; MFL wallet rows cannot be preserved."
-            exit 0
+            echo "No previous database artifact found. The Flow rebuild must preserve unavailable columns." >&2
+            exit 1
           fi
-
           DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
-          echo "Restoring database artifact from run $DATABASE_RUN_ID to preserve MFL wallet rows."
           gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
-          cp previous-database/*.db . 2>/dev/null || true
+          cp previous-database/*.db mfl_progression.db
 
-      - name: Run database refresh
+      - name: Test rebuild code
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run Flow database rebuild
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
-          MFL_WALLET="${{ inputs.mfl_wallet || 'false' }}"
-          COMMAND=(python update_database.py --seasons yes --mfl-wallet "$MFL_WALLET")
-
-          if [ -n "${{ inputs.limit }}" ]; then
-            COMMAND+=(--limit "${{ inputs.limit }}")
+          OWNERSHIP_MODE="${{ inputs.ownership_mode || 'incremental' }}"
+          FLOW_BATCH_SIZE="${{ inputs.flow_batch_size || '5000' }}"
+          COMMAND=(python rebuild_database.py --ownership-mode "$OWNERSHIP_MODE" --flow-batch-size "$FLOW_BATCH_SIZE")
+          if [ -n "${{ inputs.max_player_id }}" ]; then
+            COMMAND+=(--max-player-id "${{ inputs.max_player_id }}")
           fi
-
-          if [ -n "${{ inputs.wallet }}" ]; then
-            COMMAND+=(--wallet "${{ inputs.wallet }}")
+          if [ -n "${{ inputs.ownership_start_height }}" ]; then
+            COMMAND+=(--ownership-start-height "${{ inputs.ownership_start_height }}")
           fi
-
           "${COMMAND[@]}"
 
       - name: Send progression emails
@@ -144,6 +142,7 @@ jobs:
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
         run: python send_progression_emails.py --previous-db previous-database/mfl_progression.db --current-db mfl_progression.db
+
       - name: Export website data
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         run: python export_for_website.py
@@ -154,6 +153,14 @@ jobs:
         with:
           name: mfl_progression_database
           path: mfl_progression.db
+          if-no-files-found: error
+
+      - name: Upload validation report
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow_rebuild_validation
+          path: flow_rebuild_validation.json
           if-no-files-found: error
 
       - name: Move data behind protected API
