@@ -1,6 +1,16 @@
 name: Flow rebuild candidate
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "flow_data.py"
+      - "progression_rebuild.py"
+      - "next_overall.py"
+      - "rebuild_database.py"
+      - "tests/**"
+      - ".github/workflows/flow-rebuild-candidate.yml"
   workflow_dispatch:
     inputs:
       max_player_id:
@@ -81,11 +91,13 @@ jobs:
       - name: Run full Flow rebuild candidate
         shell: bash
         run: |
+          FLOW_BATCH_SIZE="${{ inputs.flow_batch_size || '5000' }}"
+          OWNERSHIP_WINDOW_SIZE="${{ inputs.ownership_window_size || '1000000' }}"
           COMMAND=(
             python rebuild_database.py
             --ownership-mode full
-            --flow-batch-size "${{ inputs.flow_batch_size }}"
-            --ownership-window-size "${{ inputs.ownership_window_size }}"
+            --flow-batch-size "$FLOW_BATCH_SIZE"
+            --ownership-window-size "$OWNERSHIP_WINDOW_SIZE"
           )
 
           if [ -n "${{ inputs.max_player_id }}" ]; then
