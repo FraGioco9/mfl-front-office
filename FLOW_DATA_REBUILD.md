@@ -36,7 +36,9 @@ The rebuilt `wallets` table includes every leaderboard wallet plus every current
 
 ## Flow metadata concurrency
 
-Top-level Flow player-ID batches run in parallel with up to 20 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order. Ownership event windows remain sequential so their block order stays explicit.
+Flow player metadata always starts with batches of exactly 3,000 player IDs. This batch size is fixed and is not exposed as a command-line or GitHub Actions option.
+
+Top-level Flow player-ID batches run in parallel with up to 100 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order. Ownership event windows remain sequential so their block order stays explicit.
 
 ## Ownership replay
 
