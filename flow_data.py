@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Iterable
@@ -17,6 +18,7 @@ MFL_PLAYER_EVENT_PREFIX = f"A.{MFL_CONTRACT_ADDRESS}.MFLPlayer"
 REQUEST_TIMEOUT_SECONDS = 60
 FLOW_RETRIES = 3
 FLOW_RETRY_DELAY_SECONDS = 15
+FLOW_PLAYER_WORKERS = 20
 FLOW_BATCH_LIMIT_MARKERS = (
     "computation exceeds limit",
     "max interaction with storage has exceeded the limit",
@@ -226,19 +228,46 @@ def batched_id_ranges(highest_player_id: int, batch_size: int) -> Iterable[list[
         yield list(range(start, min(highest_player_id + 1, start + batch_size)))
 
 
-def fetch_all_players(highest_player_id: int, batch_size: int) -> dict[int, FlowPlayer]:
+def fetch_all_players(
+    highest_player_id: int,
+    batch_size: int,
+    workers: int = FLOW_PLAYER_WORKERS,
+) -> dict[int, FlowPlayer]:
+    if workers <= 0:
+        raise ValueError("workers must be positive")
+
+    batches = list(batched_id_ranges(highest_player_id, batch_size))
+    total_batches = len(batches)
+    if not batches:
+        return {}
+
     players: dict[int, FlowPlayer] = {}
-    total_batches = (highest_player_id + batch_size - 1) // batch_size
-    for batch_number, player_ids in enumerate(batched_id_ranges(highest_player_id, batch_size), start=1):
-        batch_players = fetch_player_batch(player_ids)
-        for player in batch_players:
-            players[player.player_id] = player
-        print(
-            f"Flow metadata batch {batch_number}/{total_batches}: requested {len(player_ids)} IDs, "
-            f"returned {len(batch_players)}, total {len(players)}",
-            flush=True,
-        )
-    return players
+    worker_count = min(workers, total_batches)
+    print(
+        f"Flow metadata pull: {total_batches} batches with up to {worker_count} parallel requests",
+        flush=True,
+    )
+
+    with ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix="flow-player") as executor:
+        futures = {
+            executor.submit(fetch_player_batch, player_ids): (batch_number, player_ids)
+            for batch_number, player_ids in enumerate(batches, start=1)
+        }
+        completed_batches = 0
+        for future in as_completed(futures):
+            batch_number, player_ids = futures[future]
+            batch_players = future.result()
+            for player in batch_players:
+                players[player.player_id] = player
+            completed_batches += 1
+            print(
+                f"Flow metadata batch {batch_number}/{total_batches} complete "
+                f"({completed_batches}/{total_batches} finished): IDs {player_ids[0]}-{player_ids[-1]}, "
+                f"requested {len(player_ids)}, returned {len(batch_players)}, total {len(players)}",
+                flush=True,
+            )
+
+    return dict(sorted(players.items()))
 
 
 def get_latest_sealed_block_height() -> int:
