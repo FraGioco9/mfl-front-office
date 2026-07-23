@@ -12,6 +12,7 @@ from flow_metadata_config import (
     install_flow_metadata_config,
     parse_rebuild_args,
 )
+from progression_rebuild import PROGRESSION_WORKERS
 
 
 class FlowMetadataConfigTests(unittest.TestCase):
@@ -66,6 +67,8 @@ class FlowMetadataConfigTests(unittest.TestCase):
         with patch.object(sys, "argv", ["run_flow_rebuild.py"]):
             args = parse_rebuild_args(rebuild_module)
         self.assertEqual(args.flow_batch_size, 3000)
+        self.assertEqual(args.progression_workers, PROGRESSION_WORKERS)
+        self.assertEqual(PROGRESSION_WORKERS, 100)
 
         with patch.object(
             sys,
