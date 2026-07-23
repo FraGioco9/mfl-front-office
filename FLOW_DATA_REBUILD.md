@@ -50,6 +50,8 @@ The rebuild starts with the previous database's wallet owner for every existing 
 
 A full replay initially requests block `0`. If the current Flow access node reports that older blocks are below its spork root, the rebuild automatically restarts at the reported spork root. In that case, ownership before the root remains seeded from the previous database, while Flow deposit events are authoritative from the spork root onward.
 
+The fallback does not print a separate informational notice. Before every ownership-event request, including recursively split ranges, the console prints the exact block interval being fetched so an active request does not look stalled.
+
 The validation report records the requested start height, effective start height, reported spork root, and whether this fallback was used. The impossible all-history event-coverage assertion is disabled only for this fallback; ownerless-player and all other validation checks remain active.
 
 The successful ending block is stored in `pipeline_state`. Later incremental runs begin at the following block. A manual starting height can still be supplied when required.
