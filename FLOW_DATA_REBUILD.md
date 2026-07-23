@@ -42,31 +42,31 @@ Wallet names use this priority order:
 3. the previous database name, when the leaderboard has no usable name;
 4. the wallet address itself.
 
-The rebuilt `wallets` table includes every leaderboard wallet and every resolved current owner.
+The rebuilt `wallets` table includes every leaderboard wallet and every resolved current owner. Players with temporarily unresolved ownership are not added as a wallet row.
 
-## Flow metadata concurrency
+## Flow concurrency
 
 The supported `run_flow_rebuild.py` entrypoint always requests player IDs from `42` through the inclusive live maximum. Rows below player ID `42` are ignored when reading the previous database snapshot.
 
-Flow metadata uses batches of exactly 3,000 player IDs. This batch size is fixed and is not exposed as a command-line or GitHub Actions option.
+Flow metadata uses batches of exactly 3,000 player IDs. Normal wallet collections use batches of 100 wallets. Original MFL treasury membership uses batches of 3,000 unresolved player IDs.
 
-Top-level Flow player-ID batches run in parallel with up to 25 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order.
+All three Flow stages use a fixed maximum of 20 parallel requests. Metadata and treasury-membership batches preserve recursive splitting when a request exceeds Flow computation or storage limits.
 
-At startup, the rebuild prints the minimum player ID, fixed batch size, parallel-request limit, and the configured MFL-controlled wallets.
+At startup, the rebuild prints the minimum player ID, fixed batch sizes, and parallel-request limit. It does not print a separate MFL-controlled-wallet notice.
 
 ## Ownership snapshot
 
-The rebuild scans leaderboard wallets plus distinct owner wallets present in the previous database. Wallets are queried in fixed batches of 100 with up to 25 parallel Flow requests. Each public `MFLPlayer` collection returns its current player IDs through `getIDs()`.
+The rebuild scans leaderboard wallets plus distinct owner wallets present in the previous database. Each public `MFLPlayer` collection returns its current player IDs through `getIDs()`.
 
 All wallet batches use the same sealed block height, so transfers occurring during the rebuild cannot mix ownership states from different blocks.
 
-The original MFL treasury wallet is handled separately because its collection is too large for one `getIDs()` call and exceeds Flow's 20 MB storage-interaction limit. After normal wallets are resolved, the rebuild checks only unresolved player IDs against that treasury wallet by calling the collection's optional `borrowNFT(id)` method. These checks use fixed batches of 3,000 player IDs, up to 25 parallel requests, and recursive splitting when Flow reports a computation or storage limit.
+The original MFL treasury wallet is handled separately because its collection is too large for one `getIDs()` call and exceeds Flow's 20 MB storage-interaction limit. After normal wallets are resolved, the rebuild checks only unresolved player IDs against that treasury wallet by calling the collection's optional `borrowNFT(id)` method.
 
-`MFL Trade` is currently read through its public collection like other normal-sized wallets, while still being treated as MFL-controlled for naming, progression, and validation.
+`MFL Trade` is read through its public collection like other normal-sized wallets, while still being treated as MFL-controlled for naming, progression, and validation.
 
-A player found in two wallet collections causes the rebuild to fail. Any player found in neither the scanned collections nor the original MFL treasury also remains unresolved and causes validation to fail.
+A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` is stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table.
 
-The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved players, and both configured MFL-controlled addresses.
+The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, and both configured MFL-controlled addresses.
 
 ## Progression request policy
 
@@ -76,6 +76,8 @@ The progression client has one process-wide sliding-window limiter:
 - three retries after the initial request;
 - exactly 60 seconds before each retry;
 - HTTP 414 requests are split immediately instead of retried.
+
+Players with `NULL` ownership are included in progression requests because they are not known to belong to either MFL-controlled wallet.
 
 ## Atomic replacement
 
