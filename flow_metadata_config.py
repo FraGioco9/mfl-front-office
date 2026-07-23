@@ -5,6 +5,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Iterable
 
+from progression_rebuild import PROGRESSION_WORKERS
+
 FLOW_MIN_PLAYER_ID = 42
 FLOW_PLAYER_BATCH_SIZE = 3000
 FLOW_PLAYER_WORKERS = 20
@@ -38,7 +40,7 @@ def parse_rebuild_args(rebuild_module: ModuleType) -> argparse.Namespace:
     )
     parser.add_argument("--ownership-start-height", type=int, default=None)
     parser.add_argument("--ownership-window-size", type=int, default=1_000_000)
-    parser.add_argument("--progression-workers", type=int, default=16)
+    parser.add_argument("--progression-workers", type=int, default=PROGRESSION_WORKERS)
     args = parser.parse_args()
     args.flow_batch_size = FLOW_PLAYER_BATCH_SIZE
     return args
