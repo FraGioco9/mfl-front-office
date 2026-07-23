@@ -41,6 +41,22 @@ class OwnershipToleranceTests(unittest.TestCase):
             connection.execute("ALTER TABLE players_rebuild RENAME TO players")
             connection.commit()
 
+        def rebuild_wallets(connection, wallet_names):
+            connection.execute("DROP TABLE IF EXISTS wallets")
+            connection.execute(
+                "CREATE TABLE wallets (wallet_address TEXT PRIMARY KEY, name TEXT NOT NULL)"
+            )
+            addresses = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT DISTINCT wallet_address FROM players WHERE wallet_address IS NOT NULL"
+                ).fetchall()
+            ]
+            connection.executemany(
+                "INSERT INTO wallets(wallet_address, name) VALUES (?, ?)",
+                [(address, wallet_names.get(address) or address) for address in addresses],
+            )
+
         def validate_database(connection, *, flow_player_ids, ownership_event_player_ids, **_kwargs):
             missing = len(flow_player_ids - ownership_event_player_ids)
             errors = []
@@ -56,7 +72,7 @@ class OwnershipToleranceTests(unittest.TestCase):
 
         module.create_players_table = create_players_table
         module.replace_players = replace_players
-        module.rebuild_wallets = None
+        module.rebuild_wallets = rebuild_wallets
         module.validate_database = validate_database
         return module
 
@@ -66,7 +82,7 @@ class OwnershipToleranceTests(unittest.TestCase):
         module = self.rebuild_module()
         install_ownership_tolerance(module)
 
-        player_ids = set(range(1, 10))
+        player_ids = set(range(1, OWNERSHIP_FAILURE_THRESHOLD))
         module.replace_players(
             connection,
             {player_id: object() for player_id in player_ids},
@@ -85,11 +101,11 @@ class OwnershipToleranceTests(unittest.TestCase):
             "SELECT COUNT(*) FROM players WHERE wallet_address IS NULL"
         ).fetchone()[0]
         wallet_count = connection.execute("SELECT COUNT(*) FROM wallets").fetchone()[0]
-        self.assertEqual(null_count, 9)
+        self.assertEqual(null_count, 49)
         self.assertEqual(wallet_count, 0)
         self.assertTrue(report["valid"])
-        self.assertEqual(report["ownerless_players"], 9)
-        self.assertEqual(report["ownerless_player_ids"], list(range(1, 10)))
+        self.assertEqual(report["ownerless_players"], 49)
+        self.assertEqual(report["ownerless_player_ids"], list(range(1, 50)))
         self.assertTrue(report["ownership_nulls_tolerated"])
         self.assertEqual(report["errors"], [])
         self.assertEqual(len(report["warnings"]), 1)
