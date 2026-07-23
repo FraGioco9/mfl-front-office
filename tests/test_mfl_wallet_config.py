@@ -40,6 +40,29 @@ class MFLWalletConfigTests(unittest.TestCase):
         self.assertEqual(updated, 0)
         client.assert_not_called()
 
+    def test_progression_refresh_includes_null_owner_players(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute("CREATE TABLE players (player_id INTEGER, wallet_address TEXT)")
+        connection.execute(
+            "INSERT INTO players(player_id, wallet_address) VALUES (?, NULL)",
+            (44,),
+        )
+
+        with patch("mfl_wallet_config.ProgressionClient") as client, patch(
+            "mfl_wallet_config.update_progression_rows",
+            return_value=1,
+        ) as update_rows:
+            client.return_value.fetch_with_split.return_value = {}
+            updated = refresh_progressions_excluding_mfl_wallets(
+                connection,
+                workers=1,
+            )
+
+        self.assertEqual(updated, 2)
+        requested = [call.args for call in client.return_value.fetch_with_split.call_args_list]
+        self.assertEqual(requested, [([44], "ALL"), ([44], "CURRENT_SEASON")])
+        self.assertEqual(update_rows.call_count, 2)
+
     def test_validation_accepts_null_progression_for_both_mfl_wallets_without_persisting_zeros(self):
         connection = sqlite3.connect(":memory:")
         connection.execute(
