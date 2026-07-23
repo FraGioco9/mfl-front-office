@@ -5,8 +5,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from flow_metadata_config import (
+    FLOW_MIN_PLAYER_ID,
     FLOW_PLAYER_BATCH_SIZE,
     FLOW_PLAYER_WORKERS,
+    fixed_player_id_ranges,
     install_flow_metadata_config,
     parse_rebuild_args,
 )
@@ -18,10 +20,17 @@ class FlowMetadataConfigTests(unittest.TestCase):
             DATABASE_PATH=Path("mfl_progression.db"),
             CANDIDATE_PATH=Path("mfl_progression_candidate.db"),
             fetch_all_players=Mock(return_value={}),
+            previous_rows=Mock(
+                return_value={
+                    41: {"player_id": 41},
+                    42: {"player_id": 42},
+                    43: {"player_id": 43},
+                }
+            ),
             parse_args=None,
         )
 
-    def test_fixed_batch_and_worker_settings_are_used(self):
+    def test_fixed_batch_worker_and_minimum_settings_are_used(self):
         rebuild_module = self.rebuild_module()
         original_fetch = rebuild_module.fetch_all_players
         install_flow_metadata_config(rebuild_module)
@@ -33,8 +42,24 @@ class FlowMetadataConfigTests(unittest.TestCase):
             FLOW_PLAYER_BATCH_SIZE,
             workers=FLOW_PLAYER_WORKERS,
         )
+        self.assertEqual(FLOW_MIN_PLAYER_ID, 42)
         self.assertEqual(FLOW_PLAYER_BATCH_SIZE, 3000)
-        self.assertEqual(FLOW_PLAYER_WORKERS, 30)
+        self.assertEqual(FLOW_PLAYER_WORKERS, 25)
+
+    def test_player_ranges_begin_at_42(self):
+        self.assertEqual(
+            list(fixed_player_id_ranges(47, 3)),
+            [[42, 43, 44], [45, 46, 47]],
+        )
+        self.assertEqual(list(fixed_player_id_ranges(41, 3000)), [])
+
+    def test_previous_rows_below_minimum_are_ignored(self):
+        rebuild_module = self.rebuild_module()
+        install_flow_metadata_config(rebuild_module)
+
+        rows = rebuild_module.previous_rows(None)
+
+        self.assertEqual(list(rows), [42, 43])
 
     def test_flow_batch_size_is_not_a_command_line_option(self):
         rebuild_module = self.rebuild_module()
