@@ -6,6 +6,8 @@ on:
       - agent/rebuild-flow-data-pipeline
     paths:
       - "flow_data.py"
+      - "flow_block_height.py"
+      - "flow_metadata_config.py"
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
@@ -18,6 +20,8 @@ on:
       - main
     paths:
       - "flow_data.py"
+      - "flow_block_height.py"
+      - "flow_metadata_config.py"
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
@@ -31,10 +35,6 @@ on:
         description: "Optional maximum player ID override for a test run. Leave empty to read /players?limit=1."
         required: false
         default: ""
-      flow_batch_size:
-        description: "Player IDs requested in each initial Flow metadata batch. Oversized batches split automatically."
-        required: true
-        default: "5000"
       ownership_start_height:
         description: "Optional first Flow block for ownership replay. Leave empty for the first stored checkpoint or block 0."
         required: false
@@ -105,12 +105,10 @@ jobs:
       - name: Run full Flow rebuild candidate
         shell: bash
         run: |
-          FLOW_BATCH_SIZE="${{ inputs.flow_batch_size || '5000' }}"
           OWNERSHIP_WINDOW_SIZE="${{ inputs.ownership_window_size || '1000000' }}"
           COMMAND=(
             python run_flow_rebuild.py
             --ownership-mode full
-            --flow-batch-size "$FLOW_BATCH_SIZE"
             --ownership-window-size "$OWNERSHIP_WINDOW_SIZE"
           )
 
