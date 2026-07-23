@@ -97,23 +97,33 @@ def _execute_wallet_batch(addresses: list[str], block_height: int) -> dict[str, 
         raise FlowRequestError("Flow wallet collection batch did not return a dictionary")
 
     result = {address: [] for address in addresses}
+    seen: set[str] = set()
     for raw_address, raw_ids in decoded.items():
         address = normalize_address(raw_address)
         if address not in result:
             continue
+        seen.add(address)
         if not isinstance(raw_ids, list):
             raise FlowRequestError(f"Flow wallet collection for {address} did not return an ID array")
-        result[address] = sorted(
-            {
-                int(player_id)
-                for player_id in raw_ids
-                if int(player_id) >= FLOW_MIN_PLAYER_ID
-            }
-        )
 
-    missing = [address for address in addresses if address not in decoded and address not in result]
+        player_ids: set[int] = set()
+        for raw_player_id in raw_ids:
+            try:
+                player_id = int(raw_player_id)
+            except (TypeError, ValueError) as error:
+                raise FlowRequestError(
+                    f"Flow wallet collection for {address} contained an invalid player ID"
+                ) from error
+            if player_id >= FLOW_MIN_PLAYER_ID:
+                player_ids.add(player_id)
+        result[address] = sorted(player_ids)
+
+    missing = [address for address in addresses if address not in seen]
     if missing:
-        raise FlowRequestError(f"Flow wallet collection response omitted {len(missing)} wallets")
+        preview = ", ".join(missing[:10])
+        raise FlowRequestError(
+            f"Flow wallet collection response omitted {len(missing)} wallets: {preview}"
+        )
     return result
 
 
@@ -280,7 +290,10 @@ def install_wallet_ownership_hook(
             suffix = " deposits"
             if text.startswith(prefix) and text.endswith(suffix):
                 count = text[len(prefix):-len(suffix)]
-                args = (f"Flow wallet ownership snapshot complete: resolved {count} player owners", *args[1:])
+                args = (
+                    f"Flow wallet ownership snapshot complete: resolved {count} player owners",
+                    *args[1:],
+                )
         previous_print(*args, **kwargs)
 
     rebuild_module.replay_ownership_deposits = replay_ownership_deposits
