@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 
 import rebuild_database
+from flow_block_height import install_block_height_hook
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 
 
@@ -18,6 +19,7 @@ def main() -> int:
         flush=True,
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
+    install_block_height_hook(rebuild_database)
     return rebuild_database.main()
 
 
