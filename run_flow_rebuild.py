@@ -29,11 +29,13 @@ from progression_rebuild import (
     PROGRESSION_RETRY_DELAY_SECONDS,
     PROGRESSION_WORKERS,
 )
+from windows_database_replace import install_database_replace_retry
 
 
 def main() -> int:
     install_flow_worker_config()
     install_compact_rebuild_logs(sys.modules[__name__])
+    install_database_replace_retry(rebuild_database)
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
