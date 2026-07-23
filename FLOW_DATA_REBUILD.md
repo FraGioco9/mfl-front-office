@@ -5,12 +5,11 @@ This pipeline rebuilds the existing `players` and `wallets` data without changin
 ## Sources and order
 
 1. The global MFL leaderboard is imported first to build the current `wallet_address` to wallet-name map.
-2. The MFL players API is used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
+2. The MFL players API is then used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
 3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches, beginning at player ID `42`.
-4. The highest Flow player `season` is treated as the current season. `age` and `player_seasons` are derived from each player's `ageAtMint` and mint `season`.
-5. Current ownership comes from public MFL player collections at one exact sealed Flow block.
-6. The progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
-7. Next Overall is calculated with the existing position weights and formulas.
+4. Current ownership comes from public MFL player collections at one exact sealed Flow block.
+5. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
+6. Next Overall is calculated with the existing position weights and formulas.
 
 ## Field sources
 
@@ -31,12 +30,12 @@ Fetched directly from Flow player metadata and written to `players`:
 - `physical`
 - `goalkeeping`
 
-Flow also returns `ageAtMint` and `season`. They are not stored as separate database columns, but they now populate:
+Flow also returns `season` and `ageAtMint`. The rebuild uses the highest returned Flow season as `currentSeason`, then calculates:
 
 - `age = ageAtMint + (currentSeason - mintSeason)`
 - `player_seasons = currentSeason - mintSeason + 1`
 
-`currentSeason` is the highest non-null `season` returned by Flow across the fetched players. A fixed offset between internal and displayed season numbering does not affect these formulas because only season differences are used. Missing `ageAtMint`, missing `season`, or a mint season above the detected current season causes the rebuild to fail.
+The rebuild fails when `ageAtMint` or `season` is missing, when a mint season exceeds the detected current season, or when either derived column remains missing.
 
 Fetched from current Flow wallet collections:
 
@@ -67,8 +66,6 @@ Fetched from the MFL progressions API for `ALL` and `CURRENT_SEASON`:
 
 Calculated locally rather than fetched:
 
-- `age`
-- `player_seasons`
 - `next_overall`
 - `next_overall_gap`
 - `pace_to_next_overall`
@@ -108,8 +105,6 @@ The following values are copied unchanged from the previous database:
 - `active_contract_club_name`
 - `active_contract_club_division`
 
-For a new player, these unavailable fields remain `NULL`.
-
 Wallet names use this priority order:
 
 1. the forced MFL-controlled wallet name;
@@ -141,7 +136,7 @@ The original MFL treasury wallet is handled separately because its collection is
 
 A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` is stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table.
 
-The validation report records the exact sealed snapshot block, current Flow season, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, and whether any derived age fields are missing.
+The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, and the detected current Flow season.
 
 ## Progression request policy
 
@@ -160,3 +155,5 @@ Players with `NULL` ownership are included in progression requests because they 
 ## Atomic replacement
 
 The previous database is copied to `mfl_progression_candidate.db`. The candidate replaces `mfl_progression.db` only after validation succeeds. The validation report is written to `flow_rebuild_validation.json`.
+
+On Windows, a running site, SQLite viewer, editor extension, antivirus scan, or OneDrive may temporarily lock either database file. The final atomic replacement retries a lock every five seconds for up to 60 seconds. If the file remains locked, the validated candidate is retained so it can be promoted after the locking process is closed.
