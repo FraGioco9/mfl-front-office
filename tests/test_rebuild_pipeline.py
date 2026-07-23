@@ -31,6 +31,8 @@ class RebuildPipelineTests(unittest.TestCase):
 
     def test_flow_metadata_batches_run_in_parallel(self):
         lock = threading.Lock()
+        all_started = threading.Event()
+        release_requests = threading.Event()
         active_requests = 0
         maximum_active_requests = 0
 
@@ -39,7 +41,12 @@ class RebuildPipelineTests(unittest.TestCase):
             with lock:
                 active_requests += 1
                 maximum_active_requests = max(maximum_active_requests, active_requests)
-            time.sleep(0.02)
+                if active_requests >= 2:
+                    all_started.set()
+            all_started.wait(timeout=1)
+            release_requests.set()
+            release_requests.wait(timeout=1)
+            time.sleep(0.01)
             with lock:
                 active_requests -= 1
             return [FlowPlayer(player_id=player_ids[0], metadata={"name": str(player_ids[0])}, season=1)]
