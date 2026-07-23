@@ -148,7 +148,8 @@ The MFL progressions API uses:
 - 100 worker threads for the standard rebuild command;
 - three retries after the initial request;
 - exactly 61 seconds before each retry;
-- immediate recursive splitting for HTTP 414 responses.
+- retries for HTTP, connection, timeout, invalid-JSON, and invalid-response failures;
+- immediate recursive splitting for HTTP 414 responses instead of retrying the oversized request.
 
 Players with `NULL` ownership are included in progression requests because they are not known to belong to either MFL-controlled wallet.
 
