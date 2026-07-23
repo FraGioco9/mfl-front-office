@@ -25,6 +25,27 @@ def install_spork_ownership_hook(rebuild_module: ModuleType) -> None:
         "spork_root_height": None,
     }
 
+    replay_globals = getattr(original_replay, "__globals__", None)
+    original_fetch_range = (
+        replay_globals.get("_fetch_deposit_range")
+        if isinstance(replay_globals, dict)
+        else None
+    )
+    if callable(original_fetch_range) and not getattr(
+        original_fetch_range,
+        "_flow_progress_wrapper",
+        False,
+    ):
+        def fetch_deposit_range_with_progress(start_height: int, end_height: int):
+            print(
+                f"Fetching Flow ownership events: blocks {start_height}-{end_height}",
+                flush=True,
+            )
+            return original_fetch_range(start_height, end_height)
+
+        setattr(fetch_deposit_range_with_progress, "_flow_progress_wrapper", True)
+        replay_globals["_fetch_deposit_range"] = fetch_deposit_range_with_progress
+
     def replay_ownership_deposits(
         ownership: dict[int, str],
         *,
@@ -49,11 +70,6 @@ def install_spork_ownership_hook(rebuild_module: ModuleType) -> None:
             replay_state["fallback_used"] = True
             replay_state["effective_start_height"] = spork_root
             replay_state["spork_root_height"] = spork_root
-            print(
-                f"Flow history before block {spork_root} is unavailable on the current access node; "
-                "keeping the previous database ownership snapshot and replaying deposits from the spork root.",
-                flush=True,
-            )
             return original_replay(
                 ownership,
                 start_height=spork_root,
