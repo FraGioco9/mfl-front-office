@@ -40,6 +40,8 @@ The supported `run_flow_rebuild.py` entrypoint always uses batches of exactly 3,
 
 Top-level Flow player-ID batches run in parallel with up to 100 worker threads. Each worker preserves recursive batch splitting when a request exceeds Flow computation or storage limits. Completed results are merged on the main thread and returned in player-ID order. Ownership event windows remain sequential so their block order stays explicit.
 
+At startup, the rebuild prints the fixed batch size and parallel-request limit so the active settings are visible in the logs.
+
 ## Ownership replay
 
 The first rebuild has no ownership checkpoint, so it replays Flow deposit events from block `0`. The successful ending block is stored in `pipeline_state`. Later incremental runs begin at the following block.
