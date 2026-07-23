@@ -21,6 +21,8 @@ from flow_wallet_ownership import (
     install_wallet_ownership_hook,
 )
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
+from mfl_wallet_config import add_mfl_wallet_names, install_mfl_wallet_config
+from mfl_wallets import MFL_TRADE_WALLET_ADDRESS, MFL_WALLET_ADDRESSES
 
 
 def main() -> int:
@@ -30,8 +32,14 @@ def main() -> int:
         print(f"Leaderboard import failed: {error}", file=sys.stderr, flush=True)
         return 1
 
+    add_mfl_wallet_names(leaderboard_names)
     print(
         f"Leaderboard import complete: loaded {len(leaderboard_names)} wallet addresses and names",
+        flush=True,
+    )
+    print(
+        f"MFL-controlled wallets: {len(MFL_WALLET_ADDRESSES)}, including MFL Trade "
+        f"{MFL_TRADE_WALLET_ADDRESS}",
         flush=True,
     )
     print(
@@ -53,6 +61,7 @@ def main() -> int:
     install_wallet_ownership_hook(rebuild_database, leaderboard_names)
     install_flow_metadata_config(rebuild_database)
     install_mfl_wallet_membership_hook(rebuild_database)
+    install_mfl_wallet_config(rebuild_database)
     return rebuild_database.main()
 
 
