@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 
 import rebuild_database
+from compact_rebuild_logs import install_compact_rebuild_logs
 from flow_block_height import install_block_height_hook
 from flow_metadata_config import (
     FLOW_MIN_PLAYER_ID,
@@ -25,6 +26,7 @@ from ownership_tolerance import install_ownership_tolerance
 
 def main() -> int:
     install_flow_worker_config()
+    install_compact_rebuild_logs(sys.modules[__name__])
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
