@@ -6,7 +6,7 @@ from types import ModuleType
 from typing import Any
 
 FLOW_PLAYER_BATCH_SIZE = 3000
-FLOW_PLAYER_WORKERS = 50
+FLOW_PLAYER_WORKERS = 30
 
 
 def parse_rebuild_args(rebuild_module: ModuleType) -> argparse.Namespace:
