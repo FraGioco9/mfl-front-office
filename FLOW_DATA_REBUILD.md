@@ -145,7 +145,7 @@ The MFL progressions API uses:
 
 - no requests-per-minute limiter;
 - batches of 1,000 player IDs;
-- up to 100 worker threads;
+- 100 worker threads by default;
 - three retries after the initial request;
 - exactly 61 seconds before each retry;
 - immediate recursive splitting for HTTP 414 responses.
