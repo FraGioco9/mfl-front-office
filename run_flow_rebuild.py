@@ -5,6 +5,7 @@ import sys
 import rebuild_database
 from flow_block_height import install_block_height_hook
 from flow_metadata_config import (
+    FLOW_MIN_PLAYER_ID,
     FLOW_PLAYER_BATCH_SIZE,
     FLOW_PLAYER_WORKERS,
     install_flow_metadata_config,
@@ -25,7 +26,8 @@ def main() -> int:
         flush=True,
     )
     print(
-        f"Flow metadata settings: fixed batches of {FLOW_PLAYER_BATCH_SIZE} IDs, "
+        f"Flow metadata settings: player IDs {FLOW_MIN_PLAYER_ID} and above, "
+        f"fixed batches of {FLOW_PLAYER_BATCH_SIZE} IDs, "
         f"up to {FLOW_PLAYER_WORKERS} parallel requests",
         flush=True,
     )
