@@ -4,6 +4,7 @@ import sys
 
 import rebuild_database
 from compact_rebuild_logs import install_compact_rebuild_logs
+from flow_age_seasons import install_age_season_hook
 from flow_block_height import install_block_height_hook
 from flow_metadata_config import (
     FLOW_MIN_PLAYER_ID,
@@ -70,6 +71,7 @@ def main() -> int:
     install_flow_metadata_config(rebuild_database)
     install_mfl_wallet_membership_hook(rebuild_database)
     install_mfl_wallet_config(rebuild_database)
+    install_age_season_hook(rebuild_database)
     install_ownership_tolerance(rebuild_database)
     return rebuild_database.main()
 
