@@ -10,6 +10,11 @@ from flow_metadata_config import (
     FLOW_PLAYER_WORKERS,
     install_flow_metadata_config,
 )
+from flow_mfl_wallet_membership import (
+    MFL_MEMBERSHIP_BATCH_SIZE,
+    MFL_MEMBERSHIP_WORKERS,
+    install_mfl_wallet_membership_hook,
+)
 from flow_wallet_ownership import (
     FLOW_WALLET_BATCH_SIZE,
     FLOW_WALLET_WORKERS,
@@ -36,14 +41,17 @@ def main() -> int:
         flush=True,
     )
     print(
-        f"Flow ownership settings: leaderboard and previous-owner wallets, "
-        f"fixed batches of {FLOW_WALLET_BATCH_SIZE} wallets, "
-        f"up to {FLOW_WALLET_WORKERS} parallel requests",
+        f"Flow ownership settings: non-MFL leaderboard and previous-owner wallets in "
+        f"fixed batches of {FLOW_WALLET_BATCH_SIZE} wallets with up to "
+        f"{FLOW_WALLET_WORKERS} parallel requests; MFL wallet membership in "
+        f"fixed batches of {MFL_MEMBERSHIP_BATCH_SIZE} player IDs with up to "
+        f"{MFL_MEMBERSHIP_WORKERS} parallel requests",
         flush=True,
     )
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     install_block_height_hook(rebuild_database)
     install_wallet_ownership_hook(rebuild_database, leaderboard_names)
+    install_mfl_wallet_membership_hook(rebuild_database)
     install_flow_metadata_config(rebuild_database)
     return rebuild_database.main()
 
