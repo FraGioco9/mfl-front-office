@@ -44,6 +44,10 @@ class CompactRebuildLogsTests(unittest.TestCase):
             with self.subTest(original=original):
                 self.assertEqual(compact_message(original), expected)
 
+    def test_keeps_already_compact_progression_settings(self):
+        message = "Progression settings: batch 1000, workers 100, retries 3, delay 61s"
+        self.assertEqual(compact_message(message), message)
+
     def test_stderr_messages_remain_detailed(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
