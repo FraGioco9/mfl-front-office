@@ -8,7 +8,7 @@ on:
       - "flow_data.py"
       - "flow_block_height.py"
       - "flow_metadata_config.py"
-      - "flow_spork_replay.py"
+      - "flow_wallet_ownership.py"
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
@@ -23,7 +23,7 @@ on:
       - "flow_data.py"
       - "flow_block_height.py"
       - "flow_metadata_config.py"
-      - "flow_spork_replay.py"
+      - "flow_wallet_ownership.py"
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
@@ -37,14 +37,6 @@ on:
         description: "Optional maximum player ID override for a test run. Leave empty to read /players?limit=1."
         required: false
         default: ""
-      ownership_start_height:
-        description: "Optional first Flow block for ownership replay. Leave empty for the first stored checkpoint or block 0."
-        required: false
-        default: ""
-      ownership_window_size:
-        description: "Initial Flow event block window. Rejected ranges split automatically."
-        required: true
-        default: "1000000"
 
 permissions:
   contents: read
@@ -107,18 +99,10 @@ jobs:
       - name: Run full Flow rebuild candidate
         shell: bash
         run: |
-          OWNERSHIP_WINDOW_SIZE="${{ inputs.ownership_window_size || '1000000' }}"
-          COMMAND=(
-            python run_flow_rebuild.py
-            --ownership-mode full
-            --ownership-window-size "$OWNERSHIP_WINDOW_SIZE"
-          )
+          COMMAND=(python run_flow_rebuild.py)
 
           if [ -n "${{ inputs.max_player_id }}" ]; then
             COMMAND+=(--max-player-id "${{ inputs.max_player_id }}")
-          fi
-          if [ -n "${{ inputs.ownership_start_height }}" ]; then
-            COMMAND+=(--ownership-start-height "${{ inputs.ownership_start_height }}")
           fi
 
           "${COMMAND[@]}"
