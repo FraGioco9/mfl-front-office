@@ -9,6 +9,8 @@ on:
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
+      - "leaderboard_rebuild.py"
+      - "run_flow_rebuild.py"
       - "tests/**"
       - ".github/workflows/flow-rebuild-candidate.yml"
   pull_request:
@@ -19,6 +21,8 @@ on:
       - "progression_rebuild.py"
       - "next_overall.py"
       - "rebuild_database.py"
+      - "leaderboard_rebuild.py"
+      - "run_flow_rebuild.py"
       - "tests/**"
       - ".github/workflows/flow-rebuild-candidate.yml"
   workflow_dispatch:
@@ -104,7 +108,7 @@ jobs:
           FLOW_BATCH_SIZE="${{ inputs.flow_batch_size || '5000' }}"
           OWNERSHIP_WINDOW_SIZE="${{ inputs.ownership_window_size || '1000000' }}"
           COMMAND=(
-            python rebuild_database.py
+            python run_flow_rebuild.py
             --ownership-mode full
             --flow-batch-size "$FLOW_BATCH_SIZE"
             --ownership-window-size "$OWNERSHIP_WINDOW_SIZE"
