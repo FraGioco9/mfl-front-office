@@ -5,6 +5,7 @@ on:
     branches:
       - agent/rebuild-flow-data-pipeline
     paths:
+      - "compact_rebuild_logs.py"
       - "flow_data.py"
       - "flow_block_height.py"
       - "flow_metadata_config.py"
@@ -26,6 +27,7 @@ on:
     branches:
       - main
     paths:
+      - "compact_rebuild_logs.py"
       - "flow_data.py"
       - "flow_block_height.py"
       - "flow_metadata_config.py"
