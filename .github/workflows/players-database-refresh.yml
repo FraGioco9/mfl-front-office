@@ -7,10 +7,6 @@ on:
         description: "Optional maximum player ID override for a test run."
         required: false
         default: ""
-      flow_batch_size:
-        description: "Player IDs requested per initial Flow metadata batch."
-        required: true
-        default: "5000"
       ownership_mode:
         description: "Use the stored ownership checkpoint, or replay all Flow deposit events."
         required: true
@@ -86,7 +82,6 @@ jobs:
           COMMAND=(
             python run_flow_rebuild.py
             --ownership-mode "${{ inputs.ownership_mode }}"
-            --flow-batch-size "${{ inputs.flow_batch_size }}"
           )
           if [ -n "${{ inputs.max_player_id }}" ]; then
             COMMAND+=(--max-player-id "${{ inputs.max_player_id }}")
