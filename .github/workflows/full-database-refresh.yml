@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           COMMAND=(
-            python rebuild_database.py
+            python run_flow_rebuild.py
             --ownership-mode "${{ inputs.ownership_mode }}"
             --flow-batch-size "${{ inputs.flow_batch_size }}"
           )
