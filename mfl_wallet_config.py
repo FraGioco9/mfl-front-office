@@ -34,7 +34,8 @@ def refresh_progressions_excluding_mfl_wallets(
             f"""
             SELECT player_id
             FROM players
-            WHERE lower(wallet_address) NOT IN ({placeholders})
+            WHERE wallet_address IS NULL
+               OR lower(wallet_address) NOT IN ({placeholders})
             ORDER BY player_id
             """,
             addresses,
