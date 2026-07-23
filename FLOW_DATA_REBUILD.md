@@ -11,6 +11,77 @@ This pipeline rebuilds the existing `players` and `wallets` data without changin
 5. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
 6. Next Overall is calculated with the existing position weights and formulas.
 
+## Field sources
+
+Fetched directly from Flow player metadata and written to `players`:
+
+- `player_id`
+- `name`
+- `positions`
+- `nationality` from Flow `nationalities`
+- `preferred_foot` from Flow `preferredFoot`
+- `height`
+- `overall`
+- `pace`
+- `shooting`
+- `passing`
+- `dribbling`
+- `defense`
+- `physical`
+- `goalkeeping`
+
+Flow also returns the `season` field in `PlayerData`, but the current rebuild does not write it to a database column.
+
+Fetched from current Flow wallet collections:
+
+- `wallet_address`, or `NULL` when fewer than 50 owners remain unresolved
+
+Fetched or resolved from wallet-name sources:
+
+- `wallet_name`, using forced MFL names, the current leaderboard, the previous database, then the wallet address
+
+Fetched from the MFL progressions API for `ALL` and `CURRENT_SEASON`:
+
+- `overall_prog_all`
+- `pace_prog_all`
+- `shooting_prog_all`
+- `passing_prog_all`
+- `dribbling_prog_all`
+- `defense_prog_all`
+- `physical_prog_all`
+- `goalkeeping_prog_all`
+- `overall_prog_current_season`
+- `pace_prog_current_season`
+- `shooting_prog_current_season`
+- `passing_prog_current_season`
+- `dribbling_prog_current_season`
+- `defense_prog_current_season`
+- `physical_prog_current_season`
+- `goalkeeping_prog_current_season`
+
+Calculated locally rather than fetched:
+
+- `next_overall`
+- `next_overall_gap`
+- `pace_to_next_overall`
+- `shooting_to_next_overall`
+- `passing_to_next_overall`
+- `dribbling_to_next_overall`
+- `defense_to_next_overall`
+- `physical_to_next_overall`
+- `goalkeeping_to_next_overall`
+
+Copied from the previous database because the rebuild does not currently fetch a reliable live source:
+
+- `age`; for a new player only, it starts from Flow `ageAtMint`
+- `retirement_years`
+- `owned_since`
+- `active_contract_revenue_share`
+- `active_contract_club_id`
+- `active_contract_club_name`
+- `active_contract_club_division`
+- `player_seasons`; for a new player only, it starts at `1`
+
 ## MFL-controlled wallets
 
 The rebuild treats both of these addresses as MFL-controlled:
@@ -70,12 +141,14 @@ The validation report records the exact sealed snapshot block, wallet counts, re
 
 ## Progression request policy
 
-The progression client has one process-wide sliding-window limiter:
+The MFL progressions API uses:
 
-- at most 80 requests in any 60-second period;
+- no requests-per-minute limiter;
+- batches of 1,000 player IDs;
+- up to 100 worker threads;
 - three retries after the initial request;
-- exactly 60 seconds before each retry;
-- HTTP 414 requests are split immediately instead of retried.
+- exactly 61 seconds before each retry;
+- immediate recursive splitting for HTTP 414 responses.
 
 Players with `NULL` ownership are included in progression requests because they are not known to belong to either MFL-controlled wallet.
 
