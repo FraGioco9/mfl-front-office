@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 FLOW_MIN_PLAYER_ID = 42
 FLOW_PLAYER_BATCH_SIZE = 3000
-FLOW_PLAYER_WORKERS = 25
+FLOW_PLAYER_WORKERS = 20
 
 
 def fixed_player_id_ranges(highest_player_id: int, batch_size: int) -> Iterable[list[int]]:
