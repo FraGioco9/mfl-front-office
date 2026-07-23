@@ -44,7 +44,7 @@ class FlowMetadataConfigTests(unittest.TestCase):
         )
         self.assertEqual(FLOW_MIN_PLAYER_ID, 42)
         self.assertEqual(FLOW_PLAYER_BATCH_SIZE, 3000)
-        self.assertEqual(FLOW_PLAYER_WORKERS, 25)
+        self.assertEqual(FLOW_PLAYER_WORKERS, 20)
 
     def test_player_ranges_begin_at_42(self):
         self.assertEqual(
