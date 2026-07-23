@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 
 import rebuild_database
+from candidate_only_rebuild import install_candidate_only_rebuild
 from compact_rebuild_logs import install_compact_rebuild_logs
 from flow_age_seasons import install_age_season_hook
 from flow_block_height import install_block_height_hook
@@ -29,13 +30,12 @@ from progression_rebuild import (
     PROGRESSION_RETRY_DELAY_SECONDS,
     PROGRESSION_WORKERS,
 )
-from windows_database_replace import install_database_replace_retry
 
 
 def main() -> int:
     install_flow_worker_config()
     install_compact_rebuild_logs(sys.modules[__name__])
-    install_database_replace_retry(rebuild_database)
+    install_candidate_only_rebuild(rebuild_database)
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
