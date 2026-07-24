@@ -28,7 +28,6 @@ MFL_CHECK_BATCH_SIZE = 25
 MFL_CHECK_WORKERS = 20
 FLOW_REQUEST_RETRIES = 5
 FLOW_REQUEST_RETRY_DELAY_SECONDS = 5
-LEADERBOARD_STATE: dict[str, int | None] = {"highest_player_id": None}
 
 MFL_OWNERSHIP_SCRIPT = """
 import MFLPlayer from 0x8ebcbfd516b1da27
@@ -123,9 +122,7 @@ def fetch_leaderboard_without_item_logs():
 
     rebuild.log = filtered_log
     try:
-        names, highest_player_id = original_fetch_leaderboard()
-        LEADERBOARD_STATE["highest_player_id"] = highest_player_id
-        return names, highest_player_id
+        return original_fetch_leaderboard()
     finally:
         rebuild.log = original_log
 
@@ -276,22 +273,34 @@ def fetch_wallet_player_ids_with_clean_logs(
         else:
             flow_wallet_ownership.print = original_print
 
-    highest_player_id = LEADERBOARD_STATE.get("highest_player_id")
-    if highest_player_id is None or highest_player_id < rebuild.MIN_PLAYER_ID:
-        raise RuntimeError("Leaderboard did not provide a valid highest player ID for MFL ownership checks")
-
     owned_elsewhere = {
         player_id
         for player_ids in wallet_players.values()
         for player_id in player_ids
     }
+    if not owned_elsewhere:
+        raise RuntimeError("No player IDs were found in the checked wallets")
+
+    highest_checked_id = max(owned_elsewhere)
     unresolved_ids = [
         player_id
-        for player_id in range(rebuild.MIN_PLAYER_ID, highest_player_id + 1)
+        for player_id in range(rebuild.MIN_PLAYER_ID, highest_checked_id + 1)
         if player_id not in owned_elsewhere
     ]
+    if not unresolved_ids:
+        wallet_players[rebuild.MFL_ADDRESS] = []
+        rebuild.log("Flow MFL ownership check completed: 0 player IDs")
+        return dict(sorted(wallet_players.items()))
+
+    highest_player_id = max(unresolved_ids)
+    unresolved_ids = [
+        player_id
+        for player_id in unresolved_ids
+        if player_id <= highest_player_id
+    ]
     rebuild.log(
-        f"Flow MFL ownership check started: {len(unresolved_ids)} unresolved player IDs"
+        f"Flow MFL ownership check started: {len(unresolved_ids)} unresolved player IDs, "
+        f"highest ID {highest_player_id}"
     )
     mfl_ids = check_mfl_ownership(
         unresolved_ids,
