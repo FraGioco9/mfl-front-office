@@ -21,6 +21,26 @@ def flow_season_summary(flow_players: dict[int, Any]) -> dict[str, Any]:
     }
 
 
+def age_from_flow(player: Any) -> int:
+    metadata = getattr(player, "metadata", None) or {}
+    raw_age = metadata.get("ageAtMint")
+    if raw_age is None:
+        raise RuntimeError(f"Flow ageAtMint missing for player {player.player_id}")
+
+    try:
+        age = int(raw_age)
+    except (TypeError, ValueError):
+        raise RuntimeError(
+            f"Flow ageAtMint is invalid for player {player.player_id}: {raw_age!r}"
+        ) from None
+
+    if age <= 0:
+        raise RuntimeError(
+            f"Flow ageAtMint must be positive for player {player.player_id}: {age}"
+        )
+    return age
+
+
 def player_seasons_from_flow(player: Any) -> int:
     raw_season = getattr(player, "season", None)
     if raw_season is None:
@@ -47,12 +67,11 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
     rebuild_module.PRESERVED_COLUMNS[:] = [
         column
         for column in rebuild_module.PRESERVED_COLUMNS
-        if column != "player_seasons"
+        if column not in {"age", "player_seasons"}
     ]
 
     state: dict[str, Any] = {
         "summary": None,
-        "new_players": 0,
         "players_written": 0,
     }
 
@@ -64,16 +83,15 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
         wallet_names,
     ) -> None:
         state["summary"] = flow_season_summary(flow_players)
-        state["new_players"] = sum(
-            1 for player_id in flow_players if player_id not in old_rows
-        )
 
         player_columns = list(rebuild_module.PLAYER_COLUMNS)
+        age_index = player_columns.index("age")
         player_seasons_index = player_columns.index("player_seasons")
         previous_builder = rebuild_module.build_player_row
 
         def build_player_row(player, owner, old, names):
             row = list(previous_builder(player, owner, old, names))
+            row[age_index] = age_from_flow(player)
             row[player_seasons_index] = player_seasons_from_flow(player)
             return tuple(row)
 
@@ -96,9 +114,9 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
         report = original_validate_database(*args, **kwargs)
         errors = list(report.get("errors") or [])
 
-        missing_age = int(
+        invalid_age = int(
             connection.execute(
-                "SELECT COUNT(*) FROM players WHERE age IS NULL"
+                "SELECT COUNT(*) FROM players WHERE age IS NULL OR age <= 0"
             ).fetchone()[0]
         )
         invalid_player_seasons = int(
@@ -107,8 +125,8 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "WHERE player_seasons IS NULL OR player_seasons <= 0"
             ).fetchone()[0]
         )
-        if missing_age:
-            errors.append(f"{missing_age} players have missing age")
+        if invalid_age:
+            errors.append(f"{invalid_age} players have missing or invalid Flow age")
         if invalid_player_seasons:
             errors.append(
                 f"{invalid_player_seasons} players have missing or invalid Flow player seasons"
@@ -128,12 +146,13 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "flow_season_maximum": summary["maximum"],
                 "flow_season_counts": summary["counts"],
                 "flow_season_uniform": summary["uniform"],
-                "age_source": "previous_database_or_ageAtMint_for_new_players",
+                "age_source": "flow_player_metadata_ageAtMint",
+                "age_formula": "age = Flow metadata ageAtMint",
                 "player_seasons_source": "flow_player_data_season",
                 "player_seasons_formula": "player_seasons = Flow PlayerData.season",
-                "new_players_initialized_from_flow": state["new_players"],
+                "ages_written_from_flow": state["players_written"],
                 "player_seasons_written_from_flow": state["players_written"],
-                "missing_age": missing_age,
+                "invalid_age": invalid_age,
                 "invalid_player_seasons": invalid_player_seasons,
                 "errors": errors,
                 "valid": not errors,
