@@ -10,12 +10,13 @@ from compact_rebuild_logs import install_compact_rebuild_logs
 from database_filename_config import install_database_filename_config
 from flow_worker_config import FLOW_PARALLEL_WORKERS, install_flow_worker_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
+from mfl_api_parallel_config import MFL_API_WORKERS, install_mfl_api_parallel_config
+from mfl_api_rate_limiter import REQUESTS_PER_MINUTE
 from mfl_wallet_config import add_mfl_wallet_names
 from progression_rebuild import (
     PROGRESSION_BATCH_SIZE,
     PROGRESSION_RETRIES,
     PROGRESSION_RETRY_DELAY_SECONDS,
-    PROGRESSION_WORKERS,
 )
 
 
@@ -66,6 +67,7 @@ def main() -> int:
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
     install_safe_contract_columns()
+    install_mfl_api_parallel_config(rebuild_database)
     install_progression_player_count()
     install_next_overall_status()
     install_api_first_player_source(rebuild_database)
@@ -87,11 +89,16 @@ def main() -> int:
         flush=True,
     )
     print(
+        f"MFL API settings: up to {MFL_API_WORKERS} workers with a shared "
+        f"{REQUESTS_PER_MINUTE} requests/minute cap",
+        flush=True,
+    )
+    print(
         f"Flow season settings: up to {FLOW_PARALLEL_WORKERS} parallel requests",
         flush=True,
     )
     print(
-        f"Progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {PROGRESSION_WORKERS}, "
+        f"Progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {MFL_API_WORKERS}, "
         f"retries {PROGRESSION_RETRIES}, delay {PROGRESSION_RETRY_DELAY_SECONDS}s",
         flush=True,
     )
