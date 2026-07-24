@@ -17,6 +17,11 @@ import flow_wallet_ownership
 import fresh_mfl_database_rebuild as rebuild
 
 
+FLOW_METADATA_BATCH_SIZE = 3000
+FLOW_WALLET_BATCH_SIZE = 3000
+rebuild.FLOW_BATCH_SIZE = FLOW_METADATA_BATCH_SIZE
+rebuild.WALLET_BATCH_SIZE = FLOW_WALLET_BATCH_SIZE
+
 FLOW_BLOCKS_URL = "https://rest-mainnet.onflow.org/v1/blocks?height=sealed"
 SUPPRESSED_PROCESSES = {
     "Database schema",
@@ -269,7 +274,7 @@ def fetch_wallet_player_ids_with_clean_logs(
     addresses: Iterable[str],
     *,
     block_height: int,
-    batch_size: int = flow_wallet_ownership.FLOW_WALLET_BATCH_SIZE,
+    batch_size: int = FLOW_WALLET_BATCH_SIZE,
     workers: int = flow_wallet_ownership.FLOW_WALLET_WORKERS,
 ):
     normalized_addresses = sorted(
