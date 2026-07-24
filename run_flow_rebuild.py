@@ -21,6 +21,20 @@ OWNERSHIP_PROGRESS_PATTERN = re.compile(
 )
 
 
+class OwnershipWithMFLResidual(dict[int, str]):
+    """Assign IDs absent from every other checked wallet to the MFL wallet."""
+
+    def __contains__(self, player_id: object) -> bool:
+        if isinstance(player_id, int) and player_id >= rebuild.MIN_PLAYER_ID:
+            return True
+        return super().__contains__(player_id)
+
+    def __missing__(self, player_id: int) -> str:
+        if isinstance(player_id, int) and player_id >= rebuild.MIN_PLAYER_ID:
+            return rebuild.MFL_ADDRESS
+        raise KeyError(player_id)
+
+
 def insert_wallets_without_row_logs(
     connection: sqlite3.Connection,
     names: dict[str, str],
@@ -120,6 +134,13 @@ def fetch_wallet_player_ids_with_clean_logs(
     batch_size: int = flow_wallet_ownership.FLOW_WALLET_BATCH_SIZE,
     workers: int = flow_wallet_ownership.FLOW_WALLET_WORKERS,
 ):
+    normalized_addresses = {
+        str(address or "").strip().lower()
+        for address in addresses
+        if str(address or "").strip()
+    }
+    normal_addresses = sorted(normalized_addresses - {rebuild.MFL_ADDRESS})
+
     original_print = flow_wallet_ownership.print if hasattr(flow_wallet_ownership, "print") else builtins.print
 
     def filtered_print(*args: Any, **kwargs: Any) -> None:
@@ -136,8 +157,8 @@ def fetch_wallet_player_ids_with_clean_logs(
 
     flow_wallet_ownership.print = filtered_print
     try:
-        return original_fetch_wallet_player_ids(
-            addresses,
+        wallet_players = original_fetch_wallet_player_ids(
+            normal_addresses,
             block_height=block_height,
             batch_size=batch_size,
             workers=workers,
@@ -148,11 +169,24 @@ def fetch_wallet_player_ids_with_clean_logs(
         else:
             flow_wallet_ownership.print = original_print
 
+    # The MFL collection is too large for collection.getIDs() under Flow's
+    # storage-interaction limit. Every other requested wallet has been checked,
+    # so all remaining minted player IDs are deterministically owned by MFL.
+    wallet_players[rebuild.MFL_ADDRESS] = []
+    rebuild.log("MFL wallet ownership will be resolved from remaining player IDs")
+    return wallet_players
+
+
+def build_current_ownership_with_mfl_residual(wallet_players):
+    ownership, duplicates = original_build_current_ownership(wallet_players)
+    return OwnershipWithMFLResidual(ownership), duplicates
+
 
 original_fetch_leaderboard = rebuild.fetch_leaderboard
 original_started = rebuild.started
 original_completed = rebuild.completed
 original_fetch_wallet_player_ids = rebuild.fetch_wallet_player_ids
+original_build_current_ownership = rebuild.build_current_ownership
 
 rebuild.insert_wallets = insert_wallets_without_row_logs
 rebuild.fetch_leaderboard = fetch_leaderboard_without_item_logs
@@ -160,6 +194,7 @@ rebuild.get_latest_sealed_block_height = get_latest_sealed_block_height
 rebuild.started = started_with_clean_labels
 rebuild.completed = completed_with_clean_labels
 rebuild.fetch_wallet_player_ids = fetch_wallet_player_ids_with_clean_logs
+rebuild.build_current_ownership = build_current_ownership_with_mfl_residual
 
 
 if __name__ == "__main__":
