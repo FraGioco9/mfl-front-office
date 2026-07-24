@@ -12,6 +12,7 @@ class ApiFirstPlayerSource:
     def __init__(self) -> None:
         self.items: dict[int, dict[str, Any]] = {}
         self.ownership: dict[int, str] = {}
+        self.skipped_missing_flow_season: list[int] = []
 
 
 STATE = ApiFirstPlayerSource()
@@ -197,10 +198,11 @@ def install_api_first_player_source(module: ModuleType) -> None:
     module.PRESERVED_COLUMNS[:] = []
 
     def fetch_all_players(highest_player_id: int, flow_batch_size: int):
-        print("PlayMFL API player import started", flush=True)
+        print("Player data pull started", flush=True)
         api_items = owner_player_contract_sync.fetch_all_players()
         STATE.items = {}
         STATE.ownership = {}
+        STATE.skipped_missing_flow_season = []
         for item in api_items:
             player_id = _player_id(item)
             if player_id is None:
@@ -211,16 +213,32 @@ def install_api_first_player_source(module: ModuleType) -> None:
                 STATE.ownership[player_id] = owner
         if not STATE.items:
             raise RuntimeError("PlayMFL API returned no players")
-        print(f"PlayMFL API player import complete: {len(STATE.items)} players", flush=True)
-        print("Flow player-season import started", flush=True)
+        print(f"Player data pull complete: {len(STATE.items)} players", flush=True)
+
+        print("Flow season pull started", flush=True)
         flow_players = original_flow_fetch(highest_player_id, flow_batch_size)
-        missing_flow = sorted(set(STATE.items) - set(flow_players))
-        if missing_flow:
-            preview = ", ".join(str(player_id) for player_id in missing_flow[:20])
-            raise RuntimeError(
-                f"Flow season data missing for {len(missing_flow)} API players: {preview}"
-            )
-        return {player_id: flow_players[player_id] for player_id in STATE.items}
+        valid_flow_players: dict[int, Any] = {}
+        skipped: list[int] = []
+        for player_id in sorted(STATE.items):
+            flow_player = flow_players.get(player_id)
+            season = _int(getattr(flow_player, "season", None)) if flow_player is not None else None
+            if season is None or season <= 0:
+                skipped.append(player_id)
+                continue
+            valid_flow_players[player_id] = flow_player
+
+        for player_id in skipped:
+            STATE.items.pop(player_id, None)
+            STATE.ownership.pop(player_id, None)
+        STATE.skipped_missing_flow_season = skipped
+
+        if not valid_flow_players:
+            raise RuntimeError("Flow returned no usable player season data")
+        print(
+            f"Flow season pull complete: {len(valid_flow_players)} players, {len(skipped)} skipped",
+            flush=True,
+        )
+        return valid_flow_players
 
     def replay_ownership_deposits(
         ownership: dict[int, str],
@@ -243,7 +261,7 @@ def install_api_first_player_source(module: ModuleType) -> None:
                 old_rows.get(player_id),
                 wallet_names,
             )
-            for player_id in sorted(STATE.items)
+            for player_id in sorted(flow_players)
         ]
         placeholders = ", ".join("?" for _ in module.PLAYER_COLUMNS)
         connection.executemany(
@@ -275,7 +293,9 @@ def install_api_first_player_source(module: ModuleType) -> None:
             {
                 "primary_player_source": "https://api.playmfl.com/players",
                 "flow_player_fields_used": ["player_seasons"],
-                "api_player_count": len(STATE.items),
+                "api_player_count_after_flow_season_filter": len(STATE.items),
+                "players_skipped_missing_flow_season": len(STATE.skipped_missing_flow_season),
+                "player_ids_skipped_missing_flow_season": STATE.skipped_missing_flow_season,
                 "column_null_counts": null_counts,
             }
         )
