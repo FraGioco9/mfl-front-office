@@ -10,6 +10,7 @@ _MODULE_NAMES = (
     "flow_data",
     "flow_wallet_ownership",
     "flow_mfl_wallet_membership",
+    "flow_owned_since",
     "leaderboard_rebuild",
     "mfl_wallet_config",
     "progression_rebuild",
@@ -18,6 +19,12 @@ _MODULE_NAMES = (
 
 
 def compact_message(message: str) -> str:
+    total_time = re.fullmatch(r"Total time: (\d+)s", message)
+    if total_time:
+        seconds = int(total_time.group(1))
+        minutes, remaining_seconds = divmod(seconds, 60)
+        return f"Total time: {minutes}m {remaining_seconds}s"
+
     patterns: tuple[tuple[str, str], ...] = (
         (
             r"^Leaderboard import complete: loaded (\d+) wallet addresses and names$",
