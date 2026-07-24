@@ -14,19 +14,15 @@ def _fetch_player_range(
     total_shards: int,
     lower_exclusive: int,
     upper_inclusive: int,
-    initial_page: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     items: dict[int, dict[str, Any]] = {}
     before_player_id: int | None = upper_inclusive + 1
-    page = initial_page
 
     while True:
-        if page is None:
-            page = owner_player_contract_sync._request_players_page(
-                shard_number,
-                before_player_id,
-            )
-
+        page = owner_player_contract_sync._request_players_page(
+            shard_number,
+            before_player_id,
+        )
         page_ids = [
             player_id
             for item in page
@@ -51,25 +47,25 @@ def _fetch_player_range(
             )
 
         before_player_id = minimum_page_id
-        page = None
 
     return list(items.values())
 
 
-def fetch_all_players_parallel() -> list[dict[str, Any]]:
-    first_page = owner_player_contract_sync._request_players_page(1, None)
-    first_page_ids = [
-        player_id
-        for item in first_page
-        if (player_id := owner_player_contract_sync._player_id(item)) is not None
-    ]
-    if not first_page_ids:
-        raise RuntimeError("Player data API first response did not contain player IDs")
+def fetch_all_players_parallel(
+    highest_player_id: int | None = None,
+) -> list[dict[str, Any]]:
+    if highest_player_id is None:
+        first_page = owner_player_contract_sync._request_players_page(1, None)
+        first_page_ids = [
+            player_id
+            for item in first_page
+            if (player_id := owner_player_contract_sync._player_id(item)) is not None
+        ]
+        if not first_page_ids:
+            raise RuntimeError("Player data API first response did not contain player IDs")
+        highest_player_id = max(first_page_ids)
 
-    highest_player_id = max(first_page_ids)
     shard_count = max(1, math.ceil(highest_player_id / PLAYER_DATA_BATCH_SIZE))
-    worker_count = shard_count
-
     ranges: list[tuple[int, int, int]] = []
     for index in range(shard_count):
         lower_exclusive = index * PLAYER_DATA_BATCH_SIZE
@@ -81,7 +77,6 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
             ranges.append((index + 1, lower_exclusive, upper_inclusive))
 
     ranges.sort(key=lambda value: value[2], reverse=True)
-    top_upper = ranges[0][2]
     print(
         f"Pulling player data: {len(ranges)} shards, highest ID {highest_player_id}",
         flush=True,
@@ -89,21 +84,19 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
 
     players: dict[int, dict[str, Any]] = {}
     with ThreadPoolExecutor(
-        max_workers=max(1, worker_count),
+        max_workers=max(1, len(ranges)),
         thread_name_prefix="mfl-player-data-shard",
     ) as executor:
-        futures = {}
-        for shard_number, lower_exclusive, upper_inclusive in ranges:
-            seeded_page = first_page if upper_inclusive == top_upper else None
-            future = executor.submit(
+        futures = {
+            executor.submit(
                 _fetch_player_range,
                 shard_number,
                 len(ranges),
                 lower_exclusive,
                 upper_inclusive,
-                seeded_page,
-            )
-            futures[future] = shard_number
+            ): shard_number
+            for shard_number, lower_exclusive, upper_inclusive in ranges
+        }
 
         completed_shards = 0
         for future in as_completed(futures):
