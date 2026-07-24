@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import json
 import math
 import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request
+from urllib.request import Request, urlopen
 
 import club_contract_rebuild
 
@@ -16,6 +18,7 @@ WORKERS = 100
 RETRIES = 3
 RETRY_DELAY_SECONDS = 90
 STATUS_BATCH_SIZE = 25
+REQUEST_TIMEOUT_SECONDS = 30
 
 UPDATED_COLUMNS = {
     "retirement_years",
@@ -90,19 +93,29 @@ def _request_owner_page(owner: str, offset: int) -> list[dict[str, Any]]:
         },
     )
     label = f"Owner {owner} players offset {offset}"
+
     for attempt in range(RETRIES + 1):
         try:
-            payload = club_contract_rebuild._request_json(request, label=label)
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read().decode("utf-8"))
             return _players_from_payload(payload)
-        except RuntimeError:
-            if attempt == RETRIES:
-                raise
-            print(
-                f"{label} request failed; retrying in {RETRY_DELAY_SECONDS}s "
-                f"({attempt + 1}/{RETRIES})",
-                flush=True,
-            )
-            time.sleep(RETRY_DELAY_SECONDS)
+        except HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace")
+            failure = f"HTTP {error.code}: {body}"
+        except (URLError, TimeoutError) as error:
+            failure = str(error)
+        except json.JSONDecodeError as error:
+            failure = f"invalid JSON: {error}"
+
+        if attempt == RETRIES:
+            raise RuntimeError(f"{label} failed after retries: {failure}")
+        print(
+            f"{label} request failed ({failure}); retrying in {RETRY_DELAY_SECONDS}s "
+            f"({attempt + 1}/{RETRIES})",
+            flush=True,
+        )
+        time.sleep(RETRY_DELAY_SECONDS)
+
     raise RuntimeError(f"{label} request failed after retries")
 
 
@@ -135,9 +148,16 @@ def fetch_owner_players(owner: str) -> list[dict[str, Any]]:
 
 
 def _contract_values(item: dict[str, Any]) -> tuple[Any, ...]:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
     contract = item.get("activeContract")
     if not isinstance(contract, dict):
-        contract = item.get("contract") if isinstance(item.get("contract"), dict) else {}
+        for key in ("contract", "currentContract", "sportingContract"):
+            candidate = item.get(key)
+            if isinstance(candidate, dict):
+                contract = candidate
+                break
+        else:
+            contract = {}
     club = item.get("club") if isinstance(item.get("club"), dict) else {}
     stats = item.get("stats") if isinstance(item.get("stats"), dict) else {}
 
@@ -171,9 +191,11 @@ def _contract_values(item: dict[str, Any]) -> tuple[Any, ...]:
     )
     owned_since = _int_or_none(
         _first(item, "ownedSince", "owned_since", "ownershipSeason", "ownership_season")
+        or _first(metadata, "ownedSince", "owned_since", "ownershipSeason", "ownership_season")
     )
     retirement_years = _int_or_none(
         _first(item, "retirementYears", "retirement_years")
+        or _first(metadata, "retirementYears", "retirement_years")
     )
 
     return (
@@ -224,6 +246,7 @@ def refresh_owner_player_data(
     payloads: dict[str, list[dict[str, Any]]] = {}
     completed = 0
     total_players = 0
+    group_players = 0
     with ThreadPoolExecutor(max_workers=max(1, min(WORKERS, total_owners))) as executor:
         futures = {executor.submit(fetch_owner_players, owner): owner for owner in owners}
         for future in as_completed(futures):
@@ -231,15 +254,17 @@ def refresh_owner_player_data(
             items = future.result()
             payloads[owner] = items
             completed += 1
+            group_players += len(items)
             total_players += len(items)
             if completed % STATUS_BATCH_SIZE == 0 or completed == total_owners:
                 batch_number = math.ceil(completed / STATUS_BATCH_SIZE)
                 batch_start = max(1, completed - STATUS_BATCH_SIZE + 1)
                 print(
                     f"Contracts {batch_number}/{total_batches}: owners {batch_start}-{completed}, "
-                    f"+{len(items)}, total {total_players}",
+                    f"+{group_players}, total {total_players}",
                     flush=True,
                 )
+                group_players = 0
 
     updates: list[tuple[Any, ...]] = []
     seen_players: set[int] = set()
