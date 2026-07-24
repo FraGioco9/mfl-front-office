@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import sys
 
+import club_contract_rebuild
 import rebuild_database
 from candidate_only_rebuild import install_candidate_only_rebuild
-from club_contract_rebuild import install_club_contract_hook
 from compact_rebuild_logs import install_compact_rebuild_logs
 from database_filename_config import install_database_filename_config
 from flow_age_seasons import install_age_season_hook
@@ -35,11 +35,34 @@ from progression_rebuild import (
 )
 
 
+def install_flow_club_tolerance() -> None:
+    def fetch_returned_clubs() -> list[dict[str, object]]:
+        first = club_contract_rebuild.fetch_club_batch(0)
+        total_supply = int(first.get("totalSupply") or 0)
+        clubs = list(first.get("clubs") or [])
+        offset = club_contract_rebuild.FLOW_CLUB_BATCH_SIZE
+
+        while offset < total_supply:
+            batch = club_contract_rebuild.fetch_club_batch(offset)
+            clubs.extend(batch.get("clubs") or [])
+            offset += club_contract_rebuild.FLOW_CLUB_BATCH_SIZE
+
+        by_id = {
+            int(club["clubID"]): club
+            for club in clubs
+            if isinstance(club, dict) and club.get("clubID") is not None
+        }
+        return [by_id[club_id] for club_id in sorted(by_id)]
+
+    club_contract_rebuild.fetch_all_clubs = fetch_returned_clubs
+
+
 def main() -> int:
     install_flow_worker_config()
     install_compact_rebuild_logs(sys.modules[__name__])
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
+    install_flow_club_tolerance()
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
@@ -80,7 +103,7 @@ def main() -> int:
     install_age_season_hook(rebuild_database)
     install_ownership_tolerance(rebuild_database)
     install_owned_since_hook(rebuild_database)
-    install_club_contract_hook(rebuild_database)
+    club_contract_rebuild.install_club_contract_hook(rebuild_database)
     return rebuild_database.main()
 
 
