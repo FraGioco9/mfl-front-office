@@ -134,7 +134,7 @@ Flow metadata uses batches of exactly 3,000 player IDs. Normal wallet collection
 
 Metadata, wallet collection, treasury membership, and top-level `owned_since` history windows use a maximum of 20 parallel requests. Metadata and treasury-membership batches preserve recursive splitting when a request exceeds Flow computation or storage limits. Historical event ranges also split recursively when the Flow endpoint rejects a range.
 
-The `owned_since` scan divides the chain into top-level windows of 1,000,000 block heights before any endpoint-driven recursive splitting.
+The `owned_since` scan divides the chain into top-level windows of 1,000,000 block heights before any endpoint-driven recursive splitting. Its progress messages show completed windows, newly returned events, and the running event total without printing long block ranges.
 
 At startup, the rebuild prints the minimum player ID, fixed batch sizes, and parallel-request limit. It does not print a separate MFL-controlled-wallet notice.
 
