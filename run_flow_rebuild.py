@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import time
 
 import club_contract_rebuild
 import rebuild_database
@@ -33,6 +34,31 @@ from progression_rebuild import (
     PROGRESSION_RETRY_DELAY_SECONDS,
     PROGRESSION_WORKERS,
 )
+
+
+def install_club_request_retries() -> None:
+    original_request_json = club_contract_rebuild._request_json
+
+    def request_json_with_forbidden_retry(request, *, label):
+        for attempt in range(club_contract_rebuild.MAX_REQUEST_RETRIES + 1):
+            try:
+                return original_request_json(request, label=label)
+            except RuntimeError as error:
+                is_forbidden = "returned HTTP 403" in str(error)
+                if not is_forbidden or attempt == club_contract_rebuild.MAX_REQUEST_RETRIES:
+                    raise
+
+                delay = club_contract_rebuild.RETRY_DELAY_SECONDS * (attempt + 1)
+                print(
+                    f"{label} returned HTTP 403; retrying unchanged request in {delay:g}s "
+                    f"({attempt + 1}/{club_contract_rebuild.MAX_REQUEST_RETRIES})",
+                    flush=True,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(f"{label} failed after retries")
+
+    club_contract_rebuild._request_json = request_json_with_forbidden_retry
 
 
 def install_flow_club_tolerance() -> None:
@@ -84,6 +110,7 @@ def main() -> int:
     install_compact_rebuild_logs(sys.modules[__name__])
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
+    install_club_request_retries()
     install_flow_club_tolerance()
     install_progression_player_count()
 
