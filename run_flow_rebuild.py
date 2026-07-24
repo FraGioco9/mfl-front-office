@@ -37,6 +37,7 @@ from progression_rebuild import (
 
 def install_flow_club_tolerance() -> None:
     def fetch_returned_clubs() -> list[dict[str, object]]:
+        print("Clubs fetching started", flush=True)
         first = club_contract_rebuild.fetch_club_batch(0)
         total_supply = int(first.get("totalSupply") or 0)
         clubs = list(first.get("clubs") or [])
@@ -52,9 +53,30 @@ def install_flow_club_tolerance() -> None:
             for club in clubs
             if isinstance(club, dict) and club.get("clubID") is not None
         }
-        return [by_id[club_id] for club_id in sorted(by_id)]
+        returned_clubs = [by_id[club_id] for club_id in sorted(by_id)]
+        print(f"Clubs complete: {len(returned_clubs)} clubs", flush=True)
+        return returned_clubs
+
+    original_refresh_contracts = club_contract_rebuild.refresh_club_contracts
+
+    def refresh_contracts_with_status(connection, clubs):
+        print(f"Contracts fetching started: {len(clubs)} clubs", flush=True)
+        updated_players = original_refresh_contracts(connection, clubs)
+        print(f"Contracts complete: {updated_players} players", flush=True)
+        return updated_players
 
     club_contract_rebuild.fetch_all_clubs = fetch_returned_clubs
+    club_contract_rebuild.refresh_club_contracts = refresh_contracts_with_status
+
+
+def install_progression_player_count() -> None:
+    original_refresh_progressions = rebuild_database.refresh_progressions
+
+    def refresh_progressions_by_player(*args, **kwargs) -> int:
+        interval_updates = original_refresh_progressions(*args, **kwargs)
+        return interval_updates // 2
+
+    rebuild_database.refresh_progressions = refresh_progressions_by_player
 
 
 def main() -> int:
@@ -63,6 +85,7 @@ def main() -> int:
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
     install_flow_club_tolerance()
+    install_progression_player_count()
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
