@@ -8,8 +8,9 @@ This pipeline builds a validated candidate from the existing `players` and `wall
 2. The MFL players API is then used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
 3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches, beginning at player ID `42`.
 4. Current ownership comes from public MFL player collections at one exact sealed Flow block.
-5. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
-6. Next Overall is calculated with the existing position weights and formulas.
+5. Incremental `MFLPlayer.Deposit` events supply new `owned_since` timestamps when an existing Flow block baseline is available.
+6. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
+7. Next Overall is calculated with the existing position weights and formulas.
 
 ## Field sources
 
@@ -40,6 +41,18 @@ The rebuild fails when `ageAtMint` or `season` is missing, when a mint season ex
 Fetched from current Flow wallet collections:
 
 - `wallet_address`, or `NULL` when fewer than 50 owners remain unresolved
+
+Reconstructed from incremental Flow `Deposit` events:
+
+- `owned_since`, stored as Unix milliseconds from the block timestamp of the latest matching deposit to the current owner
+
+The `owned_since` rules are:
+
+- when a matching deposit to the current owner is present in the scanned interval, use that event's block timestamp;
+- when the owner is unchanged and no matching event is present, preserve the previous value;
+- when the owner changed, the player is new, or ownership is unresolved and no matching event is available, store `NULL`;
+- when no previous Flow block baseline exists, do not attempt an unreliable genesis backfill; preserve unchanged owners and use `NULL` for changed, new, or unresolved owners;
+- when the Flow event endpoint is unavailable, do not fail the candidate solely for `owned_since`; preserve unchanged owners and use `NULL` where the date cannot be established.
 
 Fetched or resolved from wallet-name sources:
 
@@ -79,7 +92,6 @@ Calculated locally rather than fetched:
 Copied from the previous database because the rebuild does not currently fetch a reliable live source:
 
 - `retirement_years`
-- `owned_since`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
 - `active_contract_club_name`
@@ -99,7 +111,6 @@ Both names are forced into the rebuilt wallet-name map. Players held by either a
 The following values are copied unchanged from the previous database:
 
 - `retirement_years`
-- `owned_since`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
 - `active_contract_club_name`
@@ -124,7 +135,7 @@ All three Flow stages use a fixed maximum of 20 parallel requests. Metadata and 
 
 At startup, the rebuild prints the minimum player ID, fixed batch sizes, and parallel-request limit. It does not print a separate MFL-controlled-wallet notice.
 
-## Ownership snapshot
+## Ownership snapshot and owned since
 
 The rebuild scans leaderboard wallets plus distinct owner wallets present in the previous database. Each public `MFLPlayer` collection returns its current player IDs through `getIDs()`.
 
@@ -136,7 +147,11 @@ The original MFL treasury wallet is handled separately because its collection is
 
 A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` is stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table inside the candidate.
 
-The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, and the detected current Flow season.
+After the sealed ownership snapshot is known, the rebuild reads `MFLPlayer.Deposit` events from the previous successful Flow block plus one through the current sealed block. Events are ordered by block height, transaction index, and event index. The latest deposit for each player is used only when its destination matches the player's current snapshot owner.
+
+The event scan is incremental. It intentionally does not request the entire contract history when the input database has no Flow block baseline, because older event history may be unavailable across Flow sporks. The current sealed block is still stored in the candidate so a promoted candidate provides a baseline for subsequent runs.
+
+The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, the detected current Flow season, the `owned_since` event range, event count, updated count, preserved count, unavailable count, invalid timestamp count, baseline status, and any non-fatal event endpoint error.
 
 ## Progression request policy
 
