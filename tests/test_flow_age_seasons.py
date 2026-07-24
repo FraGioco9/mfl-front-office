@@ -22,9 +22,9 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         self.assertEqual(summary["distinct"], 1)
         self.assertEqual(summary["counts"], {15: 2})
 
-    def test_player_59073_uses_flow_age_and_season_directly(self):
+    def test_player_59073_uses_flow_age_progression_formula(self):
         player = FlowPlayer(59073, {"ageAtMint": 19}, 15)
-        self.assertEqual(age_from_flow(player), 19)
+        self.assertEqual(age_from_flow(player), 33)
         self.assertEqual(player_seasons_from_flow(player), 15)
 
     def test_hook_overwrites_age_and_player_seasons_from_flow(self):
@@ -81,14 +81,17 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         rows = connection.execute(
             "SELECT player_id, age, player_seasons FROM players ORDER BY player_id"
         ).fetchall()
-        self.assertEqual(rows, [(42, 20, 12), (59073, 19, 15)])
+        self.assertEqual(rows, [(42, 31, 12), (59073, 33, 15)])
         self.assertNotIn("age", module.PRESERVED_COLUMNS)
         self.assertNotIn("player_seasons", module.PRESERVED_COLUMNS)
 
         report = module.validate_database(connection=connection)
         self.assertTrue(report["valid"])
-        self.assertEqual(report["age_source"], "flow_player_metadata_ageAtMint")
-        self.assertEqual(report["age_formula"], "age = Flow metadata ageAtMint")
+        self.assertEqual(report["age_source"], "flow_ageAtMint_and_player_data_season")
+        self.assertEqual(
+            report["age_formula"],
+            "age = Flow metadata ageAtMint + Flow PlayerData.season - 1",
+        )
         self.assertEqual(report["player_seasons_source"], "flow_player_data_season")
         self.assertEqual(report["ages_written_from_flow"], 2)
         self.assertEqual(report["player_seasons_written_from_flow"], 2)
@@ -99,7 +102,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "ageAtMint must be positive"):
             age_from_flow(FlowPlayer(59073, {"ageAtMint": 0}, 15))
         with self.assertRaisesRegex(RuntimeError, "season missing"):
-            player_seasons_from_flow(FlowPlayer(59073, {"ageAtMint": 19}, None))
+            age_from_flow(FlowPlayer(59073, {"ageAtMint": 19}, None))
         with self.assertRaisesRegex(RuntimeError, "season must be positive"):
             player_seasons_from_flow(FlowPlayer(59073, {"ageAtMint": 19}, 0))
 
@@ -116,7 +119,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         )
         connection.executemany(
             "INSERT INTO players VALUES (?, ?, ?)",
-            [(42, None, 15), (59073, 19, 0)],
+            [(42, None, 15), (59073, 33, 0)],
         )
 
         report = module.validate_database(connection=connection)
