@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import json
-import math
 import sqlite3
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -14,10 +12,8 @@ import club_contract_rebuild
 
 PLAYERS_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players"
 PAGE_LIMIT = 1500
-WORKERS = 100
 RETRIES = 3
 RETRY_DELAY_SECONDS = 90
-STATUS_BATCH_SIZE = 25
 REQUEST_TIMEOUT_SECONDS = 30
 
 UPDATED_COLUMNS = {
@@ -60,7 +56,7 @@ def _players_from_payload(payload: Any) -> list[dict[str, Any]]:
             value = payload.get(key)
             if isinstance(value, list):
                 return [item for item in value if isinstance(item, dict)]
-    raise RuntimeError("Owner players API returned an unexpected payload")
+    raise RuntimeError("Players API returned an unexpected payload")
 
 
 def _player_id(item: dict[str, Any]) -> int | None:
@@ -77,28 +73,23 @@ def _player_id(item: dict[str, Any]) -> int | None:
     return _int_or_none(_first(item, "id", "playerId", "player_id"))
 
 
-def _request_owner_page(
-    owner: str,
-    owner_number: int,
-    total_owners: int,
+def _request_players_page(
+    batch_number: int,
     before_player_id: int | None,
 ) -> list[dict[str, Any]]:
-    params: dict[str, Any] = {
-        "limit": PAGE_LIMIT,
-        "ownerWalletAddress": owner,
-    }
+    params: dict[str, Any] = {"limit": PAGE_LIMIT}
     if before_player_id is not None:
         params["beforePlayerId"] = before_player_id
 
-    query = urlencode(params)
     request = Request(
-        f"{PLAYERS_URL}?{query}",
+        f"{PLAYERS_URL}?{urlencode(params)}",
         headers={
             "Accept": "application/json",
-            "User-Agent": "mfl-front-office-owner-player-sync/1.0",
+            "User-Agent": "mfl-front-office-player-contract-sync/1.0",
         },
     )
-    label = f"Owner {owner} {owner_number}/{total_owners}"
+    cursor_label = "initial" if before_player_id is None else str(before_player_id)
+    label = f"Contracts batch {batch_number} beforePlayerId={cursor_label}"
 
     for attempt in range(RETRIES + 1):
         try:
@@ -125,17 +116,14 @@ def _request_owner_page(
     raise RuntimeError(f"{label} request failed after retries")
 
 
-def fetch_owner_players(
-    owner: str,
-    owner_number: int,
-    total_owners: int,
-) -> list[dict[str, Any]]:
+def fetch_all_players() -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     seen_ids: set[int] = set()
     before_player_id: int | None = None
+    batch_number = 1
 
     while True:
-        page = _request_owner_page(owner, owner_number, total_owners, before_player_id)
+        page = _request_players_page(batch_number, before_player_id)
         page_ids = [
             player_id
             for item in page
@@ -150,21 +138,29 @@ def fetch_owner_players(
             new_items.append(item)
         players.extend(new_items)
 
+        cursor_label = "initial" if before_player_id is None else str(before_player_id)
+        print(
+            f"Contracts batch {batch_number}: beforePlayerId={cursor_label}, "
+            f"+{len(new_items)}, total {len(players)}",
+            flush=True,
+        )
+
         if len(page) < PAGE_LIMIT:
             break
         if not page_ids or not new_items:
             raise RuntimeError(
-                f"Owner {owner} pagination returned no new players; "
+                "Players pagination returned no new players; "
                 "beforePlayerId could not advance"
             )
 
         next_before_player_id = min(page_ids)
         if before_player_id is not None and next_before_player_id >= before_player_id:
             raise RuntimeError(
-                f"Owner {owner} pagination cursor did not move backwards: "
+                "Players pagination cursor did not move backwards: "
                 f"{next_before_player_id} >= {before_player_id}"
             )
         before_player_id = next_before_player_id
+        batch_number += 1
 
     return players
 
@@ -251,57 +247,32 @@ def refresh_owner_player_data(
         """
     )
 
-    owners = [
-        str(row[0]).lower()
-        for row in connection.execute(
-            "SELECT DISTINCT wallet_address FROM players WHERE trim(wallet_address) != '' ORDER BY wallet_address"
-        ).fetchall()
-    ]
-    total_owners = len(owners)
-    total_batches = max(1, math.ceil(total_owners / STATUS_BATCH_SIZE))
+    database_player_ids = {
+        int(row[0])
+        for row in connection.execute("SELECT player_id FROM players").fetchall()
+    }
     print(
-        f"Contracts fetching started: {total_owners} owners, limit {PAGE_LIMIT}, "
-        f"workers {WORKERS}, retries {RETRIES}, delay {RETRY_DELAY_SECONDS}s",
+        f"Contracts fetching started: global player batches, limit {PAGE_LIMIT}, "
+        f"retries {RETRIES}, delay {RETRY_DELAY_SECONDS}s",
         flush=True,
     )
 
-    payloads: dict[str, list[dict[str, Any]]] = {}
-    completed = 0
-    total_players = 0
-    group_players = 0
-    with ThreadPoolExecutor(max_workers=max(1, min(WORKERS, total_owners))) as executor:
-        futures = {
-            executor.submit(fetch_owner_players, owner, owner_number, total_owners): owner
-            for owner_number, owner in enumerate(owners, start=1)
-        }
-        for future in as_completed(futures):
-            owner = futures[future]
-            items = future.result()
-            payloads[owner] = items
-            completed += 1
-            group_players += len(items)
-            total_players += len(items)
-            if completed % STATUS_BATCH_SIZE == 0 or completed == total_owners:
-                batch_number = math.ceil(completed / STATUS_BATCH_SIZE)
-                batch_start = max(1, completed - STATUS_BATCH_SIZE + 1)
-                print(
-                    f"Contracts {batch_number}/{total_batches}: owners {batch_start}-{completed}, "
-                    f"+{group_players}, total {total_players}",
-                    flush=True,
-                )
-                group_players = 0
-
+    payload = fetch_all_players()
     updates: list[tuple[Any, ...]] = []
     seen_players: set[int] = set()
-    for owner in owners:
-        for item in payloads.get(owner, []):
-            player_id = _player_id(item)
-            if player_id is None:
-                continue
-            if player_id in seen_players:
-                raise RuntimeError(f"Player {player_id} was returned for more than one owner")
-            seen_players.add(player_id)
-            updates.append((*_contract_values(item), player_id))
+    skipped_not_in_database = 0
+
+    for item in payload:
+        player_id = _player_id(item)
+        if player_id is None:
+            continue
+        if player_id in seen_players:
+            raise RuntimeError(f"Player {player_id} was returned more than once")
+        seen_players.add(player_id)
+        if player_id not in database_player_ids:
+            skipped_not_in_database += 1
+            continue
+        updates.append((*_contract_values(item), player_id))
 
     connection.executemany(
         """
@@ -318,7 +289,11 @@ def refresh_owner_player_data(
         """,
         updates,
     )
-    print(f"Contracts complete: {len(updates)} players", flush=True)
+    print(
+        f"Contracts complete: {len(updates)} database players updated, "
+        f"{skipped_not_in_database} API players skipped",
+        flush=True,
+    )
     return len(updates)
 
 
