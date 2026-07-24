@@ -105,7 +105,6 @@ class FlowOwnedSinceTests(unittest.TestCase):
         connection = sqlite3.connect(":memory:")
         ownership = {
             1: "0x0000000000000001",
-            2: None,
         }
 
         with patch("flow_owned_since.fetch_deposit_events", return_value=[]):
