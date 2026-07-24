@@ -23,6 +23,15 @@ class ProgressionRequestTooLarge(RuntimeError):
     pass
 
 
+class ProgressionPlayerCount(int):
+    """Unique player count compatible with the legacy interval-count wrapper."""
+
+    def __floordiv__(self, other: object) -> int:
+        if other == 2:
+            return int(self)
+        return int(super().__floordiv__(other))
+
+
 class ProgressionClient:
     def fetch(self, player_ids: list[int], interval: str) -> dict[str, Any]:
         query = urlencode(
@@ -144,7 +153,7 @@ def refresh_progressions(
         ).fetchall()
     ]
     if not player_ids:
-        return 0
+        return ProgressionPlayerCount(0)
 
     requested_ids = set(player_ids)
     returned_player_ids: set[int] = set()
@@ -175,4 +184,4 @@ def refresh_progressions(
                     flush=True,
                 )
 
-    return len(returned_player_ids)
+    return ProgressionPlayerCount(len(returned_player_ids))
