@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import sys
 import time
 
@@ -72,13 +73,15 @@ def install_flow_club_tolerance() -> None:
         )
         first = club_contract_rebuild.fetch_club_batch(0, FLOW_CLUB_BATCH_SIZE)
         total_supply = int(first.get("totalSupply") or 0)
-        clubs = list(first.get("clubs") or [])
+        first_clubs = list(first.get("clubs") or [])
+        clubs = list(first_clubs)
         offsets = list(range(FLOW_CLUB_BATCH_SIZE, total_supply, FLOW_CLUB_BATCH_SIZE))
-        total_batches = 1 + len(offsets) if total_supply else 1
-        completed_batches = 1
+        total_batches = max(1, math.ceil(total_supply / FLOW_CLUB_BATCH_SIZE))
+        total_returned = len(first_clubs)
+        first_end = min(FLOW_CLUB_BATCH_SIZE, total_supply)
         print(
-            f"Clubs batch {completed_batches}/{total_batches}: "
-            f"{min(FLOW_CLUB_BATCH_SIZE, total_supply)}/{total_supply} IDs checked",
+            f"Clubs 1/{total_batches}: IDs 1-{first_end}, "
+            f"+{len(first_clubs)}, total {total_returned}",
             flush=True,
         )
 
@@ -93,15 +96,19 @@ def install_flow_club_tolerance() -> None:
                     ): offset
                     for offset in offsets
                 }
+                completed_batches = 1
                 for future in club_contract_rebuild.as_completed(futures):
                     offset = futures[future]
                     batch = future.result()
-                    clubs.extend(batch.get("clubs") or [])
+                    batch_clubs = list(batch.get("clubs") or [])
+                    clubs.extend(batch_clubs)
                     completed_batches += 1
-                    checked = min(offset + FLOW_CLUB_BATCH_SIZE, total_supply)
+                    total_returned += len(batch_clubs)
+                    start_id = offset + 1
+                    end_id = min(offset + FLOW_CLUB_BATCH_SIZE, total_supply)
                     print(
-                        f"Clubs batch {completed_batches}/{total_batches}: "
-                        f"{checked}/{total_supply} IDs checked",
+                        f"Clubs {completed_batches}/{total_batches}: IDs {start_id}-{end_id}, "
+                        f"+{len(batch_clubs)}, total {total_returned}",
                         flush=True,
                     )
 
@@ -131,6 +138,7 @@ def install_flow_club_tolerance() -> None:
         club_lookup = {int(club["clubID"]): club for club in clubs}
         club_ids = sorted(club_lookup)
         total_clubs = len(club_ids)
+        total_status_batches = max(1, math.ceil(total_clubs / CONTRACT_STATUS_INTERVAL))
         print(
             f"Contracts fetching started: {total_clubs} clubs, workers {CONTRACT_WORKERS}, "
             f"retries {CONTRACT_RETRIES}, delay {CONTRACT_RETRY_DELAY_SECONDS}s",
@@ -139,18 +147,32 @@ def install_flow_club_tolerance() -> None:
 
         payloads: dict[int, list[dict[str, object]]] = {}
         worker_count = max(1, min(CONTRACT_WORKERS, total_clubs))
+        completed_group: list[int] = []
+        completed_groups = 0
+        total_players_returned = 0
         with club_contract_rebuild.ThreadPoolExecutor(max_workers=worker_count) as executor:
             futures = {
                 executor.submit(club_contract_rebuild.fetch_club_players, club_id): club_id
                 for club_id in club_ids
             }
-            completed = 0
             for future in club_contract_rebuild.as_completed(futures):
                 club_id = futures[future]
-                payloads[club_id] = future.result()
-                completed += 1
-                if completed % CONTRACT_STATUS_INTERVAL == 0 or completed == total_clubs:
-                    print(f"Contracts fetched: {completed}/{total_clubs} clubs", flush=True)
+                players = future.result()
+                payloads[club_id] = players
+                completed_group.append(club_id)
+                total_players_returned += len(players)
+
+                if len(completed_group) == CONTRACT_STATUS_INTERVAL or len(payloads) == total_clubs:
+                    completed_groups += 1
+                    start_id = min(completed_group)
+                    end_id = max(completed_group)
+                    group_players = sum(len(payloads[current_id]) for current_id in completed_group)
+                    print(
+                        f"Contracts {completed_groups}/{total_status_batches}: clubs {start_id}-{end_id}, "
+                        f"+{group_players}, total {total_players_returned}",
+                        flush=True,
+                    )
+                    completed_group = []
 
         updates: list[tuple[object, ...]] = []
         seen_players: set[int] = set()
