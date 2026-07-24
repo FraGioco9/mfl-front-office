@@ -105,8 +105,8 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
             )
             futures[future] = shard_number
 
+        completed_shards = 0
         for future in as_completed(futures):
-            shard_number = futures[future]
             shard_items = future.result()
             for item in shard_items:
                 player_id = owner_player_contract_sync._player_id(item)
@@ -118,8 +118,9 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
                         f"Player {player_id} was returned with conflicting data by multiple shards"
                     )
                 players[player_id] = item
+            completed_shards += 1
             print(
-                f"Player data shard {shard_number}/{len(ranges)} succeeded: "
+                f"Player data shard {completed_shards}/{len(ranges)} succeeded: "
                 f"{len(shard_items)} players",
                 flush=True,
             )
