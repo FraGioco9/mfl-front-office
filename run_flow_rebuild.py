@@ -35,50 +35,75 @@ from progression_rebuild import (
     PROGRESSION_WORKERS,
 )
 
-STATUS_BATCH_SIZE = 25
+FLOW_CLUB_BATCH_SIZE = 3000
+FLOW_CLUB_WORKERS = 20
+CONTRACT_WORKERS = 100
+CONTRACT_RETRIES = 3
+CONTRACT_RETRY_DELAY_SECONDS = 90
+CONTRACT_STATUS_INTERVAL = 25
 
 
-def install_club_request_retries() -> None:
-    original_request_json = club_contract_rebuild._request_json
+def install_contract_request_retries() -> None:
+    original_fetch_club_players = club_contract_rebuild.fetch_club_players
 
-    def request_json_with_forbidden_retry(request, *, label):
-        for attempt in range(club_contract_rebuild.MAX_REQUEST_RETRIES + 1):
+    def fetch_club_players_with_retries(club_id: int):
+        for attempt in range(CONTRACT_RETRIES + 1):
             try:
-                return original_request_json(request, label=label)
-            except RuntimeError as error:
-                is_forbidden = "returned HTTP 403" in str(error)
-                if not is_forbidden or attempt == club_contract_rebuild.MAX_REQUEST_RETRIES:
+                return original_fetch_club_players(club_id)
+            except RuntimeError:
+                if attempt == CONTRACT_RETRIES:
                     raise
-
-                delay = club_contract_rebuild.RETRY_DELAY_SECONDS * (attempt + 1)
                 print(
-                    f"{label} returned HTTP 403; retrying unchanged request in {delay:g}s "
-                    f"({attempt + 1}/{club_contract_rebuild.MAX_REQUEST_RETRIES})",
+                    f"Club {club_id} players request failed; retrying in "
+                    f"{CONTRACT_RETRY_DELAY_SECONDS}s ({attempt + 1}/{CONTRACT_RETRIES})",
                     flush=True,
                 )
-                time.sleep(delay)
+                time.sleep(CONTRACT_RETRY_DELAY_SECONDS)
+        raise RuntimeError(f"Club {club_id} players request failed after retries")
 
-        raise RuntimeError(f"{label} failed after retries")
-
-    club_contract_rebuild._request_json = request_json_with_forbidden_retry
+    club_contract_rebuild.fetch_club_players = fetch_club_players_with_retries
 
 
 def install_flow_club_tolerance() -> None:
     def fetch_returned_clubs() -> list[dict[str, object]]:
-        print("Clubs fetching started", flush=True)
-        first = club_contract_rebuild.fetch_club_batch(0, STATUS_BATCH_SIZE)
+        print(
+            f"Clubs fetching started: batch {FLOW_CLUB_BATCH_SIZE}, workers {FLOW_CLUB_WORKERS}",
+            flush=True,
+        )
+        first = club_contract_rebuild.fetch_club_batch(0, FLOW_CLUB_BATCH_SIZE)
         total_supply = int(first.get("totalSupply") or 0)
         clubs = list(first.get("clubs") or [])
-        completed = min(STATUS_BATCH_SIZE, total_supply)
-        print(f"Clubs fetched: {completed}/{total_supply}", flush=True)
+        offsets = list(range(FLOW_CLUB_BATCH_SIZE, total_supply, FLOW_CLUB_BATCH_SIZE))
+        total_batches = 1 + len(offsets) if total_supply else 1
+        completed_batches = 1
+        print(
+            f"Clubs batch {completed_batches}/{total_batches}: "
+            f"{min(FLOW_CLUB_BATCH_SIZE, total_supply)}/{total_supply} IDs checked",
+            flush=True,
+        )
 
-        offset = STATUS_BATCH_SIZE
-        while offset < total_supply:
-            batch = club_contract_rebuild.fetch_club_batch(offset, STATUS_BATCH_SIZE)
-            clubs.extend(batch.get("clubs") or [])
-            completed = min(offset + STATUS_BATCH_SIZE, total_supply)
-            print(f"Clubs fetched: {completed}/{total_supply}", flush=True)
-            offset += STATUS_BATCH_SIZE
+        if offsets:
+            worker_count = max(1, min(FLOW_CLUB_WORKERS, len(offsets)))
+            with club_contract_rebuild.ThreadPoolExecutor(max_workers=worker_count) as executor:
+                futures = {
+                    executor.submit(
+                        club_contract_rebuild.fetch_club_batch,
+                        offset,
+                        FLOW_CLUB_BATCH_SIZE,
+                    ): offset
+                    for offset in offsets
+                }
+                for future in club_contract_rebuild.as_completed(futures):
+                    offset = futures[future]
+                    batch = future.result()
+                    clubs.extend(batch.get("clubs") or [])
+                    completed_batches += 1
+                    checked = min(offset + FLOW_CLUB_BATCH_SIZE, total_supply)
+                    print(
+                        f"Clubs batch {completed_batches}/{total_batches}: "
+                        f"{checked}/{total_supply} IDs checked",
+                        flush=True,
+                    )
 
         by_id = {
             int(club["clubID"]): club
@@ -106,23 +131,26 @@ def install_flow_club_tolerance() -> None:
         club_lookup = {int(club["clubID"]): club for club in clubs}
         club_ids = sorted(club_lookup)
         total_clubs = len(club_ids)
-        print(f"Contracts fetching started: {total_clubs} clubs", flush=True)
+        print(
+            f"Contracts fetching started: {total_clubs} clubs, workers {CONTRACT_WORKERS}, "
+            f"retries {CONTRACT_RETRIES}, delay {CONTRACT_RETRY_DELAY_SECONDS}s",
+            flush=True,
+        )
 
         payloads: dict[int, list[dict[str, object]]] = {}
-        for start in range(0, total_clubs, STATUS_BATCH_SIZE):
-            batch_ids = club_ids[start:start + STATUS_BATCH_SIZE]
-            worker_count = max(1, min(club_contract_rebuild.CLUB_API_WORKERS, len(batch_ids)))
-            with club_contract_rebuild.ThreadPoolExecutor(max_workers=worker_count) as executor:
-                futures = {
-                    executor.submit(club_contract_rebuild.fetch_club_players, club_id): club_id
-                    for club_id in batch_ids
-                }
-                for future in club_contract_rebuild.as_completed(futures):
-                    club_id = futures[future]
-                    payloads[club_id] = future.result()
-
-            completed = min(start + STATUS_BATCH_SIZE, total_clubs)
-            print(f"Contracts fetched: {completed}/{total_clubs} clubs", flush=True)
+        worker_count = max(1, min(CONTRACT_WORKERS, total_clubs))
+        with club_contract_rebuild.ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = {
+                executor.submit(club_contract_rebuild.fetch_club_players, club_id): club_id
+                for club_id in club_ids
+            }
+            completed = 0
+            for future in club_contract_rebuild.as_completed(futures):
+                club_id = futures[future]
+                payloads[club_id] = future.result()
+                completed += 1
+                if completed % CONTRACT_STATUS_INTERVAL == 0 or completed == total_clubs:
+                    print(f"Contracts fetched: {completed}/{total_clubs} clubs", flush=True)
 
         updates: list[tuple[object, ...]] = []
         seen_players: set[int] = set()
@@ -206,7 +234,7 @@ def main() -> int:
     install_compact_rebuild_logs(sys.modules[__name__])
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
-    install_club_request_retries()
+    install_contract_request_retries()
     install_flow_club_tolerance()
     install_progression_player_count()
     install_next_overall_status()
