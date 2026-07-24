@@ -7,6 +7,7 @@ import rebuild_database
 from candidate_only_rebuild import install_candidate_only_rebuild
 from compact_rebuild_logs import install_compact_rebuild_logs
 from database_filename_config import install_database_filename_config
+from flow_metadata_config import install_flow_metadata_config
 from flow_only_player_rebuild import install_flow_only_player_rebuild
 from flow_worker_config import install_flow_worker_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
@@ -62,6 +63,7 @@ def main() -> int:
     install_candidate_only_rebuild(rebuild_database)
     install_safe_contract_columns()
     install_mfl_api_parallel_config(rebuild_database)
+    install_flow_metadata_config(rebuild_database)
     install_progression_player_count()
     install_next_overall_status()
     install_flow_only_player_rebuild(rebuild_database)
