@@ -91,9 +91,10 @@ jobs:
             gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
           } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
             [ -n "$RUN_ID" ] || continue
-            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select((.name == "mfl_database" or .name == "mfl_progression_database") and .expired == false) | .name' | head -n 1)"
             if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
               echo "$RUN_ID" > previous_database_run_id.txt
+              echo "$HAS_DATABASE_ARTIFACT" > previous_database_artifact_name.txt
               break
             fi
           done
@@ -103,8 +104,9 @@ jobs:
             exit 1
           fi
           DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
-          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
-          cp previous-database/*.db mfl_progression.db
+          DATABASE_ARTIFACT_NAME="$(cat previous_database_artifact_name.txt)"
+          gh run download "$DATABASE_RUN_ID" --name "$DATABASE_ARTIFACT_NAME" --dir previous-database
+          cp previous-database/*.db mfl_database.db
 
       - name: Test rebuild code
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
@@ -123,6 +125,7 @@ jobs:
             COMMAND+=(--ownership-start-height "${{ inputs.ownership_start_height }}")
           fi
           "${COMMAND[@]}"
+          cp mfl_database_candidate.db mfl_database.db
 
       - name: Send progression emails
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
@@ -136,7 +139,7 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
-        run: python send_progression_emails.py --previous-db previous-database/mfl_progression.db --current-db mfl_progression.db
+        run: python send_progression_emails.py --previous-db previous-database/*.db --current-db mfl_database.db
 
       - name: Export website data
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
@@ -146,8 +149,8 @@ jobs:
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: mfl_progression_database
-          path: mfl_progression.db
+          name: mfl_database
+          path: mfl_database.db
           if-no-files-found: error
 
       - name: Upload validation report
