@@ -76,7 +76,7 @@ def compact_message(message: str) -> str:
         ),
         (
             r"^Next Overall refresh complete: (\d+) players updated$",
-            r"Next Overall calculated for \1 players",
+            r"Next Overall calculated: \1 players",
         ),
         (
             r"^Flow database rebuild complete: (.+)$",
