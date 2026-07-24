@@ -72,11 +72,11 @@ def compact_message(message: str) -> str:
         ),
         (
             r"^Progression refresh complete: (\d+) interval rows updated$",
-            r"Progression complete: \1 updates",
+            r"Progression complete: \1 players",
         ),
         (
             r"^Next Overall refresh complete: (\d+) players updated$",
-            r"Next Overall: \1 players",
+            r"Next Overall calculated for \1 players",
         ),
         (
             r"^Flow database rebuild complete: (.+)$",
