@@ -122,6 +122,9 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
         try:
             with sqlite3.connect(args.candidate) as connection:
                 connection.row_factory = sqlite3.Row
+                connection.execute(
+                    "CREATE TABLE players (player_id INTEGER PRIMARY KEY)"
+                )
                 rebuild_module.ensure_state_table(connection)
                 wallet_names = rebuild_module.previous_wallet_names(connection)
                 ownership: dict[int, str] = {}
