@@ -14,6 +14,9 @@ rebuild.WALLET_BATCH_SIZE = 3000
 # Number of players requested in each progression API batch.
 rebuild.PROGRESSION_BATCH_SIZE = 1500
 
+# Keep progression requests capped at 80 per minute.
+rebuild.REQUESTS_PER_MINUTE = 80
+
 
 _latest_highest_player_id = rebuild.MIN_PLAYER_ID - 1
 _original_fetch_leaderboard = rebuild.fetch_leaderboard
@@ -53,7 +56,7 @@ def fetch_progressions_without_system_wallets(connection) -> None:
             """
             SELECT player_id
             FROM players
-            WHERE lower(wallet_address) NOT IN (?, ?)
+            WHERE lower(trim(wallet_address)) NOT IN (?, ?)
             ORDER BY player_id
             """,
             (rebuild.MFL_ADDRESS.lower(), rebuild.MFL_TRADE_ADDRESS.lower()),
@@ -70,9 +73,16 @@ def fetch_progressions_without_system_wallets(connection) -> None:
         for batch in batches
     ]
     completed_count = 0
+    total_tasks = len(tasks)
+
+    rebuild.log(
+        f"Progression progress 0/{total_tasks}: 0.0% complete, "
+        f"{len(ids)} players, {rebuild.PROGRESSION_BATCH_SIZE} per batch, "
+        f"{rebuild.REQUESTS_PER_MINUTE} requests/min"
+    )
 
     with ThreadPoolExecutor(
-        max_workers=min(rebuild.PROGRESSION_WORKERS, max(1, len(tasks)))
+        max_workers=min(rebuild.PROGRESSION_WORKERS, max(1, total_tasks))
     ) as executor:
         futures = {
             executor.submit(rebuild.progression_request, batch, interval, limiter): (
@@ -103,9 +113,10 @@ def fetch_progressions_without_system_wallets(connection) -> None:
             )
             connection.commit()
             completed_count += 1
+            percentage = (completed_count / total_tasks * 100) if total_tasks else 100.0
             rebuild.log(
-                f"Progression batch {completed_count}/{len(tasks)}: "
-                f"{interval}, {len(batch)} players"
+                f"Progression progress {completed_count}/{total_tasks}: "
+                f"{percentage:.1f}% complete, {interval}, {len(batch)} players"
             )
 
 
