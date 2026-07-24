@@ -92,10 +92,10 @@ class FlowOwnedSinceTests(unittest.TestCase):
         )
 
         values = dict(connection.execute("SELECT player_id, owned_since FROM players"))
-        self.assertEqual(values[1], 1_753_358_400_000)
+        self.assertEqual(values[1], 1_784_894_400_000)
         self.assertEqual(values[2], 222)
         self.assertIsNone(values[3])
-        self.assertEqual(values[4], 1_753_362_000_000)
+        self.assertEqual(values[4], 1_784_898_000_000)
         self.assertNotIn("owned_since", module.PRESERVED_COLUMNS)
 
         report = module.validate_database(connection=connection)
