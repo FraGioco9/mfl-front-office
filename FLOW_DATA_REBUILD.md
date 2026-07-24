@@ -120,7 +120,7 @@ These fields do not currently have a reliable live source in the rebuild:
 - Normal wallet collections: 100-wallet batches, up to 20 workers
 - MFL treasury membership: 3,000-ID batches, up to 20 workers
 - Owned since: no network requests; copied from the active database
-- Progression: 1,000-ID batches, 100 workers, three retries after the initial request, 70 seconds before each retry
+- Progression: 1,000-ID batches, 100 workers, three retries after the initial request, 90 seconds before each retry
 
 ## Validation and output
 
