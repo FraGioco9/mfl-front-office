@@ -18,6 +18,7 @@ from parallel_player_import import (
     PLAYER_IMPORT_WORKERS,
     install_parallel_player_import,
 )
+from player_data_request_logging import install_player_data_request_logging
 from progression_rebuild import (
     PROGRESSION_BATCH_SIZE,
     PROGRESSION_RETRIES,
@@ -73,6 +74,7 @@ def main() -> int:
     install_candidate_only_rebuild(rebuild_database)
     install_safe_contract_columns()
     install_mfl_api_parallel_config(rebuild_database)
+    install_player_data_request_logging()
     install_parallel_player_import()
     install_progression_player_count()
     install_next_overall_status()
@@ -90,12 +92,12 @@ def main() -> int:
         flush=True,
     )
     print(
-        "Player source: https://api.playmfl.com/players in parallel descending ID shards; "
+        "Player data source: https://api.playmfl.com/players in parallel descending ID shards; "
         "Flow supplies player_seasons only",
         flush=True,
     )
     print(
-        f"Player import settings: {PLAYER_IMPORT_SHARDS} shards, up to "
+        f"Player data import settings: {PLAYER_IMPORT_SHARDS} shards, up to "
         f"{PLAYER_IMPORT_WORKERS} parallel workers",
         flush=True,
     )
@@ -105,11 +107,11 @@ def main() -> int:
         flush=True,
     )
     print(
-        f"Flow season settings: up to {FLOW_PARALLEL_WORKERS} parallel requests",
+        f"Flow player season settings: up to {FLOW_PARALLEL_WORKERS} parallel requests",
         flush=True,
     )
     print(
-        f"Progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {MFL_API_WORKERS}, "
+        f"Player progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {MFL_API_WORKERS}, "
         f"retries {PROGRESSION_RETRIES}, delay {PROGRESSION_RETRY_DELAY_SECONDS}s",
         flush=True,
     )
