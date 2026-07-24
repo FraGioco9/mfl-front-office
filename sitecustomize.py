@@ -73,10 +73,11 @@ def fetch_progressions_without_system_wallets(connection) -> None:
         for batch in batches
     ]
     completed_count = 0
+    processed_players = 0
     total_tasks = len(tasks)
 
     rebuild.log(
-        f"Progression progress 0/{total_tasks}: 0.0% complete, "
+        f"Progression progress 0/{total_tasks}: "
         f"{len(ids)} players, {rebuild.PROGRESSION_BATCH_SIZE} per batch, "
         f"{rebuild.REQUESTS_PER_MINUTE} requests/min"
     )
@@ -113,10 +114,10 @@ def fetch_progressions_without_system_wallets(connection) -> None:
             )
             connection.commit()
             completed_count += 1
-            percentage = (completed_count / total_tasks * 100) if total_tasks else 100.0
+            processed_players += len(batch)
             rebuild.log(
                 f"Progression progress {completed_count}/{total_tasks}: "
-                f"{percentage:.1f}% complete, {interval}, {len(batch)} players"
+                f"{interval}, {processed_players} total players"
             )
 
 
