@@ -1,5 +1,7 @@
 """Project-wide Python startup overrides for the database rebuild."""
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import fresh_mfl_database_rebuild as rebuild
 
 
@@ -14,10 +16,8 @@ rebuild.PROGRESSION_BATCH_SIZE = 1500
 
 
 _latest_highest_player_id = rebuild.MIN_PLAYER_ID - 1
-_excluded_player_ids: set[int] = set()
 _original_fetch_leaderboard = rebuild.fetch_leaderboard
 _original_build_current_ownership = rebuild.build_current_ownership
-_original_fetch_all_players = rebuild.fetch_all_players
 _original_log = rebuild.log
 
 
@@ -36,37 +36,80 @@ def fetch_leaderboard_with_highest_id():
 
 
 def build_current_ownership_with_blanks(wallet_players):
-    system_addresses = {rebuild.MFL_ADDRESS, rebuild.MFL_TRADE_ADDRESS}
-
-    for address in system_addresses:
-        _excluded_player_ids.update(wallet_players.get(address, []))
-
-    filtered_wallet_players = {
-        address: player_ids
-        for address, player_ids in wallet_players.items()
-        if address not in system_addresses
-    }
-    ownership, duplicates = _original_build_current_ownership(filtered_wallet_players)
+    ownership, duplicates = _original_build_current_ownership(wallet_players)
     highest_owned_id = max(ownership, default=rebuild.MIN_PLAYER_ID - 1)
     highest_player_id = max(_latest_highest_player_id, highest_owned_id)
 
     for player_id in range(rebuild.MIN_PLAYER_ID, highest_player_id + 1):
-        if player_id not in _excluded_player_ids:
-            ownership.setdefault(player_id, "")
+        ownership.setdefault(player_id, "")
 
     return ownership, duplicates
 
 
-def fetch_all_players_without_system_wallets(*args, **kwargs):
-    players = _original_fetch_all_players(*args, **kwargs)
-    return {
-        player_id: player
-        for player_id, player in players.items()
-        if player_id not in _excluded_player_ids
-    }
+def fetch_progressions_without_system_wallets(connection) -> None:
+    ids = [
+        int(row[0])
+        for row in connection.execute(
+            """
+            SELECT player_id
+            FROM players
+            WHERE wallet_address NOT IN (?, ?)
+            ORDER BY player_id
+            """,
+            (rebuild.MFL_ADDRESS, rebuild.MFL_TRADE_ADDRESS),
+        )
+    ]
+    batches = rebuild.chunks(ids, rebuild.PROGRESSION_BATCH_SIZE)
+    limiter = rebuild.RateLimiter(rebuild.REQUESTS_PER_MINUTE)
+    tasks = [
+        (interval, suffix, batch)
+        for interval, suffix in (
+            ("ALL", "all"),
+            ("CURRENT_SEASON", "current_season"),
+        )
+        for batch in batches
+    ]
+    completed_count = 0
+
+    with ThreadPoolExecutor(
+        max_workers=min(rebuild.PROGRESSION_WORKERS, max(1, len(tasks)))
+    ) as executor:
+        futures = {
+            executor.submit(rebuild.progression_request, batch, interval, limiter): (
+                interval,
+                suffix,
+                batch,
+            )
+            for interval, suffix, batch in tasks
+        }
+        for future in as_completed(futures):
+            interval, suffix, batch = futures[future]
+            data = future.result()
+            rows = [
+                tuple(
+                    rebuild.progression_value(data.get(str(player_id)), attribute)
+                    for attribute in rebuild.ATTRIBUTES
+                )
+                + (player_id,)
+                for player_id in batch
+            ]
+            assignments = ", ".join(
+                f"{attribute}_prog_{suffix} = ?"
+                for attribute in rebuild.ATTRIBUTES
+            )
+            connection.executemany(
+                f"UPDATE players SET {assignments} WHERE player_id = ?",
+                rows,
+            )
+            connection.commit()
+            completed_count += 1
+            rebuild.log(
+                f"Progression batch {completed_count}/{len(tasks)}: "
+                f"{interval}, {len(batch)} players"
+            )
 
 
 rebuild.log = log_without_player_rows
 rebuild.fetch_leaderboard = fetch_leaderboard_with_highest_id
 rebuild.build_current_ownership = build_current_ownership_with_blanks
-rebuild.fetch_all_players = fetch_all_players_without_system_wallets
+rebuild.fetch_progressions = fetch_progressions_without_system_wallets
