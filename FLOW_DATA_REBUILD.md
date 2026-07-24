@@ -30,20 +30,22 @@ Fetched directly from Flow player metadata and written to `players`:
 - `defense`
 - `physical`
 - `goalkeeping`
+- `player_seasons` from Flow `PlayerData.season`
 
-Flow also returns `season` and `ageAtMint`, but the live `season` value is currently uniform across players and therefore cannot be used as a mint-season value. The rebuild does not calculate `player_seasons` from it.
+The player-seasons formula is direct:
 
-For existing players:
+```text
+player_seasons = Flow PlayerData.season
+```
 
-- `age` is preserved from the previous active database;
-- `player_seasons` is preserved from the previous active database.
+For example, when Flow returns `season = 15` for player `59073`, the rebuilt row stores `player_seasons = 15`. The value is not treated as a mint-season number and is not compared with a separate current season.
 
-For genuinely new players with no previous row:
+Age is handled separately:
 
-- `age` starts from Flow `ageAtMint`;
-- `player_seasons` starts at `1`.
+- for existing players, `age` is preserved from the previous active database;
+- for genuinely new players, `age` starts from Flow `ageAtMint`.
 
-Validation records the number and distribution of Flow `season` values so a future change in its semantics can be detected without silently overwriting trusted data.
+The rebuild fails when Flow `season` is missing, invalid, or not positive. Validation records the number and distribution of Flow `season` values and confirms that every rebuilt `player_seasons` value is present and positive.
 
 Fetched from current Flow wallet collections:
 
@@ -100,7 +102,6 @@ Calculated locally rather than fetched:
 Copied from the previous database because the rebuild does not currently fetch a reliable live source:
 
 - `age`
-- `player_seasons`
 - `retirement_years`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
@@ -121,7 +122,6 @@ Both names are forced into the rebuilt wallet-name map. Players held by either a
 The following values are copied unchanged from the previous database:
 
 - `age`
-- `player_seasons`
 - `retirement_years`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
@@ -163,7 +163,7 @@ A player found in two wallet collections causes the rebuild to fail. When fewer 
 
 After the sealed ownership snapshot is known, the rebuild scans all available `MFLPlayer.Deposit` events from block height `0` through that sealed block. Events are ordered by block height, transaction index, and event index. The latest event for every player must point to the same wallet as the current ownership snapshot.
 
-The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, the Flow `season` distribution, the full `owned_since` event range, event count, populated count, unresolved-owner IDs, missing-event IDs, owner-mismatch IDs, and invalid-timestamp IDs.
+The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, the Flow `season` distribution and player-season source, the full `owned_since` event range, event count, populated count, unresolved-owner IDs, missing-event IDs, owner-mismatch IDs, and invalid-timestamp IDs.
 
 A complete live candidate run is required to confirm that the configured Flow endpoint can serve the entire historical event range, including older Flow sporks.
 
