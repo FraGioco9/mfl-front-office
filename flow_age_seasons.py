@@ -41,27 +41,45 @@ def age_at_mint_from_flow(player: Any) -> int:
     return age_at_mint
 
 
-def player_seasons_from_flow(player: Any) -> int:
+def mint_season_from_flow(player: Any) -> int:
     raw_season = getattr(player, "season", None)
     if raw_season is None:
         raise RuntimeError(f"Flow season missing for player {player.player_id}")
 
     try:
-        player_seasons = int(raw_season)
+        mint_season = int(raw_season)
     except (TypeError, ValueError):
         raise RuntimeError(
             f"Flow season is invalid for player {player.player_id}: {raw_season!r}"
         ) from None
 
+    if mint_season <= 0:
+        raise RuntimeError(
+            f"Flow season must be positive for player {player.player_id}: {mint_season}"
+        )
+    return mint_season
+
+
+def current_flow_season(flow_players: dict[int, Any]) -> int:
+    seasons = [mint_season_from_flow(player) for player in flow_players.values()]
+    if not seasons:
+        raise RuntimeError("Flow returned no player season values")
+    return max(seasons)
+
+
+def player_seasons_from_flow(player: Any, current_season: int) -> int:
+    mint_season = mint_season_from_flow(player)
+    player_seasons = current_season - mint_season + 1
     if player_seasons <= 0:
         raise RuntimeError(
-            f"Flow season must be positive for player {player.player_id}: {player_seasons}"
+            f"Flow season {mint_season} is after current season {current_season} "
+            f"for player {player.player_id}"
         )
     return player_seasons
 
 
-def age_from_flow(player: Any) -> int:
-    return age_at_mint_from_flow(player) + player_seasons_from_flow(player) - 1
+def age_from_flow(player: Any, current_season: int) -> int:
+    return age_at_mint_from_flow(player) + player_seasons_from_flow(player, current_season) - 1
 
 
 def install_age_season_hook(rebuild_module: ModuleType) -> None:
@@ -76,6 +94,7 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
 
     state: dict[str, Any] = {
         "summary": None,
+        "current_season": None,
         "players_written": 0,
         "expected_values": {},
     }
@@ -88,10 +107,11 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
         wallet_names,
     ) -> None:
         state["summary"] = flow_season_summary(flow_players)
+        state["current_season"] = current_flow_season(flow_players)
         state["expected_values"] = {
             int(player_id): (
-                age_from_flow(player),
-                player_seasons_from_flow(player),
+                age_from_flow(player, state["current_season"]),
+                player_seasons_from_flow(player, state["current_season"]),
             )
             for player_id, player in flow_players.items()
         }
@@ -121,6 +141,11 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
             rebuild_module.build_player_row = previous_builder
 
         state["players_written"] = len(flow_players)
+        print(
+            f"Flow seasons: current season {state['current_season']}; "
+            "player seasons calculated from mint season",
+            flush=True,
+        )
 
     def validate_database(*args: Any, **kwargs: Any) -> dict[str, Any]:
         connection = args[0] if args else kwargs["connection"]
@@ -174,10 +199,11 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "flow_season_maximum": summary["maximum"],
                 "flow_season_counts": summary["counts"],
                 "flow_season_uniform": summary["uniform"],
-                "age_source": "flow_ageAtMint_and_player_data_season",
-                "age_formula": "age = Flow metadata ageAtMint + Flow PlayerData.season - 1",
-                "player_seasons_source": "flow_player_data_season",
-                "player_seasons_formula": "player_seasons = Flow PlayerData.season",
+                "current_flow_season": state["current_season"],
+                "age_source": "flow_ageAtMint_and_mint_season",
+                "age_formula": "age = Flow ageAtMint + current Flow season - Flow mint season",
+                "player_seasons_source": "flow_mint_season_relative_to_current_season",
+                "player_seasons_formula": "player_seasons = current Flow season - Flow mint season + 1",
                 "age_refreshed_every_run": True,
                 "player_seasons_refreshed_every_run": True,
                 "ages_written_from_flow": state["players_written"],
