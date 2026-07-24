@@ -41,10 +41,7 @@ class FlowOwnedSinceTests(unittest.TestCase):
         )
 
     def test_event_windows_cover_full_range(self):
-        self.assertEqual(
-            event_windows(0, 10, window_size=4),
-            [(0, 3), (4, 7), (8, 10)],
-        )
+        self.assertEqual(event_windows(0, 10, window_size=4), [(0, 3), (4, 7), (8, 10)])
 
     def test_backfills_all_resolved_players_even_when_owner_unchanged(self):
         module = self.make_module()
@@ -68,11 +65,7 @@ class FlowOwnedSinceTests(unittest.TestCase):
         ]
 
         with patch("flow_owned_since.fetch_deposit_events", return_value=deposits) as fetch:
-            module.replay_ownership_deposits(
-                ownership,
-                start_height=999,
-                end_height=2000,
-            )
+            module.replay_ownership_deposits(ownership, start_height=999, end_height=2000)
 
         fetch.assert_called_once_with(OWNED_SINCE_EVENT_START_HEIGHT, 2000)
         module.replace_players(
@@ -103,16 +96,10 @@ class FlowOwnedSinceTests(unittest.TestCase):
         module = self.make_module()
         install_owned_since_hook(module)
         connection = sqlite3.connect(":memory:")
-        ownership = {
-            1: "0x0000000000000001",
-        }
+        ownership = {1: "0x0000000000000001"}
 
         with patch("flow_owned_since.fetch_deposit_events", return_value=[]):
-            module.replay_ownership_deposits(
-                ownership,
-                start_height=500,
-                end_height=1000,
-            )
+            module.replay_ownership_deposits(ownership, start_height=500, end_height=1000)
 
         module.replace_players(
             connection,
@@ -146,11 +133,7 @@ class FlowOwnedSinceTests(unittest.TestCase):
         ]
 
         with patch("flow_owned_since.fetch_deposit_events", return_value=deposits):
-            module.replay_ownership_deposits(
-                ownership,
-                start_height=500,
-                end_height=1000,
-            )
+            module.replay_ownership_deposits(ownership, start_height=500, end_height=1000)
 
         module.replace_players(
             connection,
