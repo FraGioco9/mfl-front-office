@@ -53,10 +53,10 @@ def fetch_progressions_without_system_wallets(connection) -> None:
             """
             SELECT player_id
             FROM players
-            WHERE wallet_address NOT IN (?, ?)
+            WHERE lower(wallet_address) NOT IN (?, ?)
             ORDER BY player_id
             """,
-            (rebuild.MFL_ADDRESS, rebuild.MFL_TRADE_ADDRESS),
+            (rebuild.MFL_ADDRESS.lower(), rebuild.MFL_TRADE_ADDRESS.lower()),
         )
     ]
     batches = rebuild.chunks(ids, rebuild.PROGRESSION_BATCH_SIZE)
