@@ -146,9 +146,10 @@ def refresh_progressions(
     if not player_ids:
         return 0
 
+    requested_ids = set(player_ids)
+    returned_player_ids: set[int] = set()
     client = ProgressionClient()
     batches = chunks(player_ids, batch_size)
-    total_updates = 0
 
     for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season")):
         completed = 0
@@ -160,11 +161,18 @@ def refresh_progressions(
             for future in as_completed(future_to_batch):
                 batch = future_to_batch[future]
                 progressions = future.result()
-                total_updates += update_progression_rows(connection, batch, progressions, suffix)
+                for raw_player_id in progressions:
+                    try:
+                        player_id = int(raw_player_id)
+                    except (TypeError, ValueError):
+                        continue
+                    if player_id in requested_ids:
+                        returned_player_ids.add(player_id)
+                update_progression_rows(connection, batch, progressions, suffix)
                 completed += 1
                 print(
                     f"Progression {interval} batch {completed}/{len(batches)}: updated {len(batch)} players",
                     flush=True,
                 )
 
-    return total_updates
+    return len(returned_player_ids)
