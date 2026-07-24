@@ -1,6 +1,6 @@
 # Flow data rebuild
 
-This pipeline builds and validates `mfl_progression_candidate.db` while leaving the active `mfl_progression.db` unchanged.
+This pipeline builds and validates `mfl_database_candidate.db` while leaving the active `mfl_database.db` unchanged.
 
 ## Sources and order
 
@@ -11,6 +11,7 @@ This pipeline builds and validates `mfl_progression_candidate.db` while leaving 
 5. Preserve `owned_since` from the active database without querying Deposit events.
 6. Refresh `ALL` and `CURRENT_SEASON` progression from the MFL progression endpoint.
 7. Recalculate Next Overall fields locally.
+8. Rebuild the clubs table from Flow and refresh current player contracts from each club players endpoint.
 
 ## Fields fetched from Flow player metadata
 
@@ -103,16 +104,25 @@ Players in the MFL and MFL Trade wallets are excluded from progression requests.
 - `physical_to_next_overall`
 - `goalkeeping_to_next_overall`
 
+## Contract fields refreshed from club APIs
+
+The previous contract columns are renamed and refreshed:
+
+- `revenue_share`
+- `club_id`
+- `club_name`
+- `club_division`
+- `total_revenue_share`
+- `games_played`
+
+All contract values are cleared before current club rosters are imported, preventing stale assignments.
+
 ## Still preserved from the active database
 
 These fields do not currently have a reliable live source in the rebuild:
 
 - `owned_since`
 - `retirement_years`
-- `active_contract_revenue_share`
-- `active_contract_club_id`
-- `active_contract_club_name`
-- `active_contract_club_division`
 
 ## Concurrency and retries
 
@@ -134,7 +144,7 @@ Total time: 42m 7s
 
 After successful validation:
 
-- `mfl_progression_candidate.db` contains the rebuilt result;
-- `mfl_progression.db` remains byte-for-byte unchanged;
+- `mfl_database_candidate.db` contains the rebuilt result;
+- `mfl_database.db` remains byte-for-byte unchanged;
 - `flow_rebuild_validation.json` contains the validation report;
-- the GitHub workflow uploads the candidate as `mfl_progression_candidate_database`.
+- the GitHub workflow uploads the candidate as `mfl_database_candidate`.
