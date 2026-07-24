@@ -24,7 +24,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
 
     def test_player_59073_uses_flow_age_and_season_formula(self):
         player = FlowPlayer(59073, {"ageAtMint": 19}, 15)
-        self.assertEqual(age_from_flow(player), 34)
+        self.assertEqual(age_from_flow(player), 33)
         self.assertEqual(player_seasons_from_flow(player), 15)
 
     def test_hook_refreshes_age_and_player_seasons_from_flow_every_run(self):
@@ -81,7 +81,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         rows = connection.execute(
             "SELECT player_id, age, player_seasons FROM players ORDER BY player_id"
         ).fetchall()
-        self.assertEqual(rows, [(42, 32, 12), (59073, 34, 15)])
+        self.assertEqual(rows, [(42, 31, 12), (59073, 33, 15)])
         self.assertNotIn("age", module.PRESERVED_COLUMNS)
         self.assertNotIn("player_seasons", module.PRESERVED_COLUMNS)
 
@@ -90,7 +90,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         self.assertEqual(report["age_source"], "flow_ageAtMint_and_player_data_season")
         self.assertEqual(
             report["age_formula"],
-            "age = Flow metadata ageAtMint + Flow PlayerData.season",
+            "age = Flow metadata ageAtMint + Flow PlayerData.season - 1",
         )
         self.assertEqual(report["player_seasons_source"], "flow_player_data_season")
         self.assertTrue(report["age_refreshed_every_run"])
@@ -121,7 +121,7 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         )
         connection.executemany(
             "INSERT INTO players VALUES (?, ?, ?)",
-            [(42, None, 15), (59073, 34, 0)],
+            [(42, None, 15), (59073, 33, 0)],
         )
 
         report = module.validate_database(connection=connection)
