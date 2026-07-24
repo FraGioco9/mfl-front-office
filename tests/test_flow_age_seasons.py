@@ -3,6 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from flow_age_seasons import (
+    age_from_flow,
     flow_season_summary,
     install_age_season_hook,
     player_seasons_from_flow,
@@ -21,11 +22,12 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         self.assertEqual(summary["distinct"], 1)
         self.assertEqual(summary["counts"], {15: 2})
 
-    def test_player_59073_uses_flow_season_directly(self):
+    def test_player_59073_uses_flow_age_and_season_directly(self):
         player = FlowPlayer(59073, {"ageAtMint": 19}, 15)
+        self.assertEqual(age_from_flow(player), 19)
         self.assertEqual(player_seasons_from_flow(player), 15)
 
-    def test_hook_preserves_age_but_overwrites_player_seasons_from_flow(self):
+    def test_hook_overwrites_age_and_player_seasons_from_flow(self):
         module = SimpleNamespace()
         module.PRESERVED_COLUMNS = ["age", "retirement_years", "player_seasons"]
         module.PLAYER_COLUMNS = ["player_id", "age", "player_seasons"]
@@ -35,8 +37,8 @@ class FlowAgeSeasonsTests(unittest.TestCase):
             old = old or {}
             return (
                 player.player_id,
-                old.get("age", int(player.metadata["ageAtMint"])),
-                old.get("player_seasons", 1),
+                old.get("age"),
+                old.get("player_seasons"),
             )
 
         def replace_players(connection, flow_players, ownership, old_rows, wallet_names):
@@ -79,26 +81,29 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         rows = connection.execute(
             "SELECT player_id, age, player_seasons FROM players ORDER BY player_id"
         ).fetchall()
-        self.assertEqual(rows, [(42, 25, 12), (59073, 24, 15)])
-        self.assertIn("age", module.PRESERVED_COLUMNS)
+        self.assertEqual(rows, [(42, 20, 12), (59073, 19, 15)])
+        self.assertNotIn("age", module.PRESERVED_COLUMNS)
         self.assertNotIn("player_seasons", module.PRESERVED_COLUMNS)
 
         report = module.validate_database(connection=connection)
         self.assertTrue(report["valid"])
+        self.assertEqual(report["age_source"], "flow_player_metadata_ageAtMint")
+        self.assertEqual(report["age_formula"], "age = Flow metadata ageAtMint")
         self.assertEqual(report["player_seasons_source"], "flow_player_data_season")
-        self.assertEqual(
-            report["player_seasons_formula"],
-            "player_seasons = Flow PlayerData.season",
-        )
+        self.assertEqual(report["ages_written_from_flow"], 2)
         self.assertEqual(report["player_seasons_written_from_flow"], 2)
 
-    def test_missing_or_non_positive_flow_season_fails(self):
+    def test_missing_or_non_positive_flow_values_fail(self):
+        with self.assertRaisesRegex(RuntimeError, "ageAtMint missing"):
+            age_from_flow(FlowPlayer(59073, {}, 15))
+        with self.assertRaisesRegex(RuntimeError, "ageAtMint must be positive"):
+            age_from_flow(FlowPlayer(59073, {"ageAtMint": 0}, 15))
         with self.assertRaisesRegex(RuntimeError, "season missing"):
             player_seasons_from_flow(FlowPlayer(59073, {"ageAtMint": 19}, None))
-        with self.assertRaisesRegex(RuntimeError, "must be positive"):
+        with self.assertRaisesRegex(RuntimeError, "season must be positive"):
             player_seasons_from_flow(FlowPlayer(59073, {"ageAtMint": 19}, 0))
 
-    def test_missing_age_or_invalid_player_seasons_fail_validation(self):
+    def test_invalid_age_or_player_seasons_fail_validation(self):
         module = SimpleNamespace()
         module.PRESERVED_COLUMNS = ["age", "player_seasons"]
         module.replace_players = lambda *args, **kwargs: None
@@ -111,12 +116,12 @@ class FlowAgeSeasonsTests(unittest.TestCase):
         )
         connection.executemany(
             "INSERT INTO players VALUES (?, ?, ?)",
-            [(42, None, 15), (59073, 24, 0)],
+            [(42, None, 15), (59073, 19, 0)],
         )
 
         report = module.validate_database(connection=connection)
         self.assertFalse(report["valid"])
-        self.assertEqual(report["missing_age"], 1)
+        self.assertEqual(report["invalid_age"], 1)
         self.assertEqual(report["invalid_player_seasons"], 1)
 
 
