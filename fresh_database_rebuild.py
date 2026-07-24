@@ -34,6 +34,7 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
         database_max_id = int(
             connection.execute("SELECT MAX(player_id) FROM players").fetchone()[0] or 0
         )
+        expected_database_max_id = max(flow_player_ids) if flow_player_ids else 0
         ownerless_count = int(
             connection.execute(
                 "SELECT COUNT(*) FROM players WHERE trim(wallet_address) = ''"
@@ -64,13 +65,14 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
 
         if row_count != len(flow_player_ids):
             errors.append(
-                f"Database rows {row_count} do not match Flow players {len(flow_player_ids)}"
+                f"Database rows {row_count} do not match Flow-season players {len(flow_player_ids)}"
             )
         if distinct_count != row_count:
             errors.append("Duplicate player IDs were created")
-        if database_max_id != highest_player_id:
+        if database_max_id != expected_database_max_id:
             errors.append(
-                f"Database max ID {database_max_id} does not match API max ID {highest_player_id}"
+                f"Database max ID {database_max_id} does not match highest included player ID "
+                f"{expected_database_max_id}"
             )
         if ownerless_count:
             errors.append(f"{ownerless_count} players have no wallet owner")
@@ -85,7 +87,7 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
                 f"{len(missing_ownership_ids)} players were not covered by Flow deposit events"
             )
         if missing_basic_count:
-            errors.append(f"{missing_basic_count} players have missing Flow basic data")
+            errors.append(f"{missing_basic_count} players have missing basic data")
         if missing_progression_count:
             errors.append(
                 f"{missing_progression_count} non-MFL players have missing progression"
@@ -93,7 +95,8 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
 
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "highest_player_id": highest_player_id,
+            "highest_api_player_id": highest_player_id,
+            "highest_included_player_id": expected_database_max_id,
             "database_max_player_id": database_max_id,
             "flow_player_count": len(flow_player_ids),
             "database_player_count": row_count,
@@ -130,14 +133,11 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
                 ownership: dict[int, str] = {}
 
                 highest_player_id = args.max_player_id or rebuild_module.get_highest_player_id()
-                print(f"Highest player ID: {highest_player_id}", flush=True)
                 flow_players = rebuild_module.fetch_all_players(
                     highest_player_id, args.flow_batch_size
                 )
-                if highest_player_id not in flow_players:
-                    raise RuntimeError(
-                        f"Highest API player ID {highest_player_id} was not returned by Flow"
-                    )
+                if not flow_players:
+                    raise RuntimeError("No players with usable Flow season data were returned")
 
                 latest_height = rebuild_module.get_latest_sealed_block_height()
                 ownership, deposit_count, ownership_event_player_ids = (
@@ -149,7 +149,7 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
                     )
                 )
                 print(
-                    f"Flow ownership replay complete: applied {deposit_count} deposits",
+                    f"Ownership pull complete: {deposit_count} players",
                     flush=True,
                 )
 
@@ -158,17 +158,18 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
                 )
                 rebuild_module.rebuild_wallets(connection, wallet_names)
 
+                print("Progression pull started", flush=True)
                 progression_updates = rebuild_module.refresh_progressions(
                     connection, workers=args.progression_workers
                 )
                 print(
-                    f"Progression refresh complete: {progression_updates} players updated",
+                    f"Progression pull complete: {progression_updates} players",
                     flush=True,
                 )
 
                 next_overall_updates = rebuild_module.update_next_overall_columns(connection)
                 print(
-                    f"Next Overall refresh complete: {next_overall_updates} players updated",
+                    f"Next Overall complete: {next_overall_updates} players",
                     flush=True,
                 )
 
@@ -202,11 +203,7 @@ def install_fresh_database_rebuild(rebuild_module: ModuleType) -> None:
                     )
 
             os.replace(args.candidate, args.database)
-            print(f"Flow database rebuild complete: {args.database}", flush=True)
-            print(
-                f"Validation report: {rebuild_module.VALIDATION_REPORT_PATH}",
-                flush=True,
-            )
+            print(f"Rebuild complete: {args.database}", flush=True)
             print(f"Total time: {int(time.monotonic() - started_at)}s", flush=True)
             return 0
         except Exception as error:
