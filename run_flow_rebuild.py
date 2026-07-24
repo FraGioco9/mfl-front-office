@@ -16,6 +16,7 @@ from flow_mfl_wallet_membership import (
     MFL_MEMBERSHIP_BATCH_SIZE,
     install_mfl_wallet_membership_hook,
 )
+from flow_owned_since import install_owned_since_hook
 from flow_wallet_ownership import (
     FLOW_WALLET_BATCH_SIZE,
     install_wallet_ownership_hook,
@@ -75,6 +76,7 @@ def main() -> int:
     install_mfl_wallet_config(rebuild_database)
     install_age_season_hook(rebuild_database)
     install_ownership_tolerance(rebuild_database)
+    install_owned_since_hook(rebuild_database)
     return rebuild_database.main()
 
 
