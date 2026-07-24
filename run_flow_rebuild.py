@@ -35,6 +35,8 @@ from progression_rebuild import (
     PROGRESSION_WORKERS,
 )
 
+STATUS_BATCH_SIZE = 25
+
 
 def install_club_request_retries() -> None:
     original_request_json = club_contract_rebuild._request_json
@@ -64,15 +66,19 @@ def install_club_request_retries() -> None:
 def install_flow_club_tolerance() -> None:
     def fetch_returned_clubs() -> list[dict[str, object]]:
         print("Clubs fetching started", flush=True)
-        first = club_contract_rebuild.fetch_club_batch(0)
+        first = club_contract_rebuild.fetch_club_batch(0, STATUS_BATCH_SIZE)
         total_supply = int(first.get("totalSupply") or 0)
         clubs = list(first.get("clubs") or [])
-        offset = club_contract_rebuild.FLOW_CLUB_BATCH_SIZE
+        completed = min(STATUS_BATCH_SIZE, total_supply)
+        print(f"Clubs fetched: {completed}/{total_supply}", flush=True)
 
+        offset = STATUS_BATCH_SIZE
         while offset < total_supply:
-            batch = club_contract_rebuild.fetch_club_batch(offset)
+            batch = club_contract_rebuild.fetch_club_batch(offset, STATUS_BATCH_SIZE)
             clubs.extend(batch.get("clubs") or [])
-            offset += club_contract_rebuild.FLOW_CLUB_BATCH_SIZE
+            completed = min(offset + STATUS_BATCH_SIZE, total_supply)
+            print(f"Clubs fetched: {completed}/{total_supply}", flush=True)
+            offset += STATUS_BATCH_SIZE
 
         by_id = {
             int(club["clubID"]): club
@@ -83,13 +89,93 @@ def install_flow_club_tolerance() -> None:
         print(f"Clubs complete: {len(returned_clubs)} clubs", flush=True)
         return returned_clubs
 
-    original_refresh_contracts = club_contract_rebuild.refresh_club_contracts
-
     def refresh_contracts_with_status(connection, clubs):
-        print(f"Contracts fetching started: {len(clubs)} clubs", flush=True)
-        updated_players = original_refresh_contracts(connection, clubs)
-        print(f"Contracts complete: {updated_players} players", flush=True)
-        return updated_players
+        club_contract_rebuild.ensure_contract_columns(connection)
+        connection.execute(
+            """
+            UPDATE players
+            SET revenue_share = NULL,
+                club_id = NULL,
+                club_name = NULL,
+                club_division = NULL,
+                total_revenue_share = NULL,
+                games_played = NULL
+            """
+        )
+
+        club_lookup = {int(club["clubID"]): club for club in clubs}
+        club_ids = sorted(club_lookup)
+        total_clubs = len(club_ids)
+        print(f"Contracts fetching started: {total_clubs} clubs", flush=True)
+
+        payloads: dict[int, list[dict[str, object]]] = {}
+        for start in range(0, total_clubs, STATUS_BATCH_SIZE):
+            batch_ids = club_ids[start:start + STATUS_BATCH_SIZE]
+            worker_count = max(1, min(club_contract_rebuild.CLUB_API_WORKERS, len(batch_ids)))
+            with club_contract_rebuild.ThreadPoolExecutor(max_workers=worker_count) as executor:
+                futures = {
+                    executor.submit(club_contract_rebuild.fetch_club_players, club_id): club_id
+                    for club_id in batch_ids
+                }
+                for future in club_contract_rebuild.as_completed(futures):
+                    club_id = futures[future]
+                    payloads[club_id] = future.result()
+
+            completed = min(start + STATUS_BATCH_SIZE, total_clubs)
+            print(f"Contracts fetched: {completed}/{total_clubs} clubs", flush=True)
+
+        updates: list[tuple[object, ...]] = []
+        seen_players: set[int] = set()
+        for club_id in sorted(payloads):
+            club = club_lookup[club_id]
+            for item in payloads[club_id]:
+                player_id = club_contract_rebuild._player_id(item)
+                if player_id is None:
+                    continue
+                if player_id in seen_players:
+                    raise RuntimeError(f"Player {player_id} was returned by more than one club")
+                seen_players.add(player_id)
+
+                contract = item.get("activeContract")
+                if not isinstance(contract, dict):
+                    fallback_contract = item.get("contract")
+                    contract = fallback_contract if isinstance(fallback_contract, dict) else {}
+                stats = item.get("stats") if isinstance(item.get("stats"), dict) else {}
+
+                updates.append(
+                    (
+                        club_contract_rebuild._int_or_none(
+                            contract.get("revenueShare", item.get("revenueShare"))
+                        ),
+                        club_id,
+                        str(club.get("clubName") or ""),
+                        club_contract_rebuild._int_or_none(club.get("clubDivision")),
+                        club_contract_rebuild._int_or_none(
+                            contract.get(
+                                "totalRevenueShareLocked",
+                                item.get("totalRevenueShareLocked"),
+                            )
+                        ),
+                        club_contract_rebuild._int_or_none(stats.get("nbMatches")),
+                        player_id,
+                    )
+                )
+
+        connection.executemany(
+            """
+            UPDATE players
+            SET revenue_share = ?,
+                club_id = ?,
+                club_name = ?,
+                club_division = ?,
+                total_revenue_share = ?,
+                games_played = ?
+            WHERE player_id = ?
+            """,
+            updates,
+        )
+        print(f"Contracts complete: {len(updates)} players", flush=True)
+        return len(updates)
 
     club_contract_rebuild.fetch_all_clubs = fetch_returned_clubs
     club_contract_rebuild.refresh_club_contracts = refresh_contracts_with_status
@@ -105,6 +191,16 @@ def install_progression_player_count() -> None:
     rebuild_database.refresh_progressions = refresh_progressions_by_player
 
 
+def install_next_overall_status() -> None:
+    original_update_next_overall = rebuild_database.update_next_overall_columns
+
+    def update_next_overall_with_status(*args, **kwargs):
+        print("Next Overall calculation started", flush=True)
+        return original_update_next_overall(*args, **kwargs)
+
+    rebuild_database.update_next_overall_columns = update_next_overall_with_status
+
+
 def main() -> int:
     install_flow_worker_config()
     install_compact_rebuild_logs(sys.modules[__name__])
@@ -113,6 +209,7 @@ def main() -> int:
     install_club_request_retries()
     install_flow_club_tolerance()
     install_progression_player_count()
+    install_next_overall_status()
 
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
