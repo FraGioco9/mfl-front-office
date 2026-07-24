@@ -6,6 +6,7 @@ import rebuild_database
 from candidate_only_rebuild import install_candidate_only_rebuild
 from club_contract_rebuild import install_club_contract_hook
 from compact_rebuild_logs import install_compact_rebuild_logs
+from database_filename_config import install_database_filename_config
 from flow_age_seasons import install_age_season_hook
 from flow_block_height import install_block_height_hook
 from flow_metadata_config import (
@@ -37,6 +38,7 @@ from progression_rebuild import (
 def main() -> int:
     install_flow_worker_config()
     install_compact_rebuild_logs(sys.modules[__name__])
+    install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
 
     try:
