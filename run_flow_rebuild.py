@@ -4,6 +4,7 @@ import sys
 
 import rebuild_database
 from candidate_only_rebuild import install_candidate_only_rebuild
+from club_contract_rebuild import install_club_contract_hook
 from compact_rebuild_logs import install_compact_rebuild_logs
 from flow_age_seasons import install_age_season_hook
 from flow_block_height import install_block_height_hook
@@ -77,6 +78,7 @@ def main() -> int:
     install_age_season_hook(rebuild_database)
     install_ownership_tolerance(rebuild_database)
     install_owned_since_hook(rebuild_database)
+    install_club_contract_hook(rebuild_database)
     return rebuild_database.main()
 
 
