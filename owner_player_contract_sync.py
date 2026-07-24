@@ -79,6 +79,8 @@ def _player_id(item: dict[str, Any]) -> int | None:
 
 def _request_owner_page(
     owner: str,
+    owner_number: int,
+    total_owners: int,
     before_player_id: int | None,
 ) -> list[dict[str, Any]]:
     params: dict[str, Any] = {
@@ -96,7 +98,7 @@ def _request_owner_page(
             "User-Agent": "mfl-front-office-owner-player-sync/1.0",
         },
     )
-    label = f"Owner {owner}"
+    label = f"Owner {owner} {owner_number}/{total_owners}"
 
     for attempt in range(RETRIES + 1):
         try:
@@ -123,13 +125,17 @@ def _request_owner_page(
     raise RuntimeError(f"{label} request failed after retries")
 
 
-def fetch_owner_players(owner: str) -> list[dict[str, Any]]:
+def fetch_owner_players(
+    owner: str,
+    owner_number: int,
+    total_owners: int,
+) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     seen_ids: set[int] = set()
     before_player_id: int | None = None
 
     while True:
-        page = _request_owner_page(owner, before_player_id)
+        page = _request_owner_page(owner, owner_number, total_owners, before_player_id)
         page_ids = [
             player_id
             for item in page
@@ -264,7 +270,10 @@ def refresh_owner_player_data(
     total_players = 0
     group_players = 0
     with ThreadPoolExecutor(max_workers=max(1, min(WORKERS, total_owners))) as executor:
-        futures = {executor.submit(fetch_owner_players, owner): owner for owner in owners}
+        futures = {
+            executor.submit(fetch_owner_players, owner, owner_number, total_owners): owner
+            for owner_number, owner in enumerate(owners, start=1)
+        }
         for future in as_completed(futures):
             owner = futures[future]
             items = future.result()
