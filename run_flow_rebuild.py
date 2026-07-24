@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 
+import club_contract_rebuild
 import rebuild_database
 from api_first_player_rebuild import install_api_first_player_source
 from candidate_only_rebuild import install_candidate_only_rebuild
@@ -16,6 +17,27 @@ from progression_rebuild import (
     PROGRESSION_RETRY_DELAY_SECONDS,
     PROGRESSION_WORKERS,
 )
+
+
+def install_safe_contract_columns() -> None:
+    def ensure_contract_columns(connection) -> None:
+        columns = {
+            str(row[1])
+            for row in connection.execute("PRAGMA table_info(players)").fetchall()
+        }
+        additions = {
+            "revenue_share": "INTEGER",
+            "club_id": "INTEGER",
+            "club_name": "TEXT",
+            "club_division": "INTEGER",
+            "total_revenue_share": "INTEGER",
+            "games_played": "INTEGER",
+        }
+        for name, column_type in additions.items():
+            if name not in columns:
+                connection.execute(f"ALTER TABLE players ADD COLUMN {name} {column_type}")
+
+    club_contract_rebuild.ensure_contract_columns = ensure_contract_columns
 
 
 def install_progression_player_count() -> None:
@@ -43,6 +65,7 @@ def main() -> int:
     install_compact_rebuild_logs(sys.modules[__name__])
     install_database_filename_config(rebuild_database)
     install_candidate_only_rebuild(rebuild_database)
+    install_safe_contract_columns()
     install_progression_player_count()
     install_next_overall_status()
     install_api_first_player_source(rebuild_database)
