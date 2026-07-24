@@ -106,7 +106,9 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
             futures[future] = shard_number
 
         for future in as_completed(futures):
-            for item in future.result():
+            shard_number = futures[future]
+            shard_items = future.result()
+            for item in shard_items:
                 player_id = owner_player_contract_sync._player_id(item)
                 if player_id is None:
                     continue
@@ -116,6 +118,11 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
                         f"Player {player_id} was returned with conflicting data by multiple shards"
                     )
                 players[player_id] = item
+            print(
+                f"Player data shard {shard_number}/{len(ranges)} succeeded: "
+                f"{len(shard_items)} players",
+                flush=True,
+            )
 
     if highest_player_id not in players:
         raise RuntimeError(
