@@ -54,23 +54,20 @@ def fetch_deposit_events(
     ) as executor:
         futures = {
             executor.submit(_fetch_deposit_range, window_start, window_end): (
-                window_number,
                 window_start,
                 window_end,
             )
-            for window_number, (window_start, window_end) in enumerate(windows, start=1)
+            for window_start, window_end in windows
         }
 
         completed = 0
         for future in as_completed(futures):
-            window_number, window_start, window_end = futures[future]
             window_deposits = future.result()
             deposits.extend(window_deposits)
             completed += 1
             print(
                 f"Owned since history {completed}/{len(windows)}: "
-                f"blocks {window_start}-{window_end}, +{len(window_deposits)}, "
-                f"total {len(deposits)}",
+                f"+{len(window_deposits)}, total {len(deposits)}",
                 flush=True,
             )
 
