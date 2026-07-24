@@ -52,9 +52,7 @@ def install_next_overall_status() -> None:
 
     def update_next_overall_with_status(*args, **kwargs):
         print("Calculating Next Overall", flush=True)
-        result = original_update_next_overall(*args, **kwargs)
-        print(f"Next Overall calculated: {result} players", flush=True)
-        return result
+        return original_update_next_overall(*args, **kwargs)
 
     rebuild_database.update_next_overall_columns = update_next_overall_with_status
 
