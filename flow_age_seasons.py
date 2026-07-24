@@ -63,7 +63,7 @@ def player_seasons_from_flow(player: Any) -> int:
 def age_from_flow(player: Any) -> int:
     age_at_mint = age_at_mint_from_flow(player)
     player_seasons = player_seasons_from_flow(player)
-    return age_at_mint + player_seasons - 1
+    return age_at_mint + player_seasons
 
 
 def install_age_season_hook(rebuild_module: ModuleType) -> None:
@@ -153,9 +153,11 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "flow_season_counts": summary["counts"],
                 "flow_season_uniform": summary["uniform"],
                 "age_source": "flow_ageAtMint_and_player_data_season",
-                "age_formula": "age = Flow metadata ageAtMint + Flow PlayerData.season - 1",
+                "age_formula": "age = Flow metadata ageAtMint + Flow PlayerData.season",
                 "player_seasons_source": "flow_player_data_season",
                 "player_seasons_formula": "player_seasons = Flow PlayerData.season",
+                "age_refreshed_every_run": True,
+                "player_seasons_refreshed_every_run": True,
                 "ages_written_from_flow": state["players_written"],
                 "player_seasons_written_from_flow": state["players_written"],
                 "invalid_age": invalid_age,
