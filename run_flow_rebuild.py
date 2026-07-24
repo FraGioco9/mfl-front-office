@@ -18,11 +18,20 @@ import fresh_mfl_database_rebuild as rebuild
 
 
 FLOW_BLOCKS_URL = "https://rest-mainnet.onflow.org/v1/blocks?height=sealed"
-SUPPRESSED_PROCESSES = {"Database schema", "Wallet table creation"}
+SUPPRESSED_PROCESSES = {
+    "Database schema",
+    "Wallet table creation",
+    "Highest player ID resolution",
+}
 OWNERSHIP_PROGRESS_PATTERN = re.compile(
     r"^Flow ownership wallet batch \d+/(\d+) complete "
     r"\((\d+)/(\d+) finished\): wallets \d+, non-empty \d+, "
     r"player IDs (\d+), total IDs (\d+)$"
+)
+METADATA_PROGRESS_PATTERN = re.compile(
+    r"^Flow metadata batch \d+/(\d+) complete "
+    r"\((\d+)/(\d+) finished\): IDs \d+-\d+, "
+    r"requested \d+, returned (\d+), total (\d+)$"
 )
 MFL_CHECK_BATCH_SIZE = 25
 MFL_CHECK_WORKERS = 20
@@ -127,6 +136,20 @@ def fetch_leaderboard_without_item_logs():
         rebuild.log = original_log
 
 
+def format_elapsed(seconds: float) -> str:
+    total_seconds = max(0, int(round(seconds)))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds_part = divmod(remainder, 60)
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if seconds_part or not parts:
+        parts.append(f"{seconds_part}s")
+    return " ".join(parts)
+
+
 def started_with_clean_labels(process: str) -> float:
     if process == "Complete rebuild":
         rebuild.log("Complete database build started")
@@ -137,9 +160,25 @@ def started_with_clean_labels(process: str) -> float:
 
 
 def completed_with_clean_labels(process: str, began: float, detail: str = "") -> float:
+    elapsed = time.perf_counter() - began
     if process in SUPPRESSED_PROCESSES:
-        return time.perf_counter() - began
-    return original_completed(process, began, detail)
+        return elapsed
+    suffix = f": {detail}" if detail else ""
+    rebuild.log(f"{process} completed in {format_elapsed(elapsed)}{suffix}")
+    return elapsed
+
+
+def filtered_flow_data_print(*args: Any, **kwargs: Any) -> None:
+    if args and isinstance(args[0], str):
+        match = METADATA_PROGRESS_PATTERN.match(args[0])
+        if match:
+            _, completed, completed_total, returned, total = match.groups()
+            args = (
+                f"Flow metadata batch {completed}/{completed_total}: "
+                f"{returned} returned, {total} total",
+                *args[1:],
+            )
+    builtins.print(*args, **kwargs)
 
 
 def request_json_with_transient_retries(request: Request, label: str):
@@ -321,6 +360,7 @@ original_completed = rebuild.completed
 original_fetch_wallet_player_ids = rebuild.fetch_wallet_player_ids
 original_flow_request_json = flow_data._request_json
 
+flow_data.print = filtered_flow_data_print
 flow_data._request_json = request_json_with_transient_retries
 flow_wallet_ownership._request_json = request_json_with_transient_retries
 rebuild.insert_wallets = insert_wallets_without_row_logs
