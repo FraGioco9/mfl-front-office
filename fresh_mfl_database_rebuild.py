@@ -26,7 +26,7 @@ FLOW_BATCH_SIZE = 25
 FLOW_WORKERS = 20
 WALLET_BATCH_SIZE = 25
 WALLET_WORKERS = 20
-PROGRESSION_BATCH_SIZE = 750
+PROGRESSION_BATCH_SIZE = 1500
 PROGRESSION_WORKERS = 80
 REQUESTS_PER_MINUTE = 80
 REQUEST_TIMEOUT = 60
@@ -107,6 +107,7 @@ def fetch_leaderboard() -> tuple[dict[str, str], int | None]:
     names[MFL_ADDRESS] = "MFL"
 
     candidates: list[int] = []
+
     def visit(value: Any, parent_key: str = "") -> None:
         if isinstance(value, dict):
             for key, child in value.items():
@@ -125,6 +126,7 @@ def fetch_leaderboard() -> tuple[dict[str, str], int | None]:
         elif isinstance(value, list):
             for child in value:
                 visit(child, parent_key)
+
     visit(data)
     return names, max(candidates) if candidates else None
 
@@ -282,7 +284,18 @@ def progression_value(data: Any, attribute: str) -> int:
 
 
 def fetch_progressions(connection: sqlite3.Connection) -> None:
-    ids = [int(row[0]) for row in connection.execute("SELECT player_id FROM players ORDER BY player_id")]
+    ids = [
+        int(row[0])
+        for row in connection.execute(
+            """
+            SELECT player_id
+            FROM players
+            WHERE lower(trim(wallet_address)) NOT IN (?, ?)
+            ORDER BY player_id
+            """,
+            (MFL_ADDRESS.lower(), MFL_TRADE_ADDRESS.lower()),
+        )
+    ]
     batches = chunks(ids, PROGRESSION_BATCH_SIZE)
     limiter = RateLimiter(REQUESTS_PER_MINUTE)
     tasks = [(interval, suffix, batch) for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season")) for batch in batches]
@@ -385,13 +398,12 @@ def main() -> int:
         if missing_owners:
             raise RuntimeError(f"Flow ownership missing for {len(missing_owners)} players; first IDs: {missing_owners[:20]}")
         placeholders = ",".join("?" for _ in PLAYER_COLUMNS)
-        for index, player_id in enumerate(eligible_ids, start=1):
+        for player_id in eligible_ids:
             owner = ownership[player_id]
             connection.execute(
                 f"INSERT INTO players ({','.join(PLAYER_COLUMNS)}) VALUES ({placeholders})",
                 player_row(flow_players[player_id], owner, wallet_names.get(owner, owner)),
             )
-            log(f"Player table row {index}/{len(eligible_ids)}")
         connection.commit()
         timings["player_table"] = completed("Player table creation", began, f"{len(eligible_ids)} rows")
 
