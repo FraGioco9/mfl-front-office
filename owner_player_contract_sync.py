@@ -77,14 +77,18 @@ def _player_id(item: dict[str, Any]) -> int | None:
     return _int_or_none(_first(item, "id", "playerId", "player_id"))
 
 
-def _request_owner_page(owner: str, offset: int) -> list[dict[str, Any]]:
-    query = urlencode(
-        {
-            "limit": PAGE_LIMIT,
-            "offset": offset,
-            "ownerWalletAddress": owner,
-        }
-    )
+def _request_owner_page(
+    owner: str,
+    before_player_id: int | None,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {
+        "limit": PAGE_LIMIT,
+        "ownerWalletAddress": owner,
+    }
+    if before_player_id is not None:
+        params["beforePlayerId"] = before_player_id
+
+    query = urlencode(params)
     request = Request(
         f"{PLAYERS_URL}?{query}",
         headers={
@@ -92,7 +96,7 @@ def _request_owner_page(owner: str, offset: int) -> list[dict[str, Any]]:
             "User-Agent": "mfl-front-office-owner-player-sync/1.0",
         },
     )
-    label = f"Owner {owner} players offset {offset}"
+    label = f"Owner {owner}"
 
     for attempt in range(RETRIES + 1):
         try:
@@ -108,10 +112,10 @@ def _request_owner_page(owner: str, offset: int) -> list[dict[str, Any]]:
             failure = f"invalid JSON: {error}"
 
         if attempt == RETRIES:
-            raise RuntimeError(f"{label} failed after retries: {failure}")
+            raise RuntimeError(f"{label} request failed after retries: {failure}")
         print(
-            f"{label} request failed ({failure}); retrying in {RETRY_DELAY_SECONDS}s "
-            f"({attempt + 1}/{RETRIES})",
+            f"{label} request failed, retry {attempt + 1}/{RETRIES} in "
+            f"{RETRY_DELAY_SECONDS}s",
             flush=True,
         )
         time.sleep(RETRY_DELAY_SECONDS)
@@ -122,10 +126,15 @@ def _request_owner_page(owner: str, offset: int) -> list[dict[str, Any]]:
 def fetch_owner_players(owner: str) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     seen_ids: set[int] = set()
-    offset = 0
+    before_player_id: int | None = None
 
     while True:
-        page = _request_owner_page(owner, offset)
+        page = _request_owner_page(owner, before_player_id)
+        page_ids = [
+            player_id
+            for item in page
+            if (player_id := _player_id(item)) is not None
+        ]
         new_items: list[dict[str, Any]] = []
         for item in page:
             player_id = _player_id(item)
@@ -137,12 +146,19 @@ def fetch_owner_players(owner: str) -> list[dict[str, Any]]:
 
         if len(page) < PAGE_LIMIT:
             break
-        if not new_items:
+        if not page_ids or not new_items:
             raise RuntimeError(
-                f"Owner {owner} pagination returned no new players at offset {offset}; "
-                "the API may not support offset pagination"
+                f"Owner {owner} pagination returned no new players; "
+                "beforePlayerId could not advance"
             )
-        offset += len(page)
+
+        next_before_player_id = min(page_ids)
+        if before_player_id is not None and next_before_player_id >= before_player_id:
+            raise RuntimeError(
+                f"Owner {owner} pagination cursor did not move backwards: "
+                f"{next_before_player_id} >= {before_player_id}"
+            )
+        before_player_id = next_before_player_id
 
     return players
 
