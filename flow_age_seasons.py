@@ -61,9 +61,7 @@ def player_seasons_from_flow(player: Any) -> int:
 
 
 def age_from_flow(player: Any) -> int:
-    age_at_mint = age_at_mint_from_flow(player)
-    player_seasons = player_seasons_from_flow(player)
-    return age_at_mint + player_seasons - 1
+    return age_at_mint_from_flow(player) + player_seasons_from_flow(player) - 1
 
 
 def install_age_season_hook(rebuild_module: ModuleType) -> None:
@@ -79,6 +77,7 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
     state: dict[str, Any] = {
         "summary": None,
         "players_written": 0,
+        "expected_values": {},
     }
 
     def replace_players(
@@ -89,6 +88,13 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
         wallet_names,
     ) -> None:
         state["summary"] = flow_season_summary(flow_players)
+        state["expected_values"] = {
+            int(player_id): (
+                age_from_flow(player),
+                player_seasons_from_flow(player),
+            )
+            for player_id, player in flow_players.items()
+        }
 
         player_columns = list(rebuild_module.PLAYER_COLUMNS)
         age_index = player_columns.index("age")
@@ -97,8 +103,9 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
 
         def build_player_row(player, owner, old, names):
             row = list(previous_builder(player, owner, old, names))
-            row[age_index] = age_from_flow(player)
-            row[player_seasons_index] = player_seasons_from_flow(player)
+            expected_age, expected_seasons = state["expected_values"][int(player.player_id)]
+            row[age_index] = expected_age
+            row[player_seasons_index] = expected_seasons
             return tuple(row)
 
         rebuild_module.build_player_row = build_player_row
@@ -131,11 +138,26 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "WHERE player_seasons IS NULL OR player_seasons <= 0"
             ).fetchone()[0]
         )
+
+        mismatched_ids: list[int] = []
+        for player_id, expected in state["expected_values"].items():
+            row = connection.execute(
+                "SELECT age, player_seasons FROM players WHERE player_id = ?",
+                (player_id,),
+            ).fetchone()
+            if row is None or (int(row[0]), int(row[1])) != expected:
+                mismatched_ids.append(player_id)
+
         if invalid_age:
             errors.append(f"{invalid_age} players have missing or invalid Flow-derived age")
         if invalid_player_seasons:
             errors.append(
                 f"{invalid_player_seasons} players have missing or invalid Flow player seasons"
+            )
+        if mismatched_ids:
+            preview = ", ".join(str(player_id) for player_id in mismatched_ids[:20])
+            errors.append(
+                f"{len(mismatched_ids)} players do not match Flow age/player_seasons values: {preview}"
             )
 
         summary = state["summary"] or {
@@ -162,6 +184,8 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "player_seasons_written_from_flow": state["players_written"],
                 "invalid_age": invalid_age,
                 "invalid_player_seasons": invalid_player_seasons,
+                "flow_age_season_mismatch_count": len(mismatched_ids),
+                "flow_age_season_mismatch_ids": mismatched_ids,
                 "errors": errors,
                 "valid": not errors,
             }
