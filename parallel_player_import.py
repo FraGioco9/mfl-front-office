@@ -6,8 +6,10 @@ from typing import Any
 
 import owner_player_contract_sync
 
-PLAYER_IMPORT_WORKERS = 64
-PLAYER_IMPORT_SHARDS = 64
+ESTIMATED_PLAYER_COUNT = 410_000
+PLAYER_DATA_BATCH_SIZE = 1500
+PLAYER_IMPORT_SHARDS = math.ceil(ESTIMATED_PLAYER_COUNT / PLAYER_DATA_BATCH_SIZE)
+PLAYER_IMPORT_WORKERS = PLAYER_IMPORT_SHARDS
 
 
 def _fetch_player_range(
@@ -18,7 +20,7 @@ def _fetch_player_range(
 ) -> list[dict[str, Any]]:
     items: dict[int, dict[str, Any]] = {}
     before_player_id: int | None = upper_inclusive + 1
-    page_number = 1
+    request_number = 1
     page = initial_page
 
     while True:
@@ -51,18 +53,18 @@ def _fetch_player_range(
             break
         if before_player_id is not None and minimum_page_id >= before_player_id:
             raise RuntimeError(
-                f"Player shard {shard_number} cursor did not move backwards: "
+                f"Player data shard {shard_number} cursor did not move backwards: "
                 f"{minimum_page_id} >= {before_player_id}"
             )
 
         before_player_id = minimum_page_id
-        page_number += 1
+        request_number += 1
         page = None
 
     print(
-        f"Player shard {shard_number}/{PLAYER_IMPORT_SHARDS} complete: "
-        f"IDs {lower_exclusive + 1}-{upper_inclusive}, "
-        f"{len(items)} players, {page_number} page(s)",
+        f"Player data shard {shard_number}/{PLAYER_IMPORT_SHARDS} complete: "
+        f"ID range {lower_exclusive + 1}-{upper_inclusive}, "
+        f"{len(items)} players pulled in {request_number} request(s)",
         flush=True,
     )
     return list(items.values())
@@ -76,13 +78,10 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
         if (player_id := owner_player_contract_sync._player_id(item)) is not None
     ]
     if not first_page_ids:
-        raise RuntimeError("Players API first page did not contain player IDs")
+        raise RuntimeError("Player data API first response did not contain player IDs")
 
     highest_player_id = max(first_page_ids)
-    shard_count = min(
-        PLAYER_IMPORT_SHARDS,
-        max(1, math.ceil(highest_player_id / owner_player_contract_sync.PAGE_LIMIT)),
-    )
+    shard_count = PLAYER_IMPORT_SHARDS
     shard_width = math.ceil(highest_player_id / shard_count)
 
     ranges: list[tuple[int, int, int]] = []
@@ -94,17 +93,19 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
 
     ranges.sort(key=lambda value: value[2], reverse=True)
     top_upper = ranges[0][2]
+    worker_count = min(PLAYER_IMPORT_WORKERS, len(ranges))
     print(
-        f"Parallel player import: {len(ranges)} ID shards, "
-        f"up to {min(PLAYER_IMPORT_WORKERS, len(ranges))} workers, "
-        f"highest ID {highest_player_id}",
+        f"Player data import started: {len(ranges)} shards, "
+        f"up to {worker_count} parallel workers, "
+        f"API page limit {owner_player_contract_sync.PAGE_LIMIT}, "
+        f"highest player ID {highest_player_id}",
         flush=True,
     )
 
     players: dict[int, dict[str, Any]] = {}
     with ThreadPoolExecutor(
-        max_workers=max(1, min(PLAYER_IMPORT_WORKERS, len(ranges))),
-        thread_name_prefix="mfl-player-shard",
+        max_workers=max(1, worker_count),
+        thread_name_prefix="mfl-player-data-shard",
     ) as executor:
         futures = {}
         for shard_number, lower_exclusive, upper_inclusive in ranges:
@@ -129,23 +130,23 @@ def fetch_all_players_parallel() -> list[dict[str, Any]]:
                 existing = players.get(player_id)
                 if existing is not None and existing != item:
                     raise RuntimeError(
-                        f"Player {player_id} was returned with conflicting data by multiple shards"
+                        f"Player {player_id} was returned with conflicting data by multiple player data shards"
                     )
                 players[player_id] = item
             completed += 1
             print(
-                f"Parallel player import progress: {completed}/{len(ranges)} shards, "
-                f"{len(players)} unique players",
+                f"Player data import progress: {completed}/{len(ranges)} shards complete, "
+                f"{len(players)} unique players pulled",
                 flush=True,
             )
 
     if highest_player_id not in players:
         raise RuntimeError(
-            f"Parallel player import did not return highest player ID {highest_player_id}"
+            f"Player data import did not return highest player ID {highest_player_id}"
         )
 
     print(
-        f"Parallel player import complete: {len(players)} unique players",
+        f"Player data import complete: {len(players)} unique players pulled",
         flush=True,
     )
     return [players[player_id] for player_id in sorted(players, reverse=True)]
