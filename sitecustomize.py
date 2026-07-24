@@ -11,11 +11,11 @@ rebuild.FLOW_BATCH_SIZE = 3000
 # Number of wallet addresses requested in each Flow wallet-ownership batch.
 rebuild.WALLET_BATCH_SIZE = 3000
 
-# Number of players requested in each progression API batch.
+# Match the progression request method used by update_database.py on main.
 rebuild.PROGRESSION_BATCH_SIZE = 1000
-
-# Use the current PlayMFL progression endpoint.
-rebuild.PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
+rebuild.PROGRESSIONS_URL = (
+    "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players/progressions"
+)
 
 # Keep progression requests capped at 80 per minute.
 rebuild.REQUESTS_PER_MINUTE = 80
