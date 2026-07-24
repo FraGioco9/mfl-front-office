@@ -13,6 +13,11 @@ from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderbo
 from mfl_api_parallel_config import MFL_API_WORKERS, install_mfl_api_parallel_config
 from mfl_api_rate_limiter import REQUESTS_PER_MINUTE
 from mfl_wallet_config import add_mfl_wallet_names
+from parallel_player_import import (
+    PLAYER_IMPORT_SHARDS,
+    PLAYER_IMPORT_WORKERS,
+    install_parallel_player_import,
+)
 from progression_rebuild import (
     PROGRESSION_BATCH_SIZE,
     PROGRESSION_RETRIES,
@@ -68,6 +73,7 @@ def main() -> int:
     install_candidate_only_rebuild(rebuild_database)
     install_safe_contract_columns()
     install_mfl_api_parallel_config(rebuild_database)
+    install_parallel_player_import()
     install_progression_player_count()
     install_next_overall_status()
     install_api_first_player_source(rebuild_database)
@@ -84,8 +90,13 @@ def main() -> int:
         flush=True,
     )
     print(
-        "Player source: https://api.playmfl.com/players in descending batches of 1500; "
+        "Player source: https://api.playmfl.com/players in parallel descending ID shards; "
         "Flow supplies player_seasons only",
+        flush=True,
+    )
+    print(
+        f"Player import settings: {PLAYER_IMPORT_SHARDS} shards, up to "
+        f"{PLAYER_IMPORT_WORKERS} parallel workers",
         flush=True,
     )
     print(
