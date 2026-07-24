@@ -1,26 +1,27 @@
 # Flow data rebuild
 
-This pipeline builds a validated candidate from the existing `players` and `wallets` data without changing the exported player columns or replacing the active database.
+This pipeline builds and validates `mfl_progression_candidate.db` while leaving the active `mfl_progression.db` unchanged.
 
 ## Sources and order
 
-1. The global MFL leaderboard is imported first to build the current `wallet_address` to wallet-name map.
-2. The MFL players API is used only for `GET /players?limit=1`, which supplies the inclusive maximum player ID.
-3. `MFLPlayer.getPlayerData(id:)` on Flow supplies player metadata in ID batches, beginning at player ID `42`.
-4. Current ownership comes from public MFL player collections at one exact sealed Flow block.
-5. The complete available `MFLPlayer.Deposit` event history supplies `owned_since` for every player with a resolved current owner.
-6. The existing progressions endpoint supplies `ALL` and `CURRENT_SEASON` progression for players outside the MFL-controlled wallets.
-7. Next Overall is calculated with the existing position weights and formulas.
+1. Import the global MFL leaderboard for wallet names.
+2. Use `GET /players?limit=1` only to discover the inclusive maximum player ID.
+3. Read `MFLPlayer.getPlayerData(id:)` from Flow in ID batches beginning at player ID `42`.
+4. Resolve current ownership from public Flow collections at one sealed block.
+5. Reconstruct `owned_since` from the complete available `MFLPlayer.Deposit` history.
+6. Refresh `ALL` and `CURRENT_SEASON` progression from the MFL progression endpoint.
+7. Recalculate Next Overall fields locally.
 
-## Field sources
+## Fields fetched from Flow player metadata
 
-Fetched directly from Flow player metadata and written to `players`:
+The following columns are refreshed from `MFLPlayer.PlayerData` on every rebuild:
 
 - `player_id`
 - `name`
 - `positions`
-- `nationality` from Flow `nationalities`
-- `preferred_foot` from Flow `preferredFoot`
+- `age` from metadata `ageAtMint`
+- `nationality` from metadata `nationalities`
+- `preferred_foot` from metadata `preferredFoot`
 - `height`
 - `overall`
 - `pace`
@@ -30,45 +31,43 @@ Fetched directly from Flow player metadata and written to `players`:
 - `defense`
 - `physical`
 - `goalkeeping`
-- `player_seasons` from Flow `PlayerData.season`
+- `player_seasons` from `PlayerData.season`
 
-The player-seasons formula is direct:
+The mappings are direct:
 
 ```text
+age = Flow metadata ageAtMint
 player_seasons = Flow PlayerData.season
 ```
 
-For example, when Flow returns `season = 15` for player `59073`, the rebuilt row stores `player_seasons = 15`. The value is not treated as a mint-season number and is not compared with a separate current season.
+For example, when player `59073` has `ageAtMint = 19` and `season = 15`, the rebuilt row stores:
 
-Age is handled separately:
+```text
+age = 19
+player_seasons = 15
+```
 
-- for existing players, `age` is preserved from the previous active database;
-- for genuinely new players, `age` starts from Flow `ageAtMint`.
+Previous database values do not override either field. The rebuild fails when `ageAtMint` or `season` is missing, invalid, zero, or negative.
 
-The rebuild fails when Flow `season` is missing, invalid, or not positive. Validation records the number and distribution of Flow `season` values and confirms that every rebuilt `player_seasons` value is present and positive.
+## Ownership fields
 
 Fetched from current Flow wallet collections:
 
-- `wallet_address`, or `NULL` when fewer than 50 owners remain unresolved
+- `wallet_address`, or `NULL` for fewer than 50 tolerated unresolved owners
 
-Reconstructed from the complete available Flow `Deposit` history:
-
-- `owned_since`, stored as Unix milliseconds from the block timestamp of the latest deposit whose destination matches the current snapshot owner
-
-The `owned_since` rules are:
-
-- scan from Flow block height `0` through the current sealed snapshot block on every candidate rebuild;
-- use the latest deposit for every player, including players whose owner did not change since the previous database;
-- overwrite any previous `owned_since` value with the Flow-derived timestamp;
-- allow `NULL` only for players whose current owner is unresolved under the existing fewer-than-50 ownership tolerance;
-- fail validation when a resolved player has no deposit event, the latest deposit owner differs from the current ownership snapshot, or the event timestamp is invalid;
-- fail the rebuild when the historical Flow event endpoint cannot provide the requested history.
-
-Fetched or resolved from wallet-name sources:
+Resolved from wallet-name sources:
 
 - `wallet_name`, using forced MFL names, the current leaderboard, the previous database, then the wallet address
 
-Fetched from the MFL progressions API for `ALL` and `CURRENT_SEASON`:
+Reconstructed from Flow events:
+
+- `owned_since`, stored as Unix milliseconds from the latest `MFLPlayer.Deposit` block timestamp whose destination matches the current snapshot owner
+
+The owned-since scan starts at Flow block height `0` and ends at the current sealed ownership block. It covers unchanged owners too. A resolved player with no matching deposit, a mismatching latest deposit owner, or an invalid timestamp fails validation.
+
+## Progression fields fetched from the MFL API
+
+All-time:
 
 - `overall_prog_all`
 - `pace_prog_all`
@@ -78,6 +77,9 @@ Fetched from the MFL progressions API for `ALL` and `CURRENT_SEASON`:
 - `defense_prog_all`
 - `physical_prog_all`
 - `goalkeeping_prog_all`
+
+Current season:
+
 - `overall_prog_current_season`
 - `pace_prog_current_season`
 - `shooting_prog_current_season`
@@ -87,7 +89,9 @@ Fetched from the MFL progressions API for `ALL` and `CURRENT_SEASON`:
 - `physical_prog_current_season`
 - `goalkeeping_prog_current_season`
 
-Calculated locally rather than fetched:
+Players in the MFL and MFL Trade wallets are excluded from progression requests. Players with unresolved ownership remain included.
+
+## Calculated locally
 
 - `next_overall`
 - `next_overall_gap`
@@ -99,105 +103,37 @@ Calculated locally rather than fetched:
 - `physical_to_next_overall`
 - `goalkeeping_to_next_overall`
 
-Copied from the previous database because the rebuild does not currently fetch a reliable live source:
+## Still preserved from the active database
 
-- `age`
+These fields do not currently have a reliable live source in the rebuild:
+
 - `retirement_years`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
 - `active_contract_club_name`
 - `active_contract_club_division`
 
-## MFL-controlled wallets
+## Concurrency and retries
 
-The rebuild treats both of these addresses as MFL-controlled:
+- Flow metadata: fixed 3,000-ID batches, up to 20 workers
+- Normal wallet collections: 100-wallet batches, up to 20 workers
+- MFL treasury membership: 3,000-ID batches, up to 20 workers
+- Full owned-since history: 1,000,000-block top-level windows, up to 20 workers, with recursive range splitting
+- Progression: 1,000-ID batches, 100 workers, three retries after the initial request, 70 seconds before each retry
 
-- `0xff8d2bbed8164db0` — `MFL`
-- `0x6fec8986261ecf49` — `MFL Trade`
+## Validation and output
 
-Both names are forced into the rebuilt wallet-name map. Players held by either address are excluded from progression API requests, and missing progression fields for either address do not fail validation.
+Validation records Flow age and season sources, the Flow season distribution, ownership coverage, the complete owned-since event range and errors, progression completeness, and Next Overall completion.
 
-## Preserved columns
-
-The following values are copied unchanged from the previous database:
-
-- `age`
-- `retirement_years`
-- `active_contract_revenue_share`
-- `active_contract_club_id`
-- `active_contract_club_name`
-- `active_contract_club_division`
-
-Wallet names use this priority order:
-
-1. the forced MFL-controlled wallet name;
-2. the name from the newly imported leaderboard;
-3. the previous database name, when the leaderboard has no usable name;
-4. the wallet address itself.
-
-The rebuilt `wallets` table includes every leaderboard wallet and every resolved current owner. Players with temporarily unresolved ownership are not added as a wallet row.
-
-## Flow concurrency
-
-The supported `run_flow_rebuild.py` entrypoint always requests player IDs from `42` through the inclusive live maximum. Rows below player ID `42` are ignored when reading the previous database snapshot.
-
-Flow metadata uses batches of exactly 3,000 player IDs. Normal wallet collections use batches of 100 wallets. Original MFL treasury membership uses batches of 3,000 unresolved player IDs.
-
-Metadata, wallet collection, treasury membership, and top-level `owned_since` history windows use a maximum of 20 parallel requests. Metadata and treasury-membership batches preserve recursive splitting when a request exceeds Flow computation or storage limits. Historical event ranges also split recursively when the Flow endpoint rejects a range.
-
-The `owned_since` scan divides the chain into top-level windows of 1,000,000 block heights before any endpoint-driven recursive splitting. Its progress messages show completed windows, newly returned events, and the running event total without printing long block ranges.
-
-At startup, the rebuild prints the minimum player ID, fixed batch sizes, and parallel-request limit. It does not print a separate MFL-controlled-wallet notice.
-
-## Ownership snapshot and owned since
-
-The rebuild scans leaderboard wallets plus distinct owner wallets present in the previous database. Each public `MFLPlayer` collection returns its current player IDs through `getIDs()`.
-
-All wallet batches use the same sealed block height, so transfers occurring during the rebuild cannot mix ownership states from different blocks.
-
-The original MFL treasury wallet is handled separately because its collection is too large for one `getIDs()` call and exceeds Flow's 20 MB storage-interaction limit. After normal wallets are resolved, the rebuild checks only unresolved player IDs against that treasury wallet by calling the collection's optional `borrowNFT(id)` method.
-
-`MFL Trade` is read through its public collection like other normal-sized wallets, while still being treated as MFL-controlled for naming, progression, and validation.
-
-A player found in two wallet collections causes the rebuild to fail. When fewer than 50 players remain unresolved after all ownership checks, their `wallet_address` and `owned_since` are stored as `NULL` and the candidate may still pass validation. At 50 or more unresolved players, the rebuild fails before replacing the players table inside the candidate.
-
-After the sealed ownership snapshot is known, the rebuild scans all available `MFLPlayer.Deposit` events from block height `0` through that sealed block. Events are ordered by block height, transaction index, and event index. The latest event for every player must point to the same wallet as the current ownership snapshot.
-
-The validation report records the exact sealed snapshot block, wallet counts, resolved player count, MFL membership candidates, MFL-owned players, unresolved player IDs, the ownership failure threshold, both configured MFL-controlled addresses, the Flow `season` distribution and player-season source, the full `owned_since` event range, event count, populated count, unresolved-owner IDs, missing-event IDs, owner-mismatch IDs, and invalid-timestamp IDs.
-
-A complete live candidate run is required to confirm that the configured Flow endpoint can serve the entire historical event range, including older Flow sporks.
-
-## Progression request policy
-
-The MFL progressions API uses:
-
-- no requests-per-minute limiter or other request-rate cap;
-- batches of 1,000 player IDs;
-- 100 worker threads for the standard rebuild command;
-- three retries after the initial request;
-- exactly 70 seconds before each retry;
-- retries for HTTP, connection, timeout, invalid-JSON, and invalid-response failures;
-- immediate recursive splitting for HTTP 414 responses instead of retrying the oversized request.
-
-Players with `NULL` ownership are included in progression requests because they are not known to belong to either MFL-controlled wallet.
-
-## Completion output
-
-The final duration is displayed in minutes and seconds:
+The final duration uses minutes and seconds:
 
 ```text
 Total time: 42m 7s
 ```
 
-## Candidate-only output
-
-At the beginning of a run, `mfl_progression.db` is copied to `mfl_progression_candidate.db`. All rebuilding and validation happen only inside the candidate.
-
 After successful validation:
 
-- `mfl_progression_candidate.db` remains available as the result;
-- `mfl_progression.db` remains unchanged;
-- `flow_rebuild_validation.json` is written beside the databases;
-- no automatic promotion or file replacement is performed.
-
-The GitHub candidate workflow restores its input only from active-database workflows, verifies that the active database hash is unchanged after the run, and uploads the candidate under the separate artifact name `mfl_progression_candidate_database`.
+- `mfl_progression_candidate.db` contains the rebuilt result;
+- `mfl_progression.db` remains byte-for-byte unchanged;
+- `flow_rebuild_validation.json` contains the validation report;
+- the GitHub workflow uploads the candidate as `mfl_progression_candidate_database`.
