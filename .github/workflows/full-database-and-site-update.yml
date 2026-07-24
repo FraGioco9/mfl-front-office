@@ -143,7 +143,7 @@ jobs:
 
       - name: Export website data
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
-        run: python export_for_website.py
+        run: python -c "from pathlib import Path; import export_for_website as module; module.DATABASE_PATH = Path('mfl_database.db'); raise SystemExit(module.main())"
 
       - name: Upload database
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
