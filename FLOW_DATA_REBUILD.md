@@ -8,7 +8,7 @@ This pipeline builds and validates `mfl_progression_candidate.db` while leaving 
 2. Use `GET /players?limit=1` only to discover the inclusive maximum player ID.
 3. Read `MFLPlayer.getPlayerData(id:)` from Flow in ID batches beginning at player ID `42`.
 4. Resolve current ownership from public Flow collections at one sealed block.
-5. Reconstruct `owned_since` from the complete available `MFLPlayer.Deposit` history.
+5. Preserve `owned_since` from the active database without querying Deposit events.
 6. Refresh `ALL` and `CURRENT_SEASON` progression from the MFL progression endpoint.
 7. Recalculate Next Overall fields locally.
 
@@ -59,11 +59,11 @@ Resolved from wallet-name sources:
 
 - `wallet_name`, using forced MFL names, the current leaderboard, the previous database, then the wallet address
 
-Reconstructed from Flow events:
+Temporarily preserved from the active database:
 
-- `owned_since`, stored as Unix milliseconds from the latest `MFLPlayer.Deposit` block timestamp whose destination matches the current snapshot owner
+- `owned_since`
 
-The owned-since scan starts at Flow block height `0` and ends at the current sealed ownership block. It covers unchanged owners too. A resolved player with no matching deposit, a mismatching latest deposit owner, or an invalid timestamp fails validation.
+`owned_since` fetching is disabled because the public Flow access node does not provide the complete historical Deposit-event archive required to rebuild the value reliably. Existing values are copied unchanged. New players without a previous row receive `NULL` until a reliable live source is added. No `MFLPlayer.Deposit` event requests are made.
 
 ## Progression fields fetched from the MFL API
 
@@ -107,6 +107,7 @@ Players in the MFL and MFL Trade wallets are excluded from progression requests.
 
 These fields do not currently have a reliable live source in the rebuild:
 
+- `owned_since`
 - `retirement_years`
 - `active_contract_revenue_share`
 - `active_contract_club_id`
@@ -118,12 +119,12 @@ These fields do not currently have a reliable live source in the rebuild:
 - Flow metadata: fixed 3,000-ID batches, up to 20 workers
 - Normal wallet collections: 100-wallet batches, up to 20 workers
 - MFL treasury membership: 3,000-ID batches, up to 20 workers
-- Full owned-since history: 1,000,000-block top-level windows, up to 20 workers, with recursive range splitting
+- Owned since: no network requests; copied from the active database
 - Progression: 1,000-ID batches, 100 workers, three retries after the initial request, 70 seconds before each retry
 
 ## Validation and output
 
-Validation records the Flow age formula, season source and distribution, ownership coverage, the complete owned-since event range and errors, progression completeness, and Next Overall completion.
+Validation records the Flow age formula, season source and distribution, ownership coverage, the disabled owned-since source and preservation counts, progression completeness, and Next Overall completion.
 
 The final duration uses minutes and seconds:
 
