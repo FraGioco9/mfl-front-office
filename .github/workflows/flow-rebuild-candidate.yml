@@ -7,6 +7,7 @@ on:
     paths:
       - "candidate_only_rebuild.py"
       - "compact_rebuild_logs.py"
+      - "database_filename_config.py"
       - "flow_age_seasons.py"
       - "flow_owned_since.py"
       - "flow_data.py"
@@ -32,6 +33,7 @@ on:
     paths:
       - "candidate_only_rebuild.py"
       - "compact_rebuild_logs.py"
+      - "database_filename_config.py"
       - "flow_age_seasons.py"
       - "flow_owned_since.py"
       - "flow_data.py"
@@ -94,9 +96,10 @@ jobs:
             gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
           } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
             [ -n "$RUN_ID" ] || continue
-            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select((.name == "mfl_database" or .name == "mfl_progression_database") and .expired == false) | .name' | head -n 1)"
             if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
               echo "$RUN_ID" > previous_database_run_id.txt
+              echo "$HAS_DATABASE_ARTIFACT" > previous_database_artifact_name.txt
               break
             fi
             echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable active database artifact."
@@ -108,10 +111,11 @@ jobs:
           fi
 
           DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
+          DATABASE_ARTIFACT_NAME="$(cat previous_database_artifact_name.txt)"
           echo "Restoring active database artifact from run $DATABASE_RUN_ID."
-          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
-          cp previous-database/*.db mfl_progression.db
-          sha256sum mfl_progression.db > active_database.sha256
+          gh run download "$DATABASE_RUN_ID" --name "$DATABASE_ARTIFACT_NAME" --dir previous-database
+          cp previous-database/*.db mfl_database.db
+          sha256sum mfl_database.db > active_database.sha256
 
       - name: Test rebuild code
         run: python -m unittest discover -s tests -p 'test_*.py' -v
@@ -133,8 +137,8 @@ jobs:
       - name: Upload candidate database
         uses: actions/upload-artifact@v4
         with:
-          name: mfl_progression_candidate_database
-          path: mfl_progression_candidate.db
+          name: mfl_database_candidate
+          path: mfl_database_candidate.db
           if-no-files-found: error
 
       - name: Upload validation report
