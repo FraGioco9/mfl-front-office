@@ -8,7 +8,7 @@ from typing import Any, Iterable
 from progression_rebuild import PROGRESSION_WORKERS
 
 FLOW_MIN_PLAYER_ID = 42
-FLOW_PLAYER_BATCH_SIZE = 3000
+FLOW_PLAYER_BATCH_SIZE = 25
 FLOW_PLAYER_WORKERS = 20
 
 
