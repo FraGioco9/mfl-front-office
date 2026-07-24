@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import base64
 import builtins
 import json
 import re
+import socket
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Iterable
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+import flow_data
 import flow_wallet_ownership
 import fresh_mfl_database_rebuild as rebuild
 
@@ -19,20 +24,31 @@ OWNERSHIP_PROGRESS_PATTERN = re.compile(
     r"\((\d+)/(\d+) finished\): wallets \d+, non-empty \d+, "
     r"player IDs (\d+), total IDs (\d+)$"
 )
+MFL_CHECK_BATCH_SIZE = 25
+MFL_CHECK_WORKERS = 20
+FLOW_REQUEST_RETRIES = 5
+FLOW_REQUEST_RETRY_DELAY_SECONDS = 5
+LEADERBOARD_STATE: dict[str, int | None] = {"highest_player_id": None}
 
+MFL_OWNERSHIP_SCRIPT = """
+import MFLPlayer from 0x8ebcbfd516b1da27
 
-class OwnershipWithMFLResidual(dict[int, str]):
-    """Assign IDs absent from every other checked wallet to the MFL wallet."""
+access(all) fun main(address: Address, ids: [UInt64]): [UInt64] {
+    let owned: [UInt64] = []
 
-    def __contains__(self, player_id: object) -> bool:
-        if isinstance(player_id, int) and player_id >= rebuild.MIN_PLAYER_ID:
-            return True
-        return super().__contains__(player_id)
+    if let collection = getAccount(address).capabilities.borrow<&MFLPlayer.Collection>(
+        MFLPlayer.CollectionPublicPath
+    ) {
+        for id in ids {
+            if collection.borrowNFT(id) != nil {
+                owned.append(id)
+            }
+        }
+    }
 
-    def __missing__(self, player_id: int) -> str:
-        if isinstance(player_id, int) and player_id >= rebuild.MIN_PLAYER_ID:
-            return rebuild.MFL_ADDRESS
-        raise KeyError(player_id)
+    return owned
+}
+"""
 
 
 def insert_wallets_without_row_logs(
@@ -107,7 +123,9 @@ def fetch_leaderboard_without_item_logs():
 
     rebuild.log = filtered_log
     try:
-        return original_fetch_leaderboard()
+        names, highest_player_id = original_fetch_leaderboard()
+        LEADERBOARD_STATE["highest_player_id"] = highest_player_id
+        return names, highest_player_id
     finally:
         rebuild.log = original_log
 
@@ -127,6 +145,90 @@ def completed_with_clean_labels(process: str, began: float, detail: str = "") ->
     return original_completed(process, began, detail)
 
 
+def request_json_with_transient_retries(request: Request, label: str):
+    last_error: BaseException | None = None
+    for attempt in range(FLOW_REQUEST_RETRIES + 1):
+        try:
+            return original_flow_request_json(request, label)
+        except (ConnectionResetError, ConnectionAbortedError, TimeoutError, socket.timeout, URLError, OSError) as error:
+            last_error = error
+            if attempt == FLOW_REQUEST_RETRIES:
+                raise
+            rebuild.log(
+                f"{label} connection retry {attempt + 1}/{FLOW_REQUEST_RETRIES} "
+                f"in {FLOW_REQUEST_RETRY_DELAY_SECONDS}s"
+            )
+            time.sleep(FLOW_REQUEST_RETRY_DELAY_SECONDS)
+    raise RuntimeError(f"{label} failed after retries: {last_error}")
+
+
+def _execute_mfl_ownership_batch(player_ids: list[int], block_height: int) -> list[int]:
+    body = json.dumps(
+        {
+            "script": base64.b64encode(MFL_OWNERSHIP_SCRIPT.encode("utf-8")).decode("utf-8"),
+            "arguments": [
+                flow_data.cadence_argument("Address", rebuild.MFL_ADDRESS),
+                flow_data.cadence_argument(
+                    "Array",
+                    [{"type": "UInt64", "value": str(player_id)} for player_id in player_ids],
+                ),
+            ],
+        }
+    ).encode("utf-8")
+    request = Request(
+        f"{flow_data.FLOW_ACCESS_NODE}/v1/scripts?block_height={block_height}",
+        data=body,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "mfl-front-office-clean-rebuild/1.0",
+        },
+    )
+    encoded_response = request_json_with_transient_retries(
+        request,
+        f"Flow MFL ownership IDs {player_ids[0]}-{player_ids[-1]}",
+    )
+    cadence_json = json.loads(base64.b64decode(encoded_response).decode("utf-8"))
+    decoded = flow_data.decode_cadence(cadence_json)
+    if not isinstance(decoded, list):
+        raise RuntimeError("Flow MFL ownership script did not return an ID list")
+    return sorted({int(player_id) for player_id in decoded})
+
+
+def check_mfl_ownership(
+    unresolved_ids: list[int],
+    *,
+    block_height: int,
+    batch_size: int = MFL_CHECK_BATCH_SIZE,
+    workers: int = MFL_CHECK_WORKERS,
+) -> list[int]:
+    batches = [
+        unresolved_ids[index:index + batch_size]
+        for index in range(0, len(unresolved_ids), batch_size)
+    ]
+    if not batches:
+        return []
+
+    found: list[int] = []
+    total_found = 0
+    with ThreadPoolExecutor(max_workers=min(workers, len(batches))) as executor:
+        futures = {
+            executor.submit(_execute_mfl_ownership_batch, batch, block_height): batch
+            for batch in batches
+        }
+        completed = 0
+        for future in as_completed(futures):
+            owned_ids = future.result()
+            found.extend(owned_ids)
+            completed += 1
+            total_found += len(owned_ids)
+            rebuild.log(
+                f"Flow MFL ownership batch {completed}/{len(batches)} complete: "
+                f"{len(owned_ids)} player IDs, {total_found} total IDs"
+            )
+    return sorted(set(found))
+
+
 def fetch_wallet_player_ids_with_clean_logs(
     addresses: Iterable[str],
     *,
@@ -134,12 +236,17 @@ def fetch_wallet_player_ids_with_clean_logs(
     batch_size: int = flow_wallet_ownership.FLOW_WALLET_BATCH_SIZE,
     workers: int = flow_wallet_ownership.FLOW_WALLET_WORKERS,
 ):
-    normalized_addresses = {
-        str(address or "").strip().lower()
-        for address in addresses
-        if str(address or "").strip()
-    }
-    normal_addresses = sorted(normalized_addresses - {rebuild.MFL_ADDRESS})
+    normalized_addresses = sorted(
+        {
+            flow_wallet_ownership.normalize_address(address)
+            for address in addresses
+            if flow_wallet_ownership.normalize_address(address)
+        }
+    )
+    normal_addresses = [
+        address for address in normalized_addresses
+        if address != rebuild.MFL_ADDRESS
+    ]
 
     original_print = flow_wallet_ownership.print if hasattr(flow_wallet_ownership, "print") else builtins.print
 
@@ -169,32 +276,50 @@ def fetch_wallet_player_ids_with_clean_logs(
         else:
             flow_wallet_ownership.print = original_print
 
-    # The MFL collection is too large for collection.getIDs() under Flow's
-    # storage-interaction limit. Every other requested wallet has been checked,
-    # so all remaining minted player IDs are deterministically owned by MFL.
-    wallet_players[rebuild.MFL_ADDRESS] = []
-    rebuild.log("MFL wallet ownership will be resolved from remaining player IDs")
-    return wallet_players
+    highest_player_id = LEADERBOARD_STATE.get("highest_player_id")
+    if highest_player_id is None or highest_player_id < rebuild.MIN_PLAYER_ID:
+        raise RuntimeError("Leaderboard did not provide a valid highest player ID for MFL ownership checks")
 
-
-def build_current_ownership_with_mfl_residual(wallet_players):
-    ownership, duplicates = original_build_current_ownership(wallet_players)
-    return OwnershipWithMFLResidual(ownership), duplicates
+    owned_elsewhere = {
+        player_id
+        for player_ids in wallet_players.values()
+        for player_id in player_ids
+    }
+    unresolved_ids = [
+        player_id
+        for player_id in range(rebuild.MIN_PLAYER_ID, highest_player_id + 1)
+        if player_id not in owned_elsewhere
+    ]
+    rebuild.log(
+        f"Flow MFL ownership check started: {len(unresolved_ids)} unresolved player IDs"
+    )
+    mfl_ids = check_mfl_ownership(
+        unresolved_ids,
+        block_height=block_height,
+        batch_size=MFL_CHECK_BATCH_SIZE,
+        workers=MFL_CHECK_WORKERS,
+    )
+    wallet_players[rebuild.MFL_ADDRESS] = mfl_ids
+    rebuild.log(
+        f"Flow MFL ownership check completed: {len(mfl_ids)} player IDs"
+    )
+    return dict(sorted(wallet_players.items()))
 
 
 original_fetch_leaderboard = rebuild.fetch_leaderboard
 original_started = rebuild.started
 original_completed = rebuild.completed
 original_fetch_wallet_player_ids = rebuild.fetch_wallet_player_ids
-original_build_current_ownership = rebuild.build_current_ownership
+original_flow_request_json = flow_data._request_json
 
+flow_data._request_json = request_json_with_transient_retries
+flow_wallet_ownership._request_json = request_json_with_transient_retries
 rebuild.insert_wallets = insert_wallets_without_row_logs
 rebuild.fetch_leaderboard = fetch_leaderboard_without_item_logs
 rebuild.get_latest_sealed_block_height = get_latest_sealed_block_height
 rebuild.started = started_with_clean_labels
 rebuild.completed = completed_with_clean_labels
 rebuild.fetch_wallet_player_ids = fetch_wallet_player_ids_with_clean_logs
-rebuild.build_current_ownership = build_current_ownership_with_mfl_residual
 
 
 if __name__ == "__main__":
