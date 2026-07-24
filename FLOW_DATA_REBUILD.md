@@ -47,7 +47,7 @@ age = 19 + 15 - 1 = 33
 player_seasons = 15
 ```
 
-Previous database values do not override either field. The rebuild fails when `ageAtMint` or `season` is missing, invalid, zero, or negative.
+Both fields are recalculated and overwritten from the latest Flow response on every run. Previous database values never override `age` or `player_seasons`. The rebuild fails when `ageAtMint` or `season` is missing, invalid, zero, or negative.
 
 ## Ownership fields
 
@@ -124,7 +124,7 @@ These fields do not currently have a reliable live source in the rebuild:
 
 ## Validation and output
 
-Validation records the Flow age formula, season source and distribution, ownership coverage, the disabled owned-since source and preservation counts, progression completeness, and Next Overall completion.
+Validation records the Flow age formula, season source and distribution, explicit every-run refresh flags, ownership coverage, the disabled owned-since source and preservation counts, progression completeness, and Next Overall completion.
 
 The final duration uses minutes and seconds:
 
