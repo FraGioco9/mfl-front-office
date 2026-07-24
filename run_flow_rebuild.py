@@ -33,7 +33,7 @@ METADATA_PROGRESS_PATTERN = re.compile(
     r"\((\d+)/(\d+) finished\): IDs \d+-\d+, "
     r"requested \d+, returned (\d+), total (\d+)$"
 )
-MFL_CHECK_BATCH_SIZE = 25
+MFL_CHECK_BATCH_SIZE = 3000
 MFL_CHECK_WORKERS = 20
 FLOW_REQUEST_RETRIES = 5
 FLOW_REQUEST_RETRY_DELAY_SECONDS = 5
