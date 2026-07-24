@@ -1,0 +1,10 @@
+from __future__ import annotations
+
+MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
+MFL_TRADE_WALLET_ADDRESS = "0x6fec8986261ecf49"
+
+MFL_WALLET_NAMES = {
+    MFL_WALLET_ADDRESS: "MFL",
+    MFL_TRADE_WALLET_ADDRESS: "MFL Trade",
+}
+MFL_WALLET_ADDRESSES = frozenset(MFL_WALLET_NAMES)

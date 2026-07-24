@@ -1,0 +1,150 @@
+# Flow data rebuild
+
+This pipeline builds and validates `mfl_database_candidate.db` while leaving the active `mfl_database.db` unchanged.
+
+## Sources and order
+
+1. Import the global MFL leaderboard for wallet names.
+2. Use `GET /players?limit=1` only to discover the inclusive maximum player ID.
+3. Read `MFLPlayer.getPlayerData(id:)` from Flow in ID batches beginning at player ID `42`.
+4. Resolve current ownership from public Flow collections at one sealed block.
+5. Preserve `owned_since` from the active database without querying Deposit events.
+6. Refresh `ALL` and `CURRENT_SEASON` progression from the MFL progression endpoint.
+7. Recalculate Next Overall fields locally.
+8. Rebuild the clubs table from Flow and refresh current player contracts from each club players endpoint.
+
+## Fields fetched from Flow player metadata
+
+The following columns are refreshed from `MFLPlayer.PlayerData` on every rebuild:
+
+- `player_id`
+- `name`
+- `positions`
+- `age`, calculated from metadata `ageAtMint` and `PlayerData.season`
+- `nationality` from metadata `nationalities`
+- `preferred_foot` from metadata `preferredFoot`
+- `height`
+- `overall`
+- `pace`
+- `shooting`
+- `passing`
+- `dribbling`
+- `defense`
+- `physical`
+- `goalkeeping`
+- `player_seasons` from `PlayerData.season`
+
+The formulas are:
+
+```text
+age = Flow metadata ageAtMint + Flow PlayerData.season - 1
+player_seasons = Flow PlayerData.season
+```
+
+For example, when player `59073` has `ageAtMint = 19` and `season = 15`, the rebuilt row stores:
+
+```text
+age = 19 + 15 - 1 = 33
+player_seasons = 15
+```
+
+Both fields are recalculated and overwritten from the latest Flow response on every run. Previous database values never override `age` or `player_seasons`. The rebuild fails when `ageAtMint` or `season` is missing, invalid, zero, or negative.
+
+## Ownership fields
+
+Fetched from current Flow wallet collections:
+
+- `wallet_address`, or `NULL` for fewer than 50 tolerated unresolved owners
+
+Resolved from wallet-name sources:
+
+- `wallet_name`, using forced MFL names, the current leaderboard, the previous database, then the wallet address
+
+Temporarily preserved from the active database:
+
+- `owned_since`
+
+`owned_since` fetching is disabled because the public Flow access node does not provide the complete historical Deposit-event archive required to rebuild the value reliably. Existing values are copied unchanged. New players without a previous row receive `NULL` until a reliable live source is added. No `MFLPlayer.Deposit` event requests are made.
+
+## Progression fields fetched from the MFL API
+
+All-time:
+
+- `overall_prog_all`
+- `pace_prog_all`
+- `shooting_prog_all`
+- `passing_prog_all`
+- `dribbling_prog_all`
+- `defense_prog_all`
+- `physical_prog_all`
+- `goalkeeping_prog_all`
+
+Current season:
+
+- `overall_prog_current_season`
+- `pace_prog_current_season`
+- `shooting_prog_current_season`
+- `passing_prog_current_season`
+- `dribbling_prog_current_season`
+- `defense_prog_current_season`
+- `physical_prog_current_season`
+- `goalkeeping_prog_current_season`
+
+Players in the MFL and MFL Trade wallets are excluded from progression requests. Players with unresolved ownership remain included.
+
+## Calculated locally
+
+- `next_overall`
+- `next_overall_gap`
+- `pace_to_next_overall`
+- `shooting_to_next_overall`
+- `passing_to_next_overall`
+- `dribbling_to_next_overall`
+- `defense_to_next_overall`
+- `physical_to_next_overall`
+- `goalkeeping_to_next_overall`
+
+## Contract fields refreshed from club APIs
+
+The previous contract columns are renamed and refreshed:
+
+- `revenue_share`
+- `club_id`
+- `club_name`
+- `club_division`
+- `total_revenue_share`
+- `games_played`
+
+All contract values are cleared before current club rosters are imported, preventing stale assignments.
+
+## Still preserved from the active database
+
+These fields do not currently have a reliable live source in the rebuild:
+
+- `owned_since`
+- `retirement_years`
+
+## Concurrency and retries
+
+- Flow metadata: fixed 3,000-ID batches, up to 20 workers
+- Normal wallet collections: 100-wallet batches, up to 20 workers
+- MFL treasury membership: 3,000-ID batches, up to 20 workers
+- Owned since: no network requests; copied from the active database
+- Progression: 1,000-ID batches, 100 workers, three retries after the initial request, 90 seconds before each retry
+
+## Validation and output
+
+Validation records the Flow age formula, season source and distribution, explicit every-run refresh flags, ownership coverage, the disabled owned-since source and preservation counts, progression completeness, and Next Overall completion.
+
+The final duration uses minutes and seconds:
+
+```text
+Total time: 42m 7s
+```
+
+After successful validation:
+
+- `mfl_database_candidate.db` contains the rebuilt result;
+- `mfl_database.db` remains byte-for-byte unchanged;
+- `flow_rebuild_validation.json` contains the validation report;
+- the GitHub workflow uploads the candidate as `mfl_database_candidate`.

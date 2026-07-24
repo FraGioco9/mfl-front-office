@@ -1,0 +1,304 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+import time
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+import club_contract_rebuild
+
+PLAYERS_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/players"
+PAGE_LIMIT = 1500
+RETRIES = 3
+RETRY_DELAY_SECONDS = 90
+REQUEST_TIMEOUT_SECONDS = 30
+
+UPDATED_COLUMNS = {
+    "retirement_years",
+    "owned_since",
+    "active_contract_revenue_share",
+    "active_contract_club_id",
+    "active_contract_club_name",
+    "active_contract_club_division",
+    "revenue_share",
+    "club_id",
+    "club_name",
+    "club_division",
+    "total_revenue_share",
+    "games_played",
+}
+
+
+def _int_or_none(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _first(mapping: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in mapping and mapping[key] not in (None, ""):
+            return mapping[key]
+    return None
+
+
+def _players_from_payload(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in ("players", "data", "items", "results"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+    raise RuntimeError("Players API returned an unexpected payload")
+
+
+def _player_id(item: dict[str, Any]) -> int | None:
+    metadata = item.get("metadata")
+    if isinstance(metadata, dict):
+        value = _int_or_none(_first(metadata, "id", "playerId", "player_id"))
+        if value is not None:
+            return value
+    player = item.get("player")
+    if isinstance(player, dict):
+        value = _int_or_none(_first(player, "id", "playerId", "player_id"))
+        if value is not None:
+            return value
+    return _int_or_none(_first(item, "id", "playerId", "player_id"))
+
+
+def _request_players_page(
+    batch_number: int,
+    before_player_id: int | None,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {"limit": PAGE_LIMIT}
+    if before_player_id is not None:
+        params["beforePlayerId"] = before_player_id
+
+    request = Request(
+        f"{PLAYERS_URL}?{urlencode(params)}",
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "mfl-front-office-player-contract-sync/1.0",
+        },
+    )
+    cursor_label = "initial" if before_player_id is None else str(before_player_id)
+    label = f"Contracts batch {batch_number} beforePlayerId={cursor_label}"
+
+    for attempt in range(RETRIES + 1):
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            return _players_from_payload(payload)
+        except HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace")
+            failure = f"HTTP {error.code}: {body}"
+        except (URLError, TimeoutError) as error:
+            failure = str(error)
+        except json.JSONDecodeError as error:
+            failure = f"invalid JSON: {error}"
+
+        if attempt == RETRIES:
+            raise RuntimeError(f"{label} request failed after retries: {failure}")
+        print(
+            f"{label} request failed, retry {attempt + 1}/{RETRIES} in "
+            f"{RETRY_DELAY_SECONDS}s",
+            flush=True,
+        )
+        time.sleep(RETRY_DELAY_SECONDS)
+
+    raise RuntimeError(f"{label} request failed after retries")
+
+
+def fetch_all_players() -> list[dict[str, Any]]:
+    players: list[dict[str, Any]] = []
+    seen_ids: set[int] = set()
+    before_player_id: int | None = None
+    batch_number = 1
+
+    while True:
+        page = _request_players_page(batch_number, before_player_id)
+        page_ids = [
+            player_id
+            for item in page
+            if (player_id := _player_id(item)) is not None
+        ]
+        new_items: list[dict[str, Any]] = []
+        for item in page:
+            player_id = _player_id(item)
+            if player_id is None or player_id in seen_ids:
+                continue
+            seen_ids.add(player_id)
+            new_items.append(item)
+        players.extend(new_items)
+
+        cursor_label = "initial" if before_player_id is None else str(before_player_id)
+        print(
+            f"Contracts batch {batch_number}: beforePlayerId={cursor_label}, "
+            f"+{len(new_items)}, total {len(players)}",
+            flush=True,
+        )
+
+        if len(page) < PAGE_LIMIT:
+            break
+        if not page_ids or not new_items:
+            raise RuntimeError(
+                "Players pagination returned no new players; "
+                "beforePlayerId could not advance"
+            )
+
+        next_before_player_id = min(page_ids)
+        if before_player_id is not None and next_before_player_id >= before_player_id:
+            raise RuntimeError(
+                "Players pagination cursor did not move backwards: "
+                f"{next_before_player_id} >= {before_player_id}"
+            )
+        before_player_id = next_before_player_id
+        batch_number += 1
+
+    return players
+
+
+def _contract_values(item: dict[str, Any]) -> tuple[Any, ...]:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    contract = item.get("activeContract")
+    if not isinstance(contract, dict):
+        for key in ("contract", "currentContract", "sportingContract"):
+            candidate = item.get(key)
+            if isinstance(candidate, dict):
+                contract = candidate
+                break
+        else:
+            contract = {}
+    club = item.get("club") if isinstance(item.get("club"), dict) else {}
+    stats = item.get("stats") if isinstance(item.get("stats"), dict) else {}
+
+    revenue_share = _int_or_none(
+        _first(contract, "revenueShare", "revenue_share")
+        or _first(item, "revenueShare", "revenue_share")
+    )
+    club_id = _int_or_none(
+        _first(contract, "clubId", "clubID", "club_id")
+        or _first(club, "id", "clubId", "clubID", "club_id")
+        or _first(item, "clubId", "clubID", "club_id")
+    )
+    club_name = str(
+        _first(contract, "clubName", "club_name")
+        or _first(club, "name", "clubName", "club_name")
+        or _first(item, "clubName", "club_name")
+        or ""
+    )
+    club_division = _int_or_none(
+        _first(contract, "clubDivision", "club_division")
+        or _first(club, "division", "clubDivision", "club_division")
+        or _first(item, "clubDivision", "club_division")
+    )
+    total_revenue_share = _int_or_none(
+        _first(contract, "totalRevenueShareLocked", "totalRevenueShare", "total_revenue_share")
+        or _first(item, "totalRevenueShareLocked", "totalRevenueShare", "total_revenue_share")
+    )
+    games_played = _int_or_none(
+        _first(stats, "nbMatches", "gamesPlayed", "games_played")
+        or _first(item, "nbMatches", "gamesPlayed", "games_played")
+    )
+    owned_since = _int_or_none(
+        _first(item, "ownedSince", "owned_since", "ownershipSeason", "ownership_season")
+        or _first(metadata, "ownedSince", "owned_since", "ownershipSeason", "ownership_season")
+    )
+    retirement_years = _int_or_none(
+        _first(item, "retirementYears", "retirement_years")
+        or _first(metadata, "retirementYears", "retirement_years")
+    )
+
+    return (
+        revenue_share,
+        club_id,
+        club_name,
+        club_division,
+        total_revenue_share,
+        games_played,
+        owned_since,
+        retirement_years,
+    )
+
+
+def refresh_owner_player_data(
+    connection: sqlite3.Connection,
+    _clubs: list[dict[str, Any]],
+) -> int:
+    club_contract_rebuild.ensure_contract_columns(connection)
+    connection.execute(
+        """
+        UPDATE players
+        SET revenue_share = NULL,
+            club_id = NULL,
+            club_name = NULL,
+            club_division = NULL,
+            total_revenue_share = NULL,
+            games_played = NULL,
+            owned_since = NULL,
+            retirement_years = NULL
+        """
+    )
+
+    database_player_ids = {
+        int(row[0])
+        for row in connection.execute("SELECT player_id FROM players").fetchall()
+    }
+    print(
+        f"Contracts fetching started: global player batches, limit {PAGE_LIMIT}, "
+        f"retries {RETRIES}, delay {RETRY_DELAY_SECONDS}s",
+        flush=True,
+    )
+
+    payload = fetch_all_players()
+    updates: list[tuple[Any, ...]] = []
+    seen_players: set[int] = set()
+    skipped_not_in_database = 0
+
+    for item in payload:
+        player_id = _player_id(item)
+        if player_id is None:
+            continue
+        if player_id in seen_players:
+            raise RuntimeError(f"Player {player_id} was returned more than once")
+        seen_players.add(player_id)
+        if player_id not in database_player_ids:
+            skipped_not_in_database += 1
+            continue
+        updates.append((*_contract_values(item), player_id))
+
+    connection.executemany(
+        """
+        UPDATE players
+        SET revenue_share = ?,
+            club_id = ?,
+            club_name = ?,
+            club_division = ?,
+            total_revenue_share = ?,
+            games_played = ?,
+            owned_since = ?,
+            retirement_years = ?
+        WHERE player_id = ?
+        """,
+        updates,
+    )
+    print(
+        f"Contracts complete: {len(updates)} database players updated, "
+        f"{skipped_not_in_database} API players skipped",
+        flush=True,
+    )
+    return len(updates)
+
+
+def install_owner_player_contract_sync(rebuild_module: Any) -> None:
+    rebuild_module.PRESERVED_COLUMNS = [
+        column for column in rebuild_module.PRESERVED_COLUMNS if column not in UPDATED_COLUMNS
+    ]
+    club_contract_rebuild.refresh_club_contracts = refresh_owner_player_data
