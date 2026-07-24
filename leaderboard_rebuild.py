@@ -32,7 +32,9 @@ def fetch_leaderboard_wallet_names() -> dict[str, str]:
             break
         except HTTPError as error:
             if error.code not in RETRY_STATUS_CODES or attempt == MAX_RETRIES:
-                raise RuntimeError(f"MFL leaderboard API returned status code {error.code}") from error
+                raise RuntimeError(
+                    f"MFL leaderboard API returned status code {error.code}"
+                ) from error
             print(
                 f"MFL leaderboard API returned {error.code}; retrying in "
                 f"{RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_RETRIES})",
@@ -42,20 +44,26 @@ def fetch_leaderboard_wallet_names() -> dict[str, str]:
         except (URLError, TimeoutError) as error:
             if attempt == MAX_RETRIES:
                 reason = getattr(error, "reason", str(error))
-                raise RuntimeError(f"Could not connect to MFL leaderboard API: {reason}") from error
+                raise RuntimeError(
+                    f"Could not connect to MFL leaderboard API: {reason}"
+                ) from error
             print(
-                f"MFL leaderboard API connection failed; retrying in "
+                "MFL leaderboard API connection failed; retrying in "
                 f"{RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_RETRIES})",
                 flush=True,
             )
             time.sleep(RETRY_DELAY_SECONDS)
         except json.JSONDecodeError as error:
-            raise RuntimeError("MFL leaderboard API response was not valid JSON") from error
+            raise RuntimeError(
+                "MFL leaderboard API response was not valid JSON"
+            ) from error
     else:
         raise RuntimeError("MFL leaderboard API request failed after retries")
 
     if not isinstance(data, dict) or not isinstance(data.get("users"), list):
-        raise RuntimeError("MFL leaderboard API response did not contain a users list")
+        raise RuntimeError(
+            "MFL leaderboard API response did not contain a users list"
+        )
 
     names: dict[str, str] = {}
     for user in data["users"]:
@@ -72,29 +80,9 @@ def fetch_leaderboard_wallet_names() -> dict[str, str]:
     return names
 
 
-def merge_wallet_names(
-    leaderboard_names: dict[str, str],
-    previous_names: dict[str, str],
-) -> dict[str, str]:
-    merged = {
-        str(address).lower(): str(name or "")
-        for address, name in previous_names.items()
-        if address
-    }
-    for address, name in leaderboard_names.items():
-        normalized = str(address or "").lower()
-        if not normalized:
-            continue
-        normalized_name = str(name or "")
-        if normalized_name or normalized not in merged:
-            merged[normalized] = normalized_name
-    return merged
-
-
 def rebuild_wallet_table(
     connection: sqlite3.Connection,
     leaderboard_names: dict[str, str],
-    known_names: dict[str, str],
 ) -> None:
     connection.execute("DROP TABLE IF EXISTS wallets")
     connection.execute(
@@ -108,7 +96,9 @@ def rebuild_wallet_table(
 
     owner_addresses = {
         str(row[0] or "").lower()
-        for row in connection.execute("SELECT DISTINCT wallet_address FROM players")
+        for row in connection.execute(
+            "SELECT DISTINCT wallet_address FROM players"
+        )
         if row[0]
     }
     addresses = sorted(set(leaderboard_names) | owner_addresses)
@@ -117,9 +107,7 @@ def rebuild_wallet_table(
         [
             (
                 address,
-                leaderboard_names.get(address)
-                or known_names.get(address)
-                or address,
+                leaderboard_names.get(address) or address,
             )
             for address in addresses
         ],
@@ -131,23 +119,23 @@ def install_leaderboard_hooks(
     rebuild_module: ModuleType,
     leaderboard_names: dict[str, str],
 ) -> None:
-    original_previous_wallet_names = rebuild_module.previous_wallet_names
     original_validate_database = rebuild_module.validate_database
 
-    def previous_wallet_names(connection: sqlite3.Connection) -> dict[str, str]:
-        previous_names = original_previous_wallet_names(connection)
-        return merge_wallet_names(leaderboard_names, previous_names)
+    def wallet_names(_connection: sqlite3.Connection) -> dict[str, str]:
+        return dict(leaderboard_names)
 
     def rebuild_wallets(
         connection: sqlite3.Connection,
-        known_names: dict[str, str],
+        _known_names: dict[str, str],
     ) -> None:
-        rebuild_wallet_table(connection, leaderboard_names, known_names)
+        rebuild_wallet_table(connection, leaderboard_names)
 
     def validate_database(*args: Any, **kwargs: Any) -> dict[str, Any]:
         report = original_validate_database(*args, **kwargs)
         connection = args[0] if args else kwargs["connection"]
-        wallet_count = int(connection.execute("SELECT COUNT(*) FROM wallets").fetchone()[0])
+        wallet_count = int(
+            connection.execute("SELECT COUNT(*) FROM wallets").fetchone()[0]
+        )
         placeholders = ",".join("?" for _ in leaderboard_names)
         if leaderboard_names:
             imported_count = int(
@@ -162,7 +150,9 @@ def install_leaderboard_hooks(
         missing_leaderboard_wallets = len(leaderboard_names) - imported_count
         errors = list(report.get("errors") or [])
         if missing_leaderboard_wallets:
-            errors.append(f"{missing_leaderboard_wallets} leaderboard wallets are missing from wallets")
+            errors.append(
+                f"{missing_leaderboard_wallets} leaderboard wallets are missing from wallets"
+            )
 
         report.update(
             {
@@ -170,12 +160,14 @@ def install_leaderboard_hooks(
                 "leaderboard_wallet_count": len(leaderboard_names),
                 "imported_leaderboard_wallet_count": imported_count,
                 "missing_leaderboard_wallets": missing_leaderboard_wallets,
+                "wallet_name_source": "leaderboard_api",
+                "previous_wallet_names_used": False,
                 "errors": errors,
                 "valid": not errors,
             }
         )
         return report
 
-    rebuild_module.previous_wallet_names = previous_wallet_names
+    rebuild_module.previous_wallet_names = wallet_names
     rebuild_module.rebuild_wallets = rebuild_wallets
     rebuild_module.validate_database = validate_database
