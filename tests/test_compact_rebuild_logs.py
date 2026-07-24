@@ -31,8 +31,8 @@ class CompactRebuildLogsTests(unittest.TestCase):
         cases = {
             "Flow player batch 42-3041 failed; retrying in 15s (1/3)":
                 "Metadata retry 1/3 in 15s",
-            "Progression ALL request failed; retrying in 61s (2/3)":
-                "Progression ALL retry 2/3 in 61s",
+            "Progression ALL request failed; retrying in 70s (2/3)":
+                "Progression ALL retry 2/3 in 70s",
             "Flow wallet ownership snapshot complete: resolved 402991 player owners":
                 "Ownership complete: 402991 players",
             "Progression refresh complete: 805982 interval rows updated":
@@ -44,8 +44,13 @@ class CompactRebuildLogsTests(unittest.TestCase):
             with self.subTest(original=original):
                 self.assertEqual(compact_message(original), expected)
 
+    def test_formats_total_time_in_minutes_and_seconds(self):
+        self.assertEqual(compact_message("Total time: 0s"), "Total time: 0m 0s")
+        self.assertEqual(compact_message("Total time: 125s"), "Total time: 2m 5s")
+        self.assertEqual(compact_message("Total time: 3601s"), "Total time: 60m 1s")
+
     def test_keeps_already_compact_progression_settings(self):
-        message = "Progression settings: batch 1000, workers 100, retries 3, delay 61s"
+        message = "Progression settings: batch 1000, workers 100, retries 3, delay 70s"
         self.assertEqual(compact_message(message), message)
 
     def test_stderr_messages_remain_detailed(self):
