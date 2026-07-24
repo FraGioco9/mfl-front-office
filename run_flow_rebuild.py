@@ -4,16 +4,14 @@ import sys
 
 import club_contract_rebuild
 import rebuild_database
-from api_first_player_rebuild import install_api_first_player_source
 from candidate_only_rebuild import install_candidate_only_rebuild
 from compact_rebuild_logs import install_compact_rebuild_logs
 from database_filename_config import install_database_filename_config
+from flow_only_player_rebuild import install_flow_only_player_rebuild
 from flow_worker_config import install_flow_worker_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
 from mfl_api_parallel_config import install_mfl_api_parallel_config
 from mfl_wallet_config import add_mfl_wallet_names
-from parallel_player_import import install_parallel_player_import
-from player_data_request_logging import install_player_data_request_logging
 
 
 def install_safe_contract_columns() -> None:
@@ -64,11 +62,9 @@ def main() -> int:
     install_candidate_only_rebuild(rebuild_database)
     install_safe_contract_columns()
     install_mfl_api_parallel_config(rebuild_database)
-    install_player_data_request_logging()
-    install_parallel_player_import()
     install_progression_player_count()
     install_next_overall_status()
-    install_api_first_player_source(rebuild_database)
+    install_flow_only_player_rebuild(rebuild_database)
 
     print("Pulling wallet names", flush=True)
     try:
