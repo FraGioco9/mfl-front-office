@@ -19,7 +19,7 @@ The following columns are refreshed from `MFLPlayer.PlayerData` on every rebuild
 - `player_id`
 - `name`
 - `positions`
-- `age` from metadata `ageAtMint`
+- `age`, calculated from metadata `ageAtMint` and `PlayerData.season`
 - `nationality` from metadata `nationalities`
 - `preferred_foot` from metadata `preferredFoot`
 - `height`
@@ -33,17 +33,17 @@ The following columns are refreshed from `MFLPlayer.PlayerData` on every rebuild
 - `goalkeeping`
 - `player_seasons` from `PlayerData.season`
 
-The mappings are direct:
+The formulas are:
 
 ```text
-age = Flow metadata ageAtMint
+age = Flow metadata ageAtMint + Flow PlayerData.season - 1
 player_seasons = Flow PlayerData.season
 ```
 
 For example, when player `59073` has `ageAtMint = 19` and `season = 15`, the rebuilt row stores:
 
 ```text
-age = 19
+age = 19 + 15 - 1 = 33
 player_seasons = 15
 ```
 
@@ -123,7 +123,7 @@ These fields do not currently have a reliable live source in the rebuild:
 
 ## Validation and output
 
-Validation records Flow age and season sources, the Flow season distribution, ownership coverage, the complete owned-since event range and errors, progression completeness, and Next Overall completion.
+Validation records the Flow age formula, season source and distribution, ownership coverage, the complete owned-since event range and errors, progression completeness, and Next Overall completion.
 
 The final duration uses minutes and seconds:
 
