@@ -300,7 +300,15 @@ def fetch_progressions(connection: sqlite3.Connection) -> None:
     limiter = RateLimiter(REQUESTS_PER_MINUTE)
     tasks = [(interval, suffix, batch) for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season")) for batch in batches]
     completed_count = 0
-    with ThreadPoolExecutor(max_workers=min(PROGRESSION_WORKERS, max(1, len(tasks)))) as executor:
+    total_tasks = len(tasks)
+    total_players_processed = 0
+
+    log(
+        f"Progression progress 0/{total_tasks}: {len(ids)} players, "
+        f"{PROGRESSION_BATCH_SIZE} per batch, {REQUESTS_PER_MINUTE} requests/min"
+    )
+
+    with ThreadPoolExecutor(max_workers=min(PROGRESSION_WORKERS, max(1, total_tasks))) as executor:
         futures = {executor.submit(progression_request, batch, interval, limiter): (interval, suffix, batch) for interval, suffix, batch in tasks}
         for future in as_completed(futures):
             interval, suffix, batch = futures[future]
@@ -310,7 +318,11 @@ def fetch_progressions(connection: sqlite3.Connection) -> None:
             connection.executemany(f"UPDATE players SET {assignments} WHERE player_id = ?", rows)
             connection.commit()
             completed_count += 1
-            log(f"Progression batch {completed_count}/{len(tasks)}: {interval}, {len(batch)} players")
+            total_players_processed += len(batch)
+            log(
+                f"Progression progress {completed_count}/{total_tasks}: "
+                f"{interval}, {total_players_processed} total players"
+            )
 
 
 def calculate_next_overall(connection: sqlite3.Connection) -> None:
