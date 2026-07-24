@@ -28,7 +28,7 @@ class ProgressionPolicyTests(unittest.TestCase):
             100,
         )
 
-    def test_failed_request_retries_three_times_after_70_seconds(self):
+    def test_failed_request_retries_three_times_after_90_seconds(self):
         client = ProgressionClient()
         with patch(
             "progression_rebuild.urlopen",
@@ -38,10 +38,10 @@ class ProgressionPolicyTests(unittest.TestCase):
                 client.fetch([42], "ALL")
 
         self.assertEqual(PROGRESSION_RETRIES, 3)
-        self.assertEqual(PROGRESSION_RETRY_DELAY_SECONDS, 70)
+        self.assertEqual(PROGRESSION_RETRY_DELAY_SECONDS, 90)
         self.assertEqual(request.call_count, 1 + PROGRESSION_RETRIES)
         self.assertEqual(sleep.call_count, PROGRESSION_RETRIES)
-        sleep.assert_called_with(70)
+        sleep.assert_called_with(90)
 
 
 if __name__ == "__main__":
