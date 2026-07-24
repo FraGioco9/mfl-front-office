@@ -21,24 +21,24 @@ def flow_season_summary(flow_players: dict[int, Any]) -> dict[str, Any]:
     }
 
 
-def age_from_flow(player: Any) -> int:
+def age_at_mint_from_flow(player: Any) -> int:
     metadata = getattr(player, "metadata", None) or {}
     raw_age = metadata.get("ageAtMint")
     if raw_age is None:
         raise RuntimeError(f"Flow ageAtMint missing for player {player.player_id}")
 
     try:
-        age = int(raw_age)
+        age_at_mint = int(raw_age)
     except (TypeError, ValueError):
         raise RuntimeError(
             f"Flow ageAtMint is invalid for player {player.player_id}: {raw_age!r}"
         ) from None
 
-    if age <= 0:
+    if age_at_mint <= 0:
         raise RuntimeError(
-            f"Flow ageAtMint must be positive for player {player.player_id}: {age}"
+            f"Flow ageAtMint must be positive for player {player.player_id}: {age_at_mint}"
         )
-    return age
+    return age_at_mint
 
 
 def player_seasons_from_flow(player: Any) -> int:
@@ -58,6 +58,12 @@ def player_seasons_from_flow(player: Any) -> int:
             f"Flow season must be positive for player {player.player_id}: {player_seasons}"
         )
     return player_seasons
+
+
+def age_from_flow(player: Any) -> int:
+    age_at_mint = age_at_mint_from_flow(player)
+    player_seasons = player_seasons_from_flow(player)
+    return age_at_mint + player_seasons - 1
 
 
 def install_age_season_hook(rebuild_module: ModuleType) -> None:
@@ -126,7 +132,7 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
             ).fetchone()[0]
         )
         if invalid_age:
-            errors.append(f"{invalid_age} players have missing or invalid Flow age")
+            errors.append(f"{invalid_age} players have missing or invalid Flow-derived age")
         if invalid_player_seasons:
             errors.append(
                 f"{invalid_player_seasons} players have missing or invalid Flow player seasons"
@@ -146,8 +152,8 @@ def install_age_season_hook(rebuild_module: ModuleType) -> None:
                 "flow_season_maximum": summary["maximum"],
                 "flow_season_counts": summary["counts"],
                 "flow_season_uniform": summary["uniform"],
-                "age_source": "flow_player_metadata_ageAtMint",
-                "age_formula": "age = Flow metadata ageAtMint",
+                "age_source": "flow_ageAtMint_and_player_data_season",
+                "age_formula": "age = Flow metadata ageAtMint + Flow PlayerData.season - 1",
                 "player_seasons_source": "flow_player_data_season",
                 "player_seasons_formula": "player_seasons = Flow PlayerData.season",
                 "ages_written_from_flow": state["players_written"],
