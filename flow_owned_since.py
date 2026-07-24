@@ -147,7 +147,10 @@ def install_owned_since_hook(rebuild_module: ModuleType) -> None:
                     updated += 1
             elif current_owner and old_owner == current_owner and old:
                 owned_since = old.get("owned_since")
-                preserved += 1
+                if owned_since is None:
+                    unavailable += 1
+                else:
+                    preserved += 1
             else:
                 owned_since = None
                 unavailable += 1
