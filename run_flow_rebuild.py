@@ -21,6 +21,7 @@ FLOW_METADATA_BATCH_SIZE = 3000
 FLOW_WALLET_BATCH_SIZE = 3000
 rebuild.FLOW_BATCH_SIZE = FLOW_METADATA_BATCH_SIZE
 rebuild.WALLET_BATCH_SIZE = FLOW_WALLET_BATCH_SIZE
+rebuild.INTENTIONALLY_BLANK.update({"wallet_address", "wallet_name"})
 
 FLOW_BLOCKS_URL = "https://rest-mainnet.onflow.org/v1/blocks?height=sealed"
 SUPPRESSED_PROCESSES = {
@@ -62,6 +63,23 @@ access(all) fun main(address: Address, ids: [UInt64]): [UInt64] {
     return owned
 }
 """
+
+
+class OwnershipWithBlankFallback(dict[int, str]):
+    """Treat unresolved player ownership as present but blank."""
+
+    def __contains__(self, key: object) -> bool:
+        if isinstance(key, int):
+            return True
+        return super().__contains__(key)
+
+    def __missing__(self, key: int) -> str:
+        return ""
+
+
+def build_current_ownership_allow_missing(wallet_players):
+    ownership, duplicates = original_build_current_ownership(wallet_players)
+    return OwnershipWithBlankFallback(ownership), duplicates
 
 
 def insert_wallets_without_row_logs(
@@ -363,6 +381,7 @@ original_fetch_leaderboard = rebuild.fetch_leaderboard
 original_started = rebuild.started
 original_completed = rebuild.completed
 original_fetch_wallet_player_ids = rebuild.fetch_wallet_player_ids
+original_build_current_ownership = rebuild.build_current_ownership
 original_flow_request_json = flow_data._request_json
 
 flow_data.print = filtered_flow_data_print
@@ -374,6 +393,7 @@ rebuild.get_latest_sealed_block_height = get_latest_sealed_block_height
 rebuild.started = started_with_clean_labels
 rebuild.completed = completed_with_clean_labels
 rebuild.fetch_wallet_player_ids = fetch_wallet_player_ids_with_clean_logs
+rebuild.build_current_ownership = build_current_ownership_allow_missing
 
 
 if __name__ == "__main__":
