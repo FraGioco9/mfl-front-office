@@ -12,7 +12,7 @@ rebuild.FLOW_BATCH_SIZE = 3000
 rebuild.WALLET_BATCH_SIZE = 3000
 
 # Number of players requested in each progression API batch.
-rebuild.PROGRESSION_BATCH_SIZE = 1500
+rebuild.PROGRESSION_BATCH_SIZE = 1000
 
 # Use the current PlayMFL progression endpoint.
 rebuild.PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
