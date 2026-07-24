@@ -1,13 +1,35 @@
 from __future__ import annotations
 
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import ModuleType
 from typing import Any, Iterable
 
-from flow_data import FlowRequestError, OwnershipDeposit, _fetch_deposit_range, unix_milliseconds
+from flow_data import OwnershipDeposit, _fetch_deposit_range, unix_milliseconds
 from flow_wallet_ownership import normalize_address
 
+OWNED_SINCE_EVENT_START_HEIGHT = 0
 OWNED_SINCE_EVENT_WINDOW_SIZE = 1_000_000
+OWNED_SINCE_EVENT_WORKERS = 20
+
+
+def event_windows(
+    start_height: int,
+    end_height: int,
+    *,
+    window_size: int = OWNED_SINCE_EVENT_WINDOW_SIZE,
+) -> list[tuple[int, int]]:
+    if start_height < 0:
+        raise ValueError("start_height cannot be negative")
+    if window_size <= 0:
+        raise ValueError("window_size must be positive")
+    if start_height > end_height:
+        return []
+
+    return [
+        (window_start, min(end_height, window_start + window_size - 1))
+        for window_start in range(start_height, end_height + 1, window_size)
+    ]
 
 
 def fetch_deposit_events(
@@ -15,18 +37,42 @@ def fetch_deposit_events(
     end_height: int,
     *,
     window_size: int = OWNED_SINCE_EVENT_WINDOW_SIZE,
+    workers: int = OWNED_SINCE_EVENT_WORKERS,
 ) -> list[OwnershipDeposit]:
-    if start_height > end_height:
-        return []
-    if start_height <= 0:
-        raise ValueError("start_height must be positive for incremental owned_since updates")
-    if window_size <= 0:
-        raise ValueError("window_size must be positive")
+    if workers <= 0:
+        raise ValueError("workers must be positive")
 
+    windows = event_windows(start_height, end_height, window_size=window_size)
+    if not windows:
+        return []
+
+    worker_count = min(workers, len(windows))
     deposits: list[OwnershipDeposit] = []
-    for window_start in range(start_height, end_height + 1, window_size):
-        window_end = min(end_height, window_start + window_size - 1)
-        deposits.extend(_fetch_deposit_range(window_start, window_end))
+    with ThreadPoolExecutor(
+        max_workers=worker_count,
+        thread_name_prefix="flow-owned-since",
+    ) as executor:
+        futures = {
+            executor.submit(_fetch_deposit_range, window_start, window_end): (
+                window_number,
+                window_start,
+                window_end,
+            )
+            for window_number, (window_start, window_end) in enumerate(windows, start=1)
+        }
+
+        completed = 0
+        for future in as_completed(futures):
+            window_number, window_start, window_end = futures[future]
+            window_deposits = future.result()
+            deposits.extend(window_deposits)
+            completed += 1
+            print(
+                f"Owned since history {completed}/{len(windows)}: "
+                f"blocks {window_start}-{window_end}, +{len(window_deposits)}, "
+                f"total {len(deposits)}",
+                flush=True,
+            )
 
     deposits.sort(
         key=lambda item: (
@@ -59,16 +105,16 @@ def install_owned_since_hook(rebuild_module: ModuleType) -> None:
     ]
 
     state: dict[str, Any] = {
-        "start_height": None,
+        "start_height": OWNED_SINCE_EVENT_START_HEIGHT,
         "end_height": None,
         "events_scanned": 0,
         "latest_deposits": {},
-        "event_error": None,
-        "no_baseline": False,
+        "resolved_players": 0,
         "updated": 0,
-        "preserved": 0,
-        "unavailable": 0,
-        "invalid_timestamps": 0,
+        "unresolved_owner_ids": [],
+        "missing_deposit_ids": [],
+        "owner_mismatch_ids": [],
+        "invalid_timestamp_ids": [],
     }
 
     def replay_ownership_deposits(
@@ -85,28 +131,18 @@ def install_owned_since_hook(rebuild_module: ModuleType) -> None:
             window_size=window_size,
         )
 
+        deposits = fetch_deposit_events(
+            OWNED_SINCE_EVENT_START_HEIGHT,
+            end_height,
+        )
         state.update(
             {
-                "start_height": start_height,
+                "start_height": OWNED_SINCE_EVENT_START_HEIGHT,
                 "end_height": end_height,
-                "events_scanned": 0,
-                "latest_deposits": {},
-                "event_error": None,
-                "no_baseline": start_height <= 0,
+                "events_scanned": len(deposits),
+                "latest_deposits": latest_deposits_by_player(deposits),
             }
         )
-
-        if start_height <= 0 or start_height > end_height:
-            return result
-
-        try:
-            deposits = fetch_deposit_events(start_height, end_height)
-        except FlowRequestError as error:
-            state["event_error"] = str(error)
-            return result
-
-        state["events_scanned"] = len(deposits)
-        state["latest_deposits"] = latest_deposits_by_player(deposits)
         return result
 
     def replace_players(
@@ -126,36 +162,41 @@ def install_owned_since_hook(rebuild_module: ModuleType) -> None:
 
         latest_deposits: dict[int, OwnershipDeposit] = state["latest_deposits"]
         updates: list[tuple[int | None, int]] = []
+        unresolved_owner_ids: list[int] = []
+        missing_deposit_ids: list[int] = []
+        owner_mismatch_ids: list[int] = []
+        invalid_timestamp_ids: list[int] = []
         updated = 0
-        preserved = 0
-        unavailable = 0
-        invalid_timestamps = 0
+        resolved_players = 0
 
         for player_id in sorted(flow_players):
             current_owner = normalize_address(ownership.get(player_id))
-            old = old_rows.get(player_id) or {}
-            old_owner = normalize_address(old.get("wallet_address"))
-            deposit = latest_deposits.get(player_id)
+            if not current_owner:
+                unresolved_owner_ids.append(player_id)
+                updates.append((None, player_id))
+                continue
 
-            owned_since: int | None
-            if current_owner and deposit is not None and normalize_address(deposit.wallet_address) == current_owner:
-                owned_since = unix_milliseconds(deposit.block_timestamp)
-                if owned_since is None:
-                    invalid_timestamps += 1
-                    unavailable += 1
-                else:
-                    updated += 1
-            elif current_owner and old_owner == current_owner and old:
-                owned_since = old.get("owned_since")
-                if owned_since is None:
-                    unavailable += 1
-                else:
-                    preserved += 1
-            else:
-                owned_since = None
-                unavailable += 1
+            resolved_players += 1
+            deposit = latest_deposits.get(player_id)
+            if deposit is None:
+                missing_deposit_ids.append(player_id)
+                updates.append((None, player_id))
+                continue
+
+            deposit_owner = normalize_address(deposit.wallet_address)
+            if deposit_owner != current_owner:
+                owner_mismatch_ids.append(player_id)
+                updates.append((None, player_id))
+                continue
+
+            owned_since = unix_milliseconds(deposit.block_timestamp)
+            if owned_since is None:
+                invalid_timestamp_ids.append(player_id)
+                updates.append((None, player_id))
+                continue
 
             updates.append((owned_since, player_id))
+            updated += 1
 
         connection.executemany(
             "UPDATE players SET owned_since = ? WHERE player_id = ?",
@@ -165,39 +206,56 @@ def install_owned_since_hook(rebuild_module: ModuleType) -> None:
 
         state.update(
             {
+                "resolved_players": resolved_players,
                 "updated": updated,
-                "preserved": preserved,
-                "unavailable": unavailable,
-                "invalid_timestamps": invalid_timestamps,
+                "unresolved_owner_ids": unresolved_owner_ids,
+                "missing_deposit_ids": missing_deposit_ids,
+                "owner_mismatch_ids": owner_mismatch_ids,
+                "invalid_timestamp_ids": invalid_timestamp_ids,
             }
         )
 
-        if state["no_baseline"]:
-            print(
-                f"Owned since: no baseline, preserved {preserved}, null {unavailable}",
-                flush=True,
-            )
-        else:
-            print(
-                f"Owned since: events {state['events_scanned']}, updated {updated}, "
-                f"preserved {preserved}, null {unavailable}",
-                flush=True,
-            )
+        print(
+            f"Owned since: {updated}/{resolved_players} resolved, "
+            f"unresolved {len(unresolved_owner_ids)}",
+            flush=True,
+        )
 
     def validate_database(*args: Any, **kwargs: Any) -> dict[str, Any]:
         report = original_validate(*args, **kwargs)
+        errors = list(report.get("errors") or [])
+
+        missing_deposit_ids = list(state["missing_deposit_ids"])
+        owner_mismatch_ids = list(state["owner_mismatch_ids"])
+        invalid_timestamp_ids = list(state["invalid_timestamp_ids"])
+
+        if missing_deposit_ids:
+            errors.append(
+                f"{len(missing_deposit_ids)} resolved players have no Flow Deposit event"
+            )
+        if owner_mismatch_ids:
+            errors.append(
+                f"{len(owner_mismatch_ids)} players have a latest Deposit owner that does not match the snapshot"
+            )
+        if invalid_timestamp_ids:
+            errors.append(
+                f"{len(invalid_timestamp_ids)} players have an invalid Flow Deposit timestamp"
+            )
+
         report.update(
             {
-                "owned_since_source": "flow_deposit_events_incremental",
+                "owned_since_source": "full_flow_deposit_history",
                 "owned_since_event_start_height": state["start_height"],
                 "owned_since_event_end_height": state["end_height"],
                 "owned_since_events_scanned": state["events_scanned"],
+                "owned_since_resolved_players": state["resolved_players"],
                 "owned_since_updated_from_flow": state["updated"],
-                "owned_since_preserved": state["preserved"],
-                "owned_since_unavailable": state["unavailable"],
-                "owned_since_invalid_timestamps": state["invalid_timestamps"],
-                "owned_since_no_baseline": state["no_baseline"],
-                "owned_since_event_error": state["event_error"],
+                "owned_since_unresolved_owner_ids": list(state["unresolved_owner_ids"]),
+                "owned_since_missing_deposit_ids": missing_deposit_ids,
+                "owned_since_owner_mismatch_ids": owner_mismatch_ids,
+                "owned_since_invalid_timestamp_ids": invalid_timestamp_ids,
+                "errors": errors,
+                "valid": not errors,
             }
         )
         return report
