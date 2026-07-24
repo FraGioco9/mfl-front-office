@@ -8,22 +8,12 @@ from api_first_player_rebuild import install_api_first_player_source
 from candidate_only_rebuild import install_candidate_only_rebuild
 from compact_rebuild_logs import install_compact_rebuild_logs
 from database_filename_config import install_database_filename_config
-from flow_worker_config import FLOW_PARALLEL_WORKERS, install_flow_worker_config
+from flow_worker_config import install_flow_worker_config
 from leaderboard_rebuild import fetch_leaderboard_wallet_names, install_leaderboard_hooks
-from mfl_api_parallel_config import MFL_API_WORKERS, install_mfl_api_parallel_config
-from mfl_api_rate_limiter import REQUESTS_PER_MINUTE
+from mfl_api_parallel_config import install_mfl_api_parallel_config
 from mfl_wallet_config import add_mfl_wallet_names
-from parallel_player_import import (
-    PLAYER_IMPORT_SHARDS,
-    PLAYER_IMPORT_WORKERS,
-    install_parallel_player_import,
-)
+from parallel_player_import import install_parallel_player_import
 from player_data_request_logging import install_player_data_request_logging
-from progression_rebuild import (
-    PROGRESSION_BATCH_SIZE,
-    PROGRESSION_RETRIES,
-    PROGRESSION_RETRY_DELAY_SECONDS,
-)
 
 
 def install_safe_contract_columns() -> None:
@@ -61,8 +51,10 @@ def install_next_overall_status() -> None:
     original_update_next_overall = rebuild_database.update_next_overall_columns
 
     def update_next_overall_with_status(*args, **kwargs):
-        print("Next Overall calculation started", flush=True)
-        return original_update_next_overall(*args, **kwargs)
+        print("Calculating Next Overall", flush=True)
+        result = original_update_next_overall(*args, **kwargs)
+        print(f"Next Overall calculated: {result} players", flush=True)
+        return result
 
     rebuild_database.update_next_overall_columns = update_next_overall_with_status
 
@@ -80,41 +72,15 @@ def main() -> int:
     install_next_overall_status()
     install_api_first_player_source(rebuild_database)
 
+    print("Pulling wallet names", flush=True)
     try:
         leaderboard_names = fetch_leaderboard_wallet_names()
     except Exception as error:
-        print(f"Leaderboard import failed: {error}", file=sys.stderr, flush=True)
+        print(f"Wallet name pull failed: {error}", file=sys.stderr, flush=True)
         return 1
 
     add_mfl_wallet_names(leaderboard_names)
-    print(
-        f"Leaderboard import complete: loaded {len(leaderboard_names)} wallet addresses and names",
-        flush=True,
-    )
-    print(
-        "Player data source: https://api.playmfl.com/players in parallel descending ID shards; "
-        "Flow supplies player_seasons only",
-        flush=True,
-    )
-    print(
-        f"Player data import settings: {PLAYER_IMPORT_SHARDS} shards, up to "
-        f"{PLAYER_IMPORT_WORKERS} parallel workers",
-        flush=True,
-    )
-    print(
-        f"MFL API settings: up to {MFL_API_WORKERS} workers with a shared "
-        f"{REQUESTS_PER_MINUTE} requests/minute cap",
-        flush=True,
-    )
-    print(
-        f"Flow player season settings: up to {FLOW_PARALLEL_WORKERS} parallel requests",
-        flush=True,
-    )
-    print(
-        f"Player progression settings: batch {PROGRESSION_BATCH_SIZE}, workers {MFL_API_WORKERS}, "
-        f"retries {PROGRESSION_RETRIES}, delay {PROGRESSION_RETRY_DELAY_SECONDS}s",
-        flush=True,
-    )
+    print(f"Wallet names pulled: {len(leaderboard_names)}", flush=True)
 
     install_leaderboard_hooks(rebuild_database, leaderboard_names)
     return rebuild_database.main()
