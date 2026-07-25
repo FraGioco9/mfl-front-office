@@ -110,7 +110,7 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
     for attempt in range(MAX_RETRIES + 1):
         if limiter:
             limiter.wait()
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "mfl-front-office-rebuild/4.0"})
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "mfl-front-office-rebuild/4.1"})
         try:
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))
@@ -224,7 +224,7 @@ def fetch_all_player_sources(limiter: RateLimiter) -> dict[str, list[dict[str, A
             executor.submit(
                 fetch_players_page,
                 limiter,
-                page_label=f"{config['label']} batch 1",
+                page_label=f"{config['label']} first batch",
                 retired=config["retired"],
                 wallet_address=config["wallet"],
             ): key
@@ -235,36 +235,42 @@ def fetch_all_player_sources(limiter: RateLimiter) -> dict[str, list[dict[str, A
             key = first_futures[future]
             first_pages[key] = future.result()
 
-    jobs: list[tuple[str, int, int, int]] = []
+    jobs: list[tuple[str, int, int]] = []
+    totals_by_source: dict[str, int] = {}
+    completed_by_source: dict[str, int] = {key: 0 for key in sources}
+
     for key, config in sources.items():
         first_page = first_pages[key]
         results[key].update({player_id(item): item for item in first_page})
         anchors = page_anchors(first_page)
         total_batches = 1 + len(anchors)
+        totals_by_source[key] = total_batches
+        completed_by_source[key] = 1
         log(f"{config['label']} batch 1/{total_batches}: returned {len(first_page)}, total {len(results[key])}")
-        for batch_number, before_player_id in enumerate(anchors, start=2):
-            jobs.append((key, batch_number, total_batches, before_player_id))
+        for before_player_id in anchors:
+            jobs.append((key, total_batches, before_player_id))
 
     with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, max(1, len(jobs)))) as executor:
         future_jobs = {}
-        for key, batch_number, total_batches, before_player_id in jobs:
+        for key, total_batches, before_player_id in jobs:
             config = sources[key]
             future = executor.submit(
                 fetch_players_page,
                 limiter,
-                page_label=f"{config['label']} batch {batch_number}/{total_batches}",
+                page_label=f"{config['label']} queued batch",
                 before_player_id=before_player_id,
                 retired=config["retired"],
                 wallet_address=config["wallet"],
             )
-            future_jobs[future] = (key, batch_number, total_batches)
+            future_jobs[future] = key
 
         for future in as_completed(future_jobs):
-            key, batch_number, total_batches = future_jobs[future]
+            key = future_jobs[future]
             page = future.result()
             results[key].update({player_id(item): item for item in page})
+            completed_by_source[key] += 1
             log(
-                f"{sources[key]['label']} batch {batch_number}/{total_batches}: "
+                f"{sources[key]['label']} batch {completed_by_source[key]}/{totals_by_source[key]}: "
                 f"returned {len(page)}, total {len(results[key])}"
             )
 
@@ -449,9 +455,7 @@ def main() -> int:
     try:
         _, timings["schema"] = timed("Create fresh database", create_schema, connection)
         wallet_count, timings["wallets"] = timed("Leaderboard wallets", refresh_wallets, connection, limiter)
-        source_results, timings["player_sources"] = timed(
-            "All player sources in parallel", fetch_all_player_sources, limiter
-        )
+        source_results, timings["player_sources"] = timed("All players", fetch_all_player_sources, limiter)
         general = source_results["general"]
         retired = source_results["retired"]
         mfl = source_results["mfl"]
