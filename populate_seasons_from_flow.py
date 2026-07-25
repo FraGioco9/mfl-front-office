@@ -24,6 +24,7 @@ MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 15.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
+MIN_FLOW_SPLIT_BATCH_SIZE = 250
 MIN_MFL_FLOW_SPLIT_BATCH_SIZE = 250
 FLOW_WORKERS = 20
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
@@ -282,14 +283,29 @@ def parse_flow_static_player_response(response: dict[str, Any]) -> list[dict[str
     return [cadence_struct_to_dict(item) for item in response["value"]]
 
 
+def fetch_wallet_flow_batch_resilient(wallet_address: str, offset: int, limit: int) -> list[dict[str, Any]]:
+    try:
+        return parse_flow_static_player_response(execute_flow_script(wallet_address, offset, limit))
+    except RuntimeError:
+        if limit <= MIN_FLOW_SPLIT_BATCH_SIZE:
+            raise
+        left_limit = limit // 2
+        right_limit = limit - left_limit
+        print(
+            f"Flow seasons {wallet_address} offset {offset} limit {limit} failed after retries; "
+            f"splitting into {left_limit} and {right_limit}"
+        )
+        left = fetch_wallet_flow_batch_resilient(wallet_address, offset, left_limit)
+        right = fetch_wallet_flow_batch_resilient(wallet_address, offset + left_limit, right_limit)
+        return left + right
+
+
 def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     offset = 0
     batch_number = 0
     while True:
-        batch = parse_flow_static_player_response(
-            execute_flow_script(wallet_address, offset, FLOW_STATIC_PLAYER_BATCH_SIZE)
-        )
+        batch = fetch_wallet_flow_batch_resilient(wallet_address, offset, FLOW_STATIC_PLAYER_BATCH_SIZE)
         players.extend(batch)
         batch_number += 1
         print(
