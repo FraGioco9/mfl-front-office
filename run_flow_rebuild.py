@@ -212,7 +212,7 @@ def page_anchors(first_page: list[dict[str, Any]]) -> list[int]:
 
 def fetch_all_player_sources(limiter: RateLimiter) -> dict[str, list[dict[str, Any]]]:
     sources: dict[str, dict[str, Any]] = {
-        "general": {"label": "General players", "retired": False, "wallet": None},
+        "general": {"label": "Active players", "retired": False, "wallet": None},
         "retired": {"label": "Retired players", "retired": True, "wallet": None},
         "mfl": {"label": "MFL wallet", "retired": None, "wallet": MFL_WALLET_ADDRESS},
         "mfl_trade": {"label": "MFL Trade wallet", "retired": None, "wallet": MFL_TRADE_WALLET_ADDRESS},
