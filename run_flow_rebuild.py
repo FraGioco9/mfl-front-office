@@ -84,25 +84,22 @@ def log(message: str) -> None:
     print(message, flush=True)
 
 
+def format_duration(seconds: float) -> str:
+    rounded = int(round(seconds))
+    minutes, secs = divmod(rounded, 60)
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
 def timed(stage_name: str, function: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[Any, float]:
     log(f"\n=== {stage_name} ===")
     started = time.perf_counter()
     result = function(*args, **kwargs)
     elapsed = time.perf_counter() - started
     detail = f" ({len(result)} items)" if hasattr(result, "__len__") else ""
-    log(f"{stage_name} completed in {elapsed:.2f}s{detail}")
+    log(f"{stage_name} completed in {format_duration(elapsed)}{detail}")
     return result, elapsed
-
-
-def format_duration(seconds: float) -> str:
-    rounded = int(round(seconds))
-    hours, remainder = divmod(rounded, 3600)
-    minutes, secs = divmod(remainder, 60)
-    if hours:
-        return f"{hours}h {minutes}m {secs}s"
-    if minutes:
-        return f"{minutes}m {secs}s"
-    return f"{secs}s"
 
 
 def request_json(url: str, request_name: str, limiter: RateLimiter | None = None) -> Any:
@@ -120,7 +117,7 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
         except (URLError, TimeoutError, json.JSONDecodeError) as error:
             last_error = error
         if attempt < MAX_RETRIES:
-            log(f"{request_name} failed; retrying in {RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_RETRIES})")
+            log(f"{request_name} failed; retrying in {format_duration(RETRY_DELAY_SECONDS)} ({attempt + 1}/{MAX_RETRIES})")
             time.sleep(RETRY_DELAY_SECONDS)
     raise RuntimeError(f"{request_name} failed: {last_error}")
 
@@ -468,7 +465,7 @@ def main() -> int:
             connection, limit=None, wallet_address=None, force=True, include_mfl_wallet=True
         )
         timings["flow_seasons"] = time.perf_counter() - flow_started
-        log(f"\n=== Flow seasons ===\nFlow seasons updated: {updated_seasons} in {timings['flow_seasons']:.2f}s")
+        log(f"\n=== Flow seasons ===\nFlow seasons updated: {updated_seasons} in {format_duration(timings['flow_seasons'])}")
 
         progression_totals, timings["progressions"] = timed(
             "Progressions ALL and CURRENT_SEASON", refresh_progressions, connection, limiter
@@ -502,7 +499,7 @@ def main() -> int:
         connection.execute("VACUUM")
         connection.close()
         os.replace(CANDIDATE_PATH, DATABASE_PATH)
-        log(f"\nComplete rebuild finished in {format_duration(total_seconds)} ({total_seconds:.2f}s)")
+        log(f"\nComplete rebuild finished in {format_duration(total_seconds)}")
         log(f"Database: {DATABASE_PATH}")
         log(f"Report: {REPORT_PATH}")
         if report["anything_missing"]:
