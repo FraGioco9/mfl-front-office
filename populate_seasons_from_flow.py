@@ -2,7 +2,6 @@ import argparse
 import base64
 import json
 import sqlite3
-import sys
 import threading
 import time
 from collections import deque
@@ -25,6 +24,7 @@ MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
 FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
+MIN_MFL_FLOW_SPLIT_BATCH_SIZE = 250
 FLOW_WORKERS = 20
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
@@ -203,12 +203,12 @@ def execute_script(script: str, arguments: list[dict[str, Any]], label: str) -> 
             "arguments": [encode_cadence_argument(argument) for argument in arguments],
         }
     ).encode("utf-8")
-    request = Request(
-        FLOW_SCRIPT_URL,
-        data=body,
-        headers={"Accept": "application/json", "Content-Type": "application/json", "User-Agent": "mfl-flow-seasons-rebuild/3.0"},
-    )
     for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
+        request = Request(
+            FLOW_SCRIPT_URL,
+            data=body,
+            headers={"Accept": "application/json", "Content-Type": "application/json", "User-Agent": "mfl-flow-seasons-rebuild/3.1"},
+        )
         try:
             wait_for_flow_rate_limit()
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
@@ -216,12 +216,22 @@ def execute_script(script: str, arguments: list[dict[str, Any]], label: str) -> 
                 return json.loads(base64.b64decode(encoded).decode("utf-8"))
         except HTTPError as error:
             body_text = error.read().decode("utf-8", errors="replace")
-            retryable = error.code in FLOW_RETRY_STATUS_CODES and not any(marker in body_text.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
+            retryable = error.code in FLOW_RETRY_STATUS_CODES and not any(
+                marker in body_text.lower() for marker in FLOW_RETRY_ERROR_MARKERS
+            )
             if not retryable or attempt == MAX_FLOW_REQUEST_RETRIES:
                 raise RuntimeError(f"Flow API {label} returned {error.code}: {body_text}") from error
+            print(
+                f"Flow API {label} returned {error.code}; retrying "
+                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+            )
         except URLError as error:
             if attempt == MAX_FLOW_REQUEST_RETRIES:
                 raise RuntimeError(f"Flow API {label} connection failed: {error.reason}") from error
+            print(
+                f"Flow API {label} connection failed; retrying "
+                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+            )
         time.sleep(FLOW_RETRY_DELAY_SECONDS)
     raise RuntimeError(f"Flow API {label} failed after retries")
 
@@ -277,7 +287,9 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
     offset = 0
     batch_number = 0
     while True:
-        batch = parse_flow_static_player_response(execute_flow_script(wallet_address, offset, FLOW_STATIC_PLAYER_BATCH_SIZE))
+        batch = parse_flow_static_player_response(
+            execute_flow_script(wallet_address, offset, FLOW_STATIC_PLAYER_BATCH_SIZE)
+        )
         players.extend(batch)
         batch_number += 1
         print(
@@ -289,21 +301,44 @@ def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]
         offset += FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
+def fetch_mfl_ids_batch_resilient(player_ids: list[int]) -> list[dict[str, Any]]:
+    try:
+        response = execute_flow_ids_script(MFL_WALLET_ADDRESS, player_ids)
+        return parse_flow_static_player_response(response)
+    except RuntimeError:
+        if len(player_ids) <= MIN_MFL_FLOW_SPLIT_BATCH_SIZE:
+            raise
+        midpoint = len(player_ids) // 2
+        left = player_ids[:midpoint]
+        right = player_ids[midpoint:]
+        print(
+            f"Flow seasons MFL batch of {len(player_ids)} IDs failed after retries; "
+            f"splitting into {len(left)} and {len(right)}"
+        )
+        return fetch_mfl_ids_batch_resilient(left) + fetch_mfl_ids_batch_resilient(right)
+
+
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
-    batches = [player_ids[index:index + MFL_FLOW_STATIC_PLAYER_BATCH_SIZE] for index in range(0, len(player_ids), MFL_FLOW_STATIC_PLAYER_BATCH_SIZE)]
+    batches = [
+        player_ids[index:index + MFL_FLOW_STATIC_PLAYER_BATCH_SIZE]
+        for index in range(0, len(player_ids), MFL_FLOW_STATIC_PLAYER_BATCH_SIZE)
+    ]
     if not batches:
         return []
     players: list[dict[str, Any]] = []
     worker_count = min(FLOW_WORKERS, len(batches))
     with ThreadPoolExecutor(max_workers=max(1, worker_count)) as executor:
-        futures = {executor.submit(execute_flow_ids_script, MFL_WALLET_ADDRESS, batch): batch for batch in batches}
+        futures = {executor.submit(fetch_mfl_ids_batch_resilient, batch): batch for batch in batches}
         completed = 0
         for future in as_completed(futures):
             batch = futures[future]
-            batch_players = parse_flow_static_player_response(future.result())
+            batch_players = future.result()
             players.extend(batch_players)
             completed += 1
-            print(f"Flow seasons MFL batch {completed}/{len(batches)}: read {len(batch)} IDs, returned {len(batch_players)}")
+            print(
+                f"Flow seasons MFL batch {completed}/{len(batches)}: "
+                f"read {len(batch)} IDs, returned {len(batch_players)}"
+            )
     return list({int(player["playerId"]): player for player in players}.values())
 
 
