@@ -12,14 +12,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from populate_seasons_from_flow import populate_flow_static_fields
-from update_database import (
-    ATTRIBUTES,
-    MFL_WALLET_ADDRESS,
-    POSITION_GROUP_WEIGHTS,
-    STAT_ATTRIBUTES,
-    next_overall_values,
-)
+import populate_seasons_from_flow as flow_module
+from update_database import ATTRIBUTES, MFL_WALLET_ADDRESS, next_overall_values
 
 DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
 CANDIDATE_PATH = Path(__file__).with_name("mfl_progression_candidate.db")
@@ -42,6 +36,10 @@ FLOW_WORKERS = 20
 REQUEST_TIMEOUT_SECONDS = 60
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 90.0
+
+flow_module.FLOW_STATIC_PLAYER_BATCH_SIZE = FLOW_BATCH_SIZE
+flow_module.MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = FLOW_BATCH_SIZE
+flow_module.FLOW_WORKERS = FLOW_WORKERS
 
 PLAYER_COLUMNS = [
     "player_id", "wallet_address", "wallet_name", "name", "positions", "age",
@@ -112,7 +110,7 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
     for attempt in range(MAX_RETRIES + 1):
         if limiter:
             limiter.wait()
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "mfl-front-office-rebuild/3.0"})
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "mfl-front-office-rebuild/4.0"})
         try:
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))
@@ -130,66 +128,29 @@ def request_json(url: str, request_name: str, limiter: RateLimiter | None = None
 def create_schema(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE IF EXISTS players")
     connection.execute("DROP TABLE IF EXISTS wallets")
-    connection.execute(
-        """
-        CREATE TABLE wallets (
-            wallet_address TEXT PRIMARY KEY,
-            name TEXT NOT NULL DEFAULT ''
-        )
-        """
-    )
+    connection.execute("CREATE TABLE wallets (wallet_address TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '')")
     connection.execute(
         """
         CREATE TABLE players (
-            player_id INTEGER PRIMARY KEY,
-            wallet_address TEXT NOT NULL,
-            wallet_name TEXT NOT NULL DEFAULT '',
-            name TEXT,
-            positions TEXT,
-            age INTEGER,
-            nationality TEXT,
-            preferred_foot TEXT,
-            height INTEGER,
-            retirement_years INTEGER,
-            owned_since INTEGER,
-            active_contract_revenue_share INTEGER,
-            active_contract_club_id TEXT,
-            active_contract_club_name TEXT,
-            active_contract_club_division TEXT,
-            overall INTEGER,
-            pace INTEGER,
-            shooting INTEGER,
-            passing INTEGER,
-            dribbling INTEGER,
-            defense INTEGER,
-            physical INTEGER,
-            goalkeeping INTEGER,
-            player_seasons INTEGER,
-            overall_prog_all INTEGER,
-            pace_prog_all INTEGER,
-            shooting_prog_all INTEGER,
-            passing_prog_all INTEGER,
-            dribbling_prog_all INTEGER,
-            defense_prog_all INTEGER,
-            physical_prog_all INTEGER,
-            goalkeeping_prog_all INTEGER,
-            overall_prog_current_season INTEGER,
-            pace_prog_current_season INTEGER,
-            shooting_prog_current_season INTEGER,
-            passing_prog_current_season INTEGER,
-            dribbling_prog_current_season INTEGER,
-            defense_prog_current_season INTEGER,
-            physical_prog_current_season INTEGER,
-            goalkeeping_prog_current_season INTEGER,
-            next_overall REAL,
-            next_overall_gap REAL,
-            pace_to_next_overall REAL,
-            shooting_to_next_overall REAL,
-            passing_to_next_overall REAL,
-            dribbling_to_next_overall REAL,
-            defense_to_next_overall REAL,
-            physical_to_next_overall REAL,
-            goalkeeping_to_next_overall REAL
+            player_id INTEGER PRIMARY KEY, wallet_address TEXT NOT NULL,
+            wallet_name TEXT NOT NULL DEFAULT '', name TEXT, positions TEXT, age INTEGER,
+            nationality TEXT, preferred_foot TEXT, height INTEGER, retirement_years INTEGER,
+            owned_since INTEGER, active_contract_revenue_share INTEGER,
+            active_contract_club_id TEXT, active_contract_club_name TEXT,
+            active_contract_club_division TEXT, overall INTEGER, pace INTEGER,
+            shooting INTEGER, passing INTEGER, dribbling INTEGER, defense INTEGER,
+            physical INTEGER, goalkeeping INTEGER, player_seasons INTEGER,
+            overall_prog_all INTEGER, pace_prog_all INTEGER, shooting_prog_all INTEGER,
+            passing_prog_all INTEGER, dribbling_prog_all INTEGER, defense_prog_all INTEGER,
+            physical_prog_all INTEGER, goalkeeping_prog_all INTEGER,
+            overall_prog_current_season INTEGER, pace_prog_current_season INTEGER,
+            shooting_prog_current_season INTEGER, passing_prog_current_season INTEGER,
+            dribbling_prog_current_season INTEGER, defense_prog_current_season INTEGER,
+            physical_prog_current_season INTEGER, goalkeeping_prog_current_season INTEGER,
+            next_overall REAL, next_overall_gap REAL, pace_to_next_overall REAL,
+            shooting_to_next_overall REAL, passing_to_next_overall REAL,
+            dribbling_to_next_overall REAL, defense_to_next_overall REAL,
+            physical_to_next_overall REAL, goalkeeping_to_next_overall REAL
         )
         """
     )
@@ -197,8 +158,8 @@ def create_schema(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
-def refresh_wallets(connection: sqlite3.Connection) -> int:
-    data = request_json(LEADERBOARD_URL, "Leaderboard")
+def refresh_wallets(connection: sqlite3.Connection, limiter: RateLimiter) -> int:
+    data = request_json(LEADERBOARD_URL, "Leaderboard", limiter)
     users = data.get("users") if isinstance(data, dict) else None
     if not isinstance(users, list):
         raise RuntimeError("Leaderboard response did not contain a users list")
@@ -211,10 +172,7 @@ def refresh_wallets(connection: sqlite3.Connection) -> int:
             wallets[address] = str(user.get("name") or "")
     wallets[MFL_WALLET_ADDRESS] = MFL_WALLET_NAME
     wallets[MFL_TRADE_WALLET_ADDRESS] = MFL_TRADE_WALLET_NAME
-    connection.executemany(
-        "INSERT INTO wallets(wallet_address, name) VALUES (?, ?)",
-        sorted(wallets.items()),
-    )
+    connection.executemany("INSERT INTO wallets(wallet_address, name) VALUES (?, ?)", sorted(wallets.items()))
     connection.commit()
     log(f"Wallets saved: {len(wallets)}")
     return len(wallets)
@@ -245,45 +203,72 @@ def fetch_players_page(
     return [item for item in data if isinstance(item, dict) and item.get("id") is not None]
 
 
-def fetch_paginated_players(
-    limiter: RateLimiter,
-    *,
-    source_label: str,
-    retired: bool | None = None,
-    wallet_address: str | None = None,
-) -> list[dict[str, Any]]:
-    first_page = fetch_players_page(
-        limiter,
-        page_label=f"{source_label} batch 1",
-        retired=retired,
-        wallet_address=wallet_address,
-    )
-    collected: dict[int, dict[str, Any]] = {player_id(item): item for item in first_page}
-    log(f"{source_label} batch 1: returned {len(first_page)}, total {len(collected)}")
+def page_anchors(first_page: list[dict[str, Any]]) -> list[int]:
     if len(first_page) < MFL_PAGE_SIZE:
-        return list(collected.values())
+        return []
+    lowest_id = min(player_id(item) for item in first_page)
+    return list(range(lowest_id, 0, -MFL_PAGE_SIZE))
 
-    before = min(player_id(item) for item in first_page)
-    batch_number = 2
-    while True:
-        page = fetch_players_page(
-            limiter,
-            page_label=f"{source_label} batch {batch_number}",
-            before_player_id=before,
-            retired=retired,
-            wallet_address=wallet_address,
-        )
-        for item in page:
-            collected[player_id(item)] = item
-        log(f"{source_label} batch {batch_number}: returned {len(page)}, total {len(collected)}")
-        if len(page) < MFL_PAGE_SIZE:
-            break
-        next_before = min(player_id(item) for item in page)
-        if next_before >= before:
-            raise RuntimeError(f"{source_label} pagination did not advance")
-        before = next_before
-        batch_number += 1
-    return list(collected.values())
+
+def fetch_all_player_sources(limiter: RateLimiter) -> dict[str, list[dict[str, Any]]]:
+    sources: dict[str, dict[str, Any]] = {
+        "general": {"label": "General players", "retired": False, "wallet": None},
+        "retired": {"label": "Retired players", "retired": True, "wallet": None},
+        "mfl": {"label": "MFL wallet", "retired": None, "wallet": MFL_WALLET_ADDRESS},
+        "mfl_trade": {"label": "MFL Trade wallet", "retired": None, "wallet": MFL_TRADE_WALLET_ADDRESS},
+    }
+    results: dict[str, dict[int, dict[str, Any]]] = {key: {} for key in sources}
+
+    with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, len(sources))) as executor:
+        first_futures = {
+            executor.submit(
+                fetch_players_page,
+                limiter,
+                page_label=f"{config['label']} batch 1",
+                retired=config["retired"],
+                wallet_address=config["wallet"],
+            ): key
+            for key, config in sources.items()
+        }
+        first_pages: dict[str, list[dict[str, Any]]] = {}
+        for future in as_completed(first_futures):
+            key = first_futures[future]
+            first_pages[key] = future.result()
+
+    jobs: list[tuple[str, int, int, int]] = []
+    for key, config in sources.items():
+        first_page = first_pages[key]
+        results[key].update({player_id(item): item for item in first_page})
+        anchors = page_anchors(first_page)
+        total_batches = 1 + len(anchors)
+        log(f"{config['label']} batch 1/{total_batches}: returned {len(first_page)}, total {len(results[key])}")
+        for batch_number, before_player_id in enumerate(anchors, start=2):
+            jobs.append((key, batch_number, total_batches, before_player_id))
+
+    with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, max(1, len(jobs)))) as executor:
+        future_jobs = {}
+        for key, batch_number, total_batches, before_player_id in jobs:
+            config = sources[key]
+            future = executor.submit(
+                fetch_players_page,
+                limiter,
+                page_label=f"{config['label']} batch {batch_number}/{total_batches}",
+                before_player_id=before_player_id,
+                retired=config["retired"],
+                wallet_address=config["wallet"],
+            )
+            future_jobs[future] = (key, batch_number, total_batches)
+
+        for future in as_completed(future_jobs):
+            key, batch_number, total_batches = future_jobs[future]
+            page = future.result()
+            results[key].update({player_id(item): item for item in page})
+            log(
+                f"{sources[key]['label']} batch {batch_number}/{total_batches}: "
+                f"returned {len(page)}, total {len(results[key])}"
+            )
+
+    return {key: list(players.values()) for key, players in results.items()}
 
 
 def merge_players(*sources: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -307,30 +292,23 @@ def join_values(value: Any) -> str:
     return "" if value is None else str(value)
 
 
-def owner_values(player: dict[str, Any]) -> tuple[str, str]:
-    owner = player.get("ownedBy") or {}
-    if not isinstance(owner, dict):
-        owner = {}
-    address = str(owner.get("walletAddress") or "").strip().lower()
-    name = str(owner.get("name") or "")
-    return address, name
-
-
 def player_row(player: dict[str, Any]) -> tuple[Any, ...]:
     metadata = player.get("metadata") or {}
+    owner = player.get("ownedBy") or {}
+    contract = player.get("activeContract") or {}
+    club = contract.get("club") or {} if isinstance(contract, dict) else {}
     if not isinstance(metadata, dict):
         metadata = {}
-    active_contract = player.get("activeContract") or {}
-    if not isinstance(active_contract, dict):
-        active_contract = {}
-    club = active_contract.get("club") or {}
+    if not isinstance(owner, dict):
+        owner = {}
+    if not isinstance(contract, dict):
+        contract = {}
     if not isinstance(club, dict):
         club = {}
-    address, wallet_name = owner_values(player)
     values: dict[str, Any] = {
         "player_id": player_id(player),
-        "wallet_address": address,
-        "wallet_name": wallet_name,
+        "wallet_address": str(owner.get("walletAddress") or "").strip().lower(),
+        "wallet_name": str(owner.get("name") or ""),
         "name": f"{str(metadata.get('firstName') or '').strip()} {str(metadata.get('lastName') or '').strip()}".strip(),
         "positions": join_values(metadata.get("positions")),
         "age": to_int(metadata.get("age")),
@@ -339,7 +317,7 @@ def player_row(player: dict[str, Any]) -> tuple[Any, ...]:
         "height": to_int(metadata.get("height")),
         "retirement_years": to_int(metadata.get("retirementYears")),
         "owned_since": to_int(player.get("ownedSince") or player.get("ownedsince")),
-        "active_contract_revenue_share": to_int(active_contract.get("revenueShare")),
+        "active_contract_revenue_share": to_int(contract.get("revenueShare")),
         "active_contract_club_id": str(club.get("id") or ""),
         "active_contract_club_name": str(club.get("name") or ""),
         "active_contract_club_division": str(club.get("division") or ""),
@@ -358,6 +336,10 @@ def insert_players(connection: sqlite3.Connection, players: dict[int, dict[str, 
     log(f"Players inserted: {len(players)}")
 
 
+def chunks(values: list[int], size: int) -> list[list[int]]:
+    return [values[index:index + size] for index in range(0, len(values), size)]
+
+
 def progression_request(batch: list[int], interval: str, limiter: RateLimiter) -> dict[str, Any]:
     query = urlencode({"playersIds": ",".join(str(value) for value in batch), "interval": interval})
     data = request_json(f"{PROGRESSIONS_URL}?{query}", f"Progression {interval}", limiter)
@@ -367,43 +349,44 @@ def progression_request(batch: list[int], interval: str, limiter: RateLimiter) -
 
 
 def progression_value(data: Any, attribute: str) -> int:
-    if not isinstance(data, dict):
-        return 0
-    return to_int(data.get(attribute)) or 0
-
-
-def chunks(values: list[int], size: int) -> list[list[int]]:
-    return [values[index:index + size] for index in range(0, len(values), size)]
+    return (to_int(data.get(attribute)) or 0) if isinstance(data, dict) else 0
 
 
 def refresh_progressions(connection: sqlite3.Connection, limiter: RateLimiter) -> dict[str, int]:
-    excluded = (MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS)
     ids = [
         int(row[0])
         for row in connection.execute(
             "SELECT player_id FROM players WHERE lower(wallet_address) NOT IN (?, ?) ORDER BY player_id",
-            excluded,
+            (MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS),
         )
     ]
     batches = chunks(ids, PROGRESSION_BATCH_SIZE)
+    jobs = [
+        (interval, suffix, batch)
+        for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season"))
+        for batch in batches
+    ]
     totals = {"ALL": 0, "CURRENT_SEASON": 0}
-    for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season")):
-        with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, max(1, len(batches)))) as executor:
-            futures = {executor.submit(progression_request, batch, interval, limiter): batch for batch in batches}
-            completed = 0
-            for future in as_completed(futures):
-                batch = futures[future]
-                data = future.result()
-                rows = [
-                    tuple(progression_value(data.get(str(pid)), attribute) for attribute in ATTRIBUTES) + (pid,)
-                    for pid in batch
-                ]
-                assignments = ", ".join(f"{attribute}_prog_{suffix} = ?" for attribute in ATTRIBUTES)
-                connection.executemany(f"UPDATE players SET {assignments} WHERE player_id = ?", rows)
-                connection.commit()
-                completed += 1
-                totals[interval] += len(rows)
-                log(f"Progression {interval} batch {completed}/{len(batches)}: updated {len(rows)}")
+    completed = {"ALL": 0, "CURRENT_SEASON": 0}
+
+    with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, max(1, len(jobs)))) as executor:
+        futures = {
+            executor.submit(progression_request, batch, interval, limiter): (interval, suffix, batch)
+            for interval, suffix, batch in jobs
+        }
+        for future in as_completed(futures):
+            interval, suffix, batch = futures[future]
+            data = future.result()
+            rows = [
+                tuple(progression_value(data.get(str(pid)), attribute) for attribute in ATTRIBUTES) + (pid,)
+                for pid in batch
+            ]
+            assignments = ", ".join(f"{attribute}_prog_{suffix} = ?" for attribute in ATTRIBUTES)
+            connection.executemany(f"UPDATE players SET {assignments} WHERE player_id = ?", rows)
+            connection.commit()
+            completed[interval] += 1
+            totals[interval] += len(rows)
+            log(f"Progression {interval} batch {completed[interval]}/{len(batches)}: updated {len(rows)}")
     return totals
 
 
@@ -415,10 +398,9 @@ def calculate_next_overall(connection: sqlite3.Connection) -> int:
     updates = [(*next_overall_values(row), row["player_id"]) for row in rows]
     connection.executemany(
         """
-        UPDATE players SET
-            next_overall=?, next_overall_gap=?, pace_to_next_overall=?, shooting_to_next_overall=?,
-            passing_to_next_overall=?, dribbling_to_next_overall=?, defense_to_next_overall=?,
-            physical_to_next_overall=?, goalkeeping_to_next_overall=?
+        UPDATE players SET next_overall=?, next_overall_gap=?, pace_to_next_overall=?,
+        shooting_to_next_overall=?, passing_to_next_overall=?, dribbling_to_next_overall=?,
+        defense_to_next_overall=?, physical_to_next_overall=?, goalkeeping_to_next_overall=?
         WHERE player_id=?
         """,
         updates,
@@ -434,9 +416,10 @@ def validate(connection: sqlite3.Connection, expected_players: int) -> dict[str,
     extra_columns = [column for column in actual_columns if column not in PLAYER_COLUMNS]
     row_count = int(connection.execute("SELECT COUNT(*) FROM players").fetchone()[0])
     missing_values: dict[str, int] = {}
+    text_columns = {"wallet_address", "wallet_name", "name", "positions", "nationality", "preferred_foot"}
     for column in sorted(REQUIRED_BASE_COLUMNS):
         quoted = column.replace('"', '""')
-        if column in {"wallet_address", "wallet_name", "name", "positions", "nationality", "preferred_foot"}:
+        if column in text_columns:
             count = int(connection.execute(f'SELECT COUNT(*) FROM players WHERE "{quoted}" IS NULL OR trim("{quoted}") = \'\'').fetchone()[0])
         else:
             count = int(connection.execute(f'SELECT COUNT(*) FROM players WHERE "{quoted}" IS NULL').fetchone()[0])
@@ -465,39 +448,26 @@ def main() -> int:
     connection = sqlite3.connect(CANDIDATE_PATH)
     try:
         _, timings["schema"] = timed("Create fresh database", create_schema, connection)
-        wallet_count, timings["wallets"] = timed("Leaderboard wallets", refresh_wallets, connection)
-        general, timings["general_players"] = timed(
-            "General active players", fetch_paginated_players, limiter,
-            source_label="General players", retired=False,
+        wallet_count, timings["wallets"] = timed("Leaderboard wallets", refresh_wallets, connection, limiter)
+        source_results, timings["player_sources"] = timed(
+            "All player sources in parallel", fetch_all_player_sources, limiter
         )
-        retired, timings["retired_players"] = timed(
-            "Retired players", fetch_paginated_players, limiter,
-            source_label="Retired players", retired=True,
-        )
-        mfl, timings["mfl_wallet_players"] = timed(
-            "MFL wallet players", fetch_paginated_players, limiter,
-            source_label="MFL wallet", wallet_address=MFL_WALLET_ADDRESS,
-        )
-        mfl_trade, timings["mfl_trade_wallet_players"] = timed(
-            "MFL Trade wallet players", fetch_paginated_players, limiter,
-            source_label="MFL Trade wallet", wallet_address=MFL_TRADE_WALLET_ADDRESS,
-        )
+        general = source_results["general"]
+        retired = source_results["retired"]
+        mfl = source_results["mfl"]
+        mfl_trade = source_results["mfl_trade"]
         players = merge_players(general, retired, mfl, mfl_trade)
         _, timings["insert_players"] = timed("Insert merged players", insert_players, connection, players)
 
         flow_started = time.perf_counter()
-        updated_seasons = populate_flow_static_fields(
-            connection,
-            limit=None,
-            wallet_address=None,
-            force=True,
-            include_mfl_wallet=True,
+        updated_seasons = flow_module.populate_flow_static_fields(
+            connection, limit=None, wallet_address=None, force=True, include_mfl_wallet=True
         )
         timings["flow_seasons"] = time.perf_counter() - flow_started
         log(f"\n=== Flow seasons ===\nFlow seasons updated: {updated_seasons} in {timings['flow_seasons']:.2f}s")
 
         progression_totals, timings["progressions"] = timed(
-            "Progressions ALL and CURRENT_SEASON", refresh_progressions, connection, limiter,
+            "Progressions ALL and CURRENT_SEASON", refresh_progressions, connection, limiter
         )
         next_count, timings["next_overall"] = timed("Next Overall", calculate_next_overall, connection)
         report, timings["validation"] = timed("Validation", validate, connection, len(players))
@@ -505,19 +475,16 @@ def main() -> int:
         total_seconds = time.perf_counter() - total_started
         report.update({
             "source_counts": {
-                "wallets": wallet_count,
-                "general": len(general),
-                "retired": len(retired),
-                "mfl_wallet": len(mfl),
-                "mfl_trade_wallet": len(mfl_trade),
-                "unique_players": len(players),
-                "flow_seasons_updated": updated_seasons,
+                "wallets": wallet_count, "general": len(general), "retired": len(retired),
+                "mfl_wallet": len(mfl), "mfl_trade_wallet": len(mfl_trade),
+                "unique_players": len(players), "flow_seasons_updated": updated_seasons,
                 "progression_all": progression_totals["ALL"],
                 "progression_current_season": progression_totals["CURRENT_SEASON"],
                 "next_overall": next_count,
             },
             "settings": {
                 "mfl_requests_per_minute": MFL_REQUESTS_PER_MINUTE,
+                "mfl_workers": MFL_WORKERS,
                 "mfl_page_size": MFL_PAGE_SIZE,
                 "progression_batch_size": PROGRESSION_BATCH_SIZE,
                 "flow_batch_size": FLOW_BATCH_SIZE,
