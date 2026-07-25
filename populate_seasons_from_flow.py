@@ -23,8 +23,8 @@ FLOW_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 FLOW_RETRY_ERROR_MARKERS = ("computation exceeds limit", "max interaction with storage has exceeded the limit")
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
 FLOW_RETRY_DELAY_SECONDS = 90.0
-FLOW_STATIC_PLAYER_BATCH_SIZE = 25
-MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 25
+FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
+MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 FLOW_WORKERS = 20
 FLOW_REQUEST_TIMESTAMPS: deque[float] = deque()
 FLOW_RATE_LIMIT_LOCK = threading.Lock()
@@ -135,35 +135,19 @@ access(all) fun main(address: Address, ids: [UInt64]): [FlowStaticPlayer] {
 
 
 def ensure_flow_static_columns(connection: sqlite3.Connection) -> None:
-    existing_columns = {
-        row[1]
-        for row in connection.execute("PRAGMA table_info(players)").fetchall()
-    }
-    expected_columns = {
-        "player_seasons": "INTEGER",
-    }
-
+    existing_columns = {row[1] for row in connection.execute("PRAGMA table_info(players)").fetchall()}
     if "seasons" in existing_columns and "player_seasons" not in existing_columns:
         connection.execute("ALTER TABLE players RENAME COLUMN seasons TO player_seasons")
         existing_columns.remove("seasons")
         existing_columns.add("player_seasons")
-
     if "player_seasons" not in existing_columns:
         connection.execute("ALTER TABLE players ADD COLUMN player_seasons INTEGER")
-        existing_columns.add("player_seasons")
-
-    for column_name, column_type in expected_columns.items():
-        if column_name not in existing_columns:
-            connection.execute(f"ALTER TABLE players ADD COLUMN {column_name} {column_type}")
-
     if "age_at_mint" in existing_columns:
         connection.execute(
             """
             UPDATE players
             SET player_seasons = age - age_at_mint + 1
-            WHERE player_seasons IS NULL
-                AND age IS NOT NULL
-                AND age_at_mint IS NOT NULL
+            WHERE player_seasons IS NULL AND age IS NOT NULL AND age_at_mint IS NOT NULL
             """
         )
         connection.execute("ALTER TABLE players DROP COLUMN age_at_mint")
@@ -177,470 +161,183 @@ def get_wallets_to_process(
     include_mfl_wallet: bool = True,
 ) -> list[str]:
     if wallet_address:
-        normalized_wallet_address = wallet_address.lower()
-        if normalized_wallet_address == MFL_WALLET_ADDRESS and not include_mfl_wallet:
+        normalized = wallet_address.lower()
+        if normalized == MFL_WALLET_ADDRESS and not include_mfl_wallet:
             return []
-        return [normalized_wallet_address]
-
-    where_sql = ""
-    parameters: list[Any] = []
-
-    if not force:
-        where_sql = "WHERE player_seasons IS NULL"
-
-    limit_sql = ""
-    if limit is not None:
-        limit_sql = "LIMIT ?"
-        parameters.append(limit)
-
+        return [normalized]
+    where_sql = "" if force else "WHERE player_seasons IS NULL"
+    limit_sql = "" if limit is None else "LIMIT ?"
+    params: list[Any] = [] if limit is None else [limit]
     rows = connection.execute(
-        f"""
-        SELECT DISTINCT wallet_address
-        FROM players
-        {where_sql}
-        ORDER BY wallet_address
-        {limit_sql}
-        """,
-        parameters,
+        f"SELECT DISTINCT wallet_address FROM players {where_sql} ORDER BY wallet_address {limit_sql}",
+        params,
     ).fetchall()
     wallets = [row[0] for row in rows]
-
-    without_mfl_wallet = [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
+    standard = [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
     if include_mfl_wallet:
-        mfl_wallets = [wallet for wallet in wallets if wallet.lower() == MFL_WALLET_ADDRESS]
-        return [*mfl_wallets, *without_mfl_wallet]
-
-    return without_mfl_wallet
+        return [*[wallet for wallet in wallets if wallet.lower() == MFL_WALLET_ADDRESS], *standard]
+    return standard
 
 
-def encode_cadence_argument(argument: dict[str, str]) -> str:
-    argument_json = json.dumps(argument, separators=(",", ":"))
-    return base64.b64encode(argument_json.encode("utf-8")).decode("utf-8")
+def encode_cadence_argument(argument: dict[str, Any]) -> str:
+    return base64.b64encode(json.dumps(argument, separators=(",", ":")).encode("utf-8")).decode("utf-8")
 
 
 def wait_for_flow_rate_limit() -> None:
     while True:
         with FLOW_RATE_LIMIT_LOCK:
             now = time.monotonic()
-
             while FLOW_REQUEST_TIMESTAMPS and now - FLOW_REQUEST_TIMESTAMPS[0] >= 1.0:
                 FLOW_REQUEST_TIMESTAMPS.popleft()
-
             if len(FLOW_REQUEST_TIMESTAMPS) < FLOW_REQUESTS_PER_SECOND_LIMIT:
                 FLOW_REQUEST_TIMESTAMPS.append(now)
                 return
-
             sleep_seconds = 1.0 - (now - FLOW_REQUEST_TIMESTAMPS[0])
-
         time.sleep(max(sleep_seconds, 0.01))
 
 
-def execute_flow_script(wallet_address: str, offset: int = 0, limit: int = FLOW_STATIC_PLAYER_BATCH_SIZE) -> dict[str, Any]:
+def execute_script(script: str, arguments: list[dict[str, Any]], label: str) -> dict[str, Any]:
     body = json.dumps(
         {
-            "script": base64.b64encode(CADENCE_SCRIPT.encode("utf-8")).decode("utf-8"),
-            "arguments": [
-                encode_cadence_argument(
-                    {
-                        "type": "Address",
-                        "value": wallet_address,
-                    }
-                ),
-                encode_cadence_argument(
-                    {
-                        "type": "Int",
-                        "value": str(offset),
-                    }
-                ),
-                encode_cadence_argument(
-                    {
-                        "type": "Int",
-                        "value": str(limit),
-                    }
-                ),
-            ],
+            "script": base64.b64encode(script.encode("utf-8")).decode("utf-8"),
+            "arguments": [encode_cadence_argument(argument) for argument in arguments],
         }
     ).encode("utf-8")
-
     request = Request(
         FLOW_SCRIPT_URL,
         data=body,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": "mfl-progression-flow-static-fields/1.0",
-        },
+        headers={"Accept": "application/json", "Content-Type": "application/json", "User-Agent": "mfl-flow-seasons-rebuild/3.0"},
     )
-
     for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
         try:
             wait_for_flow_rate_limit()
-
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-                encoded_response = json.loads(response.read().decode("utf-8"))
-                break
+                encoded = json.loads(response.read().decode("utf-8"))
+                return json.loads(base64.b64decode(encoded).decode("utf-8"))
         except HTTPError as error:
-            error_body = error.read().decode("utf-8", errors="replace")
-
-            retryable_error_body = any(marker in error_body.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
-            if retryable_error_body:
-                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
-
-            if error.code not in FLOW_RETRY_STATUS_CODES or attempt == MAX_FLOW_REQUEST_RETRIES:
-                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
-
-            print(
-                f"Flow API {wallet_address} offset {offset} limit {limit} returned {error.code}; "
-                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
-            )
-            time.sleep(FLOW_RETRY_DELAY_SECONDS)
+            body_text = error.read().decode("utf-8", errors="replace")
+            retryable = error.code in FLOW_RETRY_STATUS_CODES and not any(marker in body_text.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
+            if not retryable or attempt == MAX_FLOW_REQUEST_RETRIES:
+                raise RuntimeError(f"Flow API {label} returned {error.code}: {body_text}") from error
         except URLError as error:
             if attempt == MAX_FLOW_REQUEST_RETRIES:
-                raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
+                raise RuntimeError(f"Flow API {label} connection failed: {error.reason}") from error
+        time.sleep(FLOW_RETRY_DELAY_SECONDS)
+    raise RuntimeError(f"Flow API {label} failed after retries")
 
-            print(
-                f"Flow API {wallet_address} offset {offset} limit {limit} connection failed; "
-                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
-            )
-            time.sleep(FLOW_RETRY_DELAY_SECONDS)
-        except json.JSONDecodeError as error:
-            raise RuntimeError("Flow API response was not valid JSON") from error
 
-    decoded_response = base64.b64decode(encoded_response).decode("utf-8")
-    return json.loads(decoded_response)
+def execute_flow_script(wallet_address: str, offset: int, limit: int) -> dict[str, Any]:
+    return execute_script(
+        CADENCE_SCRIPT,
+        [
+            {"type": "Address", "value": wallet_address},
+            {"type": "Int", "value": str(offset)},
+            {"type": "Int", "value": str(limit)},
+        ],
+        f"{wallet_address} offset {offset} limit {limit}",
+    )
 
 
 def execute_flow_ids_script(wallet_address: str, player_ids: list[int]) -> dict[str, Any]:
-    body = json.dumps(
-        {
-            "script": base64.b64encode(CADENCE_SCRIPT_BY_IDS.encode("utf-8")).decode("utf-8"),
-            "arguments": [
-                encode_cadence_argument(
-                    {
-                        "type": "Address",
-                        "value": wallet_address,
-                    }
-                ),
-                encode_cadence_argument(
-                    {
-                        "type": "Array",
-                        "value": [
-                            {
-                                "type": "UInt64",
-                                "value": str(player_id),
-                            }
-                            for player_id in player_ids
-                        ],
-                    }
-                ),
-            ],
-        }
-    ).encode("utf-8")
-
-    request = Request(
-        FLOW_SCRIPT_URL,
-        data=body,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": "mfl-progression-flow-static-fields/1.0",
-        },
+    return execute_script(
+        CADENCE_SCRIPT_BY_IDS,
+        [
+            {"type": "Address", "value": wallet_address},
+            {"type": "Array", "value": [{"type": "UInt64", "value": str(player_id)} for player_id in player_ids]},
+        ],
+        f"{wallet_address} ids {len(player_ids)}",
     )
-
-    for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
-        try:
-            wait_for_flow_rate_limit()
-
-            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-                encoded_response = json.loads(response.read().decode("utf-8"))
-                break
-        except HTTPError as error:
-            error_body = error.read().decode("utf-8", errors="replace")
-
-            retryable_error_body = any(marker in error_body.lower() for marker in FLOW_RETRY_ERROR_MARKERS)
-            if retryable_error_body:
-                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
-
-            if error.code not in FLOW_RETRY_STATUS_CODES or attempt == MAX_FLOW_REQUEST_RETRIES:
-                raise RuntimeError(f"Flow API returned status code {error.code}: {error_body}") from error
-
-            print(
-                f"Flow API {wallet_address} ids {len(player_ids)} returned {error.code}; "
-                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
-            )
-            time.sleep(FLOW_RETRY_DELAY_SECONDS)
-        except URLError as error:
-            if attempt == MAX_FLOW_REQUEST_RETRIES:
-                raise RuntimeError(f"Could not connect to Flow API: {error.reason}") from error
-
-            print(
-                f"Flow API {wallet_address} ids {len(player_ids)} connection failed; "
-                f"retrying in {FLOW_RETRY_DELAY_SECONDS:.0f}s ({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
-            )
-            time.sleep(FLOW_RETRY_DELAY_SECONDS)
-        except json.JSONDecodeError as error:
-            raise RuntimeError("Flow API response was not valid JSON") from error
-
-    decoded_response = base64.b64decode(encoded_response).decode("utf-8")
-    return json.loads(decoded_response)
-
-
-def is_flow_batch_limit_error(error: Exception) -> bool:
-    message = str(error).lower()
-    return any(marker in message for marker in FLOW_RETRY_ERROR_MARKERS)
 
 
 def cadence_value(value: dict[str, Any]) -> Any:
-    value_type = value["type"]
-    raw_value = value["value"]
-
-    if raw_value is None:
+    raw = value["value"]
+    if raw is None:
         return None
-
-    if value_type == "Optional":
-        return cadence_value(raw_value)
-
-    if value_type in {"UInt8", "UInt16", "UInt32", "UInt64", "Int", "Int64"}:
-        return int(raw_value)
-
-    if value_type in {"String", "Address"}:
-        return str(raw_value)
-
-    return raw_value
+    if value["type"] == "Optional":
+        return cadence_value(raw)
+    if value["type"] in {"UInt8", "UInt16", "UInt32", "UInt64", "Int", "Int64"}:
+        return int(raw)
+    if value["type"] in {"String", "Address"}:
+        return str(raw)
+    return raw
 
 
 def cadence_struct_to_dict(struct_value: dict[str, Any]) -> dict[str, Any]:
-    fields = struct_value["value"]["fields"]
-    result = {}
-
-    for field in fields:
-        result[field["name"]] = cadence_value(field["value"])
-
-    return result
+    return {field["name"]: cadence_value(field["value"]) for field in struct_value["value"]["fields"]}
 
 
 def parse_flow_static_player_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     if response["type"] != "Array":
-        raise RuntimeError(f"Expected Flow script to return an array, got {response['type']}")
-
+        raise RuntimeError(f"Expected Flow array, got {response['type']}")
     return [cadence_struct_to_dict(item) for item in response["value"]]
-
-
-def flow_batch_size_for_wallet(wallet_address: str) -> int:
-    return MFL_FLOW_STATIC_PLAYER_BATCH_SIZE if wallet_address.lower() == MFL_WALLET_ADDRESS else FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
 def fetch_wallet_flow_static_players(wallet_address: str) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
     offset = 0
-    batch_size = flow_batch_size_for_wallet(wallet_address)
-    completed_batches = 0
-
+    batch_number = 0
     while True:
-        response = execute_flow_script(wallet_address, offset, batch_size)
-        batch_players = parse_flow_static_player_response(response)
-        players.extend(batch_players)
-        completed_batches += 1
-        estimated_batches = completed_batches if len(batch_players) < batch_size else completed_batches + 1
+        batch = parse_flow_static_player_response(execute_flow_script(wallet_address, offset, FLOW_STATIC_PLAYER_BATCH_SIZE))
+        players.extend(batch)
+        batch_number += 1
         print(
-            f"Flow players mint age {wallet_address} batch {completed_batches}/{estimated_batches}: "
-            f"read {batch_size} IDs, returned {len(batch_players)} players, total {len(players)} players"
+            f"Flow seasons {wallet_address} batch {batch_number}: read {FLOW_STATIC_PLAYER_BATCH_SIZE} IDs, "
+            f"returned {len(batch)}, total {len(players)}"
         )
-
-        if len(batch_players) < batch_size:
+        if len(batch) < FLOW_STATIC_PLAYER_BATCH_SIZE:
             return players
-
-        offset += batch_size
-
-
-def fetch_flow_static_player_range(wallet_address: str, offset: int, limit: int) -> list[dict[str, Any]]:
-    response = execute_flow_script(wallet_address, offset, limit)
-    return parse_flow_static_player_response(response)
-
-def fetch_mfl_wallet_flow_static_players_parallel(player_count: int) -> list[dict[str, Any]]:
-    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
-    total_batches = max(1, (max(1, player_count) + batch_size - 1) // batch_size)
-    offsets = [index * batch_size for index in range(total_batches)]
-    players: list[dict[str, Any]] = []
-    completed_batches = 0
-
-    if FLOW_WORKERS <= 1:
-        for offset in offsets:
-            batch_players = fetch_flow_static_player_range(MFL_WALLET_ADDRESS, offset, batch_size)
-            players.extend(batch_players)
-            completed_batches += 1
-            print(
-                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
-                f"offset {offset}, returned {len(batch_players)} players, total {len(players)} players"
-            )
-
-        players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
-        return list(players_by_id.values())
-
-    with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(offsets)))) as executor:
-        future_to_offset = {
-            executor.submit(fetch_flow_static_player_range, MFL_WALLET_ADDRESS, offset, batch_size): offset
-            for offset in offsets
-        }
-
-        for future in as_completed(future_to_offset):
-            offset = future_to_offset[future]
-            batch_players = future.result()
-            players.extend(batch_players)
-            completed_batches += 1
-            print(
-                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
-                f"offset {offset}, returned {len(batch_players)} players, total {len(players)} players"
-            )
-
-    players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
-    return list(players_by_id.values())
-
-def fetch_mfl_flow_static_player_ids_batch(player_ids: list[int]) -> list[dict[str, Any]]:
-    response = execute_flow_ids_script(MFL_WALLET_ADDRESS, player_ids)
-    return parse_flow_static_player_response(response)
+        offset += FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
 def fetch_mfl_flow_static_players_by_ids(player_ids: list[int]) -> list[dict[str, Any]]:
-    batch_size = MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
-    batches = [player_ids[index:index + batch_size] for index in range(0, len(player_ids), batch_size)]
-    total_batches = len(batches)
-    players: list[dict[str, Any]] = []
-    completed_batches = 0
-
+    batches = [player_ids[index:index + MFL_FLOW_STATIC_PLAYER_BATCH_SIZE] for index in range(0, len(player_ids), MFL_FLOW_STATIC_PLAYER_BATCH_SIZE)]
     if not batches:
-        print(f"Flow players mint age {MFL_WALLET_ADDRESS}: no database player IDs need updating")
         return []
-
-    worker_count = max(1, min(FLOW_WORKERS, total_batches))
-    print(
-        f"Flow players mint age {MFL_WALLET_ADDRESS}: fetching {len(player_ids)} database player IDs "
-        f"in {total_batches} batches with {worker_count} workers"
-    )
-
-    if worker_count <= 1:
-        for batch in batches:
-            batch_players = fetch_mfl_flow_static_player_ids_batch(batch)
+    players: list[dict[str, Any]] = []
+    worker_count = min(FLOW_WORKERS, len(batches))
+    with ThreadPoolExecutor(max_workers=max(1, worker_count)) as executor:
+        futures = {executor.submit(execute_flow_ids_script, MFL_WALLET_ADDRESS, batch): batch for batch in batches}
+        completed = 0
+        for future in as_completed(futures):
+            batch = futures[future]
+            batch_players = parse_flow_static_player_response(future.result())
             players.extend(batch_players)
-            completed_batches += 1
-            print(
-                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
-                f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
-            )
-        return players
-
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        future_to_batch = {
-            executor.submit(fetch_mfl_flow_static_player_ids_batch, batch): batch
-            for batch in batches
-        }
-
-        for future in as_completed(future_to_batch):
-            batch = future_to_batch[future]
-            batch_players = future.result()
-            players.extend(batch_players)
-            completed_batches += 1
-            print(
-                f"Flow players mint age {MFL_WALLET_ADDRESS} batch {completed_batches}/{total_batches}: "
-                f"read {len(batch)} IDs, returned {len(batch_players)} players, total {len(players)} players"
-            )
-
-    players_by_id = {str(player.get("playerId")): player for player in players if player.get("playerId") is not None}
-    return list(players_by_id.values())
-
-def get_mfl_player_ids_to_process(connection: sqlite3.Connection, force: bool) -> list[int]:
-    where_sql = ""
-    if not force:
-        where_sql = "AND player_seasons IS NULL"
-
-    rows = connection.execute(
-        f"""
-        SELECT player_id
-        FROM players
-        WHERE lower(wallet_address) = lower(?)
-        {where_sql}
-        ORDER BY player_id DESC
-        """,
-        (MFL_WALLET_ADDRESS,),
-    ).fetchall()
-    return [int(row[0]) for row in rows]
+            completed += 1
+            print(f"Flow seasons MFL batch {completed}/{len(batches)}: read {len(batch)} IDs, returned {len(batch_players)}")
+    return list({int(player["playerId"]): player for player in players}.values())
 
 
-def update_flow_static_fields(
-    connection: sqlite3.Connection,
-    players: list[dict[str, Any]],
-    force: bool,
-) -> int:
-    if force:
-        where_sql = ""
-    else:
-        where_sql = "AND player_seasons IS NULL"
-
+def update_flow_static_fields(connection: sqlite3.Connection, players: list[dict[str, Any]], force: bool) -> int:
+    where_sql = "" if force else "AND player_seasons IS NULL"
     rows = [
         (
-            player["name"],
-            player["preferredFoot"],
-            player["height"],
-            player["ageAtMint"],
-            player["ageAtMint"],
-            player["playerId"],
+            player["name"], player["preferredFoot"], player["height"],
+            player["ageAtMint"], player["ageAtMint"], player["playerId"],
         )
         for player in players
     ]
-
-    before_changes = connection.total_changes
+    before = connection.total_changes
     connection.executemany(
         f"""
-        UPDATE players
-        SET
-            name = ?,
-            preferred_foot = ?,
-            height = ?,
-            player_seasons = CASE
-                WHEN age IS NOT NULL AND ? IS NOT NULL THEN age - ? + 1
-                ELSE player_seasons
-            END
-        WHERE player_id = ?
-        {where_sql}
+        UPDATE players SET
+            name=?, preferred_foot=?, height=?,
+            player_seasons=CASE WHEN age IS NOT NULL AND ? IS NOT NULL THEN age - ? + 1 ELSE player_seasons END
+        WHERE player_id=? {where_sql}
         """,
         rows,
     )
-    return connection.total_changes - before_changes
+    return connection.total_changes - before
 
 
-def get_database_player_count(connection: sqlite3.Connection, wallet_address: str) -> int:
-    return connection.execute(
-        """
-        SELECT COUNT(*)
-        FROM players
-        WHERE wallet_address = ?
-        """,
-        (wallet_address,),
-    ).fetchone()[0]
-
-
-def print_flow_wallet_status(
-    connection: sqlite3.Connection,
-    index: int,
-    total_wallets: int,
-    wallet_address: str,
-    players: list[dict[str, Any]],
-    updated_count: int,
-) -> None:
-    message = (
-        f"Flow players mint age {index}/{total_wallets} {wallet_address}: "
-        f"read {len(players)} players, updated {updated_count}"
-    )
-
-    if not players:
-        database_player_count = get_database_player_count(connection, wallet_address)
-        if database_player_count:
-            message += (
-                f" (Flow public collection missing or empty; "
-                f"database has {database_player_count} players)"
-            )
-
-    print(message)
+def get_mfl_player_ids_to_process(connection: sqlite3.Connection, force: bool) -> list[int]:
+    where_sql = "" if force else "AND player_seasons IS NULL"
+    return [
+        int(row[0])
+        for row in connection.execute(
+            f"SELECT player_id FROM players WHERE lower(wallet_address)=lower(?) {where_sql} ORDER BY player_id DESC",
+            (MFL_WALLET_ADDRESS,),
+        ).fetchall()
+    ]
 
 
 def populate_flow_static_fields(
@@ -652,138 +349,43 @@ def populate_flow_static_fields(
 ) -> int:
     ensure_flow_static_columns(connection)
     wallets = get_wallets_to_process(connection, limit, wallet_address, force, include_mfl_wallet)
-    total_jobs = len(wallets)
+    mfl_wallets = [wallet for wallet in wallets if wallet.lower() == MFL_WALLET_ADDRESS]
+    standard_wallets = [wallet for wallet in wallets if wallet.lower() != MFL_WALLET_ADDRESS]
     total_updated = 0
-
-    if total_jobs == 0:
-        return 0
-
-    print("\n=== Flow players mint age ===")
-    completed_wallets = 0
-    mfl_wallets = [current_wallet_address for current_wallet_address in wallets if current_wallet_address.lower() == MFL_WALLET_ADDRESS]
-    standard_wallets = [current_wallet_address for current_wallet_address in wallets if current_wallet_address.lower() != MFL_WALLET_ADDRESS]
-
-    for current_wallet_address in mfl_wallets:
-        completed_wallets += 1
-        player_ids = get_mfl_player_ids_to_process(connection, force)
-        players = fetch_mfl_flow_static_players_by_ids(player_ids)
-
-        updated_count = update_flow_static_fields(connection, players, force)
+    for wallet in mfl_wallets:
+        players = fetch_mfl_flow_static_players_by_ids(get_mfl_player_ids_to_process(connection, force))
+        updated = update_flow_static_fields(connection, players, force)
         connection.commit()
-
-        total_updated += updated_count
-        print_flow_wallet_status(
-            connection,
-            completed_wallets,
-            total_jobs,
-            current_wallet_address,
-            players,
-            updated_count,
-        )
-
-    if FLOW_WORKERS > 1:
-        with ThreadPoolExecutor(max_workers=FLOW_WORKERS) as executor:
-            future_to_wallet = {
-                executor.submit(fetch_wallet_flow_static_players, current_wallet_address): current_wallet_address
-                for current_wallet_address in standard_wallets
-            }
-
-            for future in as_completed(future_to_wallet):
-                completed_wallets += 1
-                current_wallet_address = future_to_wallet[future]
-                players = future.result()
-
-                updated_count = update_flow_static_fields(connection, players, force)
-                connection.commit()
-
-                total_updated += updated_count
-                print_flow_wallet_status(
-                    connection,
-                    completed_wallets,
-                    total_jobs,
-                    current_wallet_address,
-                    players,
-                    updated_count,
-                )
-
-        return total_updated
-
-    for current_wallet_address in standard_wallets:
-        completed_wallets += 1
-        players = fetch_wallet_flow_static_players(current_wallet_address)
-
-        updated_count = update_flow_static_fields(connection, players, force)
-        connection.commit()
-
-        total_updated += updated_count
-        print_flow_wallet_status(
-            connection,
-            completed_wallets,
-            total_jobs,
-            current_wallet_address,
-            players,
-            updated_count,
-        )
-
-        if SLEEP_SECONDS_BETWEEN_WALLETS > 0:
-            time.sleep(SLEEP_SECONDS_BETWEEN_WALLETS)
-
+        total_updated += updated
+        print(f"Flow seasons {wallet}: updated {updated}")
+    with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(standard_wallets) or 1))) as executor:
+        futures = {executor.submit(fetch_wallet_flow_static_players, wallet): wallet for wallet in standard_wallets}
+        completed = 0
+        for future in as_completed(futures):
+            wallet = futures[future]
+            players = future.result()
+            updated = update_flow_static_fields(connection, players, force)
+            connection.commit()
+            total_updated += updated
+            completed += 1
+            print(f"Flow seasons wallet {completed}/{len(standard_wallets)} {wallet}: updated {updated}")
     return total_updated
 
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="One-time population of static MFL player fields from Flow.")
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Only process this many wallets. Useful for testing.",
-    )
-    parser.add_argument(
-        "--wallet",
-        default=None,
-        help="Only process one wallet address. Useful for testing.",
-    )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Update static Flow fields even when player_seasons is already filled.",
-    )
+    parser = argparse.ArgumentParser(description="Populate Flow seasons in the MFL database.")
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--wallet", default=None)
+    parser.add_argument("--force", action="store_true")
     return parser.parse_args()
 
 
-def format_duration(seconds: float) -> str:
-    total_seconds = int(round(seconds))
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    if hours:
-        return f"{hours}h {minutes}m {seconds}s"
-    if minutes:
-        return f"{minutes}m {seconds}s"
-    return f"{seconds}s"
-
-
 def main() -> int:
-    started_at = time.monotonic()
     args = parse_args()
-
-    try:
-        with sqlite3.connect(DATABASE_PATH) as connection:
-            total_updated = populate_flow_static_fields(
-                connection,
-                args.limit,
-                args.wallet,
-                args.force,
-            )
-
-        print(f"Flow static field population complete: updated {total_updated} players.")
-        print(f"Database file: {DATABASE_PATH}")
-        print(f"Total time: {format_duration(time.monotonic() - started_at)}")
-        return 0
-    except Exception as error:
-        print(f"Flow static field population failed: {error}", file=sys.stderr)
-        print(f"Total time before failure: {format_duration(time.monotonic() - started_at)}")
-        return 1
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        updated = populate_flow_static_fields(connection, args.limit, args.wallet, args.force)
+    print(f"Flow seasons updated: {updated}")
+    return 0
 
 
 if __name__ == "__main__":
