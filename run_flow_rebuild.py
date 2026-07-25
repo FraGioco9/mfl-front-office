@@ -1,400 +1,595 @@
 from __future__ import annotations
 
-import base64
-import builtins
 import json
-import re
-import socket
+import os
 import sqlite3
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Iterable
-from urllib.error import URLError
+from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-import flow_data
-import flow_wallet_ownership
 import fresh_mfl_database_rebuild as rebuild
+from flow_data import fetch_all_players
+from next_overall import next_overall_values
 
+PLAYERS_URL = "https://api.playmfl.com/players"
+PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
+MFL_ADDRESS = "0xff8d2bbed8164db0"
+MFL_TRADE_ADDRESS = "0x6fec8986261ecf49"
+MFL_PAGE_SIZE = 1500
+PROGRESSION_BATCH_SIZE = 1000
+MFL_REQUESTS_PER_MINUTE = 80
+MFL_WORKERS = 20
+FLOW_BATCH_SIZE = 3000
+FLOW_WORKERS = 20
+REQUEST_TIMEOUT = 60
+RETRIES = 3
+RETRY_DELAY_SECONDS = 15
+DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
+CANDIDATE_PATH = Path(__file__).with_name("mfl_progression_candidate.db")
+REPORT_PATH = Path(__file__).with_name("mfl_rebuild_report.json")
 
-FLOW_METADATA_BATCH_SIZE = 3000
-FLOW_WALLET_BATCH_SIZE = 3000
-rebuild.FLOW_BATCH_SIZE = FLOW_METADATA_BATCH_SIZE
-rebuild.WALLET_BATCH_SIZE = FLOW_WALLET_BATCH_SIZE
-rebuild.INTENTIONALLY_BLANK.update({"wallet_address", "wallet_name"})
-
-FLOW_BLOCKS_URL = "https://rest-mainnet.onflow.org/v1/blocks?height=sealed"
-SUPPRESSED_PROCESSES = {
-    "Database schema",
-    "Wallet table creation",
-    "Highest player ID resolution",
+ATTRIBUTES = rebuild.ATTRIBUTES
+PLAYER_COLUMNS = rebuild.PLAYER_COLUMNS
+PROGRESSION_COLUMNS = rebuild.PROGRESSION_COLUMNS
+NEXT_COLUMNS = rebuild.NEXT_COLUMNS
+INTENTIONALLY_BLANK = {
+    "owned_since",
+    "revenue_share",
+    "club_id",
+    "club_name",
+    "club_division",
 }
-OWNERSHIP_PROGRESS_PATTERN = re.compile(
-    r"^Flow ownership wallet batch \d+/(\d+) complete "
-    r"\((\d+)/(\d+) finished\): wallets \d+, non-empty \d+, "
-    r"player IDs (\d+), total IDs (\d+)$"
-)
-METADATA_PROGRESS_PATTERN = re.compile(
-    r"^Flow metadata batch \d+/(\d+) complete "
-    r"\((\d+)/(\d+) finished\): IDs \d+-\d+, "
-    r"requested \d+, returned (\d+), total (\d+)$"
-)
-MFL_CHECK_BATCH_SIZE = 3000
-MFL_CHECK_WORKERS = 20
-FLOW_REQUEST_RETRIES = 5
-FLOW_REQUEST_RETRY_DELAY_SECONDS = 5
 
-MFL_OWNERSHIP_SCRIPT = """
-import MFLPlayer from 0x8ebcbfd516b1da27
 
-access(all) fun main(address: Address, ids: [UInt64]): [UInt64] {
-    let owned: [UInt64] = []
+class RateLimiter:
+    def __init__(self, requests_per_minute: int) -> None:
+        self.interval = 60.0 / requests_per_minute
+        self.lock = threading.Lock()
+        self.next_time = 0.0
 
-    if let collection = getAccount(address).capabilities.borrow<&MFLPlayer.Collection>(
-        MFLPlayer.CollectionPublicPath
-    ) {
-        for id in ids {
-            if collection.borrowNFT(id) != nil {
-                owned.append(id)
-            }
+    def wait(self) -> None:
+        with self.lock:
+            now = time.monotonic()
+            delay = max(0.0, self.next_time - now)
+            self.next_time = max(now, self.next_time) + self.interval
+        if delay:
+            time.sleep(delay)
+
+
+def log(message: str) -> None:
+    print(message, flush=True)
+
+
+def timed(label: str, function, *args, **kwargs):
+    log(f"{label} started")
+    started_at = time.perf_counter()
+    result = function(*args, **kwargs)
+    elapsed = time.perf_counter() - started_at
+    detail = f": {len(result)} items" if hasattr(result, "__len__") else ""
+    log(f"{label} completed in {elapsed:.2f}s{detail}")
+    return result, elapsed
+
+
+def request_json(url: str, label: str, limiter: RateLimiter) -> Any:
+    last_error: Exception | None = None
+    for attempt in range(RETRIES + 1):
+        limiter.wait()
+        request = Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "mfl-front-office-clean-rebuild/2.0",
+            },
+        )
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace")
+            last_error = RuntimeError(
+                f"HTTP {error.code} {error.reason}: {body[:1000]}"
+            )
+        except (URLError, TimeoutError, json.JSONDecodeError) as error:
+            last_error = error
+        if attempt < RETRIES:
+            log(f"{label} retry {attempt + 1}/{RETRIES}: {last_error}")
+            time.sleep(RETRY_DELAY_SECONDS)
+    raise RuntimeError(f"{label} failed: {last_error}")
+
+
+def chunks(values: list[int], size: int) -> list[list[int]]:
+    return [values[index:index + size] for index in range(0, len(values), size)]
+
+
+def normalize_address(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def numeric_player_id(player: dict[str, Any]) -> int:
+    return int(player["id"])
+
+
+def fetch_players_page(
+    limiter: RateLimiter,
+    *,
+    label: str,
+    before_player_id: int | None = None,
+    is_retired: bool | None = None,
+    owner_wallet_address: str | None = None,
+) -> list[dict[str, Any]]:
+    query: dict[str, Any] = {"limit": MFL_PAGE_SIZE}
+    if before_player_id is not None:
+        query["beforePlayerId"] = before_player_id
+    if is_retired is not None:
+        query["isRetired"] = "true" if is_retired else "false"
+    if owner_wallet_address:
+        query["ownerWalletAddress"] = owner_wallet_address
+    data = request_json(f"{PLAYERS_URL}?{urlencode(query)}", label, limiter)
+    if not isinstance(data, list):
+        raise RuntimeError(f"{label} response was not a list")
+    return [
+        item
+        for item in data
+        if isinstance(item, dict) and item.get("id") is not None
+    ]
+
+
+def fetch_paginated_players(
+    limiter: RateLimiter,
+    *,
+    label: str,
+    is_retired: bool | None = None,
+    owner_wallet_address: str | None = None,
+) -> list[dict[str, Any]]:
+    collected: dict[int, dict[str, Any]] = {}
+    before_player_id: int | None = None
+    page_number = 0
+    while True:
+        page = fetch_players_page(
+            limiter,
+            label=f"{label} page {page_number + 1}",
+            before_player_id=before_player_id,
+            is_retired=is_retired,
+            owner_wallet_address=owner_wallet_address,
+        )
+        page_number += 1
+        for player in page:
+            collected[numeric_player_id(player)] = player
+        log(
+            f"{label} page {page_number}: returned {len(page)}, "
+            f"unique total {len(collected)}"
+        )
+        if len(page) < MFL_PAGE_SIZE:
+            break
+        next_before = min(numeric_player_id(player) for player in page)
+        if before_player_id is not None and next_before >= before_player_id:
+            raise RuntimeError(f"{label} pagination did not advance")
+        before_player_id = next_before
+    return list(collected.values())
+
+
+def owner_values(player: dict[str, Any]) -> tuple[str, str]:
+    owner = player.get("ownedBy") or {}
+    if not isinstance(owner, dict):
+        owner = {}
+    address = normalize_address(owner.get("walletAddress"))
+    name = str(owner.get("name") or address).strip()
+    return address, name
+
+
+def merge_sources(
+    general: list[dict[str, Any]],
+    retired: list[dict[str, Any]],
+    mfl_players: list[dict[str, Any]],
+    mfl_trade_players: list[dict[str, Any]],
+) -> dict[int, dict[str, Any]]:
+    merged: dict[int, dict[str, Any]] = {}
+    for source in (general, retired):
+        for player in source:
+            merged[numeric_player_id(player)] = player
+    for player in mfl_players:
+        patched = dict(player)
+        patched["ownedBy"] = {
+            "walletAddress": MFL_ADDRESS,
+            "name": "MFL",
         }
+        merged[numeric_player_id(player)] = patched
+    for player in mfl_trade_players:
+        patched = dict(player)
+        patched["ownedBy"] = {
+            "walletAddress": MFL_TRADE_ADDRESS,
+            "name": "MFL Trade",
+        }
+        merged[numeric_player_id(player)] = patched
+    return dict(sorted(merged.items()))
+
+
+def to_int(value: Any) -> int | None:
+    try:
+        return None if value in (None, "") else int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def text_value(metadata: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = metadata.get(key)
+        if value not in (None, "", []):
+            if isinstance(value, list):
+                return ", ".join(str(item) for item in value)
+            return str(value)
+    return ""
+
+
+def player_row(player: dict[str, Any], season: int | None) -> tuple[Any, ...]:
+    metadata = player.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    active_contract = player.get("activeContract") or {}
+    if not isinstance(active_contract, dict):
+        active_contract = {}
+    club = active_contract.get("club") or {}
+    if not isinstance(club, dict):
+        club = {}
+    address, wallet_name = owner_values(player)
+    first_name = str(metadata.get("firstName") or "").strip()
+    last_name = str(metadata.get("lastName") or "").strip()
+    name = f"{first_name} {last_name}".strip() or text_value(metadata, "name")
+    values: dict[str, Any] = {
+        "player_id": numeric_player_id(player),
+        "wallet_address": address,
+        "wallet_name": wallet_name,
+        "name": name,
+        "positions": text_value(metadata, "positions"),
+        "age": to_int(metadata.get("age")),
+        "player_seasons": season,
+        "nationality": text_value(metadata, "nationalities", "nationality"),
+        "preferred_foot": text_value(metadata, "preferredFoot"),
+        "height": to_int(metadata.get("height")),
+        "retirement_years": to_int(metadata.get("retirementYears")),
+        "owned_since": to_int(player.get("ownedSince") or player.get("ownedsince")),
+        "revenue_share": to_int(active_contract.get("revenueShare")),
+        "club_id": str(club.get("id") or ""),
+        "club_name": str(club.get("name") or ""),
+        "club_division": str(club.get("division") or ""),
+        **{attribute: to_int(metadata.get(attribute)) for attribute in ATTRIBUTES},
+        **{column: None for column in PROGRESSION_COLUMNS + NEXT_COLUMNS},
     }
-
-    return owned
-}
-"""
+    return tuple(values[column] for column in PLAYER_COLUMNS)
 
 
-class OwnershipWithBlankFallback(dict[int, str]):
-    """Treat unresolved player ownership as present but blank."""
-
-    def __contains__(self, key: object) -> bool:
-        if isinstance(key, int):
-            return True
-        return super().__contains__(key)
-
-    def __missing__(self, key: int) -> str:
-        return ""
-
-
-def build_current_ownership_allow_missing(wallet_players):
-    ownership, duplicates = original_build_current_ownership(wallet_players)
-    return OwnershipWithBlankFallback(ownership), duplicates
-
-
-def insert_wallets_without_row_logs(
+def insert_tables(
     connection: sqlite3.Connection,
-    names: dict[str, str],
+    players: dict[int, dict[str, Any]],
+    seasons: dict[int, int | None],
 ) -> None:
+    placeholders = ",".join("?" for _ in PLAYER_COLUMNS)
+    connection.executemany(
+        f"INSERT INTO players ({','.join(PLAYER_COLUMNS)}) VALUES ({placeholders})",
+        [player_row(player, seasons.get(player_id)) for player_id, player in players.items()],
+    )
+    wallets: dict[str, str] = {
+        MFL_ADDRESS: "MFL",
+        MFL_TRADE_ADDRESS: "MFL Trade",
+    }
+    for player in players.values():
+        address, name = owner_values(player)
+        if address:
+            wallets[address] = name or address
     connection.executemany(
         "INSERT INTO wallets(wallet_address, wallet_name) VALUES (?, ?)",
-        sorted(names.items()),
+        sorted(wallets.items()),
     )
     connection.commit()
 
 
-def _find_block_height(value: Any) -> int | None:
-    if isinstance(value, dict):
-        for key in ("height", "block_height", "blockHeight"):
-            raw_height = value.get(key)
-            if raw_height not in (None, ""):
-                try:
-                    return int(raw_height)
-                except (TypeError, ValueError):
-                    pass
-
-        for key in ("header", "block_header", "blockHeader", "block"):
-            if key in value:
-                height = _find_block_height(value[key])
-                if height is not None:
-                    return height
-
-        for child in value.values():
-            height = _find_block_height(child)
-            if height is not None:
-                return height
-
-    elif isinstance(value, list):
-        for child in value:
-            height = _find_block_height(child)
-            if height is not None:
-                return height
-
-    return None
-
-
-def get_latest_sealed_block_height() -> int:
-    request = Request(
-        FLOW_BLOCKS_URL,
-        headers={
-            "Accept": "application/json",
-            "User-Agent": "mfl-front-office-clean-rebuild/1.0",
-        },
-    )
-    with urlopen(request, timeout=rebuild.REQUEST_TIMEOUT) as response:
-        data = json.loads(response.read().decode("utf-8"))
-
-    height = _find_block_height(data)
-    if height is None or height <= 0:
-        preview = json.dumps(data, separators=(",", ":"))[:500]
-        raise RuntimeError(
-            "Latest sealed block response did not contain a valid height. "
-            f"Response preview: {preview}"
-        )
-    return height
-
-
-def fetch_leaderboard_without_item_logs():
-    original_log = rebuild.log
-
-    def filtered_log(message: str) -> None:
-        if message.startswith("Leaderboard wallet "):
-            return
-        original_log(message)
-
-    rebuild.log = filtered_log
-    try:
-        return original_fetch_leaderboard()
-    finally:
-        rebuild.log = original_log
-
-
-def format_elapsed(seconds: float) -> str:
-    total_seconds = max(0, int(round(seconds)))
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds_part = divmod(remainder, 60)
-    parts: list[str] = []
-    if hours:
-        parts.append(f"{hours}h")
-    if minutes:
-        parts.append(f"{minutes}m")
-    if seconds_part or not parts:
-        parts.append(f"{seconds_part}s")
-    return " ".join(parts)
-
-
-def started_with_clean_labels(process: str) -> float:
-    if process == "Complete rebuild":
-        rebuild.log("Complete database build started")
-        return time.perf_counter()
-    if process in SUPPRESSED_PROCESSES:
-        return time.perf_counter()
-    return original_started(process)
-
-
-def completed_with_clean_labels(process: str, began: float, detail: str = "") -> float:
-    elapsed = time.perf_counter() - began
-    if process in SUPPRESSED_PROCESSES:
-        return elapsed
-    suffix = f": {detail}" if detail else ""
-    rebuild.log(f"{process} completed in {format_elapsed(elapsed)}{suffix}")
-    return elapsed
-
-
-def filtered_flow_data_print(*args: Any, **kwargs: Any) -> None:
-    if args and isinstance(args[0], str):
-        match = METADATA_PROGRESS_PATTERN.match(args[0])
-        if match:
-            _, completed, completed_total, returned, total = match.groups()
-            args = (
-                f"Flow metadata batch {completed}/{completed_total}: "
-                f"{returned} returned, {total} total",
-                *args[1:],
-            )
-    builtins.print(*args, **kwargs)
-
-
-def request_json_with_transient_retries(request: Request, label: str):
-    last_error: BaseException | None = None
-    for attempt in range(FLOW_REQUEST_RETRIES + 1):
-        try:
-            return original_flow_request_json(request, label)
-        except (ConnectionResetError, ConnectionAbortedError, TimeoutError, socket.timeout, URLError, OSError) as error:
-            last_error = error
-            if attempt == FLOW_REQUEST_RETRIES:
-                raise
-            rebuild.log(
-                f"{label} connection retry {attempt + 1}/{FLOW_REQUEST_RETRIES} "
-                f"in {FLOW_REQUEST_RETRY_DELAY_SECONDS}s"
-            )
-            time.sleep(FLOW_REQUEST_RETRY_DELAY_SECONDS)
-    raise RuntimeError(f"{label} failed after retries: {last_error}")
-
-
-def _execute_mfl_ownership_batch(player_ids: list[int], block_height: int) -> list[int]:
-    body = json.dumps(
+def progression_request(
+    batch: list[int],
+    interval: str,
+    limiter: RateLimiter,
+) -> dict[str, Any]:
+    query = urlencode(
         {
-            "script": base64.b64encode(MFL_OWNERSHIP_SCRIPT.encode("utf-8")).decode("utf-8"),
-            "arguments": [
-                flow_data.cadence_argument("Address", rebuild.MFL_ADDRESS),
-                flow_data.cadence_argument(
-                    "Array",
-                    [{"type": "UInt64", "value": str(player_id)} for player_id in player_ids],
-                ),
-            ],
+            "playersIds": ",".join(str(player_id) for player_id in batch),
+            "interval": interval,
         }
-    ).encode("utf-8")
-    request = Request(
-        f"{flow_data.FLOW_ACCESS_NODE}/v1/scripts?block_height={block_height}",
-        data=body,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": "mfl-front-office-clean-rebuild/1.0",
-        },
     )
-    encoded_response = request_json_with_transient_retries(
-        request,
-        f"Flow MFL ownership IDs {player_ids[0]}-{player_ids[-1]}",
+    data = request_json(
+        f"{PROGRESSIONS_URL}?{query}",
+        f"Progression {interval}",
+        limiter,
     )
-    cadence_json = json.loads(base64.b64decode(encoded_response).decode("utf-8"))
-    decoded = flow_data.decode_cadence(cadence_json)
-    if not isinstance(decoded, list):
-        raise RuntimeError("Flow MFL ownership script did not return an ID list")
-    return sorted({int(player_id) for player_id in decoded})
+    if not isinstance(data, dict):
+        raise RuntimeError(f"Progression {interval} response was not an object")
+    return data
 
 
-def check_mfl_ownership(
-    unresolved_ids: list[int],
-    *,
-    block_height: int,
-    batch_size: int = MFL_CHECK_BATCH_SIZE,
-    workers: int = MFL_CHECK_WORKERS,
-) -> list[int]:
-    batches = [
-        unresolved_ids[index:index + batch_size]
-        for index in range(0, len(unresolved_ids), batch_size)
+def progression_value(progression: Any, attribute: str) -> int:
+    if not isinstance(progression, dict):
+        return 0
+    return to_int(progression.get(attribute)) or 0
+
+
+def fetch_progressions(connection: sqlite3.Connection, limiter: RateLimiter) -> None:
+    player_ids = [
+        int(row[0])
+        for row in connection.execute(
+            """
+            SELECT player_id
+            FROM players
+            WHERE lower(trim(wallet_address)) NOT IN (?, ?)
+            ORDER BY player_id
+            """,
+            (MFL_ADDRESS, MFL_TRADE_ADDRESS),
+        )
     ]
-    if not batches:
-        return []
-
-    found: list[int] = []
-    total_found = 0
-    with ThreadPoolExecutor(max_workers=min(workers, len(batches))) as executor:
+    batches = chunks(player_ids, PROGRESSION_BATCH_SIZE)
+    tasks = [
+        (interval, suffix, batch)
+        for interval, suffix in (
+            ("ALL", "all"),
+            ("CURRENT_SEASON", "current_season"),
+        )
+        for batch in batches
+    ]
+    log(
+        f"Progressions: {len(player_ids)} eligible players, "
+        f"{len(tasks)} requests, {PROGRESSION_BATCH_SIZE} IDs/request"
+    )
+    with ThreadPoolExecutor(max_workers=min(MFL_WORKERS, max(1, len(tasks)))) as executor:
         futures = {
-            executor.submit(_execute_mfl_ownership_batch, batch, block_height): batch
-            for batch in batches
-        }
-        completed = 0
-        for future in as_completed(futures):
-            owned_ids = future.result()
-            found.extend(owned_ids)
-            completed += 1
-            total_found += len(owned_ids)
-            rebuild.log(
-                f"Flow MFL ownership batch {completed}/{len(batches)} complete: "
-                f"{len(owned_ids)} player IDs, {total_found} total IDs"
+            executor.submit(progression_request, batch, interval, limiter): (
+                interval,
+                suffix,
+                batch,
             )
-    return sorted(set(found))
-
-
-def fetch_wallet_player_ids_with_clean_logs(
-    addresses: Iterable[str],
-    *,
-    block_height: int,
-    batch_size: int = FLOW_WALLET_BATCH_SIZE,
-    workers: int = flow_wallet_ownership.FLOW_WALLET_WORKERS,
-):
-    normalized_addresses = sorted(
-        {
-            flow_wallet_ownership.normalize_address(address)
-            for address in addresses
-            if flow_wallet_ownership.normalize_address(address)
+            for interval, suffix, batch in tasks
         }
-    )
-    normal_addresses = [
-        address for address in normalized_addresses
-        if address != rebuild.MFL_ADDRESS
-    ]
-
-    original_print = flow_wallet_ownership.print if hasattr(flow_wallet_ownership, "print") else builtins.print
-
-    def filtered_print(*args: Any, **kwargs: Any) -> None:
-        if args and isinstance(args[0], str):
-            match = OWNERSHIP_PROGRESS_PATTERN.match(args[0])
-            if match:
-                _, completed, completed_total, batch_ids, total_ids = match.groups()
-                args = (
-                    f"Flow wallet batch {completed}/{completed_total} complete: "
-                    f"{batch_ids} player IDs, {total_ids} total IDs",
-                    *args[1:],
+        completed_count = 0
+        for future in as_completed(futures):
+            interval, suffix, batch = futures[future]
+            data = future.result()
+            rows = [
+                tuple(
+                    progression_value(data.get(str(player_id)), attribute)
+                    for attribute in ATTRIBUTES
                 )
-        original_print(*args, **kwargs)
+                + (player_id,)
+                for player_id in batch
+            ]
+            assignments = ", ".join(
+                f"{attribute}_prog_{suffix} = ?" for attribute in ATTRIBUTES
+            )
+            connection.executemany(
+                f"UPDATE players SET {assignments} WHERE player_id = ?",
+                rows,
+            )
+            connection.commit()
+            completed_count += 1
+            log(
+                f"Progression {completed_count}/{len(tasks)}: "
+                f"{interval}, {len(batch)} players"
+            )
 
-    flow_wallet_ownership.print = filtered_print
-    try:
-        wallet_players = original_fetch_wallet_player_ids(
-            normal_addresses,
-            block_height=block_height,
-            batch_size=batch_size,
-            workers=workers,
-        )
-    finally:
-        if original_print is builtins.print:
-            delattr(flow_wallet_ownership, "print")
+
+def calculate_next_overall(connection: sqlite3.Connection) -> None:
+    connection.row_factory = sqlite3.Row
+    rows = connection.execute(
+        """
+        SELECT player_id, positions, overall, pace, shooting, passing,
+               dribbling, defense, physical, goalkeeping
+        FROM players
+        ORDER BY player_id
+        """
+    ).fetchall()
+    updates = [(*next_overall_values(row), row["player_id"]) for row in rows]
+    connection.executemany(
+        """
+        UPDATE players SET
+            next_overall=?, next_overall_gap=?, pace_to_next_overall=?,
+            shooting_to_next_overall=?, passing_to_next_overall=?,
+            dribbling_to_next_overall=?, defense_to_next_overall=?,
+            physical_to_next_overall=?, goalkeeping_to_next_overall=?
+        WHERE player_id=?
+        """,
+        updates,
+    )
+    connection.commit()
+    log(f"Next Overall calculated for {len(updates)} players")
+
+
+def validate(connection: sqlite3.Connection, expected_players: int) -> dict[str, Any]:
+    actual_columns = [
+        row[1] for row in connection.execute("PRAGMA table_info(players)").fetchall()
+    ]
+    missing_schema_columns = [
+        column for column in PLAYER_COLUMNS if column not in actual_columns
+    ]
+    unexpected_schema_columns = [
+        column for column in actual_columns if column not in PLAYER_COLUMNS
+    ]
+    row_count = int(connection.execute("SELECT COUNT(*) FROM players").fetchone()[0])
+    missing_counts: dict[str, int] = {}
+    for column in PLAYER_COLUMNS:
+        quoted = column.replace('"', '""')
+        if column in {
+            "wallet_address",
+            "wallet_name",
+            "name",
+            "positions",
+            "nationality",
+            "preferred_foot",
+        }:
+            count = int(
+                connection.execute(
+                    f'SELECT COUNT(*) FROM players '
+                    f'WHERE "{quoted}" IS NULL OR trim("{quoted}") = \'\''
+                ).fetchone()[0]
+            )
         else:
-            flow_wallet_ownership.print = original_print
-
-    owned_elsewhere = {
-        player_id
-        for player_ids in wallet_players.values()
-        for player_id in player_ids
+            count = int(
+                connection.execute(
+                    f'SELECT COUNT(*) FROM players WHERE "{quoted}" IS NULL'
+                ).fetchone()[0]
+            )
+        missing_counts[column] = count
+    unexpected_missing = {
+        column: count
+        for column, count in missing_counts.items()
+        if count and column not in INTENTIONALLY_BLANK
     }
-    if not owned_elsewhere:
-        raise RuntimeError("No player IDs were found in the checked wallets")
-
-    highest_checked_id = max(owned_elsewhere)
-    unresolved_ids = [
-        player_id
-        for player_id in range(rebuild.MIN_PLAYER_ID, highest_checked_id + 1)
-        if player_id not in owned_elsewhere
-    ]
-    if not unresolved_ids:
-        wallet_players[rebuild.MFL_ADDRESS] = []
-        rebuild.log("Flow MFL ownership check completed: 0 player IDs")
-        return dict(sorted(wallet_players.items()))
-
-    highest_player_id = max(unresolved_ids)
-    unresolved_ids = [
-        player_id
-        for player_id in unresolved_ids
-        if player_id <= highest_player_id
-    ]
-    rebuild.log(
-        f"Flow MFL ownership check started: {len(unresolved_ids)} unresolved player IDs, "
-        f"highest ID {highest_player_id}"
-    )
-    mfl_ids = check_mfl_ownership(
-        unresolved_ids,
-        block_height=block_height,
-        batch_size=MFL_CHECK_BATCH_SIZE,
-        workers=MFL_CHECK_WORKERS,
-    )
-    wallet_players[rebuild.MFL_ADDRESS] = mfl_ids
-    rebuild.log(
-        f"Flow MFL ownership check completed: {len(mfl_ids)} player IDs"
-    )
-    return dict(sorted(wallet_players.items()))
+    return {
+        "players": row_count,
+        "expected_players": expected_players,
+        "missing_schema_columns": missing_schema_columns,
+        "unexpected_schema_columns": unexpected_schema_columns,
+        "column_missing_counts": missing_counts,
+        "intentionally_blank_columns": sorted(INTENTIONALLY_BLANK),
+        "unexpected_missing_values": unexpected_missing,
+        "valid": (
+            row_count == expected_players
+            and not missing_schema_columns
+            and not unexpected_schema_columns
+            and not unexpected_missing
+        ),
+    }
 
 
-original_fetch_leaderboard = rebuild.fetch_leaderboard
-original_started = rebuild.started
-original_completed = rebuild.completed
-original_fetch_wallet_player_ids = rebuild.fetch_wallet_player_ids
-original_build_current_ownership = rebuild.build_current_ownership
-original_flow_request_json = flow_data._request_json
+def main() -> int:
+    total_started = time.perf_counter()
+    timings: dict[str, float] = {}
+    limiter = RateLimiter(MFL_REQUESTS_PER_MINUTE)
+    if CANDIDATE_PATH.exists():
+        CANDIDATE_PATH.unlink()
+    connection = sqlite3.connect(CANDIDATE_PATH)
+    try:
+        schema_started = time.perf_counter()
+        rebuild.create_schema(connection)
+        timings["database_schema"] = time.perf_counter() - schema_started
 
-flow_data.print = filtered_flow_data_print
-flow_data._request_json = request_json_with_transient_retries
-flow_wallet_ownership._request_json = request_json_with_transient_retries
-rebuild.insert_wallets = insert_wallets_without_row_logs
-rebuild.fetch_leaderboard = fetch_leaderboard_without_item_logs
-rebuild.get_latest_sealed_block_height = get_latest_sealed_block_height
-rebuild.started = started_with_clean_labels
-rebuild.completed = completed_with_clean_labels
-rebuild.fetch_wallet_player_ids = fetch_wallet_player_ids_with_clean_logs
-rebuild.build_current_ownership = build_current_ownership_allow_missing
+        general, timings["general_players"] = timed(
+            "General MFL players",
+            fetch_paginated_players,
+            limiter,
+            label="General players",
+        )
+        retired, timings["retired_players"] = timed(
+            "Retired MFL players",
+            fetch_paginated_players,
+            limiter,
+            label="Retired players",
+            is_retired=True,
+        )
+        mfl_players, timings["mfl_wallet_players"] = timed(
+            "MFL wallet players",
+            fetch_paginated_players,
+            limiter,
+            label="MFL wallet players",
+            owner_wallet_address=MFL_ADDRESS,
+        )
+        mfl_trade_players, timings["mfl_trade_wallet_players"] = timed(
+            "MFL Trade wallet players",
+            fetch_paginated_players,
+            limiter,
+            label="MFL Trade wallet players",
+            owner_wallet_address=MFL_TRADE_ADDRESS,
+        )
+
+        players = merge_sources(
+            general,
+            retired,
+            mfl_players,
+            mfl_trade_players,
+        )
+        if not players:
+            raise RuntimeError("MFL API returned no players")
+        log(f"Merged unique players: {len(players)}")
+
+        flow_started = time.perf_counter()
+        flow_players = fetch_all_players(
+            max(players),
+            FLOW_BATCH_SIZE,
+            workers=FLOW_WORKERS,
+        )
+        seasons = {
+            player_id: flow_player.season
+            for player_id, flow_player in flow_players.items()
+            if player_id in players
+        }
+        timings["flow_seasons"] = time.perf_counter() - flow_started
+        log(
+            f"Flow seasons completed in {timings['flow_seasons']:.2f}s: "
+            f"{len(seasons)}/{len(players)} players returned"
+        )
+
+        table_started = time.perf_counter()
+        insert_tables(connection, players, seasons)
+        timings["tables"] = time.perf_counter() - table_started
+        log(f"Player and wallet tables completed in {timings['tables']:.2f}s")
+
+        progression_started = time.perf_counter()
+        fetch_progressions(connection, limiter)
+        timings["progressions"] = time.perf_counter() - progression_started
+        log(f"Progressions completed in {timings['progressions']:.2f}s")
+
+        next_started = time.perf_counter()
+        calculate_next_overall(connection)
+        timings["next_overall"] = time.perf_counter() - next_started
+        log(f"Next Overall completed in {timings['next_overall']:.2f}s")
+
+        validation_started = time.perf_counter()
+        report = validate(connection, len(players))
+        timings["validation"] = time.perf_counter() - validation_started
+
+        total_seconds = time.perf_counter() - total_started
+        report.update(
+            {
+                "source_counts": {
+                    "general": len(general),
+                    "retired": len(retired),
+                    "mfl_wallet": len(mfl_players),
+                    "mfl_trade_wallet": len(mfl_trade_players),
+                    "unique_merged": len(players),
+                    "flow_seasons": len(seasons),
+                },
+                "settings": {
+                    "mfl_page_size": MFL_PAGE_SIZE,
+                    "progression_batch_size": PROGRESSION_BATCH_SIZE,
+                    "mfl_requests_per_minute": MFL_REQUESTS_PER_MINUTE,
+                    "flow_batch_size": FLOW_BATCH_SIZE,
+                    "flow_workers": FLOW_WORKERS,
+                },
+                "timings_seconds": timings,
+                "total_seconds": total_seconds,
+            }
+        )
+        REPORT_PATH.write_text(
+            json.dumps(report, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        connection.execute("VACUUM")
+        connection.close()
+        os.replace(CANDIDATE_PATH, DATABASE_PATH)
+
+        log(f"Complete rebuild finished in {total_seconds:.2f}s")
+        log(f"Database file: {DATABASE_PATH}")
+        log(f"Report file: {REPORT_PATH}")
+        if report["valid"]:
+            log("Validation: no missing columns or unexpected missing values.")
+            return 0
+        log(f"Validation found missing data: {json.dumps(report, sort_keys=True)}")
+        return 1
+    except Exception:
+        connection.close()
+        if CANDIDATE_PATH.exists():
+            CANDIDATE_PATH.unlink()
+        raise
 
 
 if __name__ == "__main__":
-    raise SystemExit(rebuild.main())
+    raise SystemExit(main())
