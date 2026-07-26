@@ -21,6 +21,7 @@ FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MIN_FLOW_SPLIT_BATCH_SIZE = _impl.MIN_FLOW_SPLIT_BATCH_SIZE
 FLOW_WORKERS = 25
+FLOW_PROGRESS_INTERVAL = 100
 
 FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT = """
 import NonFungibleToken from 0x1d7e57aa55817448
@@ -187,11 +188,13 @@ def populate_flow_static_fields(
             connection.commit()
             total_updated += updated
             completed += 1
-            print(
-                f"Flow seasons batch {completed}/{len(jobs)}: {wallet} "
-                f"batch {batch_number}/{total_batches}, requested {requested}, "
-                f"returned {len(players)}, updated {updated}"
-            )
+            if completed % FLOW_PROGRESS_INTERVAL == 0 or completed == len(jobs):
+                print(
+                    f"Flow seasons batches {completed}/{len(jobs)} completed; "
+                    f"latest {wallet} batch {batch_number}/{total_batches}, "
+                    f"requested {requested}, returned {len(players)}, updated {updated}",
+                    flush=True,
+                )
 
     return total_updated
 
