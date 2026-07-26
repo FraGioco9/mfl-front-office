@@ -1,0 +1,81 @@
+name: One-time sidebar and changelog repair
+
+on:
+  push:
+    paths:
+      - ".github/workflows/one-time-fix-sidebar-changelog.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply repair
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          version = "1.149.67"
+
+          styles_path = Path("site/styles.css")
+          styles = styles_path.read_text(encoding="utf-8")
+          styles = re.sub(
+              r'\n/\* Latest changelog entries, displayed before the existing v1\.149\.62 item\. \*/\n\.changelogList::before \{.*?\n\}',
+              '',
+              styles,
+              flags=re.S,
+          )
+          marker = "/* v1.149.67 - Keep the checkbox column visible during sidebar transitions */"
+          if marker not in styles:
+              styles += f'''\n\n{marker}\n.appShell .tableScroller .col-select {{\n  width: max(3.5%, 44px) !important;\n  min-width: 44px !important;\n}}\n\n.appShell.menuAnimating .tableScroller .col-select {{\n  width: 44px !important;\n  min-width: 44px !important;\n}}\n\n.appShell .tableScroller .selectionCell {{\n  min-width: 44px;\n  width: 44px;\n  padding-left: 4px;\n  padding-right: 4px;\n  text-align: center;\n}}\n\n.appShell .tableScroller .selectionCell input[type="checkbox"] {{\n  display: inline-block;\n  flex: 0 0 auto;\n}}\n'''
+          styles_path.write_text(styles, encoding="utf-8")
+
+          index_path = Path("site/index.html")
+          index = index_path.read_text(encoding="utf-8")
+          index = re.sub(r'/styles\.css\?v=[0-9.]+', f'/styles.css?v={version}', index)
+          index = re.sub(r'/app\.js\?v=[0-9.]+', f'/app.js?v={version}', index)
+
+          entries = [
+              ('1.149.67', 'Keep the checkbox column visible during sidebar transitions'),
+              ('1.149.66', 'Preserve table alignment throughout sidebar transitions'),
+              ('1.149.65', 'Smooth table column expansion with numeric endpoints'),
+              ('1.149.64', 'Shrink table columns when the sidebar is open'),
+              ('1.149.63', 'Shrink the individual player Notes box'),
+          ]
+          for entry_version, _ in entries:
+              index = re.sub(
+                  rf'^\s*<li><span>v{re.escape(entry_version)}</span><p>.*?</p></li>\s*$',
+                  '',
+                  index,
+                  flags=re.M,
+              )
+
+          anchor = '              <li><span>v1.149.62</span><p>Add saved Evaluation delete tooltip</p></li>'
+          inserted = '\n'.join(
+              f'              <li><span>v{entry_version}</span><p>{description}</p></li>'
+              for entry_version, description in entries
+          )
+          if anchor not in index:
+              raise SystemExit('Changelog anchor v1.149.62 not found')
+          index = index.replace(anchor, inserted + '\n' + anchor, 1)
+          index_path.write_text(index, encoding="utf-8")
+
+          Path('.github/workflows/one-time-fix-sidebar-changelog.yml').unlink()
+          PY
+
+      - name: Commit repair
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/styles.css site/index.html .github/workflows/one-time-fix-sidebar-changelog.yml
+          git commit -m "Fix sidebar checkbox transition and changelog entries"
+          git push origin main
