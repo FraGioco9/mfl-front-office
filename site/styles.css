@@ -100,10 +100,8 @@
 
 /* v1.149.65 - Use numeric endpoints in both sidebar directions */
 .appShell.menuAnimating .tableScroller table,
-.appShell.menuAnimating .tableScroller col,
-.appShell.menuAnimating .tableScroller th,
-.appShell.menuAnimating .tableScroller td {
-  transition: width 220ms ease, min-width 220ms ease, padding-left 220ms ease, padding-right 220ms ease !important;
+.appShell.menuAnimating .tableScroller col {
+  transition: width 220ms ease, min-width 220ms ease !important;
 }
 
 .appShell.menuClosed .tableScroller table {
@@ -170,6 +168,46 @@
 
 .appShell.menuClosed .tableScroller th,
 .appShell.menuClosed .tableScroller td {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* v1.149.66 - Preserve cell alignment for the full sidebar transition */
+.appShell .tableScroller table {
+  table-layout: fixed;
+}
+
+.appShell .tableScroller th,
+.appShell .tableScroller td {
+  vertical-align: middle;
+}
+
+.appShell.menuAnimating .tableScroller th,
+.appShell.menuAnimating .tableScroller td {
+  transition: none !important;
+}
+
+.appShell.menuAnimating .tableScroller .selectionCell,
+.appShell.menuAnimating .tableScroller .flagCell,
+.appShell.menuAnimating .tableScroller .statCell,
+.appShell.menuAnimating .tableScroller .overallCell,
+.appShell.menuAnimating .tableScroller .ageCell,
+.appShell.menuAnimating .tableScroller .positionsCell,
+.appShell.menuAnimating .tableScroller .seasonsCell {
+  text-align: center;
+}
+
+/* Latest changelog entries, displayed before the existing v1.149.62 item. */
+.changelogList::before {
+  content: "v1.149.66   Preserve table alignment throughout sidebar transitions\A v1.149.65   Smooth table column expansion with numeric endpoints\A v1.149.64   Shrink table columns when the sidebar is open\A v1.149.63   Shrink the individual player Notes box";
+  display: block;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.8;
+  white-space: pre-line;
 }
