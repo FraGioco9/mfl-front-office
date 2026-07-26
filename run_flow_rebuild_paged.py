@@ -26,6 +26,7 @@ access(all) fun main(address: Address): [UInt64] {
 """
 
 FLOW_WALLET_PLAYER_IDS: dict[str, list[int]] = {}
+FLOW_OWNERSHIP_WORKERS = 3000
 
 
 class RollingRateLimiter:
@@ -87,7 +88,7 @@ def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, li
     total_ids = 0
 
     with ThreadPoolExecutor(
-        max_workers=min(pipeline.flow_module.FLOW_WORKERS, max(1, len(wallet_addresses)))
+        max_workers=min(FLOW_OWNERSHIP_WORKERS, max(1, len(wallet_addresses)))
     ) as executor:
         futures = {
             executor.submit(fetch_flow_wallet_player_ids, wallet_address): wallet_address
