@@ -15,6 +15,24 @@ import run_flow_rebuild
 import run_flow_rebuild_paged
 
 
+class WalletPlayerIds(list[int]):
+    """Player IDs carrying the wallet address used to choose the Flow batch size."""
+
+    def __init__(self, values: list[int], wallet_address: str) -> None:
+        super().__init__(values)
+        self.wallet_address = wallet_address.lower()
+
+
+def flow_season_batch_size(wallet_address: str) -> int:
+    special_wallets = {
+        populate_seasons_from_flow.MFL_WALLET_ADDRESS.lower(),
+        populate_seasons_from_flow.MFL_TRADE_WALLET_ADDRESS.lower(),
+    }
+    if wallet_address.lower() in special_wallets:
+        return 1500
+    return populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE
+
+
 def skip_validation(connection: Any, expected_players: int) -> dict[str, Any]:
     """Keep report generation without blocking the rebuilt database on validation."""
     return {
@@ -88,14 +106,22 @@ def fetch_active_and_retired_player_sources(
 
 def install_flow_wallet_id_cache() -> None:
     """Load all wallet/player relationships once instead of scanning the table per wallet."""
-    cache: dict[tuple[int, bool], dict[str, list[int]]] = {}
+    cache: dict[tuple[int, bool], dict[str, WalletPlayerIds]] = {}
 
-    def cached_wallet_player_ids(connection: Any, wallet_address: str, force: bool) -> list[int]:
+    def cached_wallet_player_ids(
+        connection: Any,
+        wallet_address: str,
+        force: bool,
+    ) -> WalletPlayerIds:
         cache_key = (id(connection), force)
         wallet_map = cache.get(cache_key)
         if wallet_map is None:
             print("\n=== Flow seasons ===", flush=True)
-            print("Preparing fixed 3000-ID Flow season batches...", flush=True)
+            print(
+                "Preparing Flow season batches: 1500 IDs for MFL and MFL Trade, "
+                "3000 IDs for other wallets...",
+                flush=True,
+            )
             where_sql = "" if force else "WHERE player_seasons IS NULL"
             rows = connection.execute(
                 f"""
@@ -109,21 +135,39 @@ def install_flow_wallet_id_cache() -> None:
             for wallet, player_id in rows:
                 if wallet:
                     grouped[str(wallet)].append(int(player_id))
-            wallet_map = dict(grouped)
+            wallet_map = {
+                wallet: WalletPlayerIds(player_ids, wallet)
+                for wallet, player_ids in grouped.items()
+            }
             cache[cache_key] = wallet_map
             total_batches = sum(
-                (len(player_ids) + populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE - 1)
-                // populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE
-                for player_ids in wallet_map.values()
+                (len(player_ids) + flow_season_batch_size(wallet) - 1)
+                // flow_season_batch_size(wallet)
+                for wallet, player_ids in wallet_map.items()
             )
             print(
                 f"Prepared {total_batches} Flow season batches across "
                 f"{len(wallet_map)} wallets.",
                 flush=True,
             )
-        return wallet_map.get(wallet_address.lower(), [])
+        return wallet_map.get(
+            wallet_address.lower(),
+            WalletPlayerIds([], wallet_address),
+        )
+
+    original_id_batches = populate_seasons_from_flow._id_batches
+
+    def wallet_aware_id_batches(player_ids: list[int]) -> list[list[int]]:
+        if isinstance(player_ids, WalletPlayerIds):
+            batch_size = flow_season_batch_size(player_ids.wallet_address)
+            return [
+                player_ids[index:index + batch_size]
+                for index in range(0, len(player_ids), batch_size)
+            ]
+        return original_id_batches(player_ids)
 
     populate_seasons_from_flow._wallet_player_ids = cached_wallet_player_ids
+    populate_seasons_from_flow._id_batches = wallet_aware_id_batches
 
 
 if __name__ == "__main__":
