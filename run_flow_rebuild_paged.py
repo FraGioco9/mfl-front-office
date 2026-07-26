@@ -9,6 +9,25 @@ from typing import Any
 import run_flow_rebuild as pipeline
 
 
+FLOW_WALLET_IDS_SCRIPT = """
+import NonFungibleToken from 0x1d7e57aa55817448
+import MFLPlayer from 0x8ebcbfd516b1da27
+
+access(all) fun main(address: Address): [UInt64] {
+    let account = getAccount(address)
+    let collection = account.capabilities.borrow<&{NonFungibleToken.CollectionPublic}>(MFLPlayer.CollectionPublicPath)
+
+    if collection == nil {
+        return []
+    }
+
+    return collection!.getIDs()
+}
+"""
+
+FLOW_WALLET_PLAYER_IDS: dict[str, list[int]] = {}
+
+
 class RollingRateLimiter:
     """Allow an immediate burst, then limit starts in a rolling 60-second window."""
 
@@ -35,8 +54,64 @@ class RollingRateLimiter:
             time.sleep(delay)
 
 
+def fetch_flow_wallet_player_ids(wallet_address: str) -> list[int]:
+    response = pipeline.flow_module._execute_script_with_network_retries(
+        FLOW_WALLET_IDS_SCRIPT,
+        [{"type": "Address", "value": wallet_address}],
+        f"wallet IDs {wallet_address}",
+    )
+    if response.get("type") != "Array":
+        raise RuntimeError(
+            f"Flow wallet IDs for {wallet_address} returned {response.get('type')}, expected Array"
+        )
+
+    ids: list[int] = []
+    for item in response.get("value", []):
+        if not isinstance(item, dict):
+            continue
+        raw_value = item.get("value")
+        try:
+            ids.append(int(raw_value))
+        except (TypeError, ValueError):
+            continue
+    return sorted(set(ids), reverse=True)
+
+
+def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, list[int]]:
+    pipeline.log(
+        f"Flow ownership scan: reading player IDs from {len(wallet_addresses)} wallets"
+    )
+    results: dict[str, list[int]] = {}
+    completed = 0
+    total_ids = 0
+
+    with ThreadPoolExecutor(
+        max_workers=min(pipeline.flow_module.FLOW_WORKERS, max(1, len(wallet_addresses)))
+    ) as executor:
+        futures = {
+            executor.submit(fetch_flow_wallet_player_ids, wallet_address): wallet_address
+            for wallet_address in wallet_addresses
+        }
+        for future in as_completed(futures):
+            wallet_address = futures[future]
+            ids = future.result()
+            results[wallet_address] = ids
+            completed += 1
+            total_ids += len(ids)
+            if completed == len(wallet_addresses) or completed % 100 == 0:
+                pipeline.log(
+                    f"Flow ownership scan: {completed}/{len(wallet_addresses)} wallets, "
+                    f"{total_ids} ownerships"
+                )
+
+    pipeline.log(
+        f"Flow ownership scan completed: {len(results)} wallets, {total_ids} ownerships"
+    )
+    return results
+
+
 def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRateLimiter) -> int:
-    """Fetch the external leaderboard without consuming the PlayMFL API quota."""
+    """Fetch the leaderboard, then read every wallet's player IDs directly from Flow."""
     del limiter
     data = pipeline.request_json(pipeline.LEADERBOARD_URL, "Leaderboard")
     users = data.get("users") if isinstance(data, dict) else None
@@ -59,73 +134,39 @@ def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRat
     )
     connection.commit()
     pipeline.log(f"Wallets saved: {len(wallets)}")
+
+    global FLOW_WALLET_PLAYER_IDS
+    FLOW_WALLET_PLAYER_IDS = load_all_flow_wallet_player_ids(sorted(wallets))
     return len(wallets)
 
 
-def fetch_dynamic_player_source(
+def anchors_from_flow_ids(player_ids: list[int]) -> list[int]:
+    """Return the real ID at the end of every complete 1500-ID Flow slice."""
+    ordered_ids = sorted(set(player_ids), reverse=True)
+    return [
+        ordered_ids[offset - 1]
+        for offset in range(pipeline.MFL_PAGE_SIZE, len(ordered_ids), pipeline.MFL_PAGE_SIZE)
+    ]
+
+
+def fetch_predetermined_player_source(
     limiter: RollingRateLimiter,
     *,
     label: str,
-    retired: bool,
+    anchors: list[int],
+    retired: bool | None = None,
+    wallet_address: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Follow the real beforePlayerId cursor until a partial active/retired batch."""
-    players: dict[int, dict[str, Any]] = {}
-    before_player_id: int | None = None
-    previous_before_player_id: int | None = None
-    batch_number = 1
-
-    while True:
-        page = pipeline.fetch_players_page(
-            limiter,
-            page_label=f"{label} batch {batch_number}",
-            before_player_id=before_player_id,
-            retired=retired,
-        )
-        players.update({pipeline.player_id(player): player for player in page})
-        pipeline.log(
-            f"{label} batch {batch_number}: returned {len(page)}, total {len(players)}"
-        )
-
-        if len(page) < pipeline.MFL_PAGE_SIZE:
-            break
-
-        next_before_player_id = min(pipeline.player_id(player) for player in page)
-        if next_before_player_id == previous_before_player_id:
-            raise RuntimeError(
-                f"{label} pagination stalled at beforePlayerId={next_before_player_id}"
-            )
-
-        previous_before_player_id = next_before_player_id
-        before_player_id = next_before_player_id
-        batch_number += 1
-
-    return list(players.values())
-
-
-def fetch_predetermined_wallet_source(
-    limiter: RollingRateLimiter,
-    *,
-    label: str,
-    wallet_address: str,
-) -> list[dict[str, Any]]:
-    """Pre-compute wallet page anchors from the first page, then fetch concurrently."""
+    """Fetch one source concurrently using anchors derived from Flow ownership IDs."""
     first_page = pipeline.fetch_players_page(
         limiter,
         page_label=f"{label} initial batch",
+        retired=retired,
         wallet_address=wallet_address,
     )
     players: dict[int, dict[str, Any]] = {
         pipeline.player_id(player): player for player in first_page
     }
-
-    if len(first_page) < pipeline.MFL_PAGE_SIZE:
-        pipeline.log(
-            f"{label} batch 1/1: returned {len(first_page)}, total {len(players)}"
-        )
-        return list(players.values())
-
-    lowest_id = min(pipeline.player_id(player) for player in first_page)
-    anchors = list(range(lowest_id, 0, -pipeline.MFL_PAGE_SIZE))
     total_batches = 1 + len(anchors)
     completed_batches = 1
     pipeline.log(
@@ -133,8 +174,11 @@ def fetch_predetermined_wallet_source(
         f"returned {len(first_page)}, total {len(players)}"
     )
 
+    if not anchors:
+        return list(players.values())
+
     with ThreadPoolExecutor(
-        max_workers=min(pipeline.MFL_WORKERS, max(1, len(anchors)))
+        max_workers=min(pipeline.MFL_WORKERS, len(anchors))
     ) as executor:
         futures = {
             executor.submit(
@@ -142,6 +186,7 @@ def fetch_predetermined_wallet_source(
                 limiter,
                 page_label=f"{label} queued batch",
                 before_player_id=before_player_id,
+                retired=retired,
                 wallet_address=wallet_address,
             ): before_player_id
             for before_player_id in anchors
@@ -162,42 +207,61 @@ def fetch_predetermined_wallet_source(
 def fetch_all_player_sources(
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
+    if not FLOW_WALLET_PLAYER_IDS:
+        raise RuntimeError("Flow wallet player IDs were not loaded before player batching")
+
+    all_flow_ids = sorted(
+        {
+            player_id
+            for wallet_ids in FLOW_WALLET_PLAYER_IDS.values()
+            for player_id in wallet_ids
+        },
+        reverse=True,
+    )
+    global_anchors = anchors_from_flow_ids(all_flow_ids)
+    mfl_anchors = anchors_from_flow_ids(
+        FLOW_WALLET_PLAYER_IDS.get(pipeline.MFL_WALLET_ADDRESS, [])
+    )
+    mfl_trade_anchors = anchors_from_flow_ids(
+        FLOW_WALLET_PLAYER_IDS.get(pipeline.MFL_TRADE_WALLET_ADDRESS, [])
+    )
+
+    pipeline.log(
+        "Flow-derived PlayMFL batches: "
+        f"active {1 + len(global_anchors)}, "
+        f"retired {1 + len(global_anchors)}, "
+        f"MFL {1 + len(mfl_anchors)}, "
+        f"MFL Trade {1 + len(mfl_trade_anchors)}"
+    )
+
     jobs = {
-        "general": (
-            fetch_dynamic_player_source,
-            {
-                "label": "Active players",
-                "retired": False,
-            },
-        ),
-        "retired": (
-            fetch_dynamic_player_source,
-            {
-                "label": "Retired players",
-                "retired": True,
-            },
-        ),
-        "mfl": (
-            fetch_predetermined_wallet_source,
-            {
-                "label": "MFL wallet",
-                "wallet_address": pipeline.MFL_WALLET_ADDRESS,
-            },
-        ),
-        "mfl_trade": (
-            fetch_predetermined_wallet_source,
-            {
-                "label": "MFL Trade wallet",
-                "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
-            },
-        ),
+        "general": {
+            "label": "Active players",
+            "anchors": global_anchors,
+            "retired": False,
+        },
+        "retired": {
+            "label": "Retired players",
+            "anchors": global_anchors,
+            "retired": True,
+        },
+        "mfl": {
+            "label": "MFL wallet",
+            "anchors": mfl_anchors,
+            "wallet_address": pipeline.MFL_WALLET_ADDRESS,
+        },
+        "mfl_trade": {
+            "label": "MFL Trade wallet",
+            "anchors": mfl_trade_anchors,
+            "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
+        },
     }
 
     results: dict[str, list[dict[str, Any]]] = {}
     with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
         futures = {
-            executor.submit(function, limiter, **kwargs): key
-            for key, (function, kwargs) in jobs.items()
+            executor.submit(fetch_predetermined_player_source, limiter, **config): key
+            for key, config in jobs.items()
         }
         for future in as_completed(futures):
             results[futures[future]] = future.result()
