@@ -10,14 +10,13 @@ import run_flow_rebuild as pipeline
 
 
 class RollingRateLimiter:
-    """Limit request starts to a rolling requests-per-minute window."""
+    """Allow an immediate burst, then limit starts in a rolling 60-second window."""
 
     def __init__(self, requests_per_minute: int) -> None:
         self.requests_per_minute = requests_per_minute
         self.window_seconds = 60.0
         self.starts: deque[float] = deque()
         self.lock = threading.Lock()
-        self.total_started = 0
 
     def wait(self) -> None:
         while True:
@@ -29,13 +28,6 @@ class RollingRateLimiter:
 
                 if len(self.starts) < self.requests_per_minute:
                     self.starts.append(now)
-                    self.total_started += 1
-                    rolling_count = len(self.starts)
-                    total_started = self.total_started
-                    pipeline.log(
-                        f"PlayMFL request start {total_started}: "
-                        f"{rolling_count}/{self.requests_per_minute} starts in rolling 60s"
-                    )
                     return
 
                 delay = max(0.001, self.starts[0] + self.window_seconds - now)
