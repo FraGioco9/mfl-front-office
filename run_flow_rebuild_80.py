@@ -10,9 +10,4 @@ import run_flow_rebuild_paged
 
 
 if __name__ == "__main__":
-    print(
-        "MFL 80 RPM ENTRYPOINT ACTIVE: "
-        "run_flow_rebuild_paged.py will enforce 80 starts/min with 320 workers",
-        flush=True,
-    )
     raise SystemExit(run_flow_rebuild_paged.main())
