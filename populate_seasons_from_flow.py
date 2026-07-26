@@ -184,7 +184,7 @@ def populate_flow_static_fields(
     force: bool,
     include_mfl_wallet: bool = True,
 ) -> int:
-    """Populate Flow seasons using fixed batches of up to 3,000 explicit player IDs."""
+    """Populate Flow seasons using fixed batches of explicit player IDs."""
     _impl.ensure_flow_static_columns(connection)
     wallets = _impl.get_wallets_to_process(
         connection,
@@ -211,6 +211,12 @@ def populate_flow_static_fields(
 
     for wallet in first_wallets:
         batches = _id_batches(_wallet_player_ids(connection, wallet, force))
+        wallet_updated = 0
+        wallet_label = (
+            "MFL wallet"
+            if wallet.lower() == MFL_WALLET_ADDRESS.lower()
+            else "MFL Trade wallet"
+        )
         for batch_number, batch in enumerate(batches, start=1):
             players = _fetch_flow_static_players_by_ids(
                 wallet,
@@ -219,11 +225,12 @@ def populate_flow_static_fields(
                 len(batches),
             )
             updated = _store_flow_batch(connection, players, force)
+            wallet_updated += updated
             total_updated += updated
             completed += 1
             print(
-                f"Flow seasons {wallet} batch {batch_number}/{len(batches)}: "
-                f"requested {len(batch)}, returned {len(players)}, updated {updated}",
+                f"Flow seasons {wallet_label} batch {batch_number}/{len(batches)}: "
+                f"updated {updated}, total {wallet_updated}",
                 flush=True,
             )
 
@@ -253,9 +260,7 @@ def populate_flow_static_fields(
             completed += 1
             if completed % 100 == 0 or completed == total_jobs:
                 print(
-                    f"Flow seasons batches {completed}/{total_jobs} completed; latest {wallet} "
-                    f"batch {batch_number}/{total_batches}, requested {requested}, "
-                    f"returned {len(players)}, updated {updated}",
+                    f"Flow seasons batches {completed}/{total_jobs} completed",
                     flush=True,
                 )
 
