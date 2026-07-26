@@ -1,8 +1,5 @@
 {
   "functions": {
-    "api/app-bundle.js": {
-      "includeFiles": "app.js"
-    },
     "api/data.js": {
       "includeFiles": "api/data-files/**"
     },
@@ -10,11 +7,36 @@
       "includeFiles": "api/data-files/manifest.json"
     }
   },
-  "rewrites": [
+  "headers": [
     {
       "source": "/app.js",
-      "destination": "/api/app-bundle"
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
+    {
+      "source": "/app-core.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/app-fixes.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
     {
       "source": "/home",
       "destination": "/"

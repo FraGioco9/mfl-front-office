@@ -1,47 +1,34 @@
-const fs = require("node:fs");
-const path = require("node:path");
-
-function runtimeFix() {
-  const currentVersion = "1.149.71";
+(() => {
+  const currentVersion = "1.149.72";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
+  const watchlistViews = {};
 
   function syncVisibleVersion() {
+    const footerLink = document.querySelector('.siteFooter a[href="/changelog"]');
+    if (footerLink) {
+      footerLink.textContent = `MFL Front Office v${currentVersion}`;
+    }
+
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       element.textContent = `v${currentVersion}`;
     });
-
-    let footer = document.querySelector(".siteFooter, body > footer");
-    if (!footer) {
-      footer = document.createElement("footer");
-      footer.className = "siteFooter runtimeVersionFooter";
-      document.body.appendChild(footer);
-    }
-
-    let version = footer.querySelector("[data-app-version]");
-    if (!version) {
-      version = document.createElement("span");
-      version.dataset.appVersion = "";
-      footer.appendChild(version);
-    }
-    version.textContent = `v${currentVersion}`;
 
     const changelog = document.querySelector(".changelogList");
     const exists = changelog && Array.from(changelog.querySelectorAll("li span"))
       .some((item) => item.textContent === `v${currentVersion}`);
     if (changelog && !exists) {
       const entry = document.createElement("li");
-      entry.innerHTML = `<span>v${currentVersion}</span><p>Limit notes to 100 characters, sync each watchlist view, stabilize sidebar transitions, and fix player page data access</p>`;
+      entry.innerHTML = `<span>v${currentVersion}</span><p>Restore static site source loading, limit notes to 100 characters, save each watchlist view, stabilize sidebar transitions, and fix player pages</p>`;
       changelog.prepend(entry);
     }
   }
 
   const style = document.createElement("style");
   style.textContent = [
-    ".runtimeVersionFooter{display:flex;justify-content:center;padding:10px 16px 18px;color:var(--muted,#8f98aa);font-size:13px}",
-    ".appShell.runtimeSidebarTransition .tableScroller{overflow-x:hidden!important}",
-    ".appShell.runtimeSidebarTransition .tableScroller table,.appShell.runtimeSidebarTransition .tableScroller col,.appShell.runtimeSidebarTransition .tableScroller th,.appShell.runtimeSidebarTransition .tableScroller td{visibility:visible!important;opacity:1!important}",
-    ".appShell.runtimeSidebarTransition .tableScroller th,.appShell.runtimeSidebarTransition .tableScroller td,.appShell.runtimeSidebarTransition .tableScroller a,.appShell.runtimeSidebarTransition .tableScroller button{transition:none!important}"
+    ".appShell.sourceSidebarTransition .tableScroller{overflow-x:hidden!important}",
+    ".appShell.sourceSidebarTransition .tableScroller table,.appShell.sourceSidebarTransition .tableScroller col,.appShell.sourceSidebarTransition .tableScroller th,.appShell.sourceSidebarTransition .tableScroller td{visibility:visible!important;opacity:1!important}",
+    ".appShell.sourceSidebarTransition .tableScroller th,.appShell.sourceSidebarTransition .tableScroller td,.appShell.sourceSidebarTransition .tableScroller a,.appShell.sourceSidebarTransition .tableScroller button{transition:none!important}"
   ].join("");
   document.head.appendChild(style);
 
@@ -125,8 +112,6 @@ function runtimeFix() {
     };
   }
 
-  const watchlistViews = {};
-
   function rememberCurrentWatchlistView() {
     if (state.currentPage === "watchlist" && state.currentWatchlistId && state.view) {
       watchlistViews[state.currentWatchlistId] = state.view;
@@ -172,8 +157,8 @@ function runtimeFix() {
 
   if (typeof setView === "function") {
     const originalSetView = setView;
-    setView = async function setViewWithWatchlistSync(viewName) {
-      const result = await originalSetView.apply(this, arguments);
+    setView = function setViewWithWatchlistSync(viewName) {
+      const result = originalSetView.apply(this, arguments);
       rememberCurrentWatchlistView();
       if (state.currentPage === "watchlist" && typeof saveTableState === "function") {
         saveTableState();
@@ -201,7 +186,6 @@ function runtimeFix() {
   }
 
   let frozenColumns = null;
-  let frozenTableWidth = "";
   let animationTimer = 0;
   const table = document.querySelector(".tableScroller table");
 
@@ -250,17 +234,17 @@ function runtimeFix() {
       window.clearTimeout(animationTimer);
 
       if (table) {
-        frozenTableWidth = `${table.getBoundingClientRect().width}px`;
-        table.style.width = frozenTableWidth;
-        table.style.minWidth = frozenTableWidth;
+        const width = `${table.getBoundingClientRect().width}px`;
+        table.style.width = width;
+        table.style.minWidth = width;
       }
 
-      appShell?.classList.add("runtimeSidebarTransition");
+      appShell?.classList.add("sourceSidebarTransition");
       const result = originalToggleMenu.apply(this, args);
 
       animationTimer = window.setTimeout(() => {
         frozenColumns = null;
-        appShell?.classList.remove("runtimeSidebarTransition");
+        appShell?.classList.remove("sourceSidebarTransition");
         if (table) {
           table.style.removeProperty("width");
           table.style.removeProperty("min-width");
@@ -274,17 +258,4 @@ function runtimeFix() {
       return result;
     };
   }
-}
-
-const PATCH = `\n;(${runtimeFix.toString()})();\n`;
-
-module.exports = (request, response) => {
-  try {
-    const source = fs.readFileSync(path.join(process.cwd(), "app.js"), "utf8");
-    response.setHeader("Content-Type", "application/javascript; charset=utf-8");
-    response.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
-    response.status(200).send(source + PATCH);
-  } catch (error) {
-    response.status(500).send(`console.error(${JSON.stringify("Could not load application bundle.")});`);
-  }
-};
+})();
