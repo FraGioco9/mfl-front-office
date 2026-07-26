@@ -21,7 +21,6 @@ FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MIN_FLOW_SPLIT_BATCH_SIZE = _impl.MIN_FLOW_SPLIT_BATCH_SIZE
 FLOW_WORKERS = 25
-FLOW_PROGRESS_INTERVAL = 100
 
 FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT = """
 import NonFungibleToken from 0x1d7e57aa55817448
@@ -143,6 +142,16 @@ def _fetch_flow_static_players_by_ids(
     return _impl.parse_flow_static_player_response(response)
 
 
+def _store_flow_batch(
+    connection: sqlite3.Connection,
+    players: list[dict[str, Any]],
+    force: bool,
+) -> int:
+    updated = _impl.update_flow_static_fields(connection, players, force)
+    connection.commit()
+    return updated
+
+
 def populate_flow_static_fields(
     connection: sqlite3.Connection,
     limit: int | None,
@@ -160,15 +169,40 @@ def populate_flow_static_fields(
         include_mfl_wallet,
     )
 
-    jobs: list[tuple[str, list[int], int, int]] = []
-    for wallet in wallets:
-        player_ids = _wallet_player_ids(connection, wallet, force)
-        batches = _id_batches(player_ids)
-        for batch_number, batch in enumerate(batches, start=1):
-            jobs.append((wallet, batch, batch_number, len(batches)))
+    priority_order = [MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS]
+    priority_wallets = [wallet for wallet in priority_order if wallet in wallets]
+    regular_wallets = [wallet for wallet in wallets if wallet not in priority_order]
 
     total_updated = 0
     completed = 0
+    total_jobs = sum(
+        len(_id_batches(_wallet_player_ids(connection, wallet, force)))
+        for wallet in wallets
+    )
+
+    for wallet in priority_wallets:
+        batches = _id_batches(_wallet_player_ids(connection, wallet, force))
+        for batch_number, batch in enumerate(batches, start=1):
+            players = _fetch_flow_static_players_by_ids(
+                wallet,
+                batch,
+                batch_number,
+                len(batches),
+            )
+            updated = _store_flow_batch(connection, players, force)
+            total_updated += updated
+            completed += 1
+            print(
+                f"Flow seasons priority {wallet} batch {batch_number}/{len(batches)}: "
+                f"requested {len(batch)}, returned {len(players)}, updated {updated}"
+            )
+
+    jobs: list[tuple[str, list[int], int, int]] = []
+    for wallet in regular_wallets:
+        batches = _id_batches(_wallet_player_ids(connection, wallet, force))
+        for batch_number, batch in enumerate(batches, start=1):
+            jobs.append((wallet, batch, batch_number, len(batches)))
+
     with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(jobs) or 1))) as executor:
         futures = {
             executor.submit(
@@ -184,16 +218,14 @@ def populate_flow_static_fields(
         for future in as_completed(futures):
             wallet, batch_number, total_batches, requested = futures[future]
             players = future.result()
-            updated = _impl.update_flow_static_fields(connection, players, force)
-            connection.commit()
+            updated = _store_flow_batch(connection, players, force)
             total_updated += updated
             completed += 1
-            if completed % FLOW_PROGRESS_INTERVAL == 0 or completed == len(jobs):
+            if completed % 100 == 0 or completed == total_jobs:
                 print(
-                    f"Flow seasons batches {completed}/{len(jobs)} completed; "
-                    f"latest {wallet} batch {batch_number}/{total_batches}, "
-                    f"requested {requested}, returned {len(players)}, updated {updated}",
-                    flush=True,
+                    f"Flow seasons batches {completed}/{total_jobs} completed; latest {wallet} "
+                    f"batch {batch_number}/{total_batches}, requested {requested}, "
+                    f"returned {len(players)}, updated {updated}"
                 )
 
     return total_updated
