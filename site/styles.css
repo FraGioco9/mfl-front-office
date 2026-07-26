@@ -32,7 +32,6 @@
 }
 
 .appShell:not(.menuClosed) .tableScroller col {
-  width: auto !important;
   min-width: 0 !important;
   max-width: none !important;
 }
@@ -97,4 +96,80 @@
 .appShell:not(.menuClosed) .tableScroller td {
   padding-left: 4px;
   padding-right: 4px;
+}
+
+/* v1.149.65 - Use numeric endpoints in both sidebar directions */
+.appShell.menuAnimating .tableScroller table,
+.appShell.menuAnimating .tableScroller col,
+.appShell.menuAnimating .tableScroller th,
+.appShell.menuAnimating .tableScroller td {
+  transition: width 220ms ease, min-width 220ms ease, padding-left 220ms ease, padding-right 220ms ease !important;
+}
+
+.appShell.menuClosed .tableScroller table {
+  width: 100% !important;
+  min-width: 1240px !important;
+  table-layout: fixed;
+}
+
+.appShell.menuClosed .tableScroller .col-select {
+  width: 51.09px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-id {
+  width: 68.13px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-flag {
+  width: 45.41px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-name {
+  width: 212.89px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-nationality {
+  width: 141.92px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-age {
+  width: 65.28px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-positions {
+  width: 119.22px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-seasons {
+  width: 82.31px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-stat {
+  width: 107.86px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-agent {
+  width: 187.34px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-revenue {
+  width: 140px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-club {
+  width: 227.16px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-division {
+  width: 280px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-link {
+  width: 48.39px !important;
+}
+
+.appShell.menuClosed .tableScroller th,
+.appShell.menuClosed .tableScroller td {
+  padding-left: 6px;
+  padding-right: 6px;
 }
