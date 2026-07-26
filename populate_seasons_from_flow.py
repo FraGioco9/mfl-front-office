@@ -169,9 +169,9 @@ def populate_flow_static_fields(
         include_mfl_wallet,
     )
 
-    priority_order = [MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS]
-    priority_wallets = [wallet for wallet in priority_order if wallet in wallets]
-    regular_wallets = [wallet for wallet in wallets if wallet not in priority_order]
+    first_order = [MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS]
+    first_wallets = [wallet for wallet in first_order if wallet in wallets]
+    regular_wallets = [wallet for wallet in wallets if wallet not in first_order]
 
     total_updated = 0
     completed = 0
@@ -180,7 +180,7 @@ def populate_flow_static_fields(
         for wallet in wallets
     )
 
-    for wallet in priority_wallets:
+    for wallet in first_wallets:
         batches = _id_batches(_wallet_player_ids(connection, wallet, force))
         for batch_number, batch in enumerate(batches, start=1):
             players = _fetch_flow_static_players_by_ids(
@@ -193,7 +193,7 @@ def populate_flow_static_fields(
             total_updated += updated
             completed += 1
             print(
-                f"Flow seasons priority {wallet} batch {batch_number}/{len(batches)}: "
+                f"Flow seasons {wallet} batch {batch_number}/{len(batches)}: "
                 f"requested {len(batch)}, returned {len(players)}, updated {updated}"
             )
 
