@@ -1,47 +1,92 @@
 (() => {
-  const currentVersion = "1.149.73";
+  const currentVersion = "1.149.74";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
 
   const recoveredChangelog = [
+    ["1.149.74", "Keep every table column continuously visible during sidebar transitions and place recent patches in the v1.149 section"],
     ["1.149.73", "Keep every table column visible during sidebar transitions and normalize the changelog"],
     ["1.149.72", "Restore static source loading and remove the Vercel app bundle wrapper"],
     ["1.149.71", "Limit notes to 100 characters, remember watchlist views, smooth sidebar transitions, and fix player pages"],
     ["1.149.70", "Keep the current version visible in the footer"],
     ["1.149.69", "Persist the last selected view for each watchlist"],
     ["1.149.68", "Improve sidebar transitions and player page data loading"],
-    ["1.149.67", "Stabilize the deployed site source and database update flow"],
   ];
+
+  function normalizePatchText(entry, label, description) {
+    const version = entry.querySelector("span");
+    const text = entry.querySelector("p");
+    if (version && text) {
+      version.textContent = label;
+      text.textContent = description;
+    } else {
+      entry.innerHTML = `<span>${label}</span><p>${description}</p>`;
+    }
+  }
+
+  function updatePatchCount(section, count) {
+    if (!section) return;
+    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (/\d+\s+patch(?:es)?/i.test(node.nodeValue || "")) {
+        node.nodeValue = node.nodeValue.replace(/\d+\s+patch(?:es)?/i, `${count} patches`);
+        return;
+      }
+    }
+  }
 
   function syncChangelog() {
     const changelog = document.querySelector(".changelogList");
-    if (!changelog) return;
+    if (!changelog) return false;
 
-    const existing = new Map(
-      Array.from(changelog.querySelectorAll("li")).map((item) => [
-        item.querySelector("span")?.textContent?.trim(),
-        item,
-      ])
-    );
+    const looseRecentEntries = Array.from(changelog.children).filter((entry) => {
+      const version = entry.querySelector(":scope > span")?.textContent?.trim();
+      return recoveredChangelog.some(([number]) => version === `v${number}`);
+    });
+    looseRecentEntries.forEach((entry) => entry.remove());
+
+    const referenceVersion = Array.from(changelog.querySelectorAll("li span"))
+      .find((item) => item.textContent.trim() === "v1.149.67");
+    const referenceEntry = referenceVersion?.closest("li");
+    if (!referenceEntry) return false;
+
+    const patchList = referenceEntry.parentElement;
+    if (!patchList) return false;
 
     recoveredChangelog.slice().reverse().forEach(([version, description]) => {
       const label = `v${version}`;
-      let entry = existing.get(label);
+      let entry = Array.from(patchList.children).find(
+        (item) => item.querySelector("span")?.textContent?.trim() === label
+      );
       if (!entry) {
-        entry = document.createElement("li");
-        changelog.prepend(entry);
+        entry = referenceEntry.cloneNode(true);
+        patchList.insertBefore(entry, patchList.firstElementChild || referenceEntry);
       }
-      entry.innerHTML = `<span>${label}</span><p>${description}</p>`;
+      normalizePatchText(entry, label, description);
     });
 
-    changelog.querySelectorAll("li").forEach((entry) => {
+    Array.from(patchList.querySelectorAll(":scope > li")).forEach((entry) => {
       const version = entry.querySelector("span");
       const description = entry.querySelector("p");
       if (!version || !description) return;
       version.textContent = version.textContent.trim();
       description.textContent = description.textContent.trim().replace(/\s+/g, " ");
     });
+
+    const section = patchList.closest("details, .changelogVersion, .changelogGroup, li, section, div");
+    updatePatchCount(section, patchList.querySelectorAll(":scope > li").length);
+    return true;
+  }
+
+  function scheduleChangelogSync() {
+    if (syncChangelog()) return;
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (syncChangelog() || attempts >= 20) window.clearInterval(timer);
+    }, 50);
   }
 
   function syncVisibleVersion() {
@@ -50,16 +95,16 @@
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       element.textContent = `v${currentVersion}`;
     });
-    syncChangelog();
+    scheduleChangelogSync();
   }
 
   const style = document.createElement("style");
   style.textContent = [
-    ".appShell,.appShell main,.tableScroller,.tableScroller table{will-change:width}",
-    ".appShell.sourceSidebarTransition .tableScroller table,.appShell.sourceSidebarTransition .tableScroller col,.appShell.sourceSidebarTransition .tableScroller th,.appShell.sourceSidebarTransition .tableScroller td{visibility:visible!important;opacity:1!important}",
-    ".appShell.sourceSidebarTransition .tableScroller th,.appShell.sourceSidebarTransition .tableScroller td,.appShell.sourceSidebarTransition .tableScroller a,.appShell.sourceSidebarTransition .tableScroller button{transition:none!important}",
-    ".appShell.sourceSidebarTransition .tableScroller{overflow-x:auto!important}",
-    ".appShell.sourceSidebarTransition .tableScroller table{width:100%!important;min-width:100%!important;table-layout:fixed!important}"
+    ".tableScroller.sidebarSnapshotActive{position:relative!important}",
+    ".tableScroller.sidebarSnapshotActive>table:not(.sidebarTableSnapshot){opacity:0!important}",
+    ".sidebarTableSnapshot{position:absolute!important;inset:0 auto auto 0!important;width:100%!important;min-width:0!important;table-layout:fixed!important;z-index:20!important;pointer-events:none!important;margin:0!important;opacity:1!important;visibility:visible!important}",
+    ".sidebarTableSnapshot col,.sidebarTableSnapshot th,.sidebarTableSnapshot td,.sidebarTableSnapshot a,.sidebarTableSnapshot button{opacity:1!important;visibility:visible!important;transition:none!important}",
+    ".appShell,.appShell main,.tableScroller{will-change:width}",
   ].join("");
   document.head.appendChild(style);
 
@@ -199,68 +244,67 @@
     };
   }
 
-  let frozenColumns = null;
   let transitionTimer = 0;
-  const originalBuildTableColGroup = typeof buildTableColGroup === "function" ? buildTableColGroup : null;
-  const originalBuildHeader = typeof buildHeader === "function" ? buildHeader : null;
-  const originalRenderTable = typeof renderTable === "function" ? renderTable : null;
+  let activeSnapshot = null;
+  let activeScroller = null;
 
-  if (typeof currentViewColumns === "function") {
-    const originalCurrentViewColumns = currentViewColumns;
-    currentViewColumns = function stableCurrentViewColumns(...args) {
-      return frozenColumns ? [...frozenColumns] : originalCurrentViewColumns.apply(this, args);
-    };
+  function removeDuplicateIds(root) {
+    root.removeAttribute?.("id");
+    root.querySelectorAll?.("[id]").forEach((element) => element.removeAttribute("id"));
   }
 
-  if (originalBuildTableColGroup) {
-    buildTableColGroup = function stableBuildTableColGroup(...args) {
-      if (frozenColumns && tableColGroup?.children.length) return tableColGroup;
-      return originalBuildTableColGroup.apply(this, args);
-    };
-  }
+  function createSidebarSnapshot() {
+    const visibleTable = Array.from(document.querySelectorAll(".tableScroller > table"))
+      .find((table) => table.offsetParent !== null && !table.classList.contains("evaluationTable"));
+    if (!visibleTable) return;
 
-  if (originalBuildHeader) {
-    buildHeader = function stableBuildHeader(...args) {
-      if (frozenColumns) return tableHead;
-      return originalBuildHeader.apply(this, args);
-    };
-  }
+    const scroller = visibleTable.parentElement;
+    const snapshot = visibleTable.cloneNode(true);
+    removeDuplicateIds(snapshot);
+    snapshot.classList.add("sidebarTableSnapshot");
+    snapshot.setAttribute("aria-hidden", "true");
 
-  if (originalRenderTable) {
-    renderTable = function stableRenderTable(...args) {
-      if (frozenColumns) return tableBody;
-      return originalRenderTable.apply(this, args);
-    };
+    const sourceCols = Array.from(visibleTable.querySelectorAll("colgroup col"));
+    const snapshotCols = Array.from(snapshot.querySelectorAll("colgroup col"));
+    const totalWidth = visibleTable.getBoundingClientRect().width || 1;
+    sourceCols.forEach((column, index) => {
+      if (!snapshotCols[index]) return;
+      const width = column.getBoundingClientRect().width;
+      snapshotCols[index].style.width = `${(width / totalWidth) * 100}%`;
+      snapshotCols[index].style.minWidth = "0";
+      snapshotCols[index].style.maxWidth = "none";
+    });
+
+    scroller.classList.add("sidebarSnapshotActive");
+    scroller.appendChild(snapshot);
+    activeScroller = scroller;
+    activeSnapshot = snapshot;
   }
 
   function finishSidebarTransition() {
-    if (!frozenColumns) return;
-    frozenColumns = null;
-    appShell?.classList.remove("sourceSidebarTransition");
-    if (originalBuildTableColGroup) originalBuildTableColGroup();
-    if (originalBuildHeader) originalBuildHeader();
-    if (typeof applyFilters === "function" && typeof tablePageKey === "function" && tablePageKey()) applyFilters();
+    window.clearTimeout(transitionTimer);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      activeSnapshot?.remove();
+      activeScroller?.classList.remove("sidebarSnapshotActive");
+      activeSnapshot = null;
+      activeScroller = null;
+    }));
   }
 
   if (typeof toggleMenu === "function") {
     const originalToggleMenu = toggleMenu;
     toggleMenu = function smoothToggleMenu(...args) {
-      frozenColumns = typeof currentViewColumns === "function" ? [...currentViewColumns()] : [];
-      window.clearTimeout(transitionTimer);
-      appShell?.classList.add("sourceSidebarTransition");
-
+      finishSidebarTransition();
+      createSidebarSnapshot();
       const result = originalToggleMenu.apply(this, args);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        transitionTimer = window.setTimeout(finishSidebarTransition, 320);
-      }));
+      transitionTimer = window.setTimeout(finishSidebarTransition, 420);
       return result;
     };
 
-    appShell?.addEventListener("transitionend", (event) => {
-      if (event.target === appShell || event.target === sidebar || event.target === menuRail) {
-        window.clearTimeout(transitionTimer);
-        finishSidebarTransition();
-      }
+    [appShell, sidebar, menuRail].filter(Boolean).forEach((element) => {
+      element.addEventListener("transitionend", (event) => {
+        if (event.target === element) finishSidebarTransition();
+      });
     });
   }
 })();
