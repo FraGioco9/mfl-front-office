@@ -62,17 +62,57 @@ def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRat
     return len(wallets)
 
 
-def fetch_predetermined_player_source(
+def fetch_dynamic_player_source(
     limiter: RollingRateLimiter,
     *,
     label: str,
     retired: bool,
 ) -> list[dict[str, Any]]:
-    """Pre-compute active or retired page anchors, then fetch them concurrently."""
+    """Follow the real beforePlayerId cursor until a partial active/retired batch."""
+    players: dict[int, dict[str, Any]] = {}
+    before_player_id: int | None = None
+    previous_before_player_id: int | None = None
+    batch_number = 1
+
+    while True:
+        page = pipeline.fetch_players_page(
+            limiter,
+            page_label=f"{label} batch {batch_number}",
+            before_player_id=before_player_id,
+            retired=retired,
+        )
+        players.update({pipeline.player_id(player): player for player in page})
+        pipeline.log(
+            f"{label} batch {batch_number}: returned {len(page)}, total {len(players)}"
+        )
+
+        if len(page) < pipeline.MFL_PAGE_SIZE:
+            break
+
+        next_before_player_id = min(pipeline.player_id(player) for player in page)
+        if next_before_player_id == previous_before_player_id:
+            raise RuntimeError(
+                f"{label} pagination stalled at beforePlayerId={next_before_player_id}"
+            )
+
+        previous_before_player_id = next_before_player_id
+        before_player_id = next_before_player_id
+        batch_number += 1
+
+    return list(players.values())
+
+
+def fetch_predetermined_wallet_source(
+    limiter: RollingRateLimiter,
+    *,
+    label: str,
+    wallet_address: str,
+) -> list[dict[str, Any]]:
+    """Pre-compute wallet page anchors from the first page, then fetch concurrently."""
     first_page = pipeline.fetch_players_page(
         limiter,
         page_label=f"{label} initial batch",
-        retired=retired,
+        wallet_address=wallet_address,
     )
     players: dict[int, dict[str, Any]] = {
         pipeline.player_id(player): player for player in first_page
@@ -102,7 +142,7 @@ def fetch_predetermined_player_source(
                 limiter,
                 page_label=f"{label} queued batch",
                 before_player_id=before_player_id,
-                retired=retired,
+                wallet_address=wallet_address,
             ): before_player_id
             for before_player_id in anchors
         }
@@ -119,73 +159,33 @@ def fetch_predetermined_player_source(
     return list(players.values())
 
 
-def fetch_dynamic_wallet_source(
-    limiter: RollingRateLimiter,
-    *,
-    label: str,
-    wallet_address: str,
-) -> list[dict[str, Any]]:
-    """Follow each wallet's real beforePlayerId cursor until a partial batch."""
-    players: dict[int, dict[str, Any]] = {}
-    before_player_id: int | None = None
-    previous_before_player_id: int | None = None
-    batch_number = 1
-
-    while True:
-        page = pipeline.fetch_players_page(
-            limiter,
-            page_label=f"{label} batch {batch_number}",
-            before_player_id=before_player_id,
-            wallet_address=wallet_address,
-        )
-        players.update({pipeline.player_id(player): player for player in page})
-        pipeline.log(
-            f"{label} batch {batch_number}: returned {len(page)}, total {len(players)}"
-        )
-
-        if len(page) < pipeline.MFL_PAGE_SIZE:
-            break
-
-        next_before_player_id = min(pipeline.player_id(player) for player in page)
-        if next_before_player_id == previous_before_player_id:
-            raise RuntimeError(
-                f"{label} pagination stalled at beforePlayerId={next_before_player_id}"
-            )
-
-        previous_before_player_id = next_before_player_id
-        before_player_id = next_before_player_id
-        batch_number += 1
-
-    return list(players.values())
-
-
 def fetch_all_player_sources(
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
     jobs = {
         "general": (
-            fetch_predetermined_player_source,
+            fetch_dynamic_player_source,
             {
                 "label": "Active players",
                 "retired": False,
             },
         ),
         "retired": (
-            fetch_predetermined_player_source,
+            fetch_dynamic_player_source,
             {
                 "label": "Retired players",
                 "retired": True,
             },
         ),
         "mfl": (
-            fetch_dynamic_wallet_source,
+            fetch_predetermined_wallet_source,
             {
                 "label": "MFL wallet",
                 "wallet_address": pipeline.MFL_WALLET_ADDRESS,
             },
         ),
         "mfl_trade": (
-            fetch_dynamic_wallet_source,
+            fetch_predetermined_wallet_source,
             {
                 "label": "MFL Trade wallet",
                 "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
