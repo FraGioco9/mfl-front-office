@@ -78,8 +78,9 @@ def fetch_flow_wallet_player_ids(wallet_address: str) -> list[int]:
 
 
 def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, list[int]]:
+    pipeline.log("\n=== FLOW OWNERSHIP SCAN ===")
     pipeline.log(
-        f"Flow ownership scan: reading player IDs from {len(wallet_addresses)} wallets"
+        f"Reading player IDs from {len(wallet_addresses)} wallets"
     )
     results: dict[str, list[int]] = {}
     completed = 0
@@ -100,13 +101,14 @@ def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, li
             total_ids += len(ids)
             if completed == len(wallet_addresses) or completed % 100 == 0:
                 pipeline.log(
-                    f"Flow ownership scan: {completed}/{len(wallet_addresses)} wallets, "
+                    f"{completed}/{len(wallet_addresses)} wallets, "
                     f"{total_ids} ownerships"
                 )
 
     pipeline.log(
         f"Flow ownership scan completed: {len(results)} wallets, {total_ids} ownerships"
     )
+    pipeline.log("=== END FLOW OWNERSHIP SCAN ===\n")
     return results
 
 
