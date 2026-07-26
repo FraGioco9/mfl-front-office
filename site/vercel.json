@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/app-bundle.js": {
+      "includeFiles": "app.js"
+    },
     "api/data.js": {
       "includeFiles": "api/data-files/**"
     },
@@ -8,6 +11,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/app.js",
+      "destination": "/api/app-bundle"
+    },
     {
       "source": "/home",
       "destination": "/"
