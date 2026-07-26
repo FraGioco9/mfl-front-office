@@ -8,6 +8,7 @@ executes the concurrent paged implementation explicitly.
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any
 
 import populate_seasons_from_flow
@@ -47,6 +48,29 @@ def skip_validation(connection: Any, expected_players: int) -> dict[str, Any]:
         "anything_missing": False,
         "validation_skipped": True,
     }
+
+
+def install_concise_progression_logging() -> None:
+    """Remove per-batch updated counts from progression progress messages."""
+    original_log = run_flow_rebuild.log
+
+    def concise_log(message: str) -> None:
+        if message.startswith("Progression ") and ": updated " in message:
+            message = message.split(": updated ", 1)[0]
+        original_log(message)
+
+    run_flow_rebuild.log = concise_log
+
+
+def install_database_filename() -> None:
+    """Use mfl_database.db and a matching temporary candidate filename."""
+    database_path = Path(run_flow_rebuild.__file__).with_name("mfl_database.db")
+    candidate_path = Path(run_flow_rebuild.__file__).with_name("mfl_database_candidate.db")
+
+    run_flow_rebuild.DATABASE_PATH = database_path
+    run_flow_rebuild.CANDIDATE_PATH = candidate_path
+    populate_seasons_from_flow.DATABASE_PATH = database_path
+    populate_seasons_from_flow._impl.DATABASE_PATH = database_path
 
 
 def fetch_active_and_retired_player_sources(
@@ -171,6 +195,8 @@ def install_flow_wallet_id_cache() -> None:
 
 
 if __name__ == "__main__":
+    install_database_filename()
+    install_concise_progression_logging()
     run_flow_rebuild.validate = skip_validation
     run_flow_rebuild_paged.FLOW_SPECIAL_WALLET_RANGE_SIZE = 3000
     run_flow_rebuild_paged.fetch_all_player_sources = fetch_active_and_retired_player_sources
