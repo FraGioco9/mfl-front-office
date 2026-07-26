@@ -62,14 +62,68 @@ def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRat
     return len(wallets)
 
 
-def fetch_player_source(
+def fetch_predetermined_player_source(
     limiter: RollingRateLimiter,
     *,
     label: str,
-    retired: bool | None,
-    wallet_address: str | None,
+    retired: bool,
 ) -> list[dict[str, Any]]:
-    """Follow beforePlayerId until the API returns a partial final batch."""
+    """Pre-compute active or retired page anchors, then fetch them concurrently."""
+    first_page = pipeline.fetch_players_page(
+        limiter,
+        page_label=f"{label} batch 1",
+        retired=retired,
+    )
+    players: dict[int, dict[str, Any]] = {
+        pipeline.player_id(player): player for player in first_page
+    }
+
+    if len(first_page) < pipeline.MFL_PAGE_SIZE:
+        pipeline.log(
+            f"{label} batch 1/1: returned {len(first_page)}, total {len(players)}"
+        )
+        return list(players.values())
+
+    lowest_id = min(pipeline.player_id(player) for player in first_page)
+    anchors = list(range(lowest_id, 0, -pipeline.MFL_PAGE_SIZE))
+    total_batches = 1 + len(anchors)
+    pipeline.log(
+        f"{label} batch 1/{total_batches}: returned {len(first_page)}, total {len(players)}"
+    )
+
+    with ThreadPoolExecutor(
+        max_workers=min(pipeline.MFL_WORKERS, max(1, len(anchors)))
+    ) as executor:
+        futures = {
+            executor.submit(
+                pipeline.fetch_players_page,
+                limiter,
+                page_label=f"{label} batch {batch_number}",
+                before_player_id=before_player_id,
+                retired=retired,
+            ): batch_number
+            for batch_number, before_player_id in enumerate(anchors, start=2)
+        }
+
+        for future in as_completed(futures):
+            batch_number = futures[future]
+            page = future.result()
+            players.update({pipeline.player_id(player): player for player in page})
+            pipeline.log(
+                f"{label} batch {batch_number}/{total_batches}: "
+                f"returned {len(page)}, total {len(players)}"
+            )
+
+    return list(players.values())
+
+
+def fetch_dynamic_wallet_source(
+    limiter: RollingRateLimiter,
+    *,
+    label: str,
+    wallet_address: str,
+) -> list[dict[str, Any]]:
+    """Follow each wallet's real beforePlayerId cursor until a partial batch."""
     players: dict[int, dict[str, Any]] = {}
     before_player_id: int | None = None
     previous_before_player_id: int | None = None
@@ -80,14 +134,11 @@ def fetch_player_source(
             limiter,
             page_label=f"{label} batch {batch_number}",
             before_player_id=before_player_id,
-            retired=retired,
             wallet_address=wallet_address,
         )
-
         players.update({pipeline.player_id(player): player for player in page})
         pipeline.log(
-            f"{label} batch {batch_number}: "
-            f"returned {len(page)}, total {len(players)}"
+            f"{label} batch {batch_number}: returned {len(page)}, total {len(players)}"
         )
 
         if len(page) < pipeline.MFL_PAGE_SIZE:
@@ -109,45 +160,45 @@ def fetch_player_source(
 def fetch_all_player_sources(
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
-    sources: dict[str, dict[str, Any]] = {
-        "general": {
-            "label": "Active players",
-            "retired": False,
-            "wallet_address": None,
-        },
-        "retired": {
-            "label": "Retired players",
-            "retired": True,
-            "wallet_address": None,
-        },
-        "mfl": {
-            "label": "MFL wallet",
-            "retired": None,
-            "wallet_address": pipeline.MFL_WALLET_ADDRESS,
-        },
-        "mfl_trade": {
-            "label": "MFL Trade wallet",
-            "retired": None,
-            "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
-        },
+    jobs = {
+        "general": (
+            fetch_predetermined_player_source,
+            {
+                "label": "Active players",
+                "retired": False,
+            },
+        ),
+        "retired": (
+            fetch_predetermined_player_source,
+            {
+                "label": "Retired players",
+                "retired": True,
+            },
+        ),
+        "mfl": (
+            fetch_dynamic_wallet_source,
+            {
+                "label": "MFL wallet",
+                "wallet_address": pipeline.MFL_WALLET_ADDRESS,
+            },
+        ),
+        "mfl_trade": (
+            fetch_dynamic_wallet_source,
+            {
+                "label": "MFL Trade wallet",
+                "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
+            },
+        ),
     }
 
     results: dict[str, list[dict[str, Any]]] = {}
-    with ThreadPoolExecutor(max_workers=len(sources)) as executor:
+    with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
         futures = {
-            executor.submit(
-                fetch_player_source,
-                limiter,
-                label=config["label"],
-                retired=config["retired"],
-                wallet_address=config["wallet_address"],
-            ): key
-            for key, config in sources.items()
+            executor.submit(function, limiter, **kwargs): key
+            for key, (function, kwargs) in jobs.items()
         }
-
         for future in as_completed(futures):
-            key = futures[future]
-            results[key] = future.result()
+            results[futures[future]] = future.result()
 
     return results
 
