@@ -23,3 +23,78 @@
   min-height: 58px;
   resize: none;
 }
+
+/* v1.149.64 - Fit player table inside the viewport with the sidebar open */
+.appShell:not(.menuClosed) .tableScroller table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+
+.appShell:not(.menuClosed) .tableScroller col {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-select {
+  width: 3.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-id {
+  width: 5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-flag {
+  width: 3.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-name {
+  width: 15% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-nationality {
+  width: 10% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-age {
+  width: 4.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-positions {
+  width: 8% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-seasons {
+  width: 5.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-stat {
+  width: 7.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-agent {
+  width: 13% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-revenue {
+  width: 10% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-club {
+  width: 18% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-division {
+  width: 14% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-link {
+  width: 4% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller th,
+.appShell:not(.menuClosed) .tableScroller td {
+  padding-left: 4px;
+  padding-right: 4px;
+}
