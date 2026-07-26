@@ -17,6 +17,7 @@ class RollingRateLimiter:
         self.window_seconds = 60.0
         self.starts: deque[float] = deque()
         self.lock = threading.Lock()
+        self.total_started = 0
 
     def wait(self) -> None:
         while True:
@@ -28,6 +29,13 @@ class RollingRateLimiter:
 
                 if len(self.starts) < self.requests_per_minute:
                     self.starts.append(now)
+                    self.total_started += 1
+                    rolling_count = len(self.starts)
+                    total_started = self.total_started
+                    pipeline.log(
+                        f"PlayMFL request start {total_started}: "
+                        f"{rolling_count}/{self.requests_per_minute} starts in rolling 60s"
+                    )
                     return
 
                 delay = max(0.001, self.starts[0] + self.window_seconds - now)
@@ -147,6 +155,11 @@ def main() -> int:
     pipeline.MFL_WORKERS = 320
     pipeline.RateLimiter = RollingRateLimiter
     pipeline.fetch_all_player_sources = fetch_all_player_sources
+    pipeline.log(
+        f"PlayMFL runtime configuration: "
+        f"{pipeline.MFL_REQUESTS_PER_MINUTE} starts/min, "
+        f"{pipeline.MFL_WORKERS} workers"
+    )
     return pipeline.main()
 
 
