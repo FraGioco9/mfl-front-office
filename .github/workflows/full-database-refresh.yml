@@ -2,23 +2,6 @@ name: Full database refresh
 
 on:
   workflow_dispatch:
-    inputs:
-      limit:
-        description: "Number of leaderboard wallets to refresh. Leave empty for all wallets."
-        required: false
-        default: ""
-      wallet:
-        description: "Single wallet address to refresh. Leave empty to use leaderboard wallets."
-        required: false
-        default: ""
-      mfl_wallet:
-        description: "Refresh the large MFL wallet too. Leave false to preserve current MFL rows."
-        required: true
-        type: choice
-        options:
-          - "false"
-          - "true"
-        default: "false"
 
 permissions:
   contents: read
@@ -38,60 +21,33 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Restore previous database artifact
-        if: inputs.mfl_wallet != 'true'
+      - name: Restore previous database for comparison
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p previous-database
-
           {
             gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
           } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
-            if [ -z "$RUN_ID" ]; then
-              continue
-            fi
-
-            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_progression_database" and .expired == false) | .name' | head -n 1)"
-
-            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then
-              echo "$RUN_ID" > previous_database_run_id.txt
-              break
-            fi
-
-            echo "Skipping run $RUN_ID from $CREATED_AT because it has no usable database artifact."
+            [ -n "$RUN_ID" ] || continue
+            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' | head -n 1)"
+            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then echo "$RUN_ID" > previous_database_run_id.txt; break; fi
           done
-
-          if [ ! -f previous_database_run_id.txt ]; then
-            echo "No previous database artifact found; MFL wallet rows cannot be preserved."
-            exit 0
+          if [ -f previous_database_run_id.txt ]; then
+            gh run download "$(cat previous_database_run_id.txt)" --name mfl_database --dir previous-database
+          else
+            echo "No previous mfl_database artifact found."
           fi
 
-          DATABASE_RUN_ID="$(cat previous_database_run_id.txt)"
-          echo "Restoring database artifact from run $DATABASE_RUN_ID to preserve MFL wallet rows."
-          gh run download "$DATABASE_RUN_ID" --name mfl_progression_database --dir previous-database
-          cp previous-database/*.db . 2>/dev/null || true
-
-      - name: Run database refresh
-        shell: bash
-        run: |
-          COMMAND=(python update_database.py --seasons yes --mfl-wallet "${{ inputs.mfl_wallet }}")
-
-          if [ -n "${{ inputs.limit }}" ]; then
-            COMMAND+=(--limit "${{ inputs.limit }}")
-          fi
-
-          if [ -n "${{ inputs.wallet }}" ]; then
-            COMMAND+=(--wallet "${{ inputs.wallet }}")
-          fi
-
-          "${COMMAND[@]}"
+      - name: Rebuild database
+        run: python rebuild_database.py
 
       - name: Send progression emails
+        if: hashFiles('previous-database/mfl_database.db') != ''
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -102,10 +58,11 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_REPLY_TO: ${{ secrets.EMAIL_REPLY_TO }}
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
-        run: python send_progression_emails.py --previous-db previous-database/mfl_progression.db --current-db mfl_progression.db
+        run: python send_progression_emails.py --previous-db previous-database/mfl_database.db --current-db mfl_database.db
+
       - name: Upload database
         uses: actions/upload-artifact@v4
         with:
-          name: mfl_progression_database
-          path: mfl_progression.db
+          name: mfl_database
+          path: mfl_database.db
           if-no-files-found: error
