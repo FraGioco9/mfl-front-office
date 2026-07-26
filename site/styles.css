@@ -197,17 +197,28 @@
   text-align: center;
 }
 
-/* Latest changelog entries, displayed before the existing v1.149.62 item. */
-.changelogList::before {
-  content: "v1.149.66   Preserve table alignment throughout sidebar transitions\A v1.149.65   Smooth table column expansion with numeric endpoints\A v1.149.64   Shrink table columns when the sidebar is open\A v1.149.63   Shrink the individual player Notes box";
-  display: block;
-  margin: 0 0 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 700;
-  line-height: 1.8;
-  white-space: pre-line;
+
+
+/* v1.149.67 - Keep the checkbox column visible during sidebar transitions */
+.appShell .tableScroller .col-select {
+  width: max(3.5%, 44px) !important;
+  min-width: 44px !important;
+}
+
+.appShell.menuAnimating .tableScroller .col-select {
+  width: 44px !important;
+  min-width: 44px !important;
+}
+
+.appShell .tableScroller .selectionCell {
+  min-width: 44px;
+  width: 44px;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+
+.appShell .tableScroller .selectionCell input[type="checkbox"] {
+  display: inline-block;
+  flex: 0 0 auto;
 }
