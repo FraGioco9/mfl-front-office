@@ -68,28 +68,53 @@ access(all) fun main(address: Address, ids: [UInt64]): [FlowStaticPlayer] {
 _ORIGINAL_EXECUTE_SCRIPT = _impl.execute_script
 
 
+def _is_retryable_flow_error(error: RuntimeError) -> bool:
+    message = str(error).lower()
+    return any(
+        marker in message
+        for marker in (
+            "returned 500",
+            "returned 502",
+            "returned 503",
+            "returned 504",
+            "internal server error",
+            "timed out",
+            "timeout",
+            "connection reset",
+            "connection aborted",
+            "temporarily unavailable",
+        )
+    )
+
+
 def _execute_script_with_network_retries(
     script: str,
     arguments: list[dict[str, Any]],
     label: str,
 ) -> dict[str, Any]:
-    """Retry transient socket failures without changing the requested batch."""
-    for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
+    """Retry the same unchanged Flow batch until a transient failure clears."""
+    attempt = 0
+    while True:
         try:
             return _ORIGINAL_EXECUTE_SCRIPT(script, arguments, label)
-        except (ConnectionResetError, ConnectionAbortedError, TimeoutError, OSError) as error:
-            if attempt == MAX_FLOW_REQUEST_RETRIES:
-                raise RuntimeError(
-                    f"Flow API {label} network connection failed after retries: {error}"
-                ) from error
+        except RuntimeError as error:
+            if not _is_retryable_flow_error(error):
+                raise
+            attempt += 1
             print(
-                f"Flow API {label} network connection reset; retrying the same "
-                f"{FLOW_STATIC_PLAYER_BATCH_SIZE}-ID batch in "
-                f"{float(FLOW_RETRY_DELAY_SECONDS):g}s "
-                f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
+                f"Flow API {label} still failing; retrying the same batch in "
+                f"{float(FLOW_RETRY_DELAY_SECONDS):g}s (retry {attempt})",
+                flush=True,
             )
             time.sleep(float(FLOW_RETRY_DELAY_SECONDS))
-    raise RuntimeError(f"Flow API {label} failed after network retries")
+        except (ConnectionResetError, ConnectionAbortedError, TimeoutError, OSError) as error:
+            attempt += 1
+            print(
+                f"Flow API {label} network failure: {error}; retrying the same batch in "
+                f"{float(FLOW_RETRY_DELAY_SECONDS):g}s (retry {attempt})",
+                flush=True,
+            )
+            time.sleep(float(FLOW_RETRY_DELAY_SECONDS))
 
 
 def _wallet_player_ids(
@@ -169,9 +194,13 @@ def populate_flow_static_fields(
         include_mfl_wallet,
     )
 
-    first_order = [MFL_WALLET_ADDRESS, MFL_TRADE_WALLET_ADDRESS]
-    first_wallets = [wallet for wallet in first_order if wallet in wallets]
-    regular_wallets = [wallet for wallet in wallets if wallet not in first_order]
+    wallets_by_lower = {wallet.lower(): wallet for wallet in wallets}
+    first_order = [MFL_WALLET_ADDRESS.lower(), MFL_TRADE_WALLET_ADDRESS.lower()]
+    first_wallets = [wallets_by_lower[address] for address in first_order if address in wallets_by_lower]
+    first_wallet_addresses = set(first_order)
+    regular_wallets = [
+        wallet for wallet in wallets if wallet.lower() not in first_wallet_addresses
+    ]
 
     total_updated = 0
     completed = 0
@@ -194,7 +223,8 @@ def populate_flow_static_fields(
             completed += 1
             print(
                 f"Flow seasons {wallet} batch {batch_number}/{len(batches)}: "
-                f"requested {len(batch)}, returned {len(players)}, updated {updated}"
+                f"requested {len(batch)}, returned {len(players)}, updated {updated}",
+                flush=True,
             )
 
     jobs: list[tuple[str, list[int], int, int]] = []
@@ -225,7 +255,8 @@ def populate_flow_static_fields(
                 print(
                     f"Flow seasons batches {completed}/{total_jobs} completed; latest {wallet} "
                     f"batch {batch_number}/{total_batches}, requested {requested}, "
-                    f"returned {len(players)}, updated {updated}"
+                    f"returned {len(players)}, updated {updated}",
+                    flush=True,
                 )
 
     return total_updated
