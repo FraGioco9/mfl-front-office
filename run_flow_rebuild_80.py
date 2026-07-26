@@ -6,6 +6,8 @@ Run this file directly. It bypasses the unreliable sitecustomize redirect and
 executes the concurrent paged implementation explicitly.
 """
 
+import sqlite3
+import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -34,22 +36,6 @@ def flow_season_batch_size(wallet_address: str) -> int:
     return populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
-def skip_validation(connection: Any, expected_players: int) -> dict[str, Any]:
-    """Keep report generation without blocking the rebuilt database on validation."""
-    return {
-        "players": expected_players,
-        "expected_players": expected_players,
-        "missing_columns": [],
-        "extra_columns": [],
-        "missing_required_values": {},
-        "missing_flow_seasons": 0,
-        "valid_schema": True,
-        "valid_player_count": True,
-        "anything_missing": False,
-        "validation_skipped": True,
-    }
-
-
 def install_concise_progression_logging() -> None:
     """Remove per-batch updated counts from progression progress messages."""
     original_log = run_flow_rebuild.log
@@ -63,12 +49,9 @@ def install_concise_progression_logging() -> None:
 
 
 def install_database_filename() -> None:
-    """Use mfl_database.db and a matching temporary candidate filename."""
+    """Use mfl_database.db as the rebuild database."""
     database_path = Path(run_flow_rebuild.__file__).with_name("mfl_database.db")
-    candidate_path = Path(run_flow_rebuild.__file__).with_name("mfl_database_candidate.db")
-
     run_flow_rebuild.DATABASE_PATH = database_path
-    run_flow_rebuild.CANDIDATE_PATH = candidate_path
     populate_seasons_from_flow.DATABASE_PATH = database_path
     populate_seasons_from_flow._impl.DATABASE_PATH = database_path
 
@@ -121,8 +104,6 @@ def fetch_active_and_retired_player_sources(
         for future in as_completed(futures):
             results[futures[future]] = future.result()
 
-    # The active and retired endpoints already include players held by MFL and MFL Trade.
-    # Keep empty compatibility keys so the existing merge/report pipeline needs no changes.
     results["mfl"] = []
     results["mfl_trade"] = []
     return results
@@ -194,11 +175,85 @@ def install_flow_wallet_id_cache() -> None:
     populate_seasons_from_flow._id_batches = wallet_aware_id_batches
 
 
+def rebuild_directly() -> int:
+    """Rebuild mfl_database.db directly without reports, validation, or candidate files."""
+    total_started = time.perf_counter()
+    limiter = run_flow_rebuild.RateLimiter(run_flow_rebuild.MFL_REQUESTS_PER_MINUTE)
+    database_path = run_flow_rebuild.DATABASE_PATH
+
+    if database_path.exists():
+        database_path.unlink()
+
+    connection = sqlite3.connect(database_path)
+    try:
+        run_flow_rebuild.timed("Create fresh database", run_flow_rebuild.create_schema, connection)
+        run_flow_rebuild.timed(
+            "Leaderboard wallets",
+            run_flow_rebuild.refresh_wallets,
+            connection,
+            limiter,
+        )
+        source_results, _ = run_flow_rebuild.timed(
+            "All players",
+            run_flow_rebuild.fetch_all_player_sources,
+            limiter,
+        )
+        players = run_flow_rebuild.merge_players(
+            source_results["general"],
+            source_results["retired"],
+            source_results["mfl"],
+            source_results["mfl_trade"],
+        )
+        run_flow_rebuild.timed(
+            "Insert merged players",
+            run_flow_rebuild.insert_players,
+            connection,
+            players,
+        )
+
+        flow_started = time.perf_counter()
+        updated_seasons = run_flow_rebuild.flow_module.populate_flow_static_fields(
+            connection,
+            limit=None,
+            wallet_address=None,
+            force=True,
+            include_mfl_wallet=True,
+        )
+        flow_seconds = time.perf_counter() - flow_started
+        run_flow_rebuild.log(
+            f"\n=== Flow seasons ===\nFlow seasons updated: {updated_seasons} "
+            f"in {run_flow_rebuild.format_duration(flow_seconds)}"
+        )
+
+        run_flow_rebuild.timed(
+            "Progressions ALL and CURRENT_SEASON",
+            run_flow_rebuild.refresh_progressions,
+            connection,
+            limiter,
+        )
+        run_flow_rebuild.timed(
+            "Next Overall",
+            run_flow_rebuild.calculate_next_overall,
+            connection,
+        )
+
+        connection.execute("VACUUM")
+        connection.close()
+        total_seconds = time.perf_counter() - total_started
+        run_flow_rebuild.log(
+            f"\nComplete rebuild finished in {run_flow_rebuild.format_duration(total_seconds)}"
+        )
+        return 0
+    except Exception:
+        connection.close()
+        raise
+
+
 if __name__ == "__main__":
     install_database_filename()
     install_concise_progression_logging()
-    run_flow_rebuild.validate = skip_validation
     run_flow_rebuild_paged.FLOW_SPECIAL_WALLET_RANGE_SIZE = 3000
     run_flow_rebuild_paged.fetch_all_player_sources = fetch_active_and_retired_player_sources
     install_flow_wallet_id_cache()
+    run_flow_rebuild.main = rebuild_directly
     raise SystemExit(run_flow_rebuild_paged.main())
