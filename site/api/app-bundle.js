@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 function runtimeFix() {
-  const currentVersion = "1.149.69";
+  const currentVersion = "1.149.70";
 
   function syncVisibleVersion() {
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
@@ -29,7 +29,7 @@ function runtimeFix() {
       .some((item) => item.textContent === `v${currentVersion}`);
     if (changelog && !exists) {
       const entry = document.createElement("li");
-      entry.innerHTML = `<span>v${currentVersion}</span><p>Keep every table column visible during sidebar transitions and wait for player data before rendering player pages</p>`;
+      entry.innerHTML = `<span>v${currentVersion}</span><p>Stabilize all table columns during sidebar transitions and reliably load player pages</p>`;
       changelog.prepend(entry);
     }
   }
@@ -39,66 +39,92 @@ function runtimeFix() {
     ".runtimeVersionFooter{display:flex;justify-content:center;padding:10px 16px 18px;color:var(--muted,#8f98aa);font-size:13px}",
     ".appShell.menuAnimating .tableScroller table,.appShell.menuAnimating .tableScroller col,.appShell.menuAnimating .tableScroller th,.appShell.menuAnimating .tableScroller td{visibility:visible!important;opacity:1!important}",
     ".appShell.menuAnimating .tableScroller th,.appShell.menuAnimating .tableScroller td,.appShell.menuAnimating .tableScroller a,.appShell.menuAnimating .tableScroller button{transition:none!important}",
-    ".appShell.menuAnimating .tableScroller{overflow-x:clip}"
+    ".appShell.menuAnimating .tableScroller{overflow-x:hidden!important}"
   ].join("");
   document.head.appendChild(style);
 
   syncVisibleVersion();
   document.addEventListener("DOMContentLoaded", syncVisibleVersion, { once: true });
 
-  if (typeof buildTableColGroup === "function") {
-    const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function stableBuildTableColGroup(...args) {
-      if (appShell?.classList.contains("menuAnimating") && tableColGroup?.children.length) {
-        return tableColGroup;
+  let frozenColumns = null;
+  let animationTimer = 0;
+
+  if (typeof currentViewColumns === "function") {
+    const originalCurrentViewColumns = currentViewColumns;
+    currentViewColumns = function stableCurrentViewColumns(...args) {
+      if (frozenColumns) {
+        return [...frozenColumns];
       }
-      return originalBuildTableColGroup.apply(this, args);
+      return originalCurrentViewColumns.apply(this, args);
     };
 
     if (typeof toggleMenu === "function") {
       const originalToggleMenu = toggleMenu;
       toggleMenu = function stableToggleMenu(...args) {
+        frozenColumns = [...originalCurrentViewColumns()];
+        window.clearTimeout(animationTimer);
         const result = originalToggleMenu.apply(this, args);
-        window.setTimeout(() => {
-          originalBuildTableColGroup();
-          if (typeof renderTable === "function" && typeof tablePageKey === "function" && tablePageKey()) {
-            renderTable();
+        animationTimer = window.setTimeout(() => {
+          frozenColumns = null;
+          if (typeof buildHeader === "function") {
+            buildHeader();
           }
-        }, 230);
+          if (typeof applyFilters === "function" && typeof tablePageKey === "function" && tablePageKey()) {
+            applyFilters();
+          }
+        }, 240);
         return result;
       };
     }
   }
 
+  if (typeof buildTableColGroup === "function") {
+    const originalBuildTableColGroup = buildTableColGroup;
+    buildTableColGroup = function stableBuildTableColGroup(...args) {
+      if (frozenColumns && tableColGroup?.children.length) {
+        return tableColGroup;
+      }
+      return originalBuildTableColGroup.apply(this, args);
+    };
+  }
+
   if (typeof renderPlayerPage === "function") {
     const originalRenderPlayerPage = renderPlayerPage;
-    let pendingPlayerId = "";
-    let pendingTimer = 0;
+    let pendingToken = 0;
 
     renderPlayerPage = function dataAwareRenderPlayerPage(playerId) {
       const id = String(playerId || "");
       const row = typeof rowByPlayerId === "function" ? rowByPlayerId(id) : null;
+      const dataIsChanging = Boolean(state.dataLoadPromise) || !state.dataLoaded || !state.rows.length;
 
-      if (!row && !state.dataLoaded) {
-        pendingPlayerId = id;
-        if (playerDetail) {
-          playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
-        }
-
-        window.clearInterval(pendingTimer);
-        const startedAt = Date.now();
-        pendingTimer = window.setInterval(() => {
-          const loadedRow = typeof rowByPlayerId === "function" ? rowByPlayerId(pendingPlayerId) : null;
-          if (loadedRow || state.dataLoaded || Date.now() - startedAt > 20000) {
-            window.clearInterval(pendingTimer);
-            pendingTimer = 0;
-            originalRenderPlayerPage(pendingPlayerId);
-          }
-        }, 50);
+      if (row || !dataIsChanging) {
+        originalRenderPlayerPage(id);
         return;
       }
 
-      originalRenderPlayerPage(id);
+      const token = ++pendingToken;
+      if (playerDetail) {
+        playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
+      }
+
+      const startedAt = Date.now();
+      const checkPlayer = () => {
+        if (token !== pendingToken || state.currentPage !== "player") {
+          return;
+        }
+
+        const loadedRow = typeof rowByPlayerId === "function" ? rowByPlayerId(id) : null;
+        const stillLoading = Boolean(state.dataLoadPromise) || !state.dataLoaded || !state.rows.length;
+
+        if (loadedRow || !stillLoading || Date.now() - startedAt >= 30000) {
+          originalRenderPlayerPage(id);
+          return;
+        }
+
+        window.setTimeout(checkPlayer, 50);
+      };
+
+      window.setTimeout(checkPlayer, 50);
     };
   }
 }
