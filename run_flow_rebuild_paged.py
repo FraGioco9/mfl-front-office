@@ -27,6 +27,7 @@ access(all) fun main(address: Address): [UInt64] {
 
 FLOW_WALLET_PLAYER_IDS: dict[str, list[int]] = {}
 FLOW_OWNERSHIP_WORKERS = 3000
+FLOW_STORAGE_LIMIT_MARKER = "max interaction with storage has exceeded the limit"
 
 
 class RollingRateLimiter:
@@ -78,12 +79,49 @@ def fetch_flow_wallet_player_ids(wallet_address: str) -> list[int]:
     return sorted(set(ids), reverse=True)
 
 
-def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, list[int]]:
+def fetch_playmfl_wallet_player_ids(
+    limiter: RollingRateLimiter,
+    wallet_address: str,
+) -> list[int]:
+    """Fallback for Flow collections whose getIDs() exceeds the execution storage limit."""
+    ids: set[int] = set()
+    before_player_id: int | None = None
+    previous_before_player_id: int | None = None
+    batch_number = 1
+
+    while True:
+        page = pipeline.fetch_players_page(
+            limiter,
+            page_label=f"Ownership fallback {wallet_address} batch {batch_number}",
+            before_player_id=before_player_id,
+            wallet_address=wallet_address,
+        )
+        ids.update(pipeline.player_id(player) for player in page)
+
+        if len(page) < pipeline.MFL_PAGE_SIZE:
+            break
+
+        next_before_player_id = min(pipeline.player_id(player) for player in page)
+        if next_before_player_id == previous_before_player_id:
+            raise RuntimeError(
+                f"Ownership fallback pagination stalled for {wallet_address} "
+                f"at beforePlayerId={next_before_player_id}"
+            )
+
+        previous_before_player_id = next_before_player_id
+        before_player_id = next_before_player_id
+        batch_number += 1
+
+    return sorted(ids, reverse=True)
+
+
+def load_all_flow_wallet_player_ids(
+    wallet_addresses: list[str],
+) -> tuple[dict[str, list[int]], list[str]]:
     pipeline.log("\n=== FLOW OWNERSHIP SCAN ===")
-    pipeline.log(
-        f"Reading player IDs from {len(wallet_addresses)} wallets"
-    )
+    pipeline.log(f"Reading player IDs from {len(wallet_addresses)} wallets")
     results: dict[str, list[int]] = {}
+    fallback_wallets: list[str] = []
     completed = 0
     total_ids = 0
 
@@ -96,7 +134,18 @@ def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, li
         }
         for future in as_completed(futures):
             wallet_address = futures[future]
-            ids = future.result()
+            try:
+                ids = future.result()
+            except RuntimeError as error:
+                if FLOW_STORAGE_LIMIT_MARKER not in str(error).lower():
+                    raise
+                ids = []
+                fallback_wallets.append(wallet_address)
+                pipeline.log(
+                    f"{wallet_address}: Flow getIDs exceeded the storage limit; "
+                    "using PlayMFL ownership fallback"
+                )
+
             results[wallet_address] = ids
             completed += 1
             total_ids += len(ids)
@@ -106,16 +155,14 @@ def load_all_flow_wallet_player_ids(wallet_addresses: list[str]) -> dict[str, li
                     f"{total_ids} ownerships"
                 )
 
-    pipeline.log(
-        f"Flow ownership scan completed: {len(results)} wallets, {total_ids} ownerships"
-    )
-    pipeline.log("=== END FLOW OWNERSHIP SCAN ===\n")
-    return results
+    return results, fallback_wallets
 
 
-def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRateLimiter) -> int:
-    """Fetch the leaderboard, then read every wallet's player IDs directly from Flow."""
-    del limiter
+def refresh_wallets_without_playmfl_limiter(
+    connection: Any,
+    limiter: RollingRateLimiter,
+) -> int:
+    """Fetch the leaderboard, then read every wallet's player IDs before batching."""
     data = pipeline.request_json(pipeline.LEADERBOARD_URL, "Leaderboard")
     users = data.get("users") if isinstance(data, dict) else None
     if not isinstance(users, list):
@@ -139,16 +186,36 @@ def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRat
     pipeline.log(f"Wallets saved: {len(wallets)}")
 
     global FLOW_WALLET_PLAYER_IDS
-    FLOW_WALLET_PLAYER_IDS = load_all_flow_wallet_player_ids(sorted(wallets))
+    FLOW_WALLET_PLAYER_IDS, fallback_wallets = load_all_flow_wallet_player_ids(
+        sorted(wallets)
+    )
+
+    for wallet_address in fallback_wallets:
+        ids = fetch_playmfl_wallet_player_ids(limiter, wallet_address)
+        FLOW_WALLET_PLAYER_IDS[wallet_address] = ids
+        pipeline.log(
+            f"{wallet_address}: fallback ownership scan completed, {len(ids)} ownerships"
+        )
+
+    total_ids = sum(len(ids) for ids in FLOW_WALLET_PLAYER_IDS.values())
+    pipeline.log(
+        f"Flow ownership scan completed: {len(FLOW_WALLET_PLAYER_IDS)} wallets, "
+        f"{total_ids} ownerships, {len(fallback_wallets)} fallback wallet(s)"
+    )
+    pipeline.log("=== END FLOW OWNERSHIP SCAN ===\n")
     return len(wallets)
 
 
 def anchors_from_flow_ids(player_ids: list[int]) -> list[int]:
-    """Return the real ID at the end of every complete 1500-ID Flow slice."""
+    """Return the real ID at the end of every complete 1500-ID ownership slice."""
     ordered_ids = sorted(set(player_ids), reverse=True)
     return [
         ordered_ids[offset - 1]
-        for offset in range(pipeline.MFL_PAGE_SIZE, len(ordered_ids), pipeline.MFL_PAGE_SIZE)
+        for offset in range(
+            pipeline.MFL_PAGE_SIZE,
+            len(ordered_ids),
+            pipeline.MFL_PAGE_SIZE,
+        )
     ]
 
 
@@ -160,7 +227,7 @@ def fetch_predetermined_player_source(
     retired: bool | None = None,
     wallet_address: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Fetch one source concurrently using anchors derived from Flow ownership IDs."""
+    """Fetch one source concurrently using ownership-derived anchors."""
     first_page = pipeline.fetch_players_page(
         limiter,
         page_label=f"{label} initial batch",
@@ -211,7 +278,7 @@ def fetch_all_player_sources(
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
     if not FLOW_WALLET_PLAYER_IDS:
-        raise RuntimeError("Flow wallet player IDs were not loaded before player batching")
+        raise RuntimeError("Wallet player IDs were not loaded before player batching")
 
     all_flow_ids = sorted(
         {
@@ -230,7 +297,7 @@ def fetch_all_player_sources(
     )
 
     pipeline.log(
-        "Flow-derived PlayMFL batches: "
+        "Ownership-derived PlayMFL batches: "
         f"active {1 + len(global_anchors)}, "
         f"retired {1 + len(global_anchors)}, "
         f"MFL {1 + len(mfl_anchors)}, "
