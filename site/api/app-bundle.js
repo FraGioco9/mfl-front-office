@@ -1,13 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const VERSION = "1.149.69";
-
-const PATCH = String.raw`
-
-/* v1.149.69 runtime fixes */
-(() => {
-  const currentVersion = "${VERSION}";
+function runtimeFix() {
+  const currentVersion = "1.149.69";
 
   function syncVisibleVersion() {
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
@@ -30,7 +25,9 @@ const PATCH = String.raw`
     version.textContent = `v${currentVersion}`;
 
     const changelog = document.querySelector(".changelogList");
-    if (changelog && !Array.from(changelog.querySelectorAll("li span")).some((item) => item.textContent === `v${currentVersion}`)) {
+    const exists = changelog && Array.from(changelog.querySelectorAll("li span"))
+      .some((item) => item.textContent === `v${currentVersion}`);
+    if (changelog && !exists) {
       const entry = document.createElement("li");
       entry.innerHTML = `<span>v${currentVersion}</span><p>Keep every table column visible during sidebar transitions and wait for player data before rendering player pages</p>`;
       changelog.prepend(entry);
@@ -38,31 +35,12 @@ const PATCH = String.raw`
   }
 
   const style = document.createElement("style");
-  style.textContent = `
-    .runtimeVersionFooter {
-      display: flex;
-      justify-content: center;
-      padding: 10px 16px 18px;
-      color: var(--muted, #8f98aa);
-      font-size: 13px;
-    }
-    .appShell.menuAnimating .tableScroller table,
-    .appShell.menuAnimating .tableScroller col,
-    .appShell.menuAnimating .tableScroller th,
-    .appShell.menuAnimating .tableScroller td {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    .appShell.menuAnimating .tableScroller th,
-    .appShell.menuAnimating .tableScroller td,
-    .appShell.menuAnimating .tableScroller a,
-    .appShell.menuAnimating .tableScroller button {
-      transition: none !important;
-    }
-    .appShell.menuAnimating .tableScroller {
-      overflow-x: clip;
-    }
-  `;
+  style.textContent = [
+    ".runtimeVersionFooter{display:flex;justify-content:center;padding:10px 16px 18px;color:var(--muted,#8f98aa);font-size:13px}",
+    ".appShell.menuAnimating .tableScroller table,.appShell.menuAnimating .tableScroller col,.appShell.menuAnimating .tableScroller th,.appShell.menuAnimating .tableScroller td{visibility:visible!important;opacity:1!important}",
+    ".appShell.menuAnimating .tableScroller th,.appShell.menuAnimating .tableScroller td,.appShell.menuAnimating .tableScroller a,.appShell.menuAnimating .tableScroller button{transition:none!important}",
+    ".appShell.menuAnimating .tableScroller{overflow-x:clip}"
+  ].join("");
   document.head.appendChild(style);
 
   syncVisibleVersion();
@@ -104,7 +82,7 @@ const PATCH = String.raw`
       if (!row && !state.dataLoaded) {
         pendingPlayerId = id;
         if (playerDetail) {
-          playerDetail.innerHTML = `<div class="emptyState">Loading player...</div>`;
+          playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
         }
 
         window.clearInterval(pendingTimer);
@@ -123,16 +101,16 @@ const PATCH = String.raw`
       originalRenderPlayerPage(id);
     };
   }
-})();
-`;
+}
+
+const PATCH = `\n;(${runtimeFix.toString()})();\n`;
 
 module.exports = (request, response) => {
   try {
-    const appPath = path.join(process.cwd(), "app.js");
-    const source = fs.readFileSync(appPath, "utf8");
+    const source = fs.readFileSync(path.join(process.cwd(), "app.js"), "utf8");
     response.setHeader("Content-Type", "application/javascript; charset=utf-8");
     response.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
-    response.status(200).send(`${source}${PATCH}`);
+    response.status(200).send(source + PATCH);
   } catch (error) {
     response.status(500).send(`console.error(${JSON.stringify("Could not load application bundle.")});`);
   }
