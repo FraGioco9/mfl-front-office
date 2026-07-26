@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 
-DATABASE_PATH = Path(__file__).with_name("mfl_progression.db")
+DATABASE_PATH = Path(__file__).with_name("mfl_database.db")
 SITE_PATH = Path(__file__).with_name("site")
 SITE_DATA_PATH = SITE_PATH / "data"
 MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0"
@@ -171,7 +171,31 @@ def export_wallets(output_path: Path, rows: list[sqlite3.Row]) -> int:
     return len(rows)
 
 
+def ensure_export_database() -> None:
+    if not DATABASE_PATH.exists():
+        raise FileNotFoundError(
+            f"Database not found: {DATABASE_PATH}. Run 'python rebuild_database.py' first."
+        )
+
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+
+    missing_tables = {"players", "wallets"} - tables
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        raise RuntimeError(
+            f"Database {DATABASE_PATH.name} is incomplete; missing table(s): {missing}. "
+            "Run 'python rebuild_database.py' first."
+        )
+
+
 def export_players(output_path: Path) -> dict[str, Any]:
+    ensure_export_database()
     clean_output_folder(output_path)
 
     connection = sqlite3.connect(DATABASE_PATH)
