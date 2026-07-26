@@ -43,6 +43,33 @@ class RollingRateLimiter:
             time.sleep(delay)
 
 
+def refresh_wallets_without_playmfl_limiter(connection: Any, limiter: RollingRateLimiter) -> int:
+    """Fetch the external leaderboard without consuming the PlayMFL API quota."""
+    del limiter
+    data = pipeline.request_json(pipeline.LEADERBOARD_URL, "Leaderboard")
+    users = data.get("users") if isinstance(data, dict) else None
+    if not isinstance(users, list):
+        raise RuntimeError("Leaderboard response did not contain a users list")
+
+    wallets: dict[str, str] = {}
+    for user in users:
+        if not isinstance(user, dict):
+            continue
+        address = str(user.get("walletAddress") or "").strip().lower()
+        if address:
+            wallets[address] = str(user.get("name") or "")
+
+    wallets[pipeline.MFL_WALLET_ADDRESS] = pipeline.MFL_WALLET_NAME
+    wallets[pipeline.MFL_TRADE_WALLET_ADDRESS] = pipeline.MFL_TRADE_WALLET_NAME
+    connection.executemany(
+        "INSERT INTO wallets(wallet_address, name) VALUES (?, ?)",
+        sorted(wallets.items()),
+    )
+    connection.commit()
+    pipeline.log(f"Wallets saved: {len(wallets)}")
+    return len(wallets)
+
+
 def page_anchors(first_page: list[dict[str, Any]]) -> list[int]:
     if len(first_page) < pipeline.MFL_PAGE_SIZE:
         return []
@@ -154,6 +181,7 @@ def fetch_all_player_sources(
 def main() -> int:
     pipeline.MFL_WORKERS = 320
     pipeline.RateLimiter = RollingRateLimiter
+    pipeline.refresh_wallets = refresh_wallets_without_playmfl_limiter
     pipeline.fetch_all_player_sources = fetch_all_player_sources
     pipeline.log(
         f"PlayMFL runtime configuration: "
