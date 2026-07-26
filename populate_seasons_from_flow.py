@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import populate_seasons_from_flow_original as _impl
@@ -21,6 +22,49 @@ MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
 MIN_FLOW_SPLIT_BATCH_SIZE = _impl.MIN_FLOW_SPLIT_BATCH_SIZE
 FLOW_WORKERS = 25
 
+FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT = """
+import NonFungibleToken from 0x1d7e57aa55817448
+import ViewResolver from 0x1d7e57aa55817448
+import MFLPlayer from 0x8ebcbfd516b1da27
+import MFLViews from 0x8ebcbfd516b1da27
+
+access(all) struct FlowStaticPlayer {
+    access(all) let playerId: UInt64
+    access(all) let name: String?
+    access(all) let preferredFoot: String?
+    access(all) let height: UInt32?
+    access(all) let ageAtMint: UInt32?
+
+    init(view: MFLViews.PlayerDataViewV1) {
+        self.playerId = view.id
+        self.name = view.metadata.name
+        self.preferredFoot = view.metadata.preferredFoot
+        self.height = view.metadata.height
+        self.ageAtMint = view.metadata.ageAtMint
+    }
+}
+
+access(all) fun main(address: Address, ids: [UInt64]): [FlowStaticPlayer] {
+    let account = getAccount(address)
+    let collection = account.capabilities.borrow<&{NonFungibleToken.CollectionPublic, ViewResolver.ResolverCollection}>(MFLPlayer.CollectionPublicPath)
+
+    if collection == nil {
+        return []
+    }
+
+    let results: [FlowStaticPlayer] = []
+    for id in ids {
+        if let resolver = collection!.borrowViewResolver(id: id) {
+            if let view = resolver.resolveView(Type<MFLViews.PlayerDataViewV1>()) as? MFLViews.PlayerDataViewV1 {
+                results.append(FlowStaticPlayer(view: view))
+            }
+        }
+    }
+
+    return results
+}
+"""
+
 _ORIGINAL_EXECUTE_SCRIPT = _impl.execute_script
 
 
@@ -29,7 +73,7 @@ def _execute_script_with_network_retries(
     arguments: list[dict[str, Any]],
     label: str,
 ) -> dict[str, Any]:
-    """Retry transient socket failures that urllib does not wrap in URLError."""
+    """Retry transient socket failures without changing the requested batch."""
     for attempt in range(MAX_FLOW_REQUEST_RETRIES + 1):
         try:
             return _ORIGINAL_EXECUTE_SCRIPT(script, arguments, label)
@@ -39,7 +83,8 @@ def _execute_script_with_network_retries(
                     f"Flow API {label} network connection failed after retries: {error}"
                 ) from error
             print(
-                f"Flow API {label} network connection reset; retrying in "
+                f"Flow API {label} network connection reset; retrying the same "
+                f"{FLOW_STATIC_PLAYER_BATCH_SIZE}-ID batch in "
                 f"{float(FLOW_RETRY_DELAY_SECONDS):g}s "
                 f"({attempt + 1}/{MAX_FLOW_REQUEST_RETRIES})"
             )
@@ -47,21 +92,108 @@ def _execute_script_with_network_retries(
     raise RuntimeError(f"Flow API {label} failed after network retries")
 
 
-def populate_flow_static_fields(connection, limit, wallet_address, force, include_mfl_wallet=True):
-    # MFL and MFL Trade are fetched from PlayMFL during the general player stage,
-    # but they must still be queried from Flow during the Flow seasons stage.
-    _impl.SPECIAL_API_WALLETS = set()
-    _impl.FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
-    _impl.FLOW_WORKERS = 25
-    _impl.FLOW_RETRY_DELAY_SECONDS = float(FLOW_RETRY_DELAY_SECONDS)
-    _impl.execute_script = _execute_script_with_network_retries
-    return _impl.populate_flow_static_fields(
+def _wallet_player_ids(
+    connection: sqlite3.Connection,
+    wallet_address: str,
+    force: bool,
+) -> list[int]:
+    where_sql = "" if force else "AND player_seasons IS NULL"
+    return [
+        int(row[0])
+        for row in connection.execute(
+            f"""
+            SELECT player_id
+            FROM players
+            WHERE lower(wallet_address) = ? {where_sql}
+            ORDER BY player_id DESC
+            """,
+            (wallet_address.lower(),),
+        ).fetchall()
+    ]
+
+
+def _id_batches(player_ids: list[int]) -> list[list[int]]:
+    return [
+        player_ids[index:index + FLOW_STATIC_PLAYER_BATCH_SIZE]
+        for index in range(0, len(player_ids), FLOW_STATIC_PLAYER_BATCH_SIZE)
+    ]
+
+
+def _fetch_flow_static_players_by_ids(
+    wallet_address: str,
+    player_ids: list[int],
+    batch_number: int,
+    total_batches: int,
+) -> list[dict[str, Any]]:
+    response = _execute_script_with_network_retries(
+        FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT,
+        [
+            {"type": "Address", "value": wallet_address},
+            {
+                "type": "Array",
+                "value": [
+                    {"type": "UInt64", "value": str(player_id)}
+                    for player_id in player_ids
+                ],
+            },
+        ],
+        f"{wallet_address} batch {batch_number}/{total_batches} ({len(player_ids)} IDs)",
+    )
+    return _impl.parse_flow_static_player_response(response)
+
+
+def populate_flow_static_fields(
+    connection: sqlite3.Connection,
+    limit: int | None,
+    wallet_address: str | None,
+    force: bool,
+    include_mfl_wallet: bool = True,
+) -> int:
+    """Populate Flow seasons using fixed batches of up to 3,000 explicit player IDs."""
+    _impl.ensure_flow_static_columns(connection)
+    wallets = _impl.get_wallets_to_process(
         connection,
         limit,
         wallet_address,
         force,
         include_mfl_wallet,
     )
+
+    jobs: list[tuple[str, list[int], int, int]] = []
+    for wallet in wallets:
+        player_ids = _wallet_player_ids(connection, wallet, force)
+        batches = _id_batches(player_ids)
+        for batch_number, batch in enumerate(batches, start=1):
+            jobs.append((wallet, batch, batch_number, len(batches)))
+
+    total_updated = 0
+    completed = 0
+    with ThreadPoolExecutor(max_workers=max(1, min(FLOW_WORKERS, len(jobs) or 1))) as executor:
+        futures = {
+            executor.submit(
+                _fetch_flow_static_players_by_ids,
+                wallet,
+                batch,
+                batch_number,
+                total_batches,
+            ): (wallet, batch_number, total_batches, len(batch))
+            for wallet, batch, batch_number, total_batches in jobs
+        }
+
+        for future in as_completed(futures):
+            wallet, batch_number, total_batches, requested = futures[future]
+            players = future.result()
+            updated = _impl.update_flow_static_fields(connection, players, force)
+            connection.commit()
+            total_updated += updated
+            completed += 1
+            print(
+                f"Flow seasons batch {completed}/{len(jobs)}: {wallet} "
+                f"batch {batch_number}/{total_batches}, requested {requested}, "
+                f"returned {len(players)}, updated {updated}"
+            )
+
+    return total_updated
 
 
 def main() -> int:
