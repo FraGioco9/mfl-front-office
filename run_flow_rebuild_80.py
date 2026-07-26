@@ -7,6 +7,7 @@ executes the concurrent paged implementation explicitly.
 """
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import populate_seasons_from_flow
@@ -28,6 +29,61 @@ def skip_validation(connection: Any, expected_players: int) -> dict[str, Any]:
         "anything_missing": False,
         "validation_skipped": True,
     }
+
+
+def fetch_active_and_retired_player_sources(
+    limiter: run_flow_rebuild_paged.RollingRateLimiter,
+) -> dict[str, list[dict[str, Any]]]:
+    """Fetch only active and retired PlayMFL sources using the combined Flow IDs."""
+    if not run_flow_rebuild_paged.FLOW_WALLET_PLAYER_IDS:
+        raise RuntimeError("Wallet player IDs were not loaded before player batching")
+
+    all_flow_ids = sorted(
+        {
+            player_id
+            for wallet_ids in run_flow_rebuild_paged.FLOW_WALLET_PLAYER_IDS.values()
+            for player_id in wallet_ids
+        },
+        reverse=True,
+    )
+    anchors = run_flow_rebuild_paged.anchors_from_flow_ids(all_flow_ids)
+
+    run_flow_rebuild.log(
+        "Ownership-derived PlayMFL batches: "
+        f"active {1 + len(anchors)}, retired {1 + len(anchors)}"
+    )
+
+    jobs = {
+        "general": {
+            "label": "Active players",
+            "anchors": anchors,
+            "retired": False,
+        },
+        "retired": {
+            "label": "Retired players",
+            "anchors": anchors,
+            "retired": True,
+        },
+    }
+
+    results: dict[str, list[dict[str, Any]]] = {}
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            executor.submit(
+                run_flow_rebuild_paged.fetch_predetermined_player_source,
+                limiter,
+                **config,
+            ): key
+            for key, config in jobs.items()
+        }
+        for future in as_completed(futures):
+            results[futures[future]] = future.result()
+
+    # The active and retired endpoints already include players held by MFL and MFL Trade.
+    # Keep empty compatibility keys so the existing merge/report pipeline needs no changes.
+    results["mfl"] = []
+    results["mfl_trade"] = []
+    return results
 
 
 def install_flow_wallet_id_cache() -> None:
@@ -73,5 +129,6 @@ def install_flow_wallet_id_cache() -> None:
 if __name__ == "__main__":
     run_flow_rebuild.validate = skip_validation
     run_flow_rebuild_paged.FLOW_SPECIAL_WALLET_RANGE_SIZE = 3000
+    run_flow_rebuild_paged.fetch_all_player_sources = fetch_active_and_retired_player_sources
     install_flow_wallet_id_cache()
     raise SystemExit(run_flow_rebuild_paged.main())
