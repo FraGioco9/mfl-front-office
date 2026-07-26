@@ -71,7 +71,7 @@ def fetch_predetermined_player_source(
     """Pre-compute active or retired page anchors, then fetch them concurrently."""
     first_page = pipeline.fetch_players_page(
         limiter,
-        page_label=f"{label} batch 1",
+        page_label=f"{label} initial batch",
         retired=retired,
     )
     players: dict[int, dict[str, Any]] = {
@@ -87,8 +87,10 @@ def fetch_predetermined_player_source(
     lowest_id = min(pipeline.player_id(player) for player in first_page)
     anchors = list(range(lowest_id, 0, -pipeline.MFL_PAGE_SIZE))
     total_batches = 1 + len(anchors)
+    completed_batches = 1
     pipeline.log(
-        f"{label} batch 1/{total_batches}: returned {len(first_page)}, total {len(players)}"
+        f"{label} batch {completed_batches}/{total_batches}: "
+        f"returned {len(first_page)}, total {len(players)}"
     )
 
     with ThreadPoolExecutor(
@@ -98,19 +100,19 @@ def fetch_predetermined_player_source(
             executor.submit(
                 pipeline.fetch_players_page,
                 limiter,
-                page_label=f"{label} batch {batch_number}",
+                page_label=f"{label} queued batch",
                 before_player_id=before_player_id,
                 retired=retired,
-            ): batch_number
-            for batch_number, before_player_id in enumerate(anchors, start=2)
+            ): before_player_id
+            for before_player_id in anchors
         }
 
         for future in as_completed(futures):
-            batch_number = futures[future]
             page = future.result()
             players.update({pipeline.player_id(player): player for player in page})
+            completed_batches += 1
             pipeline.log(
-                f"{label} batch {batch_number}/{total_batches}: "
+                f"{label} batch {completed_batches}/{total_batches}: "
                 f"returned {len(page)}, total {len(players)}"
             )
 
