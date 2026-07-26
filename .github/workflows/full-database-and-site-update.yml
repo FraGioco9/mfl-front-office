@@ -66,7 +66,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p previous-database
-
           {
             gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
             gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
@@ -110,7 +109,10 @@ jobs:
 
       - name: Export website data
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
-        run: python export_for_website.py
+        shell: bash
+        run: |
+          ln -s mfl_database.db mfl_progression.db
+          python export_for_website.py
 
       - name: Upload database
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
