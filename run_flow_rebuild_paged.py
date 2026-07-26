@@ -26,7 +26,7 @@ access(all) fun main(address: Address): [UInt64] {
 """
 
 FLOW_WALLET_PLAYER_IDS: dict[str, list[int]] = {}
-FLOW_OWNERSHIP_WORKERS = 3000
+FLOW_OWNERSHIP_WORKERS = 100
 FLOW_STORAGE_LIMIT_MARKER = "max interaction with storage has exceeded the limit"
 
 
