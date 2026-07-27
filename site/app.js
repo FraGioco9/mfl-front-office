@@ -1,6 +1,6 @@
 (() => {
   const coreScript = document.createElement("script");
-  coreScript.src = "/app-core.js?v=1.150.5";
+  coreScript.src = "/app-core.js?v=1.150.6";
   coreScript.async = false;
 
   coreScript.addEventListener("load", () => {
@@ -91,12 +91,37 @@
       "setPage",
     ].forEach(wrap);
 
+    const widthRules = Object.entries(WIDTHS)
+      .map(([className, width]) => `
+        .tableScroller #tableColGroup > .${className},
+        .tableScroller th.${className},
+        .tableScroller td.${className} {
+          width: ${width}% !important;
+          min-width: ${width}% !important;
+          max-width: ${width}% !important;
+        }
+      `)
+      .join("\n");
+
     const style = document.createElement("style");
     style.textContent = `
+      .tableScroller table {
+        table-layout: fixed !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      ${widthRules}
+
       .tableScroller table,
       .tableScroller col,
       .tableScroller th,
-      .tableScroller td {
+      .tableScroller td,
+      .tableScroller table:hover,
+      .tableScroller col:hover,
+      .tableScroller th:hover,
+      .tableScroller td:hover {
         transition: none !important;
         animation: none !important;
       }
