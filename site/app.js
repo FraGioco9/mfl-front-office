@@ -12250,7 +12250,7 @@ startApp();
   else initialize();
 })();
 
-/* Consolidated from v1500-exact-column-widths.js */
+/* Single exact player-table width engine */
 (() => {
   const WIDTHS = {
     "col-select": 3,
@@ -12271,142 +12271,96 @@ startApp();
     "col-link": 3,
   };
 
-  const isClubRoute = () => /^\/clubs\/[^/]+(?:\/(?:attributes|contracts))?\/?$/i.test(window.location.pathname);
-  let clubRevealTimer = 0;
+  function restoreSingleTable() {
+    document.querySelectorAll(".tableBodyScroller").forEach((bodyScroller) => {
+      const bodyTable = bodyScroller.querySelector("table");
+      const headerScroller = bodyScroller.previousElementSibling?.classList.contains("tableHeaderScroller")
+        ? bodyScroller.previousElementSibling
+        : null;
+      const headerTable = headerScroller?.querySelector("table");
+      const tableHead = headerTable?.querySelector("thead");
 
-  function applyExactColumnWidths() {
-    const colGroup = document.querySelector("#tableColGroup");
-    if (!colGroup) return false;
-
-    let matched = 0;
-    Array.from(colGroup.children).forEach((col) => {
-      const matchedClass = Object.keys(WIDTHS).find((className) => col.classList.contains(className));
-      if (!matchedClass) return;
-      matched += 1;
-      const width = `${WIDTHS[matchedClass]}%`;
-      col.style.setProperty("width", width, "important");
-      col.style.setProperty("min-width", width, "important");
-      col.style.setProperty("max-width", width, "important");
-      col.style.setProperty("transition", "none", "important");
-    });
-
-    return matched > 0;
-  }
-
-  function removeClubPager() {
-    if (state?.currentPage !== "club" && !isClubRoute()) return;
-    document.querySelectorAll("#progressionPage nav.pager, #progressionPage .pager").forEach((pager) => pager.remove());
-  }
-
-  function clubContentReady() {
-    return Boolean(
-      document.querySelector("#progressionPage") &&
-      document.querySelector("#tableColGroup") &&
-      document.querySelector("#tableBody") &&
-      applyExactColumnWidths()
-    );
-  }
-
-  function revealClubPage(className) {
-    window.clearTimeout(clubRevealTimer);
-    let attempts = 0;
-    let stableFrames = 0;
-    let previousSignature = "";
-
-    const check = () => {
-      attempts += 1;
-      removeClubPager();
-      applyExactColumnWidths();
-      const signature = Array.from(document.querySelectorAll("#tableColGroup > col"))
-        .map((col) => col.style.width)
-        .join("|");
-
-      if (clubContentReady() && signature && signature === previousSignature) stableFrames += 1;
-      else stableFrames = 0;
-      previousSignature = signature;
-
-      if (stableFrames >= 2 || attempts >= 120) {
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          document.body.classList.remove(className);
-        }));
-        return;
+      if (bodyTable && tableHead && !bodyTable.querySelector("thead")) {
+        const colGroup = bodyTable.querySelector("colgroup");
+        if (colGroup?.nextSibling) bodyTable.insertBefore(tableHead, colGroup.nextSibling);
+        else bodyTable.prepend(tableHead);
       }
 
-      clubRevealTimer = window.setTimeout(check, 16);
-    };
+      headerScroller?.remove();
+      bodyScroller.classList.remove("tableBodyScroller");
+    });
+  }
 
-    check();
+  function applyExactTableWidths() {
+    restoreSingleTable();
+
+    document.querySelectorAll(".tableScroller table").forEach((table) => {
+      table.style.setProperty("table-layout", "fixed", "important");
+      table.style.setProperty("width", "100%", "important");
+      table.style.setProperty("min-width", "100%", "important");
+      table.style.setProperty("max-width", "100%", "important");
+
+      const colGroup = table.querySelector("colgroup");
+      if (!colGroup) return;
+
+      Array.from(colGroup.children).forEach((column) => {
+        const widthClass = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
+        if (!widthClass) return;
+        const width = `${WIDTHS[widthClass]}%`;
+        column.style.setProperty("width", width, "important");
+        column.style.setProperty("min-width", width, "important");
+        column.style.setProperty("max-width", width, "important");
+        column.style.setProperty("transition", "none", "important");
+      });
+    });
   }
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithExactPercentages() {
+    buildTableColGroup = function buildTableColGroupWithExactWidths() {
       const result = originalBuildTableColGroup.apply(this, arguments);
-      applyExactColumnWidths();
-      removeClubPager();
+      applyExactTableWidths();
       return result;
     };
   }
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithExactPercentages() {
+    buildHeader = function buildHeaderWithExactWidths() {
       const result = originalBuildHeader.apply(this, arguments);
-      applyExactColumnWidths();
-      removeClubPager();
+      applyExactTableWidths();
       return result;
     };
   }
 
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
-    renderTable = function renderTableWithExactPercentages() {
+    renderTable = function renderTableWithExactWidths() {
       const result = originalRenderTable.apply(this, arguments);
-      applyExactColumnWidths();
-      removeClubPager();
+      applyExactTableWidths();
       return result;
     };
   }
 
-  document.addEventListener("pointerdown", (event) => {
-    if (state?.currentPage !== "club") return;
-    const button = event.target.closest?.(".viewButton[data-view='attributes'], .viewButton[data-view='contracts']");
-    if (!button) return;
-    document.body.classList.add("clubAtomicSwitch");
-  }, true);
-
-  document.addEventListener("click", (event) => {
-    if (state?.currentPage !== "club") return;
-    const button = event.target.closest?.(".viewButton[data-view='attributes'], .viewButton[data-view='contracts']");
-    if (!button) return;
-    window.setTimeout(() => revealClubPage("clubAtomicSwitch"), 0);
-  }, true);
-
-  const observer = new MutationObserver(() => {
-    applyExactColumnWidths();
-    removeClubPager();
-
-    if (document.body.classList.contains("clubAtomicInitial") && !document.body.classList.contains("loading")) {
-      revealClubPage("clubAtomicInitial");
-    }
-  });
-
-  function initialize() {
-    applyExactColumnWidths();
-    removeClubPager();
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-
-    if (document.body.classList.contains("clubAtomicInitial") && !document.body.classList.contains("loading")) {
-      revealClubPage("clubAtomicInitial");
-    }
-  }
-
   const style = document.createElement("style");
   style.textContent = `
+    .appShell .tableScroller {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+      overflow-x: visible !important;
+      overflow-y: visible !important;
+      max-height: none !important;
+      scrollbar-gutter: auto !important;
+    }
+
     .appShell .tableScroller table {
       width: 100% !important;
+      min-width: 100% !important;
+      max-width: 100% !important;
       table-layout: fixed !important;
     }
+
     .appShell .tableScroller col.col-select { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
     .appShell .tableScroller col.col-id { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
     .appShell .tableScroller col.col-flag { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
@@ -12423,232 +12377,19 @@ startApp();
     .appShell .tableScroller col.col-joined-agency,
     .appShell .tableScroller col.col-owned-since { width: 9% !important; min-width: 9% !important; max-width: 9% !important; }
     .appShell .tableScroller col.col-link { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
-    .appShell .tableScroller .selectionCell { width: auto !important; min-width: 0 !important; }
-    body[data-page="club"] #progressionPage nav.pager,
-    body[data-page="club"] #progressionPage .pager { display: none !important; }
-    body.clubAtomicSwitch #progressionPage .tableShell { visibility: hidden !important; opacity: 0 !important; }
-    body.clubAtomicSwitch #progressionPage .tableShell * { transition: none !important; }
-  `;
-  document.head.appendChild(style);
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
-  else initialize();
-})();
-
-/* Single synchronous player-table width engine */
-(() => {
-  const WIDTHS = {
-    "col-select": 3,
-    "col-id": 3,
-    "col-flag": 3,
-    "col-name": 13,
-    "col-nationality": 7,
-    "col-age": 4,
-    "col-positions": 8,
-    "col-seasons": 5,
-    "col-stat": 6,
-    "col-contract-revenue": 8,
-    "col-contract-club": 19,
-    "col-contract-division": 9,
-    "col-agent": 9,
-    "col-joined-agency": 9,
-    "col-owned-since": 9,
-    "col-link": 3,
-  };
-
-  const FLEXIBLE_COLUMNS = [
-    "col-contract-club",
-    "col-agent",
-    "col-owned-since",
-    "col-name",
-  ];
-
-  function widthClassForColumn(column) {
-    return Object.keys(WIDTHS).find((name) => column.classList.contains(name)) || "";
-  }
-
-  function normalizedPercentages(columns) {
-    const classes = columns.map(widthClassForColumn);
-    const percentages = classes.map((name) => WIDTHS[name]);
-    if (percentages.some((width) => !Number.isFinite(width) || width <= 0)) return null;
-
-    const total = percentages.reduce((sum, width) => sum + width, 0);
-    const flexibleIndex = FLEXIBLE_COLUMNS
-      .map((name) => classes.indexOf(name))
-      .find((index) => index >= 0);
-
-    if (!Number.isInteger(flexibleIndex)) return null;
-    percentages[flexibleIndex] += 100 - total;
-    return percentages[flexibleIndex] > 0 ? percentages : null;
-  }
-
-  function ensureSeparatedTableHeader() {
-    const bodyScroller = document.querySelector(".tableScroller");
-    const bodyTable = bodyScroller?.querySelector("table");
-    if (!bodyScroller || !bodyTable) return null;
-
-    let headerScroller = bodyScroller.previousElementSibling;
-    if (!headerScroller?.classList.contains("tableHeaderScroller")) {
-      const tableHead = bodyTable.querySelector("thead");
-      if (!tableHead) return null;
-
-      headerScroller = document.createElement("div");
-      headerScroller.className = "tableHeaderScroller";
-
-      const headerTable = document.createElement("table");
-      headerTable.className = `${bodyTable.className} tableHeaderTable`.trim();
-
-      const bodyColGroup = bodyTable.querySelector("colgroup");
-      if (bodyColGroup) {
-        const headerColGroup = bodyColGroup.cloneNode(true);
-        headerColGroup.removeAttribute("id");
-        headerColGroup.dataset.tableHeaderColGroup = "true";
-        headerTable.appendChild(headerColGroup);
-      }
-
-      headerTable.appendChild(tableHead);
-      headerScroller.appendChild(headerTable);
-      bodyScroller.parentNode.insertBefore(headerScroller, bodyScroller);
-      bodyScroller.classList.add("tableBodyScroller");
-
-      bodyScroller.addEventListener("scroll", () => {
-        headerScroller.scrollLeft = bodyScroller.scrollLeft;
-      }, { passive: true });
-    }
-
-    return {
-      bodyScroller,
-      bodyTable,
-      headerScroller,
-      headerTable: headerScroller.querySelector("table"),
-    };
-  }
-
-  function syncHeaderColGroup(bodyTable, headerTable) {
-    const bodyColGroup = bodyTable.querySelector("colgroup");
-    if (!bodyColGroup || !headerTable) return null;
-
-    const clone = bodyColGroup.cloneNode(true);
-    clone.removeAttribute("id");
-    clone.dataset.tableHeaderColGroup = "true";
-
-    const current = headerTable.querySelector("colgroup");
-    if (current) current.replaceWith(clone);
-    else headerTable.insertBefore(clone, headerTable.firstChild);
-
-    return clone;
-  }
-
-  function applySynchronousTableWidths() {
-    const parts = ensureSeparatedTableHeader();
-    if (!parts) return false;
-
-    const { bodyScroller, bodyTable, headerScroller, headerTable } = parts;
-    const bodyColGroup = bodyTable.querySelector("#tableColGroup");
-    const bodyColumns = bodyColGroup ? Array.from(bodyColGroup.children) : [];
-    const percentages = normalizedPercentages(bodyColumns);
-    if (!percentages) return false;
-
-    const headerColGroup = syncHeaderColGroup(bodyTable, headerTable);
-    const headerColumns = headerColGroup ? Array.from(headerColGroup.children) : [];
-
-    const availableWidth = bodyScroller.clientWidth;
-    if (!Number.isFinite(availableWidth) || availableWidth <= 0) return false;
-
-    [bodyTable, headerTable].forEach((table) => {
-      if (!table) return;
-      const tableWidth = `${availableWidth}px`;
-      table.style.setProperty("table-layout", "fixed", "important");
-      table.style.setProperty("width", tableWidth, "important");
-      table.style.setProperty("min-width", tableWidth, "important");
-      table.style.setProperty("max-width", tableWidth, "important");
-      table.style.setProperty("transition", "none", "important");
-    });
-
-    headerScroller.style.setProperty("width", "100%", "important");
-
-    const applyColumns = (columns) => {
-      columns.forEach((column, index) => {
-        const width = `${(availableWidth * percentages[index]) / 100}px`;
-        column.style.setProperty("width", width, "important");
-        column.style.setProperty("min-width", width, "important");
-        column.style.setProperty("max-width", width, "important");
-        column.style.setProperty("transition", "none", "important");
-      });
-    };
-
-    applyColumns(bodyColumns);
-    applyColumns(headerColumns);
-    return true;
-  }
-
-  if (typeof buildTableColGroup === "function") {
-    const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithSynchronousWidths() {
-      const result = originalBuildTableColGroup.apply(this, arguments);
-      applySynchronousTableWidths();
-      return result;
-    };
-  }
-
-  if (typeof buildHeader === "function") {
-    const originalBuildHeader = buildHeader;
-    buildHeader = function buildSeparatedHeaderWithSynchronousWidths() {
-      const result = originalBuildHeader.apply(this, arguments);
-      applySynchronousTableWidths();
-      return result;
-    };
-  }
-
-  const style = document.createElement("style");
-  style.textContent = `
-    .tableHeaderScroller {
-      overflow: hidden !important;
-      scrollbar-width: none !important;
-    }
-
-    .tableHeaderScroller::-webkit-scrollbar {
-      display: none !important;
-    }
-
-    .tableScroller,
-    .tableBodyScroller {
-      overflow: visible !important;
-      overflow-x: visible !important;
-      overflow-y: visible !important;
-      max-height: none !important;
-      scrollbar-gutter: auto !important;
-    }
-
-    .tableHeaderScroller,
-    .tableHeaderTable,
-    .tableBodyScroller,
-    .tableBodyScroller table {
-      width: 100% !important;
-      min-width: 100% !important;
-      max-width: 100% !important;
-    }
-
-    .tableHeaderTable {
-      margin-bottom: 0 !important;
-    }
-
-    .tableBodyScroller table,
-    .tableBodyScroller col,
-    .tableBodyScroller th,
-    .tableBodyScroller td,
-    .tableBodyScroller tr:hover,
-    .tableBodyScroller tr:hover > th,
-    .tableBodyScroller tr:hover > td,
-    .tableHeaderScroller table,
-    .tableHeaderScroller col,
-    .tableHeaderScroller th {
+    .appShell .tableScroller table,
+    .appShell .tableScroller col,
+    .appShell .tableScroller th,
+    .appShell .tableScroller td,
+    .appShell .tableScroller tr:hover,
+    .appShell .tableScroller tr:hover > th,
+    .appShell .tableScroller tr:hover > td {
       transition: none !important;
       animation: none !important;
     }
   `;
   document.head.appendChild(style);
 
-  applySynchronousTableWidths();
-  window.addEventListener("resize", applySynchronousTableWidths, { passive: true });
+  applyExactTableWidths();
 })();
