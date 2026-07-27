@@ -1,7 +1,26 @@
 (() => {
   const requestedPatchText = "Keep every table column continuously visible during sidebar transitions";
   const mflWalletAddress = "0xff8d2bbed8164db0";
-  let columnWidthSyncFrame = 0;
+  const fixedTableColumnWidths = {
+    selection: 50,
+    player_id: 70,
+    nationality_flag: 40,
+    name: 200,
+    nationality: 140,
+    positions: 120,
+    player_seasons: 85,
+    overall: 102,
+    pace: 102,
+    shooting: 102,
+    passing: 102,
+    dribbling: 102,
+    defense: 102,
+    physical: 102,
+    goalkeeping: 102,
+    wallet_name: 185,
+    owned_since: 185,
+    player_link: 55,
+  };
 
   function keepSidebarExpanded() {
     if (typeof state === "object" && state) state.menuOpen = true;
@@ -39,81 +58,28 @@
     };
   }
 
-  function attributesColumnsForCurrentPage() {
-    if (typeof currentViewColumns !== "function" || typeof state !== "object" || !state) return [];
-    const currentView = state.view;
-    try {
-      state.view = typeof normalizeViewForPage === "function"
-        ? normalizeViewForPage("attributes", state.currentPage)
-        : "attributes";
-      return Array.from(currentViewColumns());
-    } finally {
-      state.view = currentView;
-    }
-  }
-
-  function canonicalAttributesTableWidth() {
-    if (typeof tableColumnWidths !== "object" || !tableColumnWidths) return 0;
-    return ["selection", ...attributesColumnsForCurrentPage()].reduce((total, column) => {
-      const width = Number(tableColumnWidths[column]);
-      return total + (Number.isFinite(width) ? width : 0);
-    }, 0);
-  }
-
-  function applySourceColumnWidths() {
-    if (typeof state !== "object" || !state) return;
-    if (!["attributes", "current", "all", "next", "contracts"].includes(state.view)) return;
-    if (typeof currentViewColumns !== "function" || typeof tableColumnWidths !== "object") return;
-    if (typeof tableColGroup === "undefined" || !tableColGroup) return;
-
-    const table = tableColGroup.closest("table");
-    const columns = Array.from(tableColGroup.querySelectorAll(":scope > col"));
-    const columnNames = ["selection", ...currentViewColumns()];
-    const canonicalTotal = canonicalAttributesTableWidth();
-    if (!table || !columns.length || columns.length !== columnNames.length || !(canonicalTotal > 0)) return;
-
-    columns.forEach((column, index) => {
-      const width = Number(tableColumnWidths[columnNames[index]]);
-      if (!Number.isFinite(width) || width <= 0) return;
-      const pixels = `${width}px`;
-      const percent = `${(width / canonicalTotal) * 100}%`;
-      column.style.setProperty("width", percent, "important");
-      column.style.setProperty("min-width", pixels, "important");
-      column.style.setProperty("max-width", pixels, "important");
-      column.dataset.widthPx = String(width);
-      column.dataset.widthPercent = percent;
+  function installFixedTableColumnWidths() {
+    if (typeof tableColumnWidths !== "object" || !tableColumnWidths) return;
+    Object.entries(fixedTableColumnWidths).forEach(([column, width]) => {
+      tableColumnWidths[column] = width;
     });
-
-    const canonicalPixels = `${canonicalTotal}px`;
-    table.style.setProperty("width", canonicalPixels, "important");
-    table.style.setProperty("min-width", canonicalPixels, "important");
-    table.style.setProperty("max-width", canonicalPixels, "important");
-    table.style.setProperty("table-layout", "fixed", "important");
   }
 
-  function queueCommonColumnWidthSync() {
-    if (columnWidthSyncFrame) cancelAnimationFrame(columnWidthSyncFrame);
-    columnWidthSyncFrame = requestAnimationFrame(() => {
-      columnWidthSyncFrame = 0;
-      applySourceColumnWidths();
-    });
+  installFixedTableColumnWidths();
+
+  if (typeof buildTableColGroup === "function") {
+    const originalBuildTableColGroup = buildTableColGroup;
+    buildTableColGroup = function buildTableColGroupWithFixedWidths() {
+      installFixedTableColumnWidths();
+      return originalBuildTableColGroup.apply(this, arguments);
+    };
   }
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithSourceWidths() {
-      const result = originalBuildHeader.apply(this, arguments);
-      queueCommonColumnWidthSync();
-      return result;
-    };
-  }
-
-  if (typeof renderTable === "function") {
-    const originalRenderTable = renderTable;
-    renderTable = function renderTableWithSourceWidths() {
-      const result = originalRenderTable.apply(this, arguments);
-      queueCommonColumnWidthSync();
-      return result;
+    buildHeader = function buildHeaderWithFixedWidths() {
+      installFixedTableColumnWidths();
+      return originalBuildHeader.apply(this, arguments);
     };
   }
 
@@ -177,8 +143,8 @@
       const nextOptions = routeView ? { ...options, view: routeView } : options;
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
+      installFixedTableColumnWidths();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-      queueCommonColumnWidthSync();
       return result;
     };
   }
@@ -226,7 +192,7 @@
   renamePatch();
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
+    installFixedTableColumnWidths();
     renamePatch();
-    queueCommonColumnWidthSync();
   }, { once: true });
 })();
