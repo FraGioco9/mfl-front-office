@@ -2,6 +2,7 @@
   const VERSION = "1.150.0";
   const MAX_SEARCH_RESULTS = 5;
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
+  let clubWidthUnlockTimer = null;
 
   function clubIdColumn() {
     if (!Array.isArray(state?.columns)) return "";
@@ -40,7 +41,7 @@
     if (division) {
       info.append(document.createTextNode(" · "));
       const label = document.createElement("span");
-      label.className = "clubSearchDivision contractDivisionLabel";
+      label.className = "clubSearchDivision";
       label.textContent = division.name;
       label.style.color = division.color;
       info.appendChild(label);
@@ -72,25 +73,11 @@
   }
 
   function setFooterVersion() {
-    const selectors = [
-      "footer .version",
-      "footer [class*='version']",
-      "footer [id*='version']",
-      ".siteFooter .version",
-      ".appFooter .version",
-      "[data-app-version]",
-    ];
-    document.querySelectorAll(selectors.join(",")).forEach((element) => {
-      element.textContent = `v${VERSION}`;
-    });
+    const footerLink = document.querySelector(".siteFooter a[data-page='changelog']");
+    if (footerLink) footerLink.textContent = `MFL Front Office v${VERSION}`;
 
-    document.querySelectorAll("footer, .siteFooter, .appFooter").forEach((footer) => {
-      const walker = document.createTreeWalker(footer, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      while (walker.nextNode()) nodes.push(walker.currentNode);
-      nodes.forEach((node) => {
-        if (/^\s*v?1\.\d+\.\d+\s*$/i.test(node.nodeValue || "")) node.nodeValue = `v${VERSION}`;
-      });
+    document.querySelectorAll("[data-app-version]").forEach((element) => {
+      element.textContent = `v${VERSION}`;
     });
   }
 
@@ -105,67 +92,110 @@
     return item;
   }
 
+  function collapseOlderChangelogSections(list) {
+    const sections = Array.from(list.querySelectorAll(":scope > .changelogMinorSection"));
+    sections.forEach((section, index) => {
+      const expanded = index === 0;
+      section.classList.toggle("is-expanded", expanded);
+      section.querySelector(":scope > .changelogMinorToggle")?.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+  }
+
   function addChangelogSection() {
     const list = document.querySelector(".changelogList");
-    if (!list || list.querySelector(`[data-version='${VERSION}']`)) return;
+    if (!list) return;
 
-    if (list.dataset.sectioned !== "true") {
-      list.prepend(createChangelogItem());
-      return;
+    Array.from(list.children).forEach((child) => {
+      if (!child.classList.contains("changelogMinorSection") && /^v1\.150\.0$/i.test(child.querySelector(":scope > span")?.textContent || "")) {
+        child.remove();
+      }
+    });
+
+    let section = Array.from(list.querySelectorAll(":scope > .changelogMinorSection")).find((candidate) =>
+      /^v1\.150$/i.test(candidate.querySelector(".changelogMinorVersion")?.textContent || ""),
+    );
+
+    if (!section) {
+      section = document.createElement("li");
+      section.className = "changelogMinorSection";
+
+      const toggle = document.createElement("button");
+      toggle.className = "changelogMinorToggle";
+      toggle.type = "button";
+
+      const title = document.createElement("span");
+      title.className = "changelogMinorVersion";
+      title.textContent = "v1.150";
+      const meta = document.createElement("span");
+      meta.className = "changelogMinorMeta";
+      meta.textContent = "1 patch";
+      const chevron = document.createElement("span");
+      chevron.className = "changelogMinorChevron";
+      chevron.setAttribute("aria-hidden", "true");
+      chevron.textContent = ">";
+      toggle.append(title, meta, chevron);
+
+      const panel = document.createElement("div");
+      panel.className = "changelogMinorPanel";
+      const inner = document.createElement("div");
+      inner.className = "changelogMinorPanelInner";
+      const patchList = document.createElement("ol");
+      patchList.className = "changelogPatchList";
+      patchList.appendChild(createChangelogItem());
+      inner.appendChild(patchList);
+      panel.appendChild(inner);
+      section.append(toggle, panel);
+
+      toggle.addEventListener("click", () => {
+        const expanded = section.classList.toggle("is-expanded");
+        toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+      list.prepend(section);
+    } else if (!section.querySelector(`[data-version='${VERSION}']`)) {
+      section.querySelector(".changelogPatchList")?.prepend(createChangelogItem());
     }
 
-    const section = document.createElement("li");
-    section.className = "changelogMinorSection is-expanded";
+    collapseOlderChangelogSections(list);
+  }
 
-    const toggle = document.createElement("button");
-    toggle.className = "changelogMinorToggle";
-    toggle.type = "button";
-    toggle.setAttribute("aria-expanded", "true");
+  function rebuildClubColumns() {
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
+  }
 
-    const title = document.createElement("span");
-    title.className = "changelogMinorVersion";
-    title.textContent = "v1.150";
-    const meta = document.createElement("span");
-    meta.className = "changelogMinorMeta";
-    meta.textContent = "1 patch";
-    const chevron = document.createElement("span");
-    chevron.className = "changelogMinorChevron";
-    chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = ">";
-    toggle.append(title, meta, chevron);
+  function lockClubWidths() {
+    window.clearTimeout(clubWidthUnlockTimer);
+    document.body.classList.add("clubWidthSwitching");
+    rebuildClubColumns();
+  }
 
-    const panel = document.createElement("div");
-    panel.className = "changelogMinorPanel";
-    const inner = document.createElement("div");
-    inner.className = "changelogMinorPanelInner";
-    const patchList = document.createElement("ol");
-    patchList.className = "changelogPatchList";
-    patchList.appendChild(createChangelogItem());
-    inner.appendChild(patchList);
-    panel.appendChild(inner);
-    section.append(toggle, panel);
-
-    toggle.addEventListener("click", () => {
-      const expanded = section.classList.toggle("is-expanded");
-      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-    });
-    list.prepend(section);
+  function unlockClubWidthsAfterStableRender() {
+    [0, 30, 80, 150, 240].forEach((delay) => window.setTimeout(rebuildClubColumns, delay));
+    clubWidthUnlockTimer = window.setTimeout(() => {
+      rebuildClubColumns();
+      requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("clubWidthSwitching")));
+    }, 300);
   }
 
   document.addEventListener("pointerdown", (event) => {
     if (state?.currentPage !== "club") return;
     const button = event.target.closest?.(".viewButton[data-view='contracts'], .viewButton[data-view='attributes']");
-    if (button) document.body.classList.add("clubViewSwitching");
+    if (button) lockClubWidths();
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    if (state?.currentPage !== "club") return;
+    const button = event.target.closest?.(".viewButton[data-view='contracts'], .viewButton[data-view='attributes']");
+    if (button) unlockClubWidthsAfterStableRender();
   }, true);
 
   const style = document.createElement("style");
   style.textContent = `
     .clubSearchResult > span { display: block !important; }
-    .clubSearchDivision { display: inline !important; font-weight: 700; }
-    body.clubViewSwitching #progressionPage .tableShell,
-    body.clubViewSwitching #progressionPage .pager { visibility: hidden !important; }
-    body.clubViewSwitching #progressionPage .tableScroller table,
-    body.clubViewSwitching #progressionPage .tableScroller col { transition: none !important; }
+    .clubSearchDivision { display: inline !important; font-weight: 400 !important; }
+    body.clubWidthSwitching #progressionPage .tableShell,
+    body.clubWidthSwitching #progressionPage .pager { visibility: hidden !important; }
+    body.clubWidthSwitching #progressionPage .tableScroller table,
+    body.clubWidthSwitching #progressionPage .tableScroller col { transition: none !important; }
   `;
   document.head.appendChild(style);
 
