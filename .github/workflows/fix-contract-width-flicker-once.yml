@@ -1,0 +1,82 @@
+name: Fix contract width flicker once
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-contract-width-flicker-once.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch app.js
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path("site/app.js")
+          text = path.read_text(encoding="utf-8")
+
+          pattern = re.compile(
+              r"  function finishClubSwitch\(\) \{\n"
+              r"    requestAnimationFrame\(\(\) => \{\n"
+              r"      if \(typeof buildTableColGroup === \"function\"\) buildTableColGroup\(\);\n"
+              r"      requestAnimationFrame\(\(\) => window\.setTimeout\(\(\) => setClubSwitching\(false\), 80\)\);\n"
+              r"    \}\);\n"
+              r"  \}"
+          )
+
+          replacement = '''  function finishClubSwitch() {
+            let attempts = 0;
+            let stableFrames = 0;
+            let previousSignature = "";
+
+            const checkStableColumns = () => {
+              attempts += 1;
+              if (typeof buildTableColGroup === "function") buildTableColGroup();
+              if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
+
+              const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
+              const signature = columns
+                .map((column) => `${column.className}:${column.style.width}:${column.getAttribute("style") || ""}`)
+                .join("|");
+
+              if (columns.length && signature && signature === previousSignature) stableFrames += 1;
+              else stableFrames = 0;
+              previousSignature = signature;
+
+              if (stableFrames >= 2 || attempts >= 60) {
+                requestAnimationFrame(() => setClubSwitching(false));
+                return;
+              }
+
+              requestAnimationFrame(checkStableColumns);
+            };
+
+            requestAnimationFrame(checkStableColumns);
+          }'''
+
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise RuntimeError(f"finishClubSwitch: expected 1 match, found {count}")
+
+          old_style = '    body.clubViewSwitching #progressionPage .tableScroller { visibility: hidden !important; }'
+          new_style = '''    body.clubViewSwitching #progressionPage .tableShell { visibility: hidden !important; opacity: 0 !important; }
+              body.clubViewSwitching #progressionPage .tableScroller table,
+              body.clubViewSwitching #progressionPage .tableScroller col { transition: none !important; }'''
+          if text.count(old_style) != 1:
+              raise RuntimeError(f"clubViewSwitching style: expected 1 match, found {text.count(old_style)}")
+          text = text.replace(old_style, new_style, 1)
+
+          path.write_text(text, encoding="utf-8")
+      - name: Validate and commit
+        run: |
+          node --check site/app.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/app.js
+          git commit -m "Prevent Contracts column width flicker"
+          git push
