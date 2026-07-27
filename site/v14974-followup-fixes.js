@@ -1,8 +1,6 @@
 (() => {
   const requestedPatchText = "Keep every table column continuously visible during sidebar transitions";
   const mflWalletAddress = "0xff8d2bbed8164db0";
-  const attributesColumnWidths = new Map();
-  let syncingColumnWidths = false;
   let columnWidthSyncFrame = 0;
 
   function keepSidebarExpanded() {
@@ -41,148 +39,78 @@
     };
   }
 
-  function activePlayerTable() {
-    return document.querySelector("#playerTable, #databaseTable, .tableScroller > table:not(.sidebarTableSnapshot), main table:has(colgroup)");
-  }
-
-  function columnKey(header, index) {
-    const datasetKey = header?.dataset?.column
-      || header?.dataset?.sortKey
-      || header?.dataset?.key
-      || header?.getAttribute?.("data-column")
-      || header?.getAttribute?.("data-sort-key");
-    if (datasetKey) return String(datasetKey).trim().toLowerCase();
-
-    const text = String(header?.textContent || "")
-      .replace(/[▲▼↕]/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-    return text || `column-${index}`;
-  }
-
-  function tableColumns() {
-    const table = activePlayerTable();
-    if (!table) return { table: null, headers: [], columns: [] };
-    return {
-      table,
-      headers: Array.from(table.querySelectorAll("thead tr:first-child > th")),
-      columns: Array.from(table.querySelectorAll("colgroup > col")),
-    };
-  }
-
-  function clearForcedColumnWidths(table) {
-    if (!table) return;
-    table.querySelectorAll("colgroup > col").forEach((column) => {
-      column.style.removeProperty("width");
-      column.style.removeProperty("min-width");
-      column.style.removeProperty("max-width");
-    });
-    table.querySelectorAll("thead tr:first-child > th, tbody tr:first-child > td").forEach((cell) => {
-      cell.style.removeProperty("width");
-      cell.style.removeProperty("min-width");
-      cell.style.removeProperty("max-width");
-    });
-  }
-
-  function captureAttributesColumnWidths() {
-    const { table, headers, columns } = tableColumns();
-    if (!table || !headers.length || headers.length !== columns.length) return false;
-
-    clearForcedColumnWidths(table);
-    const tableWidth = table.getBoundingClientRect().width;
-    if (!(tableWidth > 0)) return false;
-
-    attributesColumnWidths.clear();
-    headers.forEach((header, index) => {
-      const column = columns[index];
-      const measuredWidth = header.getBoundingClientRect().width || column.getBoundingClientRect().width;
-      if (!(measuredWidth > 0)) return;
-      attributesColumnWidths.set(columnKey(header, index), {
-        pixels: measuredWidth,
-        percent: (measuredWidth / tableWidth) * 100,
-      });
-    });
-    return attributesColumnWidths.size > 0;
-  }
-
-  function applyCanonicalWidth(element, canonical) {
-    if (!element || !canonical) return;
-    element.style.setProperty("width", `${canonical.percent}%`, "important");
-    element.style.setProperty("min-width", `${canonical.pixels}px`, "important");
-    element.style.setProperty("max-width", `${canonical.pixels}px`, "important");
-  }
-
-  function applyAttributesColumnWidths() {
-    if (!attributesColumnWidths.size) return false;
-    const { table, headers, columns } = tableColumns();
-    if (!table || !headers.length || headers.length !== columns.length) return false;
-
-    const firstRowCells = Array.from(table.querySelectorAll("tbody tr:first-child > td"));
-    headers.forEach((header, index) => {
-      const canonical = attributesColumnWidths.get(columnKey(header, index));
-      if (!canonical) return;
-      applyCanonicalWidth(columns[index], canonical);
-      applyCanonicalWidth(header, canonical);
-      applyCanonicalWidth(firstRowCells[index], canonical);
-    });
-    return true;
-  }
-
-  function synchronizeCommonColumnWidths() {
-    if (syncingColumnWidths || typeof state !== "object" || !state) return;
-    if (!["attributes", "current", "all", "next", "contracts"].includes(state.view)) return;
-    if (typeof buildTableColGroup !== "function" || typeof buildHeader !== "function") return;
-
-    syncingColumnWidths = true;
+  function attributesColumnsForCurrentPage() {
+    if (typeof currentViewColumns !== "function" || typeof state !== "object" || !state) return [];
+    const currentView = state.view;
     try {
-      if (!attributesColumnWidths.size) {
-        if (state.view === "attributes") {
-          captureAttributesColumnWidths();
-        } else {
-          const currentView = state.view;
-          const currentPage = state.page;
-          state.view = typeof normalizeViewForPage === "function"
-            ? normalizeViewForPage("attributes", state.currentPage)
-            : "attributes";
-          buildTableColGroup();
-          buildHeader();
-          captureAttributesColumnWidths();
-          state.view = currentView;
-          state.page = currentPage;
-          buildTableColGroup();
-          buildHeader();
-        }
-      }
-
-      applyAttributesColumnWidths();
+      state.view = typeof normalizeViewForPage === "function"
+        ? normalizeViewForPage("attributes", state.currentPage)
+        : "attributes";
+      return Array.from(currentViewColumns());
     } finally {
-      syncingColumnWidths = false;
+      state.view = currentView;
     }
+  }
+
+  function canonicalAttributesTableWidth() {
+    if (typeof tableColumnWidths !== "object" || !tableColumnWidths) return 0;
+    return ["selection", ...attributesColumnsForCurrentPage()].reduce((total, column) => {
+      const width = Number(tableColumnWidths[column]);
+      return total + (Number.isFinite(width) ? width : 0);
+    }, 0);
+  }
+
+  function applySourceColumnWidths() {
+    if (typeof state !== "object" || !state) return;
+    if (!["attributes", "current", "all", "next", "contracts"].includes(state.view)) return;
+    if (typeof currentViewColumns !== "function" || typeof tableColumnWidths !== "object") return;
+    if (typeof tableColGroup === "undefined" || !tableColGroup) return;
+
+    const table = tableColGroup.closest("table");
+    const columns = Array.from(tableColGroup.querySelectorAll(":scope > col"));
+    const columnNames = ["selection", ...currentViewColumns()];
+    const canonicalTotal = canonicalAttributesTableWidth();
+    if (!table || !columns.length || columns.length !== columnNames.length || !(canonicalTotal > 0)) return;
+
+    columns.forEach((column, index) => {
+      const width = Number(tableColumnWidths[columnNames[index]]);
+      if (!Number.isFinite(width) || width <= 0) return;
+      const pixels = `${width}px`;
+      const percent = `${(width / canonicalTotal) * 100}%`;
+      column.style.setProperty("width", percent, "important");
+      column.style.setProperty("min-width", pixels, "important");
+      column.style.setProperty("max-width", pixels, "important");
+      column.dataset.widthPx = String(width);
+      column.dataset.widthPercent = percent;
+    });
+
+    const canonicalPixels = `${canonicalTotal}px`;
+    table.style.setProperty("width", canonicalPixels, "important");
+    table.style.setProperty("min-width", canonicalPixels, "important");
+    table.style.setProperty("max-width", canonicalPixels, "important");
+    table.style.setProperty("table-layout", "fixed", "important");
   }
 
   function queueCommonColumnWidthSync() {
     if (columnWidthSyncFrame) cancelAnimationFrame(columnWidthSyncFrame);
     columnWidthSyncFrame = requestAnimationFrame(() => {
-      columnWidthSyncFrame = requestAnimationFrame(() => {
-        columnWidthSyncFrame = 0;
-        synchronizeCommonColumnWidths();
-      });
+      columnWidthSyncFrame = 0;
+      applySourceColumnWidths();
     });
   }
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithCanonicalWidths() {
+    buildHeader = function buildHeaderWithSourceWidths() {
       const result = originalBuildHeader.apply(this, arguments);
-      if (!syncingColumnWidths) queueCommonColumnWidthSync();
+      queueCommonColumnWidthSync();
       return result;
     };
   }
 
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
-    renderTable = function renderTableWithCanonicalWidths() {
+    renderTable = function renderTableWithSourceWidths() {
       const result = originalRenderTable.apply(this, arguments);
       queueCommonColumnWidthSync();
       return result;
