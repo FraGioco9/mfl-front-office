@@ -54,11 +54,27 @@
       };
     }
 
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest?.("#progressionPage .viewButton[data-view]");
-      if (!button) return;
-      applyCurrentColumnWidths();
-    });
+    function prepareContractsLayout() {
+      if (typeof state !== "object" || !state || state.view === "contracts") return;
+      if (typeof buildTableColGroup !== "function" || typeof buildHeader !== "function") return;
+
+      const previousView = state.view;
+      state.view = "contracts";
+
+      try {
+        buildTableColGroup();
+        buildHeader();
+        applyCurrentColumnWidths();
+      } finally {
+        state.view = previousView;
+      }
+    }
+
+    document.addEventListener("pointerdown", (event) => {
+      const button = event.target.closest?.("#progressionPage .viewButton[data-view='contracts']");
+      if (!button || button.classList.contains("active")) return;
+      prepareContractsLayout();
+    }, true);
 
     const style = document.createElement("style");
     style.textContent = `
