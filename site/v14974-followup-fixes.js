@@ -20,9 +20,9 @@
     goalkeeping: 6,
     wallet_name: 11,
     owned_since: 11,
-    active_contract_revenue_share: 6,
-    active_contract_club_name: 14,
-    active_contract_club_division: 8,
+    active_contract_revenue_share: 8,
+    active_contract_club_name: 19,
+    active_contract_club_division: 9,
     player_link: 3,
   };
 
