@@ -58,15 +58,15 @@
   }
 
   function applySharedGridWidths() {
-    if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return;
+    if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return false;
 
     const table = tableColGroup.closest("table");
-    if (!table) return;
+    if (!table) return false;
 
     const columnNames = ["selection", ...currentViewColumns()];
     const percentages = viewPercentages(columnNames);
     const colElements = Array.from(tableColGroup.children);
-    if (!percentages || colElements.length !== columnNames.length) return;
+    if (!percentages || colElements.length !== columnNames.length) return false;
 
     clearLegacySizing(table);
     table.style.setProperty("table-layout", "fixed", "important");
@@ -87,35 +87,89 @@
         cell.style.setProperty("width", width, "important");
       });
     });
+
+    return true;
+  }
+
+  let scheduledFrame = 0;
+  function scheduleSharedGridWidths() {
+    if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
+    scheduledFrame = requestAnimationFrame(() => {
+      scheduledFrame = 0;
+      applySharedGridWidths();
+      requestAnimationFrame(applySharedGridWidths);
+    });
+  }
+
+  function scheduleInitialWidths() {
+    scheduleSharedGridWidths();
+    [0, 50, 150, 350, 750].forEach((delay) => setTimeout(scheduleSharedGridWidths, delay));
+  }
+
+  function scheduleAfterResult(result) {
+    scheduleSharedGridWidths();
+    if (result && typeof result.then === "function") {
+      result.finally(scheduleInitialWidths);
+    } else {
+      scheduleInitialWidths();
+    }
+    return result;
+  }
+
+  if (typeof restoreSavedTableState === "function") {
+    const originalRestoreSavedTableState = restoreSavedTableState;
+    restoreSavedTableState = function restoreSavedTableStateWithSharedGrid() {
+      return scheduleAfterResult(originalRestoreSavedTableState.apply(this, arguments));
+    };
   }
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
     buildTableColGroup = function buildTableColGroupWithSharedGrid() {
-      const result = originalBuildTableColGroup.apply(this, arguments);
-      applySharedGridWidths();
-      return result;
+      return scheduleAfterResult(originalBuildTableColGroup.apply(this, arguments));
     };
   }
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
     buildHeader = function buildHeaderWithSharedGrid() {
-      const result = originalBuildHeader.apply(this, arguments);
-      applySharedGridWidths();
-      return result;
+      return scheduleAfterResult(originalBuildHeader.apply(this, arguments));
     };
   }
 
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
     renderTable = function renderTableWithSharedGrid() {
-      const result = originalRenderTable.apply(this, arguments);
-      applySharedGridWidths();
-      return result;
+      return scheduleAfterResult(originalRenderTable.apply(this, arguments));
     };
   }
 
-  requestAnimationFrame(applySharedGridWidths);
-  document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(applySharedGridWidths), { once: true });
+  if (typeof setPage === "function") {
+    const originalSetPage = setPage;
+    setPage = function setPageWithSharedGrid() {
+      return scheduleAfterResult(originalSetPage.apply(this, arguments));
+    };
+  }
+
+  const tableObserver = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.type === "childList" && (mutation.addedNodes.length || mutation.removedNodes.length))) {
+      scheduleSharedGridWidths();
+    }
+  });
+
+  function observeTableRendering() {
+    const target = typeof tableColGroup !== "undefined" && tableColGroup
+      ? tableColGroup.closest("table")?.parentElement || tableColGroup.closest("table")
+      : document.body;
+    if (target) tableObserver.observe(target, { childList: true, subtree: true });
+  }
+
+  scheduleInitialWidths();
+  observeTableRendering();
+  document.addEventListener("DOMContentLoaded", () => {
+    observeTableRendering();
+    scheduleInitialWidths();
+  }, { once: true });
+  window.addEventListener("load", scheduleInitialWidths, { once: true });
+  window.addEventListener("pageshow", scheduleInitialWidths);
 })();
