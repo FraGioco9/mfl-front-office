@@ -1,6 +1,8 @@
 (() => {
   const requestedPatchText = "Keep every table column continuously visible during sidebar transitions";
   const mflWalletAddress = "0xff8d2bbed8164db0";
+  const attributesColumnWidths = new Map();
+  let syncingColumnWidths = false;
 
   function keepSidebarExpanded() {
     if (typeof state === "object" && state) state.menuOpen = true;
@@ -35,6 +37,112 @@
   if (typeof toggleMenu === "function") {
     toggleMenu = function permanentlyExpandedMenu() {
       keepSidebarExpanded();
+    };
+  }
+
+  function activePlayerTable() {
+    return document.querySelector("#playerTable, #databaseTable, .tableScroller > table:not(.sidebarTableSnapshot), main table:has(colgroup)");
+  }
+
+  function columnKey(header, index) {
+    const datasetKey = header?.dataset?.column
+      || header?.dataset?.sortKey
+      || header?.dataset?.key
+      || header?.getAttribute?.("data-column")
+      || header?.getAttribute?.("data-sort-key");
+    if (datasetKey) return String(datasetKey).trim().toLowerCase();
+
+    const text = String(header?.textContent || "")
+      .replace(/[▲▼↕]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    return text || `column-${index}`;
+  }
+
+  function tableColumns() {
+    const table = activePlayerTable();
+    if (!table) return { headers: [], columns: [] };
+    return {
+      headers: Array.from(table.querySelectorAll("thead tr:first-child > th")),
+      columns: Array.from(table.querySelectorAll("colgroup > col")),
+    };
+  }
+
+  function captureAttributesColumnWidths() {
+    const { headers, columns } = tableColumns();
+    if (!headers.length || headers.length !== columns.length) return false;
+
+    attributesColumnWidths.clear();
+    headers.forEach((header, index) => {
+      const column = columns[index];
+      const declaredWidth = column.style.width || column.getAttribute("width") || "";
+      const measuredWidth = column.getBoundingClientRect().width || header.getBoundingClientRect().width;
+      attributesColumnWidths.set(columnKey(header, index), {
+        declaredWidth,
+        measuredWidth,
+      });
+    });
+    return attributesColumnWidths.size > 0;
+  }
+
+  function applyAttributesColumnWidths() {
+    if (!attributesColumnWidths.size) return false;
+    const { headers, columns } = tableColumns();
+    if (!headers.length || headers.length !== columns.length) return false;
+
+    headers.forEach((header, index) => {
+      const canonical = attributesColumnWidths.get(columnKey(header, index));
+      if (!canonical) return;
+      const column = columns[index];
+      if (canonical.declaredWidth) {
+        column.style.setProperty("width", canonical.declaredWidth, "important");
+      } else if (canonical.measuredWidth > 0) {
+        column.style.setProperty("width", `${canonical.measuredWidth}px`, "important");
+      }
+    });
+    return true;
+  }
+
+  function synchronizeCommonColumnWidths() {
+    if (syncingColumnWidths || typeof state !== "object" || !state) return;
+    if (!["attributes", "current", "all", "next", "contracts"].includes(state.view)) return;
+    if (typeof buildTableColGroup !== "function" || typeof buildHeader !== "function") return;
+
+    syncingColumnWidths = true;
+    try {
+      if (state.view === "attributes") {
+        captureAttributesColumnWidths();
+        return;
+      }
+
+      if (!attributesColumnWidths.size) {
+        const currentView = state.view;
+        const currentPage = state.page;
+        state.view = typeof normalizeViewForPage === "function"
+          ? normalizeViewForPage("attributes", state.currentPage)
+          : "attributes";
+        buildTableColGroup();
+        buildHeader();
+        captureAttributesColumnWidths();
+        state.view = currentView;
+        state.page = currentPage;
+        buildTableColGroup();
+        buildHeader();
+      }
+
+      applyAttributesColumnWidths();
+    } finally {
+      syncingColumnWidths = false;
+    }
+  }
+
+  if (typeof buildHeader === "function") {
+    const originalBuildHeader = buildHeader;
+    buildHeader = function buildHeaderWithCanonicalWidths() {
+      const result = originalBuildHeader.apply(this, arguments);
+      if (!syncingColumnWidths) synchronizeCommonColumnWidths();
+      return result;
     };
   }
 
@@ -99,6 +207,7 @@
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
+      synchronizeCommonColumnWidths();
       return result;
     };
   }
@@ -147,5 +256,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
     renamePatch();
+    synchronizeCommonColumnWidths();
   }, { once: true });
 })();
