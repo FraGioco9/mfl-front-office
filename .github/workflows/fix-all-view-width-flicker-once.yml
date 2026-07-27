@@ -1,3 +1,4 @@
+# Trigger after workflow registration
 name: Fix all view width flicker once
 on:
   push:
