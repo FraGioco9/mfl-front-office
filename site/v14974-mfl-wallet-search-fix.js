@@ -1,10 +1,11 @@
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
-  function clickedMflWallet(target) {
+  function clickedMflWallet(event) {
+    const target = event?.target;
     if (!target) return false;
 
-    const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
     const candidates = [
       target.closest?.("a,button,[role='button'],li,div"),
       ...path,
@@ -31,7 +32,7 @@
   }
 
   document.addEventListener("click", (event) => {
-    if (!onMflStatsView() || !clickedMflWallet(event.target)) return;
+    if (!onMflStatsView() || !clickedMflWallet(event)) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
