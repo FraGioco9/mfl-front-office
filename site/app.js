@@ -11890,11 +11890,34 @@ startApp();
   }
 
   function finishClubSwitch() {
-    requestAnimationFrame(() => {
-      if (typeof buildTableColGroup === "function") buildTableColGroup();
-      requestAnimationFrame(() => window.setTimeout(() => setClubSwitching(false), 80));
-    });
-  }
+  let attempts = 0;
+  let stableFrames = 0;
+  let previousSignature = "";
+
+  const checkStableColumns = () => {
+    attempts += 1;
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
+    if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
+
+    const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
+    const signature = columns
+      .map((column) => `${column.className}:${column.style.width}:${column.getAttribute("style") || ""}`)
+      .join("|");
+
+    if (columns.length && signature && signature === previousSignature) stableFrames += 1;
+    else stableFrames = 0;
+    previousSignature = signature;
+
+    if (stableFrames >= 2 || attempts >= 60) {
+      requestAnimationFrame(() => setClubSwitching(false));
+      return;
+    }
+
+    requestAnimationFrame(checkStableColumns);
+  };
+
+  requestAnimationFrame(checkStableColumns);
+}
 
   function hideClubPageControls() {
     const views = document.querySelector("#progressionPage .views");
@@ -12167,7 +12190,9 @@ startApp();
   style.textContent = `
     .clubPageLink { color: var(--text, #fff) !important; text-decoration: none; transition: color 120ms ease; }
     .clubPageLink:hover, .clubPageLink:focus-visible { color: #78c7ff !important; }
-    body.clubViewSwitching #progressionPage .tableScroller { visibility: hidden !important; }
+    body.clubViewSwitching #progressionPage .tableShell { visibility: hidden !important; opacity: 0 !important; }
+    body.clubViewSwitching #progressionPage .tableScroller table,
+    body.clubViewSwitching #progressionPage .tableScroller col { transition: none !important; }
   `;
   document.head.appendChild(style);
 
