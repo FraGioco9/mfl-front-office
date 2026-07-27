@@ -24,7 +24,10 @@
 
   const sidebarStyle = document.createElement("style");
   sidebarStyle.textContent = [
-    "#menuButton,.menuButton,[data-action='toggle-menu']{pointer-events:none!important;cursor:default!important}",
+    "#menuButton,.menuButton,[data-action='toggle-menu']{pointer-events:none!important;cursor:default!important;color:#fff!important;opacity:1!important}",
+    "#menuButton *,.menuButton * ,[data-action='toggle-menu'] *{color:#fff!important;opacity:1!important}",
+    "#menuButton svg,.menuButton svg,[data-action='toggle-menu'] svg{stroke:#fff!important;fill:none!important}",
+    "#menuButton svg [fill]:not([fill='none']),.menuButton svg [fill]:not([fill='none']),[data-action='toggle-menu'] svg [fill]:not([fill='none']){fill:#fff!important}",
     ".appShell.menuClosed,.appShell.sidebarClosed,.appShell.sidebarCollapsed,.appShell.collapsed{grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr)!important}",
   ].join("");
   document.head.appendChild(sidebarStyle);
