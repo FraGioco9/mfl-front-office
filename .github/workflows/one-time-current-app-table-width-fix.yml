@@ -1,0 +1,299 @@
+name: One-time current app table width fix
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.issue.title == '[table-width-fix] Apply shared table width'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch current app.js only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('site/app.js')
+          source = path.read_text(encoding='utf-8')
+
+          # Remove the obsolete club-specific widths that override the requested grid.
+          obsolete_lines = [
+              '    .appShell:not(.menuClosed) .tableScroller .col-age { width: 2.5% !important; }\n',
+              '    .appShell:not(.menuClosed) .tableScroller .col-positions { width: 10% !important; }\n',
+              '    .appShell.menuClosed .tableScroller .col-age { width: 36.9px !important; }\n',
+              '    .appShell.menuClosed .tableScroller .col-positions { width: 147.6px !important; }\n',
+          ]
+          for line in obsolete_lines:
+              source = source.replace(line, '')
+
+          marker = '/* Single exact player-table width engine */'
+          if marker not in source:
+              raise SystemExit('Exact table width engine marker not found')
+
+          source = source.split(marker, 1)[0].rstrip()
+          source += r'''
+
+/* Single exact player-table width engine */
+(() => {
+  const WIDTHS = {
+    "col-select": 3,
+    "col-id": 3,
+    "col-flag": 3,
+    "col-name": 13,
+    "col-nationality": 7,
+    "col-age": 4,
+    "col-positions": 8,
+    "col-seasons": 5,
+    "col-stat": 6,
+    "col-contract-revenue": 8,
+    "col-contract-club": 19,
+    "col-contract-division": 9,
+    "col-agent": 9,
+    "col-joined-agency": 9,
+    "col-owned-since": 9,
+    "col-link": 3,
+  };
+
+  const FILLER_CLASS = "col-exact-width-filler";
+  const EPSILON = 0.01;
+  let applyingWidths = false;
+  let applyFrame = 0;
+
+  function restoreSingleTable() {
+    document.querySelectorAll(".tableBodyScroller").forEach((bodyScroller) => {
+      const bodyTable = bodyScroller.querySelector("table");
+      const headerScroller = bodyScroller.previousElementSibling?.classList.contains("tableHeaderScroller")
+        ? bodyScroller.previousElementSibling
+        : null;
+      const tableHead = headerScroller?.querySelector("thead");
+
+      if (bodyTable && tableHead && !bodyTable.querySelector("thead")) {
+        const colGroup = bodyTable.querySelector("colgroup");
+        if (colGroup?.nextSibling) bodyTable.insertBefore(tableHead, colGroup.nextSibling);
+        else bodyTable.prepend(tableHead);
+      }
+
+      headerScroller?.remove();
+      bodyScroller.classList.remove("tableBodyScroller");
+    });
+  }
+
+  function widthForColumn(column) {
+    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
+    return className ? WIDTHS[className] : null;
+  }
+
+  function removeFiller(table, colGroup) {
+    colGroup.querySelectorAll(`.${FILLER_CLASS}`).forEach((element) => element.remove());
+    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}`).forEach((element) => element.remove());
+  }
+
+  function appendFiller(table, widthInPixels) {
+    if (widthInPixels <= EPSILON) return;
+    const width = `${widthInPixels}px`;
+    const fillerColumn = document.createElement("col");
+    fillerColumn.className = FILLER_CLASS;
+    fillerColumn.style.setProperty("width", width, "important");
+    fillerColumn.style.setProperty("min-width", width, "important");
+    fillerColumn.style.setProperty("max-width", width, "important");
+    table.querySelector("colgroup")?.appendChild(fillerColumn);
+
+    table.querySelectorAll("thead tr, tbody tr").forEach((row) => {
+      const cell = document.createElement(row.closest("thead") ? "th" : "td");
+      cell.className = FILLER_CLASS;
+      cell.setAttribute("aria-hidden", "true");
+      cell.style.setProperty("width", width, "important");
+      cell.style.setProperty("min-width", width, "important");
+      cell.style.setProperty("max-width", width, "important");
+      row.appendChild(cell);
+    });
+  }
+
+  function sharedTableWidth() {
+    const page = document.querySelector("#progressionPage");
+    if (!page || page.hidden) return 0;
+
+    page.style.setProperty("width", "100%", "important");
+    page.style.setProperty("min-width", "0", "important");
+    page.style.setProperty("max-width", "100%", "important");
+    page.style.setProperty("box-sizing", "border-box", "important");
+
+    const width = page.clientWidth;
+    return Number.isFinite(width) && width > 0 ? width : 0;
+  }
+
+  function applyExactTableWidths() {
+    if (applyingWidths) return false;
+    applyingWidths = true;
+
+    try {
+      restoreSingleTable();
+      const tableWidth = sharedTableWidth();
+      if (!tableWidth) return false;
+
+      document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
+        element.style.setProperty("width", "100%", "important");
+        element.style.setProperty("min-width", "0", "important");
+        element.style.setProperty("max-width", "100%", "important");
+        element.style.setProperty("box-sizing", "border-box", "important");
+        element.style.setProperty("overflow", "visible", "important");
+      });
+
+      document.querySelectorAll("#progressionPage .tableScroller table").forEach((table) => {
+        const colGroup = table.querySelector("colgroup");
+        if (!colGroup) return;
+
+        removeFiller(table, colGroup);
+        const columns = Array.from(colGroup.children);
+        const percentages = columns.map(widthForColumn);
+        if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return;
+
+        const totalPercentage = percentages.reduce((sum, width) => sum + width, 0);
+        if (totalPercentage > 100 + EPSILON) return;
+
+        table.style.setProperty("table-layout", "fixed", "important");
+        table.style.setProperty("width", "100%", "important");
+        table.style.setProperty("min-width", "100%", "important");
+        table.style.setProperty("max-width", "100%", "important");
+        table.style.setProperty("box-sizing", "border-box", "important");
+        table.style.setProperty("border-spacing", "0", "important");
+
+        let assignedWidth = 0;
+        columns.forEach((column, index) => {
+          const pixelWidth = tableWidth * percentages[index] / 100;
+          assignedWidth += pixelWidth;
+          const width = `${pixelWidth}px`;
+          column.style.setProperty("width", width, "important");
+          column.style.setProperty("min-width", width, "important");
+          column.style.setProperty("max-width", width, "important");
+          column.style.setProperty("transition", "none", "important");
+        });
+
+        appendFiller(table, Math.max(0, tableWidth - assignedWidth));
+      });
+
+      return true;
+    } finally {
+      applyingWidths = false;
+    }
+  }
+
+  function queueExactTableWidths() {
+    cancelAnimationFrame(applyFrame);
+    applyFrame = requestAnimationFrame(() => {
+      applyExactTableWidths();
+      requestAnimationFrame(applyExactTableWidths);
+    });
+  }
+
+  if (typeof buildTableColGroup === "function") {
+    const originalBuildTableColGroup = buildTableColGroup;
+    buildTableColGroup = function buildTableColGroupWithExactGrid() {
+      const result = originalBuildTableColGroup.apply(this, arguments);
+      queueExactTableWidths();
+      return result;
+    };
+  }
+
+  if (typeof buildHeader === "function") {
+    const originalBuildHeader = buildHeader;
+    buildHeader = function buildHeaderWithExactGrid() {
+      const result = originalBuildHeader.apply(this, arguments);
+      queueExactTableWidths();
+      return result;
+    };
+  }
+
+  if (typeof renderTable === "function") {
+    const originalRenderTable = renderTable;
+    renderTable = function renderTableWithExactGrid() {
+      const result = originalRenderTable.apply(this, arguments);
+      queueExactTableWidths();
+      return result;
+    };
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    html {
+      overflow-y: scroll !important;
+      scrollbar-gutter: stable !important;
+    }
+
+    #progressionPage,
+    #progressionPage .tableShell,
+    #progressionPage .tableScroller,
+    #progressionPage .tableScroller table {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    #progressionPage {
+      min-width: 0 !important;
+    }
+
+    #progressionPage .tableShell,
+    #progressionPage .tableScroller {
+      min-width: 0 !important;
+      overflow: visible !important;
+      max-height: none !important;
+      scrollbar-gutter: auto !important;
+    }
+
+    #progressionPage .tableScroller table {
+      min-width: 100% !important;
+      table-layout: fixed !important;
+      border-spacing: 0 !important;
+    }
+
+    #progressionPage .tableScroller .${FILLER_CLASS} {
+      padding: 0 !important;
+      border-left: 0 !important;
+      border-right: 0 !important;
+      background: inherit !important;
+      pointer-events: none !important;
+    }
+
+    #progressionPage .tableScroller table,
+    #progressionPage .tableScroller col,
+    #progressionPage .tableScroller th,
+    #progressionPage .tableScroller td,
+    #progressionPage .tableScroller tr:hover,
+    #progressionPage .tableScroller tr:hover > th,
+    #progressionPage .tableScroller tr:hover > td {
+      transition: none !important;
+      animation: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  window.addEventListener("resize", queueExactTableWidths, { passive: true });
+  document.addEventListener("click", (event) => {
+    if (event.target.closest?.(".viewButton[data-view]")) queueExactTableWidths();
+  }, true);
+
+  queueExactTableWidths();
+})();
+'''
+
+          path.write_text(source, encoding='utf-8')
+          Path('.github/workflows/one-time-current-app-table-width-fix.yml').unlink()
+          PY
+
+      - name: Commit current app.js fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/app.js .github/workflows/one-time-current-app-table-width-fix.yml
+          git commit -m "Keep shared table columns identical across views"
+          git push origin main
