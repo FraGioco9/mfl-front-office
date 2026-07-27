@@ -1,0 +1,59 @@
+name: Patch club default once
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-club-default-once.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch app.js
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("site/app.js")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              ('        : "contracts",', '        : "attributes",', 'club route fallback'),
+              ('    const safeView = view === "attributes" ? "attributes" : "contracts";', '    const safeView = view === "contracts" ? "contracts" : "attributes";', 'canonical route fallback'),
+              ('  function openClubImmediately(clubId, view = "contracts") {', '  function openClubImmediately(clubId, view = "attributes") {', 'immediate club default'),
+              ('  async function openClubPage(clubId, view = "contracts", updateHistory = true) {', '  async function openClubPage(clubId, view = "attributes", updateHistory = true) {', 'club page default'),
+              ('      const nextView = view === "attributes" ? "attributes" : "contracts";', '      const nextView = view === "contracts" ? "contracts" : "attributes";', 'normalized club view'),
+          ]
+
+          for old, new, label in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{label}: expected 1 match, found {count}")
+              text = text.replace(old, new, 1)
+
+          old_order = '      if (contracts) views.insertBefore(contracts, attributes || views.firstChild);'
+          new_order = '''      const nextOverall = views.querySelector('[data-view="next"]');
+              if (attributes) views.prepend(attributes);
+              if (contracts) {
+                if (nextOverall && !nextOverall.hidden) nextOverall.after(contracts);
+                else if (attributes) attributes.after(contracts);
+              }'''
+          count = text.count(old_order)
+          if count != 1:
+              raise RuntimeError(f"club button order: expected 1 match, found {count}")
+          text = text.replace(old_order, new_order, 1)
+
+          text = text.replace('canonicalClubRoute(clubId, "contracts")', 'canonicalClubRoute(clubId, "attributes")')
+          text = text.replace('openClubImmediately(clubId, "contracts")', 'openClubImmediately(clubId, "attributes")')
+
+          path.write_text(text, encoding="utf-8")
+      - name: Validate and commit
+        run: |
+          node --check site/app.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/app.js
+          git commit -m "Default club pages to attributes and reorder views"
+          git push
