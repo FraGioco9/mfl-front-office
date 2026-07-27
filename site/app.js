@@ -1,6 +1,6 @@
 (() => {
   const coreScript = document.createElement("script");
-  coreScript.src = "/app-core.js?v=1.150.4";
+  coreScript.src = "/app-core.js?v=1.150.5";
   coreScript.async = false;
 
   coreScript.addEventListener("load", () => {
@@ -22,9 +22,6 @@
       "col-owned-since": 9,
       "col-link": 3,
     };
-
-    let switchingView = false;
-    let revealFrame = 0;
 
     function setImportant(element, property, value) {
       if (!element) return;
@@ -68,64 +65,31 @@
       return true;
     }
 
-    function beginAtomicViewSwitch() {
-      if (revealFrame) {
-        cancelAnimationFrame(revealFrame);
-        revealFrame = 0;
-      }
-      switchingView = true;
-      document.body.classList.add("atomicTableViewSwitch");
-    }
-
-    function finishAtomicViewSwitch() {
-      if (!switchingView) {
-        applyFixedTableWidths();
-        return;
-      }
-
-      if (revealFrame) cancelAnimationFrame(revealFrame);
-      revealFrame = requestAnimationFrame(() => {
-        applyFixedTableWidths();
-        revealFrame = requestAnimationFrame(() => {
-          applyFixedTableWidths();
-          document.body.classList.remove("atomicTableViewSwitch");
-          switchingView = false;
-          revealFrame = 0;
-        });
-      });
-    }
-
-    function wrap(functionName, after) {
+    function wrap(functionName) {
       const original = window[functionName];
-      if (typeof original !== "function" || original.__atomicTableRender) return;
+      if (typeof original !== "function" || original.__instantTableWidths) return;
 
-      function wrappedAtomicTableRender() {
+      function wrappedInstantTableWidths() {
         const result = original.apply(this, arguments);
-        after();
-        if (result && typeof result.finally === "function") result.finally(after);
+        applyFixedTableWidths();
+        if (result && typeof result.finally === "function") {
+          result.finally(applyFixedTableWidths);
+        }
         return result;
       }
 
-      wrappedAtomicTableRender.__atomicTableRender = true;
-      window[functionName] = wrappedAtomicTableRender;
+      wrappedInstantTableWidths.__instantTableWidths = true;
+      window[functionName] = wrappedInstantTableWidths;
     }
 
-    wrap("buildTableColGroup", applyFixedTableWidths);
-    wrap("buildHeader", applyFixedTableWidths);
-    wrap("renderTable", finishAtomicViewSwitch);
-    wrap("applyFilters", finishAtomicViewSwitch);
-    wrap("restoreSavedTableState", finishAtomicViewSwitch);
-    wrap("setPage", finishAtomicViewSwitch);
-
-    document.addEventListener("pointerdown", (event) => {
-      const viewButton = event.target.closest?.(".viewButton[data-view]");
-      if (viewButton && !viewButton.classList.contains("active")) beginAtomicViewSwitch();
-    }, true);
-
-    document.addEventListener("click", (event) => {
-      const viewButton = event.target.closest?.(".viewButton[data-view]");
-      if (viewButton && !viewButton.classList.contains("active")) beginAtomicViewSwitch();
-    }, true);
+    [
+      "buildTableColGroup",
+      "buildHeader",
+      "renderTable",
+      "applyFilters",
+      "restoreSavedTableState",
+      "setPage",
+    ].forEach(wrap);
 
     const style = document.createElement("style");
     style.textContent = `
@@ -135,10 +99,6 @@
       .tableScroller td {
         transition: none !important;
         animation: none !important;
-      }
-
-      body.atomicTableViewSwitch .tableShell {
-        visibility: hidden !important;
       }
     `;
     document.head.appendChild(style);
