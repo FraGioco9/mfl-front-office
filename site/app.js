@@ -12456,34 +12456,129 @@ startApp();
     "col-link": 3,
   };
 
-  function widthForColumn(column) {
-    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
-    return className ? WIDTHS[className] : null;
+  const FLEXIBLE_COLUMNS = [
+    "col-contract-club",
+    "col-agent",
+    "col-owned-since",
+    "col-name",
+  ];
+
+  function widthClassForColumn(column) {
+    return Object.keys(WIDTHS).find((name) => column.classList.contains(name)) || "";
+  }
+
+  function normalizedPercentages(columns) {
+    const classes = columns.map(widthClassForColumn);
+    const percentages = classes.map((name) => WIDTHS[name]);
+    if (percentages.some((width) => !Number.isFinite(width) || width <= 0)) return null;
+
+    const total = percentages.reduce((sum, width) => sum + width, 0);
+    const flexibleIndex = FLEXIBLE_COLUMNS
+      .map((name) => classes.indexOf(name))
+      .find((index) => index >= 0);
+
+    if (!Number.isInteger(flexibleIndex)) return null;
+    percentages[flexibleIndex] += 100 - total;
+    return percentages[flexibleIndex] > 0 ? percentages : null;
+  }
+
+  function ensureSeparatedTableHeader() {
+    const bodyScroller = document.querySelector(".tableScroller");
+    const bodyTable = bodyScroller?.querySelector("table");
+    if (!bodyScroller || !bodyTable) return null;
+
+    let headerScroller = bodyScroller.previousElementSibling;
+    if (!headerScroller?.classList.contains("tableHeaderScroller")) {
+      const tableHead = bodyTable.querySelector("thead");
+      if (!tableHead) return null;
+
+      headerScroller = document.createElement("div");
+      headerScroller.className = "tableHeaderScroller";
+
+      const headerTable = document.createElement("table");
+      headerTable.className = `${bodyTable.className} tableHeaderTable`.trim();
+
+      const bodyColGroup = bodyTable.querySelector("colgroup");
+      if (bodyColGroup) {
+        const headerColGroup = bodyColGroup.cloneNode(true);
+        headerColGroup.removeAttribute("id");
+        headerColGroup.dataset.tableHeaderColGroup = "true";
+        headerTable.appendChild(headerColGroup);
+      }
+
+      headerTable.appendChild(tableHead);
+      headerScroller.appendChild(headerTable);
+      bodyScroller.parentNode.insertBefore(headerScroller, bodyScroller);
+      bodyScroller.classList.add("tableBodyScroller");
+
+      bodyScroller.addEventListener("scroll", () => {
+        headerScroller.scrollLeft = bodyScroller.scrollLeft;
+      }, { passive: true });
+    }
+
+    return {
+      bodyScroller,
+      bodyTable,
+      headerScroller,
+      headerTable: headerScroller.querySelector("table"),
+    };
+  }
+
+  function syncHeaderColGroup(bodyTable, headerTable) {
+    const bodyColGroup = bodyTable.querySelector("colgroup");
+    if (!bodyColGroup || !headerTable) return null;
+
+    const clone = bodyColGroup.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.dataset.tableHeaderColGroup = "true";
+
+    const current = headerTable.querySelector("colgroup");
+    if (current) current.replaceWith(clone);
+    else headerTable.insertBefore(clone, headerTable.firstChild);
+
+    return clone;
   }
 
   function applySynchronousTableWidths() {
-    const colGroup = document.querySelector("#tableColGroup");
-    const table = colGroup?.closest("table");
-    const columns = colGroup ? Array.from(colGroup.children) : [];
-    if (!table || !columns.length) return false;
+    const parts = ensureSeparatedTableHeader();
+    if (!parts) return false;
 
-    const widths = columns.map(widthForColumn);
-    if (widths.some((width) => !Number.isFinite(width) || width <= 0)) return false;
+    const { bodyScroller, bodyTable, headerScroller, headerTable } = parts;
+    const bodyColGroup = bodyTable.querySelector("#tableColGroup");
+    const bodyColumns = bodyColGroup ? Array.from(bodyColGroup.children) : [];
+    const percentages = normalizedPercentages(bodyColumns);
+    if (!percentages) return false;
 
-    table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", "100%", "important");
-    table.style.setProperty("min-width", "100%", "important");
-    table.style.setProperty("max-width", "100%", "important");
-    table.style.setProperty("transition", "none", "important");
+    const headerColGroup = syncHeaderColGroup(bodyTable, headerTable);
+    const headerColumns = headerColGroup ? Array.from(headerColGroup.children) : [];
 
-    columns.forEach((column, index) => {
-      const width = `${widths[index]}%`;
-      column.style.setProperty("width", width, "important");
-      column.style.setProperty("min-width", width, "important");
-      column.style.setProperty("max-width", width, "important");
-      column.style.setProperty("transition", "none", "important");
+    const availableWidth = bodyScroller.clientWidth;
+    if (!Number.isFinite(availableWidth) || availableWidth <= 0) return false;
+
+    [bodyTable, headerTable].forEach((table) => {
+      if (!table) return;
+      const tableWidth = `${availableWidth}px`;
+      table.style.setProperty("table-layout", "fixed", "important");
+      table.style.setProperty("width", tableWidth, "important");
+      table.style.setProperty("min-width", tableWidth, "important");
+      table.style.setProperty("max-width", tableWidth, "important");
+      table.style.setProperty("transition", "none", "important");
     });
 
+    headerScroller.style.setProperty("width", "100%", "important");
+
+    const applyColumns = (columns) => {
+      columns.forEach((column, index) => {
+        const width = `${(availableWidth * percentages[index]) / 100}px`;
+        column.style.setProperty("width", width, "important");
+        column.style.setProperty("min-width", width, "important");
+        column.style.setProperty("max-width", width, "important");
+        column.style.setProperty("transition", "none", "important");
+      });
+    };
+
+    applyColumns(bodyColumns);
+    applyColumns(headerColumns);
     return true;
   }
 
@@ -12496,19 +12591,45 @@ startApp();
     };
   }
 
+  if (typeof buildHeader === "function") {
+    const originalBuildHeader = buildHeader;
+    buildHeader = function buildSeparatedHeaderWithSynchronousWidths() {
+      const result = originalBuildHeader.apply(this, arguments);
+      applySynchronousTableWidths();
+      return result;
+    };
+  }
+
   const style = document.createElement("style");
   style.textContent = `
-    .tableScroller {
-      scrollbar-gutter: stable;
+    .tableHeaderScroller {
+      overflow: hidden !important;
+      scrollbar-width: none !important;
     }
 
-    .tableScroller table,
-    .tableScroller col,
-    .tableScroller th,
-    .tableScroller td,
-    .tableScroller tr:hover,
-    .tableScroller tr:hover > th,
-    .tableScroller tr:hover > td {
+    .tableHeaderScroller::-webkit-scrollbar {
+      display: none !important;
+    }
+
+    .tableBodyScroller {
+      overflow-y: scroll !important;
+      scrollbar-gutter: auto !important;
+    }
+
+    .tableHeaderTable {
+      margin-bottom: 0 !important;
+    }
+
+    .tableBodyScroller table,
+    .tableBodyScroller col,
+    .tableBodyScroller th,
+    .tableBodyScroller td,
+    .tableBodyScroller tr:hover,
+    .tableBodyScroller tr:hover > th,
+    .tableBodyScroller tr:hover > td,
+    .tableHeaderScroller table,
+    .tableHeaderScroller col,
+    .tableHeaderScroller th {
       transition: none !important;
       animation: none !important;
     }
@@ -12516,4 +12637,5 @@ startApp();
   document.head.appendChild(style);
 
   applySynchronousTableWidths();
+  window.addEventListener("resize", applySynchronousTableWidths, { passive: true });
 })();
