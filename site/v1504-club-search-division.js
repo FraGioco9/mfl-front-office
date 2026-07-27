@@ -6,6 +6,19 @@
     "active_club_id",
   ];
 
+  const divisionNames = {
+    "1": "Diamond",
+    "2": "Platinum",
+    "3": "Gold",
+    "4": "Silver",
+    "5": "Bronze",
+    "6": "Copper",
+    "7": "Iron",
+    "8": "Stone",
+    "9": "Wood",
+    "10": "Flint",
+  };
+
   const divisionColors = {
     diamond: "#58d7ff",
     platinum: "#c7d7e8",
@@ -24,6 +37,11 @@
     return CLUB_ID_COLUMNS.find((column) => state.columns.includes(column)) || "";
   }
 
+  function normalizedDivision(value) {
+    const raw = String(value || "").trim();
+    return divisionNames[raw] || raw;
+  }
+
   function divisionByClubId() {
     const idColumn = clubIdColumn();
     const divisions = new Map();
@@ -31,7 +49,7 @@
 
     state.rows.forEach((row) => {
       const clubId = String(getValue(row, idColumn) || "").trim();
-      const division = String(getValue(row, "active_contract_club_division") || "").trim();
+      const division = normalizedDivision(getValue(row, "active_contract_club_division"));
       if (clubId && division && !divisions.has(clubId)) divisions.set(clubId, division);
     });
 
@@ -39,30 +57,45 @@
   }
 
   function searchResultClubId(button) {
-    const info = String(button.querySelector("span")?.textContent || "");
-    const match = info.match(/#([^·]+?)(?:\s|$)/);
-    return match ? match[1].trim() : "";
+    if (button.dataset.clubId) return button.dataset.clubId;
+    const info = String(button.querySelector(":scope > span")?.textContent || "");
+    const match = info.match(/#([^·\s]+)/);
+    const clubId = match ? match[1].trim() : "";
+    if (clubId) button.dataset.clubId = clubId;
+    return clubId;
   }
 
   function decorateClubSearchResults() {
     if (typeof playerSearchResults === "undefined" || !playerSearchResults) return;
     const divisions = divisionByClubId();
+    const clubButtons = Array.from(playerSearchResults.querySelectorAll(".clubSearchResult"));
 
-    playerSearchResults.querySelectorAll(".clubSearchResult").forEach((button) => {
+    clubButtons.forEach((button) => {
       const clubId = searchResultClubId(button);
       const division = divisions.get(clubId);
-      const info = button.querySelector("span");
-      if (!division || !info) return;
+      const info = button.querySelector(":scope > span");
+      if (!clubId || !info) return;
 
-      info.querySelector(".clubSearchDivision")?.remove();
-      info.append(document.createTextNode(" · "));
+      info.replaceChildren(
+        document.createTextNode(`Club · #${clubId}`),
+      );
 
-      const divisionLabel = document.createElement("span");
-      divisionLabel.className = "clubSearchDivision";
-      divisionLabel.textContent = division;
-      divisionLabel.style.color = divisionColors[division.toLowerCase()] || "inherit";
-      info.appendChild(divisionLabel);
+      if (division) {
+        info.append(document.createTextNode(" · "));
+        const divisionLabel = document.createElement("span");
+        divisionLabel.className = "clubSearchDivision";
+        divisionLabel.textContent = division;
+        divisionLabel.style.color = divisionColors[division.toLowerCase()] || "inherit";
+        info.appendChild(divisionLabel);
+      }
     });
+
+    if (clubButtons.length) {
+      playerSearchResults.querySelectorAll(".searchHint").forEach((hint) => {
+        if (/no players or agents found/i.test(hint.textContent || "")) hint.remove();
+      });
+      playerSearchResults.classList.add("filledSearchResults");
+    }
   }
 
   if (typeof renderSearchResultsNow === "function") {
@@ -74,14 +107,35 @@
     };
   }
 
-  const observer = new MutationObserver(() => requestAnimationFrame(decorateClubSearchResults));
+  let decorationQueued = false;
+  const observer = new MutationObserver(() => {
+    if (decorationQueued) return;
+    decorationQueued = true;
+    requestAnimationFrame(() => {
+      decorationQueued = false;
+      decorateClubSearchResults();
+    });
+  });
+
   if (typeof playerSearchResults !== "undefined" && playerSearchResults) {
     observer.observe(playerSearchResults, { childList: true, subtree: true });
   }
 
   const style = document.createElement("style");
   style.textContent = `
+    .clubSearchResult > span {
+      display: block !important;
+      width: auto !important;
+      border: 0 !important;
+      background: none !important;
+    }
+    .clubSearchResult > span::before,
+    .clubSearchResult > span::after {
+      content: none !important;
+      display: none !important;
+    }
     .clubSearchDivision {
+      display: inline !important;
       font-weight: 700;
     }
   `;
