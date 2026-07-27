@@ -12271,6 +12271,9 @@ startApp();
     "col-link": 3,
   };
 
+  const FILLER_CLASS = "col-exact-width-filler";
+  const EPSILON = 0.001;
+
   function restoreSingleTable() {
     document.querySelectorAll(".tableBodyScroller").forEach((bodyScroller) => {
       const bodyTable = bodyScroller.querySelector("table");
@@ -12291,33 +12294,72 @@ startApp();
     });
   }
 
+  function widthForColumn(column) {
+    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
+    return className ? WIDTHS[className] : null;
+  }
+
+  function removeFiller(table, colGroup) {
+    colGroup.querySelectorAll(`.${FILLER_CLASS}`).forEach((element) => element.remove());
+    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}`).forEach((element) => element.remove());
+  }
+
+  function appendFillerCells(table, fillerWidth) {
+    const width = `${fillerWidth}%`;
+    const fillerColumn = document.createElement("col");
+    fillerColumn.className = FILLER_CLASS;
+    fillerColumn.style.setProperty("width", width, "important");
+    fillerColumn.style.setProperty("min-width", width, "important");
+    fillerColumn.style.setProperty("max-width", width, "important");
+    table.querySelector("colgroup")?.appendChild(fillerColumn);
+
+    table.querySelectorAll("thead tr, tbody tr").forEach((row) => {
+      const cell = document.createElement(row.closest("thead") ? "th" : "td");
+      cell.className = FILLER_CLASS;
+      cell.setAttribute("aria-hidden", "true");
+      cell.style.setProperty("width", width, "important");
+      cell.style.setProperty("min-width", width, "important");
+      cell.style.setProperty("max-width", width, "important");
+      row.appendChild(cell);
+    });
+  }
+
   function applyExactTableWidths() {
     restoreSingleTable();
 
-    document.querySelectorAll(".tableScroller table").forEach((table) => {
+    document.querySelectorAll(".appShell .tableScroller table").forEach((table) => {
+      const colGroup = table.querySelector("colgroup");
+      if (!colGroup) return;
+
+      removeFiller(table, colGroup);
+      const columns = Array.from(colGroup.children);
+      const widths = columns.map(widthForColumn);
+      if (!widths.length || widths.some((width) => !Number.isFinite(width))) return;
+
+      const total = widths.reduce((sum, width) => sum + width, 0);
+      if (total > 100 + EPSILON) return;
+
       table.style.setProperty("table-layout", "fixed", "important");
       table.style.setProperty("width", "100%", "important");
       table.style.setProperty("min-width", "100%", "important");
       table.style.setProperty("max-width", "100%", "important");
 
-      const colGroup = table.querySelector("colgroup");
-      if (!colGroup) return;
-
-      Array.from(colGroup.children).forEach((column) => {
-        const widthClass = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
-        if (!widthClass) return;
-        const width = `${WIDTHS[widthClass]}%`;
+      columns.forEach((column, index) => {
+        const width = `${widths[index]}%`;
         column.style.setProperty("width", width, "important");
         column.style.setProperty("min-width", width, "important");
         column.style.setProperty("max-width", width, "important");
         column.style.setProperty("transition", "none", "important");
       });
+
+      const remainder = 100 - total;
+      if (remainder > EPSILON) appendFillerCells(table, remainder);
     });
   }
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithExactWidths() {
+    buildTableColGroup = function buildTableColGroupWithExactGrid() {
       const result = originalBuildTableColGroup.apply(this, arguments);
       applyExactTableWidths();
       return result;
@@ -12326,7 +12368,7 @@ startApp();
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithExactWidths() {
+    buildHeader = function buildHeaderWithExactGrid() {
       const result = originalBuildHeader.apply(this, arguments);
       applyExactTableWidths();
       return result;
@@ -12335,7 +12377,7 @@ startApp();
 
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
-    renderTable = function renderTableWithExactWidths() {
+    renderTable = function renderTableWithExactGrid() {
       const result = originalRenderTable.apply(this, arguments);
       applyExactTableWidths();
       return result;
@@ -12344,39 +12386,30 @@ startApp();
 
   const style = document.createElement("style");
   style.textContent = `
-    .appShell .tableScroller {
+    .appShell .tableScroller,
+    .appShell .tableScroller table {
       width: 100% !important;
+      min-width: 100% !important;
       max-width: 100% !important;
+    }
+
+    .appShell .tableScroller {
       overflow: visible !important;
-      overflow-x: visible !important;
-      overflow-y: visible !important;
       max-height: none !important;
       scrollbar-gutter: auto !important;
     }
 
     .appShell .tableScroller table {
-      width: 100% !important;
-      min-width: 100% !important;
-      max-width: 100% !important;
       table-layout: fixed !important;
     }
 
-    .appShell .tableScroller col.col-select { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
-    .appShell .tableScroller col.col-id { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
-    .appShell .tableScroller col.col-flag { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
-    .appShell .tableScroller col.col-name { width: 13% !important; min-width: 13% !important; max-width: 13% !important; }
-    .appShell .tableScroller col.col-nationality { width: 7% !important; min-width: 7% !important; max-width: 7% !important; }
-    .appShell .tableScroller col.col-age { width: 4% !important; min-width: 4% !important; max-width: 4% !important; }
-    .appShell .tableScroller col.col-positions { width: 8% !important; min-width: 8% !important; max-width: 8% !important; }
-    .appShell .tableScroller col.col-seasons { width: 5% !important; min-width: 5% !important; max-width: 5% !important; }
-    .appShell .tableScroller col.col-stat { width: 6% !important; min-width: 6% !important; max-width: 6% !important; }
-    .appShell .tableScroller col.col-contract-revenue { width: 8% !important; min-width: 8% !important; max-width: 8% !important; }
-    .appShell .tableScroller col.col-contract-club { width: 19% !important; min-width: 19% !important; max-width: 19% !important; }
-    .appShell .tableScroller col.col-contract-division { width: 9% !important; min-width: 9% !important; max-width: 9% !important; }
-    .appShell .tableScroller col.col-agent,
-    .appShell .tableScroller col.col-joined-agency,
-    .appShell .tableScroller col.col-owned-since { width: 9% !important; min-width: 9% !important; max-width: 9% !important; }
-    .appShell .tableScroller col.col-link { width: 3% !important; min-width: 3% !important; max-width: 3% !important; }
+    .appShell .tableScroller .${FILLER_CLASS} {
+      padding: 0 !important;
+      border-left: 0 !important;
+      border-right: 0 !important;
+      background: inherit !important;
+      pointer-events: none !important;
+    }
 
     .appShell .tableScroller table,
     .appShell .tableScroller col,
