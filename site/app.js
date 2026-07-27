@@ -12611,9 +12611,22 @@ startApp();
       display: none !important;
     }
 
+    .tableScroller,
     .tableBodyScroller {
-      overflow-y: scroll !important;
+      overflow: visible !important;
+      overflow-x: visible !important;
+      overflow-y: visible !important;
+      max-height: none !important;
       scrollbar-gutter: auto !important;
+    }
+
+    .tableHeaderScroller,
+    .tableHeaderTable,
+    .tableBodyScroller,
+    .tableBodyScroller table {
+      width: 100% !important;
+      min-width: 100% !important;
+      max-width: 100% !important;
     }
 
     .tableHeaderTable {
