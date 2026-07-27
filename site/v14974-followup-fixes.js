@@ -76,9 +76,19 @@
     const columnNames = ["selection", ...currentViewColumns()];
     if (!table || columns.length !== columnNames.length) return;
 
+    const weights = columnNames.map((columnName) => Number(tableColumnPercentages[columnName]));
+    if (weights.some((weight) => !Number.isFinite(weight) || weight <= 0)) return;
+
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) return;
+
+    let assignedPercentage = 0;
     columns.forEach((column, index) => {
-      const percentage = Number(tableColumnPercentages[columnNames[index]]);
-      if (!Number.isFinite(percentage) || percentage <= 0) return;
+      const percentage = index === columns.length - 1
+        ? 100 - assignedPercentage
+        : (weights[index] / totalWeight) * 100;
+
+      if (index !== columns.length - 1) assignedPercentage += percentage;
       clearLegacyPixelWidths(column);
       column.style.setProperty("width", `${percentage}%`, "important");
     });
