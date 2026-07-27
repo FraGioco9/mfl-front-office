@@ -67,8 +67,9 @@
 
   function decorateClubSearchResults() {
     if (typeof playerSearchResults === "undefined" || !playerSearchResults) return;
+
     const divisions = divisionByClubId();
-    const clubButtons = Array.from(playerSearchResults.querySelectorAll(".clubSearchResult"));
+    const clubButtons = Array.from(playerSearchResults.querySelectorAll(":scope > .clubSearchResult"));
 
     clubButtons.forEach((button) => {
       const clubId = searchResultClubId(button);
@@ -76,22 +77,23 @@
       const info = button.querySelector(":scope > span");
       if (!clubId || !info) return;
 
-      info.replaceChildren(
-        document.createTextNode(`Club · #${clubId}`),
-      );
+      const fragment = document.createDocumentFragment();
+      fragment.append(document.createTextNode(`Club · #${clubId}`));
 
       if (division) {
-        info.append(document.createTextNode(" · "));
+        fragment.append(document.createTextNode(" · "));
         const divisionLabel = document.createElement("span");
         divisionLabel.className = "clubSearchDivision";
         divisionLabel.textContent = division;
         divisionLabel.style.color = divisionColors[division.toLowerCase()] || "inherit";
-        info.appendChild(divisionLabel);
+        fragment.appendChild(divisionLabel);
       }
+
+      info.replaceChildren(fragment);
     });
 
     if (clubButtons.length) {
-      playerSearchResults.querySelectorAll(".searchHint").forEach((hint) => {
+      playerSearchResults.querySelectorAll(":scope > .searchHint").forEach((hint) => {
         if (/no players or agents found/i.test(hint.textContent || "")) hint.remove();
       });
       playerSearchResults.classList.add("filledSearchResults");
@@ -102,23 +104,9 @@
     const originalRenderSearchResultsNow = renderSearchResultsNow;
     renderSearchResultsNow = function renderSearchResultsNowWithClubDivisions() {
       const result = originalRenderSearchResultsNow.apply(this, arguments);
-      requestAnimationFrame(decorateClubSearchResults);
+      decorateClubSearchResults();
       return result;
     };
-  }
-
-  let decorationQueued = false;
-  const observer = new MutationObserver(() => {
-    if (decorationQueued) return;
-    decorationQueued = true;
-    requestAnimationFrame(() => {
-      decorationQueued = false;
-      decorateClubSearchResults();
-    });
-  });
-
-  if (typeof playerSearchResults !== "undefined" && playerSearchResults) {
-    observer.observe(playerSearchResults, { childList: true, subtree: true });
   }
 
   const style = document.createElement("style");
