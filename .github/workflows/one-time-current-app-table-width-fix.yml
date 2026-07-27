@@ -2,18 +2,16 @@ name: One-time current app table width fix
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - .github/table-width-trigger
-  issues:
-    types: [opened]
+      - .github/workflows/one-time-current-app-table-width-fix.yml
 
 permissions:
   contents: write
 
 jobs:
   fix:
-    if: github.event_name == 'push' || github.event.issue.title == '[table-width-fix] Apply shared table width'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
