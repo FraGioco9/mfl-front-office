@@ -40,13 +40,17 @@
   if (typeof restoreSavedTableState === "function") {
     const originalRestoreSavedTableState = restoreSavedTableState;
     restoreSavedTableState = function restoreSavedTableStateWithRoute(pageName, options = {}) {
-      const routeView = pageName === "watchlist" ? routeViewFromPath() : "";
+      const routeView = routeViewFromPath();
       const result = originalRestoreSavedTableState.call(
         this,
         pageName,
         routeView ? { ...options, view: routeView } : options,
       );
-      if (routeView) enforceWatchlistRouteView(false);
+      if (routeView) {
+        state.view = typeof normalizeViewForPage === "function"
+          ? normalizeViewForPage(routeView, "watchlist")
+          : routeView;
+      }
       return result;
     };
   }
@@ -54,26 +58,10 @@
   if (typeof setPage === "function") {
     const originalSetPage = setPage;
     setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {
-      const result = await originalSetPage.call(this, pageName, updateHash, options);
-      if (pageName === "watchlist") enforceWatchlistRouteView(true);
-      return result;
-    };
-  }
-
-  if (typeof applyWalletTableState === "function") {
-    const originalApplyWalletTableState = applyWalletTableState;
-    applyWalletTableState = function applyWalletTableStateWithRoute(tableState) {
-      const result = originalApplyWalletTableState.call(this, tableState);
-      enforceWatchlistRouteView(true);
-      return result;
-    };
-  }
-
-  if (typeof switchWatchlist === "function") {
-    const originalSwitchWatchlist = switchWatchlist;
-    switchWatchlist = function switchWatchlistWithRoute(watchlistId) {
-      const result = originalSwitchWatchlist.apply(this, arguments);
-      enforceWatchlistRouteView(true);
+      const routeView = pageName === "watchlist" ? routeViewFromPath() : "";
+      const nextOptions = routeView ? { ...options, view: routeView } : options;
+      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+      if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
       return result;
     };
   }
