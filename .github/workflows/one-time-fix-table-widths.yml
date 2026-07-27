@@ -1,0 +1,138 @@
+name: One-time table width cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-fix-table-widths.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove delayed width engines and install synchronous widths
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path("site/app.js")
+          source = path.read_text(encoding="utf-8")
+
+          source, first_count = re.subn(
+              r"  function clearLegacyPixelWidths\(element\) \{[\s\S]*?(?=  function routeViewFromPath\(\))",
+              "  function applyPercentageTableColumnWidths() {}\n\n",
+              source,
+              count=1,
+          )
+
+          source, second_count = re.subn(
+              r"/\* Consolidated from v14974-column-width-fix\.js \*/[\s\S]*?(?=/\* Consolidated from )",
+              "",
+              source,
+              count=1,
+          )
+
+          if first_count != 1 or second_count != 1:
+              raise SystemExit(f"Expected both legacy width blocks once; found {first_count=} {second_count=}")
+
+          marker = "/* Single synchronous player-table width engine */"
+          if marker not in source:
+              source += r'''
+
+/* Single synchronous player-table width engine */
+(() => {
+  const WIDTHS = {
+    "col-select": 3,
+    "col-id": 3,
+    "col-flag": 3,
+    "col-name": 13,
+    "col-nationality": 7,
+    "col-age": 4,
+    "col-positions": 8,
+    "col-seasons": 5,
+    "col-stat": 6,
+    "col-contract-revenue": 8,
+    "col-contract-club": 19,
+    "col-contract-division": 9,
+    "col-agent": 9,
+    "col-joined-agency": 9,
+    "col-owned-since": 9,
+    "col-link": 3,
+  };
+
+  function widthForColumn(column) {
+    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
+    return className ? WIDTHS[className] : null;
+  }
+
+  function applySynchronousTableWidths() {
+    const colGroup = document.querySelector("#tableColGroup");
+    const table = colGroup?.closest("table");
+    const columns = colGroup ? Array.from(colGroup.children) : [];
+    if (!table || !columns.length) return false;
+
+    const widths = columns.map(widthForColumn);
+    if (widths.some((width) => !Number.isFinite(width) || width <= 0)) return false;
+
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", "100%", "important");
+    table.style.setProperty("min-width", "100%", "important");
+    table.style.setProperty("max-width", "100%", "important");
+    table.style.setProperty("transition", "none", "important");
+
+    columns.forEach((column, index) => {
+      const width = `${widths[index]}%`;
+      column.style.setProperty("width", width, "important");
+      column.style.setProperty("min-width", width, "important");
+      column.style.setProperty("max-width", width, "important");
+      column.style.setProperty("transition", "none", "important");
+    });
+
+    return true;
+  }
+
+  if (typeof buildTableColGroup === "function") {
+    const originalBuildTableColGroup = buildTableColGroup;
+    buildTableColGroup = function buildTableColGroupWithSynchronousWidths() {
+      const result = originalBuildTableColGroup.apply(this, arguments);
+      applySynchronousTableWidths();
+      return result;
+    };
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .tableScroller table,
+    .tableScroller col,
+    .tableScroller th,
+    .tableScroller td,
+    .tableScroller tr:hover,
+    .tableScroller tr:hover > th,
+    .tableScroller tr:hover > td {
+      transition: none !important;
+      animation: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  applySynchronousTableWidths();
+})();
+'''
+
+          path.write_text(source, encoding="utf-8")
+
+          workflow = Path(".github/workflows/one-time-fix-table-widths.yml")
+          workflow.unlink()
+
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/app.js .github/workflows/one-time-fix-table-widths.yml
+          git commit -m "Load player tables with stable fixed widths"
+          git push
