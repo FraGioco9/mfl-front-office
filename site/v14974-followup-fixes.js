@@ -3,12 +3,12 @@
   const mflWalletAddress = "0xff8d2bbed8164db0";
   const tableColumnPercentages = {
     selection: 3,
-    player_id: 4,
+    player_id: 3,
     nationality_flag: 3,
-    name: 14,
-    nationality: 8,
+    name: 13,
+    nationality: 7,
     age: 6,
-    positions: 7,
+    positions: 6,
     player_seasons: 5,
     overall: 6,
     pace: 6,
@@ -18,12 +18,12 @@
     defense: 6,
     physical: 6,
     goalkeeping: 6,
-    wallet_name: 11,
-    owned_since: 11,
+    wallet_name: 10,
+    owned_since: 10,
     active_contract_revenue_share: 8,
     active_contract_club_name: 19,
     active_contract_club_division: 9,
-    player_link: 3,
+    player_link: 2,
   };
 
   function keepSidebarExpanded() {
