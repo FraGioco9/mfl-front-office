@@ -42,15 +42,25 @@
     }
   }
 
-  const sidebarStyle = document.createElement("style");
-  sidebarStyle.textContent = [
+  const fixedWidthStyle = document.createElement("style");
+  fixedWidthStyle.textContent = [
     "#menuButton,.menuButton,[data-action='toggle-menu']{pointer-events:none!important;cursor:default!important;color:#fff!important;opacity:1!important}",
     "#menuButton *,.menuButton * ,[data-action='toggle-menu'] *{color:#fff!important;opacity:1!important}",
     "#menuButton svg,.menuButton svg,[data-action='toggle-menu'] svg{stroke:#fff!important;fill:none!important}",
     "#menuButton svg [fill]:not([fill='none']),.menuButton svg [fill]:not([fill='none']),[data-action='toggle-menu'] svg [fill]:not([fill='none']){fill:#fff!important}",
     ".appShell.menuClosed,.appShell.sidebarClosed,.appShell.sidebarCollapsed,.appShell.collapsed{grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr)!important}",
+    "table col.col-select,table th.selectionCell,table td.selectionCell{width:50px!important;min-width:50px!important;max-width:50px!important}",
+    "table col.col-id,table th.col-id,table td.col-id{width:70px!important;min-width:70px!important;max-width:70px!important}",
+    "table col.col-flag,table th.col-flag,table td.col-flag{width:40px!important;min-width:40px!important;max-width:40px!important}",
+    "table col.col-name,table th.col-name,table td.col-name{width:200px!important;min-width:200px!important;max-width:200px!important}",
+    "table col.col-nationality,table th.col-nationality,table td.col-nationality{width:140px!important;min-width:140px!important;max-width:140px!important}",
+    "table col.col-positions,table th.col-positions,table td.col-positions{width:120px!important;min-width:120px!important;max-width:120px!important}",
+    "table col.col-seasons,table th.col-seasons,table td.col-seasons{width:85px!important;min-width:85px!important;max-width:85px!important}",
+    "table col.col-stat,table th.col-stat,table td.col-stat{width:102px!important;min-width:102px!important;max-width:102px!important}",
+    "table col.col-agent,table th.col-agent,table td.col-agent{width:185px!important;min-width:185px!important;max-width:185px!important}",
+    "table col.col-link,table th.col-link,table td.col-link{width:55px!important;min-width:55px!important;max-width:55px!important}",
   ].join("");
-  document.head.appendChild(sidebarStyle);
+  document.head.appendChild(fixedWidthStyle);
 
   if (typeof toggleMenu === "function") {
     toggleMenu = function permanentlyExpandedMenu() {
@@ -60,9 +70,12 @@
 
   function installFixedTableColumnWidths() {
     if (typeof tableColumnWidths !== "object" || !tableColumnWidths) return;
-    Object.entries(fixedTableColumnWidths).forEach(([column, width]) => {
-      tableColumnWidths[column] = width;
-    });
+    Object.assign(tableColumnWidths, fixedTableColumnWidths);
+  }
+
+  function rebuildCurrentTableWidths() {
+    installFixedTableColumnWidths();
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
   }
 
   installFixedTableColumnWidths();
@@ -145,6 +158,7 @@
       keepSidebarExpanded();
       installFixedTableColumnWidths();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
+      rebuildCurrentTableWidths();
       return result;
     };
   }
@@ -189,10 +203,13 @@
   }, true);
 
   keepSidebarExpanded();
+  installFixedTableColumnWidths();
   renamePatch();
+  requestAnimationFrame(rebuildCurrentTableWidths);
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
     installFixedTableColumnWidths();
     renamePatch();
+    requestAnimationFrame(rebuildCurrentTableWidths);
   }, { once: true });
 })();
