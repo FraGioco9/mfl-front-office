@@ -68,6 +68,14 @@
     element.style.removeProperty("max-width");
   }
 
+  function remainderColumnName(columnNames) {
+    if (columnNames.includes("active_contract_club_name")) return "active_contract_club_name";
+    if (columnNames.includes("wallet_name")) return "wallet_name";
+    if (columnNames.includes("owned_since")) return "owned_since";
+    if (columnNames.includes("name")) return "name";
+    return columnNames[columnNames.length - 1];
+  }
+
   function applyPercentageTableColumnWidths() {
     if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return;
 
@@ -76,21 +84,19 @@
     const columnNames = ["selection", ...currentViewColumns()];
     if (!table || columns.length !== columnNames.length) return;
 
-    const weights = columnNames.map((columnName) => Number(tableColumnPercentages[columnName]));
-    if (weights.some((weight) => !Number.isFinite(weight) || weight <= 0)) return;
+    const percentages = columnNames.map((columnName) => Number(tableColumnPercentages[columnName]));
+    if (percentages.some((percentage) => !Number.isFinite(percentage) || percentage <= 0)) return;
 
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    if (!Number.isFinite(totalWeight) || totalWeight <= 0) return;
+    const totalPercentage = percentages.reduce((sum, percentage) => sum + percentage, 0);
+    const remainderIndex = columnNames.indexOf(remainderColumnName(columnNames));
+    if (remainderIndex < 0) return;
 
-    let assignedPercentage = 0;
+    percentages[remainderIndex] += 100 - totalPercentage;
+    if (percentages[remainderIndex] <= 0) return;
+
     columns.forEach((column, index) => {
-      const percentage = index === columns.length - 1
-        ? 100 - assignedPercentage
-        : (weights[index] / totalWeight) * 100;
-
-      if (index !== columns.length - 1) assignedPercentage += percentage;
       clearLegacyPixelWidths(column);
-      column.style.setProperty("width", `${percentage}%`, "important");
+      column.style.setProperty("width", `${percentages[index]}%`, "important");
     });
 
     clearLegacyPixelWidths(table);
