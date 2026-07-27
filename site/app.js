@@ -11841,12 +11841,12 @@ startApp();
       clubId: decodeURIComponent(match[1]),
       view: CLUB_VIEWS.has(String(match[2] || "").toLowerCase())
         ? String(match[2]).toLowerCase()
-        : "contracts",
+        : "attributes",
     };
   }
 
   function canonicalClubRoute(clubId = activeClubId, view = state.view) {
-    const safeView = view === "attributes" ? "attributes" : "contracts";
+    const safeView = view === "contracts" ? "contracts" : "attributes";
     return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;
   }
 
@@ -11904,7 +11904,12 @@ startApp();
       views.querySelectorAll(".viewButton").forEach((button) => {
         button.hidden = button !== attributes && button !== contracts;
       });
-      if (contracts) views.insertBefore(contracts, attributes || views.firstChild);
+      const nextOverall = views.querySelector('[data-view="next"]');
+    if (attributes) views.prepend(attributes);
+    if (contracts) {
+      if (nextOverall && !nextOverall.hidden) nextOverall.after(contracts);
+      else if (attributes) attributes.after(contracts);
+    }
     }
 
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
@@ -11929,7 +11934,7 @@ startApp();
     updateClubLinks();
   }
 
-  function openClubImmediately(clubId, view = "contracts") {
+  function openClubImmediately(clubId, view = "attributes") {
     const route = canonicalClubRoute(clubId, view);
     if (`${window.location.pathname}${window.location.search}` !== route) {
       window.history.pushState({}, "", route);
@@ -11955,12 +11960,12 @@ startApp();
       if (!clubId || !name) return;
 
       const link = document.createElement("a");
-      link.href = canonicalClubRoute(clubId, "contracts");
+      link.href = canonicalClubRoute(clubId, "attributes");
       link.className = "clubPageLink";
       link.textContent = name;
       link.addEventListener("click", (event) => {
         event.preventDefault();
-        openClubImmediately(clubId, "contracts");
+        openClubImmediately(clubId, "attributes");
       });
       cell.replaceChildren(link);
     });
@@ -12003,7 +12008,7 @@ startApp();
       button.innerHTML = `<strong>${safeName}</strong><span>Club &middot; #${safeId}</span>`;
       button.addEventListener("click", () => {
         if (typeof closeSearch === "function") closeSearch();
-        openClubImmediately(clubId, "contracts");
+        openClubImmediately(clubId, "attributes");
       });
       fragment.appendChild(button);
     });
@@ -12011,13 +12016,13 @@ startApp();
     playerSearchResults.classList.add("filledSearchResults");
   }
 
-  async function openClubPage(clubId, view = "contracts", updateHistory = true) {
+  async function openClubPage(clubId, view = "attributes", updateHistory = true) {
     if (!clubId || openingClub) return;
     openingClub = true;
     setClubSwitching(true);
     try {
       activeClubId = String(clubId);
-      const nextView = view === "attributes" ? "attributes" : "contracts";
+      const nextView = view === "contracts" ? "contracts" : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
       if (updateHistory && `${window.location.pathname}${window.location.search}` !== route) {
         window.history.pushState({}, "", route);
