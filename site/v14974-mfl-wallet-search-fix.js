@@ -1,46 +1,59 @@
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
-  function clickedMflWallet(event) {
-    const target = event?.target;
-    if (!target) return false;
+  function elementContext(element) {
+    if (!element) return "";
 
-    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    const candidates = [
-      target.closest?.("a,button,[role='button'],li,div"),
-      ...path,
-    ].filter((element, index, elements) => element && element.nodeType === 1 && elements.indexOf(element) === index);
+    const text = String(element.textContent || "").trim().toLowerCase();
+    const attributes = Array.from(element.attributes || [])
+      .map((attribute) => `${attribute.name}=${attribute.value}`)
+      .join(" ")
+      .toLowerCase();
 
-    return candidates.some((element) => {
-      const text = String(element.textContent || "").trim().toLowerCase();
-      const attributes = Array.from(element.attributes || [])
-        .map((attribute) => `${attribute.name}=${attribute.value}`)
-        .join(" ")
-        .toLowerCase();
-      const context = `${text} ${attributes}`;
-      return context.includes("mfl wallet") || context.includes(mflWalletAddress);
-    });
+    return `${text} ${attributes}`;
   }
 
-  function onMflStatsView() {
-    const pathname = window.location.pathname.toLowerCase().replace(/\/$/, "");
-    return pathname === "/mfl/stats"
-      || (typeof state === "object" && state && (
-        state.currentPage === "mflstats"
-        || (state.currentPage === "mfl" && state.view === "stats")
-      ));
+  function clickedMflWallet(event) {
+    const target = event?.target;
+    if (!target?.closest) return false;
+
+    // Inspect only the element that performs the navigation. Do not inspect the
+    // whole composed path, because a page ancestor may contain "MFL Wallet"
+    // even when an unrelated navigation control was clicked.
+    const interactiveElement = target.closest(
+      "a,button,[role='button'],[data-wallet-address],[data-agent-wallet],[data-wallet]",
+    );
+
+    if (interactiveElement) {
+      const context = elementContext(interactiveElement);
+      if (context.includes("mfl wallet") || context.includes(mflWalletAddress)) return true;
+    }
+
+    // Search results may use a non-interactive row as their click target.
+    const searchContainer = target.closest(
+      "#searchModal,.searchResults,#playerSearchResults,[class*='searchResult']",
+    );
+    if (!searchContainer) return false;
+
+    const searchResult = target.closest(
+      "li,[role='option'],[data-wallet-address],[data-agent-wallet],[data-wallet],.searchResult,[class*='searchResultItem']",
+    );
+    if (!searchResult || !searchContainer.contains(searchResult)) return false;
+
+    const context = elementContext(searchResult);
+    return context.includes("mfl wallet") || context.includes(mflWalletAddress);
   }
 
   document.addEventListener("click", (event) => {
-    if (!onMflStatsView() || !clickedMflWallet(event)) return;
+    if (!clickedMflWallet(event)) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
 
     if (typeof closeSearch === "function") closeSearch();
 
-    // A full route navigation lets the app initialise the Attributes view and
-    // load its table through the same path used on a direct page visit.
+    // Always open the MFL Wallet profile on Attributes. This intentionally
+    // ignores the last saved MFL view, which may have been Stats.
     window.location.assign("/mfl/attributes");
   }, true);
 })();
