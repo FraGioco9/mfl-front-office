@@ -12498,6 +12498,10 @@ startApp();
 
   const style = document.createElement("style");
   style.textContent = `
+    .tableScroller {
+      scrollbar-gutter: stable;
+    }
+
     .tableScroller table,
     .tableScroller col,
     .tableScroller th,
