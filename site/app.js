@@ -12229,10 +12229,6 @@ startApp();
     .clubSearchResult > span { display: block !important; }
     .clubSearchDivision { display: inline !important; font-weight: 400 !important; }
     .clubPageLink, .contractDivisionLabel { font-weight: 400 !important; }
-    .appShell:not(.menuClosed) .tableScroller .col-age { width: 2.5% !important; }
-    .appShell:not(.menuClosed) .tableScroller .col-positions { width: 10% !important; }
-    .appShell.menuClosed .tableScroller .col-age { width: 36.9px !important; }
-    .appShell.menuClosed .tableScroller .col-positions { width: 147.6px !important; }
     body.clubWidthHardLock #progressionPage .tableShell,
     body.clubWidthHardLock #progressionPage .pager { visibility: hidden !important; opacity: 0 !important; }
     body.clubWidthHardLock #progressionPage .tableScroller table,
@@ -12252,6 +12248,9 @@ startApp();
 
 /* Single exact player-table width engine */
 (() => {
+  document.documentElement.style.setProperty("overflow-y", "scroll", "important");
+  document.documentElement.style.setProperty("scrollbar-gutter", "stable", "important");
+
   const WIDTHS = {
     "col-select": 3,
     "col-id": 3,
