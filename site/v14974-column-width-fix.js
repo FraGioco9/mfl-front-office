@@ -16,12 +16,12 @@
     defense: 6,
     physical: 6,
     goalkeeping: 6,
-    wallet_name: 10,
-    owned_since: 10,
+    wallet_name: 9,
+    owned_since: 9,
     active_contract_revenue_share: 8,
     active_contract_club_name: 19,
     active_contract_club_division: 9,
-    player_link: 2,
+    player_link: 3,
   };
 
   function flexibleColumnIndex(columnNames) {
