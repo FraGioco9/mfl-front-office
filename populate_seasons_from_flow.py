@@ -18,7 +18,7 @@ MFL_WALLET_ADDRESS = _impl.MFL_WALLET_ADDRESS
 MFL_TRADE_WALLET_ADDRESS = _impl.MFL_TRADE_WALLET_ADDRESS
 FLOW_RETRY_DELAY_SECONDS = _impl.FLOW_RETRY_DELAY_SECONDS
 FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
-MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
+MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 1000
 MIN_FLOW_SPLIT_BATCH_SIZE = _impl.MIN_FLOW_SPLIT_BATCH_SIZE
 FLOW_WORKERS = 25
 
@@ -137,11 +137,20 @@ def _wallet_player_ids(
     ]
 
 
-def _id_batches(player_ids: list[int]) -> list[list[int]]:
+def _id_batches(player_ids: list[int], batch_size: int = FLOW_STATIC_PLAYER_BATCH_SIZE) -> list[list[int]]:
     return [
-        player_ids[index:index + FLOW_STATIC_PLAYER_BATCH_SIZE]
-        for index in range(0, len(player_ids), FLOW_STATIC_PLAYER_BATCH_SIZE)
+        player_ids[index:index + batch_size]
+        for index in range(0, len(player_ids), batch_size)
     ]
+
+
+def _wallet_batch_size(wallet_address: str) -> int:
+    if wallet_address.lower() in {
+        MFL_WALLET_ADDRESS.lower(),
+        MFL_TRADE_WALLET_ADDRESS.lower(),
+    }:
+        return MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
+    return FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
 def _fetch_flow_static_players_by_ids(
@@ -205,12 +214,18 @@ def populate_flow_static_fields(
     total_updated = 0
     completed = 0
     total_jobs = sum(
-        len(_id_batches(_wallet_player_ids(connection, wallet, force)))
+        len(_id_batches(
+            _wallet_player_ids(connection, wallet, force),
+            _wallet_batch_size(wallet),
+        ))
         for wallet in wallets
     )
 
     for wallet in first_wallets:
-        batches = _id_batches(_wallet_player_ids(connection, wallet, force))
+        batches = _id_batches(
+            _wallet_player_ids(connection, wallet, force),
+            MFL_FLOW_STATIC_PLAYER_BATCH_SIZE,
+        )
         wallet_updated = 0
         wallet_label = (
             "MFL wallet"
@@ -236,7 +251,10 @@ def populate_flow_static_fields(
 
     jobs: list[tuple[str, list[int], int, int]] = []
     for wallet in regular_wallets:
-        batches = _id_batches(_wallet_player_ids(connection, wallet, force))
+        batches = _id_batches(
+            _wallet_player_ids(connection, wallet, force),
+            FLOW_STATIC_PLAYER_BATCH_SIZE,
+        )
         for batch_number, batch in enumerate(batches, start=1):
             jobs.append((wallet, batch, batch_number, len(batches)))
 
