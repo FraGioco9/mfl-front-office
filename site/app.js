@@ -11567,6 +11567,49 @@ startApp();
 })();
 
 
+/* v1.150.1 public progression table views */
+(() => {
+  const PUBLIC_PROGRESSION_VIEWS = ["current", "all"];
+  const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);
+
+  tablePages.add("club");
+  pageViewOptions.watchlist = Array.from(new Set([
+    ...(pageViewOptions.watchlist || []),
+    ...PUBLIC_PROGRESSION_VIEWS,
+  ]));
+  pageViewOptions.club = ["attributes", "contracts", ...PUBLIC_PROGRESSION_VIEWS];
+  defaultPageViews.club = "attributes";
+
+  if (typeof allowedViewsForPage === "function") {
+    const originalAllowedViewsForPage = allowedViewsForPage;
+    allowedViewsForPage = function allowedViewsForPublicTables(pageName = state.currentPage) {
+      const allowed = originalAllowedViewsForPage.apply(this, arguments) || [];
+      if (!PUBLIC_TABLE_PAGES.has(pageName)) return allowed;
+      return Array.from(new Set([...allowed, ...PUBLIC_PROGRESSION_VIEWS]));
+    };
+  }
+
+  if (typeof normalizeViewForPage === "function") {
+    const originalNormalizeViewForPage = normalizeViewForPage;
+    normalizeViewForPage = function normalizePublicProgressionView(viewName, pageName = state.currentPage) {
+      if (PUBLIC_TABLE_PAGES.has(pageName) && PUBLIC_PROGRESSION_VIEWS.includes(String(viewName || ""))) {
+        return String(viewName);
+      }
+      return originalNormalizeViewForPage.apply(this, arguments);
+    };
+  }
+
+  if (typeof currentDataAccess === "function") {
+    const originalCurrentDataAccess = currentDataAccess;
+    currentDataAccess = function currentPublicProgressionDataAccess(pageName = state.currentPage) {
+      if (PUBLIC_TABLE_PAGES.has(pageName) && PUBLIC_PROGRESSION_VIEWS.includes(state.view)) {
+        return originalCurrentDataAccess.call(this, "progression");
+      }
+      return originalCurrentDataAccess.apply(this, arguments);
+    };
+  }
+})();
+
 /* Consolidated from v1500-club-pages.js */
 (() => {
   const CLUB_PAGE = "club";
@@ -11576,7 +11619,7 @@ startApp();
     "current_club_id",
     "active_club_id",
   ];
-  const CLUB_VIEWS = new Set(["contracts", "attributes"]);
+  const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const POSITION_ORDER = [
     "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
   ];
@@ -11585,24 +11628,35 @@ startApp();
   let activeClubId = "";
   let openingClub = false;
   const initialClubRoute = clubRoute();
+  if (initialClubRoute) setClubSwitching(true);
 
   function normalizedPath() {
     return window.location.pathname.replace(/\/+$/, "") || "/";
   }
 
   function clubRoute(pathname = normalizedPath()) {
-    const match = pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(contracts|attributes))?$/i);
+    const match = pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(contracts|attributes|current-season|all-time))?$/i);
     if (!match) return null;
+    const routeView = String(match[2] || "").toLowerCase();
+    const view = routeView === "current-season"
+      ? "current"
+      : routeView === "all-time"
+        ? "all"
+        : routeView;
     return {
       clubId: decodeURIComponent(match[1]),
-      view: CLUB_VIEWS.has(String(match[2] || "").toLowerCase())
-        ? String(match[2]).toLowerCase()
-        : "attributes",
+      view: CLUB_VIEWS.has(view) ? view : "attributes",
     };
   }
 
   function canonicalClubRoute(clubId = activeClubId, view = state.view) {
-    const safeView = view === "contracts" ? "contracts" : "attributes";
+    const safeView = view === "current"
+      ? "current-season"
+      : view === "all"
+        ? "all-time"
+        : view === "contracts"
+          ? "contracts"
+          : "attributes";
     return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;
   }
 
@@ -11643,58 +11697,75 @@ startApp();
 
   function setClubSwitching(active) {
     document.body.classList.toggle("clubViewSwitching", active);
+    if (active) {
+      document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+    }
   }
 
   function finishClubSwitch() {
-  let attempts = 0;
-  let stableFrames = 0;
-  let previousSignature = "";
+    return new Promise((resolve) => {
+      let attempts = 0;
+      let stableFrames = 0;
+      let previousSignature = "";
 
-  const checkStableColumns = () => {
-    attempts += 1;
-    if (typeof buildTableColGroup === "function") buildTableColGroup();
-    if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
+      const checkStableClubPage = () => {
+        attempts += 1;
+        if (typeof buildTableColGroup === "function") buildTableColGroup();
+        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+        applyClubPresentation();
 
-    const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
-    const signature = columns
-      .map((column) => `${column.className}:${column.style.width}:${column.getAttribute("style") || ""}`)
-      .join("|");
+        const page = document.querySelector("#progressionPage");
+        const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
+        const visibleViews = Array.from(document.querySelectorAll("#progressionPage .viewButton:not([hidden])"))
+          .map((button) => `${button.dataset.view}:${button.classList.contains("active")}`)
+          .join("|");
+        const signature = [
+          page && !page.hidden ? "visible" : "hidden",
+          tablePageTitle?.textContent || "",
+          visibleViews,
+          tableBody?.childElementCount || 0,
+          columns.map((column) => `${column.className}:${column.style.width}`).join("|"),
+        ].join("::");
 
-    if (columns.length && signature && signature === previousSignature) stableFrames += 1;
-    else stableFrames = 0;
-    previousSignature = signature;
+        if (columns.length && signature === previousSignature) stableFrames += 1;
+        else stableFrames = 0;
+        previousSignature = signature;
 
-    if (stableFrames >= 2 || attempts >= 60) {
-      requestAnimationFrame(() => setClubSwitching(false));
-      return;
-    }
+        if (stableFrames >= 2 || attempts >= 120) {
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            applyClubPresentation();
+            setClubSwitching(false);
+            resolve();
+          }));
+          return;
+        }
 
-    requestAnimationFrame(checkStableColumns);
-  };
+        requestAnimationFrame(checkStableClubPage);
+      };
 
-  requestAnimationFrame(checkStableColumns);
-}
+      requestAnimationFrame(checkStableClubPage);
+    });
+  }
+
 
   function hideClubPageControls() {
     const views = document.querySelector("#progressionPage .views");
     if (views) {
-      const attributes = views.querySelector('[data-view="attributes"]');
-      const contracts = views.querySelector('[data-view="contracts"]');
-      views.querySelectorAll(".viewButton").forEach((button) => {
-        button.hidden = button !== attributes && button !== contracts;
+      const orderedViews = ["attributes", "contracts", "current", "all"];
+      orderedViews.forEach((viewName) => {
+        const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+        if (button) views.appendChild(button);
       });
-      const nextOverall = views.querySelector('[data-view="next"]');
-    if (attributes) views.prepend(attributes);
-    if (contracts) {
-      if (nextOverall && !nextOverall.hidden) nextOverall.after(contracts);
-      else if (attributes) attributes.after(contracts);
-    }
+      views.querySelectorAll(".viewButton").forEach((button) => {
+        button.hidden = !CLUB_VIEWS.has(button.dataset.view);
+      });
     }
 
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
-    const controlsBar = document.querySelector("#progressionPage .controlsBar");
-    if (controlsBar) controlsBar.hidden = true;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = true;
+    });
   }
 
   function restoreStandardControls() {
@@ -11702,7 +11773,11 @@ startApp();
     if (quickFilters) quickFilters.hidden = false;
     const controlsBar = document.querySelector("#progressionPage .controlsBar");
     if (controlsBar) controlsBar.hidden = false;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = false;
+    });
   }
+
 
   function applyClubPresentation() {
     if (state.currentPage !== CLUB_PAGE || !activeClubId) return;
@@ -11801,7 +11876,7 @@ startApp();
     setClubSwitching(true);
     try {
       activeClubId = String(clubId);
-      const nextView = view === "contracts" ? "contracts" : "attributes";
+      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
       if (updateHistory && `${window.location.pathname}${window.location.search}` !== route) {
         window.history.pushState({}, "", route);
@@ -11810,7 +11885,8 @@ startApp();
       }
 
       if (typeof setPage === "function") {
-        await setPage("database", false, { view: nextView, skipNavigationLoading: false });
+        const sourcePage = ["current", "all"].includes(nextView) ? "progression" : "database";
+        await setPage(sourcePage, false, { view: nextView, skipNavigationLoading: false });
       }
 
       state.currentPage = CLUB_PAGE;
@@ -11832,7 +11908,7 @@ startApp();
       applyClubPresentation();
     } finally {
       openingClub = false;
-      finishClubSwitch();
+      await finishClubSwitch();
     }
   }
 
@@ -11946,9 +12022,12 @@ startApp();
   style.textContent = `
     .clubPageLink { color: var(--text, #fff) !important; text-decoration: none; transition: color 120ms ease; }
     .clubPageLink:hover, .clubPageLink:focus-visible { color: #78c7ff !important; }
-    body.clubViewSwitching #progressionPage .tableShell { visibility: hidden !important; opacity: 0 !important; }
-    body.clubViewSwitching #progressionPage .tableScroller table,
-    body.clubViewSwitching #progressionPage .tableScroller col { transition: none !important; }
+    body.clubViewSwitching #progressionPage { visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+    body.clubViewSwitching #progressionPage,
+    body.clubViewSwitching #progressionPage * { transition: none !important; animation: none !important; }
+    body[data-page="club"] #progressionPage .quickFilters,
+    body[data-page="club"] #progressionPage .pager,
+    body[data-page="club"] #progressionPage nav.pager { display: none !important; }
   `;
   document.head.appendChild(style);
 
@@ -11961,7 +12040,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.0";
+  const VERSION = "1.150.1";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12123,7 +12202,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Add club pages, searchable club routes, division details, and position-sorted club squads";
+    description.textContent = "Load club pages atomically, add public progression views, remove club quick filters and pagination, and keep shared column widths identical";
     item.append(version, description);
     return item;
   }
@@ -12202,21 +12281,10 @@ startApp();
   }
 
   function lockClubWidths() {
-    window.clearTimeout(clubWidthUnlockTimer);
-    clubWidthLockStartedAt = Date.now();
-    document.body.classList.add("clubWidthHardLock");
+    document.body.classList.remove("clubWidthHardLock");
     rebuildClubColumns();
-    clubWidthObserver?.disconnect();
-    const colGroup = document.querySelector("#tableColGroup");
-    if (colGroup) {
-      clubWidthObserver = new MutationObserver(() => {
-        rebuildClubColumns();
-        scheduleClubWidthUnlock();
-      });
-      clubWidthObserver.observe(colGroup, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
-    }
-    scheduleClubWidthUnlock();
   }
+
 
   document.addEventListener("pointerdown", (event) => {
     if (state?.currentPage !== "club") return;
@@ -12229,10 +12297,6 @@ startApp();
     .clubSearchResult > span { display: block !important; }
     .clubSearchDivision { display: inline !important; font-weight: 400 !important; }
     .clubPageLink, .contractDivisionLabel { font-weight: 400 !important; }
-    body.clubWidthHardLock #progressionPage .tableShell,
-    body.clubWidthHardLock #progressionPage .pager { visibility: hidden !important; opacity: 0 !important; }
-    body.clubWidthHardLock #progressionPage .tableScroller table,
-    body.clubWidthHardLock #progressionPage .tableScroller col { transition: none !important; }
   `;
   document.head.appendChild(style);
 
@@ -12271,7 +12335,9 @@ startApp();
   };
 
   const FILLER_CLASS = "col-exact-width-filler";
-  const EPSILON = 0.001;
+  const EPSILON = 0.01;
+  let applyingWidths = false;
+  let queuedFrame = 0;
 
   function restoreSingleTable() {
     document.querySelectorAll(".tableBodyScroller").forEach((bodyScroller) => {
@@ -12279,8 +12345,7 @@ startApp();
       const headerScroller = bodyScroller.previousElementSibling?.classList.contains("tableHeaderScroller")
         ? bodyScroller.previousElementSibling
         : null;
-      const headerTable = headerScroller?.querySelector("table");
-      const tableHead = headerTable?.querySelector("thead");
+      const tableHead = headerScroller?.querySelector("thead");
 
       if (bodyTable && tableHead && !bodyTable.querySelector("thead")) {
         const colGroup = bodyTable.querySelector("colgroup");
@@ -12298,13 +12363,23 @@ startApp();
     return className ? WIDTHS[className] : null;
   }
 
+  function sharedTableWidth() {
+    const page = document.querySelector("#progressionPage");
+    if (!page || page.hidden) return 0;
+    const styles = window.getComputedStyle(page);
+    const horizontalPadding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+    const width = page.clientWidth - horizontalPadding;
+    return Number.isFinite(width) && width > 0 ? width : 0;
+  }
+
   function removeFiller(table, colGroup) {
     colGroup.querySelectorAll(`.${FILLER_CLASS}`).forEach((element) => element.remove());
     table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}`).forEach((element) => element.remove());
   }
 
-  function appendFillerCells(table, fillerWidth) {
-    const width = `${fillerWidth}%`;
+  function appendFiller(table, widthInPixels) {
+    if (widthInPixels <= EPSILON) return;
+    const width = `${widthInPixels}px`;
     const fillerColumn = document.createElement("col");
     fillerColumn.className = FILLER_CLASS;
     fillerColumn.style.setProperty("width", width, "important");
@@ -12324,43 +12399,77 @@ startApp();
   }
 
   function applyExactTableWidths() {
-    restoreSingleTable();
+    if (applyingWidths) return false;
+    applyingWidths = true;
 
-    document.querySelectorAll(".appShell .tableScroller table").forEach((table) => {
-      const colGroup = table.querySelector("colgroup");
-      if (!colGroup) return;
+    try {
+      restoreSingleTable();
+      const tableWidth = sharedTableWidth();
+      if (!tableWidth) return false;
 
-      removeFiller(table, colGroup);
-      const columns = Array.from(colGroup.children);
-      const widths = columns.map(widthForColumn);
-      if (!widths.length || widths.some((width) => !Number.isFinite(width))) return;
-
-      const total = widths.reduce((sum, width) => sum + width, 0);
-      if (total > 100 + EPSILON) return;
-
-      table.style.setProperty("table-layout", "fixed", "important");
-      table.style.setProperty("width", "100%", "important");
-      table.style.setProperty("min-width", "100%", "important");
-      table.style.setProperty("max-width", "100%", "important");
-
-      columns.forEach((column, index) => {
-        const width = `${widths[index]}%`;
-        column.style.setProperty("width", width, "important");
-        column.style.setProperty("min-width", width, "important");
-        column.style.setProperty("max-width", width, "important");
-        column.style.setProperty("transition", "none", "important");
+      document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
+        element.style.setProperty("width", "100%", "important");
+        element.style.setProperty("min-width", "0", "important");
+        element.style.setProperty("max-width", "100%", "important");
+        element.style.setProperty("box-sizing", "border-box", "important");
+        element.style.setProperty("overflow", "visible", "important");
       });
 
-      const remainder = 100 - total;
-      if (remainder > EPSILON) appendFillerCells(table, remainder);
+      document.querySelectorAll("#progressionPage .tableScroller table").forEach((table) => {
+        const colGroup = table.querySelector("colgroup");
+        if (!colGroup) return;
+
+        removeFiller(table, colGroup);
+        const columns = Array.from(colGroup.children);
+        const percentages = columns.map(widthForColumn);
+        if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return;
+
+        const totalPercentage = percentages.reduce((sum, width) => sum + width, 0);
+        if (totalPercentage > 100 + EPSILON) return;
+
+        const exactWidth = `${tableWidth}px`;
+        table.style.setProperty("table-layout", "fixed", "important");
+        table.style.setProperty("width", exactWidth, "important");
+        table.style.setProperty("min-width", exactWidth, "important");
+        table.style.setProperty("max-width", exactWidth, "important");
+        table.style.setProperty("box-sizing", "border-box", "important");
+        table.style.setProperty("border-spacing", "0", "important");
+
+        let assignedWidth = 0;
+        columns.forEach((column, index) => {
+          const pixelWidth = tableWidth * percentages[index] / 100;
+          assignedWidth += pixelWidth;
+          const width = `${pixelWidth}px`;
+          column.style.setProperty("width", width, "important");
+          column.style.setProperty("min-width", width, "important");
+          column.style.setProperty("max-width", width, "important");
+          column.style.setProperty("transition", "none", "important");
+        });
+
+        appendFiller(table, Math.max(0, tableWidth - assignedWidth));
+      });
+
+      return true;
+    } finally {
+      applyingWidths = false;
+    }
+  }
+
+  function queueExactTableWidths() {
+    cancelAnimationFrame(queuedFrame);
+    queuedFrame = requestAnimationFrame(() => {
+      applyExactTableWidths();
+      requestAnimationFrame(applyExactTableWidths);
     });
   }
+
+  window.applyExactPlayerTableWidths = applyExactTableWidths;
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
     buildTableColGroup = function buildTableColGroupWithExactGrid() {
       const result = originalBuildTableColGroup.apply(this, arguments);
-      applyExactTableWidths();
+      queueExactTableWidths();
       return result;
     };
   }
@@ -12369,7 +12478,7 @@ startApp();
     const originalBuildHeader = buildHeader;
     buildHeader = function buildHeaderWithExactGrid() {
       const result = originalBuildHeader.apply(this, arguments);
-      applyExactTableWidths();
+      queueExactTableWidths();
       return result;
     };
   }
@@ -12378,31 +12487,37 @@ startApp();
     const originalRenderTable = renderTable;
     renderTable = function renderTableWithExactGrid() {
       const result = originalRenderTable.apply(this, arguments);
-      applyExactTableWidths();
+      queueExactTableWidths();
       return result;
     };
   }
 
   const style = document.createElement("style");
   style.textContent = `
-    .appShell .tableScroller,
-    .appShell .tableScroller table {
+    #progressionPage,
+    #progressionPage .tableShell,
+    #progressionPage .tableScroller {
       width: 100% !important;
-      min-width: 100% !important;
       max-width: 100% !important;
+      box-sizing: border-box !important;
     }
 
-    .appShell .tableScroller {
+    #progressionPage { min-width: 0 !important; }
+
+    #progressionPage .tableShell,
+    #progressionPage .tableScroller {
+      min-width: 0 !important;
       overflow: visible !important;
       max-height: none !important;
       scrollbar-gutter: auto !important;
     }
 
-    .appShell .tableScroller table {
+    #progressionPage .tableScroller table {
       table-layout: fixed !important;
+      border-spacing: 0 !important;
     }
 
-    .appShell .tableScroller .${FILLER_CLASS} {
+    #progressionPage .tableScroller .${FILLER_CLASS} {
       padding: 0 !important;
       border-left: 0 !important;
       border-right: 0 !important;
@@ -12410,18 +12525,29 @@ startApp();
       pointer-events: none !important;
     }
 
-    .appShell .tableScroller table,
-    .appShell .tableScroller col,
-    .appShell .tableScroller th,
-    .appShell .tableScroller td,
-    .appShell .tableScroller tr:hover,
-    .appShell .tableScroller tr:hover > th,
-    .appShell .tableScroller tr:hover > td {
+    #progressionPage .tableScroller table,
+    #progressionPage .tableScroller col,
+    #progressionPage .tableScroller th,
+    #progressionPage .tableScroller td,
+    #progressionPage .tableScroller tr:hover,
+    #progressionPage .tableScroller tr:hover > th,
+    #progressionPage .tableScroller tr:hover > td {
       transition: none !important;
       animation: none !important;
     }
   `;
   document.head.appendChild(style);
 
-  applyExactTableWidths();
+  window.addEventListener("resize", queueExactTableWidths, { passive: true });
+  document.addEventListener("click", (event) => {
+    if (event.target.closest?.(".viewButton[data-view]")) queueExactTableWidths();
+  }, true);
+
+  if (window.ResizeObserver) {
+    const widthObserver = new ResizeObserver(queueExactTableWidths);
+    const page = document.querySelector("#progressionPage");
+    if (page) widthObserver.observe(page);
+  }
+
+  queueExactTableWidths();
 })();
