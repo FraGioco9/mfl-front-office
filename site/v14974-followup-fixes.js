@@ -42,25 +42,15 @@
     }
   }
 
-  const fixedWidthStyle = document.createElement("style");
-  fixedWidthStyle.textContent = [
+  const sidebarStyle = document.createElement("style");
+  sidebarStyle.textContent = [
     "#menuButton,.menuButton,[data-action='toggle-menu']{pointer-events:none!important;cursor:default!important;color:#fff!important;opacity:1!important}",
     "#menuButton *,.menuButton * ,[data-action='toggle-menu'] *{color:#fff!important;opacity:1!important}",
     "#menuButton svg,.menuButton svg,[data-action='toggle-menu'] svg{stroke:#fff!important;fill:none!important}",
     "#menuButton svg [fill]:not([fill='none']),.menuButton svg [fill]:not([fill='none']),[data-action='toggle-menu'] svg [fill]:not([fill='none']){fill:#fff!important}",
     ".appShell.menuClosed,.appShell.sidebarClosed,.appShell.sidebarCollapsed,.appShell.collapsed{grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr)!important}",
-    "table col.col-select,table th.selectionCell,table td.selectionCell{width:50px!important;min-width:50px!important;max-width:50px!important}",
-    "table col.col-id,table th.col-id,table td.col-id{width:70px!important;min-width:70px!important;max-width:70px!important}",
-    "table col.col-flag,table th.col-flag,table td.col-flag{width:40px!important;min-width:40px!important;max-width:40px!important}",
-    "table col.col-name,table th.col-name,table td.col-name{width:200px!important;min-width:200px!important;max-width:200px!important}",
-    "table col.col-nationality,table th.col-nationality,table td.col-nationality{width:140px!important;min-width:140px!important;max-width:140px!important}",
-    "table col.col-positions,table th.col-positions,table td.col-positions{width:120px!important;min-width:120px!important;max-width:120px!important}",
-    "table col.col-seasons,table th.col-seasons,table td.col-seasons{width:85px!important;min-width:85px!important;max-width:85px!important}",
-    "table col.col-stat,table th.col-stat,table td.col-stat{width:102px!important;min-width:102px!important;max-width:102px!important}",
-    "table col.col-agent,table th.col-agent,table td.col-agent{width:185px!important;min-width:185px!important;max-width:185px!important}",
-    "table col.col-link,table th.col-link,table td.col-link{width:55px!important;min-width:55px!important;max-width:55px!important}",
   ].join("");
-  document.head.appendChild(fixedWidthStyle);
+  document.head.appendChild(sidebarStyle);
 
   if (typeof toggleMenu === "function") {
     toggleMenu = function permanentlyExpandedMenu() {
@@ -73,9 +63,34 @@
     Object.assign(tableColumnWidths, fixedTableColumnWidths);
   }
 
-  function rebuildCurrentTableWidths() {
+  function applyExactTableColumnWidths() {
     installFixedTableColumnWidths();
-    if (typeof buildTableColGroup === "function") buildTableColGroup();
+    if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return;
+
+    const table = tableColGroup.closest("table");
+    const columns = Array.from(tableColGroup.children);
+    const columnNames = ["selection", ...currentViewColumns()];
+    if (!table || columns.length !== columnNames.length) return;
+
+    let totalWidth = 0;
+    columns.forEach((column, index) => {
+      const columnName = columnNames[index];
+      const width = Number(fixedTableColumnWidths[columnName] ?? tableColumnWidths[columnName]);
+      if (!Number.isFinite(width) || width <= 0) return;
+      const value = `${width}px`;
+      column.style.setProperty("width", value, "important");
+      column.style.setProperty("min-width", value, "important");
+      column.style.setProperty("max-width", value, "important");
+      totalWidth += width;
+    });
+
+    if (totalWidth > 0) {
+      const value = `${totalWidth}px`;
+      table.style.setProperty("table-layout", "fixed", "important");
+      table.style.setProperty("width", value, "important");
+      table.style.setProperty("min-width", value, "important");
+      table.style.setProperty("max-width", value, "important");
+    }
   }
 
   installFixedTableColumnWidths();
@@ -84,7 +99,9 @@
     const originalBuildTableColGroup = buildTableColGroup;
     buildTableColGroup = function buildTableColGroupWithFixedWidths() {
       installFixedTableColumnWidths();
-      return originalBuildTableColGroup.apply(this, arguments);
+      const result = originalBuildTableColGroup.apply(this, arguments);
+      applyExactTableColumnWidths();
+      return result;
     };
   }
 
@@ -92,7 +109,18 @@
     const originalBuildHeader = buildHeader;
     buildHeader = function buildHeaderWithFixedWidths() {
       installFixedTableColumnWidths();
-      return originalBuildHeader.apply(this, arguments);
+      const result = originalBuildHeader.apply(this, arguments);
+      applyExactTableColumnWidths();
+      return result;
+    };
+  }
+
+  if (typeof renderTable === "function") {
+    const originalRenderTable = renderTable;
+    renderTable = function renderTableWithFixedWidths() {
+      const result = originalRenderTable.apply(this, arguments);
+      applyExactTableColumnWidths();
+      return result;
     };
   }
 
@@ -156,9 +184,8 @@
       const nextOptions = routeView ? { ...options, view: routeView } : options;
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
-      installFixedTableColumnWidths();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-      rebuildCurrentTableWidths();
+      applyExactTableColumnWidths();
       return result;
     };
   }
@@ -205,11 +232,11 @@
   keepSidebarExpanded();
   installFixedTableColumnWidths();
   renamePatch();
-  requestAnimationFrame(rebuildCurrentTableWidths);
+  requestAnimationFrame(applyExactTableColumnWidths);
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
     installFixedTableColumnWidths();
     renamePatch();
-    requestAnimationFrame(rebuildCurrentTableWidths);
+    requestAnimationFrame(applyExactTableColumnWidths);
   }, { once: true });
 })();
