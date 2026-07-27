@@ -14,6 +14,29 @@
     }[match[1].toLowerCase()] || "";
   }
 
+  function enforceWatchlistRouteView(render = true) {
+    const routeView = routeViewFromPath();
+    if (!routeView || state.currentPage !== "watchlist") return false;
+
+    const normalizedView = typeof normalizeViewForPage === "function"
+      ? normalizeViewForPage(routeView, "watchlist")
+      : routeView;
+
+    if (state.view === normalizedView) return true;
+
+    state.view = normalizedView;
+    state.page = 1;
+
+    if (render) {
+      if (typeof updateViewButtons === "function") updateViewButtons();
+      if (typeof buildTableColGroup === "function") buildTableColGroup();
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false });
+    }
+
+    return true;
+  }
+
   if (typeof restoreSavedTableState === "function") {
     const originalRestoreSavedTableState = restoreSavedTableState;
     restoreSavedTableState = function restoreSavedTableStateWithRoute(pageName, options = {}) {
@@ -23,11 +46,34 @@
         pageName,
         routeView ? { ...options, view: routeView } : options,
       );
-      if (routeView) {
-        state.view = typeof normalizeViewForPage === "function"
-          ? normalizeViewForPage(routeView, "watchlist")
-          : routeView;
-      }
+      if (routeView) enforceWatchlistRouteView(false);
+      return result;
+    };
+  }
+
+  if (typeof setPage === "function") {
+    const originalSetPage = setPage;
+    setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {
+      const result = await originalSetPage.call(this, pageName, updateHash, options);
+      if (pageName === "watchlist") enforceWatchlistRouteView(true);
+      return result;
+    };
+  }
+
+  if (typeof applyWalletTableState === "function") {
+    const originalApplyWalletTableState = applyWalletTableState;
+    applyWalletTableState = function applyWalletTableStateWithRoute(tableState) {
+      const result = originalApplyWalletTableState.call(this, tableState);
+      enforceWatchlistRouteView(true);
+      return result;
+    };
+  }
+
+  if (typeof switchWatchlist === "function") {
+    const originalSwitchWatchlist = switchWatchlist;
+    switchWatchlist = function switchWatchlistWithRoute(watchlistId) {
+      const result = originalSwitchWatchlist.apply(this, arguments);
+      enforceWatchlistRouteView(true);
       return result;
     };
   }
