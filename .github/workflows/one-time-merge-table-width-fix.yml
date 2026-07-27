@@ -1,0 +1,29 @@
+name: One-time merged table width fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/pr-table-width-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch current app.js
+        run: python .github/scripts/patch_current_app_width.py
+      - name: Commit current app.js fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Keep shared table columns identical across views"
+          git push origin main
