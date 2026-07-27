@@ -2,6 +2,39 @@
   const requestedPatchText = "Keep every table column continuously visible during sidebar transitions";
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
+  function keepSidebarExpanded() {
+    if (typeof state === "object" && state) state.menuOpen = true;
+
+    [document.body, typeof appShell !== "undefined" ? appShell : null, typeof sidebar !== "undefined" ? sidebar : null, typeof menuRail !== "undefined" ? menuRail : null]
+      .filter(Boolean)
+      .forEach((element) => {
+        element.classList.remove("menuClosed", "sidebarClosed", "sidebarCollapsed", "collapsed");
+        element.classList.add("menuOpen");
+      });
+
+    if (typeof menuButton !== "undefined" && menuButton) {
+      menuButton.disabled = true;
+      menuButton.tabIndex = -1;
+      menuButton.setAttribute("aria-disabled", "true");
+      menuButton.setAttribute("aria-expanded", "true");
+      menuButton.style.pointerEvents = "none";
+      menuButton.style.cursor = "default";
+    }
+  }
+
+  const sidebarStyle = document.createElement("style");
+  sidebarStyle.textContent = [
+    "#menuButton,.menuButton,[data-action='toggle-menu']{pointer-events:none!important;cursor:default!important}",
+    ".appShell.menuClosed,.appShell.sidebarClosed,.appShell.sidebarCollapsed,.appShell.collapsed{grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr)!important}",
+  ].join("");
+  document.head.appendChild(sidebarStyle);
+
+  if (typeof toggleMenu === "function") {
+    toggleMenu = function permanentlyExpandedMenu() {
+      keepSidebarExpanded();
+    };
+  }
+
   function routeViewFromPath() {
     const match = window.location.pathname.match(/^\/watchlist\/[^/]+\/(attributes|next-overall|contracts|current-season|all-time)\/?$/i);
     if (!match) return "";
@@ -61,6 +94,7 @@
       const routeView = pageName === "watchlist" ? routeViewFromPath() : "";
       const nextOptions = routeView ? { ...options, view: routeView } : options;
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+      keepSidebarExpanded();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
       return result;
     };
@@ -91,6 +125,13 @@
   }
 
   document.addEventListener("click", (event) => {
+    if (typeof menuButton !== "undefined" && menuButton && (event.target === menuButton || menuButton.contains(event.target))) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      keepSidebarExpanded();
+      return;
+    }
+
     if (!onMflStatsPage() || !searchResultForMflWallet(event.target)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -98,6 +139,10 @@
     void setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
   }, true);
 
+  keepSidebarExpanded();
   renamePatch();
-  document.addEventListener("DOMContentLoaded", renamePatch, { once: true });
+  document.addEventListener("DOMContentLoaded", () => {
+    keepSidebarExpanded();
+    renamePatch();
+  }, { once: true });
 })();
