@@ -1,6 +1,10 @@
 name: One-time current app table width fix
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/table-width-trigger
   issues:
     types: [opened]
 
@@ -9,7 +13,7 @@ permissions:
 
 jobs:
   fix:
-    if: github.event.issue.title == '[table-width-fix] Apply shared table width'
+    if: github.event_name == 'push' || github.event.issue.title == '[table-width-fix] Apply shared table width'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +29,6 @@ jobs:
           path = Path('site/app.js')
           source = path.read_text(encoding='utf-8')
 
-          # Remove the obsolete club-specific widths that override the requested grid.
           obsolete_lines = [
               '    .appShell:not(.menuClosed) .tableScroller .col-age { width: 2.5% !important; }\n',
               '    .appShell:not(.menuClosed) .tableScroller .col-positions { width: 10% !important; }\n',
@@ -238,9 +241,7 @@ jobs:
       box-sizing: border-box !important;
     }
 
-    #progressionPage {
-      min-width: 0 !important;
-    }
+    #progressionPage { min-width: 0 !important; }
 
     #progressionPage .tableShell,
     #progressionPage .tableScroller {
@@ -287,6 +288,7 @@ jobs:
 '''
 
           path.write_text(source, encoding='utf-8')
+          Path('.github/table-width-trigger').unlink(missing_ok=True)
           Path('.github/workflows/one-time-current-app-table-width-fix.yml').unlink()
           PY
 
@@ -294,6 +296,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/app.js .github/workflows/one-time-current-app-table-width-fix.yml
+          git add site/app.js .github/table-width-trigger .github/workflows/one-time-current-app-table-width-fix.yml
           git commit -m "Keep shared table columns identical across views"
           git push origin main
