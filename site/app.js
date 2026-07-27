@@ -11330,74 +11330,7 @@ startApp();
     };
   }
 
-  function clearLegacyPixelWidths(element) {
-    if (!element) return;
-    element.style.removeProperty("min-width");
-    element.style.removeProperty("max-width");
-  }
-
-  function remainderColumnName(columnNames) {
-    if (columnNames.includes("active_contract_club_name")) return "active_contract_club_name";
-    if (columnNames.includes("wallet_name")) return "wallet_name";
-    if (columnNames.includes("owned_since")) return "owned_since";
-    if (columnNames.includes("name")) return "name";
-    return columnNames[columnNames.length - 1];
-  }
-
-  function applyPercentageTableColumnWidths() {
-    if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return;
-
-    const table = tableColGroup.closest("table");
-    const columns = Array.from(tableColGroup.children);
-    const columnNames = ["selection", ...currentViewColumns()];
-    if (!table || columns.length !== columnNames.length) return;
-
-    const percentages = columnNames.map((columnName) => Number(tableColumnPercentages[columnName]));
-    if (percentages.some((percentage) => !Number.isFinite(percentage) || percentage <= 0)) return;
-
-    const totalPercentage = percentages.reduce((sum, percentage) => sum + percentage, 0);
-    const remainderIndex = columnNames.indexOf(remainderColumnName(columnNames));
-    if (remainderIndex < 0) return;
-
-    percentages[remainderIndex] += 100 - totalPercentage;
-    if (percentages[remainderIndex] <= 0) return;
-
-    columns.forEach((column, index) => {
-      clearLegacyPixelWidths(column);
-      column.style.setProperty("width", `${percentages[index]}%`, "important");
-    });
-
-    clearLegacyPixelWidths(table);
-    table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", "100%", "important");
-  }
-
-  if (typeof buildTableColGroup === "function") {
-    const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithPercentageWidths() {
-      const result = originalBuildTableColGroup.apply(this, arguments);
-      applyPercentageTableColumnWidths();
-      return result;
-    };
-  }
-
-  if (typeof buildHeader === "function") {
-    const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithPercentageWidths() {
-      const result = originalBuildHeader.apply(this, arguments);
-      applyPercentageTableColumnWidths();
-      return result;
-    };
-  }
-
-  if (typeof renderTable === "function") {
-    const originalRenderTable = renderTable;
-    renderTable = function renderTableWithPercentageWidths() {
-      const result = originalRenderTable.apply(this, arguments);
-      applyPercentageTableColumnWidths();
-      return result;
-    };
-  }
+  function applyPercentageTableColumnWidths() {}
 
   function routeViewFromPath() {
     const match = window.location.pathname.match(/^\/watchlist\/[^/]+\/(attributes|next-overall|contracts|current-season|all-time)\/?$/i);
@@ -11512,183 +11445,6 @@ startApp();
     renamePatch();
     requestAnimationFrame(applyPercentageTableColumnWidths);
   }, { once: true });
-})();
-
-/* Consolidated from v14974-column-width-fix.js */
-(() => {
-  const columnPercentages = {
-    selection: 3,
-    player_id: 3,
-    nationality_flag: 3,
-    name: 13,
-    nationality: 7,
-    age: 6,
-    positions: 6,
-    player_seasons: 5,
-    overall: 6,
-    pace: 6,
-    shooting: 6,
-    passing: 6,
-    dribbling: 6,
-    defense: 6,
-    physical: 6,
-    goalkeeping: 6,
-    wallet_name: 9,
-    owned_since: 9,
-    active_contract_revenue_share: 8,
-    active_contract_club_name: 19,
-    active_contract_club_division: 9,
-    player_link: 3,
-  };
-
-  function flexibleColumnIndex(columnNames) {
-    const preferredColumns = [
-      "active_contract_club_name",
-      "wallet_name",
-      "owned_since",
-      "name",
-    ];
-
-    for (const columnName of preferredColumns) {
-      const index = columnNames.indexOf(columnName);
-      if (index >= 0) return index;
-    }
-
-    return columnNames.length - 1;
-  }
-
-  function viewPercentages(columnNames) {
-    const percentages = columnNames.map((columnName) => Number(columnPercentages[columnName]));
-    if (percentages.some((percentage) => !Number.isFinite(percentage) || percentage <= 0)) return null;
-
-    const total = percentages.reduce((sum, percentage) => sum + percentage, 0);
-    const flexibleIndex = flexibleColumnIndex(columnNames);
-    percentages[flexibleIndex] += 100 - total;
-
-    return percentages[flexibleIndex] > 0 ? percentages : null;
-  }
-
-  function clearLegacySizing(element) {
-    if (!element) return;
-    element.style.removeProperty("min-width");
-    element.style.removeProperty("max-width");
-  }
-
-  function applySharedGridWidths() {
-    if (typeof tableColGroup === "undefined" || !tableColGroup || typeof currentViewColumns !== "function") return false;
-
-    const table = tableColGroup.closest("table");
-    if (!table) return false;
-
-    const columnNames = ["selection", ...currentViewColumns()];
-    const percentages = viewPercentages(columnNames);
-    const colElements = Array.from(tableColGroup.children);
-    if (!percentages || colElements.length !== columnNames.length) return false;
-
-    clearLegacySizing(table);
-    table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", "100%", "important");
-
-    colElements.forEach((column, index) => {
-      const width = `${percentages[index]}%`;
-      clearLegacySizing(column);
-      column.style.setProperty("width", width, "important");
-    });
-
-    Array.from(table.rows).forEach((row) => {
-      Array.from(row.cells).forEach((cell, index) => {
-        if (index >= percentages.length) return;
-        const width = `${percentages[index]}%`;
-        clearLegacySizing(cell);
-        cell.style.setProperty("box-sizing", "border-box", "important");
-        cell.style.setProperty("width", width, "important");
-      });
-    });
-
-    return true;
-  }
-
-  let scheduledFrame = 0;
-  function scheduleSharedGridWidths() {
-    if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
-    scheduledFrame = requestAnimationFrame(() => {
-      scheduledFrame = 0;
-      applySharedGridWidths();
-      requestAnimationFrame(applySharedGridWidths);
-    });
-  }
-
-  function scheduleInitialWidths() {
-    scheduleSharedGridWidths();
-    [0, 50, 150, 350, 750].forEach((delay) => setTimeout(scheduleSharedGridWidths, delay));
-  }
-
-  function scheduleAfterResult(result) {
-    scheduleSharedGridWidths();
-    if (result && typeof result.then === "function") {
-      result.finally(scheduleInitialWidths);
-    } else {
-      scheduleInitialWidths();
-    }
-    return result;
-  }
-
-  if (typeof restoreSavedTableState === "function") {
-    const originalRestoreSavedTableState = restoreSavedTableState;
-    restoreSavedTableState = function restoreSavedTableStateWithSharedGrid() {
-      return scheduleAfterResult(originalRestoreSavedTableState.apply(this, arguments));
-    };
-  }
-
-  if (typeof buildTableColGroup === "function") {
-    const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithSharedGrid() {
-      return scheduleAfterResult(originalBuildTableColGroup.apply(this, arguments));
-    };
-  }
-
-  if (typeof buildHeader === "function") {
-    const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithSharedGrid() {
-      return scheduleAfterResult(originalBuildHeader.apply(this, arguments));
-    };
-  }
-
-  if (typeof renderTable === "function") {
-    const originalRenderTable = renderTable;
-    renderTable = function renderTableWithSharedGrid() {
-      return scheduleAfterResult(originalRenderTable.apply(this, arguments));
-    };
-  }
-
-  if (typeof setPage === "function") {
-    const originalSetPage = setPage;
-    setPage = function setPageWithSharedGrid() {
-      return scheduleAfterResult(originalSetPage.apply(this, arguments));
-    };
-  }
-
-  const tableObserver = new MutationObserver((mutations) => {
-    if (mutations.some((mutation) => mutation.type === "childList" && (mutation.addedNodes.length || mutation.removedNodes.length))) {
-      scheduleSharedGridWidths();
-    }
-  });
-
-  function observeTableRendering() {
-    const target = typeof tableColGroup !== "undefined" && tableColGroup
-      ? tableColGroup.closest("table")?.parentElement || tableColGroup.closest("table")
-      : document.body;
-    if (target) tableObserver.observe(target, { childList: true, subtree: true });
-  }
-
-  scheduleInitialWidths();
-  observeTableRendering();
-  document.addEventListener("DOMContentLoaded", () => {
-    observeTableRendering();
-    scheduleInitialWidths();
-  }, { once: true });
-  window.addEventListener("load", scheduleInitialWidths, { once: true });
-  window.addEventListener("pageshow", scheduleInitialWidths);
 })();
 
 /* Consolidated from v14974-agent-views-fix.js */
@@ -12677,4 +12433,83 @@ startApp();
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
   else initialize();
+})();
+
+/* Single synchronous player-table width engine */
+(() => {
+  const WIDTHS = {
+    "col-select": 3,
+    "col-id": 3,
+    "col-flag": 3,
+    "col-name": 13,
+    "col-nationality": 7,
+    "col-age": 4,
+    "col-positions": 8,
+    "col-seasons": 5,
+    "col-stat": 6,
+    "col-contract-revenue": 8,
+    "col-contract-club": 19,
+    "col-contract-division": 9,
+    "col-agent": 9,
+    "col-joined-agency": 9,
+    "col-owned-since": 9,
+    "col-link": 3,
+  };
+
+  function widthForColumn(column) {
+    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
+    return className ? WIDTHS[className] : null;
+  }
+
+  function applySynchronousTableWidths() {
+    const colGroup = document.querySelector("#tableColGroup");
+    const table = colGroup?.closest("table");
+    const columns = colGroup ? Array.from(colGroup.children) : [];
+    if (!table || !columns.length) return false;
+
+    const widths = columns.map(widthForColumn);
+    if (widths.some((width) => !Number.isFinite(width) || width <= 0)) return false;
+
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", "100%", "important");
+    table.style.setProperty("min-width", "100%", "important");
+    table.style.setProperty("max-width", "100%", "important");
+    table.style.setProperty("transition", "none", "important");
+
+    columns.forEach((column, index) => {
+      const width = `${widths[index]}%`;
+      column.style.setProperty("width", width, "important");
+      column.style.setProperty("min-width", width, "important");
+      column.style.setProperty("max-width", width, "important");
+      column.style.setProperty("transition", "none", "important");
+    });
+
+    return true;
+  }
+
+  if (typeof buildTableColGroup === "function") {
+    const originalBuildTableColGroup = buildTableColGroup;
+    buildTableColGroup = function buildTableColGroupWithSynchronousWidths() {
+      const result = originalBuildTableColGroup.apply(this, arguments);
+      applySynchronousTableWidths();
+      return result;
+    };
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .tableScroller table,
+    .tableScroller col,
+    .tableScroller th,
+    .tableScroller td,
+    .tableScroller tr:hover,
+    .tableScroller tr:hover > th,
+    .tableScroller tr:hover > td {
+      transition: none !important;
+      animation: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  applySynchronousTableWidths();
 })();
