@@ -42,58 +42,64 @@
     return divisionNames[raw] || raw;
   }
 
-  function divisionByClubId() {
+  function clubMetadata() {
     const idColumn = clubIdColumn();
-    const divisions = new Map();
-    if (!idColumn || !Array.isArray(state?.rows)) return divisions;
+    const clubs = new Map();
+    if (!idColumn || !Array.isArray(state?.rows)) return clubs;
 
     state.rows.forEach((row) => {
       const clubId = String(getValue(row, idColumn) || "").trim();
+      const name = String(getValue(row, "active_contract_club_name") || "").trim();
       const division = normalizedDivision(getValue(row, "active_contract_club_division"));
-      if (clubId && division && !divisions.has(clubId)) divisions.set(clubId, division);
+      if (clubId && name && !clubs.has(clubId)) clubs.set(clubId, { name, division });
     });
 
-    return divisions;
+    return clubs;
   }
 
-  function searchResultClubId(button) {
-    if (button.dataset.clubId) return button.dataset.clubId;
-    const info = String(button.querySelector(":scope > span")?.textContent || "");
-    const match = info.match(/#([^·\s]+)/);
-    const clubId = match ? match[1].trim() : "";
-    if (clubId) button.dataset.clubId = clubId;
-    return clubId;
+  function clubIdFromButton(button) {
+    const directId = String(button.dataset.clubId || "").trim();
+    if (directId) return directId;
+    const text = String(button.textContent || "");
+    const match = text.match(/#([^·\s]+)/);
+    return match ? match[1].trim() : "";
   }
 
-  function decorateClubSearchResults() {
+  function rebuildClubSearchResults() {
     if (typeof playerSearchResults === "undefined" || !playerSearchResults) return;
-
-    const divisions = divisionByClubId();
-    const clubButtons = Array.from(playerSearchResults.querySelectorAll(":scope > .clubSearchResult"));
+    const clubs = clubMetadata();
+    const clubButtons = Array.from(playerSearchResults.querySelectorAll(".clubSearchResult"));
 
     clubButtons.forEach((button) => {
-      const clubId = searchResultClubId(button);
-      const division = divisions.get(clubId);
-      const info = button.querySelector(":scope > span");
-      if (!clubId || !info) return;
-
-      const fragment = document.createDocumentFragment();
-      fragment.append(document.createTextNode(`Club · #${clubId}`));
-
-      if (division) {
-        fragment.append(document.createTextNode(" · "));
-        const divisionLabel = document.createElement("span");
-        divisionLabel.className = "clubSearchDivision";
-        divisionLabel.textContent = division;
-        divisionLabel.style.color = divisionColors[division.toLowerCase()] || "inherit";
-        fragment.appendChild(divisionLabel);
+      const clubId = clubIdFromButton(button);
+      const metadata = clubs.get(clubId);
+      if (!clubId || !metadata) {
+        button.remove();
+        return;
       }
 
-      info.replaceChildren(fragment);
+      button.dataset.clubId = clubId;
+      const title = document.createElement("strong");
+      title.textContent = metadata.name;
+
+      const info = document.createElement("span");
+      info.append(document.createTextNode(`Club · #${clubId}`));
+
+      if (metadata.division) {
+        info.append(document.createTextNode(" · "));
+        const division = document.createElement("b");
+        division.className = "clubSearchDivision";
+        division.textContent = metadata.division;
+        division.style.color = divisionColors[metadata.division.toLowerCase()] || "inherit";
+        info.appendChild(division);
+      }
+
+      button.replaceChildren(title, info);
     });
 
-    if (clubButtons.length) {
-      playerSearchResults.querySelectorAll(":scope > .searchHint").forEach((hint) => {
+    const remainingClubButtons = playerSearchResults.querySelectorAll(".clubSearchResult");
+    if (remainingClubButtons.length) {
+      playerSearchResults.querySelectorAll(".searchHint").forEach((hint) => {
         if (/no players or agents found/i.test(hint.textContent || "")) hint.remove();
       });
       playerSearchResults.classList.add("filledSearchResults");
@@ -102,18 +108,26 @@
 
   if (typeof renderSearchResultsNow === "function") {
     const originalRenderSearchResultsNow = renderSearchResultsNow;
-    renderSearchResultsNow = function renderSearchResultsNowWithClubDivisions() {
+    renderSearchResultsNow = function renderSearchResultsNowWithCleanClubs() {
       const result = originalRenderSearchResultsNow.apply(this, arguments);
-      decorateClubSearchResults();
+      rebuildClubSearchResults();
       return result;
     };
   }
 
   const style = document.createElement("style");
   style.textContent = `
+    .clubSearchResult {
+      min-height: 66px !important;
+      padding: 12px !important;
+    }
+    .clubSearchResult > strong,
     .clubSearchResult > span {
       display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
       width: auto !important;
+      height: auto !important;
       border: 0 !important;
       background: none !important;
     }
