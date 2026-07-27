@@ -1,5 +1,4 @@
-# Trigger after workflow registration
-name: Fix all view width flicker once
+name: Fix current Contracts flicker
 on:
   push:
     branches: [main]
@@ -12,140 +11,86 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch app.js
+      - name: Patch current app.js
         shell: python
         run: |
           from pathlib import Path
-          import re
 
           path = Path("site/app.js")
           text = path.read_text(encoding="utf-8")
 
-          start = "/* Atomic table view widths */"
-          end = "/* End atomic table view widths */"
-          if start in text and end in text:
-              text = re.sub(re.escape(start) + r".*?" + re.escape(end) + r"\n?", "", text, flags=re.S)
+          old = '''  function finishClubSwitch() {
+  let attempts = 0;
+  let stableFrames = 0;
+  let previousSignature = "";
 
-          block = r'''
-/* Atomic table view widths */
-(() => {
-  const widths = {
-    "col-select": "3%",
-    "col-id": "3%",
-    "col-flag": "3%",
-    "col-name": "13%",
-    "col-nationality": "7%",
-    "col-age": "4%",
-    "col-positions": "8%",
-    "col-seasons": "5%",
-    "col-stat": "6%",
-    "col-contract-revenue": "8%",
-    "col-contract-club": "19%",
-    "col-contract-division": "9%",
-    "col-agent": "9%",
-    "col-joined-agency": "9%",
-    "col-owned-since": "9%",
-    "col-link": "3%",
+  const checkStableColumns = () => {
+    attempts += 1;
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
+    if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
+
+    const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
+    const signature = columns
+      .map((column) => `${column.className}:${column.style.width}:${column.getAttribute("style") || ""}`)
+      .join("|");
+
+    if (columns.length && signature && signature === previousSignature) stableFrames += 1;
+    else stableFrames = 0;
+    previousSignature = signature;
+
+    if (stableFrames >= 2 || attempts >= 60) {
+      requestAnimationFrame(() => setClubSwitching(false));
+      return;
+    }
+
+    requestAnimationFrame(checkStableColumns);
   };
 
-  let switchToken = 0;
+  requestAnimationFrame(checkStableColumns);
+}'''
 
-  function applyAtomicWidths() {
-    const table = document.querySelector("#progressionPage .tableScroller table");
-    const colGroup = document.querySelector("#tableColGroup");
-    if (!table || !colGroup) return "";
-
-    table.style.setProperty("width", "100%", "important");
-    table.style.setProperty("table-layout", "fixed", "important");
-
-    const signature = [];
-    Array.from(colGroup.children).forEach((col) => {
-      const className = Object.keys(widths).find((name) => col.classList.contains(name));
-      if (!className) {
-        signature.push(`${col.className}:`);
-        return;
-      }
-      const width = widths[className];
-      col.style.setProperty("width", width, "important");
-      col.style.setProperty("min-width", width, "important");
-      col.style.setProperty("max-width", width, "important");
-      col.style.setProperty("transition", "none", "important");
-      signature.push(`${className}:${width}`);
-    });
-    return signature.join("|");
-  }
-
-  function finishAtomicSwitch(token) {
+          new = '''  function finishClubSwitch() {
     let attempts = 0;
     let stableFrames = 0;
     let previousSignature = "";
 
-    const check = () => {
-      if (token !== switchToken) return;
-      attempts += 1;
-      const signature = applyAtomicWidths();
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
+    if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
 
-      if (signature && signature === previousSignature) stableFrames += 1;
+    const checkStableColumns = () => {
+      attempts += 1;
+      if (typeof applyExactColumnWidths === "function") applyExactColumnWidths();
+
+      const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
+      const signature = columns
+        .map((column) => `${column.className}:${column.style.width}`)
+        .join("|");
+
+      if (columns.length && signature && signature === previousSignature) stableFrames += 1;
       else stableFrames = 0;
       previousSignature = signature;
 
-      if (stableFrames >= 3 || attempts >= 90) {
-        requestAnimationFrame(() => {
-          if (token === switchToken) document.body.classList.remove("atomicTableViewSwitch");
-        });
+      if (stableFrames >= 3 || attempts >= 60) {
+        requestAnimationFrame(() => setClubSwitching(false));
         return;
       }
-      requestAnimationFrame(check);
+
+      requestAnimationFrame(checkStableColumns);
     };
 
-    requestAnimationFrame(check);
-  }
+    requestAnimationFrame(checkStableColumns);
+  }'''
 
-  document.addEventListener("pointerdown", (event) => {
-    const button = event.target.closest?.("#progressionPage .viewButton[data-view]");
-    if (!button || button.classList.contains("active")) return;
-    switchToken += 1;
-    const token = switchToken;
-    document.body.classList.add("atomicTableViewSwitch");
-    finishAtomicSwitch(token);
-  }, true);
-
-  const observer = new MutationObserver(() => applyAtomicWidths());
-  const initialize = () => {
-    applyAtomicWidths();
-    const progressionPage = document.querySelector("#progressionPage");
-    if (progressionPage) observer.observe(progressionPage, { childList: true, subtree: true });
-  };
-
-  const style = document.createElement("style");
-  style.textContent = `
-    body.atomicTableViewSwitch #progressionPage .tableShell {
-      visibility: hidden !important;
-      opacity: 0 !important;
-    }
-    body.atomicTableViewSwitch #progressionPage .tableScroller table,
-    body.atomicTableViewSwitch #progressionPage .tableScroller col {
-      transition: none !important;
-    }
-    #progressionPage .tableScroller table {
-      width: 100% !important;
-      table-layout: fixed !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
-  else initialize();
-})();
-/* End atomic table view widths */
-'''
-
-          path.write_text(text.rstrip() + "\n\n" + block, encoding="utf-8")
+          count = text.count(old)
+          if count != 1:
+              raise RuntimeError(f"finishClubSwitch match count: {count}")
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
       - name: Validate and commit
         run: |
           node --check site/app.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add site/app.js
-          git commit -m "Apply stable widths before revealing table views"
+          git commit -m "Stop rebuilding columns during Contracts switch"
           git push
