@@ -1,3 +1,4 @@
+# Trigger consolidation after workflow registration
 name: Consolidate v1x helpers once
 on:
   push:
