@@ -1,55 +1,45 @@
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
-  function searchResultForMflWallet(target) {
-    const result = target?.closest?.("a,button,[role='button'],li");
-    if (!result || !result.closest("#searchModal,.searchResults,#playerSearchResults,[class*='searchResult']")) return null;
+  function clickedMflWallet(target) {
+    if (!target) return false;
 
-    const context = [result, result.closest("li"), result.parentElement]
-      .filter(Boolean)
-      .map((element) => `${element.textContent || ""} ${Array.from(element.attributes || []).map((attribute) => `${attribute.name}=${attribute.value}`).join(" ")}`.toLowerCase())
-      .join(" ");
+    const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
+    const candidates = [
+      target.closest?.("a,button,[role='button'],li,div"),
+      ...path,
+    ].filter((element, index, elements) => element && element.nodeType === 1 && elements.indexOf(element) === index);
 
-    return context.includes("mfl wallet") || context.includes(mflWalletAddress) ? result : null;
+    return candidates.some((element) => {
+      const text = String(element.textContent || "").trim().toLowerCase();
+      const attributes = Array.from(element.attributes || [])
+        .map((attribute) => `${attribute.name}=${attribute.value}`)
+        .join(" ")
+        .toLowerCase();
+      const context = `${text} ${attributes}`;
+      return context.includes("mfl wallet") || context.includes(mflWalletAddress);
+    });
   }
 
   function onMflStatsView() {
-    return window.location.pathname.toLowerCase() === "/mfl/stats"
+    const pathname = window.location.pathname.toLowerCase().replace(/\/$/, "");
+    return pathname === "/mfl/stats"
       || (typeof state === "object" && state && (
         state.currentPage === "mflstats"
         || (state.currentPage === "mfl" && state.view === "stats")
       ));
   }
 
-  async function openMflAttributes() {
-    if (typeof closeSearch === "function") closeSearch();
-
-    if (typeof setPage === "function") {
-      await setPage("mfl", true, { view: "attributes", skipNavigationLoading: false });
-    }
-
-    if (typeof state === "object" && state) {
-      state.currentPage = "mfl";
-      state.view = "attributes";
-      state.page = 1;
-    }
-
-    if (window.location.pathname.toLowerCase() !== "/mfl/attributes") {
-      window.history.replaceState({}, "", "/mfl/attributes");
-    }
-
-    if (typeof updateViewButtons === "function") updateViewButtons();
-    if (typeof buildTableColGroup === "function") buildTableColGroup();
-    if (typeof buildHeader === "function") buildHeader();
-    if (typeof applyFilters === "function") applyFilters({ save: false });
-    else if (typeof renderTable === "function") renderTable();
-  }
-
   document.addEventListener("click", (event) => {
-    if (!onMflStatsView() || !searchResultForMflWallet(event.target)) return;
+    if (!onMflStatsView() || !clickedMflWallet(event.target)) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
-    void openMflAttributes();
+
+    if (typeof closeSearch === "function") closeSearch();
+
+    // A full route navigation lets the app initialise the Attributes view and
+    // load its table through the same path used on a direct page visit.
+    window.location.assign("/mfl/attributes");
   }, true);
 })();
