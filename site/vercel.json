@@ -36,6 +36,33 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/clubs/:id",
+      "destination": "/clubs/:id/contracts",
+      "permanent": false
+    },
+    {
+      "source": "/club/:id",
+      "destination": "/clubs/:id/contracts",
+      "permanent": false
+    },
+    {
+      "source": "/club/:id/:view",
+      "destination": "/clubs/:id/:view",
+      "permanent": false
+    },
+    {
+      "source": "/club",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/clubs",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/home",
@@ -115,6 +142,10 @@
     },
     {
       "source": "/agents/:wallet/:view",
+      "destination": "/"
+    },
+    {
+      "source": "/clubs/:id/:view",
       "destination": "/"
     }
   ],
