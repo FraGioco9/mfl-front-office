@@ -34,19 +34,19 @@
   }
 
   function clubRoute(pathname = normalizedPath()) {
-    const match = pathname.match(/^\/club\/([^/]+)(?:\/(contracts|attributes))?$/i);
+    const match = pathname.match(/^\/(clubs|club)\/([^/]+)(?:\/(contracts|attributes))?$/i);
     if (!match) return null;
     return {
-      clubId: decodeURIComponent(match[1]),
-      view: CLUB_VIEWS.has(String(match[2] || "").toLowerCase())
-        ? String(match[2]).toLowerCase()
+      clubId: decodeURIComponent(match[2]),
+      view: CLUB_VIEWS.has(String(match[3] || "").toLowerCase())
+        ? String(match[3]).toLowerCase()
         : "contracts",
     };
   }
 
   function canonicalClubRoute(clubId = activeClubId, view = state.view) {
     const safeView = view === "attributes" ? "attributes" : "contracts";
-    return `/club/${encodeURIComponent(clubId)}/${safeView}`;
+    return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;
   }
 
   function clubIdColumn() {
@@ -277,7 +277,7 @@
 
   function bootClubRoute() {
     const path = normalizedPath();
-    if (path.toLowerCase() === "/club") {
+    if (["/club", "/clubs"].includes(path.toLowerCase())) {
       window.location.replace("/");
       return;
     }
