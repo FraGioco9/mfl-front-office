@@ -3,6 +3,7 @@
   const mflWalletAddress = "0xff8d2bbed8164db0";
   const attributesColumnWidths = new Map();
   let syncingColumnWidths = false;
+  let columnWidthSyncFrame = 0;
 
   function keepSidebarExpanded() {
     if (typeof state === "object" && state) state.menuOpen = true;
@@ -62,44 +63,68 @@
 
   function tableColumns() {
     const table = activePlayerTable();
-    if (!table) return { headers: [], columns: [] };
+    if (!table) return { table: null, headers: [], columns: [] };
     return {
+      table,
       headers: Array.from(table.querySelectorAll("thead tr:first-child > th")),
       columns: Array.from(table.querySelectorAll("colgroup > col")),
     };
   }
 
+  function clearForcedColumnWidths(table) {
+    if (!table) return;
+    table.querySelectorAll("colgroup > col").forEach((column) => {
+      column.style.removeProperty("width");
+      column.style.removeProperty("min-width");
+      column.style.removeProperty("max-width");
+    });
+    table.querySelectorAll("thead tr:first-child > th, tbody tr:first-child > td").forEach((cell) => {
+      cell.style.removeProperty("width");
+      cell.style.removeProperty("min-width");
+      cell.style.removeProperty("max-width");
+    });
+  }
+
   function captureAttributesColumnWidths() {
-    const { headers, columns } = tableColumns();
-    if (!headers.length || headers.length !== columns.length) return false;
+    const { table, headers, columns } = tableColumns();
+    if (!table || !headers.length || headers.length !== columns.length) return false;
+
+    clearForcedColumnWidths(table);
+    const tableWidth = table.getBoundingClientRect().width;
+    if (!(tableWidth > 0)) return false;
 
     attributesColumnWidths.clear();
     headers.forEach((header, index) => {
       const column = columns[index];
-      const declaredWidth = column.style.width || column.getAttribute("width") || "";
-      const measuredWidth = column.getBoundingClientRect().width || header.getBoundingClientRect().width;
+      const measuredWidth = header.getBoundingClientRect().width || column.getBoundingClientRect().width;
+      if (!(measuredWidth > 0)) return;
       attributesColumnWidths.set(columnKey(header, index), {
-        declaredWidth,
-        measuredWidth,
+        pixels: measuredWidth,
+        percent: (measuredWidth / tableWidth) * 100,
       });
     });
     return attributesColumnWidths.size > 0;
   }
 
+  function applyCanonicalWidth(element, canonical) {
+    if (!element || !canonical) return;
+    element.style.setProperty("width", `${canonical.percent}%`, "important");
+    element.style.setProperty("min-width", `${canonical.pixels}px`, "important");
+    element.style.setProperty("max-width", `${canonical.pixels}px`, "important");
+  }
+
   function applyAttributesColumnWidths() {
     if (!attributesColumnWidths.size) return false;
-    const { headers, columns } = tableColumns();
-    if (!headers.length || headers.length !== columns.length) return false;
+    const { table, headers, columns } = tableColumns();
+    if (!table || !headers.length || headers.length !== columns.length) return false;
 
+    const firstRowCells = Array.from(table.querySelectorAll("tbody tr:first-child > td"));
     headers.forEach((header, index) => {
       const canonical = attributesColumnWidths.get(columnKey(header, index));
       if (!canonical) return;
-      const column = columns[index];
-      if (canonical.declaredWidth) {
-        column.style.setProperty("width", canonical.declaredWidth, "important");
-      } else if (canonical.measuredWidth > 0) {
-        column.style.setProperty("width", `${canonical.measuredWidth}px`, "important");
-      }
+      applyCanonicalWidth(columns[index], canonical);
+      applyCanonicalWidth(header, canonical);
+      applyCanonicalWidth(firstRowCells[index], canonical);
     });
     return true;
   }
@@ -111,24 +136,23 @@
 
     syncingColumnWidths = true;
     try {
-      if (state.view === "attributes") {
-        captureAttributesColumnWidths();
-        return;
-      }
-
       if (!attributesColumnWidths.size) {
-        const currentView = state.view;
-        const currentPage = state.page;
-        state.view = typeof normalizeViewForPage === "function"
-          ? normalizeViewForPage("attributes", state.currentPage)
-          : "attributes";
-        buildTableColGroup();
-        buildHeader();
-        captureAttributesColumnWidths();
-        state.view = currentView;
-        state.page = currentPage;
-        buildTableColGroup();
-        buildHeader();
+        if (state.view === "attributes") {
+          captureAttributesColumnWidths();
+        } else {
+          const currentView = state.view;
+          const currentPage = state.page;
+          state.view = typeof normalizeViewForPage === "function"
+            ? normalizeViewForPage("attributes", state.currentPage)
+            : "attributes";
+          buildTableColGroup();
+          buildHeader();
+          captureAttributesColumnWidths();
+          state.view = currentView;
+          state.page = currentPage;
+          buildTableColGroup();
+          buildHeader();
+        }
       }
 
       applyAttributesColumnWidths();
@@ -137,11 +161,30 @@
     }
   }
 
+  function queueCommonColumnWidthSync() {
+    if (columnWidthSyncFrame) cancelAnimationFrame(columnWidthSyncFrame);
+    columnWidthSyncFrame = requestAnimationFrame(() => {
+      columnWidthSyncFrame = requestAnimationFrame(() => {
+        columnWidthSyncFrame = 0;
+        synchronizeCommonColumnWidths();
+      });
+    });
+  }
+
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
     buildHeader = function buildHeaderWithCanonicalWidths() {
       const result = originalBuildHeader.apply(this, arguments);
-      if (!syncingColumnWidths) synchronizeCommonColumnWidths();
+      if (!syncingColumnWidths) queueCommonColumnWidthSync();
+      return result;
+    };
+  }
+
+  if (typeof renderTable === "function") {
+    const originalRenderTable = renderTable;
+    renderTable = function renderTableWithCanonicalWidths() {
+      const result = originalRenderTable.apply(this, arguments);
+      queueCommonColumnWidthSync();
       return result;
     };
   }
@@ -207,7 +250,7 @@
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-      synchronizeCommonColumnWidths();
+      queueCommonColumnWidthSync();
       return result;
     };
   }
@@ -256,6 +299,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
     renamePatch();
-    synchronizeCommonColumnWidths();
+    queueCommonColumnWidthSync();
   }, { once: true });
 })();
