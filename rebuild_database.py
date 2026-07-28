@@ -141,7 +141,7 @@ def flow_season_batch_size(wallet_address: str) -> int:
         populate_seasons_from_flow.MFL_TRADE_WALLET_ADDRESS.lower(),
     }
     if wallet_address.lower() in special_wallets:
-        return 1500
+        return populate_seasons_from_flow.MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
     return populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
@@ -230,10 +230,12 @@ def install_flow_wallet_id_cache() -> None:
         cache_key = (id(connection), force)
         wallet_map = cache.get(cache_key)
         if wallet_map is None:
+            mfl_batch_size = populate_seasons_from_flow.MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
+            regular_batch_size = populate_seasons_from_flow.FLOW_STATIC_PLAYER_BATCH_SIZE
             print("\n=== Flow seasons ===", flush=True)
             print(
-                "Preparing Flow season batches: 1500 IDs for MFL and MFL Trade, "
-                "3000 IDs for other wallets...",
+                f"Preparing Flow season batches: {mfl_batch_size} IDs for MFL and MFL Trade, "
+                f"{regular_batch_size} IDs for other wallets...",
                 flush=True,
             )
             where_sql = "" if force else "WHERE player_seasons IS NULL"
@@ -271,9 +273,13 @@ def install_flow_wallet_id_cache() -> None:
 
     original_id_batches = populate_seasons_from_flow._id_batches
 
-    def wallet_aware_id_batches(player_ids: list[int]) -> list[list[int]]:
-        if isinstance(player_ids, WalletPlayerIds):
+    def wallet_aware_id_batches(
+        player_ids: list[int],
+        batch_size: int | None = None,
+    ) -> list[list[int]]:
+        if batch_size is None and isinstance(player_ids, WalletPlayerIds):
             batch_size = flow_season_batch_size(player_ids.wallet_address)
+        if batch_size is not None:
             return [
                 player_ids[index:index + batch_size]
                 for index in range(0, len(player_ids), batch_size)
