@@ -87,6 +87,11 @@ def _is_retryable_flow_error(error: RuntimeError) -> bool:
     )
 
 
+def _is_computation_limit_error(error: RuntimeError) -> bool:
+    message = str(error).lower()
+    return "computation exceeds limit" in message
+
+
 def _execute_script_with_network_retries(
     script: str,
     arguments: list[dict[str, Any]],
@@ -153,27 +158,76 @@ def _wallet_batch_size(wallet_address: str) -> int:
     return FLOW_STATIC_PLAYER_BATCH_SIZE
 
 
+def _flow_static_arguments(
+    wallet_address: str,
+    player_ids: list[int],
+) -> list[dict[str, Any]]:
+    return [
+        {"type": "Address", "value": wallet_address},
+        {
+            "type": "Array",
+            "value": [
+                {"type": "UInt64", "value": str(player_id)}
+                for player_id in player_ids
+            ],
+        },
+    ]
+
+
+def _fetch_flow_static_players_segment(
+    wallet_address: str,
+    player_ids: list[int],
+    label: str,
+) -> list[dict[str, Any]]:
+    try:
+        response = _execute_script_with_network_retries(
+            FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT,
+            _flow_static_arguments(wallet_address, player_ids),
+            label,
+        )
+        return _impl.parse_flow_static_player_response(response)
+    except RuntimeError as error:
+        minimum_size = max(1, int(MIN_FLOW_SPLIT_BATCH_SIZE))
+        if not _is_computation_limit_error(error) or len(player_ids) <= minimum_size:
+            raise
+
+        split_at = len(player_ids) // 2
+        left_ids = player_ids[:split_at]
+        right_ids = player_ids[split_at:]
+        if not left_ids or not right_ids:
+            raise
+
+        print(
+            f"Flow API {label} exceeded the computation limit; splitting "
+            f"{len(player_ids)} IDs into {len(left_ids)} and {len(right_ids)}.",
+            flush=True,
+        )
+        players: list[dict[str, Any]] = []
+        players.extend(
+            _fetch_flow_static_players_segment(
+                wallet_address,
+                left_ids,
+                f"{label} split 1/2",
+            )
+        )
+        players.extend(
+            _fetch_flow_static_players_segment(
+                wallet_address,
+                right_ids,
+                f"{label} split 2/2",
+            )
+        )
+        return players
+
+
 def _fetch_flow_static_players_by_ids(
     wallet_address: str,
     player_ids: list[int],
     batch_number: int,
     total_batches: int,
 ) -> list[dict[str, Any]]:
-    response = _execute_script_with_network_retries(
-        FLOW_STATIC_PLAYERS_BY_IDS_SCRIPT,
-        [
-            {"type": "Address", "value": wallet_address},
-            {
-                "type": "Array",
-                "value": [
-                    {"type": "UInt64", "value": str(player_id)}
-                    for player_id in player_ids
-                ],
-            },
-        ],
-        f"{wallet_address} batch {batch_number}/{total_batches} ({len(player_ids)} IDs)",
-    )
-    return _impl.parse_flow_static_player_response(response)
+    label = f"{wallet_address} batch {batch_number}/{total_batches} ({len(player_ids)} IDs)"
+    return _fetch_flow_static_players_segment(wallet_address, player_ids, label)
 
 
 def _store_flow_batch(
@@ -193,7 +247,7 @@ def populate_flow_static_fields(
     force: bool,
     include_mfl_wallet: bool = True,
 ) -> int:
-    """Populate Flow seasons using fixed batches of explicit player IDs."""
+    """Populate Flow seasons using wallet-sized batches with adaptive splitting."""
     _impl.ensure_flow_static_columns(connection)
     wallets = _impl.get_wallets_to_process(
         connection,
