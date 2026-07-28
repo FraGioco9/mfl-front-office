@@ -30,8 +30,9 @@
           }
         }
 
-        function jsonResponse(message, status) {
-          return new Response(JSON.stringify({ error: message }), {
+        function jsonResponse(payload, status = 200) {
+          const body = typeof payload === "string" ? { error: payload } : payload;
+          return new Response(JSON.stringify(body), {
             status,
             headers: { "content-type": "application/json; charset=utf-8" },
           });
@@ -51,7 +52,7 @@
 
         function isPagedTableLocation() {
           return /^\/(?:database|progression|watchlist|my-players)(?:\/|$)/i.test(window.location.pathname)
-            || /^\/mfl(?:\/|$)/i.test(window.location.pathname) && !/^\/mfl\/stats\/?$/i.test(window.location.pathname);
+            || (/^\/mfl(?:\/|$)/i.test(window.location.pathname) && !/^\/mfl\/stats\/?$/i.test(window.location.pathname));
         }
 
         function isFullPlayerDataRequest(url) {
@@ -63,13 +64,9 @@
         }
 
         function normalizePagedRequest(url) {
-          if (!url || url.pathname.toLowerCase() !== "/api/data" || url.searchParams.get("mode") !== "page") {
-            return url;
-          }
+          if (!url || url.pathname.toLowerCase() !== "/api/data" || url.searchParams.get("mode") !== "page") return url;
           const scope = String(url.searchParams.get("scope") || "").toLowerCase();
-          if (!["database", "progression", "mfl", "watchlist", "myplayers"].includes(scope)) {
-            return url;
-          }
+          if (!["database", "progression", "mfl", "watchlist", "myplayers"].includes(scope)) return url;
           const requestedPageSize = Number(url.searchParams.get("pageSize"));
           const requestedPage = Number(url.searchParams.get("page"));
           url.searchParams.set("pageSize", String(validPageSizes.has(requestedPageSize) ? requestedPageSize : 100));
@@ -77,11 +74,15 @@
           return url;
         }
 
-        function startSearchBootstrap() {
+        function loadSearchBootstrap() {
           searchDataAllowed = true;
           if (!searchBootstrapPromise) {
             searchBootstrapPromise = originalFetch("/api/data?mode=bootstrap", { cache: "no-store" })
-              .then((response) => response)
+              .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || "Could not load search data.");
+                return data;
+              })
               .catch((error) => {
                 searchBootstrapPromise = null;
                 throw error;
@@ -102,10 +103,8 @@
           }
 
           if (url?.pathname.toLowerCase() === "/api/data" && url.searchParams.get("mode") === "bootstrap") {
-            if (!searchDataAllowed) {
-              return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
-            }
-            return startSearchBootstrap().then((response) => response.clone());
+            if (!searchDataAllowed) return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
+            return loadSearchBootstrap().then((data) => jsonResponse(data));
           }
 
           if (!searchDataAllowed && isSearchDataRequest(url)) {
@@ -117,19 +116,15 @@
         };
 
         function activateSearchData() {
-          void startSearchBootstrap().catch(() => false);
+          void loadSearchBootstrap().catch(() => false);
         }
 
         document.addEventListener("click", (event) => {
-          if (event.target instanceof Element && event.target.closest("#openSearchButton")) {
-            activateSearchData();
-          }
+          if (event.target instanceof Element && event.target.closest("#openSearchButton")) activateSearchData();
         }, true);
 
         document.addEventListener("keydown", (event) => {
-          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-            activateSearchData();
-          }
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") activateSearchData();
         }, true);
 
         document.addEventListener("focusin", (event) => {
@@ -156,14 +151,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.4">
-    <style>html.bootPending body{visibility:hidden}</style>
+    <link rel="stylesheet" href="/styles.css?v=1.151.5">
+    <style>
+      html.bootPending body{visibility:hidden}
+      body.routeBootLoading #progressionPage .views,
+      body.routeBootLoading #progressionPage .quickFilters,
+      body.routeBootLoading #progressionPage .controlsBar,
+      body.routeBootLoading #progressionPage .pager,
+      body.routeBootLoading #progressionPage .selectionBar{visibility:hidden!important}
+    </style>
   </head>
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.4";
-        const CHANGELOG_DESCRIPTION = "Load complete search indexes on activation, enforce page-sized table requests, preserve refreshed routes during loading, and remove homepage opt-in flicker";
+        const VERSION = "1.151.5";
+        const CHANGELOG_DESCRIPTION = "Include clubs in global search results, show the full Database player total, and stabilize refreshed page views and layout";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -194,16 +196,19 @@
             });
         }
 
+        function showInitialNavigation(doc) {
+          const menuRail = doc.getElementById("menuRail");
+          const sidebar = doc.getElementById("sidebar");
+          const appShell = doc.getElementById("appShell");
+          if (menuRail) menuRail.hidden = false;
+          if (sidebar) sidebar.hidden = false;
+          appShell?.classList.remove("menuClosed");
+        }
+
         function prepareInitialRoute(doc) {
           const path = window.location.pathname.replace(/\/+$/, "") || "/";
-          const homePage = doc.getElementById("homePage");
-          const tablePage = doc.getElementById("progressionPage");
-          const mflStatsPage = doc.getElementById("mflStatsPage");
-          const evaluationPage = doc.getElementById("evaluationPage");
-          const playerPage = doc.getElementById("playerPage");
-          const settingsPage = doc.getElementById("settingsPage");
-          const changelogPage = doc.getElementById("changelogPage");
           hideAllViews(doc);
+          showInitialNavigation(doc);
 
           const tableRoutes = [
             { pattern: /^\/database(?:\/|$)/i, page: "database", title: "Database" },
@@ -217,58 +222,58 @@
 
           if (/^\/mfl\/stats\/?$/i.test(path)) {
             doc.body.dataset.page = "mflstats";
-            if (mflStatsPage) mflStatsPage.hidden = false;
+            doc.getElementById("mflStatsPage").hidden = false;
             const distribution = doc.getElementById("mflStatsAgeDistribution");
             if (distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
-            return;
+            return { loadingRoute: true };
           }
 
           const tableRoute = tableRoutes.find((route) => route.pattern.test(path));
           if (tableRoute) {
             doc.body.dataset.page = tableRoute.page;
+            doc.body.classList.add("routeBootLoading");
+            const tablePage = doc.getElementById("progressionPage");
             if (tablePage) tablePage.hidden = false;
             const title = doc.getElementById("tablePageTitle");
             if (title) title.textContent = tableRoute.title;
-            const body = doc.getElementById("tableBody");
-            if (body) body.replaceChildren();
+            doc.getElementById("tableBody")?.replaceChildren();
             const emptyState = doc.getElementById("emptyState");
             if (emptyState) {
               emptyState.hidden = false;
               emptyState.textContent = "Loading players...";
             }
-            return;
+            return { loadingRoute: true };
           }
 
           if (/^\/players\/[^/]+\/?$/i.test(path)) {
             doc.body.dataset.page = "player";
-            if (playerPage) playerPage.hidden = false;
+            doc.getElementById("playerPage").hidden = false;
             const detail = doc.getElementById("playerDetail");
             if (detail) detail.innerHTML = '<div class="emptyState">Loading player...</div>';
-            return;
+            return { loadingRoute: true };
           }
 
           if (/^\/evaluation\/?$/i.test(path)) {
             doc.body.dataset.page = "evaluation";
-            if (evaluationPage) evaluationPage.hidden = false;
-            return;
+            doc.getElementById("evaluationPage").hidden = false;
+            return { loadingRoute: false };
           }
-
           if (/^\/settings\/?$/i.test(path)) {
             doc.body.dataset.page = "settings";
-            if (settingsPage) settingsPage.hidden = false;
-            return;
+            doc.getElementById("settingsPage").hidden = false;
+            return { loadingRoute: false };
           }
-
           if (/^\/changelog\/?$/i.test(path)) {
             doc.body.dataset.page = "changelog";
-            if (changelogPage) changelogPage.hidden = false;
-            return;
+            doc.getElementById("changelogPage").hidden = false;
+            return { loadingRoute: false };
           }
 
           doc.body.dataset.page = "home";
-          if (homePage) homePage.hidden = false;
+          doc.getElementById("homePage").hidden = false;
           const homeOptInButton = doc.getElementById("homeOptInButton");
           if (homeOptInButton && hasStoredWalletOptIn()) homeOptInButton.hidden = true;
+          return { loadingRoute: false };
         }
 
         function rebuildChangelog() {
@@ -348,26 +353,144 @@
           });
         }
 
+        function createClubSearchButton(club) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "searchResult clubSearchResult";
+          button.dataset.clubId = club.clubId;
+          const division = typeof contractDivisionInfo === "function" ? contractDivisionInfo(club.division) : null;
+          const divisionHtml = division
+            ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>`
+            : "";
+          button.innerHTML = `<strong>${escapeHtml(club.name)}</strong><span>Club &middot; #${escapeHtml(club.clubId)}${divisionHtml}</span>`;
+          button.addEventListener("click", () => {
+            if (typeof closeSearch === "function") closeSearch();
+            window.location.assign(`/clubs/${encodeURIComponent(club.clubId)}/attributes`);
+          });
+          return button;
+        }
+
+        function installRuntimeFixes() {
+          if (typeof renderSearchResultsNow === "function") {
+            const originalRenderSearchResultsNow = renderSearchResultsNow;
+            renderSearchResultsNow = function renderSearchResultsIncludingClubs() {
+              const result = originalRenderSearchResultsNow.apply(this, arguments);
+              const resultsElement = document.querySelector("#playerSearchResults");
+              const input = document.querySelector("#playerSearchInput");
+              const query = typeof normalizeSearchText === "function" ? normalizeSearchText(input?.value?.trim() || "") : String(input?.value || "").trim().toLowerCase();
+              if (!resultsElement || !query || typeof state === "undefined") return result;
+
+              if (!state.clubSearchIndex.length && Array.isArray(state.bootstrapData?.clubs)) {
+                state.clubSearchIndex = state.bootstrapData.clubs.map((club) => ({
+                  clubId: String(club.clubId || ""),
+                  name: String(club.name || ""),
+                  division: Number.isFinite(Number(club.division)) ? Number(club.division) : null,
+                  searchText: normalizeSearchText(`${club.name || ""} ${club.clubId || ""}`),
+                })).filter((club) => club.clubId && club.name);
+              }
+
+              const clubs = state.clubSearchIndex
+                .map((club) => {
+                  const name = normalizeSearchText(club.name);
+                  const id = normalizeSearchText(club.clubId);
+                  const score = name === query || id === query ? 100 : name.startsWith(query) || id.startsWith(query) ? 80 : club.searchText.includes(query) ? 50 : 0;
+                  return { club, score };
+                })
+                .filter((entry) => entry.score > 0)
+                .sort((a, b) => b.score - a.score || (a.club.division ?? Infinity) - (b.club.division ?? Infinity) || a.club.name.localeCompare(b.club.name));
+
+              if (!clubs.length) {
+                const hint = resultsElement.querySelector(".searchHint");
+                if (hint?.textContent === "No players or agents found.") hint.textContent = "No players, clubs, or agents found.";
+                return result;
+              }
+
+              const existing = Array.from(resultsElement.querySelectorAll(":scope > .searchResult"))
+                .filter((element) => !element.classList.contains("clubSearchResult"));
+              const merged = [...clubs.slice(0, 5).map(({ club }) => createClubSearchButton(club)), ...existing].slice(0, 5);
+              resultsElement.replaceChildren(...merged);
+              resultsElement.classList.add("filledSearchResults");
+              return result;
+            };
+          }
+
+          if (typeof updateTablePlayerCount === "function") {
+            const originalUpdateTablePlayerCount = updateTablePlayerCount;
+            updateTablePlayerCount = function updateDatabaseTotalPlayerCount() {
+              const result = originalUpdateTablePlayerCount.apply(this, arguments);
+              if (typeof state !== "undefined" && state.currentPage === "database") {
+                const count = document.querySelector("#totalPlayers")?.textContent?.trim();
+                const tableCount = document.querySelector("#watchlistPlayerCount");
+                if (tableCount && count && count !== "-") {
+                  tableCount.hidden = false;
+                  tableCount.textContent = `${count} players`;
+                }
+              }
+              return result;
+            };
+          }
+        }
+
+        function expectedPageFromPath() {
+          const path = window.location.pathname;
+          if (/^\/database(?:\/|$)/i.test(path)) return "database";
+          if (/^\/mfl\/stats\/?$/i.test(path)) return "mflstats";
+          if (/^\/mfl(?:\/|$)/i.test(path)) return "mfl";
+          if (/^\/progression(?:\/|$)/i.test(path)) return "progression";
+          if (/^\/watchlist(?:\/|$)/i.test(path)) return "watchlist";
+          if (/^\/my-players(?:\/|$)/i.test(path)) return "myplayers";
+          if (/^\/agents?\/[^/]+(?:\/|$)/i.test(path)) return "agents";
+          if (/^\/clubs?\/[^/]+(?:\/|$)/i.test(path)) return "club";
+          if (/^\/players\/[^/]+\/?$/i.test(path)) return "player";
+          if (/^\/evaluation\/?$/i.test(path)) return "evaluation";
+          if (/^\/settings\/?$/i.test(path)) return "settings";
+          if (/^\/changelog\/?$/i.test(path)) return "changelog";
+          return "home";
+        }
+
+        function finishFirstPaint() {
+          const expectedPage = expectedPageFromPath();
+          let attempts = 0;
+          const settle = () => {
+            attempts += 1;
+            const appBusy = document.documentElement.classList.contains("appBusy") || document.body.classList.contains("appBusy");
+            const pageReady = document.body.dataset.page === expectedPage;
+            if ((!appBusy && pageReady) || attempts > 400) {
+              if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                document.body.classList.remove("routeBootLoading");
+                document.documentElement.classList.remove("bootPending");
+              }));
+              return;
+            }
+            requestAnimationFrame(settle);
+          };
+          requestAnimationFrame(settle);
+        }
+
         async function loadApplicationShell() {
           const response = await fetch(`/index-shell.html?v=${VERSION}`, { cache: "default" });
           if (!response.ok) throw new Error("Could not load the application shell.");
           const html = await response.text();
           const shell = new DOMParser().parseFromString(html, "text/html");
           shell.querySelectorAll("script").forEach((script) => script.remove());
-          prepareInitialRoute(shell);
+          const initial = prepareInitialRoute(shell);
           Array.from(document.body.attributes).forEach((attribute) => document.body.removeAttribute(attribute.name));
           Array.from(shell.body.attributes).forEach((attribute) => document.body.setAttribute(attribute.name, attribute.value));
           document.body.innerHTML = shell.body.innerHTML;
-          document.documentElement.classList.remove("bootPending");
+          if (initial.loadingRoute) document.documentElement.classList.remove("bootPending");
 
           const applicationScript = document.createElement("script");
           applicationScript.src = `/app.js?v=${VERSION}`;
           applicationScript.async = false;
           applicationScript.addEventListener("load", () => {
+            installRuntimeFixes();
             rebuildChangelog();
             window.setTimeout(rebuildChangelog, 0);
+            finishFirstPaint();
           });
           applicationScript.addEventListener("error", () => {
+            document.documentElement.classList.remove("bootPending");
             document.body.innerHTML = '<main><p class="emptyState">Could not load MFL Front Office.</p></main>';
           });
           document.body.appendChild(applicationScript);
