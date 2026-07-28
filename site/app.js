@@ -11793,6 +11793,31 @@ startApp();
     return row ? String(getValue(row, "active_contract_club_name") || `Club ${clubId}`) : `Club ${clubId}`;
   }
 
+  function clubDivision(clubId = activeClubId) {
+    const row = clubRows(clubId)[0];
+    return row && typeof contractDivisionInfo === "function"
+      ? contractDivisionInfo(getValue(row, "active_contract_club_division"))
+      : null;
+  }
+
+  function renderClubTitle() {
+    if (typeof tablePageTitle === "undefined" || !tablePageTitle) return;
+    const division = clubDivision();
+    if (!division) {
+      tablePageTitle.textContent = clubName();
+      return;
+    }
+
+    const divisionLabel = document.createElement("span");
+    divisionLabel.className = "clubPageTitleDivision";
+    divisionLabel.style.color = division.color;
+    divisionLabel.textContent = division.name;
+    tablePageTitle.replaceChildren(
+      document.createTextNode(`${clubName()} - `),
+      divisionLabel,
+    );
+  }
+
   function primaryPosition(row) {
     if (typeof playerPositions === "function") {
       return String(playerPositions(row)?.[0] || "").trim().toUpperCase();
@@ -11903,7 +11928,7 @@ startApp();
     if (state.currentPage !== CLUB_PAGE || !activeClubId) return;
     document.body.dataset.page = CLUB_PAGE;
     document.querySelectorAll(".navButton").forEach((link) => link.classList.remove("active"));
-    if (typeof tablePageTitle !== "undefined" && tablePageTitle) tablePageTitle.textContent = clubName();
+    renderClubTitle();
     hideClubPageControls();
     updateClubLinks();
   }
@@ -12162,7 +12187,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.8";
+  const VERSION = "1.150.9";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12363,7 +12388,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Center pagination in the page layout and keep the table at its final width immediately after refresh";
+    description.textContent = "Keep refreshed tables at their final width and show the club division in its league color";
     item.append(version, description);
     return item;
   }
@@ -12516,11 +12541,25 @@ startApp();
     return rail && !rail.hidden ? 190 : 0;
   }
 
+  let cachedScrollbarWidth = null;
+
+  function browserScrollbarWidth() {
+    if (cachedScrollbarWidth !== null) return cachedScrollbarWidth;
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;top:-9999px;width:100px;height:100px;overflow:scroll;";
+    document.body.appendChild(probe);
+    cachedScrollbarWidth = Math.max(0, probe.offsetWidth - probe.clientWidth);
+    probe.remove();
+    return cachedScrollbarWidth;
+  }
+
   function sharedContentWidth() {
     const main = document.querySelector("main");
     if (!main) return 0;
     const styles = window.getComputedStyle(main);
-    const viewportWidth = document.documentElement.clientWidth;
+    const clientWidth = document.documentElement.clientWidth;
+    const reservedViewportWidth = Math.max(0, window.innerWidth - browserScrollbarWidth());
+    const viewportWidth = Math.min(clientWidth, reservedViewportWidth);
     const sidebarWidth = pinnedSidebarWidth();
     const paddingLeft = parseFloat(styles.paddingLeft) || 0;
     const paddingRight = parseFloat(styles.paddingRight) || 0;
