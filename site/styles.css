@@ -555,12 +555,13 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   width: 100% !important;
 }
 
-/* v1.150.12 - Centered popup close, add, and remove shapes */
+/* v1.150.13 - Refined popup controls and filter dropdown hover */
 .popupCloseButton,
 .popupAddButton,
 .popupMinusButton {
   position: relative;
   font-size: 0;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .popupCloseButton::before,
@@ -572,7 +573,7 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 12px;
+  width: 10px;
   height: 2px;
   border-radius: 999px;
   background: currentColor;
@@ -596,6 +597,18 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 .popupCloseButton:hover:not(:disabled),
 .popupAddButton:hover:not(:disabled),
 .popupMinusButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+
+.filtersDialog select {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog select:hover:not(:disabled),
+.filtersDialog select:focus-visible:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
