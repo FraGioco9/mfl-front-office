@@ -12228,7 +12228,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.15";
+  const VERSION = "1.150.16";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12429,7 +12429,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Match Training controls and selected filter dropdowns to view-button hover behavior";
+    description.textContent = "Match individual-player view buttons and filter value boxes to table view-button hover behavior";
     item.append(version, description);
     return item;
   }

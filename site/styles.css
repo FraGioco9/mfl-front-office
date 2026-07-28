@@ -640,3 +640,34 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   color: var(--text) !important;
   transition: none !important;
 }
+
+/* v1.150.16 - Match player views and filter values to table view-button hover */
+.playerAttributeViewButton {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.playerAttributeViewButton:not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.playerAttributeViewButton.active:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.filtersDialog [data-filter-value] {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog [data-filter-value]:hover:not(:disabled),
+.filtersDialog [data-filter-value]:focus:not(:disabled),
+.filtersDialog [data-filter-value]:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
