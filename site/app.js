@@ -12207,7 +12207,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.13";
+  const VERSION = "1.150.14";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12408,7 +12408,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Refine popup control sizing and filter dropdown hover behavior";
+    description.textContent = "Remove the selected white border from filter dropdowns";
     item.append(version, description);
     return item;
   }
