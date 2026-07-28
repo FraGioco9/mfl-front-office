@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.20">
+    <link rel="stylesheet" href="/styles.css?v=1.150.21">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -376,6 +376,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.150.21</span><p>Unify Evaluation and global search clear controls</p></li>
               <li><span>v1.150.20</span><p>Hide the Evaluation search clear control when the field is empty</p></li>
               <li><span>v1.150.19</span><p>Remove the duplicate and boxed Evaluation search clear control</p></li>
               <li><span>v1.150.18</span><p>Match the rows selector and Evaluation clear button to shared view and popup controls</p></li>
@@ -1007,7 +1008,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.20</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.21</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1019,7 +1020,10 @@
           <button id="closeSearchButton" class="iconButton popupCloseButton" type="button" aria-label="Close search"></button>
         </header>
         <div class="searchBody">
-          <input id="playerSearchInput" type="search" placeholder="Search by player ID, name, or agent" autocomplete="off">
+          <div class="globalSearchControl">
+            <input id="playerSearchInput" type="text" placeholder="Search by player ID, name, or agent" autocomplete="off">
+            <button id="playerSearchClearButton" class="iconButton popupCloseButton playerSearchClearButton" type="button" aria-label="Clear global search" hidden></button>
+          </div>
           <div id="playerSearchResults" class="searchResults"></div>
         </div>
       </section>
@@ -1176,6 +1180,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.20"></script>
+    <script src="/app.js?v=1.150.21"></script>
   </body>
 </html>

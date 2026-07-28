@@ -741,3 +741,53 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 .evaluationSearchClearButton[hidden] {
   display: none !important;
 }
+
+
+/* v1.150.21 - Unified Evaluation and global search clear controls */
+.evaluationSearch .field::after {
+  content: none !important;
+  display: none !important;
+}
+
+.globalSearchControl {
+  position: relative;
+}
+
+.globalSearchControl #playerSearchInput {
+  width: 100%;
+  padding-right: 42px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.globalSearchControl #playerSearchInput:hover:not(:disabled),
+.globalSearchControl #playerSearchInput:focus:not(:disabled),
+.globalSearchControl #playerSearchInput:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.playerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+}
+
+.playerSearchClearButton,
+.playerSearchClearButton:hover:not(:disabled),
+.playerSearchClearButton:focus:not(:disabled),
+.playerSearchClearButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.playerSearchClearButton[hidden] {
+  display: none !important;
+}

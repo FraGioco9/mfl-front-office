@@ -447,6 +447,7 @@ const openSearchButton = document.querySelector("#openSearchButton");
 const searchModal = document.querySelector("#searchModal");
 const closeSearchButton = document.querySelector("#closeSearchButton");
 const playerSearchInput = document.querySelector("#playerSearchInput");
+const playerSearchClearButton = document.querySelector("#playerSearchClearButton");
 const playerSearchResults = document.querySelector("#playerSearchResults");
 const accountMenu = document.querySelector("#accountMenu");
 const accountButton = document.querySelector("#accountButton");
@@ -8139,7 +8140,18 @@ function navigateFromSearch(callback) {
   window.requestAnimationFrame(() => callback());
 }
 
+function syncPlayerSearchClearButton() {
+  playerSearchClearButton.hidden = !playerSearchInput.value.trim();
+}
+
+function clearPlayerSearch() {
+  playerSearchInput.value = "";
+  renderSearchResultsNow();
+  playerSearchInput.focus();
+}
+
 function renderSearchResultsNow() {
+  syncPlayerSearchClearButton();
   const query = normalizeSearchText(playerSearchInput.value.trim());
   const results = query ? bestSearchResults(query) : recentSearchRows();
   playerSearchResults.classList.add("filledSearchResults");
@@ -8186,6 +8198,7 @@ function renderSearchResultsNow() {
 }
 
 function renderSearchResults() {
+  syncPlayerSearchClearButton();
   window.clearTimeout(state.searchRenderTimer);
   state.searchRenderTimer = window.setTimeout(renderSearchResultsNow, 80);
 }
@@ -10601,6 +10614,7 @@ document.querySelectorAll("a[data-page=\"changelog\"]").forEach((link) => {
 });
 openSearchButton.addEventListener("click", openSearch);
 closeSearchButton.addEventListener("click", closeSearch);
+playerSearchClearButton.addEventListener("click", clearPlayerSearch);
 advancedSettingsButton.addEventListener("click", openAdvancedSettings);
 closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);
 advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });
@@ -12216,7 +12230,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.20";
+  const VERSION = "1.150.21";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12417,7 +12431,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Hide the Evaluation search clear control when the field is empty";
+    description.textContent = "Unify Evaluation and global search clear controls";
     item.append(version, description);
     return item;
   }
