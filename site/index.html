@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.0">
+    <link rel="stylesheet" href="/styles.css?v=1.151.1">
   </head>
   <body data-page="home">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden aria-hidden="true">
@@ -369,6 +369,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.151.1</span><p>Cache loaded route data until refresh and show destination-first local loading states</p></li>
               <li><span>v1.151.0</span><p>Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data</p></li>
               <li><span>v1.150.21</span><p>Unify Evaluation and global search clear controls</p></li>
               <li><span>v1.150.20</span><p>Hide the Evaluation search clear control when the field is empty</p></li>
@@ -1002,7 +1003,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.151.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.151.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1174,6 +1175,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.151.0"></script>
+    <script src="/app.js?v=1.151.1"></script>
   </body>
 </html>

@@ -59,6 +59,8 @@ const state = {
   incrementalSourceRows: 0,
   incrementalLastKey: "",
   incrementalLastLoadedAt: 0,
+  incrementalPayloadCache: new Map(),
+  incrementalRequestPromises: new Map(),
   interactionBusyDepth: 0,
   recentSearchItems: [],
   recentSearchPlayerIds: [],
@@ -7105,14 +7107,19 @@ function renderEvaluationSearchResults() {
       evaluationSearchResults.hidden = true;
       syncEvaluationPlayerUrl(playerId);
       try {
-        await withInteractionBusy(async () => {
-          const route = incrementalRouteTarget("evaluation", { playerId });
-          await requestIncrementalRoute(route, 1, { force: true });
+        const route = incrementalRouteTarget("evaluation", { playerId });
+        const loadAndRender = async () => {
+          await requestIncrementalRoute(route, 1);
           const row = rowByPlayerId(playerId);
           if (row) {
             renderEvaluationTable(row);
           }
-        });
+        };
+        if (incrementalRouteIsCached(route, 1)) {
+          await loadAndRender();
+        } else {
+          await withInteractionBusy(loadAndRender);
+        }
       } catch (error) {
         showToastAfterLoading(error?.message || "Could not load this player.");
       }
@@ -10566,7 +10573,7 @@ function incrementalWatchlistPlayerIds(options = {}) {
 }
 
 function incrementalRouteTarget(pageName, options = {}) {
-  const clubTarget = clubRouteTargetFromPath();
+  const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
   if (clubTarget && ["club", "database", "progression"].includes(pageName)) {
     return {
       ...clubTarget,
@@ -10658,6 +10665,28 @@ function incrementalDataQuery(route, page = 1) {
   return query;
 }
 
+function incrementalRequestDetails(route, page = 1) {
+  const query = incrementalDataQuery(route, page);
+  const requestKey = query.toString();
+  const walletKey = normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() || "guest";
+  return {
+    query,
+    requestKey,
+    cacheKey: `${walletKey}:${requestKey}`,
+  };
+}
+
+function cachedIncrementalPayload(route, page = 1) {
+  if (!route || route.scope === "empty") {
+    return null;
+  }
+  return state.incrementalPayloadCache.get(incrementalRequestDetails(route, page).cacheKey) || null;
+}
+
+function incrementalRouteIsCached(route, page = 1) {
+  return Boolean(cachedIncrementalPayload(route, page));
+}
+
 function applyIncrementalPayload(route, payload) {
   const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
   state.columns = Array.isArray(payload.columns) ? payload.columns : [];
@@ -10699,28 +10728,35 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return payload;
   }
 
-  const query = incrementalDataQuery(route, page);
-  const requestKey = query.toString();
-  if (!options.force && state.incrementalLastKey === requestKey && Date.now() - state.incrementalLastLoadedAt < 400) {
-    return {
-      columns: state.columns,
-      rows: state.rows,
-      page: state.page,
-      pageSize: state.pageSize,
-      totalRows: state.incrementalTotalRows,
-      sourceRows: state.incrementalSourceRows,
-    };
+  const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const cachedPayload = state.incrementalPayloadCache.get(cacheKey);
+  if (cachedPayload) {
+    applyIncrementalPayload(route, cachedPayload);
+    state.incrementalLastKey = requestKey;
+    state.incrementalLastLoadedAt = Date.now();
+    return cachedPayload;
   }
 
-  const response = await fetch(`/api/data?${requestKey}`, {
-    cache: "no-store",
-    headers: walletProofHeaders(true),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not load this page.");
+  let requestPromise = state.incrementalRequestPromises.get(cacheKey);
+  if (!requestPromise) {
+    requestPromise = (async () => {
+      const response = await fetch(`/api/data?${requestKey}`, {
+        cache: "no-store",
+        headers: walletProofHeaders(true),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not load this page.");
+      }
+      state.incrementalPayloadCache.set(cacheKey, payload);
+      return payload;
+    })().finally(() => {
+      state.incrementalRequestPromises.delete(cacheKey);
+    });
+    state.incrementalRequestPromises.set(cacheKey, requestPromise);
   }
 
+  const payload = await requestPromise;
   applyIncrementalPayload(route, payload);
   state.incrementalLastKey = requestKey;
   state.incrementalLastLoadedAt = Date.now();
@@ -10746,9 +10782,9 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
     return false;
   }
 
-  return withInteractionBusy(async () => {
+  const loadAndRender = async () => {
     try {
-      await requestIncrementalRoute(route, page, { force: options.force !== false });
+      await requestIncrementalRoute(route, page);
       state.incrementalApplying = true;
       try {
         buildHeader();
@@ -10764,6 +10800,16 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
       showToastAfterLoading(error?.message || "Could not load this page.");
       return false;
     }
+  };
+
+  if (incrementalRouteIsCached(route, page)) {
+    return loadAndRender();
+  }
+
+  state.page = page;
+  return withInteractionBusy(async () => {
+    showTableBusyState();
+    return loadAndRender();
   });
 }
 
@@ -11421,10 +11467,10 @@ async function startApp() {
   try {
     void ensureFlowWallet();
     applyStoredWalletPermission();
-    await Promise.allSettled([
-      loadSummary(),
-      ensureSearchIndexes(),
-    ]);
+    await ensureSearchIndexes().catch(() => false);
+    if (!state.bootstrapData?.summary) {
+      await loadSummary();
+    }
     await Promise.all([
       loadWalletNames(),
       loadWalletPreferences(),
@@ -12612,7 +12658,6 @@ async function startApp() {
   style.textContent = `
     .clubPageLink { color: var(--text, #fff) !important; text-decoration: none; transition: color 120ms ease; }
     .clubPageLink:hover, .clubPageLink:focus-visible { color: #78c7ff !important; }
-    body.clubViewSwitching #progressionPage { visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
     body.clubViewSwitching #progressionPage,
     body.clubViewSwitching #progressionPage * { transition: none !important; animation: none !important; }
     body[data-page="club"] #progressionPage .quickFilters,
@@ -12630,7 +12675,7 @@ async function startApp() {
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.151.0";
+  const VERSION = "1.151.1";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12831,7 +12876,7 @@ async function startApp() {
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data";
+    description.textContent = "Cache loaded route data until refresh and show destination-first local loading states";
     item.append(version, description);
     return item;
   }
@@ -12848,9 +12893,10 @@ async function startApp() {
     const list = document.querySelector(".changelogList");
     if (!list) return;
     const minorVersion = `v${VERSION.split(".").slice(0, 2).join(".")}`;
-    Array.from(list.children).forEach((child) => {
-      if (!child.classList.contains("changelogMinorSection") && child.querySelector(":scope > span")?.textContent === `v${VERSION}`) child.remove();
-    });
+    const looseMinorEntries = Array.from(list.children).filter((child) =>
+      !child.classList.contains("changelogMinorSection")
+      && child.querySelector(":scope > span")?.textContent?.startsWith(`${minorVersion}.`),
+    );
     let section = Array.from(list.querySelectorAll(":scope > .changelogMinorSection")).find((candidate) =>
       candidate.querySelector(".changelogMinorVersion")?.textContent === minorVersion,
     );
@@ -12877,7 +12923,12 @@ async function startApp() {
       inner.className = "changelogMinorPanelInner";
       const patchList = document.createElement("ol");
       patchList.className = "changelogPatchList";
-      patchList.appendChild(createChangelogItem());
+      looseMinorEntries.forEach((entry) => patchList.appendChild(entry));
+      if (!Array.from(patchList.children).some((item) =>
+        item.querySelector("span")?.textContent?.trim() === `v${VERSION}`,
+      )) {
+        patchList.prepend(createChangelogItem());
+      }
       inner.appendChild(patchList);
       panel.appendChild(inner);
       section.append(toggle, panel);
@@ -12886,11 +12937,23 @@ async function startApp() {
         toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
       });
       list.prepend(section);
-    } else if (!Array.from(section.querySelectorAll(".changelogPatchList > li")).some((item) =>
-      item.querySelector("span")?.textContent?.trim() === `v${VERSION}`,
-    )) {
-      section.querySelector(".changelogPatchList")?.prepend(createChangelogItem());
+    } else {
+      const patchList = section.querySelector(".changelogPatchList");
+      looseMinorEntries.forEach((entry) => patchList?.appendChild(entry));
+      if (!Array.from(section.querySelectorAll(".changelogPatchList > li")).some((item) =>
+        item.querySelector("span")?.textContent?.trim() === `v${VERSION}`,
+      )) {
+        patchList?.prepend(createChangelogItem());
+      }
     }
+    const patchList = section.querySelector(".changelogPatchList");
+    Array.from(patchList?.children || [])
+      .sort((a, b) => String(b.querySelector("span")?.textContent || "").localeCompare(
+        String(a.querySelector("span")?.textContent || ""),
+        undefined,
+        { numeric: true },
+      ))
+      .forEach((entry) => patchList.appendChild(entry));
     const patchCount = section.querySelectorAll(".changelogPatchList > li").length;
     const meta = section.querySelector(".changelogMinorMeta");
     if (meta) meta.textContent = `${patchCount} ${patchCount === 1 ? "patch" : "patches"}`;
@@ -13225,7 +13288,7 @@ async function startApp() {
   syncLayoutCenter();
 })();
 
-/* v1.151.0 incremental route data and interaction-only loading */
+/* v1.151.1 session-cached incremental route data and destination-first loading */
 (() => {
   const originalApplyFilters = applyFilters;
   const originalSetPage = setPage;
@@ -13233,7 +13296,7 @@ async function startApp() {
   const originalRenderSearchResultsNow = renderSearchResultsNow;
 
   function prepareIncrementalRoute(pageName, options = {}) {
-    const clubTarget = clubRouteTargetFromPath();
+    const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
     if (!clubTarget && tablePages.has(pageName)) {
       restoreSavedTableState(pageName, { view: options.view });
     } else if (clubTarget) {
@@ -13260,6 +13323,89 @@ async function startApp() {
     return incrementalRouteTarget(pageName, options);
   }
 
+  function commitIncrementalLocation(pageName, updateHash, options = {}) {
+    if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
+      window.history.replaceState({}, "", options.replaceUrl);
+      return;
+    }
+    updatePageUrl(pageName, {
+      ...options,
+      updateUrl: updateHash,
+    });
+  }
+
+  function incrementalLoadingPageName(pageName, route) {
+    return route.scope === "club" ? "club" : pageName;
+  }
+
+  function renderIncrementalLoadingState(pageName, route) {
+    const loadingPageName = incrementalLoadingPageName(pageName, route);
+    const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
+    const mflStatsActive = route.scope === "mflstats";
+    const playerPageActive = route.scope === "player";
+    const evaluationPageActive = route.scope === "evaluation";
+
+    state.currentPage = loadingPageName;
+    state.view = route.view || state.view;
+    document.body.dataset.page = loadingPageName;
+    homePage.hidden = true;
+    progressionPage.hidden = !tableRoute;
+    mflStatsPage.hidden = !mflStatsActive;
+    myPlayersLockedPage.hidden = true;
+    evaluationPage.hidden = !evaluationPageActive;
+    playerPage.hidden = !playerPageActive;
+    settingsPage.hidden = true;
+    changelogPage.hidden = true;
+
+    navButtons.forEach((button) => {
+      button.classList.toggle("active", route.scope !== "club" && button.dataset.page === pageName);
+    });
+
+    if (tableRoute) {
+      if (route.scope === "club") {
+        const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
+        tablePageTitle.textContent = club?.name || "Club";
+      } else {
+        tablePageTitle.textContent = tableTitleForPage(pageName);
+      }
+      updateViewButtons();
+      showTableBusyState();
+    } else if (mflStatsActive) {
+      state.view = "stats";
+      updateViewButtons();
+      if (mflStatsTotalPlayers) mflStatsTotalPlayers.textContent = "-";
+      if (mflStatsPackablePlayers) mflStatsPackablePlayers.textContent = "-";
+      if (mflStatsAgedPlayers) mflStatsAgedPlayers.textContent = "-";
+      if (mflStatsOtherPlayers) mflStatsOtherPlayers.textContent = "-";
+      if (mflStatsAgeDistribution) {
+        mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
+      }
+    } else if (playerPageActive && playerDetail) {
+      playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
+    } else if (evaluationPageActive) {
+      evaluationPanel.hidden = true;
+      evaluationSearchResults.hidden = true;
+    }
+
+    revealAppShell();
+    syncHomeLoginButton();
+  }
+
+  async function renderLoadedIncrementalRoute(pageName, updateHash, options, route) {
+    await requestIncrementalRoute(route, 1);
+    state.dataAccess = currentDataAccess(pageName);
+    state.incrementalApplying = true;
+    try {
+      return await originalSetPage.call(this, pageName, false, {
+        ...options,
+        replaceUrl: "",
+        skipNavigationLoading: true,
+      });
+    } finally {
+      state.incrementalApplying = false;
+    }
+  }
+
   applyFilters = function applyFiltersWithIncrementalData(options = {}) {
     if (!state.incrementalMode || state.incrementalApplying || options.localOnly) {
       return originalApplyFilters.apply(this, arguments);
@@ -13275,25 +13421,25 @@ async function startApp() {
       return originalSetView.apply(this, arguments);
     }
 
-    return withInteractionBusy(async () => {
-      state.incrementalApplying = true;
-      try {
-        await originalSetView.call(this, viewName);
-      } finally {
-        state.incrementalApplying = false;
-      }
+    state.incrementalApplying = true;
+    try {
+      await originalSetView.call(this, viewName);
+    } finally {
+      state.incrementalApplying = false;
+    }
 
-      const route = incrementalRouteTarget(state.currentPage, {
-        view: state.view,
-        walletAddress: state.currentAgentWalletAddress,
-        watchlistId: state.currentWatchlistId,
-      });
-      if (!route) {
-        return;
-      }
+    const route = incrementalRouteTarget(state.currentPage, {
+      view: state.view,
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+    });
+    if (!route) {
+      return;
+    }
 
+    const loadAndRender = async () => {
       try {
-        await requestIncrementalRoute(route, 1, { force: true });
+        await requestIncrementalRoute(route, 1);
         state.incrementalApplying = true;
         try {
           buildHeader();
@@ -13304,34 +13450,56 @@ async function startApp() {
       } catch (error) {
         showToastAfterLoading(error?.message || "Could not load this view.");
       }
+    };
+
+    if (incrementalRouteIsCached(route, 1)) {
+      return loadAndRender();
+    }
+
+    return withInteractionBusy(async () => {
+      showTableBusyState();
+      return loadAndRender();
     });
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
-    const route = prepareIncrementalRoute(pageName, options);
+    const previousPage = state.currentPage;
+    const previousTablePage = tablePageKey();
+    if (previousTablePage) {
+      state.tablePageStates[previousTablePage] = currentTablePageState();
+      saveTableState();
+    }
+
+    const route = prepareIncrementalRoute(pageName, {
+      ...options,
+      ignoreCurrentClubRoute: updateHash,
+    });
     if (!route) {
       state.incrementalMode = false;
       return originalSetPage.call(this, pageName, updateHash, options);
     }
 
-    return withInteractionBusy(async () => {
+    commitIncrementalLocation(pageName, updateHash, options);
+    const loadAndRender = async () => {
       try {
-        await requestIncrementalRoute(route, 1);
+        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);
+        if (previousPage !== incrementalLoadingPageName(pageName, route)) {
+          resetPageScroll();
+        }
+        return result;
       } catch (error) {
         showToastAfterLoading(error?.message || "Could not load this page.");
         return;
       }
+    };
 
-      state.dataAccess = currentDataAccess(pageName);
-      state.incrementalApplying = true;
-      try {
-        return await originalSetPage.call(this, pageName, updateHash, {
-          ...options,
-          skipNavigationLoading: true,
-        });
-      } finally {
-        state.incrementalApplying = false;
-      }
+    if (route.scope === "empty" || incrementalRouteIsCached(route, 1)) {
+      return loadAndRender();
+    }
+
+    return withInteractionBusy(async () => {
+      renderIncrementalLoadingState(pageName, route);
+      return loadAndRender();
     });
   };
 
@@ -13406,8 +13574,8 @@ async function startApp() {
     if (!route) {
       return false;
     }
-    return withInteractionBusy(async () => {
-      await requestIncrementalRoute(route, 1, { force: true });
+    const loadAndRender = async () => {
+      await requestIncrementalRoute(route, 1);
       state.incrementalApplying = true;
       try {
         buildHeader();
@@ -13416,6 +13584,15 @@ async function startApp() {
         state.incrementalApplying = false;
       }
       return true;
+    };
+
+    if (incrementalRouteIsCached(route, 1)) {
+      return loadAndRender();
+    }
+
+    return withInteractionBusy(async () => {
+      renderIncrementalLoadingState(pageName, route);
+      return loadAndRender();
     });
   };
 })();
