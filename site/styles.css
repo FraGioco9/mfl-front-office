@@ -671,3 +671,18 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   color: var(--text);
   box-shadow: none;
 }
+
+/* v1.150.17 - Match Evaluation search to table view-button hover */
+#evaluationSearchInput {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#evaluationSearchInput:hover:not(:disabled),
+#evaluationSearchInput:focus:not(:disabled),
+#evaluationSearchInput:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
