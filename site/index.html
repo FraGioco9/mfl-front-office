@@ -66,10 +66,10 @@
           if (!url || url.pathname.toLowerCase() !== "/api/data" || url.searchParams.get("mode") !== "page") return url;
           const scope = String(url.searchParams.get("scope") || "").toLowerCase();
           if (!["database", "progression", "mfl", "watchlist", "myplayers"].includes(scope)) return url;
-          const requestedPageSize = Number(url.searchParams.get("pageSize"));
-          const requestedPage = Number(url.searchParams.get("page"));
-          url.searchParams.set("pageSize", String(validPageSizes.has(requestedPageSize) ? requestedPageSize : 100));
-          url.searchParams.set("page", String(Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1));
+          const pageSize = Number(url.searchParams.get("pageSize"));
+          const page = Number(url.searchParams.get("page"));
+          url.searchParams.set("pageSize", String(validPageSizes.has(pageSize) ? pageSize : 100));
+          url.searchParams.set("page", String(Number.isInteger(page) && page > 0 ? page : 1));
           return url;
         }
 
@@ -95,21 +95,17 @@
           if (url?.pathname.toLowerCase() === "/summary.json") {
             return Promise.resolve(jsonResponse("Use the live manifest summary.", 404));
           }
-
           url = normalizePagedRequest(url);
           if (isPagedTableLocation() && isFullPlayerDataRequest(url)) {
             return Promise.resolve(jsonResponse("Use the paged data endpoint for this table.", 409));
           }
-
           if (url?.pathname.toLowerCase() === "/api/data" && url.searchParams.get("mode") === "bootstrap") {
             if (!searchDataAllowed) return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
             return loadSearchBootstrap().then((data) => jsonResponse(data));
           }
-
           if (!searchDataAllowed && isSearchDataRequest(url)) {
             return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
           }
-
           const normalizedInput = url && !(input instanceof Request) ? url.toString() : input;
           return originalFetch(normalizedInput, init);
         };
@@ -121,11 +117,9 @@
         document.addEventListener("click", (event) => {
           if (event.target instanceof Element && event.target.closest("#openSearchButton")) activateSearchData();
         }, true);
-
         document.addEventListener("keydown", (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") activateSearchData();
         }, true);
-
         document.addEventListener("focusin", (event) => {
           if (!(event.target instanceof Element) || !event.target.matches("#evaluationSearchInput")) return;
           activateSearchData();
@@ -150,14 +144,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.6">
-    <style>html.bootPending body{visibility:hidden}</style>
+    <link rel="stylesheet" href="/styles.css?v=1.151.7">
+    <style>
+      html.bootPending body { visibility: hidden; }
+      #watchlistPlayerCount { display: none !important; }
+      table th,
+      table td { padding-left: 8px !important; padding-right: 8px !important; }
+    </style>
   </head>
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.6";
-        const CHANGELOG_DESCRIPTION = "Show the loaded Database page over the complete player total and keep refreshed page chrome visible and stable while table rows load";
+        const VERSION = "1.151.7";
+        const CHANGELOG_DESCRIPTION = "Remove table row counters, show destination quick filters immediately, and standardize table cell padding";
+        const TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"]);
+        let pendingQuickFilterPage = "";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -165,9 +166,9 @@
         }
 
         function compareVersionsDescending(a, b) {
-          const aParts = versionParts(a) || [0, 0, 0];
-          const bParts = versionParts(b) || [0, 0, 0];
-          return bParts[0] - aParts[0] || bParts[1] - aParts[1] || bParts[2] - aParts[2];
+          const ap = versionParts(a) || [0, 0, 0];
+          const bp = versionParts(b) || [0, 0, 0];
+          return bp[0] - ap[0] || bp[1] - ap[1] || bp[2] - ap[2];
         }
 
         function hasStoredWalletOptIn() {
@@ -180,8 +181,8 @@
           }
         }
 
-        function routeInfo() {
-          const path = window.location.pathname.replace(/\/+$/, "") || "/";
+        function routeInfo(pathname = window.location.pathname) {
+          const path = String(pathname || "/").replace(/\/+$/, "") || "/";
           if (/^\/mfl\/stats$/i.test(path)) return { page: "mflstats", title: "MFL Stats", table: false };
           const routes = [
             [/^\/database(?:\/|$)/i, "database", "Database"],
@@ -201,6 +202,11 @@
           return { page: "home", table: false };
         }
 
+        function hidePlayerCounter(root = document) {
+          const counter = root.querySelector?.("#watchlistPlayerCount");
+          if (counter) counter.hidden = true;
+        }
+
         function prepareInitialShell(doc) {
           const route = routeInfo();
           ["homePage", "progressionPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage"]
@@ -208,7 +214,6 @@
               const element = doc.getElementById(id);
               if (element) element.hidden = true;
             });
-
           doc.body.dataset.page = route.page;
           const menuRail = doc.getElementById("menuRail");
           const sidebar = doc.getElementById("sidebar");
@@ -216,6 +221,7 @@
           if (sidebar) sidebar.hidden = false;
           doc.getElementById("appShell")?.classList.remove("menuClosed");
           doc.querySelectorAll(".navButton").forEach((button) => button.classList.toggle("active", button.dataset.page === route.page));
+          hidePlayerCounter(doc);
 
           if (route.table) {
             const page = doc.getElementById("progressionPage");
@@ -237,18 +243,11 @@
             const detail = doc.getElementById("playerDetail");
             if (detail) detail.innerHTML = '<div class="emptyState">Loading player...</div>';
           } else {
-            const pageId = {
-              home: "homePage",
-              evaluation: "evaluationPage",
-              settings: "settingsPage",
-              changelog: "changelogPage",
-            }[route.page];
+            const pageId = { home: "homePage", evaluation: "evaluationPage", settings: "settingsPage", changelog: "changelogPage" }[route.page];
             if (pageId) doc.getElementById(pageId).hidden = false;
           }
-
           const homeOptInButton = doc.getElementById("homeOptInButton");
           if (homeOptInButton && hasStoredWalletOptIn()) homeOptInButton.hidden = true;
-          return route;
         }
 
         function rebuildChangelog() {
@@ -256,7 +255,6 @@
           if (footerLink) footerLink.textContent = `MFL Front Office v${VERSION}`;
           const list = document.querySelector(".changelogList");
           if (!list) return;
-
           const entries = new Map();
           Array.from(list.querySelectorAll("li")).forEach((item) => {
             if (item.classList.contains("changelogMinorSection")) return;
@@ -266,21 +264,18 @@
             if (!entries.has(version)) entries.set(version, description);
           });
           entries.set(`v${VERSION}`, CHANGELOG_DESCRIPTION);
-
           const groups = new Map();
-          Array.from(entries.entries()).forEach(([version, description]) => {
+          entries.forEach((description, version) => {
             const parts = versionParts(version);
             const key = `${parts[0]}.${parts[1]}`;
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push({ version, description });
           });
-
           const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
-            const [aMajor, aMinor] = a.split(".").map(Number);
-            const [bMajor, bMinor] = b.split(".").map(Number);
-            return bMajor - aMajor || bMinor - aMinor;
+            const [am, an] = a.split(".").map(Number);
+            const [bm, bn] = b.split(".").map(Number);
+            return bm - am || bn - an;
           });
-
           list.replaceChildren();
           groupEntries.forEach(([minor, patches], index) => {
             patches.sort((a, b) => compareVersionsDescending(a.version, b.version));
@@ -334,9 +329,7 @@
           button.className = "searchResult clubSearchResult";
           button.dataset.clubId = club.clubId;
           const division = typeof contractDivisionInfo === "function" ? contractDivisionInfo(club.division) : null;
-          const divisionHtml = division
-            ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>`
-            : "";
+          const divisionHtml = division ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>` : "";
           button.innerHTML = `<strong>${escapeHtml(club.name)}</strong><span>Club &middot; #${escapeHtml(club.clubId)}${divisionHtml}</span>`;
           button.addEventListener("click", () => {
             if (typeof closeSearch === "function") closeSearch();
@@ -345,39 +338,57 @@
           return button;
         }
 
-        function numericText(value) {
-          const number = Number(String(value || "").replace(/[^0-9]/g, ""));
-          return Number.isFinite(number) && number > 0 ? number : 0;
+        function savedQuickFilterState(pageName) {
+          if (typeof state === "undefined") return {};
+          return state.tablePageStates?.[pageName]
+            || (typeof defaultTablePageState === "function" ? defaultTablePageState(pageName) : {});
         }
 
-        function databaseTotalPlayers() {
-          if (typeof state !== "undefined") {
-            const candidates = [
-              state.bootstrapData?.summary?.playerCount,
-              state.manifest?.row_count,
-              state.manifest?.rowCount,
-            ];
-            const total = candidates.map(Number).find((value) => Number.isFinite(value) && value > 0);
-            if (total) return total;
-          }
-          return numericText(document.querySelector("#totalPlayers")?.textContent);
+        function previewQuickFilters(pageName) {
+          if (!TABLE_PAGES.has(pageName)) return;
+          const saved = savedQuickFilterState(pageName);
+          const hideMflFilter = document.querySelector("#hideMflPlayersFilter");
+          const hideMflInput = document.querySelector("#hideMflPlayersInput");
+          const packableFilter = document.querySelector("#packablePlayersFilter");
+          const packableInput = document.querySelector("#packablePlayersInput");
+          const newMintsInput = document.querySelector("#newMintsInput");
+          const newMintsLabel = document.querySelector("#newMintsLabel");
+
+          if (hideMflFilter) hideMflFilter.hidden = pageName !== "database";
+          if (hideMflInput) hideMflInput.checked = pageName === "database" ? (saved.hideMflPlayers !== undefined ? Boolean(saved.hideMflPlayers) : true) : false;
+          if (packableFilter) packableFilter.hidden = pageName !== "mfl";
+          if (packableInput) packableInput.checked = pageName === "mfl" ? (saved.mflPackable !== undefined ? Boolean(saved.mflPackable) : true) : false;
+          if (newMintsInput) newMintsInput.checked = Boolean(saved.newMints);
+          if (pageName === "mfl" && newMintsInput?.checked && packableInput) packableInput.checked = false;
+          if (newMintsLabel) newMintsLabel.textContent = pageName === "mfl" ? "Only aged players" : "Only new mints";
+          hidePlayerCounter();
         }
 
-        function syncDatabaseShowingCount() {
-          if (typeof state === "undefined" || state.currentPage !== "database") return;
-          const counter = document.querySelector("#watchlistPlayerCount");
-          if (!counter) return;
-          const shown = typeof currentPageRows === "function"
-            ? currentPageRows().length
-            : Array.isArray(state.filteredRows) ? state.filteredRows.length : 0;
-          const total = databaseTotalPlayers();
-          counter.hidden = false;
-          counter.textContent = total > 0
-            ? `Showing ${typeof formatCount === "function" ? formatCount(shown) : shown}/${typeof formatCount === "function" ? formatCount(total) : total}`
-            : `Showing ${typeof formatCount === "function" ? formatCount(shown) : shown}/-`;
+        function previewNavigationTarget(event) {
+          const link = event.target instanceof Element ? event.target.closest(".navButton[data-page]") : null;
+          if (!link) return;
+          const pageName = String(link.dataset.page || "");
+          if (!TABLE_PAGES.has(pageName)) return;
+          pendingQuickFilterPage = pageName;
+          previewQuickFilters(pageName);
         }
 
         function installRuntimeFixes() {
+          document.addEventListener("pointerdown", previewNavigationTarget, true);
+          document.addEventListener("click", previewNavigationTarget, true);
+
+          if (typeof syncQuickFilterLabels === "function") {
+            const originalSyncQuickFilterLabels = syncQuickFilterLabels;
+            syncQuickFilterLabels = function syncQuickFiltersWithoutDestinationFlash() {
+              const result = originalSyncQuickFilterLabels.apply(this, arguments);
+              if (pendingQuickFilterPage) {
+                previewQuickFilters(pendingQuickFilterPage);
+                if (typeof state !== "undefined" && state.currentPage === pendingQuickFilterPage) pendingQuickFilterPage = "";
+              }
+              return result;
+            };
+          }
+
           if (typeof renderSearchResultsNow === "function") {
             const originalRenderSearchResultsNow = renderSearchResultsNow;
             renderSearchResultsNow = function renderSearchResultsIncludingClubs() {
@@ -386,7 +397,6 @@
               const input = document.querySelector("#playerSearchInput");
               const query = typeof normalizeSearchText === "function" ? normalizeSearchText(input?.value?.trim() || "") : String(input?.value || "").trim().toLowerCase();
               if (!resultsElement || !query || typeof state === "undefined") return result;
-
               if (!state.clubSearchIndex.length && Array.isArray(state.bootstrapData?.clubs)) {
                 state.clubSearchIndex = state.bootstrapData.clubs.map((club) => ({
                   clubId: String(club.clubId || ""),
@@ -395,7 +405,6 @@
                   searchText: normalizeSearchText(`${club.name || ""} ${club.clubId || ""}`),
                 })).filter((club) => club.clubId && club.name);
               }
-
               const clubs = state.clubSearchIndex
                 .map((club) => {
                   const name = normalizeSearchText(club.name);
@@ -405,15 +414,12 @@
                 })
                 .filter((entry) => entry.score > 0)
                 .sort((a, b) => b.score - a.score || (a.club.division ?? Infinity) - (b.club.division ?? Infinity) || a.club.name.localeCompare(b.club.name));
-
               if (!clubs.length) {
                 const hint = resultsElement.querySelector(".searchHint");
                 if (hint?.textContent === "No players or agents found.") hint.textContent = "No players, clubs, or agents found.";
                 return result;
               }
-
-              const existing = Array.from(resultsElement.querySelectorAll(":scope > .searchResult"))
-                .filter((element) => !element.classList.contains("clubSearchResult"));
+              const existing = Array.from(resultsElement.querySelectorAll(":scope > .searchResult")).filter((element) => !element.classList.contains("clubSearchResult"));
               resultsElement.replaceChildren(...[...clubs.slice(0, 5).map(({ club }) => createClubSearchButton(club)), ...existing].slice(0, 5));
               resultsElement.classList.add("filledSearchResults");
               return result;
@@ -422,17 +428,15 @@
 
           if (typeof updateTablePlayerCount === "function") {
             const originalUpdateTablePlayerCount = updateTablePlayerCount;
-            updateTablePlayerCount = function updateTablePlayerCountWithDatabaseTotal() {
+            updateTablePlayerCount = function updateTableWithoutPlayerCounter() {
               const result = originalUpdateTablePlayerCount.apply(this, arguments);
-              syncDatabaseShowingCount();
+              hidePlayerCounter();
               return result;
             };
           }
-
-          const totalPlayersElement = document.querySelector("#totalPlayers");
-          if (totalPlayersElement) {
-            new MutationObserver(syncDatabaseShowingCount).observe(totalPlayersElement, { childList: true, characterData: true, subtree: true });
-          }
+          hidePlayerCounter();
+          const counter = document.querySelector("#watchlistPlayerCount");
+          if (counter) new MutationObserver(hidePlayerCounter).observe(counter, { attributes: true, childList: true, characterData: true, subtree: true });
         }
 
         function finalizeRouteChrome() {
@@ -441,24 +445,20 @@
             state.currentPage = route.page;
             if (route.table && typeof pageTargetFromPath === "function") {
               const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
-              if (typeof restoreSavedTableState === "function") {
-                restoreSavedTableState(route.page, { view: target?.options?.view });
-              } else if (target?.options?.view) {
-                state.view = target.options.view;
-              }
+              if (typeof restoreSavedTableState === "function") restoreSavedTableState(route.page, { view: target?.options?.view });
+              else if (target?.options?.view) state.view = target.options.view;
             }
           }
-
           document.body.dataset.page = route.page;
           document.querySelectorAll(".navButton").forEach((button) => button.classList.toggle("active", button.dataset.page === route.page));
           if (route.table) {
             const title = document.querySelector("#tablePageTitle");
             if (title) title.textContent = typeof tableTitleForPage === "function" ? tableTitleForPage(route.page) : route.title;
             if (typeof updateViewButtons === "function") updateViewButtons();
-            if (typeof syncQuickFilterLabels === "function") syncQuickFilterLabels();
+            previewQuickFilters(route.page);
             if (typeof showTableBusyState === "function") showTableBusyState();
           }
-          syncDatabaseShowingCount();
+          hidePlayerCounter();
           if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
           requestAnimationFrame(() => document.documentElement.classList.remove("bootPending"));
         }
