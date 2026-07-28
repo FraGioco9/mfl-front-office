@@ -554,3 +554,31 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   left: 0 !important;
   width: 100% !important;
 }
+
+/* v1.150.11 - Geometrically centered popup close shapes */
+.popupCloseButton {
+  position: relative;
+  font-size: 0;
+}
+
+.popupCloseButton::before,
+.popupCloseButton::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.popupCloseButton::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.popupCloseButton::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}

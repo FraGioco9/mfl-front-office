@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.10">
+    <link rel="stylesheet" href="/styles.css?v=1.150.11">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -373,7 +373,8 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
-              <li><span>v1.150.10</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
+              <li><span>v1.150.11</span><p>Center all popup close-button shapes</p></li>
+              <li><span>v1.150.11</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
               <li><span>v1.150.9</span><p>Keep refreshed tables at their final width and show the club division in its league color</p></li>
               <li><span>v1.150.8</span><p>Center pagination in the page layout and keep the table at its final width immediately after refresh</p></li>
               <li><span>v1.150.7</span><p>Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders</p></li>
@@ -994,7 +995,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.10</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.11</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1003,7 +1004,7 @@
       <section class="searchDialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
         <header class="filtersHeader">
           <h2 id="searchTitle">Search</h2>
-          <button id="closeSearchButton" class="iconButton" type="button" aria-label="Close search">x</button>
+          <button id="closeSearchButton" class="iconButton popupCloseButton" type="button" aria-label="Close search"></button>
         </header>
         <div class="searchBody">
           <input id="playerSearchInput" type="search" placeholder="Search by player ID, name, or agent" autocomplete="off">
@@ -1015,7 +1016,7 @@
       <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
         <header class="filtersHeader">
           <h2 id="filtersTitle">Filters</h2>
-          <button id="closeFiltersButton" class="iconButton" type="button" aria-label="Close filters">x</button>
+          <button id="closeFiltersButton" class="iconButton popupCloseButton" type="button" aria-label="Close filters"></button>
         </header>
 
         <section class="filterBuilder">
@@ -1041,7 +1042,7 @@
       <section class="evaluationLoadDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationLoadTitle">
         <header class="filtersHeader">
           <h2 id="evaluationLoadTitle">Load saved evaluation</h2>
-          <button id="closeEvaluationLoadButton" class="iconButton" type="button" aria-label="Close saved evaluations">x</button>
+          <button id="closeEvaluationLoadButton" class="iconButton popupCloseButton" type="button" aria-label="Close saved evaluations"></button>
         </header>
         <div id="evaluationLoadList" class="evaluationLoadList"></div>
       </section>
@@ -1053,7 +1054,7 @@
       <section class="watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
         <header class="filtersHeader">
           <h2 id="watchlistChoiceTitle">Add to watchlist</h2>
-          <button id="closeWatchlistChoiceButton" class="iconButton" type="button" aria-label="Close watchlist chooser">x</button>
+          <button id="closeWatchlistChoiceButton" class="iconButton popupCloseButton" type="button" aria-label="Close watchlist chooser"></button>
         </header>
         <section id="watchlistChoiceList" class="watchlistChoiceList" aria-label="Choose watchlist"></section>
       </section>
@@ -1063,7 +1064,7 @@
       <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
         <header class="filtersHeader">
           <h2 id="addWatchlistTitle">Add a watchlist</h2>
-          <button id="closeAddWatchlistButton" class="iconButton" type="button" aria-label="Close add watchlist">x</button>
+          <button id="closeAddWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close add watchlist"></button>
         </header>
         <section class="addWatchlistBody">
           <label class="field">
@@ -1083,7 +1084,7 @@
       <section class="deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle">
         <header class="filtersHeader">
           <h2 id="deleteWatchlistTitle">Delete watchlist</h2>
-          <button id="closeDeleteWatchlistButton" class="iconButton" type="button" aria-label="Close delete watchlist">x</button>
+          <button id="closeDeleteWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete watchlist"></button>
         </header>
         <section class="deleteWatchlistBody">
           <p>Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
@@ -1098,7 +1099,7 @@
       <section class="advancedSettingsDialog" role="dialog" aria-modal="true" aria-labelledby="advancedSettingsTitle">
         <header class="filtersHeader">
           <h2 id="advancedSettingsTitle">Advanced Settings</h2>
-          <button id="closeAdvancedSettingsButton" class="iconButton" type="button" aria-label="Close advanced settings">x</button>
+          <button id="closeAdvancedSettingsButton" class="iconButton popupCloseButton" type="button" aria-label="Close advanced settings"></button>
         </header>
 
         <section class="advancedSettingsBody">
@@ -1163,6 +1164,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.10"></script>
+    <script src="/app.js?v=1.150.11"></script>
   </body>
 </html>
