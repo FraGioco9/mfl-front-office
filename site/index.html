@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="bootPending">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,7 +16,9 @@
         }
 
         const originalFetch = window.fetch.bind(window);
+        const validPageSizes = new Set([25, 50, 100, 250]);
         let searchDataAllowed = false;
+        let searchBootstrapPromise = null;
         let evaluationSearchLoadPromise = null;
 
         function requestUrl(input) {
@@ -28,8 +30,14 @@
           }
         }
 
-        function isSearchDataRequest(input) {
-          const url = requestUrl(input);
+        function jsonResponse(message, status) {
+          return new Response(JSON.stringify({ error: message }), {
+            status,
+            headers: { "content-type": "application/json; charset=utf-8" },
+          });
+        }
+
+        function isSearchDataRequest(url) {
           if (!url) return false;
           const path = url.pathname.toLowerCase();
           const file = String(url.searchParams.get("file") || "").toLowerCase();
@@ -41,50 +49,94 @@
             || file === "agents_search.json";
         }
 
-        function jsonResponse(message, status) {
-          return new Response(JSON.stringify({ error: message }), {
-            status,
-            headers: { "content-type": "application/json; charset=utf-8" },
-          });
+        function isPagedTableLocation() {
+          return /^\/(?:database|progression|watchlist|my-players)(?:\/|$)/i.test(window.location.pathname)
+            || /^\/mfl(?:\/|$)/i.test(window.location.pathname) && !/^\/mfl\/stats\/?$/i.test(window.location.pathname);
+        }
+
+        function isFullPlayerDataRequest(url) {
+          if (!url) return false;
+          const path = url.pathname.toLowerCase();
+          const file = String(url.searchParams.get("file") || "").toLowerCase();
+          return /(^|\/)(players_public|players_progression|players_mfl_public|players_\d{4})\.json$/.test(path)
+            || /^(players_public|players_progression|players_mfl_public|players_\d{4})\.json$/.test(file);
+        }
+
+        function normalizePagedRequest(url) {
+          if (!url || url.pathname.toLowerCase() !== "/api/data" || url.searchParams.get("mode") !== "page") {
+            return url;
+          }
+          const scope = String(url.searchParams.get("scope") || "").toLowerCase();
+          if (!["database", "progression", "mfl", "watchlist", "myplayers"].includes(scope)) {
+            return url;
+          }
+          const requestedPageSize = Number(url.searchParams.get("pageSize"));
+          const requestedPage = Number(url.searchParams.get("page"));
+          url.searchParams.set("pageSize", String(validPageSizes.has(requestedPageSize) ? requestedPageSize : 100));
+          url.searchParams.set("page", String(Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1));
+          return url;
+        }
+
+        function startSearchBootstrap() {
+          searchDataAllowed = true;
+          if (!searchBootstrapPromise) {
+            searchBootstrapPromise = originalFetch("/api/data?mode=bootstrap", { cache: "no-store" })
+              .then((response) => response)
+              .catch((error) => {
+                searchBootstrapPromise = null;
+                throw error;
+              });
+          }
+          return searchBootstrapPromise;
         }
 
         window.fetch = (input, init) => {
-          const url = requestUrl(input);
+          let url = requestUrl(input);
           if (url?.pathname.toLowerCase() === "/summary.json") {
             return Promise.resolve(jsonResponse("Use the live manifest summary.", 404));
           }
-          if (!searchDataAllowed && isSearchDataRequest(input)) {
+
+          url = normalizePagedRequest(url);
+          if (isPagedTableLocation() && isFullPlayerDataRequest(url)) {
+            return Promise.resolve(jsonResponse("Use the paged data endpoint for this table.", 409));
+          }
+
+          if (url?.pathname.toLowerCase() === "/api/data" && url.searchParams.get("mode") === "bootstrap") {
+            if (!searchDataAllowed) {
+              return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
+            }
+            return startSearchBootstrap().then((response) => response.clone());
+          }
+
+          if (!searchDataAllowed && isSearchDataRequest(url)) {
             return Promise.resolve(jsonResponse("Search data is loaded after search activation.", 503));
           }
-          return originalFetch(input, init);
+
+          const normalizedInput = url && !(input instanceof Request) ? url.toString() : input;
+          return originalFetch(normalizedInput, init);
         };
 
-        function allowSearchData() {
-          searchDataAllowed = true;
+        function activateSearchData() {
+          void startSearchBootstrap().catch(() => false);
         }
 
         document.addEventListener("click", (event) => {
           if (event.target instanceof Element && event.target.closest("#openSearchButton")) {
-            allowSearchData();
+            activateSearchData();
           }
         }, true);
 
         document.addEventListener("keydown", (event) => {
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-            allowSearchData();
+            activateSearchData();
           }
         }, true);
 
         document.addEventListener("focusin", (event) => {
-          if (!(event.target instanceof Element) || !event.target.matches("#evaluationSearchInput")) {
-            return;
-          }
-          allowSearchData();
-          if (evaluationSearchLoadPromise || typeof ensureSearchIndexes !== "function") {
-            return;
-          }
-          const needsSearchData = typeof state !== "undefined" && !state.searchIndexesLoaded;
-          if (!needsSearchData) {
+          if (!(event.target instanceof Element) || !event.target.matches("#evaluationSearchInput")) return;
+          activateSearchData();
+          if (evaluationSearchLoadPromise || typeof ensureSearchIndexes !== "function") return;
+          if (typeof state !== "undefined" && state.searchIndexesLoaded) {
             if (typeof renderEvaluationSearchResults === "function") renderEvaluationSearchResults();
             return;
           }
@@ -104,13 +156,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.3">
+    <link rel="stylesheet" href="/styles.css?v=1.151.4">
+    <style>html.bootPending body{visibility:hidden}</style>
   </head>
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.3";
-        const CHANGELOG_DESCRIPTION = "Load live homepage totals, defer complete search indexes until activation, repair changelog sections, and keep table routes page-sized";
+        const VERSION = "1.151.4";
+        const CHANGELOG_DESCRIPTION = "Load complete search indexes on activation, enforce page-sized table requests, preserve refreshed routes during loading, and remove homepage opt-in flicker";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -123,10 +176,104 @@
           return bParts[0] - aParts[0] || bParts[1] - aParts[1] || bParts[2] - aParts[2];
         }
 
+        function hasStoredWalletOptIn() {
+          try {
+            const address = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim();
+            const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+            return Boolean(address && proof?.address && proof?.message && Array.isArray(proof?.signatures) && proof.signatures.length);
+          } catch {
+            return false;
+          }
+        }
+
+        function hideAllViews(doc) {
+          ["homePage", "progressionPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage"]
+            .forEach((id) => {
+              const element = doc.getElementById(id);
+              if (element) element.hidden = true;
+            });
+        }
+
+        function prepareInitialRoute(doc) {
+          const path = window.location.pathname.replace(/\/+$/, "") || "/";
+          const homePage = doc.getElementById("homePage");
+          const tablePage = doc.getElementById("progressionPage");
+          const mflStatsPage = doc.getElementById("mflStatsPage");
+          const evaluationPage = doc.getElementById("evaluationPage");
+          const playerPage = doc.getElementById("playerPage");
+          const settingsPage = doc.getElementById("settingsPage");
+          const changelogPage = doc.getElementById("changelogPage");
+          hideAllViews(doc);
+
+          const tableRoutes = [
+            { pattern: /^\/database(?:\/|$)/i, page: "database", title: "Database" },
+            { pattern: /^\/mfl(?:\/|$)/i, page: "mfl", title: "MFL Wallet" },
+            { pattern: /^\/progression(?:\/|$)/i, page: "progression", title: "Progression" },
+            { pattern: /^\/watchlist(?:\/|$)/i, page: "watchlist", title: "Watchlist" },
+            { pattern: /^\/my-players(?:\/|$)/i, page: "myplayers", title: "My Players" },
+            { pattern: /^\/agents?\/[^/]+(?:\/|$)/i, page: "agents", title: "Agent" },
+            { pattern: /^\/clubs?\/[^/]+(?:\/|$)/i, page: "club", title: "Club" },
+          ];
+
+          if (/^\/mfl\/stats\/?$/i.test(path)) {
+            doc.body.dataset.page = "mflstats";
+            if (mflStatsPage) mflStatsPage.hidden = false;
+            const distribution = doc.getElementById("mflStatsAgeDistribution");
+            if (distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
+            return;
+          }
+
+          const tableRoute = tableRoutes.find((route) => route.pattern.test(path));
+          if (tableRoute) {
+            doc.body.dataset.page = tableRoute.page;
+            if (tablePage) tablePage.hidden = false;
+            const title = doc.getElementById("tablePageTitle");
+            if (title) title.textContent = tableRoute.title;
+            const body = doc.getElementById("tableBody");
+            if (body) body.replaceChildren();
+            const emptyState = doc.getElementById("emptyState");
+            if (emptyState) {
+              emptyState.hidden = false;
+              emptyState.textContent = "Loading players...";
+            }
+            return;
+          }
+
+          if (/^\/players\/[^/]+\/?$/i.test(path)) {
+            doc.body.dataset.page = "player";
+            if (playerPage) playerPage.hidden = false;
+            const detail = doc.getElementById("playerDetail");
+            if (detail) detail.innerHTML = '<div class="emptyState">Loading player...</div>';
+            return;
+          }
+
+          if (/^\/evaluation\/?$/i.test(path)) {
+            doc.body.dataset.page = "evaluation";
+            if (evaluationPage) evaluationPage.hidden = false;
+            return;
+          }
+
+          if (/^\/settings\/?$/i.test(path)) {
+            doc.body.dataset.page = "settings";
+            if (settingsPage) settingsPage.hidden = false;
+            return;
+          }
+
+          if (/^\/changelog\/?$/i.test(path)) {
+            doc.body.dataset.page = "changelog";
+            if (changelogPage) changelogPage.hidden = false;
+            return;
+          }
+
+          doc.body.dataset.page = "home";
+          if (homePage) homePage.hidden = false;
+          const homeOptInButton = doc.getElementById("homeOptInButton");
+          if (homeOptInButton && hasStoredWalletOptIn()) homeOptInButton.hidden = true;
+        }
+
         function rebuildChangelog() {
           const footerLink = document.querySelector('.siteFooter a[data-page="changelog"]');
           if (footerLink) footerLink.textContent = `MFL Front Office v${VERSION}`;
-
           const list = document.querySelector(".changelogList");
           if (!list) return;
 
@@ -157,37 +304,30 @@
           list.replaceChildren();
           groupEntries.forEach(([minor, patches], index) => {
             patches.sort((a, b) => compareVersionsDescending(a.version, b.version));
-
             const section = document.createElement("li");
             section.className = "changelogMinorSection";
             if (index === 0) section.classList.add("is-expanded");
-
             const toggle = document.createElement("button");
             toggle.className = "changelogMinorToggle";
             toggle.type = "button";
             toggle.setAttribute("aria-expanded", index === 0 ? "true" : "false");
-
             const title = document.createElement("span");
             title.className = "changelogMinorVersion";
             title.textContent = `v${minor}`;
-
             const meta = document.createElement("span");
             meta.className = "changelogMinorMeta";
             meta.textContent = `${patches.length} ${patches.length === 1 ? "patch" : "patches"}`;
-
             const chevron = document.createElement("span");
             chevron.className = "changelogMinorChevron";
             chevron.setAttribute("aria-hidden", "true");
             chevron.textContent = ">";
             toggle.append(title, meta, chevron);
-
             const panel = document.createElement("div");
             panel.className = "changelogMinorPanel";
             const inner = document.createElement("div");
             inner.className = "changelogMinorPanelInner";
             const patchList = document.createElement("ol");
             patchList.className = "changelogPatchList";
-
             patches.forEach(({ version, description }) => {
               const item = document.createElement("li");
               const versionLabel = document.createElement("span");
@@ -197,7 +337,6 @@
               item.append(versionLabel, descriptionLabel);
               patchList.appendChild(item);
             });
-
             inner.appendChild(patchList);
             panel.appendChild(inner);
             section.append(toggle, panel);
@@ -215,10 +354,11 @@
           const html = await response.text();
           const shell = new DOMParser().parseFromString(html, "text/html");
           shell.querySelectorAll("script").forEach((script) => script.remove());
-
+          prepareInitialRoute(shell);
           Array.from(document.body.attributes).forEach((attribute) => document.body.removeAttribute(attribute.name));
           Array.from(shell.body.attributes).forEach((attribute) => document.body.setAttribute(attribute.name, attribute.value));
           document.body.innerHTML = shell.body.innerHTML;
+          document.documentElement.classList.remove("bootPending");
 
           const applicationScript = document.createElement("script");
           applicationScript.src = `/app.js?v=${VERSION}`;
@@ -234,6 +374,7 @@
         }
 
         loadApplicationShell().catch(() => {
+          document.documentElement.classList.remove("bootPending");
           document.body.innerHTML = '<main><p class="emptyState">Could not load MFL Front Office.</p></main>';
         });
       })();
