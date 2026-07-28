@@ -11706,52 +11706,45 @@ startApp();
   function setClubSwitching(active) {
     document.body.classList.toggle("clubViewSwitching", active);
     if (active) {
+      if (typeof loadingScreen !== "undefined" && loadingScreen) {
+        loadingScreen.hidden = false;
+        loadingScreen.classList.remove("leaving");
+      }
       document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
     }
   }
 
   function finishClubSwitch() {
     return new Promise((resolve) => {
-      let attempts = 0;
-      let stableFrames = 0;
-      let previousSignature = "";
-
-      const checkStableClubPage = () => {
-        attempts += 1;
+      requestAnimationFrame(() => {
         if (typeof buildTableColGroup === "function") buildTableColGroup();
         if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
         applyClubPresentation();
 
-        const page = document.querySelector("#progressionPage");
-        const columns = Array.from(document.querySelectorAll("#tableColGroup > col"));
-        const visibleViews = Array.from(document.querySelectorAll("#progressionPage .viewButton:not([hidden])"))
-          .map((button) => `${button.dataset.view}:${button.classList.contains("active")}`)
-          .join("|");
-        const signature = [
-          page && !page.hidden ? "visible" : "hidden",
-          tablePageTitle?.textContent || "",
-          visibleViews,
-          tableBody?.childElementCount || 0,
-          columns.map((column) => `${column.className}:${column.style.width}`).join("|"),
-        ].join("::");
+        requestAnimationFrame(() => {
+          if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+          applyClubPresentation();
+          setClubSwitching(false);
 
-        if (columns.length && signature === previousSignature) stableFrames += 1;
-        else stableFrames = 0;
-        previousSignature = signature;
+          if (
+            typeof loadingScreen !== "undefined"
+            && loadingScreen
+            && !document.body.classList.contains("loading")
+            && !document.body.classList.contains("booting")
+          ) {
+            loadingScreen.hidden = false;
+            loadingScreen.classList.add("leaving");
+            window.setTimeout(() => {
+              if (!document.body.classList.contains("clubViewSwitching")) {
+                loadingScreen.hidden = true;
+                loadingScreen.classList.remove("leaving");
+              }
+            }, 230);
+          }
 
-        if (stableFrames >= 2 || attempts >= 120) {
-          requestAnimationFrame(() => requestAnimationFrame(() => {
-            applyClubPresentation();
-            setClubSwitching(false);
-            resolve();
-          }));
-          return;
-        }
-
-        requestAnimationFrame(checkStableClubPage);
-      };
-
-      requestAnimationFrame(checkStableClubPage);
+          resolve();
+        });
+      });
     });
   }
 
@@ -12048,7 +12041,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.3";
+  const VERSION = "1.150.4";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12217,7 +12210,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Reveal club pages atomically, stabilize table columns, fix Watchlist view switching, prioritize search results, and center pinned-sidebar layouts";
+    description.textContent = "Fix club-page loading, center opted-out layouts and footer outside the pinned sidebar, and keep shared columns exactly the same width across views";
     item.append(version, description);
     return item;
   }
@@ -12325,9 +12318,9 @@ startApp();
   else initialize();
 })();
 
-/* v1.150.3 stable pinned layout and atomic club loading */
+/* v1.150.4 pinned content grid and shared table widths */
 (() => {
-  const INITIAL_TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
+  const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const CLUB_ROUTE = /^\/(?:clubs?|club)\/[^/]+(?:\/|$)/i;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
   const WIDTHS = {
@@ -12348,19 +12341,41 @@ startApp();
     "col-owned-since": 9,
     "col-link": 3,
   };
-  const FILLER_CLASS = "col-stable-width-filler";
-  const initialTableRoute = INITIAL_TABLE_ROUTE.test(window.location.pathname)
-    && !/^\/mfl\/stats\/?$/i.test(window.location.pathname);
-  const initialClubRoute = CLUB_ROUTE.test(window.location.pathname);
+  const FILLER_CLASS = "col-shared-width-filler";
+  const initialTableRoute = TABLE_ROUTE.test(window.location.pathname)
+    && !/^\/mfl\/stats\/?$/i.test(window.location.pathname)
+    && !CLUB_ROUTE.test(window.location.pathname);
+  let cachedLayoutKey = "";
+  let cachedContentWidth = 0;
   let revealFrame = 0;
   let revealAttempts = 0;
-  let syncingBodyState = false;
 
   if (initialTableRoute) document.body.classList.add("tableLayoutPending");
-  if (initialClubRoute) document.body.classList.add("clubPagePending", "tableLayoutPending");
 
-  function isPlayerTablePage() {
-    return TABLE_PAGES.has(String(state?.currentPage || ""));
+  function playerTablePageActive() {
+    return TABLE_PAGES.has(String(state?.currentPage || "")) || TABLE_ROUTE.test(window.location.pathname);
+  }
+
+  function pinnedSidebarWidth() {
+    const rail = document.querySelector("#menuRail");
+    if (!rail || rail.hidden) return 0;
+    return 190;
+  }
+
+  function sharedContentWidth() {
+    const main = document.querySelector("main");
+    if (!main) return 0;
+    const styles = window.getComputedStyle(main);
+    const viewportWidth = document.documentElement.clientWidth;
+    const sidebarWidth = pinnedSidebarWidth();
+    const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+    const paddingRight = parseFloat(styles.paddingRight) || 0;
+    const key = [viewportWidth, sidebarWidth, paddingLeft, paddingRight].join(":");
+    if (key !== cachedLayoutKey) {
+      cachedLayoutKey = key;
+      cachedContentWidth = Math.max(0, viewportWidth - sidebarWidth - paddingLeft - paddingRight);
+    }
+    return cachedContentWidth;
   }
 
   function restoreSingleTable() {
@@ -12385,14 +12400,16 @@ startApp();
     return className ? WIDTHS[className] : null;
   }
 
-  function removeFiller(table, colGroup) {
-    colGroup.querySelectorAll(`.${FILLER_CLASS}, .col-exact-width-filler`).forEach((element) => element.remove());
-    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}, th.col-exact-width-filler, td.col-exact-width-filler`).forEach((element) => element.remove());
+  function removeFillers(table, colGroup) {
+    colGroup.querySelectorAll(`.${FILLER_CLASS}, .col-stable-width-filler, .col-exact-width-filler`).forEach((element) => element.remove());
+    table.querySelectorAll(
+      `th.${FILLER_CLASS}, td.${FILLER_CLASS}, th.col-stable-width-filler, td.col-stable-width-filler, th.col-exact-width-filler, td.col-exact-width-filler`,
+    ).forEach((element) => element.remove());
   }
 
-  function appendFiller(table, percentage) {
-    if (!(percentage > 0.01)) return;
-    const width = `${percentage}%`;
+  function appendFiller(table, widthInPixels) {
+    if (!(widthInPixels > 0.01)) return;
+    const width = `${widthInPixels.toFixed(4)}px`;
     const fillerColumn = document.createElement("col");
     fillerColumn.className = FILLER_CLASS;
     fillerColumn.style.setProperty("width", width, "important");
@@ -12403,154 +12420,139 @@ startApp();
       const cell = document.createElement(row.closest("thead") ? "th" : "td");
       cell.className = FILLER_CLASS;
       cell.setAttribute("aria-hidden", "true");
+      cell.style.setProperty("width", width, "important");
+      cell.style.setProperty("min-width", width, "important");
+      cell.style.setProperty("max-width", width, "important");
       row.appendChild(cell);
     });
   }
 
-  function applyStableTableWidths() {
-    if (!isPlayerTablePage() && !initialTableRoute) return false;
+  function applySharedTableWidths() {
+    if (!playerTablePageActive()) return false;
     restoreSingleTable();
     const page = document.querySelector("#progressionPage");
     const table = page?.querySelector(".tableScroller table");
     const colGroup = table?.querySelector("colgroup");
-    if (!page || page.hidden || !table || !colGroup) return false;
+    const contentWidth = sharedContentWidth();
+    if (!page || page.hidden || !table || !colGroup || !(contentWidth > 0)) return false;
 
-    removeFiller(table, colGroup);
+    removeFillers(table, colGroup);
     const columns = Array.from(colGroup.children);
     const percentages = columns.map(widthForColumn);
     if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return false;
-    const total = percentages.reduce((sum, width) => sum + width, 0);
-    if (total > 100.01) return false;
+    const totalPercentage = percentages.reduce((sum, width) => sum + width, 0);
+    if (totalPercentage > 100.01) return false;
 
+    const exactWidth = `${contentWidth.toFixed(4)}px`;
     page.querySelectorAll(".tableShell, .tableScroller").forEach((element) => {
-      element.style.setProperty("width", "100%", "important");
-      element.style.setProperty("min-width", "0", "important");
-      element.style.setProperty("max-width", "100%", "important");
+      element.style.setProperty("width", exactWidth, "important");
+      element.style.setProperty("min-width", exactWidth, "important");
+      element.style.setProperty("max-width", exactWidth, "important");
       element.style.setProperty("box-sizing", "border-box", "important");
       element.style.setProperty("overflow", "visible", "important");
     });
     table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", "100%", "important");
-    table.style.setProperty("min-width", "100%", "important");
-    table.style.setProperty("max-width", "100%", "important");
+    table.style.setProperty("width", exactWidth, "important");
+    table.style.setProperty("min-width", exactWidth, "important");
+    table.style.setProperty("max-width", exactWidth, "important");
     table.style.setProperty("box-sizing", "border-box", "important");
     table.style.setProperty("border-spacing", "0", "important");
 
+    let assignedWidth = 0;
     columns.forEach((column, index) => {
-      const width = `${percentages[index]}%`;
+      const pixelWidth = contentWidth * percentages[index] / 100;
+      assignedWidth += pixelWidth;
+      const width = `${pixelWidth.toFixed(4)}px`;
       column.style.setProperty("width", width, "important");
       column.style.setProperty("min-width", width, "important");
       column.style.setProperty("max-width", width, "important");
       column.style.setProperty("transition", "none", "important");
     });
-    appendFiller(table, Math.max(0, 100 - total));
+    appendFiller(table, Math.max(0, contentWidth - assignedWidth));
     return true;
   }
 
-  function revealTablePage() {
+  function revealInitialTable() {
     cancelAnimationFrame(revealFrame);
     revealFrame = requestAnimationFrame(() => {
-      const appStillLoading = document.body.classList.contains("loading")
-        || document.body.classList.contains("booting");
-      const ready = applyStableTableWidths();
-      const waitingForClub = document.body.classList.contains("clubViewSwitching");
-      if (appStillLoading || ((!ready || waitingForClub) && revealAttempts < 600)) {
-        if (!appStillLoading) revealAttempts += 1;
-        revealTablePage();
+      const appLoading = document.body.classList.contains("loading") || document.body.classList.contains("booting");
+      const ready = applySharedTableWidths();
+      if ((appLoading || !ready) && revealAttempts < 180) {
+        revealAttempts += 1;
+        revealInitialTable();
         return;
       }
       revealAttempts = 0;
       requestAnimationFrame(() => {
-        applyStableTableWidths();
-        if (document.body.classList.contains("clubViewSwitching")) return;
-        const clubReveal = document.body.classList.contains("clubPagePending");
-        document.body.classList.remove("clubPagePending", "tableLayoutPending");
-        if (!clubReveal || !loadingScreen) return;
-        loadingScreen.hidden = false;
-        loadingScreen.classList.remove("leaving");
-        requestAnimationFrame(() => {
-          loadingScreen.classList.add("leaving");
-          window.setTimeout(() => {
-            loadingScreen.hidden = true;
-            loadingScreen.classList.remove("leaving");
-          }, 230);
-        });
+        applySharedTableWidths();
+        document.body.classList.remove("tableLayoutPending");
       });
     });
   }
 
-  function syncClubLoadingState() {
-    if (syncingBodyState) return;
-    syncingBodyState = true;
-    try {
-      if (document.body.classList.contains("clubViewSwitching")) {
-        document.body.classList.add("clubPagePending", "tableLayoutPending");
-        if (loadingScreen) {
-          loadingScreen.hidden = false;
-          loadingScreen.classList.remove("leaving");
-        }
-        return;
-      }
-      if (document.body.classList.contains("clubPagePending")) revealTablePage();
-    } finally {
-      syncingBodyState = false;
-    }
-  }
-
   function syncPinnedSidebarState() {
-    const rail = document.querySelector("#menuRail");
-    document.body.classList.toggle("pinnedSidebarVisible", Boolean(rail && !rail.hidden));
+    const visible = pinnedSidebarWidth() > 0;
+    const changed = document.body.classList.contains("pinnedSidebarVisible") !== visible;
+    document.body.classList.toggle("pinnedSidebarVisible", visible);
+    if (changed) {
+      cachedLayoutKey = "";
+      cachedContentWidth = 0;
+      requestAnimationFrame(applySharedTableWidths);
+    }
   }
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithoutFirstFrameShift() {
+    buildTableColGroup = function buildTableColGroupWithSharedWidths() {
       const result = originalBuildTableColGroup.apply(this, arguments);
-      applyStableTableWidths();
+      applySharedTableWidths();
       return result;
     };
   }
 
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithoutFirstFrameShift() {
+    buildHeader = function buildHeaderWithSharedWidths() {
       const result = originalBuildHeader.apply(this, arguments);
-      applyStableTableWidths();
+      applySharedTableWidths();
       return result;
     };
   }
 
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
-    renderTable = function renderTableWithoutFirstFrameShift() {
+    renderTable = function renderTableWithSharedWidths() {
       const result = originalRenderTable.apply(this, arguments);
-      applyStableTableWidths();
-      revealTablePage();
+      applySharedTableWidths();
+      if (document.body.classList.contains("tableLayoutPending")) revealInitialTable();
       return result;
     };
   }
 
   if (typeof updateViewButtons === "function") {
     const originalUpdateViewButtons = updateViewButtons;
-    updateViewButtons = function updateViewButtonsWithoutWatchlistLoop() {
+    updateViewButtons = function updateViewButtonsWithSharedWidths() {
       const result = originalUpdateViewButtons.apply(this, arguments);
-      applyStableTableWidths();
+      applySharedTableWidths();
       return result;
     };
   }
 
-  const bodyClassObserver = new MutationObserver(syncClubLoadingState);
-  bodyClassObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
   const rail = document.querySelector("#menuRail");
   if (rail) {
     const railObserver = new MutationObserver(syncPinnedSidebarState);
     railObserver.observe(rail, { attributes: true, attributeFilter: ["hidden"] });
   }
 
-  window.applyExactPlayerTableWidths = applyStableTableWidths;
-  window.addEventListener("resize", applyStableTableWidths, { passive: true });
+  window.applyExactPlayerTableWidths = applySharedTableWidths;
+  window.addEventListener("resize", () => {
+    cachedLayoutKey = "";
+    cachedContentWidth = 0;
+    applySharedTableWidths();
+  }, { passive: true });
+
   syncPinnedSidebarState();
-  syncClubLoadingState();
-  if (initialTableRoute) revealTablePage();
+  applySharedTableWidths();
+  if (initialTableRoute) revealInitialTable();
 })();
 

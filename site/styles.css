@@ -223,11 +223,15 @@
   flex: 0 0 auto;
 }
 
-
-/* v1.150.3 - Pinned sidebar and atomic page layout */
+/* v1.150.4 - Pinned content area, centered guest states, and shared table grid */
 :root {
   --pinned-sidebar-width: 190px;
   --pinned-topbar-height: 102px;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 .appShell,
@@ -262,11 +266,11 @@
   transition: none !important;
 }
 
+.menuButton,
 .appShell.menuClosed .menuButton,
 .appShell.sidebarClosed .menuButton,
 .appShell.sidebarCollapsed .menuButton,
-.appShell.collapsed .menuButton,
-.menuButton {
+.appShell.collapsed .menuButton {
   width: 100% !important;
   margin: 0 !important;
   justify-content: flex-start !important;
@@ -298,15 +302,28 @@
   padding: 0 14px !important;
 }
 
-main {
-  width: calc(100% - var(--pinned-sidebar-width)) !important;
-  margin-left: var(--pinned-sidebar-width) !important;
+main,
+.siteFooter {
+  box-sizing: border-box !important;
   transition: none !important;
 }
 
+body.pinnedSidebarVisible main,
+body.pinnedSidebarVisible .siteFooter {
+  width: calc(100% - var(--pinned-sidebar-width)) !important;
+  margin-left: var(--pinned-sidebar-width) !important;
+}
+
+body:not(.pinnedSidebarVisible) main,
+body:not(.pinnedSidebarVisible) .siteFooter,
 .menuRail[hidden] + main {
   width: 100% !important;
   margin-left: 0 !important;
+}
+
+.siteFooter {
+  justify-items: center !important;
+  text-align: center !important;
 }
 
 main > .pageView,
@@ -314,6 +331,11 @@ main > .pageView,
 .changelogPage,
 .myPlayersLockedPage {
   left: auto !important;
+}
+
+body.guest main > .pageView:not([hidden]) {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .myPlayersLockedPage:not([hidden]) {
@@ -325,9 +347,11 @@ main > .pageView,
   padding: 24px !important;
 }
 
-.myPlayersLockedContent {
-  width: min(520px, 100%);
-  margin: 0 auto !important;
+.myPlayersLockedContent,
+body.guest main > .pageView:not([hidden]) > [class*="LockedContent"],
+body.guest main > .pageView:not([hidden]) > [class*="OptIn"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
   text-align: center;
 }
 
@@ -336,16 +360,19 @@ main > .pageView,
 }
 
 body.tableLayoutPending #progressionPage,
-body.clubViewSwitching #progressionPage,
-body.clubPagePending #progressionPage {
+body.clubViewSwitching #progressionPage {
+  visibility: visible !important;
   opacity: 0 !important;
   transform: translateY(6px) !important;
   pointer-events: none !important;
 }
 
+body.clubViewSwitching #progressionPage {
+  transition: opacity 180ms ease, transform 180ms ease !important;
+}
+
 body.tableLayoutPending #loadingScreen,
-body.clubViewSwitching #loadingScreen,
-body.clubPagePending #loadingScreen {
+body.clubViewSwitching #loadingScreen {
   display: grid !important;
   visibility: visible !important;
   align-content: center !important;
@@ -355,8 +382,7 @@ body.clubPagePending #loadingScreen {
 }
 
 body.tableLayoutPending #loadingScreen .loadingBox,
-body.clubViewSwitching #loadingScreen .loadingBox,
-body.clubPagePending #loadingScreen .loadingBox {
+body.clubViewSwitching #loadingScreen .loadingBox {
   margin: 0 auto !important;
 }
 
@@ -379,19 +405,15 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
 #progressionPage .tableShell,
 #progressionPage .tableScroller,
 #progressionPage .tableScroller table {
-  width: 100% !important;
-  max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
 #progressionPage .tableShell,
 #progressionPage .tableScroller {
-  min-width: 0 !important;
   overflow: visible !important;
 }
 
 #progressionPage .tableScroller table {
-  min-width: 100% !important;
   table-layout: fixed !important;
   border-spacing: 0 !important;
 }
@@ -404,6 +426,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   animation: none !important;
 }
 
+#progressionPage .tableScroller .col-shared-width-filler,
 #progressionPage .tableScroller .col-stable-width-filler,
 #progressionPage .tableScroller .col-exact-width-filler {
   padding: 0 !important;
@@ -415,8 +438,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
 
 @media (min-width: 901px) {
   body:not(.loading):not(.booting).pinnedSidebarVisible.tableLayoutPending #loadingScreen,
-  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewSwitching #loadingScreen,
-  body:not(.loading):not(.booting).pinnedSidebarVisible.clubPagePending #loadingScreen {
+  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewSwitching #loadingScreen {
     inset: var(--pinned-topbar-height) 0 0 var(--pinned-sidebar-width) !important;
     width: auto !important;
     height: auto !important;
