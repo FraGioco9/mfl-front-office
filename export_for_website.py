@@ -213,7 +213,12 @@ def export_players(output_path: Path) -> dict[str, Any]:
     wallet_rows = fetch_wallet_rows(connection)
     total_wallets = export_wallets(output_path, wallet_rows)
 
-    mfl_rows = [row for row in rows if str(row["wallet_address"] or "").lower() == MFL_WALLET_ADDRESS]
+    mfl_rows = [
+        row
+        for row in rows
+        if str(row["wallet_address"] or "").strip().lower() == MFL_WALLET_ADDRESS
+        or str(row["wallet_name"] or "").strip().lower() == "mfl"
+    ]
 
     write_player_file(output_path, "players_public.json", PUBLIC_COLUMNS, rows)
     write_player_file(output_path, "players_progression.json", PROGRESSION_COLUMNS, rows)

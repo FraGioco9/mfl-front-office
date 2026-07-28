@@ -14,12 +14,19 @@
           document.documentElement.dataset.theme = "light";
           document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         }
+
+        const initialPath = window.location.pathname;
+        const initialTableRoute = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i.test(initialPath)
+          && !/^\/mfl\/stats\/?$/i.test(initialPath);
+        if (initialTableRoute) {
+          document.documentElement.classList.add("table-layout-pending");
+        }
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.4">
+    <link rel="stylesheet" href="/styles.css?v=1.150.5">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -1145,6 +1152,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.4"></script>
+    <script src="/app.js?v=1.150.5"></script>
   </body>
 </html>

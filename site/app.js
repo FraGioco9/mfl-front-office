@@ -659,6 +659,25 @@ async function showUnauthorizedProgressionRedirect() {
 async function finishLoading() {
   setLoadingPercent(100, "Loading complete");
   await paintLoadingProgress();
+
+  if (typeof window.applyExactPlayerTableWidths === "function") {
+    window.applyExactPlayerTableWidths();
+    await paintLoadingProgress();
+    window.applyExactPlayerTableWidths();
+  }
+
+  document.documentElement.classList.remove("table-layout-pending");
+  document.body.classList.remove("tableLayoutPending");
+
+  if (document.body.classList.contains("clubViewLoading")) {
+    loadingScreen.classList.remove("failed", "complete", "leaving");
+    loadingText.textContent = "Loading complete";
+    revealAppShell();
+    document.body.classList.remove("loading");
+    document.documentElement.classList.remove("loading");
+    return;
+  }
+
   await new Promise((resolve) => window.setTimeout(resolve, 180));
   loadingScreen.classList.add("complete");
   loadingText.textContent = "Loading complete";
@@ -1856,7 +1875,17 @@ async function linkWallet() {
     mergeGuestWatchlistIntoAccount();
     let upgradedCurrentPage = false;
     if ((state.currentPage === "myplayers" || state.currentPage === "watchlist" || state.currentPage === "settings") && !myPlayersLockedPage.hidden) {
-      await setPage(state.currentPage, false);
+      const lockedPage = state.currentPage;
+      await setPage(lockedPage, false, { view: "attributes" });
+      if (lockedPage === "myplayers") {
+        window.history.replaceState({}, "", "/my-players/attributes");
+      } else if (lockedPage === "watchlist") {
+        const watchlistId = state.currentWatchlistId || activeWatchlist()?.id || "";
+        const targetPath = watchlistId
+          ? `/watchlist/${encodeURIComponent(watchlistId)}/attributes`
+          : "/watchlist/attributes";
+        window.history.replaceState({}, "", targetPath);
+      }
       upgradedCurrentPage = true;
     } else {
       upgradedCurrentPage = await upgradeCurrentPageAfterWalletOptIn();
@@ -2626,6 +2655,22 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 
 function pageTargetFromPath(path) {
   const cleanPath = String(path || "").split("?")[0];
+
+  if (!hasWalletOptIn()) {
+    if (/^\/my-players(?:\/[^/]+)?$/.test(cleanPath)) {
+      return {
+        pageName: "myplayers",
+        options: cleanPath === "/my-players" ? {} : { replaceUrl: "/my-players" },
+      };
+    }
+
+    if (/^\/watchlist(?:\/[^/]+)?(?:\/[^/]+)?$/.test(cleanPath)) {
+      return {
+        pageName: "watchlist",
+        options: cleanPath === "/watchlist" ? {} : { replaceUrl: "/watchlist" },
+      };
+    }
+  }
   if (cleanPath === "/players" || cleanPath === "/agents") {
     return {
       pageName: "home",
@@ -2768,6 +2813,11 @@ function pagePath(pageName, options = {}) {
 
   if (pageName === "mflstats") {
     return "/mfl/stats";
+  }
+
+  if (!hasWalletOptIn()) {
+    if (pageName === "watchlist") return "/watchlist";
+    if (pageName === "myplayers") return "/my-players";
   }
 
   if (tablePages.has(pageName)) {
@@ -5268,6 +5318,11 @@ function recentPlayerKey(playerId) {
 function recentAgentKey(walletAddress) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   return normalizedWalletAddress ? `agent:${normalizedWalletAddress}` : "";
+}
+
+function recentClubKey(clubId) {
+  const normalizedClubId = String(clubId || "").trim();
+  return normalizedClubId ? `club:${normalizedClubId}` : "";
 }
 
 function recentSearchItemsFromLegacy(playerIds = [], agentWallets = []) {
@@ -8008,6 +8063,10 @@ function recentSearchRows() {
     : recentSearchItemsFromLegacy(state.recentSearchPlayerIds, state.recentSearchAgentWallets);
 
   return items.map((item) => {
+    if (item.startsWith("club:")) {
+      return null;
+    }
+
     if (item.startsWith("agent:")) {
       return agentSearchResultByWallet(item.slice(6));
     }
@@ -8065,6 +8124,7 @@ function renderSearchResultsNow() {
     button.className = "searchResult";
 
     if (result.type === "agent") {
+      button.dataset.searchKey = recentAgentKey(result.walletAddress);
       button.innerHTML = `<strong>${escapeHtml(result.name)}</strong><span>${escapeHtml(result.walletAddress)}</span>`;
       button.addEventListener("click", () => {
         rememberAgentSearchResult(result.walletAddress);
@@ -8081,6 +8141,7 @@ function renderSearchResultsNow() {
     }
     const id = String(entry.playerId);
     const ovr = formatPlainValue(entry.overall, "overall");
+    button.dataset.searchKey = recentPlayerKey(id);
     button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(id)} &middot; ${escapeHtml(entry.nationalityDisplay)} &middot; ${escapeHtml(entry.positionsDisplay)}</span>`;
     button.addEventListener("click", () => {
       rememberSearchResult(id);
@@ -8954,7 +9015,9 @@ function rowIsOwnedByLinkedWallet(row) {
 }
 
 function rowIsMflWalletPlayer(row) {
-  return normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === mflWalletAddress;
+  const walletAddress = normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase();
+  const walletName = normalizedAgentName(getValue(row, "wallet_name")).toLowerCase();
+  return walletAddress === mflWalletAddress || walletName === "mfl";
 }
 
 const mflStatsOverallFilterOptions = [
@@ -9617,6 +9680,42 @@ function mflPublicDataFile(manifest) {
   return manifest?.files?.mfl_public?.file || "players_mfl_public.json";
 }
 
+function mflChunkFromPublicData(chunk) {
+  const columns = Array.isArray(chunk?.columns) ? chunk.columns : [];
+  const rows = Array.isArray(chunk?.rows) ? chunk.rows : [];
+  const walletAddressIndex = columns.indexOf("wallet_address");
+  const walletNameIndex = columns.indexOf("wallet_name");
+  if (walletAddressIndex < 0 && walletNameIndex < 0) {
+    return { columns, rows: [] };
+  }
+
+  return {
+    columns,
+    rows: rows.filter((row) => {
+      const walletAddress = walletAddressIndex >= 0 ? normalizeWalletAddress(row[walletAddressIndex]).toLowerCase() : "";
+      const walletName = walletNameIndex >= 0 ? normalizedAgentName(row[walletNameIndex]).toLowerCase() : "";
+      return walletAddress === mflWalletAddress || walletName === "mfl";
+    }),
+  };
+}
+
+async function fetchPublicDataChunk(manifest, access, options = {}) {
+  if (access !== "mfl") {
+    return fetchDataFile(publicDataFile(manifest), options);
+  }
+
+  try {
+    const dedicatedChunk = await fetchDataFile(mflPublicDataFile(manifest), options);
+    if (Array.isArray(dedicatedChunk?.rows) && dedicatedChunk.rows.length) {
+      return dedicatedChunk;
+    }
+  } catch {
+    // Fall back to the public database export below.
+  }
+
+  return mflChunkFromPublicData(await fetchDataFile(publicDataFile(manifest), options));
+}
+
 function searchPlayersDataFile(manifest) {
   return manifest?.files?.search_players?.file || "players_search.json";
 }
@@ -9895,13 +9994,13 @@ async function restoreCachedDataForAccess(access = currentDataAccess(), currentM
     if (["full", "owned"].includes(access)) {
       await loadPublicAndProgressionData(manifest, { access, useCache: true });
     } else {
-      const publicChunk = await fetchDataFile(access === "mfl" ? mflPublicDataFile(manifest) : publicDataFile(manifest), { useCache: true });
+      const publicChunk = await fetchPublicDataChunk(manifest, access, { useCache: true });
 
       if (!publicChunk || !Array.isArray(publicChunk.rows)) {
         return false;
       }
 
-      state.columns = publicDataColumns(manifest);
+      state.columns = Array.isArray(publicChunk.columns) ? publicChunk.columns : publicDataColumns(manifest);
       rebuildColumnIndexMap();
       state.rows = publicChunk.rows;
       clearRowSortCache();
@@ -9986,7 +10085,7 @@ async function loadPublicAndProgressionData(manifest, options = {}) {
     });
     publicProgress(1);
     state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
-    state.columns = publicDataColumns(manifest);
+    state.columns = Array.isArray(publicChunk.columns) ? publicChunk.columns : publicDataColumns(manifest);
     rebuildColumnIndexMap();
     clearRowSortCache();
     return;
@@ -10008,7 +10107,7 @@ async function loadPublicAndProgressionData(manifest, options = {}) {
   ]);
 
   state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
-  state.columns = publicDataColumns(manifest);
+  state.columns = Array.isArray(publicChunk.columns) ? publicChunk.columns : publicDataColumns(manifest);
   rebuildColumnIndexMap();
   clearRowSortCache();
 
@@ -10208,13 +10307,13 @@ async function loadData(options = {}) {
         const publicProgress = phaseRange(10, 90);
         publicProgress(0);
         await paintLoadingProgress();
-        const publicChunk = await fetchDataFile(publicFile, {
+        const publicChunk = await fetchPublicDataChunk(manifest, targetAccess, {
           useCache: useCachedChunks,
           writeCache: !useCachedChunks,
           onProgress: publicProgress,
         });
         state.rows = Array.isArray(publicChunk.rows) ? publicChunk.rows : [];
-        state.columns = publicDataColumns(manifest);
+        state.columns = Array.isArray(publicChunk.columns) ? publicChunk.columns : publicDataColumns(manifest);
         rebuildColumnIndexMap();
         clearRowSortCache();
         publicProgress(1);
@@ -11703,13 +11802,21 @@ startApp();
     return String(getValue(a, "name") || "").localeCompare(String(getValue(b, "name") || ""));
   }
 
-  function setClubSwitching(active) {
+  function setClubSwitching(active, options = {}) {
+    const showLoadingScreen = active && options.showLoading !== false;
     document.body.classList.toggle("clubViewSwitching", active);
+    document.body.classList.toggle("clubViewLoading", showLoadingScreen);
+
+    if (showLoadingScreen && typeof loadingScreen !== "undefined" && loadingScreen) {
+      loadingScreen.hidden = false;
+      loadingScreen.classList.remove("failed", "complete", "leaving");
+    }
+
+    if (!active) {
+      document.body.classList.remove("clubViewLoading");
+    }
+
     if (active) {
-      if (typeof loadingScreen !== "undefined" && loadingScreen) {
-        loadingScreen.hidden = false;
-        loadingScreen.classList.remove("leaving");
-      }
       document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
     }
   }
@@ -11724,20 +11831,23 @@ startApp();
         requestAnimationFrame(() => {
           if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
           applyClubPresentation();
-          setClubSwitching(false);
+          document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
 
-          if (
+          const shouldHideLoading = Boolean(
             typeof loadingScreen !== "undefined"
             && loadingScreen
-            && !document.body.classList.contains("loading")
-            && !document.body.classList.contains("booting")
-          ) {
-            loadingScreen.hidden = false;
+            && !loadingScreen.hidden
+            && document.body.classList.contains("clubViewLoading")
+          );
+          setClubSwitching(false, { showLoading: false });
+
+          if (shouldHideLoading && loadingScreen) {
             loadingScreen.classList.add("leaving");
             window.setTimeout(() => {
-              if (!document.body.classList.contains("clubViewSwitching")) {
+              if (!document.body.classList.contains("clubViewLoading")) {
                 loadingScreen.hidden = true;
-                loadingScreen.classList.remove("leaving");
+                loadingScreen.classList.remove("complete", "leaving");
+                flushPostLoadingToast();
               }
             }, 230);
           }
@@ -11764,6 +11874,8 @@ startApp();
 
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters) quickFilters.hidden = true;
+    const controlsBar = document.querySelector("#progressionPage .controlsBar");
+    if (controlsBar) controlsBar.hidden = true;
     document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
       pager.hidden = true;
     });
@@ -11858,6 +11970,8 @@ startApp();
       const button = document.createElement("button");
       button.type = "button";
       button.className = "searchResult clubSearchResult";
+      button.dataset.clubId = clubId;
+      button.dataset.searchKey = recentClubKey(clubId);
       const safeName = typeof escapeHtml === "function" ? escapeHtml(name) : name;
       const safeId = typeof escapeHtml === "function" ? escapeHtml(clubId) : clubId;
       button.innerHTML = `<strong>${safeName}</strong><span>Club &middot; #${safeId}</span>`;
@@ -11990,7 +12104,7 @@ startApp();
     event.stopImmediatePropagation();
     const nextView = viewButton.dataset.view;
     window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
-    setClubSwitching(true);
+    setClubSwitching(true, { showLoading: false });
     state.view = nextView;
     state.page = 1;
     state.sortKey = "positions";
@@ -12041,7 +12155,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.4";
+  const VERSION = "1.150.5";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12118,8 +12232,13 @@ startApp();
     try {
       localStorage.setItem(RECENT_CLUBS_STORAGE_KEY, JSON.stringify(recent));
     } catch {
-      // Recent clubs still work for this session when storage is unavailable.
+      // Combined recent search state still works for this session.
     }
+
+    const searchKey = recentClubKey(key);
+    state.recentSearchItems = mergeRecentIdLists([searchKey], state.recentSearchItems);
+    persistRecentSearchStates();
+    saveTableState();
   }
 
   function createRecentClubResult(clubId) {
@@ -12129,6 +12248,7 @@ startApp();
     button.type = "button";
     button.className = "searchResult clubSearchResult recentClubSearchResult";
     button.dataset.clubId = data.clubId;
+    button.dataset.searchKey = recentClubKey(data.clubId);
     const title = document.createElement("strong");
     title.textContent = data.name;
     const info = document.createElement("span");
@@ -12155,21 +12275,47 @@ startApp();
 
   function finalizeSearchResults() {
     if (typeof playerSearchResults === "undefined" || !playerSearchResults) return;
-    prependRecentClubs();
     playerSearchResults.querySelectorAll(".clubSearchResult").forEach(normalizeClubResult);
 
+    const query = String(playerSearchInput?.value || "").trim();
+    const directResults = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"));
     const seen = new Set();
-    Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult")).forEach((result) => {
-      const clubId = result.classList.contains("clubSearchResult") ? clubIdFromResult(result) : "";
-      const key = clubId ? `club:${clubId}` : "";
+    directResults.forEach((result) => {
+      const key = result.dataset.searchKey
+        || (result.classList.contains("clubSearchResult") ? recentClubKey(clubIdFromResult(result)) : "");
+      if (key) result.dataset.searchKey = key;
       if (key && seen.has(key)) result.remove();
       else if (key) seen.add(key);
     });
 
+    if (!query) {
+      const existingByKey = new Map(
+        Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
+          .filter((result) => result.dataset.searchKey)
+          .map((result) => [result.dataset.searchKey, result]),
+      );
+      const ordered = [];
+      state.recentSearchItems.slice(0, MAX_SEARCH_RESULTS).forEach((key) => {
+        let result = existingByKey.get(key) || null;
+        if (!result && key.startsWith("club:")) {
+          result = createRecentClubResult(key.slice(5));
+        }
+        if (result && !ordered.includes(result)) ordered.push(result);
+      });
+
+      if (ordered.length) {
+        playerSearchResults.replaceChildren(...ordered.slice(0, MAX_SEARCH_RESULTS));
+        playerSearchResults.classList.add("filledSearchResults");
+      } else {
+        playerSearchResults.innerHTML = '<div class="searchHint">Recent searches will appear here.</div>';
+        playerSearchResults.classList.remove("filledSearchResults");
+      }
+      return;
+    }
+
     const resultPriority = (result) => {
       if (result.classList.contains("clubSearchResult")) return 1;
-      const detail = String(result.querySelector(":scope > span")?.textContent || "").trim();
-      return /^0x[0-9a-f]+$/i.test(detail) ? 2 : 0;
+      return result.dataset.searchKey?.startsWith("agent:") ? 2 : 0;
     };
     const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
       .sort((a, b) => resultPriority(a) - resultPriority(b));
@@ -12210,7 +12356,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Fix club-page loading, center opted-out layouts and footer outside the pinned sidebar, and keep shared columns exactly the same width across views";
+    description.textContent = "Center all guest states, eliminate first-frame table and club flicker, keep guest routes clean, retain mixed search history, and restore MFL loading";
     item.append(version, description);
     return item;
   }
@@ -12318,10 +12464,9 @@ startApp();
   else initialize();
 })();
 
-/* v1.150.4 pinned content grid and shared table widths */
+/* v1.150.5 stable pinned layout and pre-reveal table widths */
 (() => {
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
-  const CLUB_ROUTE = /^\/(?:clubs?|club)\/[^/]+(?:\/|$)/i;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
   const WIDTHS = {
     "col-select": 3,
@@ -12342,15 +12487,12 @@ startApp();
     "col-link": 3,
   };
   const FILLER_CLASS = "col-shared-width-filler";
-  const initialTableRoute = TABLE_ROUTE.test(window.location.pathname)
-    && !/^\/mfl\/stats\/?$/i.test(window.location.pathname)
-    && !CLUB_ROUTE.test(window.location.pathname);
   let cachedLayoutKey = "";
   let cachedContentWidth = 0;
-  let revealFrame = 0;
-  let revealAttempts = 0;
 
-  if (initialTableRoute) document.body.classList.add("tableLayoutPending");
+  if (document.documentElement.classList.contains("table-layout-pending")) {
+    document.body.classList.add("tableLayoutPending");
+  }
 
   function playerTablePageActive() {
     return TABLE_PAGES.has(String(state?.currentPage || "")) || TABLE_ROUTE.test(window.location.pathname);
@@ -12358,8 +12500,7 @@ startApp();
 
   function pinnedSidebarWidth() {
     const rail = document.querySelector("#menuRail");
-    if (!rail || rail.hidden) return 0;
-    return 190;
+    return rail && !rail.hidden ? 190 : 0;
   }
 
   function sharedContentWidth() {
@@ -12384,11 +12525,11 @@ startApp();
       const headerScroller = bodyScroller.previousElementSibling?.classList.contains("tableHeaderScroller")
         ? bodyScroller.previousElementSibling
         : null;
-      const tableHead = headerScroller?.querySelector("thead");
-      if (bodyTable && tableHead && !bodyTable.querySelector("thead")) {
+      const tableHeadElement = headerScroller?.querySelector("thead");
+      if (bodyTable && tableHeadElement && !bodyTable.querySelector("thead")) {
         const colGroup = bodyTable.querySelector("colgroup");
-        if (colGroup?.nextSibling) bodyTable.insertBefore(tableHead, colGroup.nextSibling);
-        else bodyTable.prepend(tableHead);
+        if (colGroup?.nextSibling) bodyTable.insertBefore(tableHeadElement, colGroup.nextSibling);
+        else bodyTable.prepend(tableHeadElement);
       }
       headerScroller?.remove();
       bodyScroller.classList.remove("tableBodyScroller");
@@ -12402,9 +12543,7 @@ startApp();
 
   function removeFillers(table, colGroup) {
     colGroup.querySelectorAll(`.${FILLER_CLASS}, .col-stable-width-filler, .col-exact-width-filler`).forEach((element) => element.remove());
-    table.querySelectorAll(
-      `th.${FILLER_CLASS}, td.${FILLER_CLASS}, th.col-stable-width-filler, td.col-stable-width-filler, th.col-exact-width-filler, td.col-exact-width-filler`,
-    ).forEach((element) => element.remove());
+    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}, th.col-stable-width-filler, td.col-stable-width-filler, th.col-exact-width-filler, td.col-exact-width-filler`).forEach((element) => element.remove());
   }
 
   function appendFiller(table, widthInPixels) {
@@ -12472,33 +12611,8 @@ startApp();
     return true;
   }
 
-  function revealInitialTable() {
-    cancelAnimationFrame(revealFrame);
-    revealFrame = requestAnimationFrame(() => {
-      const appLoading = document.body.classList.contains("loading") || document.body.classList.contains("booting");
-      const ready = applySharedTableWidths();
-      if ((appLoading || !ready) && revealAttempts < 180) {
-        revealAttempts += 1;
-        revealInitialTable();
-        return;
-      }
-      revealAttempts = 0;
-      requestAnimationFrame(() => {
-        applySharedTableWidths();
-        document.body.classList.remove("tableLayoutPending");
-      });
-    });
-  }
-
   function syncPinnedSidebarState() {
-    const visible = pinnedSidebarWidth() > 0;
-    const changed = document.body.classList.contains("pinnedSidebarVisible") !== visible;
-    document.body.classList.toggle("pinnedSidebarVisible", visible);
-    if (changed) {
-      cachedLayoutKey = "";
-      cachedContentWidth = 0;
-      requestAnimationFrame(applySharedTableWidths);
-    }
+    document.body.classList.toggle("pinnedSidebarVisible", pinnedSidebarWidth() > 0);
   }
 
   if (typeof buildTableColGroup === "function") {
@@ -12524,7 +12638,6 @@ startApp();
     renderTable = function renderTableWithSharedWidths() {
       const result = originalRenderTable.apply(this, arguments);
       applySharedTableWidths();
-      if (document.body.classList.contains("tableLayoutPending")) revealInitialTable();
       return result;
     };
   }
@@ -12540,7 +12653,12 @@ startApp();
 
   const rail = document.querySelector("#menuRail");
   if (rail) {
-    const railObserver = new MutationObserver(syncPinnedSidebarState);
+    const railObserver = new MutationObserver(() => {
+      cachedLayoutKey = "";
+      cachedContentWidth = 0;
+      syncPinnedSidebarState();
+      applySharedTableWidths();
+    });
     railObserver.observe(rail, { attributes: true, attributeFilter: ["hidden"] });
   }
 
@@ -12553,6 +12671,5 @@ startApp();
 
   syncPinnedSidebarState();
   applySharedTableWidths();
-  if (initialTableRoute) revealInitialTable();
 })();
 

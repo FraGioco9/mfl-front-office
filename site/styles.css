@@ -223,7 +223,7 @@
   flex: 0 0 auto;
 }
 
-/* v1.150.4 - Pinned content area, centered guest states, and shared table grid */
+/* v1.150.5 - Pinned content grid, guest centering, and flicker-free tables */
 :root {
   --pinned-sidebar-width: 190px;
   --pinned-topbar-height: 102px;
@@ -330,35 +330,33 @@ main > .pageView,
 .homePage,
 .changelogPage,
 .myPlayersLockedPage {
+  width: 100% !important;
   left: auto !important;
 }
 
-body.guest main > .pageView:not([hidden]) {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.myPlayersLockedPage:not([hidden]) {
+.myPlayersLockedPage:not([hidden]),
+body.guest main > [class*="LockedPage"]:not([hidden]),
+body.guest main > [class*="OptInPage"]:not([hidden]) {
   display: grid !important;
   place-items: center !important;
-  width: 100% !important;
   min-height: calc(100vh - var(--pinned-topbar-height) - 52px) !important;
   margin: 0 !important;
   padding: 24px !important;
 }
 
 .myPlayersLockedContent,
-body.guest main > .pageView:not([hidden]) > [class*="LockedContent"],
-body.guest main > .pageView:not([hidden]) > [class*="OptIn"] {
-  margin-left: auto !important;
-  margin-right: auto !important;
-  text-align: center;
+body.guest main [class*="LockedContent"],
+body.guest main [class*="OptInContent"] {
+  width: min(520px, 100%) !important;
+  margin: auto !important;
+  text-align: center !important;
 }
 
 #progressionPage {
   transition: opacity 180ms ease, transform 180ms ease !important;
 }
 
+html.table-layout-pending #progressionPage,
 body.tableLayoutPending #progressionPage,
 body.clubViewSwitching #progressionPage {
   visibility: visible !important;
@@ -367,12 +365,9 @@ body.clubViewSwitching #progressionPage {
   pointer-events: none !important;
 }
 
-body.clubViewSwitching #progressionPage {
-  transition: opacity 180ms ease, transform 180ms ease !important;
-}
-
+html.table-layout-pending #loadingScreen,
 body.tableLayoutPending #loadingScreen,
-body.clubViewSwitching #loadingScreen {
+body.clubViewLoading #loadingScreen {
   display: grid !important;
   visibility: visible !important;
   align-content: center !important;
@@ -381,9 +376,22 @@ body.clubViewSwitching #loadingScreen {
   pointer-events: auto !important;
 }
 
-body.tableLayoutPending #loadingScreen .loadingBox,
-body.clubViewSwitching #loadingScreen .loadingBox {
-  margin: 0 auto !important;
+body.clubViewSwitching:not(.clubViewLoading) #loadingScreen {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body.clubViewSwitching .navButton.active {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+body[data-page="club"] #progressionPage .quickFilters,
+body[data-page="club"] #progressionPage .controlsBar,
+body[data-page="club"] #progressionPage .pager,
+body[data-page="club"] #progressionPage nav.pager {
+  display: none !important;
 }
 
 body[data-page="watchlist"] #progressionPage .views {
@@ -438,7 +446,7 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
 
 @media (min-width: 901px) {
   body:not(.loading):not(.booting).pinnedSidebarVisible.tableLayoutPending #loadingScreen,
-  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewSwitching #loadingScreen {
+  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewLoading #loadingScreen {
     inset: var(--pinned-topbar-height) 0 0 var(--pinned-sidebar-width) !important;
     width: auto !important;
     height: auto !important;
