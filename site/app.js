@@ -12162,7 +12162,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.7";
+  const VERSION = "1.150.8";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12363,7 +12363,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders";
+    description.textContent = "Center pagination in the page layout and keep the table at its final width immediately after refresh";
     item.append(version, description);
     return item;
   }
@@ -12520,13 +12520,14 @@ startApp();
     const main = document.querySelector("main");
     if (!main) return 0;
     const styles = window.getComputedStyle(main);
-    const bounds = main.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const sidebarWidth = pinnedSidebarWidth();
     const paddingLeft = parseFloat(styles.paddingLeft) || 0;
     const paddingRight = parseFloat(styles.paddingRight) || 0;
-    const key = [bounds.left, bounds.width, paddingLeft, paddingRight].join(":");
+    const key = [viewportWidth, sidebarWidth, paddingLeft, paddingRight].join(":");
     if (key !== cachedLayoutKey) {
       cachedLayoutKey = key;
-      cachedContentWidth = Math.max(0, bounds.width - paddingLeft - paddingRight);
+      cachedContentWidth = Math.max(0, viewportWidth - sidebarWidth - paddingLeft - paddingRight);
     }
     return cachedContentWidth;
   }

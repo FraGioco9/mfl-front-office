@@ -547,3 +547,10 @@ html.table-layout-pending #progressionPage .tableScroller:not(.tableWidthsReady)
 body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) table {
   visibility: hidden !important;
 }
+
+
+/* v1.150.8 - Content-area pagination and stable initial table width */
+#progressionPage nav.pager {
+  left: 0 !important;
+  width: 100% !important;
+}
