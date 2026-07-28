@@ -3,6 +3,12 @@
     "api/data.js": {
       "includeFiles": "api/data-files/**"
     },
+    "api/data-safe.js": {
+      "includeFiles": [
+        "api/data.js",
+        "api/data-files/**"
+      ]
+    },
     "api/summary.js": {
       "includeFiles": "api/data-files/manifest.json"
     }
@@ -46,6 +52,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/data",
+      "destination": "/api/data-safe"
+    },
     {
       "source": "/home",
       "destination": "/"
