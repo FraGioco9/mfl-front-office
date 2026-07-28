@@ -7960,6 +7960,12 @@ function bestSearchResults(query) {
     buildSearchIndex();
   }
 
+  const relevanceSort = (a, b) => (
+    b.score - a.score
+    || b.overall - a.overall
+    || String(a.label).localeCompare(String(b.label))
+  );
+
   const playerResults = state.searchIndex
     .map((entry) => ({
       type: "player",
@@ -7969,7 +7975,8 @@ function bestSearchResults(query) {
       overall: entry.overall,
       label: entry.nameDisplay,
     }))
-    .filter((result) => result.score > 0);
+    .filter((result) => result.score > 0)
+    .sort(relevanceSort);
 
   const agentResults = state.agentSearchIndex
     .map((entry) => ({
@@ -7978,11 +7985,12 @@ function bestSearchResults(query) {
       overall: -1,
       label: entry.name,
     }))
-    .filter((result) => result.score > 0);
+    .filter((result) => result.score > 0)
+    .sort(relevanceSort);
 
-  return [...playerResults, ...agentResults]
-    .sort((a, b) => b.score - a.score || b.overall - a.overall || String(a.label).localeCompare(String(b.label)))
-    .slice(0, 5);
+  // Keep enough category-ranked candidates for the club-search enhancer to
+  // merge and trim them in the final players -> clubs -> agents order.
+  return [...playerResults, ...agentResults].slice(0, 10);
 }
 
 function agentSearchResultByWallet(walletAddress) {
@@ -12040,7 +12048,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.2";
+  const VERSION = "1.150.3";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12165,7 +12173,14 @@ startApp();
       else if (key) seen.add(key);
     });
 
-    const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"));
+    const resultPriority = (result) => {
+      if (result.classList.contains("clubSearchResult")) return 1;
+      const detail = String(result.querySelector(":scope > span")?.textContent || "").trim();
+      return /^0x[0-9a-f]+$/i.test(detail) ? 2 : 0;
+    };
+    const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
+      .sort((a, b) => resultPriority(a) - resultPriority(b));
+    results.forEach((result) => playerSearchResults.appendChild(result));
     results.slice(MAX_SEARCH_RESULTS).forEach((result) => result.remove());
     const visibleResults = playerSearchResults.querySelectorAll(":scope > .searchResult");
     playerSearchResults.querySelectorAll(":scope > .searchHint").forEach((hint) => {
@@ -12202,7 +12217,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Align Watchlist views, remove club filters, stabilize first-frame table widths, reveal club pages atomically, and normalize watchlist tooltip opacity";
+    description.textContent = "Reveal club pages atomically, stabilize table columns, fix Watchlist view switching, prioritize search results, and center pinned-sidebar layouts";
     item.append(version, description);
     return item;
   }
@@ -12310,11 +12325,11 @@ startApp();
   else initialize();
 })();
 
-/* Single exact player-table width engine */
+/* v1.150.3 stable pinned layout and atomic club loading */
 (() => {
-  document.documentElement.style.setProperty("overflow-y", "scroll", "important");
-  document.documentElement.style.setProperty("scrollbar-gutter", "stable", "important");
-
+  const INITIAL_TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
+  const CLUB_ROUTE = /^\/(?:clubs?|club)\/[^/]+(?:\/|$)/i;
+  const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
   const WIDTHS = {
     "col-select": 3,
     "col-id": 3,
@@ -12333,273 +12348,19 @@ startApp();
     "col-owned-since": 9,
     "col-link": 3,
   };
-
-  const FILLER_CLASS = "col-exact-width-filler";
-  const EPSILON = 0.01;
-  let applyingWidths = false;
-  let queuedFrame = 0;
-
-  function restoreSingleTable() {
-    document.querySelectorAll(".tableBodyScroller").forEach((bodyScroller) => {
-      const bodyTable = bodyScroller.querySelector("table");
-      const headerScroller = bodyScroller.previousElementSibling?.classList.contains("tableHeaderScroller")
-        ? bodyScroller.previousElementSibling
-        : null;
-      const tableHead = headerScroller?.querySelector("thead");
-
-      if (bodyTable && tableHead && !bodyTable.querySelector("thead")) {
-        const colGroup = bodyTable.querySelector("colgroup");
-        if (colGroup?.nextSibling) bodyTable.insertBefore(tableHead, colGroup.nextSibling);
-        else bodyTable.prepend(tableHead);
-      }
-
-      headerScroller?.remove();
-      bodyScroller.classList.remove("tableBodyScroller");
-    });
-  }
-
-  function widthForColumn(column) {
-    const className = Object.keys(WIDTHS).find((name) => column.classList.contains(name));
-    return className ? WIDTHS[className] : null;
-  }
-
-  function sharedTableWidth() {
-    const page = document.querySelector("#progressionPage");
-    if (!page || page.hidden) return 0;
-    const styles = window.getComputedStyle(page);
-    const horizontalPadding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
-    const width = page.clientWidth - horizontalPadding;
-    return Number.isFinite(width) && width > 0 ? width : 0;
-  }
-
-  function removeFiller(table, colGroup) {
-    colGroup.querySelectorAll(`.${FILLER_CLASS}`).forEach((element) => element.remove());
-    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}`).forEach((element) => element.remove());
-  }
-
-  function appendFiller(table, widthInPixels) {
-    if (widthInPixels <= EPSILON) return;
-    const width = `${widthInPixels}px`;
-    const fillerColumn = document.createElement("col");
-    fillerColumn.className = FILLER_CLASS;
-    fillerColumn.style.setProperty("width", width, "important");
-    fillerColumn.style.setProperty("min-width", width, "important");
-    fillerColumn.style.setProperty("max-width", width, "important");
-    table.querySelector("colgroup")?.appendChild(fillerColumn);
-
-    table.querySelectorAll("thead tr, tbody tr").forEach((row) => {
-      const cell = document.createElement(row.closest("thead") ? "th" : "td");
-      cell.className = FILLER_CLASS;
-      cell.setAttribute("aria-hidden", "true");
-      cell.style.setProperty("width", width, "important");
-      cell.style.setProperty("min-width", width, "important");
-      cell.style.setProperty("max-width", width, "important");
-      row.appendChild(cell);
-    });
-  }
-
-  function applyExactTableWidths() {
-    if (applyingWidths) return false;
-    applyingWidths = true;
-
-    try {
-      restoreSingleTable();
-      const tableWidth = sharedTableWidth();
-      if (!tableWidth) return false;
-
-      document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
-        element.style.setProperty("width", "100%", "important");
-        element.style.setProperty("min-width", "0", "important");
-        element.style.setProperty("max-width", "100%", "important");
-        element.style.setProperty("box-sizing", "border-box", "important");
-        element.style.setProperty("overflow", "visible", "important");
-      });
-
-      document.querySelectorAll("#progressionPage .tableScroller table").forEach((table) => {
-        const colGroup = table.querySelector("colgroup");
-        if (!colGroup) return;
-
-        removeFiller(table, colGroup);
-        const columns = Array.from(colGroup.children);
-        const percentages = columns.map(widthForColumn);
-        if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return;
-
-        const totalPercentage = percentages.reduce((sum, width) => sum + width, 0);
-        if (totalPercentage > 100 + EPSILON) return;
-
-        const exactWidth = `${tableWidth}px`;
-        table.style.setProperty("table-layout", "fixed", "important");
-        table.style.setProperty("width", exactWidth, "important");
-        table.style.setProperty("min-width", exactWidth, "important");
-        table.style.setProperty("max-width", exactWidth, "important");
-        table.style.setProperty("box-sizing", "border-box", "important");
-        table.style.setProperty("border-spacing", "0", "important");
-
-        let assignedWidth = 0;
-        columns.forEach((column, index) => {
-          const pixelWidth = tableWidth * percentages[index] / 100;
-          assignedWidth += pixelWidth;
-          const width = `${pixelWidth}px`;
-          column.style.setProperty("width", width, "important");
-          column.style.setProperty("min-width", width, "important");
-          column.style.setProperty("max-width", width, "important");
-          column.style.setProperty("transition", "none", "important");
-        });
-
-        appendFiller(table, Math.max(0, tableWidth - assignedWidth));
-      });
-
-      return true;
-    } finally {
-      applyingWidths = false;
-    }
-  }
-
-  function queueExactTableWidths() {
-    cancelAnimationFrame(queuedFrame);
-    queuedFrame = requestAnimationFrame(() => {
-      applyExactTableWidths();
-      requestAnimationFrame(applyExactTableWidths);
-    });
-  }
-
-  window.applyExactPlayerTableWidths = applyExactTableWidths;
-
-  if (typeof buildTableColGroup === "function") {
-    const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithExactGrid() {
-      const result = originalBuildTableColGroup.apply(this, arguments);
-      queueExactTableWidths();
-      return result;
-    };
-  }
-
-  if (typeof buildHeader === "function") {
-    const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithExactGrid() {
-      const result = originalBuildHeader.apply(this, arguments);
-      queueExactTableWidths();
-      return result;
-    };
-  }
-
-  if (typeof renderTable === "function") {
-    const originalRenderTable = renderTable;
-    renderTable = function renderTableWithExactGrid() {
-      const result = originalRenderTable.apply(this, arguments);
-      queueExactTableWidths();
-      return result;
-    };
-  }
-
-  const style = document.createElement("style");
-  style.textContent = `
-    #progressionPage,
-    #progressionPage .tableShell,
-    #progressionPage .tableScroller {
-      width: 100% !important;
-      max-width: 100% !important;
-      box-sizing: border-box !important;
-    }
-
-    #progressionPage { min-width: 0 !important; }
-
-    #progressionPage .tableShell,
-    #progressionPage .tableScroller {
-      min-width: 0 !important;
-      overflow: visible !important;
-      max-height: none !important;
-      scrollbar-gutter: auto !important;
-    }
-
-    #progressionPage .tableScroller table {
-      table-layout: fixed !important;
-      border-spacing: 0 !important;
-    }
-
-    #progressionPage .tableScroller .${FILLER_CLASS} {
-      padding: 0 !important;
-      border-left: 0 !important;
-      border-right: 0 !important;
-      background: inherit !important;
-      pointer-events: none !important;
-    }
-
-    #progressionPage .tableScroller table,
-    #progressionPage .tableScroller col,
-    #progressionPage .tableScroller th,
-    #progressionPage .tableScroller td,
-    #progressionPage .tableScroller tr:hover,
-    #progressionPage .tableScroller tr:hover > th,
-    #progressionPage .tableScroller tr:hover > td {
-      transition: none !important;
-      animation: none !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  window.addEventListener("resize", queueExactTableWidths, { passive: true });
-  document.addEventListener("click", (event) => {
-    if (event.target.closest?.(".viewButton[data-view]")) queueExactTableWidths();
-  }, true);
-
-  if (window.ResizeObserver) {
-    const widthObserver = new ResizeObserver(queueExactTableWidths);
-    const page = document.querySelector("#progressionPage");
-    if (page) widthObserver.observe(page);
-  }
-
-  queueExactTableWidths();
-})();
-
-
-/* v1.150.2 watchlist and atomic table polish */
-(() => {
-  const TABLE_ROUTE = /^\/(?:database|mfl|agents?|progression|watchlist|my-players|clubs?|club)(?:\/|$)/i;
-  const INITIAL_CLUB_ROUTE = /^\/(?:clubs?|club)\/[^/]+(?:\/|$)/i;
-  const WATCHLIST_ROUTE = /^\/watchlist(?:\/|$)/i;
-  const TOOLTIP_TEXT = "you need at least one watchlist";
-  const WIDTHS = {
-    "col-select": 3,
-    "col-id": 3,
-    "col-flag": 3,
-    "col-name": 13,
-    "col-nationality": 7,
-    "col-age": 4,
-    "col-positions": 8,
-    "col-seasons": 5,
-    "col-stat": 6,
-    "col-contract-revenue": 8,
-    "col-contract-club": 19,
-    "col-contract-division": 9,
-    "col-agent": 9,
-    "col-joined-agency": 9,
-    "col-owned-since": 9,
-    "col-link": 3,
-  };
-  const FILLER_CLASS = "col-exact-width-filler";
-  const EPSILON = 0.01;
-  const initialTableRoute = TABLE_ROUTE.test(window.location.pathname);
-  const initialClubRoute = INITIAL_CLUB_ROUTE.test(window.location.pathname);
-  let sharedTableWidth = 0;
-  let measuredCandidate = 0;
-  let measuredStableFrames = 0;
-  let queuedFrame = 0;
-  let applyingWidths = false;
-  let syncFrame = 0;
+  const FILLER_CLASS = "col-stable-width-filler";
+  const initialTableRoute = INITIAL_TABLE_ROUTE.test(window.location.pathname)
+    && !/^\/mfl\/stats\/?$/i.test(window.location.pathname);
+  const initialClubRoute = CLUB_ROUTE.test(window.location.pathname);
+  let revealFrame = 0;
+  let revealAttempts = 0;
+  let syncingBodyState = false;
 
   if (initialTableRoute) document.body.classList.add("tableLayoutPending");
-  if (initialClubRoute) {
-    document.body.classList.add("clubInitialAtomic");
-    document.querySelectorAll(".navButton.active").forEach((button) => button.classList.remove("active"));
-  }
+  if (initialClubRoute) document.body.classList.add("clubPagePending", "tableLayoutPending");
 
-  function isClubPage() {
-    return state?.currentPage === "club" || INITIAL_CLUB_ROUTE.test(window.location.pathname);
-  }
-
-  function isWatchlistPage() {
-    return state?.currentPage === "watchlist" || WATCHLIST_ROUTE.test(window.location.pathname);
+  function isPlayerTablePage() {
+    return TABLE_PAGES.has(String(state?.currentPage || ""));
   }
 
   function restoreSingleTable() {
@@ -12624,35 +12385,14 @@ startApp();
     return className ? WIDTHS[className] : null;
   }
 
-  function measuredPageWidth() {
-    const page = document.querySelector("#progressionPage");
-    if (!page || page.hidden) return 0;
-    const styles = window.getComputedStyle(page);
-    const padding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
-    const width = page.getBoundingClientRect().width - padding;
-    return Number.isFinite(width) && width > 0 ? width : 0;
-  }
-
-  function establishSharedWidth() {
-    const candidate = measuredPageWidth();
-    if (!candidate) return false;
-    if (Math.abs(candidate - measuredCandidate) <= 0.1) measuredStableFrames += 1;
-    else {
-      measuredCandidate = candidate;
-      measuredStableFrames = 1;
-    }
-    if (!sharedTableWidth && measuredStableFrames >= 2) sharedTableWidth = candidate;
-    return sharedTableWidth > 0;
-  }
-
   function removeFiller(table, colGroup) {
-    colGroup.querySelectorAll(`.${FILLER_CLASS}`).forEach((element) => element.remove());
-    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}`).forEach((element) => element.remove());
+    colGroup.querySelectorAll(`.${FILLER_CLASS}, .col-exact-width-filler`).forEach((element) => element.remove());
+    table.querySelectorAll(`th.${FILLER_CLASS}, td.${FILLER_CLASS}, th.col-exact-width-filler, td.col-exact-width-filler`).forEach((element) => element.remove());
   }
 
-  function appendFiller(table, widthInPixels) {
-    if (widthInPixels <= EPSILON) return;
-    const width = `${widthInPixels}px`;
+  function appendFiller(table, percentage) {
+    if (!(percentage > 0.01)) return;
+    const width = `${percentage}%`;
     const fillerColumn = document.createElement("col");
     fillerColumn.className = FILLER_CLASS;
     fillerColumn.style.setProperty("width", width, "important");
@@ -12663,273 +12403,154 @@ startApp();
       const cell = document.createElement(row.closest("thead") ? "th" : "td");
       cell.className = FILLER_CLASS;
       cell.setAttribute("aria-hidden", "true");
-      cell.style.setProperty("width", width, "important");
-      cell.style.setProperty("min-width", width, "important");
-      cell.style.setProperty("max-width", width, "important");
       row.appendChild(cell);
     });
   }
 
-  function applyFinalExactWidths() {
-    if (applyingWidths) return false;
-    applyingWidths = true;
-    try {
-      restoreSingleTable();
-      if (!establishSharedWidth()) return false;
-      const exactWidth = `${sharedTableWidth}px`;
-      document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
-        element.style.setProperty("width", exactWidth, "important");
-        element.style.setProperty("min-width", exactWidth, "important");
-        element.style.setProperty("max-width", exactWidth, "important");
-        element.style.setProperty("box-sizing", "border-box", "important");
-        element.style.setProperty("overflow", "visible", "important");
-      });
-      let applied = false;
-      document.querySelectorAll("#progressionPage .tableScroller table").forEach((table) => {
-        const colGroup = table.querySelector("colgroup");
-        if (!colGroup) return;
-        removeFiller(table, colGroup);
-        const columns = Array.from(colGroup.children);
-        const percentages = columns.map(widthForColumn);
-        if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return;
-        const total = percentages.reduce((sum, width) => sum + width, 0);
-        if (total > 100 + EPSILON) return;
-        table.style.setProperty("table-layout", "fixed", "important");
-        table.style.setProperty("width", exactWidth, "important");
-        table.style.setProperty("min-width", exactWidth, "important");
-        table.style.setProperty("max-width", exactWidth, "important");
-        table.style.setProperty("box-sizing", "border-box", "important");
-        table.style.setProperty("border-spacing", "0", "important");
-        let assigned = 0;
-        columns.forEach((column, index) => {
-          const pixelWidth = sharedTableWidth * percentages[index] / 100;
-          assigned += pixelWidth;
-          const width = `${pixelWidth}px`;
-          column.style.setProperty("width", width, "important");
-          column.style.setProperty("min-width", width, "important");
-          column.style.setProperty("max-width", width, "important");
-          column.style.setProperty("transition", "none", "important");
-        });
-        appendFiller(table, Math.max(0, sharedTableWidth - assigned));
-        applied = true;
-      });
-      return applied;
-    } finally {
-      applyingWidths = false;
-    }
-  }
-
-  function queueFinalExactWidths() {
-    cancelAnimationFrame(queuedFrame);
-    queuedFrame = requestAnimationFrame(() => {
-      applyFinalExactWidths();
-      requestAnimationFrame(applyFinalExactWidths);
-    });
-  }
-
-  window.applyExactPlayerTableWidths = applyFinalExactWidths;
-
-  function arrangeWatchlistViews() {
-    if (!isWatchlistPage()) return;
-    const views = document.querySelector("#progressionPage .views");
-    if (!views) return;
-    const switcher = views.querySelector("#watchlistSwitcher, .watchlistSwitcher");
-    ["attributes", "next", "contracts", "current", "all"].forEach((viewName) => {
-      const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
-      if (button) views.insertBefore(button, switcher || null);
-    });
-    if (switcher) views.appendChild(switcher);
-  }
-
-  function hideClubControls() {
-    if (!isClubPage()) return;
-    const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    const controls = document.querySelector("#progressionPage .controlsBar");
-    if (quickFilters) quickFilters.hidden = true;
-    if (controls) controls.hidden = true;
-    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
-      pager.hidden = true;
-    });
-  }
-
-  function normalizeWatchlistTooltipOpacity() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const matches = [];
-    while (walker.nextNode()) {
-      if (String(walker.currentNode.nodeValue || "").trim().toLowerCase() === TOOLTIP_TEXT) {
-        matches.push(walker.currentNode.parentElement);
-      }
-    }
-    document.querySelectorAll(".watchlistMinimumTooltip").forEach((element) => element.classList.remove("watchlistMinimumTooltip"));
-    matches.filter(Boolean).forEach((element) => {
-      element.classList.add("watchlistMinimumTooltip");
-      const tooltip = element.closest('[role="tooltip"], .tooltip, [class*="Tooltip"], [class*="tooltip"]') || element;
-      tooltip.classList.add("watchlistMinimumTooltip");
-      let ancestor = tooltip.parentElement;
-      while (ancestor && ancestor !== document.body) {
-        const opacity = parseFloat(window.getComputedStyle(ancestor).opacity);
-        if (Number.isFinite(opacity) && opacity < 1 && (ancestor.matches("button,[aria-disabled='true'],:disabled") || ancestor.classList.contains("disabled"))) {
-          ancestor.classList.add("watchlistTooltipOpacityHost");
-          break;
-        }
-        ancestor = ancestor.parentElement;
-      }
-    });
-  }
-
-  function syncPagePolish() {
-    arrangeWatchlistViews();
-    hideClubControls();
-    normalizeWatchlistTooltipOpacity();
-    queueFinalExactWidths();
-    if (document.body.classList.contains("clubInitialAtomic")) {
-      document.querySelectorAll(".navButton.active").forEach((button) => button.classList.remove("active"));
-    }
-  }
-
-  function queuePagePolish() {
-    cancelAnimationFrame(syncFrame);
-    syncFrame = requestAnimationFrame(syncPagePolish);
-  }
-
-  function tableSignature() {
+  function applyStableTableWidths() {
+    if (!isPlayerTablePage() && !initialTableRoute) return false;
+    restoreSingleTable();
     const page = document.querySelector("#progressionPage");
-    const columns = Array.from(document.querySelectorAll("#tableColGroup > col:not(.col-exact-width-filler)"));
-    return [
-      page && !page.hidden ? "visible" : "hidden",
-      sharedTableWidth.toFixed(2),
-      tableBody?.childElementCount || 0,
-      columns.map((column) => `${column.className}:${column.style.width}`).join("|"),
-    ].join("::");
+    const table = page?.querySelector(".tableScroller table");
+    const colGroup = table?.querySelector("colgroup");
+    if (!page || page.hidden || !table || !colGroup) return false;
+
+    removeFiller(table, colGroup);
+    const columns = Array.from(colGroup.children);
+    const percentages = columns.map(widthForColumn);
+    if (!percentages.length || percentages.some((width) => !Number.isFinite(width))) return false;
+    const total = percentages.reduce((sum, width) => sum + width, 0);
+    if (total > 100.01) return false;
+
+    page.querySelectorAll(".tableShell, .tableScroller").forEach((element) => {
+      element.style.setProperty("width", "100%", "important");
+      element.style.setProperty("min-width", "0", "important");
+      element.style.setProperty("max-width", "100%", "important");
+      element.style.setProperty("box-sizing", "border-box", "important");
+      element.style.setProperty("overflow", "visible", "important");
+    });
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", "100%", "important");
+    table.style.setProperty("min-width", "100%", "important");
+    table.style.setProperty("max-width", "100%", "important");
+    table.style.setProperty("box-sizing", "border-box", "important");
+    table.style.setProperty("border-spacing", "0", "important");
+
+    columns.forEach((column, index) => {
+      const width = `${percentages[index]}%`;
+      column.style.setProperty("width", width, "important");
+      column.style.setProperty("min-width", width, "important");
+      column.style.setProperty("max-width", width, "important");
+      column.style.setProperty("transition", "none", "important");
+    });
+    appendFiller(table, Math.max(0, 100 - total));
+    return true;
   }
 
-  function revealWhenStable() {
-    let previous = "";
-    let stableFrames = 0;
-    let attempts = 0;
-    const check = () => {
-      attempts += 1;
-      syncPagePolish();
-      const applied = applyFinalExactWidths();
-      const signature = tableSignature();
-      if (applied && signature && signature === previous) stableFrames += 1;
-      else stableFrames = 0;
-      previous = signature;
-      const clubReady = !initialClubRoute || (
-        state?.currentPage === "club"
-        && document.body.dataset.page === "club"
-        && document.querySelector("#progressionPage")?.hidden === false
-        && String(document.querySelector("#tablePageTitle")?.textContent || "").trim()
-      );
-      if ((stableFrames >= 3 && clubReady) || attempts >= 240) {
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          syncPagePolish();
-          applyFinalExactWidths();
-          document.body.classList.remove("tableLayoutPending", "clubInitialAtomic");
-        }));
+  function revealTablePage() {
+    cancelAnimationFrame(revealFrame);
+    revealFrame = requestAnimationFrame(() => {
+      const appStillLoading = document.body.classList.contains("loading")
+        || document.body.classList.contains("booting");
+      const ready = applyStableTableWidths();
+      const waitingForClub = document.body.classList.contains("clubViewSwitching");
+      if (appStillLoading || ((!ready || waitingForClub) && revealAttempts < 600)) {
+        if (!appStillLoading) revealAttempts += 1;
+        revealTablePage();
         return;
       }
-      requestAnimationFrame(check);
-    };
-    requestAnimationFrame(check);
+      revealAttempts = 0;
+      requestAnimationFrame(() => {
+        applyStableTableWidths();
+        if (document.body.classList.contains("clubViewSwitching")) return;
+        const clubReveal = document.body.classList.contains("clubPagePending");
+        document.body.classList.remove("clubPagePending", "tableLayoutPending");
+        if (!clubReveal || !loadingScreen) return;
+        loadingScreen.hidden = false;
+        loadingScreen.classList.remove("leaving");
+        requestAnimationFrame(() => {
+          loadingScreen.classList.add("leaving");
+          window.setTimeout(() => {
+            loadingScreen.hidden = true;
+            loadingScreen.classList.remove("leaving");
+          }, 230);
+        });
+      });
+    });
+  }
+
+  function syncClubLoadingState() {
+    if (syncingBodyState) return;
+    syncingBodyState = true;
+    try {
+      if (document.body.classList.contains("clubViewSwitching")) {
+        document.body.classList.add("clubPagePending", "tableLayoutPending");
+        if (loadingScreen) {
+          loadingScreen.hidden = false;
+          loadingScreen.classList.remove("leaving");
+        }
+        return;
+      }
+      if (document.body.classList.contains("clubPagePending")) revealTablePage();
+    } finally {
+      syncingBodyState = false;
+    }
+  }
+
+  function syncPinnedSidebarState() {
+    const rail = document.querySelector("#menuRail");
+    document.body.classList.toggle("pinnedSidebarVisible", Boolean(rail && !rail.hidden));
   }
 
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
-    buildTableColGroup = function buildTableColGroupWithFinalWidths() {
+    buildTableColGroup = function buildTableColGroupWithoutFirstFrameShift() {
       const result = originalBuildTableColGroup.apply(this, arguments);
-      queuePagePolish();
+      applyStableTableWidths();
       return result;
     };
   }
+
   if (typeof buildHeader === "function") {
     const originalBuildHeader = buildHeader;
-    buildHeader = function buildHeaderWithFinalWidths() {
+    buildHeader = function buildHeaderWithoutFirstFrameShift() {
       const result = originalBuildHeader.apply(this, arguments);
-      queuePagePolish();
+      applyStableTableWidths();
       return result;
     };
   }
+
   if (typeof renderTable === "function") {
     const originalRenderTable = renderTable;
-    renderTable = function renderTableWithFinalWidths() {
+    renderTable = function renderTableWithoutFirstFrameShift() {
       const result = originalRenderTable.apply(this, arguments);
-      queuePagePolish();
+      applyStableTableWidths();
+      revealTablePage();
       return result;
     };
   }
+
   if (typeof updateViewButtons === "function") {
     const originalUpdateViewButtons = updateViewButtons;
-    updateViewButtons = function updateViewButtonsWithFinalLayout() {
+    updateViewButtons = function updateViewButtonsWithoutWatchlistLoop() {
       const result = originalUpdateViewButtons.apply(this, arguments);
-      queuePagePolish();
+      applyStableTableWidths();
       return result;
     };
   }
 
-  const style = document.createElement("style");
-  style.textContent = `
-    body.tableLayoutPending #progressionPage {
-      visibility: hidden !important;
-      opacity: 0 !important;
-    }
-    body.clubInitialAtomic #appShell {
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-    body.clubInitialAtomic #loadingScreen {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      pointer-events: auto !important;
-    }
-    body[data-page="watchlist"] #progressionPage .views {
-      justify-content: flex-start !important;
-      text-align: left !important;
-    }
-    body[data-page="watchlist"] #progressionPage .views .viewButton {
-      order: 0 !important;
-    }
-    body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
-      order: 1 !important;
-      margin-left: auto !important;
-    }
-    body[data-page="club"] #progressionPage .quickFilters,
-    body[data-page="club"] #progressionPage .controlsBar,
-    body[data-page="club"] #progressionPage .pager,
-    body[data-page="club"] #progressionPage nav.pager {
-      display: none !important;
-    }
-    #progressionPage .tableShell,
-    #progressionPage .tableScroller,
-    #progressionPage .tableScroller table {
-      box-sizing: border-box !important;
-    }
-    .watchlistMinimumTooltip {
-      opacity: 1 !important;
-      filter: none !important;
-    }
-    .watchlistTooltipOpacityHost {
-      opacity: 1 !important;
-    }
-    .watchlistTooltipOpacityHost > :not(.watchlistMinimumTooltip) {
-      opacity: var(--disabled-opacity, .55);
-    }
-  `;
-  document.head.appendChild(style);
+  const bodyClassObserver = new MutationObserver(syncClubLoadingState);
+  bodyClassObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  const rail = document.querySelector("#menuRail");
+  if (rail) {
+    const railObserver = new MutationObserver(syncPinnedSidebarState);
+    railObserver.observe(rail, { attributes: true, attributeFilter: ["hidden"] });
+  }
 
-  const observer = new MutationObserver(queuePagePolish);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  window.addEventListener("resize", () => {
-    if (!TABLE_ROUTE.test(window.location.pathname) && state?.currentPage !== "club") return;
-    sharedTableWidth = 0;
-    measuredCandidate = 0;
-    measuredStableFrames = 0;
-    document.body.classList.add("tableLayoutPending");
-    revealWhenStable();
-  }, { passive: true });
-
-  queuePagePolish();
-  if (initialTableRoute) revealWhenStable();
+  window.applyExactPlayerTableWidths = applyStableTableWidths;
+  window.addEventListener("resize", applyStableTableWidths, { passive: true });
+  syncPinnedSidebarState();
+  syncClubLoadingState();
+  if (initialTableRoute) revealTablePage();
 })();
+

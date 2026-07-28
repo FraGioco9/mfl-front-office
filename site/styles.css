@@ -222,3 +222,210 @@
   display: inline-block;
   flex: 0 0 auto;
 }
+
+
+/* v1.150.3 - Pinned sidebar and atomic page layout */
+:root {
+  --pinned-sidebar-width: 190px;
+  --pinned-topbar-height: 102px;
+}
+
+.appShell,
+.appShell.menuClosed,
+.appShell.sidebarClosed,
+.appShell.sidebarCollapsed,
+.appShell.collapsed {
+  --sidebar-offset: var(--pinned-sidebar-width) !important;
+  transition: none !important;
+}
+
+.menuRail,
+.appShell.menuClosed .menuRail,
+.appShell.sidebarClosed .menuRail,
+.appShell.sidebarCollapsed .menuRail,
+.appShell.collapsed .menuRail {
+  width: var(--pinned-sidebar-width) !important;
+  padding: 14px !important;
+  align-items: stretch !important;
+  transition: none !important;
+}
+
+.sidebar,
+.appShell.menuClosed .sidebar,
+.appShell.sidebarClosed .sidebar,
+.appShell.sidebarCollapsed .sidebar,
+.appShell.collapsed .sidebar {
+  width: 162px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  align-items: stretch !important;
+  transition: none !important;
+}
+
+.appShell.menuClosed .menuButton,
+.appShell.sidebarClosed .menuButton,
+.appShell.sidebarCollapsed .menuButton,
+.appShell.collapsed .menuButton,
+.menuButton {
+  width: 100% !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  transition: none !important;
+}
+
+.appShell.menuClosed .menuText,
+.appShell.sidebarClosed .menuText,
+.appShell.sidebarCollapsed .menuText,
+.appShell.collapsed .menuText,
+.appShell.menuClosed .navText,
+.appShell.sidebarClosed .navText,
+.appShell.sidebarCollapsed .navText,
+.appShell.collapsed .navText {
+  max-width: 112px !important;
+  margin-left: 8px !important;
+  opacity: 1 !important;
+}
+
+.appShell.menuClosed .navButton,
+.appShell.sidebarClosed .navButton,
+.appShell.sidebarCollapsed .navButton,
+.appShell.collapsed .navButton {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  gap: 8px !important;
+  padding: 0 14px !important;
+}
+
+main {
+  width: calc(100% - var(--pinned-sidebar-width)) !important;
+  margin-left: var(--pinned-sidebar-width) !important;
+  transition: none !important;
+}
+
+.menuRail[hidden] + main {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+main > .pageView,
+.homePage,
+.changelogPage,
+.myPlayersLockedPage {
+  left: auto !important;
+}
+
+.myPlayersLockedPage:not([hidden]) {
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  min-height: calc(100vh - var(--pinned-topbar-height) - 52px) !important;
+  margin: 0 !important;
+  padding: 24px !important;
+}
+
+.myPlayersLockedContent {
+  width: min(520px, 100%);
+  margin: 0 auto !important;
+  text-align: center;
+}
+
+#progressionPage {
+  transition: opacity 180ms ease, transform 180ms ease !important;
+}
+
+body.tableLayoutPending #progressionPage,
+body.clubViewSwitching #progressionPage,
+body.clubPagePending #progressionPage {
+  opacity: 0 !important;
+  transform: translateY(6px) !important;
+  pointer-events: none !important;
+}
+
+body.tableLayoutPending #loadingScreen,
+body.clubViewSwitching #loadingScreen,
+body.clubPagePending #loadingScreen {
+  display: grid !important;
+  visibility: visible !important;
+  align-content: center !important;
+  justify-items: center !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+body.tableLayoutPending #loadingScreen .loadingBox,
+body.clubViewSwitching #loadingScreen .loadingBox,
+body.clubPagePending #loadingScreen .loadingBox {
+  margin: 0 auto !important;
+}
+
+body[data-page="watchlist"] #progressionPage .views {
+  display: flex !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="attributes"] { order: 1 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="next"] { order: 2 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="contracts"] { order: 3 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="current"] { order: 4 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="all"] { order: 5 !important; }
+body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
+  order: 10 !important;
+  margin-left: auto !important;
+}
+
+#progressionPage .tableShell,
+#progressionPage .tableScroller,
+#progressionPage .tableScroller table {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#progressionPage .tableShell,
+#progressionPage .tableScroller {
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+#progressionPage .tableScroller table {
+  min-width: 100% !important;
+  table-layout: fixed !important;
+  border-spacing: 0 !important;
+}
+
+#progressionPage .tableScroller table,
+#progressionPage .tableScroller col,
+#progressionPage .tableScroller th,
+#progressionPage .tableScroller td {
+  transition: none !important;
+  animation: none !important;
+}
+
+#progressionPage .tableScroller .col-stable-width-filler,
+#progressionPage .tableScroller .col-exact-width-filler {
+  padding: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  background: inherit !important;
+  pointer-events: none !important;
+}
+
+@media (min-width: 901px) {
+  body:not(.loading):not(.booting).pinnedSidebarVisible.tableLayoutPending #loadingScreen,
+  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewSwitching #loadingScreen,
+  body:not(.loading):not(.booting).pinnedSidebarVisible.clubPagePending #loadingScreen {
+    inset: var(--pinned-topbar-height) 0 0 var(--pinned-sidebar-width) !important;
+    width: auto !important;
+    height: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #progressionPage {
+    transition: none !important;
+  }
+}
+
