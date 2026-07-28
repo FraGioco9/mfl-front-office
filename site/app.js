@@ -8043,15 +8043,27 @@ function bestSearchResults(query) {
     .filter((result) => result.score > 0)
     .sort(relevanceSort);
 
+  const agentPlayerCounts = new Map();
+  state.rows.forEach((row) => {
+    const walletAddress = normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase();
+    if (!walletAddress) return;
+    agentPlayerCounts.set(walletAddress, (agentPlayerCounts.get(walletAddress) || 0) + 1);
+  });
+
   const agentResults = state.agentSearchIndex
     .map((entry) => ({
       ...entry,
       score: Math.max(searchMatchScore(query, entry.nameText, entry.walletText), searchMatchScore(query, entry.walletText, entry.nameText)),
+      playerCount: agentPlayerCounts.get(entry.walletAddress) || 0,
       overall: -1,
       label: entry.name,
     }))
     .filter((result) => result.score > 0)
-    .sort(relevanceSort);
+    .sort((a, b) => (
+      b.score - a.score
+      || b.playerCount - a.playerCount
+      || String(a.label).localeCompare(String(b.label))
+    ));
 
   // Keep enough category-ranked candidates for the club-search enhancer to
   // merge and trim them in the final players -> clubs -> agents order.
@@ -11983,11 +11995,20 @@ startApp();
       const searchable = typeof normalizeSearchText === "function"
         ? normalizeSearchText(`${name} ${clubId}`)
         : `${name} ${clubId}`.toLowerCase();
-      if (searchable.includes(normalizedQuery)) clubs.set(clubId, { clubId, name });
+      if (searchable.includes(normalizedQuery)) {
+        const divisionRank = typeof contractDivisionSortValue === "function"
+          ? contractDivisionSortValue(getValue(row, "active_contract_club_division"))
+          : null;
+        clubs.set(clubId, {
+          clubId,
+          name,
+          divisionRank: divisionRank ?? Number.POSITIVE_INFINITY,
+        });
+      }
     });
 
     return Array.from(clubs.values())
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => a.divisionRank - b.divisionRank || a.name.localeCompare(b.name))
       .slice(0, 5);
   }
 
@@ -12187,7 +12208,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.9";
+  const VERSION = "1.150.10";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12388,7 +12409,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Keep refreshed tables at their final width and show the club division in its league color";
+    description.textContent = "Prioritize higher-division clubs and agents with larger player rosters in search results";
     item.append(version, description);
     return item;
   }
