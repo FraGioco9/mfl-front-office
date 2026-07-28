@@ -12155,7 +12155,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.5";
+  const VERSION = "1.150.6";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12356,7 +12356,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Center all guest states, eliminate first-frame table and club flicker, keep guest routes clean, retain mixed search history, and restore MFL loading";
+    description.textContent = "Center toasts and opt-in states in the page layout, stabilize refreshed table widths, remove club page flicker and view transitions, keep MFL views ordered, and normalize the watchlist tooltip";
     item.append(version, description);
     return item;
   }
@@ -12464,7 +12464,7 @@ startApp();
   else initialize();
 })();
 
-/* v1.150.5 stable pinned layout and pre-reveal table widths */
+/* v1.150.6 stable pinned layout and pre-reveal table widths */
 (() => {
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
@@ -12489,6 +12489,7 @@ startApp();
   const FILLER_CLASS = "col-shared-width-filler";
   let cachedLayoutKey = "";
   let cachedContentWidth = 0;
+  let tableWidthFrame = 0;
 
   if (document.documentElement.classList.contains("table-layout-pending")) {
     document.body.classList.add("tableLayoutPending");
@@ -12615,6 +12616,21 @@ startApp();
     document.body.classList.toggle("pinnedSidebarVisible", pinnedSidebarWidth() > 0);
   }
 
+  function fillerOnlyMutation(mutation) {
+    const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+    return changedNodes.length > 0 && changedNodes.every((node) =>
+      node.nodeType === Node.ELEMENT_NODE
+      && node.classList.contains(FILLER_CLASS)
+    );
+  }
+
+  function scheduleSharedTableWidths() {
+    window.cancelAnimationFrame(tableWidthFrame);
+    tableWidthFrame = window.requestAnimationFrame(() => {
+      applySharedTableWidths();
+    });
+  }
+
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
     buildTableColGroup = function buildTableColGroupWithSharedWidths() {
@@ -12662,6 +12678,15 @@ startApp();
     railObserver.observe(rail, { attributes: true, attributeFilter: ["hidden"] });
   }
 
+  const progressionTablePage = document.querySelector("#progressionPage");
+  if (progressionTablePage) {
+    const tableObserver = new MutationObserver((mutations) => {
+      if (mutations.every(fillerOnlyMutation)) return;
+      scheduleSharedTableWidths();
+    });
+    tableObserver.observe(progressionTablePage, { childList: true, subtree: true });
+  }
+
   window.applyExactPlayerTableWidths = applySharedTableWidths;
   window.addEventListener("resize", () => {
     cachedLayoutKey = "";
@@ -12673,3 +12698,25 @@ startApp();
   applySharedTableWidths();
 })();
 
+/* v1.150.6 layout-centered feedback and transition-free shared views */
+(() => {
+  function syncToastCenter() {
+    const toast = document.querySelector("#toastMessage");
+    const pageLayout = document.querySelector("main");
+    if (!toast || !pageLayout) return;
+    const bounds = pageLayout.getBoundingClientRect();
+    toast.style.setProperty("--toast-center-x", `${bounds.left + (bounds.width / 2)}px`);
+  }
+
+  if (typeof showToast === "function") {
+    const originalShowToast = showToast;
+    showToast = function showLayoutCenteredToast() {
+      const result = originalShowToast.apply(this, arguments);
+      syncToastCenter();
+      return result;
+    };
+  }
+
+  window.addEventListener("resize", syncToastCenter, { passive: true });
+  syncToastCenter();
+})();

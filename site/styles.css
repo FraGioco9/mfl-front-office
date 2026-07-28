@@ -223,7 +223,7 @@
   flex: 0 0 auto;
 }
 
-/* v1.150.5 - Pinned content grid, guest centering, and flicker-free tables */
+/* v1.150.6 - Pinned content grid, guest centering, and flicker-free tables */
 :root {
   --pinned-sidebar-width: 190px;
   --pinned-topbar-height: 102px;
@@ -459,3 +459,59 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   }
 }
 
+/* v1.150.6 - Layout-centered states and stable shared view presentation */
+.toastMessage {
+  left: var(--toast-center-x, 50%) !important;
+}
+
+body.pinnedSidebarVisible .myPlayersLockedPage {
+  right: 0 !important;
+  left: var(--pinned-sidebar-width) !important;
+  width: auto !important;
+}
+
+body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
+  right: 0 !important;
+  left: 0 !important;
+  width: auto !important;
+}
+
+body[data-page="club"] #progressionPage,
+body[data-page="club"] #progressionPage * {
+  transition: none !important;
+  animation: none !important;
+}
+
+body[data-page="club"].clubViewSwitching:not(.clubViewLoading) #progressionPage {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+body[data-page="mfl"] #progressionPage .viewButton[data-view="attributes"],
+body[data-page="mflstats"] #progressionPage .viewButton[data-view="attributes"] {
+  order: 1 !important;
+}
+
+body[data-page="mfl"] #progressionPage .viewButton[data-view="stats"],
+body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
+  order: 2 !important;
+}
+
+.watchlistDropdownAction:disabled {
+  opacity: 1 !important;
+}
+
+.watchlistDropdownAction:disabled > svg {
+  opacity: 0.45;
+}
+
+.watchlistDropdownAction:disabled[data-tooltip]::after {
+  opacity: 0;
+}
+
+.watchlistDropdownAction:disabled[data-tooltip]:hover::after,
+.watchlistDropdownAction:disabled[data-tooltip]:focus-visible::after {
+  opacity: 1;
+}
