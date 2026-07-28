@@ -616,6 +616,27 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 .filtersDialog select:focus:not(:disabled),
 .filtersDialog select:focus-visible:not(:disabled) {
   outline: none;
-  border-color: var(--border-strong);
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
   box-shadow: none;
+}
+
+/* v1.150.15 - Training control hover replay and selected filter styling */
+.trainingStatControls button {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.trainingStatControls button:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.trainingStatControls button.trainingHoverReset,
+.trainingStatControls button.trainingHoverReset:hover:not(:disabled) {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  transition: none !important;
 }

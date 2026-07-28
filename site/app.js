@@ -7599,6 +7599,18 @@ function resetTrainingStats(playerId) {
   renderPlayerPage(playerId);
 }
 
+function replayTrainingControlHover(control) {
+  if (!control) {
+    return;
+  }
+
+  control.classList.add("trainingHoverReset");
+  void control.offsetWidth;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => control.classList.remove("trainingHoverReset"));
+  });
+}
+
 function playerAttributeColumns(row) {
   if (playerIsGoalkeeper(row)) {
     return ["overall", "goalkeeping"].filter((column) => column === "overall" || state.columns.includes(column));
@@ -7910,11 +7922,20 @@ function renderPlayerPage(playerId) {
   });
   playerDetail.querySelectorAll("[data-training-stat]").forEach((button) => {
     button.addEventListener("click", () => {
-      adjustTrainingStat(id, button.dataset.trainingStat, Number(button.dataset.trainingDelta || 0));
+      const stat = button.dataset.trainingStat;
+      const delta = Number(button.dataset.trainingDelta || 0);
+      adjustTrainingStat(id, stat, delta);
+      const replacement = Array.from(playerDetail.querySelectorAll("[data-training-stat]")).find((candidate) =>
+        candidate.dataset.trainingStat === stat && Number(candidate.dataset.trainingDelta || 0) === delta,
+      );
+      replayTrainingControlHover(replacement);
     });
   });
   playerDetail.querySelectorAll("[data-training-reset]").forEach((button) => {
-    button.addEventListener("click", () => resetTrainingStats(id));
+    button.addEventListener("click", () => {
+      resetTrainingStats(id);
+      replayTrainingControlHover(playerDetail.querySelector("[data-training-reset]"));
+    });
   });
   const notesInput = playerDetail.querySelector("#playerNotesInput");
   if (notesInput) {
@@ -12207,7 +12228,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.14";
+  const VERSION = "1.150.15";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12408,7 +12429,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Remove the selected white border from filter dropdowns";
+    description.textContent = "Match Training controls and selected filter dropdowns to view-button hover behavior";
     item.append(version, description);
     return item;
   }
