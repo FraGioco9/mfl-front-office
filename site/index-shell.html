@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MFL Front Office</title>
+    <script>
+      (() => {
+        try {
+          const theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+        } catch {
+          document.documentElement.dataset.theme = "light";
+          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=1.151.1">
+  </head>
+  <body data-page="home">
+    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden aria-hidden="true">
+      <div class="loadingBox">
+        <div id="loadingText" class="loadingText">Preparing data...</div>
+        <div class="loadingBar" aria-hidden="true">
+          <div id="loadingBarFill" class="loadingBarFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <div>
+        <h1><a class="brandLink" href="/" data-page="home">MFL Front Office</a></h1>
+      </div>
+      <button id="openSearchButton" class="searchButton" type="button"><span class="searchLabel"><span class="searchEmoji" aria-hidden="true">&#128269;</span> Search</span><span class="searchShortcut">Ctrl K</span></button>
+      <div class="headerControls">
+        <div class="stats" aria-label="Database stats">
+          <div>
+            <span id="totalPlayers">-</span>
+            <label>players</label>
+          </div>
+          <div>
+            <span id="totalWallets">-</span>
+            <label>wallets</label>
+          </div>
+        </div>
+        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
+        <div id="accountMenu" class="accountMenu">
+          <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
+          <div id="accountDropdown" class="accountDropdown" hidden>
+            <button id="accountEmail" class="accountDropdownItem accountUserButton" type="button">Guest</button>
+            <button id="accountSettingsButton" class="accountDropdownItem accountSettingsButton" type="button" hidden>Settings</button>
+            <button id="linkWalletButton" class="accountDropdownItem" type="button">Opt In</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div id="appShell" class="appShell">
+      <div id="menuRail" class="menuRail" hidden>
+        <button id="menuButton" class="menuButton" type="button" aria-expanded="true" aria-controls="sidebar"><span class="menuIcon">&#9776;</span><span class="menuText">Menu</span></button>
+        <aside id="sidebar" class="sidebar" hidden>
+          <a class="navButton" href="/database/attributes" data-page="database"><svg class="navEmoji navDatabaseIcon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg><span class="navText">Database</span></a>
+          <a class="navButton" href="/mfl/attributes" data-page="mfl"><svg class="navEmoji navMflIcon" viewBox="0 0 463.6 135" aria-hidden="true"><path d="M323.2,53.94l-12.85,40.53h-70.91l-12.85,40.53h-42.42l25.65-81.05h113.38Z"></path><path d="M37.59,40.53c-4.57,0-8.66,2.97-10.04,7.33L0,134.99h42.46l29.91-94.46h-34.79Z"></path><path d="M353.68,0l-29.91,94.46h42.46l25.56-80.75c2.16-6.77-2.93-13.71-10.04-13.71h-28.11.04Z"></path><path d="M463.6,94.46l-12.81,40.53h-71.73l-12.85-40.53h97.39Z"></path><path d="M136.52,40.53l-29.9,94.46h-42.46l29.92-94.46h-21.7S85.23,0,85.23,0h22.38c20.68,0,35.14,20.83,28.91,40.53Z"></path><path d="M200.68,40.53l-29.9,94.46h-42.46l29.92-94.46h-21.72L149.37,0h22.4c20.68,0,35.14,20.83,28.91,40.53Z"></path><path d="M214.06,40.53h113.39L340.3,0h-105.68c-4.61,0-8.66,2.97-10.04,7.33l-10.52,33.2Z"></path></svg><span class="navText">MFL</span></a>
+          <a class="navButton" href="/progression/current-season" data-page="progression"><svg class="navEmoji navTrendIcon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 10 13 14 21 5"></polyline><path d="M15 5h6v6"></path></svg><span class="navText">Progression</span></a>
+          <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span class="navText">Evaluation</span></a>
+          <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
+          <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
+          <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.08A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.08A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.08A1.7 1.7 0 0 0 19.4 15z"></path></svg><span class="navText">Settings</span></a>
+        </aside>
+      </div>
+
+      <main>
+        <section id="homePage" class="pageView homePage">
+          <div class="homeIntro">
+            <p>Manage scouting, progression, and roster decisions from one private workspace.</p>
+          </div>
+
+          <section class="homeStats" aria-label="Tracked database summary">
+            <div>
+              <span id="homePlayers">-</span>
+              <label>players tracked</label>
+            </div>
+            <div>
+              <span id="homeWallets">-</span>
+              <label>wallets tracked</label>
+            </div>
+          </section>
+          <button id="homeOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
+
+        </section>
+
+        <section id="progressionPage" class="pageView progressionPage" hidden>
+          <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
+          <section class="views" aria-label="Table views">
+            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="stats">Stats</button>
+            <button class="viewButton" type="button" data-view="next">Next Overall</button>
+            <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+            <button class="viewButton active" type="button" data-view="current">Current Season</button>
+            <button class="viewButton" type="button" data-view="all">All Time</button>
+            <div id="watchlistSwitcher" class="watchlistSwitcher" hidden>
+              <span class="watchlistSwitcherLabel">Watchlist</span>
+              <button id="watchlistButton" class="watchlistButton" type="button" aria-haspopup="true" aria-expanded="false">
+                <span id="watchlistButtonText">Default</span>
+                <span class="watchlistButtonChevron" aria-hidden="true">&#9662;</span>
+              </button>
+              <div id="watchlistDropdown" class="watchlistDropdown" hidden></div>
+            </div>
+          </section>
+
+          <section class="quickFilters" aria-label="Quick filters">
+            <label>
+              <input id="hideRetiredInput" type="checkbox" checked>
+              <span>Hide retired players</span>
+            </label>
+            <label>
+              <input id="hideRetiringInput" type="checkbox">
+              <span>Hide retiring players</span>
+            </label>
+            <label id="hideMflPlayersFilter" hidden>
+              <input id="hideMflPlayersInput" type="checkbox" checked>
+              <span>Hide MFL players</span>
+            </label>
+            <label id="packablePlayersFilter" hidden>
+              <input id="packablePlayersInput" type="checkbox" checked>
+              <span>Only packable players</span>
+            </label>
+            <label>
+              <input id="newMintsInput" type="checkbox">
+              <span id="newMintsLabel">Only new mints</span>
+            </label>
+            <span id="watchlistPlayerCount" class="watchlistPlayerCount" hidden>0 players</span>
+          </section>
+
+          <section class="controlsBar" aria-label="Table controls">
+            <button id="openFiltersButton" class="compactButton" type="button">&#128269; Filters</button>
+            <button id="quickClearFiltersButton" class="compactButton" type="button">&#129529; Clear</button>
+            <span id="filterSummary">0 active</span>
+            <label class="field compact rowsField">
+              <span>Rows</span>
+              <select id="pageSizeSelect">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="tableShell" aria-label="Players table">
+            <div class="tableScroller">
+              <table>
+                <colgroup id="tableColGroup"></colgroup>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+            <div id="emptyState" class="emptyState" hidden>No players match the current filters.</div>
+          </section>
+
+          <nav class="pager" aria-label="Pagination">
+            <button id="prevButton" type="button">Previous</button>
+            <span id="pageText">Page 1</span>
+            <button id="nextButton" type="button">Next</button>
+          </nav>
+
+          <div id="selectionBar" class="selectionBar">
+            <div class="selectionSummary">
+              <span id="selectionCount">0 selected</span>
+              <button id="clearSelectionButton" class="textButton" type="button">Clear</button>
+            </div>
+            <div class="selectionActions">
+              <button id="moveToWatchlistButton" type="button" hidden>Move to watchlist</button>
+              <button id="addToWatchlistButton" type="button">Add to watchlist</button>
+              <button id="openSelectedLinksButton" type="button">Open links</button>
+            </div>
+          </div>
+        </section>
+
+
+        <section id="mflStatsPage" class="pageView mflStatsPage" hidden>
+          <h2 class="tablePageTitle">MFL Wallet</h2>
+          <section class="views mflStatsViews" aria-label="MFL views">
+            <button class="viewButton" type="button" data-page="mfl" data-view="attributes">Attributes</button>
+            <button class="viewButton active" type="button" data-page="mfl" data-view="stats">Stats</button>
+          </section>
+
+          <section class="mflStatsFilters" aria-label="MFL stats overall filters">
+            <span>Overall Filters</span>
+            <div id="mflStatsOverallFilters" class="mflStatsFilterButtons"></div>
+          </section>
+
+          <section class="mflStatsCards" aria-label="MFL wallet player statistics">
+            <article>
+              <span>MFL wallet total players</span>
+              <strong id="mflStatsTotalPlayers">-</strong>
+            </article>
+            <article>
+              <span>Packable players</span>
+              <strong id="mflStatsPackablePlayers">-</strong>
+            </article>
+            <article>
+              <span>Aged players</span>
+              <strong id="mflStatsAgedPlayers">-</strong>
+              <small>not available in packs</small>
+            </article>
+            <article>
+              <span>Other players</span>
+              <strong id="mflStatsOtherPlayers">-</strong>
+              <small>not available in packs</small>
+            </article>
+          </section>
+
+          <section class="mflStatsDistribution" aria-label="Packable players distribution">
+            <div class="mflStatsDistributionHeader">
+              <h3 id="mflStatsDistributionTitle">Packable Overall Distribution</h3>
+              <div id="mflStatsDistributionModeButtons" class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+                <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+                <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+              </div>
+            </div>
+            <div id="mflStatsAgeDistribution" class="mflStatsAgeDistribution"></div>
+          </section>
+        </section>
+
+
+        <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
+          <div class="myPlayersLockedContent">
+            <h2 id="optInLockedTitle">My Players</h2>
+            <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>
+            <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
+          </div>
+        </section>
+
+        <section id="evaluationPage" class="pageView evaluationPage" hidden>
+          <div class="evaluationTitleRow">
+            <h2 class="tablePageTitle">Evaluation</h2>
+            <button class="advancedSettingsButton" type="button" aria-label="Advanced Settings"><span aria-hidden="true">&#9881;</span> Advanced Settings</button>
+          </div>
+          <section class="evaluationTopBar" aria-label="Evaluation controls">
+            <section class="evaluationSearchGroup" aria-label="Evaluation player search">
+              <section class="evaluationSearch">
+                <label class="field">
+                  <span>Player</span>
+                  <div class="evaluationSearchControl">
+                    <input id="evaluationSearchInput" type="text" placeholder="Search ID or player name" autocomplete="off">
+                    <button id="evaluationSearchClearButton" class="iconButton popupCloseButton evaluationSearchClearButton" type="button" aria-label="Clear player search" hidden></button>
+                  </div>
+                </label>
+                <div id="evaluationSearchResults" class="evaluationSearchResults" hidden></div>
+              </section>
+              <section class="evaluationActions" aria-label="Evaluation actions">
+                <section id="evaluationButtons" class="evaluationButtons" aria-label="Evaluation page actions" hidden>
+                  <button id="evaluationResetButton" class="evaluationPlayerPageButton" type="button" hidden>Reset</button>
+                  <button id="evaluationLoadButton" class="evaluationPlayerPageButton" type="button" hidden>Load</button>
+                  <button id="evaluationPlayerPageButton" class="evaluationPlayerPageButton" type="button" hidden>Player Page</button>
+                </section>
+                <section class="evaluationMetrics" aria-label="Evaluation metrics">
+                  <section class="evaluationMflUsdGroup" aria-label="MFL per USD controls">
+                    <section class="evaluationMetric evaluationMflUsdMetric" aria-label="MFL per USD">
+                      <span class="evaluationMetricLabel">MFL/USD <button id="evaluationMflUsdEditButton" class="evaluationMetricIconButton" type="button" aria-label="Edit MFL per USD">&#9998;</button></span>
+                      <strong id="evaluationMflUsd">400</strong>
+                      <span id="evaluationMflUsdEditor" class="evaluationMflUsdEditor" hidden><input id="evaluationMflUsdInput" class="evaluationMflUsdInput" type="text" inputmode="decimal" autocomplete="off"><span class="evaluationMflUsdStepper" aria-label="Adjust MFL per USD"><button id="evaluationMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="evaluationMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span></span>
+                    </section>
+                    <button id="evaluationMflUsdResetButton" class="evaluationMetricResetButton" type="button" hidden>Reset</button>
+                  </section>
+                  <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
+                    <span>Discount Rate</span>
+                    <strong id="evaluationDiscountRate">-</strong>
+                  </section>
+                </section>
+              </section>
+              <section id="evaluationOptionFilters" class="evaluationOptionFilters" aria-label="Evaluation options" hidden>
+                <label><input id="ignoreDiscountRateInput" type="checkbox"> <span>Ignore discount rate</span></label>
+                <label><input id="ignoreFirstSeasonInput" type="checkbox"> <span>Ignore first season</span></label>
+              </section>
+            </section>
+          </section>
+
+          <section id="evaluationPanel" class="evaluationPanel" hidden>
+            <h3>Summary</h3>
+            <div class="tableShell evaluationSummaryShell" aria-label="Player evaluation summary">
+              <div class="tableScroller">
+                <table class="evaluationTable evaluationSummaryTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Position</th>
+                      <th>Age</th>
+                      <th>Overall</th>
+                      <th>Expected Seasons</th>
+                      <th>$MFL Return</th>
+                      <th>Present Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationSummaryBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <h3>Season by season</h3>
+            <div class="tableShell evaluationTableShell" aria-label="Player evaluation table">
+              <div class="tableScroller">
+                <table class="evaluationTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Season</th>
+                      <th>Age</th>
+                      <th>Overall</th>
+                      <th>$MFL</th>
+                      <th>USD</th>
+                      <th>Discount Factor</th>
+                      <th>Present Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="evaluationFooterActions" aria-label="Evaluation save and share actions">
+              <button id="evaluationShareButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button"><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="M8.6 10.8 15.4 6.2"></path><path d="M8.6 13.2 15.4 17.8"></path></svg><span>Share</span></button>
+              <span class="evaluationFooterSavedActions">
+                <button id="evaluationDeleteButton" class="evaluationPlayerPageButton evaluationFooterButton evaluationLoadDeleteButton evaluationFooterDeleteButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg><span>Delete</span></button>
+                <button id="evaluationSaveButton" class="evaluationPlayerPageButton evaluationFooterButton" type="button" hidden><svg class="evaluationButtonIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg><span>Save</span></button>
+              </span>
+            </div>
+          </section>
+        </section>
+        <section id="playerPage" class="pageView playerPage" hidden>
+          <div id="playerDetail" class="playerDetail"></div>
+        </section>
+
+        <section id="settingsPage" class="pageView settingsPage" hidden>
+          <h2 class="tablePageTitle">Settings</h2>
+          <section class="settingsPanel" aria-label="Settings">
+            <section class="settingsIdentity" aria-label="Linked agent">
+              <div>
+                <span>Agent</span>
+                <strong id="settingsAgentName">-</strong>
+              </div>
+              <div>
+                <span>Wallet Address</span>
+                <strong id="settingsWalletAddress">-</strong>
+              </div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsDateFormatTitle">
+              <h3 id="settingsDateFormatTitle">Date format</h3>
+              <div id="settingsDateFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Date format"></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsTimeFormatTitle">
+              <h3 id="settingsTimeFormatTitle">Time format</h3>
+              <div id="settingsTimeFormatOptions" class="settingsDateFormatOptions" role="group" aria-label="Time format"></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailAddressTitle">
+              <h3 id="settingsEmailAddressTitle">Email address</h3>
+              <div class="settingsEmailAddressRow"><input id="settingsEmailAddressInput" class="settingsEmailAddressInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><button id="settingsEmailDiscardButton" class="settingsEmailActionButton settingsEmailDiscardButton" type="button">Discard</button><button id="settingsEmailSaveButton" class="settingsEmailActionButton primary" type="button">Save</button></div>
+            </section>
+            <section class="settingsSection" aria-labelledby="settingsEmailTitle">
+              <h3 id="settingsEmailTitle">Receive emails for</h3>
+              <div id="settingsEmailOptions" class="settingsEmailOptions"></div>
+            </section>
+          </section>
+        </section>
+        <section id="changelogPage" class="pageView changelogPage" hidden>
+          <h2>Changelog</h2>
+          <p>All pushed updates for MFL Front Office, newest first.</p>
+          <ol class="changelogList">
+              <li><span>v1.151.1</span><p>Cache loaded route data until refresh and show destination-first local loading states</p></li>
+              <li><span>v1.151.0</span><p>Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data</p></li>
+              <li><span>v1.150.21</span><p>Unify Evaluation and global search clear controls</p></li>
+              <li><span>v1.150.20</span><p>Hide the Evaluation search clear control when the field is empty</p></li>
+              <li><span>v1.150.19</span><p>Remove the duplicate and boxed Evaluation search clear control</p></li>
+              <li><span>v1.150.18</span><p>Match the rows selector and Evaluation clear button to shared view and popup controls</p></li>
+              <li><span>v1.150.17</span><p>Match the Evaluation search bar to table view-button hover behavior</p></li>
+              <li><span>v1.150.16</span><p>Match individual-player view buttons and filter value boxes to table view-button hover behavior</p></li>
+              <li><span>v1.150.15</span><p>Match Training controls and selected filter dropdowns to view-button hover behavior</p></li>
+              <li><span>v1.150.14</span><p>Remove the selected white border from filter dropdowns</p></li>
+              <li><span>v1.150.13</span><p>Reduce popup control shapes and match filter dropdown hover behavior to view buttons</p></li>
+              <li><span>v1.150.12</span><p>Center and restyle all popup close, add, and remove control shapes</p></li>
+              <li><span>v1.150.11</span><p>Center all popup close-button shapes</p></li>
+              <li><span>v1.150.10</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
+              <li><span>v1.150.9</span><p>Keep refreshed tables at their final width and show the club division in its league color</p></li>
+              <li><span>v1.150.8</span><p>Center pagination in the page layout and keep the table at its final width immediately after refresh</p></li>
+              <li><span>v1.150.7</span><p>Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders</p></li>
+              <li><span>v1.150.6</span><p>Center toasts and opt-in states in the page layout, stabilize refreshed table widths, remove club page flicker and view transitions, keep MFL views ordered, and normalize the watchlist tooltip</p></li>
+              <li><span>v1.150.5</span><p>Fix guest page states, club transitions, shared table layout, and MFL wallet views</p></li>
+              <li><span>v1.150.4</span><p>Fix club loading, pinned layout spacing, table widths, and shared page presentation</p></li>
+              <li><span>v1.150.3</span><p>Pin the sidebar layout and stabilize page and table transitions</p></li>
+              <li><span>v1.150.2</span><p>Refine club navigation and public table behavior</p></li>
+              <li><span>v1.150.1</span><p>Add public progression views to watchlist and club tables</p></li>
+              <li><span>v1.150.0</span><p>Add club pages, club search, club routing, division labels, and position-sorted club squads</p></li>
+              <li><span>v1.149.67</span><p>Keep the checkbox column visible during sidebar transitions</p></li>
+              <li><span>v1.149.66</span><p>Preserve table alignment throughout sidebar transitions</p></li>
+              <li><span>v1.149.65</span><p>Smooth table column expansion with numeric endpoints</p></li>
+              <li><span>v1.149.64</span><p>Shrink table columns when the sidebar is open</p></li>
+              <li><span>v1.149.63</span><p>Shrink the individual player Notes box</p></li>
+              <li><span>v1.149.62</span><p>Add saved Evaluation delete tooltip</p></li>
+              <li><span>v1.149.61</span><p>Show normal wallet Flow batch progress</p></li>
+              <li><span>v1.149.60</span><p>Quiet Flow request progress logs</p></li>
+              <li><span>v1.149.59</span><p>Fetch MFL Flow seasons by database IDs</p></li>
+              <li><span>v1.149.58</span><p>Keep global recent searches across MFL pages</p></li>
+              <li><span>v1.149.57</span><p>Prevent unsynced saves from resetting email settings</p></li>
+              <li><span>v1.149.56</span><p>Stabilize email settings saves</p></li>
+              <li><span>v1.149.55</span><p>Add MFL stats histogram transitions</p></li>
+              <li><span>v1.149.54</span><p>Widen sparse MFL stats histogram bars</p></li>
+              <li><span>v1.149.53</span><p>Show MFL stats histogram values on hover</p></li>
+              <li><span>v1.149.52</span><p>Keep MFL stats histogram values visible</p></li>
+              <li><span>v1.149.51</span><p>Move MFL stats values into bar tooltips</p></li>
+              <li><span>v1.149.50</span><p>Fix MFL stats histogram bar visibility</p></li>
+              <li><span>v1.149.49</span><p>Strengthen MFL stats histogram rendering</p></li>
+              <li><span>v1.149.48</span><p>Increase MFL stats histogram height</p></li>
+              <li><span>v1.149.47</span><p>Fit MFL stats histogram to page width</p></li>
+              <li><span>v1.149.46</span><p>Equalize MFL stats filter widths</p></li>
+              <li><span>v1.149.45</span><p>Fix saved MFL stats navigation</p></li>
+              <li><span>v1.149.44</span><p>Remember MFL wallet view preference</p></li>
+              <li><span>v1.149.43</span><p>Simplify MFL stats empty state text</p></li>
+              <li><span>v1.149.42</span><p>Add MFL wallet distribution toggle</p></li>
+              <li><span>v1.149.41</span><p>Rename MFL wallet stats labels</p></li>
+              <li><span>v1.149.40</span><p>Align MFL stats page controls</p></li>
+              <li><span>v1.149.39</span><p>Compact MFL wallet stats layout</p></li>
+              <li><span>v1.149.38</span><p>Polish MFL wallet stats navigation</p></li>
+              <li><span>v1.149.37</span><p>Add MFL wallet statistics page</p></li>
+              <li><span>v1.149.36</span><p>Paint loading overlay before sidebar navigation work</p></li>
+              <li><span>v1.149.35</span><p>Support refreshed table view URLs on Vercel</p></li>
+              <li><span>v1.149.34</span><p>Keep sidebar table links on their active views</p></li>
+              <li><span>v1.149.33</span><p>Add URL routes for table views</p></li>
+              <li><span>v1.149.32</span><p>Stabilize email notification settings saves</p></li>
+              <li><span>v1.149.31</span><p>Show loading before table page redraws</p></li>
+              <li><span>v1.149.30</span><p>Show loading screen immediately during page switches</p></li>
+              <li><span>v1.149.29</span><p>Add indexed search data and smoother loading cache behavior</p></li>
+              <li><span>v1.149.28</span><p>Optimize public, owned, and MFL data loading</p></li>
+              <li><span>v1.149.27</span><p>Refine quick filter cursors and text selection</p></li>
+              <li><span>v1.149.26</span><p>Reuse table tooltips during redraws</p></li>
+              <li><span>v1.149.25</span><p>Preserve table link hover states during redraws</p></li>
+              <li><span>v1.149.24</span><p>Preserve hovered table rows during redraws</p></li>
+              <li><span>v1.149.23</span><p>Rename workflow files to match GitHub workflow names</p></li>
+              <li><span>v1.149.22</span><p>Stabilize table hover and copy ID tooltips</p></li>
+              <li><span>v1.149.21</span><p>Add unsubscribe link to progression emails</p></li>
+              <li><span>v1.149.20</span><p>Use normal weight player IDs in improvement emails</p></li>
+              <li><span>v1.149.19</span><p>Protect email notification toggles during preference saves</p></li>
+              <li><span>v1.149.18</span><p>Use scoped progression update email subjects</p></li>
+              <li><span>v1.149.17</span><p>Use normal weight stat values in improvement emails</p></li>
+              <li><span>v1.149.16</span><p>Simplify improvement emails and sort biggest upgrades first</p></li>
+              <li><span>v1.149.15</span><p>Use Titillium Web in progression emails</p></li>
+              <li><span>v1.149.14</span><p>Protect email notification toggles during settings saves</p></li>
+              <li><span>v1.149.13</span><p>Fix Settings email draft protection after page switches</p></li>
+              <li><span>v1.149.12</span><p>Protect Settings email drafts from preference refreshes</p></li>
+              <li><span>v1.149.11</span><p>Match Settings Discard button to Evaluation delete styling</p></li>
+              <li><span>v1.149.10</span><p>Stop Settings email draft flicker while typing</p></li>
+              <li><span>v1.149.9</span><p>Clean up encoded UI characters</p></li>
+              <li><span>v1.149.8</span><p>Fix changelog section toggle characters</p></li>
+              <li><span>v1.149.7</span><p>Restore player page watchlist star button icon</p></li>
+              <li><span>v1.149.6</span><p>Match locked email tooltip spacing to copy tooltip</p></li>
+              <li><span>v1.149.5</span><p>Confirm saved email settings with a toast</p></li>
+              <li><span>v1.149.4</span><p>Keep locked email setting tooltips fully visible</p></li>
+              <li><span>v1.149.3</span><p>Refine email address draft controls in Settings</p></li>
+              <li><span>v1.149.2</span><p>Add tooltip for locked email notification settings</p></li>
+              <li><span>v1.149.1</span><p>Add explicit email save controls and lock email toggles until valid</p></li>
+              <li><span>v1.149.0</span><p>Add progression improvement email notifications</p></li>
+              <li><span>v1.148.48</span><p>Match player contract team styling to Agent text</p></li>
+              <li><span>v1.148.47</span><p>Align player contract division suffix baseline</p></li>
+              <li><span>v1.148.46</span><p>Hide empty player profile Rev Share card</p></li>
+              <li><span>v1.148.45</span><p>Align player contract division suffix with team name</p></li>
+              <li><span>v1.148.44</span><p>Refine player contract suffix, training card sizing, and pitch circle</p></li>
+              <li><span>v1.148.43</span><p>Show player contract division and tighten player attribute cards</p></li>
+              <li><span>v1.148.42</span><p>Add player profile contract details and rebalance player page panels</p></li>
+              <li><span>v1.148.41</span><p>Match Agent and player search navigation transitions</p></li>
+              <li><span>v1.148.40</span><p>Persist recent Agent searches and route own Agent search to My Players</p></li>
+              <li><span>v1.148.39</span><p>Add agents to global search results</p></li>
+              <li><span>v1.148.38</span><p>Show filtered player counts across all tables</p></li>
+              <li><span>v1.148.37</span><p>Hide Contract filter on MFL page</p></li>
+              <li><span>v1.148.36</span><p>Add Contract status table filter</p></li>
+              <li><span>v1.148.35</span><p>Hide Development Center contract values</p></li>
+              <li><span>v1.148.34</span><p>Show free agents in Contracts view</p></li>
+              <li><span>v1.148.33</span><p>Fine tune Contracts Club and Division widths</p></li>
+              <li><span>v1.148.32</span><p>Rebalance Contracts Club and Division columns</p></li>
+              <li><span>v1.148.31</span><p>Widen Contracts Division column</p></li>
+              <li><span>v1.148.30</span><p>Adjust Contracts column split</p></li>
+              <li><span>v1.148.29</span><p>Set measured table column widths</p></li>
+              <li><span>v1.148.28</span><p>Lock table column widths per view</p></li>
+              <li><span>v1.148.27</span><p>Match Contracts view base column widths</p></li>
+              <li><span>v1.148.26</span><p>Fix rendered Contracts column widths</p></li>
+              <li><span>v1.148.25</span><p>Resize Contracts columns</p></li>
+              <li><span>v1.148.24</span><p>Align Contracts columns and division sorting</p></li>
+              <li><span>v1.148.23</span><p>Refine Contracts view sorting and layout</p></li>
+              <li><span>v1.148.22</span><p>Add Contracts view to player tables</p></li>
+              <li><span>v1.148.21</span><p>Fix Database Hide MFL players toggle</p></li>
+              <li><span>v1.148.20</span><p>Hide selected MFL agency players from tables</p></li>
+              <li><span>v1.148.19</span><p>Persist date and time settings to Supabase</p></li>
+              <li><span>v1.148.18</span><p>Link Account dropdown Agent row to My Players</p></li>
+              <li><span>v1.148.17</span><p>Restore parallel Flow seasons workers</p></li>
+              <li><span>v1.148.16</span><p>Make sequential MFL Flow batches truly one-at-a-time</p></li>
+              <li><span>v1.148.15</span><p>Show Flow request starts and shorten stalled request timeout</p></li>
+              <li><span>v1.148.14</span><p>Split player and seasons database refresh workflows</p></li>
+              <li><span>v1.148.13</span><p>Run Flow seasons sequentially and clarify retry logs</p></li>
+              <li><span>v1.148.12</span><p>Add populate-seasons workflow and remove old site-only workflows</p></li>
+              <li><span>v1.148.11</span><p>Reduce Flow workers after repeated API errors</p></li>
+              <li><span>v1.148.10</span><p>Restore Flow batch size to 25</p></li>
+              <li><span>v1.148.9</span><p>Process MFL first and clarify refresh logs</p></li>
+              <li><span>v1.148.8</span><p>Fix Flow seasons workers and keep Flow batch sizes stable</p></li>
+              <li><span>v1.148.7</span><p>Center table Agent tooltips over a fixed 10-character anchor</p></li>
+              <li><span>v1.148.6</span><p>Split table and player Agent tooltip alignment</p></li>
+              <li><span>v1.148.5</span><p>Fix Agent tooltip alignment to a constant anchor</p></li>
+              <li><span>v1.148.4</span><p>Polish setting hover states and Joined Agency tooltip alignment</p></li>
+              <li><span>v1.148.3</span><p>Refine Joined Agency tooltips and date filter sizing</p></li>
+              <li><span>v1.148.2</span><p>Improve Joined Agency dates, tooltips, sorting, and MFL refresh ordering</p></li>
+              <li><span>v1.148.1</span><p>Add Joined Agency dates, date format settings, and ownership date filters</p></li>
+              <li><span>v1.148.0</span><p>Store ownership and active contract fields</p></li>
+              <li><span>v1.147.23</span><p>Fetch MFL Flow season batches in parallel</p></li>
+              <li><span>v1.147.22</span><p>Use smaller Flow season batches for MFL wallet</p></li>
+              <li><span>v1.147.21</span><p>Fetch MFL Flow seasons like normal wallets</p></li>
+              <li><span>v1.147.20</span><p>Preserve MFL wallet rows when MFL refresh is disabled</p></li>
+              <li><span>v1.147.19</span><p>Align table tooltip vertical position</p></li>
+              <li><span>v1.147.18</span><p>Standardize tooltip box height</p></li>
+              <li><span>v1.147.17</span><p>Keep table ID and retirement tooltips above headers</p></li>
+              <li><span>v1.147.16</span><p>Reduce startup table redraw flicker</p></li>
+              <li><span>v1.147.15</span><p>Show MFL Flow seasons batch progress</p></li>
+              <li><span>v1.147.14</span><p>Fetch MFL seasons from Flow by player ID</p></li>
+              <li><span>v1.147.13</span><p>Hide packable filter outside MFL tables</p></li>
+              <li><span>v1.147.12</span><p>Improve Settings persistence and scope packable filter</p></li>
+              <li><span>v1.147.11</span><p>Route MFL agent links to MFL and include MFL seasons</p></li>
+              <li><span>v1.147.10</span><p>Fetch MFL wallet ID ranges with parallel workers</p></li>
+              <li><span>v1.147.9</span><p>Retry Flow seasons with smaller batches on storage limits</p></li>
+              <li><span>v1.147.8</span><p>Add packable filter and seed MFL parallel batches</p></li>
+              <li><span>v1.147.7</span><p>Fetch MFL wallet batches in parallel</p></li>
+              <li><span>v1.147.6</span><p>Save Settings changes immediately to Supabase</p></li>
+              <li><span>v1.147.5</span><p>Redirect bare player and Agent URLs to Home</p></li>
+              <li><span>v1.147.4</span><p>Blank Agent column on MFL table</p></li>
+              <li><span>v1.147.3</span><p>Blank Agent header on owned and Agent tables</p></li>
+              <li><span>v1.147.2</span><p>Blank Agent column on owned and Agent tables</p></li>
+              <li><span>v1.147.1</span><p>Refine MFL wallet refresh and agent links</p></li>
+              <li><span>v1.147.0</span><p>Add individual Agent pages</p></li>
+              <li><span>v1.146.5</span><p>Make MFL wallet refresh optional in Actions</p></li>
+              <li><span>v1.146.4</span><p>Show MFL wallet fetch batch progress</p></li>
+              <li><span>v1.146.3</span><p>Fetch MFL wallet players with gentler API settings</p></li>
+              <li><span>v1.146.2</span><p>Align MFL sidebar icon with page labels</p></li>
+              <li><span>v1.146.1</span><p>Add aged-player quick filter for MFL page</p></li>
+              <li><span>v1.146.0</span><p>Add dedicated MFL players page</p></li>
+              <li><span>v1.145.3</span><p>Stabilize player table hover states</p></li>
+              <li><span>v1.145.2</span><p>Persist Settings preferences and refresh Settings route</p></li>
+              <li><span>v1.145.1</span><p>Polish Settings page spacing and account actions</p></li>
+              <li><span>v1.145.0</span><p>Add opted-in Settings page and shortcuts</p></li>
+              <li><span>v1.144.18</span><p>Align player table ID values</p></li>
+              <li><span>v1.144.17</span><p>Align player table row contents</p></li>
+              <li><span>v1.144.16</span><p>Stabilize player table hover after refresh</p></li>
+              <li><span>v1.144.15</span><p>Batch Flow seasons requests by wallet</p></li>
+              <li><span>v1.144.14</span><p>Retry Flow computation-limit seasons requests</p></li>
+              <li><span>v1.144.13</span><p>Fix scheduled database and site update times</p></li>
+              <li><span>v1.144.12</span><p>Skip Flow computation-limit wallets during seasons refresh</p></li>
+              <li><span>v1.144.11</span><p>Stabilize player table hovers across pages</p></li>
+              <li><span>v1.144.10</span><p>Stabilize Watchlist row and dropdown hovers</p></li>
+              <li><span>v1.144.9</span><p>Rename filter apply action and match filter footer button sizes</p></li>
+              <li><span>v1.144.8</span><p>Keep Evaluation overall edits when changing position</p></li>
+              <li><span>v1.144.7</span><p>Refresh cached site data when exported database files change</p></li>
+              <li><span>v1.144.6</span><p>Stop Watchlist dropdown hover flickering</p></li>
+              <li><span>v1.144.5</span><p>Clear deleted Watchlist selections and harden Watchlist saves</p></li>
+              <li><span>v1.144.4</span><p>Polish Watchlist removal toasts, dropdown text, and duplicate-name validation</p></li>
+              <li><span>v1.144.3</span><p>Polish Watchlist add and move toasts</p></li>
+              <li><span>v1.144.2</span><p>Improve Watchlist removal, move limits, toasts, and dropdown counts</p></li>
+              <li><span>v1.144.1</span><p>Polish Watchlist chooser, counts, and player button state</p></li>
+              <li><span>v1.144.0</span><p>Add multi-watchlist add and move chooser flows</p></li>
+              <li><span>v1.143.13</span><p>Remove saved active Watchlist state from Supabase</p></li>
+              <li><span>v1.143.12</span><p>Store opted-in Watchlists through the Supabase watchlists column</p></li>
+              <li><span>v1.143.11</span><p>Add Watchlist creation toast</p></li>
+              <li><span>v1.143.10</span><p>Add Watchlist rename/delete toasts and delay invalid-link toast</p></li>
+              <li><span>v1.143.9</span><p>Polish Watchlist spacing, delete hover, and invalid-link toast</p></li>
+              <li><span>v1.143.8</span><p>Polish Watchlist delete confirmation and dropdown spacing</p></li>
+              <li><span>v1.143.7</span><p>Polish Watchlist dropdown sizing, tooltip, and delete confirmation styling</p></li>
+              <li><span>v1.143.6</span><p>Fix Watchlist dropdown sizing, hover, and modal close behavior</p></li>
+              <li><span>v1.143.5</span><p>Polish Watchlist dropdown actions and delete confirmation</p></li>
+              <li><span>v1.143.4</span><p>Fix Watchlist deep links and add dropdown rename/delete actions</p></li>
+              <li><span>v1.143.3</span><p>Fix Watchlist dropdown hover override</p></li>
+              <li><span>v1.143.2</span><p>Match Watchlist dropdown hover style</p></li>
+              <li><span>v1.143.1</span><p>Refine multiple Watchlist dropdown, routing, and player limits</p></li>
+              <li><span>v1.143.0</span><p>Add multiple Supabase-synced Watchlists</p></li>
+              <li><span>v1.142.7</span><p>Rename progression loading message</p></li>
+              <li><span>v1.142.6</span><p>Tighten changelog patch list spacing</p></li>
+              <li><span>v1.142.5</span><p>Vertically center changelog version and patch text</p></li>
+              <li><span>v1.142.4</span><p>Center changelog version and patch text</p></li>
+              <li><span>v1.142.3</span><p>Align changelog patch rows and match minor-version hover styling</p></li>
+              <li><span>v1.142.2</span><p>Match changelog highlights to sidebar styling and simplify patch entries</p></li>
+              <li><span>v1.142.1</span><p>Reorganize changelog versions for Semantic Versioning</p></li>
+              <li><span>v1.142.0</span><p>Organize the changelog into collapsible minor-version sections</p></li>
+              <li><span>v1.141.0</span><p>Add Advanced Settings reset action and remove Contracts Table shadows</p></li>
+              <li><span>v1.140.0</span><p>Sync evaluation settings to wallet preferences</p></li>
+              <li><span>v1.139.0</span><p>Show player progression to everyone and unify loading messages</p></li>
+              <li><span>v1.138.0</span><p>Load full individual-player data while keeping progression views permission-gated</p></li>
+              <li><span>v1.137.0</span><p>Recreate Contracts Table with matched sticky headers and clipped scrolling rows</p></li>
+              <li><span>v1.136.3</span><p>Prevent drag-outside modal closes and keep late-career reward header unhighlighted</p></li>
+              <li><span>v1.136.2</span><p>Polish late-career reward rate controls and add collapse animation</p></li>
+              <li><span>v1.136.1</span><p>Save late-career reward rates with evaluations and make Advanced Settings collapsible</p></li>
+              <li><span>v1.136.0</span><p>Add configurable late-career reward rates to Evaluation advanced settings</p></li>
+              <li><span>v1.135.1</span><p>Keep table view sorting independent, update the footer version</p></li>
+              <li><span>v1.135.0</span><p>Remove Database Next Overall, keep Next Overall sorting instant</p></li>
+              <li><span>v1.134.1</span><p>Show preparing-data completion and speed up first-load and Next Overall paths</p></li>
+              <li><span>v1.134.0</span><p>Load exported data through the protected API with static fallback</p></li>
+              <li><span>v1.133.6</span><p>Fix exported data fallback for first-time and full-access loads</p></li>
+              <li><span>v1.133.5</span><p>Fix first-load data fallback and hide unavailable table tabs while loading</p></li>
+              <li><span>v1.133.4</span><p>Fill preparing-data progress, reveal pages immediately after Home refresh, and keep sorting session-only</p></li>
+              <li><span>v1.133.3</span><p>Fill the preparing-data progress step and speed up Next Overall sorting with indexed columns</p></li>
+              <li><span>v1.133.2</span><p>Keep loading progress monotonic and preserve saved sorting after refresh</p></li>
+              <li><span>v1.133.1</span><p>Optimized refresh loading</p></li>
+              <li><span>v1.133.0</span><p>Show the loading screen immediately during refresh instead of leaving a blank page</p></li>
+              <li><span>v1.132.1</span><p>Restore cached player data on refresh and tighten Rome scheduled update gating</p></li>
+              <li><span>v1.132.0</span><p>Sync recent player searches across tabs, make searches accent-insensitive</p></li>
+              <li><span>v1.131.0</span><p>Load Watchlist edits before revealing the page</p></li>
+              <li><span>v1.130.2</span><p>Stabilize Watchlist sync and prevent row flicker</p></li>
+              <li><span>v1.130.1</span><p>Merge concurrent Watchlist edits across tabs</p></li>
+              <li><span>v1.130.0</span><p>Load saved Evaluations immediately from the dropdown</p></li>
+              <li><span>v1.129.0</span><p>Load shared and saved Evaluations before revealing the page</p></li>
+              <li><span>v1.128.9</span><p>Shorten Evaluation saved and shared link IDs</p></li>
+              <li><span>v1.128.8</span><p>Show Evaluation recent results only when appropriate</p></li>
+              <li><span>v1.128.7</span><p>Show Evaluation recent results during link fallback</p></li>
+              <li><span>v1.128.6</span><p>Reset invalid evaluation links</p></li>
+              <li><span>v1.128.5</span><p>Show Evaluation delete action after saving shared links</p></li>
+              <li><span>v1.128.4</span><p>Hide Evaluation delete action on shared links</p></li>
+              <li><span>v1.128.3</span><p>Reset saved Evaluation delete state</p></li>
+              <li><span>v1.128.2</span><p>Refine Evaluation delete button</p></li>
+              <li><span>v1.128.1</span><p>Invert Evaluation save and share actions</p></li>
+              <li><span>v1.128.0</span><p>Move Evaluation action buttons beside search</p></li>
+              <li><span>v1.127.10</span><p>Refine Evaluation action layout</p></li>
+              <li><span>v1.127.9</span><p>Refine Evaluation metrics and saved result details</p></li>
+              <li><span>v1.127.8</span><p>Keep saved Evaluation links public-safe after opt-out and refine action overlays</p></li>
+              <li><span>v1.127.7</span><p>Refine saved Evaluation links and overlays</p></li>
+              <li><span>v1.127.6</span><p>Refine search hovers and saved Evaluation tooltips</p></li>
+              <li><span>v1.127.5</span><p>Strengthen search result and saved Evaluation delete hover states</p></li>
+              <li><span>v1.127.4</span><p>Polish search result and saved Evaluation delete hovers</p></li>
+              <li><span>v1.127.3</span><p>Match search result hovers and strengthen saved Evaluation delete hover</p></li>
+              <li><span>v1.127.2</span><p>Unify Evaluation result hovers and saved Evaluation action tooltips</p></li>
+              <li><span>v1.127.1</span><p>Refine saved Evaluation list actions and share limit handling</p></li>
+              <li><span>v1.127.0</span><p>Add saved Evaluation delete and share actions</p></li>
+              <li><span>v1.126.1</span><p>Reset Evaluation navigation and refine saved Evaluation popup spacing</p></li>
+              <li><span>v1.126.0</span><p>Open Evaluation from the sidebar as a plain page and refine saved Evaluation scrolling</p></li>
+              <li><span>v1.125.2</span><p>Refine saved Evaluation popup details</p></li>
+              <li><span>v1.125.1</span><p>Refine saved Evaluation popup behavior</p></li>
+              <li><span>v1.125.0</span><p>Add saved Evaluation loading links</p></li>
+              <li><span>v1.124.0</span><p>Replace Evaluation URL with created share link</p></li>
+              <li><span>v1.123.0</span><p>Add player IDs to shared Evaluation links</p></li>
+              <li><span>v1.122.0</span><p>Require opt-in and limit shared Evaluation links</p></li>
+              <li><span>v1.121.0</span><p>Add 24-hour shared Evaluation links</p></li>
+              <li><span>v1.120.0</span><p>Add Evaluation save and share actions</p></li>
+              <li><span>v1.119.2</span><p>Center Evaluation search clear x and show pointer cursor</p></li>
+              <li><span>v1.119.1</span><p>Keep Evaluation search clear x visible</p></li>
+              <li><span>v1.119.0</span><p>Open locked Watchlist after opt-in</p></li>
+              <li><span>v1.118.0</span><p>Sync table filters by opted-in wallet</p></li>
+              <li><span>v1.117.0</span><p>Require opt-in for Watchlist and refine locked page copy</p></li>
+              <li><span>v1.116.0</span><p>Store player notes in Supabase by opted-in wallet</p></li>
+              <li><span>v1.115.7</span><p>Fix player notes tooltip cursor</p></li>
+              <li><span>v1.115.6</span><p>Fix player notes persistence</p></li>
+              <li><span>v1.115.5</span><p>Show player notes before retirement markers in tables</p></li>
+              <li><span>v1.115.4</span><p>Keep note tooltips visible and raise pitch sizing</p></li>
+              <li><span>v1.115.3</span><p>Refine player notes tooltip wrapping and pitch sizing</p></li>
+              <li><span>v1.115.2</span><p>Refine player note tooltips, icons, pitch sizing, and opt-out cleanup</p></li>
+              <li><span>v1.115.1</span><p>Refine player notes layout and note indicators</p></li>
+              <li><span>v1.115.0</span><p>Add wallet-synced player notes</p></li>
+              <li><span>v1.114.0</span><p>Use one progress bar across refresh loading phases</p></li>
+              <li><span>v1.113.1</span><p>Skip duplicate table processing when restoring cached data</p></li>
+              <li><span>v1.113.0</span><p>Remove leftover whitelist refresh from page flow</p></li>
+              <li><span>v1.112.1</span><p>Preload and cache page datasets on refresh</p></li>
+              <li><span>v1.112.0</span><p>Move whitelist refresh off page navigation</p></li>
+              <li><span>v1.111.0</span><p>Cache loaded datasets across page switches</p></li>
+              <li><span>v1.110.4</span><p>Round needed stat gains upward and align primary pitch OVR with MFL</p></li>
+              <li><span>v1.110.3</span><p>Handle exact .50 Next Overall thresholds from MFL displayed ratings</p></li>
+              <li><span>v1.110.2</span><p>Sort Next Overall views by closest upgrade first</p></li>
+              <li><span>v1.110.1</span><p>Refresh progression permissions automatically on navigation</p></li>
+              <li><span>v1.110.0</span><p>Show owned-player progression views on player pages</p></li>
+              <li><span>v1.109.0</span><p>Add owned-player progression views to My Players</p></li>
+              <li><span>v1.108.9</span><p>Resolve first-time Dapper opt-in agent names</p></li>
+              <li><span>v1.108.8</span><p>Smooth loading bar progress animation</p></li>
+              <li><span>v1.108.7</span><p>Resize the My Players shirt icon to match the sidebar set</p></li>
+              <li><span>v1.108.6</span><p>Fill the My Players shirt icon white in dark mode</p></li>
+              <li><span>v1.108.5</span><p>Fill the My Players shirt icon black in light mode</p></li>
+              <li><span>v1.108.4</span><p>Use a plain jersey icon and bundle wallet opt-in tracking</p></li>
+              <li><span>v1.108.3</span><p>Keep My Players locked after opt-out and simplify the jersey icon</p></li>
+              <li><span>v1.108.2</span><p>Use the My Players route and jersey sidebar icon</p></li>
+              <li><span>v1.108.1</span><p>Refine My Players route and icon</p></li>
+              <li><span>v1.108.0</span><p>Add My Players page</p></li>
+              <li><span>v1.107.0</span><p>Move player seasons to public data</p></li>
+              <li><span>v1.106.4</span><p>Make the loading bar follow actual data download progress</p></li>
+              <li><span>v1.106.3</span><p>Avoid stack overflow when loading the single public player data file</p></li>
+              <li><span>v1.106.2</span><p>Fix split data manifest loading</p></li>
+              <li><span>v1.106.1</span><p>Simplify data loading text and sync the loading bar with fetch progress</p></li>
+              <li><span>v1.106.0</span><p>Load split public and progression JSON data without chunk manifests</p></li>
+              <li><span>v1.105.4</span><p>Refresh individual player pages after Dapper opt-in</p></li>
+              <li><span>v1.105.3</span><p>Normalize Watchlist and player views after Dapper opt-out</p></li>
+              <li><span>v1.105.2</span><p>Keep homepage centered with Opt In and refine login icon</p></li>
+              <li><span>v1.105.1</span><p>Restore homepage Opt In button for Dapper access</p></li>
+              <li><span>v1.105.0</span><p>Cache wallet access for one hour and track whitelist versions</p></li>
+              <li><span>v1.104.9</span><p>Check wallet whitelist only on refresh and block clicks during opt-in</p></li>
+              <li><span>v1.104.8</span><p>Restore whitelist progression access for Dapper account-proof opt-ins</p></li>
+              <li><span>v1.104.7</span><p>Restore public database loading after progression access is removed</p></li>
+              <li><span>v1.104.6</span><p>Refresh whitelist access on page changes and switch between public and progression data automatically</p></li>
+              <li><span>v1.104.5</span><p>Reduce Dapper opt-in to one wallet popup when account proof is available</p></li>
+              <li><span>v1.104.4</span><p>Improve Dapper opt-in popup guidance, default Dapper authentication, and lazy progression data loading</p></li>
+              <li><span>v1.104.3</span><p>Show a red Not authorised loading state before redirecting Progression visitors home</p></li>
+              <li><span>v1.104.2</span><p>Redirect unauthorized Progression access to the homepage</p></li>
+              <li><span>v1.104.1</span><p>Reduce Dapper opt-in to one signing popup</p></li>
+              <li><span>v1.104.0</span><p>Load Dapper opt-in through the Dapper wallet UID before falling back to restricted Discovery</p></li>
+              <li><span>v1.103.0</span><p>Use the Dapper provider address when loading the direct opt-in service</p></li>
+              <li><span>v1.102.0</span><p>Default Dapper opt-in directly to Dapper instead of showing wallet choices</p></li>
+              <li><span>v1.101.2</span><p>Load wallet names immediately after Dapper opt-in</p></li>
+              <li><span>v1.101.1</span><p>Use the signed Dapper wallet for Progression access</p></li>
+              <li><span>v1.101.0</span><p>Support Dapper wallets with separate signing addresses</p></li>
+              <li><span>v1.100.1</span><p>Improve Dapper whitelist unlock and watchlist refresh</p></li>
+              <li><span>v1.100.0</span><p>Use Dapper signing wallet for progression access</p></li>
+              <li><span>v1.99.2</span><p>Refine Dapper opt-in and sync wallet watchlists</p></li>
+              <li><span>v1.99.1</span><p>Show agent name after Dapper opt-in and add opt-out</p></li>
+              <li><span>v1.99.0</span><p>Use Flow Discovery for Dapper opt-in services</p></li>
+              <li><span>v1.98.2</span><p>Left align Dapper opt-in account action</p></li>
+              <li><span>v1.98.1</span><p>Reframe Dapper wallet flow as opt-in</p></li>
+              <li><span>v1.98.0</span><p>Add app URL metadata for Dapper login</p></li>
+              <li><span>v1.97.0</span><p>Open Dapper through FCL popup login</p></li>
+              <li><span>v1.96.0</span><p>Remove Dapper l6n parameter to prevent redirect loops</p></li>
+              <li><span>v1.95.0</span><p>Fallback to signed Dapper proof for wallet address</p></li>
+              <li><span>v1.94.0</span><p>Use this site origin for Dapper login linking</p></li>
+              <li><span>v1.93.0</span><p>Use restricted Dapper login popup for wallet linking</p></li>
+              <li><span>v1.92.5</span><p>Read Dapper wallet address from signed link proof</p></li>
+              <li><span>v1.92.4</span><p>Find nested Dapper wallet addresses during linking</p></li>
+              <li><span>v1.92.3</span><p>Fix Dapper wallet address detection and toast sizing</p></li>
+              <li><span>v1.92.2</span><p>Keep wallet permissions private and open Dapper directly</p></li>
+              <li><span>v1.92.1</span><p>Load Flow wallet with browser-safe module</p></li>
+              <li><span>v1.92.0</span><p>Add wallet permission list and improve wallet loading</p></li>
+              <li><span>v1.91.0</span><p>Replace login with wallet permissions</p></li>
+              <li><span>v1.90.0</span><p>Add account wallet linking</p></li>
+              <li><span>v1.89.3</span><p>Fix Contracts table header corners</p></li>
+              <li><span>v1.89.2</span><p>Keep Contracts header border visible while scrolling</p></li>
+              <li><span>v1.89.1</span><p>Clip Contracts rows beneath sticky headers</p></li>
+              <li><span>v1.89.0</span><p>Remove Contracts clipping and hide side borders</p></li>
+              <li><span>v1.88.9</span><p>Increase Contracts clipped side inset</p></li>
+              <li><span>v1.88.8</span><p>Hide Contracts clipped side borders</p></li>
+              <li><span>v1.88.7</span><p>Match Contracts corner header border</p></li>
+              <li><span>v1.88.6</span><p>Clean Contracts header corner and clipped borders</p></li>
+              <li><span>v1.88.5</span><p>Refine Contracts clipping and Evaluation position spacing</p></li>
+              <li><span>v1.88.4</span><p>Clip Contracts rows beneath sticky headers</p></li>
+              <li><span>v1.88.3</span><p>Raise Contracts Table sticky header mask layer</p></li>
+              <li><span>v1.88.2</span><p>Align Evaluation Season column with Summary position</p></li>
+              <li><span>v1.88.1</span><p>Align Evaluation Summary position with Season column</p></li>
+              <li><span>v1.88.0</span><p>Remove Contracts Table sticky mask</p></li>
+              <li><span>v1.87.2</span><p>Clip Contracts Table mask inside table frame</p></li>
+              <li><span>v1.87.1</span><p>Attach Contracts Table mask to sticky header</p></li>
+              <li><span>v1.87.0</span><p>Move Contracts Table sticky mask to section layer</p></li>
+              <li><span>v1.86.2</span><p>Fix Contracts Table hover color and header mask</p></li>
+              <li><span>v1.86.1</span><p>Reset Evaluation position and fix Contracts header mask</p></li>
+              <li><span>v1.86.0</span><p>Sync Evaluation Summary overall and Contracts hover</p></li>
+              <li><span>v1.85.9</span><p>Refine Contracts headers and Evaluation position dropdown</p></li>
+              <li><span>v1.85.8</span><p>Align Evaluation position selector and Contracts typography</p></li>
+              <li><span>v1.85.7</span><p>Refine Evaluation table alignment and contract hover</p></li>
+              <li><span>v1.85.6</span><p>Use Contracts Table values in Evaluation seasons</p></li>
+              <li><span>v1.85.5</span><p>Fix Advanced Settings focus and Contracts table hover</p></li>
+              <li><span>v1.85.4</span><p>Polish Evaluation Summary position and contracts table interactions</p></li>
+              <li><span>v1.85.3</span><p>Refine Evaluation position selection and contracts table sizing</p></li>
+              <li><span>v1.85.2</span><p>Fix Evaluation selection and Advanced Settings contracts layout</p></li>
+              <li><span>v1.85.1</span><p>Fix Advanced Settings MFL/USD arrow startup error</p></li>
+              <li><span>v1.85.0</span><p>Add Evaluation summary positions and refine advanced settings</p></li>
+              <li><span>v1.84.1</span><p>Refine Evaluation Advanced Settings layout</p></li>
+              <li><span>v1.84.0</span><p>Add Evaluation Advanced Settings popup</p></li>
+              <li><span>v1.83.2</span><p>Fix search and table view hover styles</p></li>
+              <li><span>v1.83.1</span><p>Match search and advanced settings hover styles</p></li>
+              <li><span>v1.83.0</span><p>Add Evaluation Advanced Settings placeholder</p></li>
+              <li><span>v1.82.0</span><p>Add Evaluation summary MFL return and align metric tooltips</p></li>
+              <li><span>v1.81.10</span><p>Reduce page height so the footer fits in view</p></li>
+              <li><span>v1.81.9</span><p>Keep the footer flush with the bottom of the screen</p></li>
+              <li><span>v1.81.8</span><p>Show recent Evaluation results with no selected player</p></li>
+              <li><span>v1.81.7</span><p>Prevent Evaluation Player Page middle-click autoscroll</p></li>
+              <li><span>v1.81.6</span><p>Prevent hidden toasts from blocking clicks</p></li>
+              <li><span>v1.81.5</span><p>Sort progression views by stat gains first</p></li>
+              <li><span>v1.81.4</span><p>Reset scroll position when switching pages</p></li>
+              <li><span>v1.81.3</span><p>Keep Evaluation metric positions stable without a player</p></li>
+              <li><span>v1.81.2</span><p>Enforce hidden Evaluation action buttons</p></li>
+              <li><span>v1.81.1</span><p>Hide Evaluation action buttons without a player</p></li>
+              <li><span>v1.81.0</span><p>Use custom Evaluation MFL/USD stepper</p></li>
+              <li><span>v1.80.4</span><p>Refine Evaluation MFL/USD input stepping</p></li>
+              <li><span>v1.80.3</span><p>Place Evaluation MFL/USD reset below its box</p></li>
+              <li><span>v1.80.2</span><p>Align Evaluation MFL/USD reset with options</p></li>
+              <li><span>v1.80.1</span><p>Stabilize Evaluation MFL/USD edit controls</p></li>
+              <li><span>v1.80.0</span><p>Add editable Evaluation MFL/USD setting</p></li>
+              <li><span>v1.79.4</span><p>Reset Evaluation Overall control margin</p></li>
+              <li><span>v1.79.3</span><p>Emphasize Evaluation Summary Present Value</p></li>
+              <li><span>v1.79.2</span><p>Pin Evaluation Overall controls in place</p></li>
+              <li><span>v1.79.1</span><p>Disable automatic Vercel Git deployments</p></li>
+              <li><span>v1.79.0</span><p>Add manual Vercel preview deployments</p></li>
+              <li><span>v1.78.4</span><p>Normalize Evaluation Overall control row height</p></li>
+              <li><span>v1.78.3</span><p>Keep Evaluation Overall limit controls from changing row height</p></li>
+              <li><span>v1.78.2</span><p>Refine Evaluation Player Page button and Overall limits</p></li>
+              <li><span>v1.78.1</span><p>Keep Evaluation active on Player Page middle-click</p></li>
+              <li><span>v1.78.0</span><p>Use native middle-click for Evaluation Player Page</p></li>
+              <li><span>v1.77.2</span><p>Fix middle-click Player Page from Evaluation</p></li>
+              <li><span>v1.77.1</span><p>Clear Evaluation search focus from player shortcut</p></li>
+              <li><span>v1.77.0</span><p>Add late-season Evaluation earnings taper</p></li>
+              <li><span>v1.76.0</span><p>Sync Evaluation player links and refine age columns</p></li>
+              <li><span>v1.75.2</span><p>Improve Evaluation links and table spacing</p></li>
+              <li><span>v1.75.1</span><p>Refine Evaluation action row and table widths</p></li>
+              <li><span>v1.75.0</span><p>Move Evaluation metrics into the action row</p></li>
+              <li><span>v1.74.1</span><p>Refine Evaluation controls and reset button</p></li>
+              <li><span>v1.74.0</span><p>Add Evaluation discount and first-season toggles</p></li>
+              <li><span>v1.73.0</span><p>Add Evaluation earnings and player-page shortcut</p></li>
+              <li><span>v1.72.0</span><p>Add adjustable season Overall values to Evaluation</p></li>
+              <li><span>v1.71.0</span><p>Add player Evaluate shortcut and refine Evaluation metric boxes</p></li>
+              <li><span>v1.70.0</span><p>Add Evaluation discount factors and MFL/USD conversion</p></li>
+              <li><span>v1.69.1</span><p>Refine Evaluation summary and discount-rate layout</p></li>
+              <li><span>v1.69.0</span><p>Add Evaluation summary and discount-rate panel</p></li>
+              <li><span>v1.68.1</span><p>Refine Evaluation search, route refresh behavior, and season table labeling</p></li>
+              <li><span>v1.68.0</span><p>Add guest Evaluation page with player longevity table</p></li>
+              <li><span>v1.67.2</span><p>Apply advanced filter edits only after confirmation</p></li>
+              <li><span>v1.67.1</span><p>Use the latest database artifact for manual Vercel site updates</p></li>
+              <li><span>v1.67.0</span><p>Add shift range selection to player tables</p></li>
+              <li><span>v1.66.6</span><p>Refine filter modal behavior and always refresh player seasons in Actions</p></li>
+              <li><span>v1.66.5</span><p>Refresh Progression filter options after page reloads</p></li>
+              <li><span>v1.66.4</span><p>Keep Database filters free of progression fields after refresh</p></li>
+              <li><span>v1.66.3</span><p>Align table ID tooltip and clear copy focus</p></li>
+              <li><span>v1.66.2</span><p>Show table ID tooltips without hover shadow</p></li>
+              <li><span>v1.66.1</span><p>Match ID copy tooltips to marker style</p></li>
+              <li><span>v1.66.0</span><p>Add click-to-copy player IDs in tables</p></li>
+              <li><span>v1.65.0</span><p>Use black Overall value text in light mode</p></li>
+              <li><span>v1.64.7</span><p>Keep copied player ID toast size consistent</p></li>
+              <li><span>v1.64.6</span><p>Default to dark mode and refine light Overall text</p></li>
+              <li><span>v1.64.5</span><p>Load only missing progression columns after guest login</p></li>
+              <li><span>v1.64.4</span><p>Keep watchlist toast size consistent</p></li>
+              <li><span>v1.64.3</span><p>Keep homepage Sign In visible after route changes</p></li>
+              <li><span>v1.64.2</span><p>Restore homepage sign-in button after login Back</p></li>
+              <li><span>v1.64.1</span><p>Fix logged-out Back navigation from login-required pages</p></li>
+              <li><span>v1.64.0</span><p>Add Training reset and center stat controls</p></li>
+              <li><span>v1.63.1</span><p>Polish Training view stat deltas and player tabs</p></li>
+              <li><span>v1.63.0</span><p>Add player page Training view with live position OVR previews</p></li>
+              <li><span>v1.62.8</span><p>Hide MAX for non-impact Next Overall stats</p></li>
+              <li><span>v1.62.7</span><p>Dismiss watchlist toast after opening Watchlist</p></li>
+              <li><span>v1.62.6</span><p>Keep Overall Next Overall delta bold</p></li>
+              <li><span>v1.62.5</span><p>Keep Next Overall table deltas regular weight</p></li>
+              <li><span>v1.62.4</span><p>Fix Overall column class handling</p></li>
+              <li><span>v1.62.3</span><p>Make table Overall values bold</p></li>
+              <li><span>v1.62.2</span><p>Keep watchlist toast visible while hovered</p></li>
+              <li><span>v1.62.1</span><p>Link watchlist toast messages to the Watchlist page</p></li>
+              <li><span>v1.62.0</span><p>Open search and limited player pages to guests</p></li>
+              <li><span>v1.61.0</span><p>Open Database to guests and merge guest watchlists on login</p></li>
+              <li><span>v1.60.1</span><p>Fit table view labels at 14px</p></li>
+              <li><span>v1.60.0</span><p>Add login back navigation and single-line view buttons</p></li>
+              <li><span>v1.59.5</span><p>Equalize table view button sizes</p></li>
+              <li><span>v1.59.4</span><p>Start protected page loading after successful login</p></li>
+              <li><span>v1.59.3</span><p>Improve logged-out navigation and scheduled refreshes</p></li>
+              <li><span>v1.59.2</span><p>Update page URLs before loading table data</p></li>
+              <li><span>v1.59.1</span><p>Preserve player seasons during API refresh and widen stat columns</p></li>
+              <li><span>v1.59.0</span><p>Precompute Next Overall data and add Watchlist attribute views</p></li>
+              <li><span>v1.58.2</span><p>Match Next Overall table values to progression formatting</p></li>
+              <li><span>v1.58.1</span><p>Refine Next Overall table display and player external links</p></li>
+              <li><span>v1.58.0</span><p>Add compact Next Overall view to the Database table</p></li>
+              <li><span>v1.57.2</span><p>Color Next Overall stat gaps and tighten age marker spacing</p></li>
+              <li><span>v1.57.1</span><p>Polish Next Overall maximum states and age marker alignment</p></li>
+              <li><span>v1.57.0</span><p>Add player retiring markers and Next Overall attribute view</p></li>
+              <li><span>v1.56.2</span><p>Fix Database refresh routing and sharpen the sidebar database icon</p></li>
+              <li><span>v1.56.1</span><p>Reveal the app shell together after loading and style table marker tooltips</p></li>
+              <li><span>v1.56.0</span><p>Split attributes into a dedicated Database page</p></li>
+              <li><span>v1.55.10</span><p>Keep brand on root, hide sidebar during login, and lighten progression text</p></li>
+              <li><span>v1.55.9</span><p>Preserve page after login and reveal sidebar with loaded pages</p></li>
+              <li><span>v1.55.8</span><p>Keep changelog navigation public and show sidebar while logged out</p></li>
+              <li><span>v1.55.7</span><p>Prevent homepage sign-in flash on changelog navigation</p></li>
+              <li><span>v1.55.6</span><p>Align menu icon with sidebar navigation icons</p></li>
+              <li><span>v1.55.5</span><p>Center collapsed sidebar icons inside their buttons</p></li>
+              <li><span>v1.55.4</span><p>Lock header positioning and center collapsed sidebar controls</p></li>
+              <li><span>v1.55.3</span><p>Stabilize header positioning and refine collapsed sidebar alignment</p></li>
+              <li><span>v1.55.2</span><p>Align header controls, pagination, and collapsed sidebar icons</p></li>
+              <li><span>v1.55.1</span><p>Equalize header controls and smooth sidebar transitions</p></li>
+              <li><span>v1.55.0</span><p>Move theme toggle after header count boxes</p></li>
+              <li><span>v1.54.0</span><p>Start semantic versioning from the initial release and keep homepage header height consistent</p></li>
+              <li><span>v1.53.0</span><p>Use semantic versioning and hide homepage header counts</p></li>
+              <li><span>v1.52.0</span><p>Point homepage navigation to the root URL</p></li>
+              <li><span>v1.51.3</span><p>Polish attribute tooltips and align fixed sidebar below header</p></li>
+              <li><span>v1.51.2</span><p>Fix fixed sidebar layout and add attribute contribution tooltips</p></li>
+              <li><span>v1.51.1</span><p>Lock sidebar position and restore star watchlist icon</p></li>
+              <li><span>v1.51.0</span><p>Extend sticky sidebar and sharpen watchlist icon</p></li>
+              <li><span>v1.50.4</span><p>Keep sidebar available while scrolling and prevent dark mode flash</p></li>
+              <li><span>v1.50.3</span><p>Harden filter uniqueness and polish page centering</p></li>
+              <li><span>v1.50.2</span><p>Prevent duplicate advanced filters</p></li>
+              <li><span>v1.50.1</span><p>Polish watchlist icon, sidebar collapse and pagination</p></li>
+              <li><span>v1.50.0</span><p>Remember player attribute view and tighten table controls</p></li>
+              <li><span>v1.49.17</span><p>Improve protected refresh loading and goalkeeper attribute layout</p></li>
+              <li><span>v1.49.16</span><p>Refine controls, goalkeeper cards and progression icon</p></li>
+              <li><span>v1.49.15</span><p>Tighten table controls and restore player progression color</p></li>
+              <li><span>v1.49.14</span><p>Polish filter controls, sidebar stability and player overall card</p></li>
+              <li><span>v1.49.13</span><p>Fix player deep links and polish sidebar, loading and filters</p></li>
+              <li><span>v1.49.12</span><p>Polish filters, homepage spacing and sidebar icons</p></li>
+              <li><span>v1.49.11</span><p>Load the menu earlier and polish the loading fade</p></li>
+              <li><span>v1.49.10</span><p>Refine loading transition, pitch arcs and table spacing</p></li>
+              <li><span>v1.49.9</span><p>Hold loading complete and adjust table typography</p></li>
+              <li><span>v1.49.8</span><p>Polish loading, typography and pitch arcs</p></li>
+              <li><span>v1.49.7</span><p>Refine player page height and pitch markings</p></li>
+              <li><span>v1.49.6</span><p>Widen player pitch and limit search suggestions</p></li>
+              <li><span>v1.49.5</span><p>Balance player pitch width and search result styling</p></li>
+              <li><span>v1.49.4</span><p>Refine player profile layout, header stability and search spacing</p></li>
+              <li><span>v1.49.3</span><p>Improve search results sizing and player profile layout</p></li>
+              <li><span>v1.49.2</span><p>Refine changelog routing, search recents and player page visuals</p></li>
+              <li><span>v1.49.1</span><p>Polish player pitch, flags and search modal sizing</p></li>
+              <li><span>v1.49.0</span><p>Add position pitch ratings and cached data loading</p></li>
+              <li><span>v1.48.1</span><p>Improve search recents and player profile polish</p></li>
+              <li><span>v1.48.0</span><p>Add rarity colors and polish player pages</p></li>
+              <li><span>v1.47.3</span><p>Fix sorting and player header details</p></li>
+              <li><span>v1.47.2</span><p>Improve player page refresh and layouts</p></li>
+              <li><span>v1.47.1</span><p>Refine player pages and search</p></li>
+              <li><span>v1.47.0</span><p>Add player pages and global search</p></li>
+              <li><span>v1.46.0</span><p>Move update date to footer</p></li>
+              <li><span>v1.45.0</span><p>Add changelog page</p></li>
+              <li><span>v1.44.1</span><p>Stack footer items</p></li>
+              <li><span>v1.44.0</span><p>Add site footer</p></li>
+              <li><span>v1.43.3</span><p>Reduce homepage height</p></li>
+              <li><span>v1.43.2</span><p>Keep account menu visible on refresh</p></li>
+              <li><span>v1.43.1</span><p>Only show signing in for saved sessions</p></li>
+              <li><span>v1.43.0</span><p>Hide homepage sign in after login restore</p></li>
+              <li><span>v1.42.0</span><p>Show guest account menu when signed out</p></li>
+              <li><span>v1.41.5</span><p>Simplify clear selection action</p></li>
+              <li><span>v1.41.4</span><p>Refine selected players bar layout</p></li>
+              <li><span>v1.41.3</span><p>Align menu button text and icon</p></li>
+              <li><span>v1.41.2</span><p>Revert popup warning click behavior</p></li>
+              <li><span>v1.41.1</span><p>Avoid popup test tab</p></li>
+              <li><span>v1.41.0</span><p>Show popup warning before opening player links</p></li>
+              <li><span>v1.40.1</span><p>Keep current page on refresh</p></li>
+              <li><span>v1.40.0</span><p>Require popups before opening player links</p></li>
+              <li><span>v1.39.0</span><p>Open selected player links directly</p></li>
+              <li><span>v1.38.0</span><p>Show update date in header</p></li>
+              <li><span>v1.37.0</span><p>Open selected links page</p></li>
+              <li><span>v1.36.1</span><p>Skip homepage loading screen</p></li>
+              <li><span>v1.36.0</span><p>Add open selected player links</p></li>
+              <li><span>v1.35.0</span><p>Fallback agent to wallet address</p></li>
+              <li><span>v1.34.0</span><p>Show public homepage counts</p></li>
+              <li><span>v1.33.0</span><p>Remember sidebar state</p></li>
+              <li><span>v1.32.1</span><p>Use clean page URLs</p></li>
+              <li><span>v1.32.0</span><p>Separate watchlist table state</p></li>
+              <li><span>v1.31.0</span><p>Add select all and watchlist removal</p></li>
+              <li><span>v1.30.0</span><p>Add watchlist page</p></li>
+              <li><span>v1.29.1</span><p>Style selected players bar</p></li>
+              <li><span>v1.29.0</span><p>Add player row selection</p></li>
+              <li><span>v1.28.0</span><p>Remove CSV download</p></li>
+              <li><span>v1.27.0</span><p>Load progression data on demand</p></li>
+              <li><span>v1.26.1</span><p>Tighten table layout and refine menu</p></li>
+              <li><span>v1.26.0</span><p>Move menu to sidebar rail</p></li>
+              <li><span>v1.25.0</span><p>Add toggleable menu and center homepage</p></li>
+              <li><span>v1.24.0</span><p>Add homepage and progression sidebar</p></li>
+              <li><span>v1.23.2</span><p>Make sign out button red</p></li>
+              <li><span>v1.23.1</span><p>Save table preferences per Supabase account</p></li>
+              <li><span>v1.23.0</span><p>Rename site to MFL Front Office</p></li>
+              <li><span>v1.22.3</span><p>Fix active filter count vertical alignment</p></li>
+              <li><span>v1.22.2</span><p>Align active filter count with buttons</p></li>
+              <li><span>v1.22.1</span><p>Refine account dropdown styling</p></li>
+              <li><span>v1.22.0</span><p>Show account menu with logged in username</p></li>
+              <li><span>v1.21.0</span><p>Add emoji to account button</p></li>
+              <li><span>v1.20.0</span><p>Move sign out into account menu</p></li>
+              <li><span>v1.19.2</span><p>Fix protected Vercel data file loading</p></li>
+              <li><span>v1.19.1</span><p>Update login copy and normalize Supabase config</p></li>
+              <li><span>v1.19.0</span><p>Add Supabase login and protected Vercel data API</p></li>
+              <li><span>v1.18.2</span><p>Fix Vercel deployment root directory</p></li>
+              <li><span>v1.18.1</span><p>Fix Vercel deploy site path</p></li>
+              <li><span>v1.18.0</span><p>Add Vercel protected site deployment workflow</p></li>
+              <li><span>v1.17.0</span><p>Add exact match option to numeric filters</p></li>
+              <li><span>v1.16.0</span><p>Rename wallet name label to agent</p></li>
+              <li><span>v1.15.1</span><p>Apply popup filters with enter key</p></li>
+              <li><span>v1.15.0</span><p>Add agent column to player table</p></li>
+              <li><span>v1.14.0</span><p>Add between option to numeric filters</p></li>
+              <li><span>v1.13.1</span><p>Exclude null values from table filters</p></li>
+              <li><span>v1.13.0</span><p>Add new mint player marker</p></li>
+              <li><span>v1.12.6</span><p>Update clear filters button emoji</p></li>
+              <li><span>v1.12.5</span><p>Update site filters and loading screen</p></li>
+              <li><span>v1.12.4</span><p>Keep quick filters when clearing popup filters</p></li>
+              <li><span>v1.12.3</span><p>Update wallet and position filters</p></li>
+              <li><span>v1.12.2</span><p>Change download button icon</p></li>
+              <li><span>v1.12.1</span><p>Specialize filter controls</p></li>
+              <li><span>v1.12.0</span><p>Remember table filters after refresh</p></li>
+              <li><span>v1.11.4</span><p>Color progression values</p></li>
+              <li><span>v1.11.3</span><p>Count only popup filters</p></li>
+              <li><span>v1.11.2</span><p>Tighten control button widths</p></li>
+              <li><span>v1.11.1</span><p>Improve advanced filter builder</p></li>
+              <li><span>v1.11.0</span><p>Add advanced filter builder</p></li>
+              <li><span>v1.10.1</span><p>Keep quick filters outside popup</p></li>
+              <li><span>v1.10.0</span><p>Move filters into popup</p></li>
+              <li><span>v1.9.1</span><p>Fix table row height</p></li>
+              <li><span>v1.9.0</span><p>Add retiring players filter</p></li>
+              <li><span>v1.8.1</span><p>Shorten retirement marker tooltip</p></li>
+              <li><span>v1.8.0</span><p>Add retirement markers to player names</p></li>
+              <li><span>v1.7.0</span><p>Replace search with filter section</p></li>
+              <li><span>v1.6.4</span><p>Improve website column widths</p></li>
+              <li><span>v1.6.3</span><p>Improve header alignment and table height</p></li>
+              <li><span>v1.6.2</span><p>Fix night mode button</p></li>
+              <li><span>v1.6.1</span><p>Fix default sorting cycle</p></li>
+              <li><span>v1.6.0</span><p>Add website night mode</p></li>
+              <li><span>v1.5.4</span><p>Update website sort cycle</p></li>
+              <li><span>v1.5.3</span><p>Fix website sort arrow refresh</p></li>
+              <li><span>v1.5.2</span><p>Fix view sorting persistence and zero progression display</p></li>
+              <li><span>v1.5.1</span><p>Fix website sorting indicators</p></li>
+              <li><span>v1.5.0</span><p>Add player links to website table</p></li>
+              <li><span>v1.4.2</span><p>Improve website filters and sorting</p></li>
+              <li><span>v1.4.1</span><p>Fix website views and retired filter</p></li>
+              <li><span>v1.4.0</span><p>Split database and site GitHub Actions</p></li>
+              <li><span>v1.3.1</span><p>Update website table views</p></li>
+              <li><span>v1.3.0</span><p>Add GitHub Pages table site</p></li>
+              <li><span>v1.2.1</span><p>Update player seasons handling</p></li>
+              <li><span>v1.2.0</span><p>Add MFL database refresh scripts</p></li>
+              <li><span>v1.1.0</span><p>Add manual GitHub database refresh</p></li>
+              <li><span>v1.0.0</span><p>Initial MFL progression database scripts</p></li>
+          </ol>
+        </section>
+      </main>
+    </div>
+
+    <footer class="siteFooter">
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.151.1</a>
+      <span id="statusText">Updated -</span>
+    </footer>
+
+
+    <div id="searchModal" class="modalBackdrop" hidden>
+      <section class="searchDialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+        <header class="filtersHeader">
+          <h2 id="searchTitle">Search</h2>
+          <button id="closeSearchButton" class="iconButton popupCloseButton" type="button" aria-label="Close search"></button>
+        </header>
+        <div class="searchBody">
+          <div class="globalSearchControl">
+            <input id="playerSearchInput" type="text" placeholder="Search by player ID, name, or agent" autocomplete="off">
+            <button id="playerSearchClearButton" class="iconButton popupCloseButton playerSearchClearButton" type="button" aria-label="Clear global search" hidden></button>
+          </div>
+          <div id="playerSearchResults" class="searchResults"></div>
+        </div>
+      </section>
+    </div>
+    <div id="filtersModal" class="modalBackdrop" hidden>
+      <section class="filtersDialog" role="dialog" aria-modal="true" aria-labelledby="filtersTitle">
+        <header class="filtersHeader">
+          <h2 id="filtersTitle">Filters</h2>
+          <button id="closeFiltersButton" class="iconButton popupCloseButton" type="button" aria-label="Close filters"></button>
+        </header>
+
+        <section class="filterBuilder">
+          <div class="addFilterRow">
+            <button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter"></button>
+            <select id="addFilterSelect" hidden>
+              <option value="">Select filter...</option>
+            </select>
+          </div>
+
+          <div id="filterRules" class="filterRules"></div>
+        </section>
+
+        <footer class="filtersFooter">
+          <button id="clearFiltersButton" type="button">Clear</button>
+          <button id="applyFiltersButton" type="button">Apply</button>
+        </footer>
+      </section>
+    </div>
+
+
+    <div id="evaluationLoadModal" class="modalBackdrop" hidden>
+      <section class="evaluationLoadDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationLoadTitle">
+        <header class="filtersHeader">
+          <h2 id="evaluationLoadTitle">Load saved evaluation</h2>
+          <button id="closeEvaluationLoadButton" class="iconButton popupCloseButton" type="button" aria-label="Close saved evaluations"></button>
+        </header>
+        <div id="evaluationLoadList" class="evaluationLoadList"></div>
+      </section>
+    </div>
+
+
+
+    <div id="watchlistChoiceModal" class="modalBackdrop" hidden>
+      <section class="watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
+        <header class="filtersHeader">
+          <h2 id="watchlistChoiceTitle">Add to watchlist</h2>
+          <button id="closeWatchlistChoiceButton" class="iconButton popupCloseButton" type="button" aria-label="Close watchlist chooser"></button>
+        </header>
+        <section id="watchlistChoiceList" class="watchlistChoiceList" aria-label="Choose watchlist"></section>
+      </section>
+    </div>
+
+    <div id="addWatchlistModal" class="modalBackdrop" hidden>
+      <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="addWatchlistTitle">Add a watchlist</h2>
+          <button id="closeAddWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close add watchlist"></button>
+        </header>
+        <section class="addWatchlistBody">
+          <label class="field">
+            <span>Name</span>
+            <input id="addWatchlistNameInput" type="text" maxlength="20" autocomplete="off" placeholder="Watchlist name" aria-describedby="addWatchlistError">
+          </label>
+          <p id="addWatchlistError" class="addWatchlistError" hidden></p>
+        </section>
+        <footer class="filtersFooter addWatchlistFooter">
+          <button id="discardAddWatchlistButton" type="button">Discard</button>
+          <button id="confirmAddWatchlistButton" type="button">Confirm</button>
+        </footer>
+      </section>
+    </div>
+
+    <div id="deleteWatchlistModal" class="modalBackdrop" hidden>
+      <section class="deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle">
+        <header class="filtersHeader">
+          <h2 id="deleteWatchlistTitle">Delete watchlist</h2>
+          <button id="closeDeleteWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete watchlist"></button>
+        </header>
+        <section class="deleteWatchlistBody">
+          <p>Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
+        </section>
+        <footer class="filtersFooter deleteWatchlistFooter">
+          <button id="cancelDeleteWatchlistButton" type="button">Cancel</button>
+          <button id="confirmDeleteWatchlistButton" class="deleteWatchlistConfirmButton" type="button">Delete</button>
+        </footer>
+      </section>
+    </div>
+    <div id="advancedSettingsModal" class="modalBackdrop" hidden>
+      <section class="advancedSettingsDialog" role="dialog" aria-modal="true" aria-labelledby="advancedSettingsTitle">
+        <header class="filtersHeader">
+          <h2 id="advancedSettingsTitle">Advanced Settings</h2>
+          <button id="closeAdvancedSettingsButton" class="iconButton popupCloseButton" type="button" aria-label="Close advanced settings"></button>
+        </header>
+
+        <section class="advancedSettingsBody">
+          <section class="advancedSettingsSection" aria-labelledby="advancedMflUsdTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedMflUsdTitle">MFL/USD</h3>
+              <div class="advancedSettingHeaderControl">
+                <button id="advancedMflUsdResetButton" class="advancedMflUsdResetButton" type="button">Reset</button>
+                <div class="advancedMflUsdControl">
+                  <span class="advancedMflUsdStepper" aria-label="Adjust MFL per USD"><button id="advancedMflUsdIncreaseButton" type="button" aria-label="Increase MFL per USD">&#9650;</button><button id="advancedMflUsdDecreaseButton" type="button" aria-label="Decrease MFL per USD">&#9660;</button></span>
+                  <input id="advancedMflUsdInput" class="advancedMflUsdInput" type="text" inputmode="decimal" autocomplete="off" aria-label="MFL per USD">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection" aria-labelledby="advancedDiscountRateTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedDiscountRateTitle">Discount Rate</h3>
+              <div class="advancedSettingValue" id="advancedDiscountRateValue">-</div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection advancedLateSeasonRewardsSection is-expanded" aria-labelledby="advancedLateSeasonRewardsTitle">
+            <button id="advancedLateSeasonRewardsToggle" class="advancedSettingHeader advancedSettingSummary" type="button" aria-expanded="true" aria-controls="advancedLateSeasonRewardsContent">
+              <h3 id="advancedLateSeasonRewardsTitle">Late-Career Reward Rates</h3>
+              <span class="advancedSettingChevron" aria-hidden="true">&#8964;</span>
+            </button>
+            <div id="advancedLateSeasonRewardsContent" class="advancedLateSeasonRewardsContent">
+              <div class="advancedLateSeasonRewardsGrid">
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">3rd-last season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedThirdLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust third-to-last season earnings"><button id="advancedThirdLastRewardIncreaseButton" type="button" aria-label="Increase third-to-last season earnings rate">&#9650;</button><button id="advancedThirdLastRewardDecreaseButton" type="button" aria-label="Decrease third-to-last season earnings rate">&#9660;</button></span><input id="advancedThirdLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Third-to-last season earnings rate"><span>%</span></span></span>
+                </div>
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">2nd-last season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedSecondLastRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust second-to-last season earnings"><button id="advancedSecondLastRewardIncreaseButton" type="button" aria-label="Increase second-to-last season earnings rate">&#9650;</button><button id="advancedSecondLastRewardDecreaseButton" type="button" aria-label="Decrease second-to-last season earnings rate">&#9660;</button></span><input id="advancedSecondLastRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Second-to-last season earnings rate"><span>%</span></span></span>
+                </div>
+                <div class="advancedLateSeasonRewardSetting">
+                  <span class="advancedLateSeasonRewardLabel">Final season</span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedFinalRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="advancedSettingsSection advancedPlayerTableSection" aria-labelledby="advancedPlayerTableTitle">
+            <div class="advancedSettingHeader">
+              <h3 id="advancedPlayerTableTitle">Contracts Table</h3>
+            </div>
+            <table class="advancedPlayerTable">
+              <thead id="advancedPlayerTableHead"></thead>
+              <tbody id="advancedPlayerTableBody"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <footer class="filtersFooter advancedSettingsFooter">
+          <button id="resetAdvancedSettingsButton" type="button">Reset</button>
+          <button id="discardAdvancedSettingsButton" type="button">Discard</button>
+          <button id="applyAdvancedSettingsButton" type="button">Apply</button>
+        </footer>
+      </section>
+    </div>
+    <script src="/app.js?v=1.151.1"></script>
+  </body>
+</html>
