@@ -4,10 +4,7 @@
       "includeFiles": "api/data-files/**"
     },
     "api/data-safe.js": {
-      "includeFiles": [
-        "api/data.js",
-        "api/data-files/**"
-      ]
+      "includeFiles": "api/**"
     },
     "api/summary.js": {
       "includeFiles": "api/data-files/manifest.json"
