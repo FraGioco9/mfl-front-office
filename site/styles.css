@@ -459,9 +459,13 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   }
 }
 
-/* v1.150.6 - Layout-centered states and stable shared view presentation */
+/* v1.150.7 - Layout-centered states and stable shared view presentation */
 .toastMessage {
   left: var(--toast-center-x, 50%) !important;
+}
+
+.selectionBar {
+  left: var(--selection-center-x, 50%) !important;
 }
 
 body.pinnedSidebarVisible .myPlayersLockedPage {
@@ -514,4 +518,32 @@ body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
 .watchlistDropdownAction:disabled[data-tooltip]:hover::after,
 .watchlistDropdownAction:disabled[data-tooltip]:focus-visible::after {
   opacity: 1;
+}
+
+#progressionPage .tableShell {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+#progressionPage .tableScroller {
+  border-radius: inherit !important;
+  overflow: hidden !important;
+}
+
+#progressionPage .tableScroller thead,
+#progressionPage .tableScroller thead tr {
+  background-clip: padding-box !important;
+}
+
+#progressionPage .tableScroller thead th:first-child {
+  border-top-left-radius: inherit;
+}
+
+#progressionPage .tableScroller thead th:last-child {
+  border-top-right-radius: inherit;
+}
+
+html.table-layout-pending #progressionPage .tableScroller:not(.tableWidthsReady) table,
+body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) table {
+  visibility: hidden !important;
 }

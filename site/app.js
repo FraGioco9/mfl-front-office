@@ -653,12 +653,14 @@ async function showUnauthorizedProgressionRedirect() {
   loadingScreen.classList.remove("failed", "complete", "leaving");
   document.body.classList.remove("loading");
   document.documentElement.classList.remove("loading");
+  flushPostLoadingToast();
   return setPage("home", false);
 }
 
 async function finishLoading() {
   setLoadingPercent(100, "Loading complete");
   await paintLoadingProgress();
+  revealAppShell();
 
   if (typeof window.applyExactPlayerTableWidths === "function") {
     window.applyExactPlayerTableWidths();
@@ -672,7 +674,6 @@ async function finishLoading() {
   if (document.body.classList.contains("clubViewLoading")) {
     loadingScreen.classList.remove("failed", "complete", "leaving");
     loadingText.textContent = "Loading complete";
-    revealAppShell();
     document.body.classList.remove("loading");
     document.documentElement.classList.remove("loading");
     return;
@@ -686,7 +687,6 @@ async function finishLoading() {
   await new Promise((resolve) => window.setTimeout(resolve, 220));
   loadingScreen.hidden = true;
   loadingScreen.classList.remove("complete", "leaving");
-  revealAppShell();
   document.body.classList.remove("loading");
   document.documentElement.classList.remove("loading");
   flushPostLoadingToast();
@@ -796,6 +796,7 @@ function showAppShell() {
 }
 
 function showLoading() {
+  hideToast();
   document.documentElement.classList.add("loading");
   document.body.classList.add("booting", "loading");
   loadingScreen.hidden = false;
@@ -3343,6 +3344,13 @@ function hideToast() {
 }
 
 function showToast(message, options = {}) {
+  if (document.body.classList.contains("loading") || !loadingScreen.hidden) {
+    state.pendingPostLoadingToast = message instanceof Node
+      ? String(message.textContent || "").trim()
+      : String(message || "").trim();
+    return;
+  }
+
   let toast = document.querySelector("#toastMessage");
 
   if (!toast) {
@@ -7825,7 +7833,7 @@ function renderPlayerPage(playerId) {
       </div>
       <div class="playerHeroActions">
         <button id="playerEvaluateButton" class="playerEvaluateButton" type="button">Evaluate</button>
-        <button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>
+        ${hasWalletOptIn() ? '<button id="playerWatchlistButton" class="playerWatchlistButton" type="button"></button>' : ""}
         <a id="openPlayerExternalButton" class="playerExternalButton" href="${escapeHtml(formatCellValue(row, linkColumn))}" target="_blank" rel="noopener noreferrer">Open link</a>
       </div>
     </section>
@@ -7839,12 +7847,14 @@ function renderPlayerPage(playerId) {
     </section>`;
 
   const watchButton = playerDetail.querySelector("#playerWatchlistButton");
-  const inAnyWatchlist = playerIsInAnyWatchlist(id);
-  watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
-  watchButton.innerHTML = `<span class="watchlistButtonStar" aria-hidden="true">${inAnyWatchlist ? "\u2605" : "\u2606"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
-  watchButton.addEventListener("click", () => {
-    toggleWatchlistPlayer(id, true);
-  });
+  if (watchButton) {
+    const inAnyWatchlist = playerIsInAnyWatchlist(id);
+    watchButton.className = `playerWatchlistButton ${inAnyWatchlist ? "active" : ""}`;
+    watchButton.innerHTML = `<span class="watchlistButtonStar" aria-hidden="true">${inAnyWatchlist ? "\u2605" : "\u2606"}</span><span>${inAnyWatchlist ? "In watchlist" : "Add to watchlist"}</span>`;
+    watchButton.addEventListener("click", () => {
+      toggleWatchlistPlayer(id, true);
+    });
+  }
   const evaluateButton = playerDetail.querySelector("#playerEvaluateButton");
   const openEvaluationForPlayer = (event) => {
     const targetPath = pagePath("evaluation", { playerId: id });
@@ -8284,9 +8294,8 @@ function buildHeader() {
   selectVisibleInput.id = "selectVisiblePlayersInput";
   selectVisibleInput.type = "checkbox";
   selectVisibleInput.setAttribute("aria-label", "Select visible players");
-  
 
-selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
+  selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
   selectionHeader.appendChild(selectVisibleInput);
   headerRow.appendChild(selectionHeader);
 
@@ -9330,11 +9339,13 @@ function updateSelectionHeader(pageRows = currentPageRows()) {
 
 function updateSelectionBar() {
   const selectedCount = state.selectedPlayerIds.size;
+  const optedIn = hasWalletOptIn();
   selectionBar.classList.toggle("visible", selectedCount > 0);
   selectionCount.textContent = `${selectedCount} selected`;
+  addToWatchlistButton.hidden = !optedIn;
   addToWatchlistButton.textContent = state.currentPage === "watchlist" ? "Remove from watchlist" : "Add to watchlist";
   if (moveToWatchlistButton) {
-    moveToWatchlistButton.hidden = state.currentPage !== "watchlist" || selectedCount <= 0;
+    moveToWatchlistButton.hidden = !optedIn || state.currentPage !== "watchlist" || selectedCount <= 0;
   }
   updateSelectionHeader();
 }
@@ -11808,6 +11819,7 @@ startApp();
     document.body.classList.toggle("clubViewLoading", showLoadingScreen);
 
     if (showLoadingScreen && typeof loadingScreen !== "undefined" && loadingScreen) {
+      hideToast();
       loadingScreen.hidden = false;
       loadingScreen.classList.remove("failed", "complete", "leaving");
     }
@@ -11842,14 +11854,9 @@ startApp();
           setClubSwitching(false, { showLoading: false });
 
           if (shouldHideLoading && loadingScreen) {
-            loadingScreen.classList.add("leaving");
-            window.setTimeout(() => {
-              if (!document.body.classList.contains("clubViewLoading")) {
-                loadingScreen.hidden = true;
-                loadingScreen.classList.remove("complete", "leaving");
-                flushPostLoadingToast();
-              }
-            }, 230);
+            loadingScreen.hidden = true;
+            loadingScreen.classList.remove("complete", "leaving");
+            flushPostLoadingToast();
           }
 
           resolve();
@@ -12155,7 +12162,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.6";
+  const VERSION = "1.150.7";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12356,7 +12363,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Center toasts and opt-in states in the page layout, stabilize refreshed table widths, remove club page flicker and view transitions, keep MFL views ordered, and normalize the watchlist tooltip";
+    description.textContent = "Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders";
     item.append(version, description);
     return item;
   }
@@ -12410,9 +12417,14 @@ startApp();
         toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
       });
       list.prepend(section);
-    } else if (!section.querySelector(`[data-version='${VERSION}']`)) {
+    } else if (!Array.from(section.querySelectorAll(".changelogPatchList > li")).some((item) =>
+      item.querySelector("span")?.textContent?.trim() === `v${VERSION}`,
+    )) {
       section.querySelector(".changelogPatchList")?.prepend(createChangelogItem());
     }
+    const patchCount = section.querySelectorAll(".changelogPatchList > li").length;
+    const meta = section.querySelector(".changelogMinorMeta");
+    if (meta) meta.textContent = `${patchCount} ${patchCount === 1 ? "patch" : "patches"}`;
     collapseOlderChangelogSections(list);
   }
 
@@ -12508,14 +12520,13 @@ startApp();
     const main = document.querySelector("main");
     if (!main) return 0;
     const styles = window.getComputedStyle(main);
-    const viewportWidth = document.documentElement.clientWidth;
-    const sidebarWidth = pinnedSidebarWidth();
+    const bounds = main.getBoundingClientRect();
     const paddingLeft = parseFloat(styles.paddingLeft) || 0;
     const paddingRight = parseFloat(styles.paddingRight) || 0;
-    const key = [viewportWidth, sidebarWidth, paddingLeft, paddingRight].join(":");
+    const key = [bounds.left, bounds.width, paddingLeft, paddingRight].join(":");
     if (key !== cachedLayoutKey) {
       cachedLayoutKey = key;
-      cachedContentWidth = Math.max(0, viewportWidth - sidebarWidth - paddingLeft - paddingRight);
+      cachedContentWidth = Math.max(0, bounds.width - paddingLeft - paddingRight);
     }
     return cachedContentWidth;
   }
@@ -12589,7 +12600,7 @@ startApp();
       element.style.setProperty("min-width", exactWidth, "important");
       element.style.setProperty("max-width", exactWidth, "important");
       element.style.setProperty("box-sizing", "border-box", "important");
-      element.style.setProperty("overflow", "visible", "important");
+      element.style.setProperty("overflow", "hidden", "important");
     });
     table.style.setProperty("table-layout", "fixed", "important");
     table.style.setProperty("width", exactWidth, "important");
@@ -12609,6 +12620,7 @@ startApp();
       column.style.setProperty("transition", "none", "important");
     });
     appendFiller(table, Math.max(0, contentWidth - assignedWidth));
+    page.querySelector(".tableScroller")?.classList.add("tableWidthsReady");
     return true;
   }
 
@@ -12634,6 +12646,7 @@ startApp();
   if (typeof buildTableColGroup === "function") {
     const originalBuildTableColGroup = buildTableColGroup;
     buildTableColGroup = function buildTableColGroupWithSharedWidths() {
+      document.querySelector("#progressionPage .tableScroller")?.classList.remove("tableWidthsReady");
       const result = originalBuildTableColGroup.apply(this, arguments);
       applySharedTableWidths();
       return result;
@@ -12698,25 +12711,32 @@ startApp();
   applySharedTableWidths();
 })();
 
-/* v1.150.6 layout-centered feedback and transition-free shared views */
+/* v1.150.7 layout-centered feedback and transition-free shared views */
 (() => {
-  function syncToastCenter() {
+  function syncLayoutCenter() {
     const toast = document.querySelector("#toastMessage");
+    const selection = document.querySelector("#selectionBar");
     const pageLayout = document.querySelector("main");
-    if (!toast || !pageLayout) return;
+    if (!pageLayout) return;
     const bounds = pageLayout.getBoundingClientRect();
-    toast.style.setProperty("--toast-center-x", `${bounds.left + (bounds.width / 2)}px`);
+    const center = `${bounds.left + (bounds.width / 2)}px`;
+    toast?.style.setProperty("--toast-center-x", center);
+    selection?.style.setProperty("--selection-center-x", center);
   }
 
   if (typeof showToast === "function") {
     const originalShowToast = showToast;
     showToast = function showLayoutCenteredToast() {
       const result = originalShowToast.apply(this, arguments);
-      syncToastCenter();
+      syncLayoutCenter();
       return result;
     };
   }
 
-  window.addEventListener("resize", syncToastCenter, { passive: true });
-  syncToastCenter();
+  window.addEventListener("resize", syncLayoutCenter, { passive: true });
+  new MutationObserver(syncLayoutCenter).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "data-page"],
+  });
+  syncLayoutCenter();
 })();
