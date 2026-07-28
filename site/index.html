@@ -100,6 +100,13 @@
           }
 
           const scope = String(url.searchParams.get("scope") || "").toLowerCase();
+          if (scope === "mflstats") {
+            url.pathname = "/api/mfl-stats";
+            url.searchParams.set("pageSize", "50000");
+            url.searchParams.set("page", "1");
+            return url;
+          }
+
           if (scope === "club") {
             url.searchParams.set("pageSize", "5000");
             url.searchParams.set("page", "1");
@@ -211,7 +218,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.9">
+    <link rel="stylesheet" href="/styles.css?v=1.151.11">
     <style>
       html.bootPending body { visibility: hidden; }
       #watchlistPlayerCount { display: none !important; }
@@ -241,8 +248,8 @@
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.9";
-        const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";
+        const VERSION = "1.151.11";
+        const CHANGELOG_DESCRIPTION = "Keep club page chrome fixed during refresh and view changes, highlight loading destinations, and load every MFL stats player";
         const TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"]);
         const CLUB_VIEWS = ["attributes", "contracts", "current", "all"];
         const CLUB_DIVISIONS = {
@@ -309,6 +316,10 @@
           "goalkeeping_prog_all",
         ];
         let pendingQuickFilterPage = "";
+        let clubChromeFrame = 0;
+        let clubChromeDeadline = 0;
+        let lockedClubId = "";
+        let lockedClubTitle = "";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -402,11 +413,50 @@
           return { page: "home", table: false };
         }
 
+        function sidebarPageForRoute(route) {
+          if (route.page === "mflstats") return "mfl";
+          if (["club", "player", "agents"].includes(route.page)) return "";
+          return route.page;
+        }
+
+        function highlightSidebarPage(pageName, root = document) {
+          root.querySelectorAll?.(".navButton[data-page]").forEach((button) => {
+            button.classList.toggle("active", Boolean(pageName) && button.dataset.page === pageName);
+          });
+        }
+
+        function syncClubMetadataFromBootstrap(route) {
+          if (route.page !== "club" || typeof state === "undefined") return;
+          const clubs = Array.isArray(state.bootstrapData?.clubs)
+            ? state.bootstrapData.clubs
+            : Array.isArray(state.clubSearchIndex) ? state.clubSearchIndex : [];
+          const club = clubs.find((candidate) => String(candidate?.clubId || "") === String(route.clubId));
+          if (!club?.name) return;
+          writeClubMetadata({
+            clubId: route.clubId,
+            name: club.name,
+            division: club.division,
+          });
+        }
+
         function clubTitleText(route) {
+          syncClubMetadataFromBootstrap(route);
           const metadata = readClubMetadata(route.clubId);
           const name = metadata?.name || `Club #${route.clubId}`;
           const divisionName = metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "";
           return divisionName ? `${name} - ${divisionName}` : name;
+        }
+
+        function rememberClubTitle(route) {
+          if (route.page !== "club") return;
+          if (lockedClubId !== String(route.clubId)) {
+            lockedClubId = String(route.clubId);
+            lockedClubTitle = "";
+          }
+          const currentTitle = String(document.querySelector("#tablePageTitle")?.textContent || "").trim();
+          const generic = !currentTitle || currentTitle === "Club" || currentTitle === `Club #${route.clubId}`;
+          if (!generic) lockedClubTitle = currentTitle;
+          if (!lockedClubTitle) lockedClubTitle = clubTitleText(route);
         }
 
         function hidePlayerCounter(root = document) {
@@ -439,15 +489,21 @@
           const page = root.querySelector?.("#progressionPage");
           if (!page) return;
 
+          rememberClubTitle(route);
           const title = root.querySelector?.("#tablePageTitle");
-          if (title) title.textContent = clubTitleText(route);
+          if (title && title.textContent !== lockedClubTitle) title.textContent = lockedClubTitle;
 
           const views = page.querySelector(".views");
           if (views) {
-            CLUB_VIEWS.forEach((viewName) => {
-              const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
-              if (button) views.appendChild(button);
-            });
+            const currentOrder = Array.from(views.querySelectorAll(".viewButton"))
+              .filter((button) => CLUB_VIEWS.includes(button.dataset.view))
+              .map((button) => button.dataset.view);
+            if (currentOrder.join("|") !== CLUB_VIEWS.join("|")) {
+              CLUB_VIEWS.forEach((viewName) => {
+                const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+                if (button) views.appendChild(button);
+              });
+            }
             views.querySelectorAll(".viewButton").forEach((button) => {
               const allowed = CLUB_VIEWS.includes(button.dataset.view);
               button.hidden = !allowed;
@@ -466,6 +522,34 @@
           });
         }
 
+        function applyClubChromeLock() {
+          clubChromeFrame = 0;
+          const route = routeInfo();
+          if (route.page !== "club") return;
+          document.body.dataset.page = "club";
+          highlightSidebarPage("");
+          prepareClubChrome(document, route);
+          hidePlayerCounter();
+
+          const stillLoading = typeof state === "undefined"
+            || state.currentPage !== "club"
+            || state.incrementalRoute?.scope !== "club"
+            || document.body.classList.contains("tableRowsLoading")
+            || document.documentElement.classList.contains("appBusy")
+            || document.body.classList.contains("appBusy");
+          if (performance.now() < clubChromeDeadline && stillLoading) {
+            clubChromeFrame = requestAnimationFrame(applyClubChromeLock);
+          }
+        }
+
+        function startClubChromeLock(duration = 15000) {
+          const route = routeInfo();
+          if (route.page !== "club") return;
+          rememberClubTitle(route);
+          clubChromeDeadline = Math.max(clubChromeDeadline, performance.now() + duration);
+          if (!clubChromeFrame) clubChromeFrame = requestAnimationFrame(applyClubChromeLock);
+        }
+
         function prepareInitialShell(doc) {
           const route = routeInfo();
           setOnlyRoutePage(doc, route);
@@ -476,9 +560,7 @@
           if (menuRail) menuRail.hidden = false;
           if (sidebar) sidebar.hidden = false;
           doc.getElementById("appShell")?.classList.remove("menuClosed");
-          doc.querySelectorAll(".navButton").forEach((button) => {
-            button.classList.toggle("active", route.page !== "club" && button.dataset.page === route.page);
-          });
+          highlightSidebarPage(sidebarPageForRoute(route), doc);
           hidePlayerCounter(doc);
 
           if (route.table) {
@@ -640,9 +722,19 @@
           const link = event.target instanceof Element ? event.target.closest(".navButton[data-page]") : null;
           if (!link) return;
           const pageName = String(link.dataset.page || "");
+          highlightSidebarPage(pageName);
           if (!TABLE_PAGES.has(pageName)) return;
           pendingQuickFilterPage = pageName;
           previewQuickFilters(pageName);
+        }
+
+        function previewClubViewTarget(event) {
+          const route = routeInfo();
+          if (route.page !== "club") return;
+          const button = event.target instanceof Element ? event.target.closest(".viewButton[data-view]") : null;
+          if (!button || !CLUB_VIEWS.includes(button.dataset.view)) return;
+          rememberClubTitle(route);
+          startClubChromeLock(10000);
         }
 
         function seedClubHeader(route) {
@@ -682,6 +774,7 @@
         function installRuntimeFixes() {
           document.addEventListener("pointerdown", previewNavigationTarget, true);
           document.addEventListener("click", previewNavigationTarget, true);
+          document.addEventListener("pointerdown", previewClubViewTarget, true);
 
           if (typeof syncQuickFilterLabels === "function") {
             const originalSyncQuickFilterLabels = syncQuickFilterLabels;
@@ -689,6 +782,7 @@
               const result = originalSyncQuickFilterLabels.apply(this, arguments);
               if (pendingQuickFilterPage) {
                 previewQuickFilters(pendingQuickFilterPage);
+                highlightSidebarPage(pendingQuickFilterPage);
                 if (typeof state !== "undefined" && state.currentPage === pendingQuickFilterPage) {
                   pendingQuickFilterPage = "";
                 }
@@ -701,6 +795,9 @@
             const originalShowTableBusyState = showTableBusyState;
             showTableBusyState = function showTableBusyStateWithHiddenPager() {
               document.body.classList.add("tableRowsLoading");
+              const route = routeInfo();
+              highlightSidebarPage(sidebarPageForRoute(route));
+              if (route.page === "club") startClubChromeLock();
               return originalShowTableBusyState.apply(this, arguments);
             };
           }
@@ -711,7 +808,15 @@
               const result = originalRenderTable.apply(this, arguments);
               document.body.classList.remove("tableRowsLoading");
               const route = routeInfo();
-              if (route.page === "club") prepareClubChrome(document, route);
+              if (route.page === "club") {
+                const liveMetadata = liveClubMetadata(route);
+                if (liveMetadata?.name) {
+                  writeClubMetadata(liveMetadata);
+                  lockedClubTitle = clubTitleText(route);
+                }
+                prepareClubChrome(document, route);
+              }
+              highlightSidebarPage(sidebarPageForRoute(route));
               return result;
             };
           }
@@ -786,7 +891,7 @@
           hidePlayerCounter();
           const counter = document.querySelector("#watchlistPlayerCount");
           if (counter) {
-            new MutationObserver(hidePlayerCounter).observe(counter, {
+            new MutationObserver(() => hidePlayerCounter()).observe(counter, {
               attributes: true,
               childList: true,
               characterData: true,
@@ -813,9 +918,7 @@
 
           setOnlyRoutePage(document, route);
           document.body.dataset.page = route.page;
-          document.querySelectorAll(".navButton").forEach((button) => {
-            button.classList.toggle("active", route.page !== "club" && button.dataset.page === route.page);
-          });
+          highlightSidebarPage(sidebarPageForRoute(route));
 
           if (route.table) {
             document.body.classList.add("tableRowsLoading");
@@ -825,6 +928,7 @@
               if (liveMetadata?.name) writeClubMetadata(liveMetadata);
               prepareClubChrome(document, route);
               seedClubHeader(route);
+              startClubChromeLock();
             } else {
               if (title) {
                 title.textContent = typeof tableTitleForPage === "function"
@@ -861,11 +965,19 @@
           Array.from(document.body.attributes).forEach((attribute) => document.body.removeAttribute(attribute.name));
           Array.from(shell.body.attributes).forEach((attribute) => document.body.setAttribute(attribute.name, attribute.value));
           document.body.innerHTML = shell.body.innerHTML;
+          if (routeInfo().page === "club") startClubChromeLock();
 
-          window.addEventListener("mfl:club-metadata", () => {
+          window.addEventListener("mfl:club-metadata", (event) => {
             const route = routeInfo();
             if (route.page !== "club") return;
+            const metadata = event.detail;
+            if (metadata?.name) {
+              writeClubMetadata(metadata);
+              lockedClubId = String(route.clubId);
+              lockedClubTitle = clubTitleText(route);
+            }
             prepareClubChrome(document, route);
+            startClubChromeLock(5000);
             if (typeof window.applyExactPlayerTableWidths === "function") {
               window.applyExactPlayerTableWidths();
             }
