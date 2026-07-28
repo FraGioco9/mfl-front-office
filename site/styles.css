@@ -711,11 +711,6 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   padding-right: 42px;
 }
 
-#evaluationSearchInput::-webkit-search-cancel-button {
-  display: none;
-  appearance: none;
-}
-
 .evaluationSearchClearButton {
   position: absolute;
   top: 50%;
@@ -723,6 +718,17 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   width: 30px;
   height: 30px;
   transform: translateY(-50%);
+}
+
+/* v1.150.19 - Single unboxed Evaluation search clear control */
+.evaluationSearchClearButton,
+.evaluationSearchClearButton:hover:not(:disabled),
+.evaluationSearchClearButton:focus:not(:disabled),
+.evaluationSearchClearButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 #evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton {

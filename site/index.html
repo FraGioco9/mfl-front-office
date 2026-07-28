@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.18">
+    <link rel="stylesheet" href="/styles.css?v=1.150.19">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -254,7 +254,7 @@
                 <label class="field">
                   <span>Player</span>
                   <div class="evaluationSearchControl">
-                    <input id="evaluationSearchInput" type="search" placeholder="Search ID or player name" autocomplete="off">
+                    <input id="evaluationSearchInput" type="text" placeholder="Search ID or player name" autocomplete="off">
                     <button id="evaluationSearchClearButton" class="iconButton popupCloseButton evaluationSearchClearButton" type="button" aria-label="Clear player search"></button>
                   </div>
                 </label>
@@ -376,6 +376,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.150.19</span><p>Remove the duplicate and boxed Evaluation search clear control</p></li>
               <li><span>v1.150.18</span><p>Match the rows selector and Evaluation clear button to shared view and popup controls</p></li>
               <li><span>v1.150.17</span><p>Match the Evaluation search bar to table view-button hover behavior</p></li>
               <li><span>v1.150.16</span><p>Match individual-player view buttons and filter value boxes to table view-button hover behavior</p></li>
@@ -1005,7 +1006,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.18</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.19</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1174,6 +1175,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.18"></script>
+    <script src="/app.js?v=1.150.19"></script>
   </body>
 </html>
