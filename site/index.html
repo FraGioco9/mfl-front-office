@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.11">
+    <link rel="stylesheet" href="/styles.css?v=1.150.12">
   </head>
   <body data-page="home" class="booting loading">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
@@ -373,8 +373,9 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.150.12</span><p>Center and restyle all popup close, add, and remove control shapes</p></li>
               <li><span>v1.150.11</span><p>Center all popup close-button shapes</p></li>
-              <li><span>v1.150.11</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
+              <li><span>v1.150.10</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
               <li><span>v1.150.9</span><p>Keep refreshed tables at their final width and show the club division in its league color</p></li>
               <li><span>v1.150.8</span><p>Center pagination in the page layout and keep the table at its final width immediately after refresh</p></li>
               <li><span>v1.150.7</span><p>Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders</p></li>
@@ -995,7 +996,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.11</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.12</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1021,7 +1022,7 @@
 
         <section class="filterBuilder">
           <div class="addFilterRow">
-            <button id="showAddFilterButton" class="iconButton" type="button" aria-label="Add filter">+</button>
+            <button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter"></button>
             <select id="addFilterSelect" hidden>
               <option value="">Select filter...</option>
             </select>
@@ -1164,6 +1165,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.11"></script>
+    <script src="/app.js?v=1.150.12"></script>
   </body>
 </html>

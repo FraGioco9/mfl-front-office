@@ -555,23 +555,29 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   width: 100% !important;
 }
 
-/* v1.150.11 - Geometrically centered popup close shapes */
-.popupCloseButton {
+/* v1.150.12 - Centered popup close, add, and remove shapes */
+.popupCloseButton,
+.popupAddButton,
+.popupMinusButton {
   position: relative;
   font-size: 0;
 }
 
 .popupCloseButton::before,
-.popupCloseButton::after {
+.popupCloseButton::after,
+.popupAddButton::before,
+.popupAddButton::after,
+.popupMinusButton::before {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 14px;
+  width: 12px;
   height: 2px;
   border-radius: 999px;
   background: currentColor;
   transform-origin: center;
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
@@ -581,4 +587,16 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 
 .popupCloseButton::after {
   transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.popupAddButton::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.popupCloseButton:hover:not(:disabled),
+.popupAddButton:hover:not(:disabled),
+.popupMinusButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
 }

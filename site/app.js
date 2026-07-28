@@ -7068,10 +7068,10 @@ function evaluationOverallControl(value, season) {
   const numericValue = Number(value);
   const reduceControl = numericValue <= 1
     ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
-    : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall">-</button>`;
+    : `<button class="popupMinusButton" type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="-1" aria-label="Reduce season ${season} overall"></button>`;
   const increaseControl = numericValue >= 99
     ? `<span class="evaluationOverallControlSpacer" aria-hidden="true"></span>`
-    : `<button type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall">+</button>`;
+    : `<button class="popupAddButton" type="button" data-evaluation-overall-season="${season}" data-evaluation-overall-delta="1" aria-label="Increase season ${season} overall"></button>`;
 
   return `<div class="evaluationOverallControl">${reduceControl}<strong>${escapeHtml(value)}</strong>${increaseControl}</div>`;
 }
@@ -7761,7 +7761,7 @@ function renderPlayerAttributePanel(row) {
     const trainingControls = isTraining
       ? (column === "overall"
         ? `<span class="trainingStatControls"><button class="trainingResetButton" type="button" data-training-reset="1">Reset</button></span>`
-        : `<span class="trainingStatControls"><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="-1" aria-label="Reduce ${escapeHtml(label)}">-</button><button type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="1" aria-label="Increase ${escapeHtml(label)}">+</button></span>`)
+        : `<span class="trainingStatControls"><button class="popupMinusButton" type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="-1" aria-label="Reduce ${escapeHtml(label)}"></button><button class="popupAddButton" type="button" data-training-stat="${escapeHtml(column)}" data-training-delta="1" aria-label="Increase ${escapeHtml(label)}"></button></span>`)
       : "";
     return `<div class="playerAttributeCard${featured}${fullWidth}${isTraining ? " trainingCard" : ""}"${rarityStyle}><span>${escapeHtml(label)}</span><strong><span class="attributeValueText"${contributionTooltip}>${valueHtml}</span>${trainingControls}</strong></div>`;
   }).join("");
@@ -8653,8 +8653,7 @@ function addFilterRule(column, options = {}) {
 
   const remove = document.createElement("button");
   remove.type = "button";
-  remove.className = "iconButton";
-  remove.textContent = "x";
+  remove.className = "iconButton popupCloseButton";
   remove.setAttribute("aria-label", `Remove ${filterLabel(column)} filter`);
   remove.addEventListener("click", () => {
     rule.remove();
@@ -12208,7 +12207,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.11";
+  const VERSION = "1.150.12";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12409,7 +12408,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Center all popup close-button shapes";
+    description.textContent = "Center and restyle all popup close, add, and remove control shapes";
     item.append(version, description);
     return item;
   }
