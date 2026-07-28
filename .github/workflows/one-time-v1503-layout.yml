@@ -1,0 +1,37 @@
+name: One-time v1.150.3 layout fixes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/v1503-layout-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply layout fixes
+        run: python .github/scripts/patch_v1503_layout.py
+
+      - name: Validate JavaScript
+        run: node --check site/app.js
+
+      - name: Commit layout fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/scripts/patch_v1503_layout.py
+          rm -f .github/workflows/one-time-v1503-layout.yml
+          rm -f .github/v1503-layout-trigger
+          git add -A
+          git commit -m "Fix pinned layout and page transitions"
+          git push origin main
