@@ -6940,7 +6940,12 @@ function clearEvaluationSearchFocus() {
   evaluationSearchResults.replaceChildren();
 }
 
+function syncEvaluationSearchClearButton() {
+  evaluationSearchClearButton.hidden = !evaluationSearchInput.value.trim();
+}
+
 function renderEvaluationSearchResults() {
+  syncEvaluationSearchClearButton();
   const query = normalizeSearchText(evaluationSearchInput.value.trim());
 
   if (!query && !shouldShowEvaluationRecentResults()) {
@@ -7214,6 +7219,7 @@ function renderEvaluationTable(row) {
   });
 }
 async function renderEvaluationPage() {
+  syncEvaluationSearchClearButton();
   const savedId = evaluationSavedIdFromUrl();
   if (savedId && !hasWalletOptIn()) {
     redirectSavedEvaluationLinkToBasicEvaluation();
@@ -7247,6 +7253,7 @@ async function renderEvaluationPage() {
 
   if (row) {
     evaluationSearchInput.value = formatCellValue(row, "name");
+    syncEvaluationSearchClearButton();
   }
 
   if (!row || getValue(row, "retirement_years") === 0) {
@@ -12209,7 +12216,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.19";
+  const VERSION = "1.150.20";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12410,7 +12417,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Remove the duplicate and boxed Evaluation search clear control";
+    description.textContent = "Hide the Evaluation search clear control when the field is empty";
     item.append(version, description);
     return item;
   }

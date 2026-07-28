@@ -736,3 +736,8 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   opacity: 0;
   pointer-events: none;
 }
+
+/* v1.150.20 - Hide the empty Evaluation search clear control */
+.evaluationSearchClearButton[hidden] {
+  display: none !important;
+}
