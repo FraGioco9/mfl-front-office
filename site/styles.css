@@ -791,3 +791,36 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 .playerSearchClearButton[hidden] {
   display: none !important;
 }
+
+/* v1.151.0 - Interaction-only loading and incremental data routes */
+#loadingScreen,
+html.table-layout-pending #loadingScreen,
+body.tableLayoutPending #loadingScreen,
+body.clubViewLoading #loadingScreen,
+body.clubViewSwitching #loadingScreen {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+html.appBusy,
+html.appBusy *,
+body.appBusy,
+body.appBusy * {
+  cursor: wait !important;
+}
+
+body.appBusy::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  background: transparent;
+  cursor: wait;
+  pointer-events: auto;
+}
+
+body.appBusy .toastMessage {
+  visibility: hidden !important;
+}

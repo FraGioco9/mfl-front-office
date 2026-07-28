@@ -47,8 +47,19 @@ const state = {
   searchRenderTimer: null,
   searchIndex: [],
   agentSearchIndex: [],
+  clubSearchIndex: [],
   searchIndexesLoaded: false,
   searchIndexesLoadPromise: null,
+  bootstrapData: null,
+  bootstrapLoadPromise: null,
+  incrementalMode: false,
+  incrementalApplying: false,
+  incrementalRoute: null,
+  incrementalTotalRows: 0,
+  incrementalSourceRows: 0,
+  incrementalLastKey: "",
+  incrementalLastLoadedAt: 0,
+  interactionBusyDepth: 0,
   recentSearchItems: [],
   recentSearchPlayerIds: [],
   recentSearchAgentWallets: [],
@@ -636,11 +647,52 @@ function paintLoadingProgress() {
   });
 }
 
+function syncInteractionBusyState() {
+  const busy = state.interactionBusyDepth > 0;
+  document.documentElement.classList.toggle("appBusy", busy);
+  document.body.classList.toggle("appBusy", busy);
+  document.body.setAttribute("aria-busy", String(busy));
+  Array.from(document.body.children).forEach((element) => {
+    if (element !== loadingScreen && element instanceof HTMLElement) {
+      element.inert = busy;
+    }
+  });
+}
+
+function beginInteractionBusy() {
+  state.interactionBusyDepth += 1;
+  hideToast();
+  syncInteractionBusyState();
+}
+
+function endInteractionBusy(options = {}) {
+  state.interactionBusyDepth = options.reset
+    ? 0
+    : Math.max(0, state.interactionBusyDepth - 1);
+  syncInteractionBusyState();
+  if (state.interactionBusyDepth === 0) {
+    flushPostLoadingToast();
+  }
+}
+
+function blockInteractionWhileBusy(event) {
+  if (state.interactionBusyDepth <= 0) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"].forEach((eventName) => {
+  document.addEventListener(eventName, blockInteractionWhileBusy, true);
+});
+
 function showLoadingError(message) {
   state.loadingPercent = 100;
   loadingBarFill.style.width = "100%";
-  loadingScreen.classList.add("failed");
+  loadingScreen.hidden = true;
   loadingText.textContent = normalizeLoadingMessage(message);
+  endInteractionBusy({ reset: true });
 }
 
 async function showUnauthorizedProgressionRedirect() {
@@ -661,37 +713,19 @@ async function showUnauthorizedProgressionRedirect() {
 
 async function finishLoading() {
   setLoadingPercent(100, "Loading complete");
-  await paintLoadingProgress();
   revealAppShell();
 
   if (typeof window.applyExactPlayerTableWidths === "function") {
-    window.applyExactPlayerTableWidths();
-    await paintLoadingProgress();
     window.applyExactPlayerTableWidths();
   }
 
   document.documentElement.classList.remove("table-layout-pending");
   document.body.classList.remove("tableLayoutPending");
-
-  if (document.body.classList.contains("clubViewLoading")) {
-    loadingScreen.classList.remove("failed", "complete", "leaving");
-    loadingText.textContent = "Loading complete";
-    document.body.classList.remove("loading");
-    document.documentElement.classList.remove("loading");
-    return;
-  }
-
-  await new Promise((resolve) => window.setTimeout(resolve, 180));
-  loadingScreen.classList.add("complete");
-  loadingText.textContent = "Loading complete";
-  await new Promise((resolve) => window.setTimeout(resolve, 450));
-  loadingScreen.classList.add("leaving");
-  await new Promise((resolve) => window.setTimeout(resolve, 220));
   loadingScreen.hidden = true;
-  loadingScreen.classList.remove("complete", "leaving");
+  loadingScreen.classList.remove("failed", "complete", "leaving");
   document.body.classList.remove("loading");
   document.documentElement.classList.remove("loading");
-  flushPostLoadingToast();
+  endInteractionBusy({ reset: true });
 }
 
 function revealAppShell() {
@@ -798,19 +832,14 @@ function showAppShell() {
 }
 
 function showLoading() {
-  hideToast();
-  document.documentElement.classList.add("loading");
-  document.body.classList.add("booting", "loading");
-  loadingScreen.hidden = false;
+  beginInteractionBusy();
+  revealAppShell();
+  document.documentElement.classList.remove("loading");
+  document.body.classList.remove("booting", "loading");
+  loadingScreen.hidden = true;
   loadingScreen.classList.remove("failed", "complete", "leaving");
   state.loadingPercent = 0;
   setLoadingPercent(3, "Preparing data...", { allowBackwards: true });
-
-  window.setTimeout(() => {
-    if (document.body.classList.contains("loading") && state.loadingPercent < 8) {
-      setLoadingPercent(8, "Preparing data...");
-    }
-  }, 0);
 }
 
 function appOrigin() {
@@ -2562,6 +2591,7 @@ async function openSavedEvaluationsModal() {
 
   showModal(evaluationLoadModal);
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
+  beginInteractionBusy();
 
   try {
     const response = await fetch("/api/evaluation-save", {
@@ -2575,13 +2605,30 @@ async function openSavedEvaluationsModal() {
     }
 
     const data = await response.json();
-    renderSavedEvaluationList(Array.isArray(data.evaluations) ? data.evaluations : []);
+    const evaluations = Array.isArray(data.evaluations) ? data.evaluations : [];
+    const playerIds = Array.from(new Set(evaluations
+      .map((entry) => String(entry?.payload?.playerId || entry?.playerId || entry?.player_id || "").trim())
+      .filter(Boolean)));
+
+    if (playerIds.length) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "players",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerIds,
+      }, 1, { force: true });
+    }
+
+    renderSavedEvaluationList(evaluations);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
     const message = document.createElement("p");
     message.className = "evaluationLoadEmpty";
     message.textContent = error?.message || "Could not load saved evaluations.";
     evaluationLoadList.appendChild(message);
+  } finally {
+    endInteractionBusy();
   }
 }
 
@@ -4155,8 +4202,8 @@ function updateTablePlayerCount() {
     return;
   }
 
-  const visibleCount = state.filteredRows.length;
-  const totalCount = state.tableSourceRowsCount;
+  const visibleCount = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
+  const totalCount = state.incrementalMode ? state.incrementalSourceRows : state.tableSourceRowsCount;
   watchlistPlayerCount.textContent = `Showing ${formatCount(visibleCount)}/${formatCount(totalCount)} players`;
 }
 
@@ -4305,7 +4352,7 @@ function flushPostLoadingToast() {
 }
 
 function showToastAfterLoading(message) {
-  if (document.body.classList.contains("loading") || !loadingScreen.hidden) {
+  if (document.body.classList.contains("appBusy") || document.body.classList.contains("loading") || !loadingScreen.hidden) {
     state.pendingPostLoadingToast = message;
     return;
   }
@@ -5600,6 +5647,15 @@ function isNumericColumn(column) {
 
 function uniqueColumnValues(column) {
   const values = new Set();
+  if (state.incrementalMode && column === "nationality" && state.searchIndex.length) {
+    state.searchIndex.forEach((entry) => {
+      if (entry.nationalityRaw) {
+        values.add(String(entry.nationalityRaw));
+      }
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }
+
   const columnIndex = state.columns.indexOf(column);
 
   if (columnIndex < 0) {
@@ -6140,6 +6196,7 @@ function rowByPlayerId(playerId) {
 function buildPlayerSearchEntryFromRow(row) {
   const playerId = String(getValue(row, "player_id") ?? "");
   const nameDisplay = formatCellValue(row, "name");
+  const nationalityRaw = getValue(row, "nationality");
   const nationalityDisplay = formatCellValue(row, "nationality");
   const positionsDisplay = formatCellValue(row, "positions");
 
@@ -6150,6 +6207,7 @@ function buildPlayerSearchEntryFromRow(row) {
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
     nameDisplay,
+    nationalityRaw,
     nationalityDisplay,
     positionsDisplay,
     overall: Number(statDisplayValue(row, "overall") || 0),
@@ -6165,7 +6223,8 @@ function compactSearchValue(row, columns, column) {
 function buildPlayerSearchEntryFromCompactRow(row, columns) {
   const playerId = String(compactSearchValue(row, columns, "player_id") ?? "");
   const nameDisplay = String(compactSearchValue(row, columns, "name") || "NULL");
-  const nationalityDisplay = formatNationality(compactSearchValue(row, columns, "nationality"));
+  const nationalityRaw = compactSearchValue(row, columns, "nationality");
+  const nationalityDisplay = formatNationality(nationalityRaw);
   const positionsDisplay = String(compactSearchValue(row, columns, "positions") || "NULL");
 
   return {
@@ -6174,6 +6233,7 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
     id: normalizeSearchText(playerId),
     name: normalizeSearchText(nameDisplay),
     nameDisplay,
+    nationalityRaw,
     nationalityDisplay,
     positionsDisplay,
     overall: Number(compactSearchValue(row, columns, "overall") || 0),
@@ -6181,7 +6241,7 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
   };
 }
 
-function buildAgentSearchEntry(walletAddress, name) {
+function buildAgentSearchEntry(walletAddress, name, playerCount = 0) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (!normalizedWalletAddress) {
     return null;
@@ -6194,6 +6254,7 @@ function buildAgentSearchEntry(walletAddress, name) {
     name: agentName,
     nameText: normalizeSearchText(agentName),
     walletText: normalizeSearchText(normalizedWalletAddress),
+    playerCount: Number(playerCount || 0),
   };
 }
 
@@ -6220,6 +6281,36 @@ function buildSearchIndex(options = {}) {
   state.searchIndexesLoaded = true;
 }
 
+async function loadBootstrapData() {
+  if (state.bootstrapData) {
+    return state.bootstrapData;
+  }
+
+  if (state.bootstrapLoadPromise) {
+    return state.bootstrapLoadPromise;
+  }
+
+  state.bootstrapLoadPromise = (async () => {
+    const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load site index.");
+    }
+
+    state.bootstrapData = data;
+    state.manifest = data.manifest || state.manifest;
+    if (data.summary) {
+      updateSummaryCounts(data.summary.playerCount, data.summary.walletCount);
+      updateStatusDate(data.summary.generatedAt);
+    }
+    return data;
+  })().finally(() => {
+    state.bootstrapLoadPromise = null;
+  });
+
+  return state.bootstrapLoadPromise;
+}
+
 async function ensureSearchIndexes() {
   if (state.searchIndexesLoaded && state.searchIndex.length) {
     return true;
@@ -6230,6 +6321,41 @@ async function ensureSearchIndexes() {
   }
 
   state.searchIndexesLoadPromise = (async () => {
+    try {
+      const bootstrap = await loadBootstrapData();
+      const playersData = bootstrap.players || {};
+      const agentsData = bootstrap.agents || {};
+      state.searchIndex = Array.isArray(playersData.rows)
+        ? playersData.rows.map((row) => buildPlayerSearchEntryFromCompactRow(row, playersData.columns || []))
+        : [];
+      state.agentSearchIndex = Array.isArray(agentsData.rows)
+        ? agentsData.rows
+            .map((row) => buildAgentSearchEntry(
+              compactSearchValue(row, agentsData.columns || [], "wallet_address"),
+              compactSearchValue(row, agentsData.columns || [], "wallet_name"),
+              compactSearchValue(row, agentsData.columns || [], "player_count"),
+            ))
+            .filter(Boolean)
+        : [];
+      state.clubSearchIndex = Array.isArray(bootstrap.clubs)
+        ? bootstrap.clubs.map((club) => ({
+            clubId: String(club.clubId || ""),
+            name: String(club.name || ""),
+            division: Number.isFinite(Number(club.division)) ? Number(club.division) : null,
+            searchText: normalizeSearchText(`${club.name || ""} ${club.clubId || ""}`),
+          })).filter((club) => club.clubId && club.name)
+        : [];
+      state.walletRows = state.agentSearchIndex.map((entry) => ({
+        wallet_address: entry.walletAddress,
+        wallet_name: entry.name,
+      }));
+      state.walletNamesLoaded = true;
+      state.searchIndexesLoaded = true;
+      return true;
+    } catch {
+      // Fall back to the generated static search exports.
+    }
+
     const manifest = state.manifest || await fetchCurrentManifestForCacheCheck() || readCachedManifest();
     if (!manifest) {
       await loadWalletNames();
@@ -6252,7 +6378,11 @@ async function ensureSearchIndexes() {
       : [];
     state.agentSearchIndex = Array.isArray(agentsData?.rows)
       ? agentsData.rows
-          .map((row) => buildAgentSearchEntry(compactSearchValue(row, agentsData.columns || [], "wallet_address"), compactSearchValue(row, agentsData.columns || [], "wallet_name")))
+          .map((row) => buildAgentSearchEntry(
+            compactSearchValue(row, agentsData.columns || [], "wallet_address"),
+            compactSearchValue(row, agentsData.columns || [], "wallet_name"),
+            compactSearchValue(row, agentsData.columns || [], "player_count"),
+          ))
           .filter(Boolean)
       : [];
     state.walletRows = state.agentSearchIndex.map((entry) => ({ wallet_address: entry.walletAddress, wallet_name: entry.name }));
@@ -6889,14 +7019,13 @@ function evaluationSearchMatches(query) {
 
   return results
     .sort((a, b) => b.overall - a.overall)
-    .slice(0, 5)
-    .map((entry) => entry.row);
+    .slice(0, 5);
 }
 
 function recentEvaluationRows() {
   return state.recentEvaluationPlayerIds
-    .map((playerId) => rowByPlayerId(playerId))
-    .filter((row) => row && getValue(row, "retirement_years") !== 0);
+    .map((playerId) => state.searchIndex.find((entry) => String(entry.playerId) === String(playerId)) || null)
+    .filter((entry) => entry && !entry.retired);
 }
 
 function rememberEvaluationResult(playerId) {
@@ -6955,27 +7084,38 @@ function renderEvaluationSearchResults() {
     return;
   }
 
-  const rows = query ? evaluationSearchMatches(query) : recentEvaluationRows();
+  const results = query ? evaluationSearchMatches(query) : recentEvaluationRows();
 
   evaluationSearchResults.replaceChildren();
-  evaluationSearchResults.hidden = rows.length === 0;
+  evaluationSearchResults.hidden = results.length === 0;
 
-  rows.forEach((row) => {
-    const playerId = String(getValue(row, "player_id"));
+  results.forEach((entry) => {
+    const playerId = String(entry.playerId);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "evaluationSearchResult";
-    const ovr = formatPlainValue(statDisplayValue(row, "overall"), "overall");
-    button.innerHTML = `<strong>${escapeHtml(formatCellValue(row, "name"))}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(playerId)} &middot; ${escapeHtml(formatCellValue(row, "nationality"))} &middot; ${escapeHtml(formatCellValue(row, "positions"))}</span>`;
-    button.addEventListener("click", () => {
+    const ovr = formatPlainValue(entry.overall, "overall");
+    button.innerHTML = `<strong>${escapeHtml(entry.nameDisplay)}</strong><span>OVR ${escapeHtml(ovr)} &middot; #${escapeHtml(playerId)} &middot; ${escapeHtml(entry.nationalityDisplay)} &middot; ${escapeHtml(entry.positionsDisplay)}</span>`;
+    button.addEventListener("click", async () => {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
       state.evaluationPlayerId = playerId;
       rememberEvaluationResult(playerId);
-      evaluationSearchInput.value = formatCellValue(row, "name");
+      evaluationSearchInput.value = entry.nameDisplay;
       evaluationSearchResults.hidden = true;
       syncEvaluationPlayerUrl(playerId);
-      renderEvaluationTable(row);
+      try {
+        await withInteractionBusy(async () => {
+          const route = incrementalRouteTarget("evaluation", { playerId });
+          await requestIncrementalRoute(route, 1, { force: true });
+          const row = rowByPlayerId(playerId);
+          if (row) {
+            renderEvaluationTable(row);
+          }
+        });
+      } catch (error) {
+        showToastAfterLoading(error?.message || "Could not load this player.");
+      }
     });
     evaluationSearchResults.appendChild(button);
   });
@@ -7990,9 +8130,16 @@ function setupBackdropClickClose(modal, closeCallback) {
 }
 
 async function openSearch() {
-  await ensureSearchIndexes();
-  if (document.body.classList.contains("loading")) {
-    await finishLoading();
+  const needsSearchData = !state.searchIndexesLoaded;
+  if (needsSearchData) {
+    beginInteractionBusy();
+  }
+  try {
+    await ensureSearchIndexes();
+  } finally {
+    if (needsSearchData) {
+      endInteractionBusy();
+    }
   }
   showModal(searchModal);
   playerSearchInput.value = "";
@@ -8066,7 +8213,7 @@ function bestSearchResults(query) {
     .map((entry) => ({
       ...entry,
       score: Math.max(searchMatchScore(query, entry.nameText, entry.walletText), searchMatchScore(query, entry.walletText, entry.nameText)),
-      playerCount: agentPlayerCounts.get(entry.walletAddress) || 0,
+      playerCount: agentPlayerCounts.get(entry.walletAddress) || entry.playerCount || 0,
       overall: -1,
       label: entry.name,
     }))
@@ -9351,6 +9498,10 @@ function applyFilters(options = {}) {
 }
 
 function currentPageRows() {
+  if (state.incrementalMode) {
+    return state.filteredRows;
+  }
+
   const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
   const currentPage = Math.min(state.page, totalPages);
   const start = (currentPage - 1) * state.pageSize;
@@ -9530,7 +9681,8 @@ function openSelectedPlayerLinks() {
 }
 
 function renderTable() {
-  const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+  const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
 
   const pageRows = currentPageRows();
@@ -10393,6 +10545,230 @@ async function loadData(options = {}) {
   }
 }
 
+function clubRouteTargetFromPath() {
+  const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(contracts|attributes|current-season|all-time))?\/?$/i);
+  if (!match) {
+    return null;
+  }
+  const routeView = String(match[2] || "attributes").toLowerCase();
+  return {
+    scope: "club",
+    clubId: decodeURIComponent(match[1]),
+    view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,
+  };
+}
+
+function incrementalWatchlistPlayerIds(options = {}) {
+  const watchlistId = String(options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "");
+  const watchlist = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds))
+    .find((candidate) => candidate.id === watchlistId);
+  return normalizeWatchlistIdList(watchlist?.playerIds || Array.from(state.watchlistPlayerIds));
+}
+
+function incrementalRouteTarget(pageName, options = {}) {
+  const clubTarget = clubRouteTargetFromPath();
+  if (clubTarget && ["club", "database", "progression"].includes(pageName)) {
+    return {
+      ...clubTarget,
+      pageName,
+      access: currentDataAccess(["current", "all"].includes(clubTarget.view) ? "progression" : "database"),
+    };
+  }
+
+  const view = normalizeViewForPage(options.view || state.view || defaultViewForPage(pageName), pageName);
+  const base = {
+    pageName,
+    view,
+    access: currentDataAccess(pageName),
+  };
+
+  if (pageName === "database") return { ...base, scope: "database" };
+  if (pageName === "progression") return { ...base, scope: "progression" };
+  if (pageName === "mfl") return { ...base, scope: "mfl" };
+  if (pageName === "mflstats") return { ...base, scope: "mflstats", view: "stats" };
+  if (pageName === "agents") {
+    return {
+      ...base,
+      scope: "agent",
+      walletAddress: normalizeWalletAddress(options.walletAddress || state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase(),
+    };
+  }
+  if (pageName === "watchlist" && hasWalletOptIn()) {
+    return {
+      ...base,
+      scope: "watchlist",
+      watchlistId: options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "",
+      playerIds: incrementalWatchlistPlayerIds(options),
+    };
+  }
+  if (pageName === "myplayers" && hasWalletOptIn()) return { ...base, scope: "myplayers" };
+  if (pageName === "player") {
+    return {
+      ...base,
+      scope: "player",
+      playerId: String(options.playerId || playerIdFromUrl() || ""),
+      view: "attributes",
+    };
+  }
+  if (pageName === "evaluation") {
+    const playerId = String(options.playerId || state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "");
+    return playerId
+      ? { ...base, scope: "evaluation", playerId, view: "attributes" }
+      : { ...base, scope: "empty", view: "attributes" };
+  }
+  return null;
+}
+
+function incrementalDataQuery(route, page = 1) {
+  const query = new URLSearchParams({
+    mode: "page",
+    scope: route.scope,
+    view: route.view || "attributes",
+    page: String(page),
+    pageSize: String(["player", "evaluation"].includes(route.scope)
+      ? 1
+      : ["club", "mflstats"].includes(route.scope)
+        ? 5000
+        : state.pageSize),
+    sortKey: route.scope === "club" ? "positions" : state.sortKey,
+    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,
+  });
+
+  if (route.access === "owned") query.set("access", "owned-progression");
+  else if (route.access === "full") query.set("access", "full-progression");
+  else query.set("access", "public-database");
+
+  if (["current", "all"].includes(route.view)) query.set("includeProgression", "1");
+  if (route.playerId) query.set("playerId", route.playerId);
+  if (route.clubId) query.set("clubId", route.clubId);
+  if (route.walletAddress) query.set("walletAddress", route.walletAddress);
+  if (route.playerIds?.length) query.set("playerIds", route.playerIds.join(","));
+
+  const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers"].includes(route.scope);
+  if (tableRoute) {
+    if (hideRetiredInput.checked) query.set("hideRetired", "1");
+    if (hideRetiringInput.checked) query.set("hideRetiring", "1");
+    if (hideMflPlayersInput?.checked) query.set("hideMfl", "1");
+    if (packablePlayersInput?.checked) query.set("packableOnly", "1");
+    if (newMintsInput.checked) query.set("newMintsOnly", "1");
+    const rules = readFilterRules();
+    if (rules.length) query.set("filters", JSON.stringify(rules));
+  }
+
+  return query;
+}
+
+function applyIncrementalPayload(route, payload) {
+  const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
+  state.columns = Array.isArray(payload.columns) ? payload.columns : [];
+  rebuildColumnIndexMap();
+  state.rows = Array.isArray(payload.rows) ? payload.rows : [];
+  state.filteredRows = [...state.rows];
+  state.page = Number(payload.page || 1);
+  if (tableRoute && !["club"].includes(route.scope)) {
+    state.pageSize = Number(payload.pageSize || state.pageSize);
+    pageSizeSelect.value = String(state.pageSize);
+  }
+  state.incrementalMode = tableRoute;
+  state.incrementalRoute = { ...route };
+  state.incrementalTotalRows = Number(payload.totalRows || 0);
+  state.incrementalSourceRows = Number(payload.sourceRows || 0);
+  state.tableSourceRowsCount = state.incrementalSourceRows;
+  state.dataAccess = route.access;
+  state.dataLoaded = true;
+  state.dataLoadPromise = null;
+  clearRowSortCache();
+  if (payload.generatedAt) {
+    updateStatusDate(payload.generatedAt);
+  }
+}
+
+async function requestIncrementalRoute(route, page = 1, options = {}) {
+  if (route.scope === "empty") {
+    const payload = {
+      columns: state.manifest?.files?.public?.columns || state.columns || [],
+      rows: [],
+      page: 1,
+      pageSize: 1,
+      totalRows: 0,
+      sourceRows: 0,
+      generatedAt: state.manifest?.generated_at || null,
+    };
+    applyIncrementalPayload(route, payload);
+    state.incrementalMode = false;
+    return payload;
+  }
+
+  const query = incrementalDataQuery(route, page);
+  const requestKey = query.toString();
+  if (!options.force && state.incrementalLastKey === requestKey && Date.now() - state.incrementalLastLoadedAt < 400) {
+    return {
+      columns: state.columns,
+      rows: state.rows,
+      page: state.page,
+      pageSize: state.pageSize,
+      totalRows: state.incrementalTotalRows,
+      sourceRows: state.incrementalSourceRows,
+    };
+  }
+
+  const response = await fetch(`/api/data?${requestKey}`, {
+    cache: "no-store",
+    headers: walletProofHeaders(true),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load this page.");
+  }
+
+  applyIncrementalPayload(route, payload);
+  state.incrementalLastKey = requestKey;
+  state.incrementalLastLoadedAt = Date.now();
+  return payload;
+}
+
+async function withInteractionBusy(callback) {
+  beginInteractionBusy();
+  try {
+    return await callback();
+  } finally {
+    endInteractionBusy();
+  }
+}
+
+async function reloadIncrementalPage(page = state.page, options = {}) {
+  const route = incrementalRouteTarget(state.currentPage, {
+    view: state.view,
+    walletAddress: state.currentAgentWalletAddress,
+    watchlistId: state.currentWatchlistId,
+  }) || state.incrementalRoute;
+  if (!route) {
+    return false;
+  }
+
+  return withInteractionBusy(async () => {
+    try {
+      await requestIncrementalRoute(route, page, { force: options.force !== false });
+      state.incrementalApplying = true;
+      try {
+        buildHeader();
+        applyFilters({ save: options.save !== false });
+      } finally {
+        state.incrementalApplying = false;
+      }
+      if (typeof window.applyExactPlayerTableWidths === "function") {
+        window.applyExactPlayerTableWidths();
+      }
+      return true;
+    } catch (error) {
+      showToastAfterLoading(error?.message || "Could not load this page.");
+      return false;
+    }
+  });
+}
+
+window.mflReloadIncrementalPage = reloadIncrementalPage;
+
 mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-distribution]");
   if (!button) {
@@ -10428,6 +10804,10 @@ watchlistButton?.addEventListener("click", (event) => {
 pageSizeSelect.addEventListener("change", () => {
   state.pageSize = Number(pageSizeSelect.value);
   state.page = 1;
+  if (state.incrementalMode) {
+    void reloadIncrementalPage(1);
+    return;
+  }
   renderTable();
 });
 
@@ -10584,11 +10964,19 @@ addWatchlistNameInput?.addEventListener("input", () => {
 
 
 prevButton.addEventListener("click", () => {
+  if (state.incrementalMode) {
+    void reloadIncrementalPage(Math.max(1, state.page - 1));
+    return;
+  }
   state.page -= 1;
   renderTable();
 });
 
 nextButton.addEventListener("click", () => {
+  if (state.incrementalMode) {
+    void reloadIncrementalPage(state.page + 1);
+    return;
+  }
   state.page += 1;
   renderTable();
 });
@@ -10839,10 +11227,7 @@ evaluationPlayerPageButton.addEventListener("click", openEvaluationPlayerPage);
 evaluationPlayerPageButton.addEventListener("mouseup", openEvaluationPlayerPage);
 
 async function paintLoadingOverlayNow(message = "Loading data") {
-  showLoading();
-  setLoadingPercent(5, message, { allowBackwards: true });
-  await paintLoadingProgress();
-  await paintLoadingProgress();
+  loadingText.textContent = normalizeLoadingMessage(message);
 }
 
 navButtons.forEach((button) => {
@@ -11026,24 +11411,30 @@ async function startApp() {
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
 
-  if (initialPage === "changelog") {
-    await setPage("changelog", false);
-  }
-
-  void ensureFlowWallet();
-  applyStoredWalletPermission();
-  await preloadRefreshData(initialPage);
-  await loadWalletNames();
-  await loadWalletPreferences();
-  updateAccountState();
-  await loadSummary();
+  loadingScreen.hidden = true;
+  document.documentElement.classList.remove("loading", "table-layout-pending");
+  document.body.classList.remove("booting", "loading", "tableLayoutPending");
+  revealAppShell();
   showAppShell();
-  await showHomeShell(initialPage, false, initialTarget.options);
-  if (document.body.classList.contains("loading")) {
-    await finishLoading();
+  beginInteractionBusy();
+
+  try {
+    void ensureFlowWallet();
+    applyStoredWalletPermission();
+    await Promise.allSettled([
+      loadSummary(),
+      ensureSearchIndexes(),
+    ]);
+    await Promise.all([
+      loadWalletNames(),
+      loadWalletPreferences(),
+    ]);
+    updateAccountState();
+    await showHomeShell(initialPage, false, initialTarget.options);
+  } finally {
+    endInteractionBusy({ reset: true });
   }
 }
-startApp();
 (() => {
   const currentVersion = "1.149.74";
   const maxNoteLength = 100;
@@ -12185,9 +12576,18 @@ startApp();
     state.sortKey = "positions";
     state.sortDirection = "asc";
     if (typeof updateViewButtons === "function") updateViewButtons();
-    if (typeof buildHeader === "function") buildHeader();
-    if (typeof applyFilters === "function") applyFilters({ save: false });
-    finishClubSwitch();
+    void (async () => {
+      try {
+        if (typeof window.mflLoadIncrementalRoutePage === "function") {
+          await window.mflLoadIncrementalRoutePage("club", { view: nextView });
+        } else {
+          if (typeof buildHeader === "function") buildHeader();
+          if (typeof applyFilters === "function") applyFilters({ save: false });
+        }
+      } finally {
+        await finishClubSwitch();
+      }
+    })();
   }, true);
 
   window.addEventListener("popstate", () => {
@@ -12230,7 +12630,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.21";
+  const VERSION = "1.151.0";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12431,7 +12831,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Unify Evaluation and global search clear controls";
+    description.textContent = "Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data";
     item.append(version, description);
     return item;
   }
@@ -12447,11 +12847,12 @@ startApp();
   function addChangelogSection() {
     const list = document.querySelector(".changelogList");
     if (!list) return;
+    const minorVersion = `v${VERSION.split(".").slice(0, 2).join(".")}`;
     Array.from(list.children).forEach((child) => {
-      if (!child.classList.contains("changelogMinorSection") && /^v1\.150\.0$/i.test(child.querySelector(":scope > span")?.textContent || "")) child.remove();
+      if (!child.classList.contains("changelogMinorSection") && child.querySelector(":scope > span")?.textContent === `v${VERSION}`) child.remove();
     });
     let section = Array.from(list.querySelectorAll(":scope > .changelogMinorSection")).find((candidate) =>
-      /^v1\.150$/i.test(candidate.querySelector(".changelogMinorVersion")?.textContent || ""),
+      candidate.querySelector(".changelogMinorVersion")?.textContent === minorVersion,
     );
     if (!section) {
       section = document.createElement("li");
@@ -12461,7 +12862,7 @@ startApp();
       toggle.type = "button";
       const title = document.createElement("span");
       title.className = "changelogMinorVersion";
-      title.textContent = "v1.150";
+      title.textContent = minorVersion;
       const meta = document.createElement("span");
       meta.className = "changelogMinorMeta";
       meta.textContent = "1 patch";
@@ -12823,3 +13224,200 @@ startApp();
   });
   syncLayoutCenter();
 })();
+
+/* v1.151.0 incremental route data and interaction-only loading */
+(() => {
+  const originalApplyFilters = applyFilters;
+  const originalSetPage = setPage;
+  const originalSetView = setView;
+  const originalRenderSearchResultsNow = renderSearchResultsNow;
+
+  function prepareIncrementalRoute(pageName, options = {}) {
+    const clubTarget = clubRouteTargetFromPath();
+    if (!clubTarget && tablePages.has(pageName)) {
+      restoreSavedTableState(pageName, { view: options.view });
+    } else if (clubTarget) {
+      state.view = clubTarget.view;
+      state.page = 1;
+      state.sortKey = "positions";
+      state.sortDirection = "asc";
+    }
+
+    if (pageName === "agents") {
+      state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    }
+
+    if (pageName === "watchlist" && hasWalletOptIn()) {
+      const requestedWatchlistId = String(options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "");
+      const watchlist = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds))
+        .find((candidate) => candidate.id === requestedWatchlistId);
+      if (watchlist) {
+        state.currentWatchlistId = watchlist.id;
+        setActiveWatchlistIds(watchlist.playerIds);
+      }
+    }
+
+    return incrementalRouteTarget(pageName, options);
+  }
+
+  applyFilters = function applyFiltersWithIncrementalData(options = {}) {
+    if (!state.incrementalMode || state.incrementalApplying || options.localOnly) {
+      return originalApplyFilters.apply(this, arguments);
+    }
+
+    state.page = 1;
+    void reloadIncrementalPage(1, { save: options.save !== false });
+    return undefined;
+  };
+
+  setView = async function setIncrementalView(viewName) {
+    if (!state.incrementalMode || state.currentPage === "club") {
+      return originalSetView.apply(this, arguments);
+    }
+
+    return withInteractionBusy(async () => {
+      state.incrementalApplying = true;
+      try {
+        await originalSetView.call(this, viewName);
+      } finally {
+        state.incrementalApplying = false;
+      }
+
+      const route = incrementalRouteTarget(state.currentPage, {
+        view: state.view,
+        walletAddress: state.currentAgentWalletAddress,
+        watchlistId: state.currentWatchlistId,
+      });
+      if (!route) {
+        return;
+      }
+
+      try {
+        await requestIncrementalRoute(route, 1, { force: true });
+        state.incrementalApplying = true;
+        try {
+          buildHeader();
+          originalApplyFilters.call(this, { save: false });
+        } finally {
+          state.incrementalApplying = false;
+        }
+      } catch (error) {
+        showToastAfterLoading(error?.message || "Could not load this view.");
+      }
+    });
+  };
+
+  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const route = prepareIncrementalRoute(pageName, options);
+    if (!route) {
+      state.incrementalMode = false;
+      return originalSetPage.call(this, pageName, updateHash, options);
+    }
+
+    return withInteractionBusy(async () => {
+      try {
+        await requestIncrementalRoute(route, 1);
+      } catch (error) {
+        showToastAfterLoading(error?.message || "Could not load this page.");
+        return;
+      }
+
+      state.dataAccess = currentDataAccess(pageName);
+      state.incrementalApplying = true;
+      try {
+        return await originalSetPage.call(this, pageName, updateHash, {
+          ...options,
+          skipNavigationLoading: true,
+        });
+      } finally {
+        state.incrementalApplying = false;
+      }
+    });
+  };
+
+  function divisionInfo(divisionValue) {
+    return typeof contractDivisionInfo === "function"
+      ? contractDivisionInfo(divisionValue)
+      : null;
+  }
+
+  function clubSearchResult(entry) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "searchResult clubSearchResult";
+    button.dataset.clubId = entry.clubId;
+    button.dataset.searchKey = recentClubKey(entry.clubId);
+    const division = divisionInfo(entry.division);
+    const divisionHtml = division
+      ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>`
+      : "";
+    button.innerHTML = `<strong>${escapeHtml(entry.name)}</strong><span>Club &middot; #${escapeHtml(entry.clubId)}${divisionHtml}</span>`;
+    button.addEventListener("click", () => {
+      closeSearch();
+      window.location.assign(`/clubs/${encodeURIComponent(entry.clubId)}/attributes`);
+    });
+    return button;
+  }
+
+  function injectBootstrapClubResults() {
+    if (!playerSearchResults || !state.clubSearchIndex.length) {
+      return;
+    }
+
+    playerSearchResults.querySelectorAll(":scope > .clubSearchResult").forEach((result) => result.remove());
+    const query = normalizeSearchText(playerSearchInput.value.trim());
+    const recentClubIds = state.recentSearchItems
+      .filter((item) => item.startsWith("club:"))
+      .map((item) => item.slice(5));
+    const clubs = query
+      ? state.clubSearchIndex
+          .filter((club) => club.searchText.includes(query))
+          .sort((a, b) => (
+            (a.division ?? Number.POSITIVE_INFINITY) - (b.division ?? Number.POSITIVE_INFINITY)
+            || a.name.localeCompare(b.name)
+          ))
+      : recentClubIds
+          .map((clubId) => state.clubSearchIndex.find((club) => club.clubId === clubId))
+          .filter(Boolean);
+
+    const existingResults = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"));
+    const playerResults = existingResults.filter((result) => !result.dataset.searchKey?.startsWith("agent:"));
+    const agentResults = existingResults.filter((result) => result.dataset.searchKey?.startsWith("agent:"));
+    const mergedResults = [
+      ...playerResults,
+      ...clubs.slice(0, 5).map(clubSearchResult),
+      ...agentResults,
+    ].slice(0, 5);
+
+    if (mergedResults.length) {
+      playerSearchResults.replaceChildren(...mergedResults);
+      playerSearchResults.classList.add("filledSearchResults");
+    }
+  }
+
+  renderSearchResultsNow = function renderSearchResultsFromBootstrap() {
+    const result = originalRenderSearchResultsNow.apply(this, arguments);
+    injectBootstrapClubResults();
+    return result;
+  };
+
+  window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage(pageName, options = {}) {
+    const route = prepareIncrementalRoute(pageName, options);
+    if (!route) {
+      return false;
+    }
+    return withInteractionBusy(async () => {
+      await requestIncrementalRoute(route, 1, { force: true });
+      state.incrementalApplying = true;
+      try {
+        buildHeader();
+        originalApplyFilters.call(this, { save: false });
+      } finally {
+        state.incrementalApplying = false;
+      }
+      return true;
+    });
+  };
+})();
+
+startApp();

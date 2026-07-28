@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="loading">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,22 +14,15 @@
           document.documentElement.dataset.theme = "light";
           document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         }
-
-        const initialPath = window.location.pathname;
-        const initialTableRoute = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i.test(initialPath)
-          && !/^\/mfl\/stats\/?$/i.test(initialPath);
-        if (initialTableRoute) {
-          document.documentElement.classList.add("table-layout-pending");
-        }
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.150.21">
+    <link rel="stylesheet" href="/styles.css?v=1.151.0">
   </head>
-  <body data-page="home" class="booting loading">
-    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite">
+  <body data-page="home">
+    <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden aria-hidden="true">
       <div class="loadingBox">
         <div id="loadingText" class="loadingText">Preparing data...</div>
         <div class="loadingBar" aria-hidden="true">
@@ -376,6 +369,7 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
+              <li><span>v1.151.0</span><p>Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data</p></li>
               <li><span>v1.150.21</span><p>Unify Evaluation and global search clear controls</p></li>
               <li><span>v1.150.20</span><p>Hide the Evaluation search clear control when the field is empty</p></li>
               <li><span>v1.150.19</span><p>Remove the duplicate and boxed Evaluation search clear control</p></li>
@@ -1008,7 +1002,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.150.21</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.151.0</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1180,6 +1174,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.150.21"></script>
+    <script src="/app.js?v=1.151.0"></script>
   </body>
 </html>
