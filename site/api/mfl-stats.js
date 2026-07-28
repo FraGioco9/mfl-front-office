@@ -2,6 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
+const STATS_COLUMNS = ["player_id", "wallet_address", "wallet_name", "age", "owned_since", "overall", "player_seasons"];
 const HIDDEN_JOINED_DAYS = new Set([
   Date.UTC(2025, 9, 9) / 86400000,
   Date.UTC(2025, 9, 10) / 86400000,
@@ -106,14 +107,17 @@ module.exports = async function mflStatsHandler(request, response) {
     const rows = sourceRows
       .filter((row) => isMflWalletPlayer(row, columns) && !hasHiddenJoinedDate(row, columns))
       .sort((a, b) => compareOverallDescending(a, b, columns));
+    const selectedColumns = STATS_COLUMNS.filter((column) => columns.includes(column));
+    const selectedIndexes = selectedColumns.map((column) => columns.indexOf(column));
+    const selectedRows = rows.map((row) => selectedIndexes.map((index) => row[index]));
 
     response.status(200).json({
-      columns,
-      rows,
+      columns: selectedColumns,
+      rows: selectedRows,
       page: 1,
-      pageSize: rows.length,
-      totalRows: rows.length,
-      sourceRows: rows.length,
+      pageSize: selectedRows.length,
+      totalRows: selectedRows.length,
+      sourceRows: selectedRows.length,
       totalPages: 1,
       generatedAt: manifest?.generated_at || null,
     });
