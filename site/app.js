@@ -507,6 +507,7 @@ const closeDeleteWatchlistButton = document.querySelector("#closeDeleteWatchlist
 const closeAddWatchlistButton = document.querySelector("#closeAddWatchlistButton");
 const tablePageTitle = document.querySelector("#tablePageTitle");
 const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
+const evaluationSearchClearButton = document.querySelector("#evaluationSearchClearButton");
 const evaluationSearchResults = document.querySelector("#evaluationSearchResults");
 const evaluationButtons = document.querySelector("#evaluationButtons");
 const evaluationResetButton = document.querySelector("#evaluationResetButton");
@@ -6974,25 +6975,7 @@ function renderEvaluationSearchResults() {
   });
 }
 
-function evaluationSearchClearZoneHit(event) {
-  const rect = evaluationSearchInput.getBoundingClientRect();
-  const clearZoneWidth = 40;
-  return event.clientX >= rect.right - clearZoneWidth && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-}
-
-function updateEvaluationSearchCursor(event) {
-  evaluationSearchInput.style.cursor = evaluationSearchClearZoneHit(event) ? "pointer" : "";
-}
-
-function resetEvaluationSearchCursor() {
-  evaluationSearchInput.style.cursor = "";
-}
-function handleEvaluationSearchPointerDown(event) {
-  if (!evaluationSearchClearZoneHit(event)) {
-    return;
-  }
-
-  event.preventDefault();
+function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
@@ -10652,9 +10635,7 @@ discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings)
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 playerSearchInput.addEventListener("input", renderSearchResults);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
-evaluationSearchInput.addEventListener("pointerdown", handleEvaluationSearchPointerDown);
-evaluationSearchInput.addEventListener("pointermove", updateEvaluationSearchCursor);
-evaluationSearchInput.addEventListener("pointerleave", resetEvaluationSearchCursor);
+evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 evaluationSearchInput.addEventListener("blur", () => {
   window.setTimeout(() => {
@@ -12228,7 +12209,7 @@ startApp();
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.150.17";
+  const VERSION = "1.150.18";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12429,7 +12410,7 @@ startApp();
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Match the Evaluation search bar to table view-button hover behavior";
+    description.textContent = "Match the rows selector and Evaluation clear button to shared view and popup controls";
     item.append(version, description);
     return item;
   }

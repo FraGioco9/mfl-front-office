@@ -686,3 +686,47 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   color: var(--text);
   box-shadow: none;
 }
+
+/* v1.150.18 - Match rows selector and Evaluation clear control */
+#pageSizeSelect {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#pageSizeSelect:hover:not(:disabled),
+#pageSizeSelect:focus:not(:disabled),
+#pageSizeSelect:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.evaluationSearchControl {
+  position: relative;
+}
+
+.evaluationSearchControl #evaluationSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
+#evaluationSearchInput::-webkit-search-cancel-button {
+  display: none;
+  appearance: none;
+}
+
+.evaluationSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+}
+
+#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
