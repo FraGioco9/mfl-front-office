@@ -12,7 +12,6 @@
           document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         } catch {
           document.documentElement.dataset.theme = "light";
-          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         }
 
         const originalFetch = window.fetch.bind(window);
@@ -151,21 +150,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.5">
-    <style>
-      html.bootPending body{visibility:hidden}
-      body.routeBootLoading #progressionPage .views,
-      body.routeBootLoading #progressionPage .quickFilters,
-      body.routeBootLoading #progressionPage .controlsBar,
-      body.routeBootLoading #progressionPage .pager,
-      body.routeBootLoading #progressionPage .selectionBar{visibility:hidden!important}
-    </style>
+    <link rel="stylesheet" href="/styles.css?v=1.151.6">
+    <style>html.bootPending body{visibility:hidden}</style>
   </head>
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.5";
-        const CHANGELOG_DESCRIPTION = "Include clubs in global search results, show the full Database player total, and stabilize refreshed page views and layout";
+        const VERSION = "1.151.6";
+        const CHANGELOG_DESCRIPTION = "Show the loaded Database page over the complete player total and keep refreshed page chrome visible and stable while table rows load";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -188,92 +180,75 @@
           }
         }
 
-        function hideAllViews(doc) {
+        function routeInfo() {
+          const path = window.location.pathname.replace(/\/+$/, "") || "/";
+          if (/^\/mfl\/stats$/i.test(path)) return { page: "mflstats", title: "MFL Stats", table: false };
+          const routes = [
+            [/^\/database(?:\/|$)/i, "database", "Database"],
+            [/^\/mfl(?:\/|$)/i, "mfl", "MFL Wallet"],
+            [/^\/progression(?:\/|$)/i, "progression", "Progression"],
+            [/^\/watchlist(?:\/|$)/i, "watchlist", "Watchlist"],
+            [/^\/my-players(?:\/|$)/i, "myplayers", "My Players"],
+            [/^\/agents?\/[^/]+(?:\/|$)/i, "agents", "Agent"],
+            [/^\/clubs?\/[^/]+(?:\/|$)/i, "club", "Club"],
+          ];
+          const tableRoute = routes.find(([pattern]) => pattern.test(path));
+          if (tableRoute) return { page: tableRoute[1], title: tableRoute[2], table: true };
+          if (/^\/players\/[^/]+$/i.test(path)) return { page: "player", table: false };
+          if (/^\/evaluation$/i.test(path)) return { page: "evaluation", table: false };
+          if (/^\/settings$/i.test(path)) return { page: "settings", table: false };
+          if (/^\/changelog$/i.test(path)) return { page: "changelog", table: false };
+          return { page: "home", table: false };
+        }
+
+        function prepareInitialShell(doc) {
+          const route = routeInfo();
           ["homePage", "progressionPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage"]
             .forEach((id) => {
               const element = doc.getElementById(id);
               if (element) element.hidden = true;
             });
-        }
 
-        function showInitialNavigation(doc) {
+          doc.body.dataset.page = route.page;
           const menuRail = doc.getElementById("menuRail");
           const sidebar = doc.getElementById("sidebar");
-          const appShell = doc.getElementById("appShell");
           if (menuRail) menuRail.hidden = false;
           if (sidebar) sidebar.hidden = false;
-          appShell?.classList.remove("menuClosed");
-        }
+          doc.getElementById("appShell")?.classList.remove("menuClosed");
+          doc.querySelectorAll(".navButton").forEach((button) => button.classList.toggle("active", button.dataset.page === route.page));
 
-        function prepareInitialRoute(doc) {
-          const path = window.location.pathname.replace(/\/+$/, "") || "/";
-          hideAllViews(doc);
-          showInitialNavigation(doc);
-
-          const tableRoutes = [
-            { pattern: /^\/database(?:\/|$)/i, page: "database", title: "Database" },
-            { pattern: /^\/mfl(?:\/|$)/i, page: "mfl", title: "MFL Wallet" },
-            { pattern: /^\/progression(?:\/|$)/i, page: "progression", title: "Progression" },
-            { pattern: /^\/watchlist(?:\/|$)/i, page: "watchlist", title: "Watchlist" },
-            { pattern: /^\/my-players(?:\/|$)/i, page: "myplayers", title: "My Players" },
-            { pattern: /^\/agents?\/[^/]+(?:\/|$)/i, page: "agents", title: "Agent" },
-            { pattern: /^\/clubs?\/[^/]+(?:\/|$)/i, page: "club", title: "Club" },
-          ];
-
-          if (/^\/mfl\/stats\/?$/i.test(path)) {
-            doc.body.dataset.page = "mflstats";
-            doc.getElementById("mflStatsPage").hidden = false;
-            const distribution = doc.getElementById("mflStatsAgeDistribution");
-            if (distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
-            return { loadingRoute: true };
-          }
-
-          const tableRoute = tableRoutes.find((route) => route.pattern.test(path));
-          if (tableRoute) {
-            doc.body.dataset.page = tableRoute.page;
-            doc.body.classList.add("routeBootLoading");
-            const tablePage = doc.getElementById("progressionPage");
-            if (tablePage) tablePage.hidden = false;
+          if (route.table) {
+            const page = doc.getElementById("progressionPage");
+            if (page) page.hidden = false;
             const title = doc.getElementById("tablePageTitle");
-            if (title) title.textContent = tableRoute.title;
+            if (title) title.textContent = route.title;
             doc.getElementById("tableBody")?.replaceChildren();
             const emptyState = doc.getElementById("emptyState");
             if (emptyState) {
               emptyState.hidden = false;
               emptyState.textContent = "Loading players...";
             }
-            return { loadingRoute: true };
-          }
-
-          if (/^\/players\/[^/]+\/?$/i.test(path)) {
-            doc.body.dataset.page = "player";
+          } else if (route.page === "mflstats") {
+            doc.getElementById("mflStatsPage").hidden = false;
+            const distribution = doc.getElementById("mflStatsAgeDistribution");
+            if (distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
+          } else if (route.page === "player") {
             doc.getElementById("playerPage").hidden = false;
             const detail = doc.getElementById("playerDetail");
             if (detail) detail.innerHTML = '<div class="emptyState">Loading player...</div>';
-            return { loadingRoute: true };
+          } else {
+            const pageId = {
+              home: "homePage",
+              evaluation: "evaluationPage",
+              settings: "settingsPage",
+              changelog: "changelogPage",
+            }[route.page];
+            if (pageId) doc.getElementById(pageId).hidden = false;
           }
 
-          if (/^\/evaluation\/?$/i.test(path)) {
-            doc.body.dataset.page = "evaluation";
-            doc.getElementById("evaluationPage").hidden = false;
-            return { loadingRoute: false };
-          }
-          if (/^\/settings\/?$/i.test(path)) {
-            doc.body.dataset.page = "settings";
-            doc.getElementById("settingsPage").hidden = false;
-            return { loadingRoute: false };
-          }
-          if (/^\/changelog\/?$/i.test(path)) {
-            doc.body.dataset.page = "changelog";
-            doc.getElementById("changelogPage").hidden = false;
-            return { loadingRoute: false };
-          }
-
-          doc.body.dataset.page = "home";
-          doc.getElementById("homePage").hidden = false;
           const homeOptInButton = doc.getElementById("homeOptInButton");
           if (homeOptInButton && hasStoredWalletOptIn()) homeOptInButton.hidden = true;
-          return { loadingRoute: false };
+          return route;
         }
 
         function rebuildChangelog() {
@@ -370,6 +345,38 @@
           return button;
         }
 
+        function numericText(value) {
+          const number = Number(String(value || "").replace(/[^0-9]/g, ""));
+          return Number.isFinite(number) && number > 0 ? number : 0;
+        }
+
+        function databaseTotalPlayers() {
+          if (typeof state !== "undefined") {
+            const candidates = [
+              state.bootstrapData?.summary?.playerCount,
+              state.manifest?.row_count,
+              state.manifest?.rowCount,
+            ];
+            const total = candidates.map(Number).find((value) => Number.isFinite(value) && value > 0);
+            if (total) return total;
+          }
+          return numericText(document.querySelector("#totalPlayers")?.textContent);
+        }
+
+        function syncDatabaseShowingCount() {
+          if (typeof state === "undefined" || state.currentPage !== "database") return;
+          const counter = document.querySelector("#watchlistPlayerCount");
+          if (!counter) return;
+          const shown = typeof currentPageRows === "function"
+            ? currentPageRows().length
+            : Array.isArray(state.filteredRows) ? state.filteredRows.length : 0;
+          const total = databaseTotalPlayers();
+          counter.hidden = false;
+          counter.textContent = total > 0
+            ? `Showing ${typeof formatCount === "function" ? formatCount(shown) : shown}/${typeof formatCount === "function" ? formatCount(total) : total}`
+            : `Showing ${typeof formatCount === "function" ? formatCount(shown) : shown}/-`;
+        }
+
         function installRuntimeFixes() {
           if (typeof renderSearchResultsNow === "function") {
             const originalRenderSearchResultsNow = renderSearchResultsNow;
@@ -407,8 +414,7 @@
 
               const existing = Array.from(resultsElement.querySelectorAll(":scope > .searchResult"))
                 .filter((element) => !element.classList.contains("clubSearchResult"));
-              const merged = [...clubs.slice(0, 5).map(({ club }) => createClubSearchButton(club)), ...existing].slice(0, 5);
-              resultsElement.replaceChildren(...merged);
+              resultsElement.replaceChildren(...[...clubs.slice(0, 5).map(({ club }) => createClubSearchButton(club)), ...existing].slice(0, 5));
               resultsElement.classList.add("filledSearchResults");
               return result;
             };
@@ -416,56 +422,45 @@
 
           if (typeof updateTablePlayerCount === "function") {
             const originalUpdateTablePlayerCount = updateTablePlayerCount;
-            updateTablePlayerCount = function updateDatabaseTotalPlayerCount() {
+            updateTablePlayerCount = function updateTablePlayerCountWithDatabaseTotal() {
               const result = originalUpdateTablePlayerCount.apply(this, arguments);
-              if (typeof state !== "undefined" && state.currentPage === "database") {
-                const count = document.querySelector("#totalPlayers")?.textContent?.trim();
-                const tableCount = document.querySelector("#watchlistPlayerCount");
-                if (tableCount && count && count !== "-") {
-                  tableCount.hidden = false;
-                  tableCount.textContent = `${count} players`;
-                }
-              }
+              syncDatabaseShowingCount();
               return result;
             };
           }
+
+          const totalPlayersElement = document.querySelector("#totalPlayers");
+          if (totalPlayersElement) {
+            new MutationObserver(syncDatabaseShowingCount).observe(totalPlayersElement, { childList: true, characterData: true, subtree: true });
+          }
         }
 
-        function expectedPageFromPath() {
-          const path = window.location.pathname;
-          if (/^\/database(?:\/|$)/i.test(path)) return "database";
-          if (/^\/mfl\/stats\/?$/i.test(path)) return "mflstats";
-          if (/^\/mfl(?:\/|$)/i.test(path)) return "mfl";
-          if (/^\/progression(?:\/|$)/i.test(path)) return "progression";
-          if (/^\/watchlist(?:\/|$)/i.test(path)) return "watchlist";
-          if (/^\/my-players(?:\/|$)/i.test(path)) return "myplayers";
-          if (/^\/agents?\/[^/]+(?:\/|$)/i.test(path)) return "agents";
-          if (/^\/clubs?\/[^/]+(?:\/|$)/i.test(path)) return "club";
-          if (/^\/players\/[^/]+\/?$/i.test(path)) return "player";
-          if (/^\/evaluation\/?$/i.test(path)) return "evaluation";
-          if (/^\/settings\/?$/i.test(path)) return "settings";
-          if (/^\/changelog\/?$/i.test(path)) return "changelog";
-          return "home";
-        }
-
-        function finishFirstPaint() {
-          const expectedPage = expectedPageFromPath();
-          let attempts = 0;
-          const settle = () => {
-            attempts += 1;
-            const appBusy = document.documentElement.classList.contains("appBusy") || document.body.classList.contains("appBusy");
-            const pageReady = document.body.dataset.page === expectedPage;
-            if ((!appBusy && pageReady) || attempts > 400) {
-              if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-              requestAnimationFrame(() => requestAnimationFrame(() => {
-                document.body.classList.remove("routeBootLoading");
-                document.documentElement.classList.remove("bootPending");
-              }));
-              return;
+        function finalizeRouteChrome() {
+          const route = routeInfo();
+          if (typeof state !== "undefined") {
+            state.currentPage = route.page;
+            if (route.table && typeof pageTargetFromPath === "function") {
+              const target = pageTargetFromPath(`${window.location.pathname}${window.location.search}`);
+              if (typeof restoreSavedTableState === "function") {
+                restoreSavedTableState(route.page, { view: target?.options?.view });
+              } else if (target?.options?.view) {
+                state.view = target.options.view;
+              }
             }
-            requestAnimationFrame(settle);
-          };
-          requestAnimationFrame(settle);
+          }
+
+          document.body.dataset.page = route.page;
+          document.querySelectorAll(".navButton").forEach((button) => button.classList.toggle("active", button.dataset.page === route.page));
+          if (route.table) {
+            const title = document.querySelector("#tablePageTitle");
+            if (title) title.textContent = typeof tableTitleForPage === "function" ? tableTitleForPage(route.page) : route.title;
+            if (typeof updateViewButtons === "function") updateViewButtons();
+            if (typeof syncQuickFilterLabels === "function") syncQuickFilterLabels();
+            if (typeof showTableBusyState === "function") showTableBusyState();
+          }
+          syncDatabaseShowingCount();
+          if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+          requestAnimationFrame(() => document.documentElement.classList.remove("bootPending"));
         }
 
         async function loadApplicationShell() {
@@ -474,11 +469,10 @@
           const html = await response.text();
           const shell = new DOMParser().parseFromString(html, "text/html");
           shell.querySelectorAll("script").forEach((script) => script.remove());
-          const initial = prepareInitialRoute(shell);
+          prepareInitialShell(shell);
           Array.from(document.body.attributes).forEach((attribute) => document.body.removeAttribute(attribute.name));
           Array.from(shell.body.attributes).forEach((attribute) => document.body.setAttribute(attribute.name, attribute.value));
           document.body.innerHTML = shell.body.innerHTML;
-          if (initial.loadingRoute) document.documentElement.classList.remove("bootPending");
 
           const applicationScript = document.createElement("script");
           applicationScript.src = `/app.js?v=${VERSION}`;
@@ -487,7 +481,7 @@
             installRuntimeFixes();
             rebuildChangelog();
             window.setTimeout(rebuildChangelog, 0);
-            finishFirstPaint();
+            finalizeRouteChrome();
           });
           applicationScript.addEventListener("error", () => {
             document.documentElement.classList.remove("bootPending");
