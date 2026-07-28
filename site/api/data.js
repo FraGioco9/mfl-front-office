@@ -690,8 +690,10 @@ async function pagedData(request, signedWallet) {
   const rules = safeJsonQuery(request.query.filters, []);
 
   rows = rows.filter((row) => {
-    const retirementYears = Number(valueFromRow(row, columns, "retirement_years"));
-    const playerSeasons = Number(valueFromRow(row, columns, "player_seasons"));
+    const retirementValue = valueFromRow(row, columns, "retirement_years");
+    const retirementYears = isBlankValue(retirementValue) ? null : Number(retirementValue);
+    const playerSeasonsValue = valueFromRow(row, columns, "player_seasons");
+    const playerSeasons = isBlankValue(playerSeasonsValue) ? null : Number(playerSeasonsValue);
     if (hideRetired && retirementYears === 0) return false;
     if (hideRetiring && [1, 2, 3].includes(retirementYears)) return false;
     if (scope === "database" && hideMfl && rowIsMflWalletPlayer(row, columns)) return false;
