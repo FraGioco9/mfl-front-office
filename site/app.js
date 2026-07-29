@@ -11467,14 +11467,8 @@ async function startApp() {
   try {
     void ensureFlowWallet();
     applyStoredWalletPermission();
-    await ensureSearchIndexes().catch(() => false);
-    if (!state.bootstrapData?.summary) {
-      await loadSummary();
-    }
-    await Promise.all([
-      loadWalletNames(),
-      loadWalletPreferences(),
-    ]);
+    await loadSummary();
+    await loadWalletPreferences();
     updateAccountState();
     await showHomeShell(initialPage, false, initialTarget.options);
   } finally {
@@ -12411,6 +12405,7 @@ async function startApp() {
     }
     void openClubPage(clubId, view, false);
   }
+  window.mflOpenClubPage = openClubImmediately;
 
   function updateClubLinks() {
     const idColumn = clubIdColumn();
@@ -12777,7 +12772,9 @@ async function startApp() {
     button.addEventListener("click", () => {
       rememberClub(data.clubId);
       if (typeof closeSearch === "function") closeSearch();
-      window.location.assign(`/clubs/${encodeURIComponent(data.clubId)}/contracts`);
+      if (typeof window.mflOpenClubPage === "function") {
+        window.mflOpenClubPage(data.clubId, "contracts");
+      }
     });
     return button;
   }
@@ -13338,6 +13335,31 @@ async function startApp() {
     return route.scope === "club" ? "club" : pageName;
   }
 
+  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);
+
+  function renderTableDestinationShell(pageName) {
+    if (!shellFirstTablePages.has(pageName)) {
+      return;
+    }
+
+    state.currentPage = pageName;
+    document.body.dataset.page = pageName;
+    homePage.hidden = true;
+    progressionPage.hidden = false;
+    mflStatsPage.hidden = true;
+    myPlayersLockedPage.hidden = true;
+    evaluationPage.hidden = true;
+    playerPage.hidden = true;
+    settingsPage.hidden = true;
+    changelogPage.hidden = true;
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+    navButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.page === pageName);
+    });
+    revealAppShell();
+    syncHomeLoginButton();
+  }
+
   function renderIncrementalLoadingState(pageName, route) {
     const loadingPageName = incrementalLoadingPageName(pageName, route);
     const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);
@@ -13470,6 +13492,12 @@ async function startApp() {
       saveTableState();
     }
 
+    const shellFirst = shellFirstTablePages.has(pageName);
+    if (shellFirst) {
+      commitIncrementalLocation(pageName, updateHash, options);
+      renderTableDestinationShell(pageName);
+    }
+
     const route = prepareIncrementalRoute(pageName, {
       ...options,
       ignoreCurrentClubRoute: updateHash,
@@ -13479,7 +13507,13 @@ async function startApp() {
       return originalSetPage.call(this, pageName, updateHash, options);
     }
 
-    commitIncrementalLocation(pageName, updateHash, options);
+    if (!shellFirst) {
+      commitIncrementalLocation(pageName, updateHash, options);
+    } else {
+      syncQuickFilterLabels();
+      updateViewButtons();
+      buildHeader();
+    }
     const loadAndRender = async () => {
       try {
         const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);
@@ -13522,7 +13556,9 @@ async function startApp() {
     button.innerHTML = `<strong>${escapeHtml(entry.name)}</strong><span>Club &middot; #${escapeHtml(entry.clubId)}${divisionHtml}</span>`;
     button.addEventListener("click", () => {
       closeSearch();
-      window.location.assign(`/clubs/${encodeURIComponent(entry.clubId)}/attributes`);
+      if (typeof window.mflOpenClubPage === "function") {
+        window.mflOpenClubPage(entry.clubId, "attributes");
+      }
     });
     return button;
   }
