@@ -3,7 +3,7 @@ export const config = {
   matcher: "/app.js",
 };
 
-export default function middleware(request: Request) {
+export default async function middleware(request: Request) {
   const target = new URL("/api/app-bundle", request.url);
   return fetch(target, {
     headers: {
