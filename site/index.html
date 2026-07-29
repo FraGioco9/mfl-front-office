@@ -1,1 +1,350 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MFL Front Office</title><script>(()=>{const VERSION="1.151.19";const request=new XMLHttpRequest();request.open("GET",`/index-source.html?v=${VERSION}`,false);try{request.send(null)}catch(error){document.body.innerHTML='<main><p>Could not load MFL Front Office.</p></main>';return}if(request.status<200||request.status>=300){document.body.innerHTML='<main><p>Could not load MFL Front Office.</p></main>';return}const original=request.responseText;let source=original;const patches=[{"before":"          url = normalizePagedRequest(url);\n          if (isPagedTableLocation() && isFullPlayerDataRequest(url)) {\n","after":"          url = normalizePagedRequest(url);\n          if (url?.pathname.toLowerCase() === \"/api/data\"\n              && url.searchParams.get(\"mode\") === \"page\"\n              && String(url.searchParams.get(\"scope\") || \"\").toLowerCase() === \"mflstats\") {\n            url = new URL(\"/api/mfl-stats\", window.location.href);\n          }\n          if (isPagedTableLocation() && isFullPlayerDataRequest(url)) {\n","label":"patch 1"},{"before":"    <link href=\"https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap\" rel=\"stylesheet\">\n    <link rel=\"stylesheet\" href=\"/styles.css?v=1.151.9\">\n    <style>\n","after":"    <link href=\"https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap\" rel=\"stylesheet\">\n    <link rel=\"stylesheet\" href=\"/styles.css?v=1.151.19\">\n    <style>\n","label":"patch 2"},{"before":"      body[data-page=\"club\"] #loadingScreen { display: none !important; }\n    </style>\n","after":"      body[data-page=\"club\"] #loadingScreen { display: none !important; }\n\n      body[data-page=\"mflstats\"] #progressionPage { display: none !important; }\n      body[data-page=\"mflstats\"] #mflStatsPage { display: block !important; }\n    </style>\n","label":"patch 3"},{"before":"      (() => {\n        const VERSION = \"1.151.9\";\n        const CHANGELOG_DESCRIPTION = \"Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load\";\n        const TABLE_PAGES = new Set([\"database\", \"mfl\", \"progression\", \"watchlist\", \"myplayers\", \"agents\", \"club\"]);\n","after":"      (() => {\n        const VERSION = \"1.151.19\";\n        const CHANGELOG_DESCRIPTION = \"Load complete MFL wallet stats and keep destination and club page chrome stable while rows load\";\n        const TABLE_PAGES = new Set([\"database\", \"mfl\", \"progression\", \"watchlist\", \"myplayers\", \"agents\", \"club\"]);\n","label":"patch 4"},{"before":"        let pendingQuickFilterPage = \"\";\n\n","after":"        let pendingQuickFilterPage = \"\";\n        let pendingRoutePage = \"\";\n        let stableClubTitleClubId = \"\";\n        let stableClubTitleHtml = \"\";\n        let stableClubTitleText = \"\";\n        let routeChromeObserver = null;\n        let routeChromeScheduled = false;\n\n","label":"patch 5"},{"before":"\n        function prepareInitialShell(doc) {\n","after":"\n        function setRoutePageVisibility(root, route) {\n          const pageIds = [\"homePage\", \"progressionPage\", \"mflStatsPage\", \"myPlayersLockedPage\", \"evaluationPage\", \"playerPage\", \"settingsPage\", \"changelogPage\"];\n          const targetId = route.table\n            ? \"progressionPage\"\n            : {\n                home: \"homePage\",\n                mflstats: \"mflStatsPage\",\n                player: \"playerPage\",\n                evaluation: \"evaluationPage\",\n                settings: \"settingsPage\",\n                changelog: \"changelogPage\",\n              }[route.page];\n\n          pageIds.forEach((id) => {\n            const element = root.getElementById?.(id) || root.querySelector?.(`#${id}`);\n            if (!element) return;\n            const shouldHide = id !== targetId;\n            if (element.hidden !== shouldHide) element.hidden = shouldHide;\n          });\n        }\n\n        function clubTitleIsGeneric(title, route) {\n          const text = String(title?.textContent || \"\").trim();\n          return !text\n            || text === \"Club\"\n            || text === `Club #${route.clubId}`\n            || text === `Club ${route.clubId}`;\n        }\n\n        function rememberStableClubTitle(route = routeInfo()) {\n          if (route.page !== \"club\") return;\n          const title = document.querySelector(\"#tablePageTitle\");\n          if (!title || clubTitleIsGeneric(title, route)) return;\n          stableClubTitleClubId = String(route.clubId);\n          stableClubTitleHtml = title.innerHTML;\n          stableClubTitleText = String(title.textContent || \"\").trim();\n        }\n\n        function statsRouteIsLoading() {\n          if (typeof state === \"undefined\") return true;\n          const busy = document.documentElement.classList.contains(\"appBusy\")\n            || document.body.classList.contains(\"appBusy\")\n            || document.body.classList.contains(\"loading\")\n            || Number(state.interactionBusyDepth || 0) > 0;\n          return state.currentPage !== \"mflstats\" || busy;\n        }\n\n        function enforceStableRouteChrome() {\n          const route = pendingRoutePage === \"mflstats\"\n            ? { page: \"mflstats\", title: \"MFL Stats\", table: false }\n            : routeInfo();\n\n          if (route.page === \"mflstats\") {\n            setRoutePageVisibility(document, route);\n            if (document.body.dataset.page !== \"mflstats\") document.body.dataset.page = \"mflstats\";\n            document.querySelectorAll(\".navButton[data-page]\").forEach((button) => {\n              button.classList.toggle(\"active\", button.dataset.page === \"mfl\");\n            });\n\n            if (statsRouteIsLoading()) {\n              [\"mflStatsTotalPlayers\", \"mflStatsPackablePlayers\", \"mflStatsAgedPlayers\", \"mflStatsOtherPlayers\"].forEach((id) => {\n                const value = document.getElementById(id);\n                if (value && value.textContent !== \"-\") value.textContent = \"-\";\n              });\n              const distribution = document.getElementById(\"mflStatsAgeDistribution\");\n              if (distribution?.childNodes.length) distribution.replaceChildren();\n            } else {\n              pendingRoutePage = \"\";\n            }\n            return;\n          }\n\n          if (route.page !== \"club\") return;\n\n          setRoutePageVisibility(document, route);\n          if (document.body.dataset.page !== \"club\") document.body.dataset.page = \"club\";\n          document.querySelectorAll(\".navButton.active\").forEach((button) => button.classList.remove(\"active\"));\n\n          const title = document.querySelector(\"#tablePageTitle\");\n          if (title) {\n            const sameClubStableTitle = stableClubTitleClubId === String(route.clubId) && stableClubTitleHtml;\n            const currentTitleText = String(title.textContent || \"\").trim();\n\n            if (sameClubStableTitle\n                && stableClubTitleText.includes(\" - \")\n                && !currentTitleText.includes(\" - \")) {\n              if (title.innerHTML !== stableClubTitleHtml) title.innerHTML = stableClubTitleHtml;\n            } else if (!clubTitleIsGeneric(title, route)) {\n              stableClubTitleClubId = String(route.clubId);\n              stableClubTitleHtml = title.innerHTML;\n              stableClubTitleText = currentTitleText;\n            } else if (sameClubStableTitle) {\n              if (title.innerHTML !== stableClubTitleHtml) title.innerHTML = stableClubTitleHtml;\n            } else {\n              const preparedTitle = clubTitleText(route);\n              if (title.textContent !== preparedTitle) title.textContent = preparedTitle;\n              if (!clubTitleIsGeneric(title, route)) {\n                stableClubTitleClubId = String(route.clubId);\n                stableClubTitleHtml = title.innerHTML;\n                stableClubTitleText = String(title.textContent || \"\").trim();\n              }\n            }\n          }\n\n          const views = document.querySelector(\"#progressionPage .views\");\n          views?.querySelectorAll(\".viewButton\").forEach((button) => {\n            const allowed = CLUB_VIEWS.includes(button.dataset.view);\n            if (button.hidden === allowed) button.hidden = !allowed;\n            button.classList.toggle(\"active\", allowed && button.dataset.view === route.view);\n          });\n        }\n\n        function scheduleStableRouteChrome() {\n          if (routeChromeScheduled) return;\n          routeChromeScheduled = true;\n          queueMicrotask(() => {\n            routeChromeScheduled = false;\n            enforceStableRouteChrome();\n          });\n        }\n\n        function installPreStartRouteGuard() {\n          rememberStableClubTitle();\n          enforceStableRouteChrome();\n\n          routeChromeObserver?.disconnect();\n          routeChromeObserver = new MutationObserver(scheduleStableRouteChrome);\n          routeChromeObserver.observe(document.body, {\n            attributes: true,\n            attributeFilter: [\"class\", \"data-page\", \"hidden\"],\n            childList: true,\n            characterData: true,\n            subtree: true,\n          });\n\n          document.addEventListener(\"pointerdown\", (event) => {\n            const target = event.target instanceof Element ? event.target : null;\n            const route = routeInfo();\n            const viewButton = target?.closest(\".viewButton[data-view]\");\n            if (route.page === \"club\" && viewButton && CLUB_VIEWS.includes(viewButton.dataset.view)) {\n              rememberStableClubTitle(route);\n              queueMicrotask(scheduleStableRouteChrome);\n              requestAnimationFrame(enforceStableRouteChrome);\n            }\n\n            if (viewButton?.dataset.view === \"stats\"\n                && (document.body.dataset.page === \"mfl\" || /^\\/mfl(?:\\/|$)/i.test(window.location.pathname))) {\n              pendingRoutePage = \"mflstats\";\n              enforceStableRouteChrome();\n            }\n          }, true);\n\n          window.addEventListener(\"popstate\", scheduleStableRouteChrome);\n        }\n\n        function prepareInitialShell(doc) {\n","label":"patch 6"},{"before":"          } else if (route.page === \"mflstats\") {\n            const distribution = doc.getElementById(\"mflStatsAgeDistribution\");\n            if (distribution) distribution.innerHTML = '<p class=\"mflStatsEmpty\">Loading players...</p>';\n          } else if (route.page === \"player\") {\n","after":"          } else if (route.page === \"mflstats\") {\n            [\"mflStatsTotalPlayers\", \"mflStatsPackablePlayers\", \"mflStatsAgedPlayers\", \"mflStatsOtherPlayers\"].forEach((id) => {\n              const value = doc.getElementById(id);\n              if (value) value.textContent = \"-\";\n            });\n            doc.getElementById(\"mflStatsAgeDistribution\")?.replaceChildren();\n          } else if (route.page === \"player\") {\n","label":"patch 7"},{"before":"              const route = routeInfo();\n              if (route.page === \"club\") prepareClubChrome(document, route);\n              return result;\n","after":"              const route = routeInfo();\n              if (route.page === \"club\") {\n                enforceStableRouteChrome();\n              }\n              return result;\n","label":"patch 8"},{"before":"          document.body.innerHTML = shell.body.innerHTML;\n\n","after":"          document.body.innerHTML = shell.body.innerHTML;\n          installPreStartRouteGuard();\n          document.documentElement.classList.remove(\"bootPending\");\n\n","label":"patch 9"},{"before":"            prepareClubChrome(document, route);\n            if (typeof window.applyExactPlayerTableWidths === \"function\") {\n","after":"            prepareClubChrome(document, route);\n            rememberStableClubTitle(route);\n            enforceStableRouteChrome();\n            if (typeof window.applyExactPlayerTableWidths === \"function\") {\n","label":"patch 10"},{"before":"            finalizeRouteChrome();\n          });\n","after":"            finalizeRouteChrome();\n            enforceStableRouteChrome();\n          });\n","label":"patch 11"}];try{for(const patch of patches){const first=source.indexOf(patch.before);if(first<0||source.indexOf(patch.before,first+patch.before.length)>=0)throw new Error(`${patch.label} did not match exactly once.`);source=source.slice(0,first)+patch.after+source.slice(first+patch.before.length)}}catch(error){console.error("[MFL Front Office] Index patch failed; loading the original page.",error);source=original}document.open();document.write(source);document.close()})();</script></head><body></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MFL Front Office</title>
+    <script>
+      (() => {
+        const VERSION = "1.151.20";
+
+        function routeGuardFunction() {
+          const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
+          const CLUB_DIVISIONS = {
+            1: "Diamond",
+            2: "Platinum",
+            3: "Gold",
+            4: "Silver",
+            5: "Bronze",
+            6: "Iron",
+            7: "Steel",
+            8: "Stone",
+            9: "Wood",
+            10: "Flint",
+          };
+          const PAGE_IDS = [
+            "homePage",
+            "progressionPage",
+            "mflStatsPage",
+            "myPlayersLockedPage",
+            "evaluationPage",
+            "playerPage",
+            "settingsPage",
+            "changelogPage",
+          ];
+
+          let pendingStats = false;
+          let statsReady = false;
+          let statsSnapshot = null;
+          let pendingClubView = "";
+          let stableClubId = "";
+          let stableClubTitleHtml = "";
+          let stableClubTitleText = "";
+          let scheduled = false;
+
+          function routeInfo() {
+            const path = String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
+            if (/^\/mfl\/stats$/i.test(path)) return { page: "mflstats" };
+            if (/^\/watchlist(?:\/[^/]+)?$/i.test(path)) return { page: "watchlist", table: true };
+
+            const clubMatch = path.match(/^\/clubs?\/([^/]+)(?:\/([^/]+))?$/i);
+            if (clubMatch) {
+              const view = {
+                attributes: "attributes",
+                contracts: "contracts",
+                "current-season": "current",
+                "all-time": "all",
+              }[String(clubMatch[2] || "attributes").toLowerCase()] || "attributes";
+              return {
+                page: "club",
+                table: true,
+                clubId: decodeURIComponent(clubMatch[1]),
+                view: pendingClubView || view,
+              };
+            }
+            return { page: "" };
+          }
+
+          function setOnlyPage(pageName) {
+            const targetId = pageName === "mflstats" ? "mflStatsPage" : "progressionPage";
+            PAGE_IDS.forEach((id) => {
+              const element = document.getElementById(id);
+              if (!element) return;
+              const hidden = id !== targetId;
+              if (element.hidden !== hidden) element.hidden = hidden;
+            });
+          }
+
+          function readClubMetadata(clubId) {
+            try {
+              const metadata = JSON.parse(sessionStorage.getItem(`mfl-club-shell:${clubId}`) || "null");
+              return metadata && String(metadata.clubId) === String(clubId) ? metadata : null;
+            } catch {
+              return null;
+            }
+          }
+
+          function preparedClubTitle(clubId) {
+            const metadata = readClubMetadata(clubId);
+            const name = String(metadata?.name || "").trim();
+            if (!name) return `Club #${clubId}`;
+            const division = String(metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "").trim();
+            return division ? `${name} - ${division}` : name;
+          }
+
+          function genericClubTitle(text, clubId) {
+            const value = String(text || "").trim();
+            return !value || value === "Club" || value === `Club #${clubId}` || value === `Club ${clubId}`;
+          }
+
+          function captureClubTitle(route) {
+            const title = document.getElementById("tablePageTitle");
+            if (!title || genericClubTitle(title.textContent, route.clubId)) return;
+            const text = String(title.textContent || "").trim();
+            if (stableClubId === String(route.clubId)
+                && stableClubTitleText.includes(" - ")
+                && !text.includes(" - ")) return;
+            stableClubId = String(route.clubId);
+            stableClubTitleHtml = title.innerHTML;
+            stableClubTitleText = text;
+          }
+
+          function enforceClub(route) {
+            setOnlyPage("club");
+            if (document.body.dataset.page !== "club") document.body.dataset.page = "club";
+            document.querySelectorAll(".navButton.active").forEach((button) => button.classList.remove("active"));
+
+            const title = document.getElementById("tablePageTitle");
+            if (title) {
+              const sameClub = stableClubId === String(route.clubId) && stableClubTitleHtml;
+              const currentText = String(title.textContent || "").trim();
+              if (!genericClubTitle(currentText, route.clubId)
+                  && (!sameClub || (currentText.includes(" - ") && !stableClubTitleText.includes(" - ")))) {
+                captureClubTitle(route);
+              } else if (sameClub && title.innerHTML !== stableClubTitleHtml) {
+                title.innerHTML = stableClubTitleHtml;
+              } else if (!sameClub) {
+                const prepared = preparedClubTitle(route.clubId);
+                if (title.textContent !== prepared) title.textContent = prepared;
+                captureClubTitle(route);
+              }
+            }
+
+            const views = document.querySelector("#progressionPage .views");
+            views?.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+              const allowed = CLUB_VIEWS.has(button.dataset.view);
+              if (button.hidden === allowed) button.hidden = !allowed;
+              button.classList.toggle("active", allowed && button.dataset.view === route.view);
+            });
+
+            if (pendingClubView && route.view === pendingClubView) pendingClubView = "";
+          }
+
+          function isBusy() {
+            return document.documentElement.classList.contains("appBusy")
+              || document.body.classList.contains("appBusy")
+              || document.body.classList.contains("loading")
+              || document.body.classList.contains("tableRowsLoading")
+              || (typeof state !== "undefined" && Number(state.interactionBusyDepth || 0) > 0);
+          }
+
+          function captureStatsSnapshot() {
+            const total = document.getElementById("mflStatsTotalPlayers");
+            const text = String(total?.textContent || "").trim();
+            if (!/^\d[\d,.]*$/.test(text)) return;
+            statsSnapshot = {
+              total: text,
+              packable: String(document.getElementById("mflStatsPackablePlayers")?.textContent || "-").trim(),
+              aged: String(document.getElementById("mflStatsAgedPlayers")?.textContent || "-").trim(),
+              other: String(document.getElementById("mflStatsOtherPlayers")?.textContent || "-").trim(),
+              distribution: document.getElementById("mflStatsAgeDistribution")?.innerHTML || "",
+            };
+          }
+
+          function blankStats() {
+            [
+              "mflStatsTotalPlayers",
+              "mflStatsPackablePlayers",
+              "mflStatsAgedPlayers",
+              "mflStatsOtherPlayers",
+            ].forEach((id) => {
+              const value = document.getElementById(id);
+              if (value && value.textContent !== "-") value.textContent = "-";
+            });
+            const distribution = document.getElementById("mflStatsAgeDistribution");
+            if (distribution?.childNodes.length) distribution.replaceChildren();
+          }
+
+          function restoreStatsSnapshot() {
+            if (!statsSnapshot) return false;
+            const values = {
+              mflStatsTotalPlayers: statsSnapshot.total,
+              mflStatsPackablePlayers: statsSnapshot.packable,
+              mflStatsAgedPlayers: statsSnapshot.aged,
+              mflStatsOtherPlayers: statsSnapshot.other,
+            };
+            Object.entries(values).forEach(([id, value]) => {
+              const element = document.getElementById(id);
+              if (element) element.textContent = value;
+            });
+            const distribution = document.getElementById("mflStatsAgeDistribution");
+            if (distribution) distribution.innerHTML = statsSnapshot.distribution;
+            return true;
+          }
+
+          function enforceStats() {
+            setOnlyPage("mflstats");
+            if (document.body.dataset.page !== "mflstats") document.body.dataset.page = "mflstats";
+            document.querySelectorAll(".navButton[data-page]").forEach((button) => {
+              button.classList.toggle("active", button.dataset.page === "mfl");
+            });
+
+            captureStatsSnapshot();
+            const appOnStats = typeof state !== "undefined" && state.currentPage === "mflstats";
+            if (!statsReady && appOnStats && !isBusy() && restoreStatsSnapshot()) {
+              statsReady = true;
+              pendingStats = false;
+              return;
+            }
+            if (!statsReady) blankStats();
+          }
+
+          function enforceWatchlist() {
+            setOnlyPage("watchlist");
+            if (document.body.dataset.page !== "watchlist") document.body.dataset.page = "watchlist";
+            const switcher = document.getElementById("watchlistSwitcher");
+            if (switcher) {
+              if (switcher.hidden) switcher.hidden = false;
+              switcher.removeAttribute("aria-hidden");
+              if (switcher.style.display) switcher.style.removeProperty("display");
+              if (switcher.style.visibility) switcher.style.removeProperty("visibility");
+            }
+          }
+
+          function enforce() {
+            if (document.getElementById("appShell")) {
+              document.documentElement.classList.remove("bootPending");
+            }
+
+            const route = pendingStats ? { page: "mflstats" } : routeInfo();
+            if (route.page === "mflstats") enforceStats();
+            else if (route.page === "club") enforceClub(route);
+            else if (route.page === "watchlist") enforceWatchlist();
+          }
+
+          function schedule() {
+            if (scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(() => {
+              scheduled = false;
+              enforce();
+            });
+          }
+
+          const previousFetch = window.fetch.bind(window);
+          window.fetch = (input, init) => {
+            try {
+              const value = input instanceof Request ? input.url : String(input || "");
+              const url = new URL(value, window.location.href);
+              if (url.pathname.toLowerCase() === "/api/data"
+                  && url.searchParams.get("mode") === "page"
+                  && String(url.searchParams.get("scope") || "").toLowerCase() === "mflstats") {
+                return previousFetch("/api/mfl-stats", init);
+              }
+            } catch {
+              // Preserve the original request when it cannot be parsed.
+            }
+            return previousFetch(input, init);
+          };
+
+          document.addEventListener("pointerdown", (event) => {
+            const target = event.target instanceof Element ? event.target : null;
+            const nav = target?.closest(".navButton[data-page]");
+            if (nav && nav.dataset.page !== "mfl") {
+              pendingStats = false;
+              statsReady = false;
+              statsSnapshot = null;
+            }
+
+            const viewButton = target?.closest(".viewButton[data-view]");
+            const route = routeInfo();
+            if (route.page === "club" && viewButton && CLUB_VIEWS.has(viewButton.dataset.view)) {
+              captureClubTitle(route);
+              pendingClubView = viewButton.dataset.view;
+              schedule();
+            }
+
+            if (viewButton?.dataset.view === "stats"
+                && (document.body.dataset.page === "mfl" || /^\/mfl(?:\/|$)/i.test(window.location.pathname))) {
+              pendingStats = true;
+              statsReady = false;
+              statsSnapshot = null;
+              enforceStats();
+            }
+          }, true);
+
+          window.addEventListener("popstate", () => {
+            pendingStats = false;
+            pendingClubView = "";
+            statsReady = false;
+            statsSnapshot = null;
+            schedule();
+          });
+
+          new MutationObserver(schedule).observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class", "data-page", "hidden", "style"],
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
+
+          enforce();
+        }
+
+        const request = new XMLHttpRequest();
+        request.open("GET", `/index-source.html?v=${VERSION}`, false);
+
+        try {
+          request.send(null);
+        } catch (error) {
+          document.body.innerHTML = '<main><p>Could not load MFL Front Office.</p></main>';
+          return;
+        }
+
+        if (request.status < 200 || request.status >= 300) {
+          document.body.innerHTML = '<main><p>Could not load MFL Front Office.</p></main>';
+          return;
+        }
+
+        let source = request.responseText;
+        source = source.replace('/styles.css?v=1.151.9', `/styles.css?v=${VERSION}`);
+        source = source.replace('const VERSION = "1.151.9";', `const VERSION = "${VERSION}";`);
+        source = source.replace(
+          'const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";',
+          'const CHANGELOG_DESCRIPTION = "Load every MFL wallet player and keep watchlist and club page chrome stable while table rows load";',
+        );
+
+        const routeStyles = `
+          <style id="route-shell-stability">
+            body[data-page="mflstats"] #progressionPage { display: none !important; }
+            body[data-page="mflstats"] #mflStatsPage { display: block !important; }
+            body[data-page="watchlist"] #watchlistSwitcher {
+              display: flex !important;
+              visibility: visible !important;
+            }
+          </style>
+        `;
+        const routeGuard = `(${routeGuardFunction.toString()})();`;
+
+        source = source.replace("</head>", `${routeStyles}</head>`);
+        source = source.replace("</body>", `<script>${routeGuard}<\/script></body>`);
+
+        document.open();
+        document.write(source);
+        document.close();
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

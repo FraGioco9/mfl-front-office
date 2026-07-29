@@ -84,14 +84,23 @@ function hasHiddenJoinedDate(row, columns) {
   return joinedDay !== null && HIDDEN_JOINED_DAYS.has(joinedDay);
 }
 
-function compareOverallDescending(a, b, columns) {
-  const aValue = Number(valueFromRow(a, columns, "overall"));
-  const bValue = Number(valueFromRow(b, columns, "overall"));
+function compareOverallDescending(a, b) {
+  const aValue = Number(valueFromRow(a.row, a.columns, "overall"));
+  const bValue = Number(valueFromRow(b.row, b.columns, "overall"));
   const aValid = Number.isFinite(aValue);
   const bValid = Number.isFinite(bValue);
   if (aValid && bValid && aValue !== bValue) return bValue - aValue;
   if (aValid !== bValid) return aValid ? -1 : 1;
-  return Number(valueFromRow(b, columns, "player_id") || 0) - Number(valueFromRow(a, columns, "player_id") || 0);
+  return Number(valueFromRow(b.row, b.columns, "player_id") || 0)
+    - Number(valueFromRow(a.row, a.columns, "player_id") || 0);
+}
+
+function manifestDataFiles(manifest) {
+  const chunks = Array.isArray(manifest?.chunks)
+    ? manifest.chunks.map((chunk) => String(chunk?.file || "").trim()).filter(Boolean)
+    : [];
+  if (chunks.length) return [...new Set(chunks)];
+  return [manifest?.files?.mfl_public?.file || "players_mfl_public.json"];
 }
 
 module.exports = async function mflStatsHandler(request, response) {
@@ -100,16 +109,28 @@ module.exports = async function mflStatsHandler(request, response) {
 
   try {
     const manifest = await readDataJson("manifest.json", request);
-    const fileName = manifest?.files?.mfl_public?.file || "players_mfl_public.json";
-    const data = await readDataJson(fileName, request);
-    const columns = Array.isArray(data?.columns) ? data.columns : [];
-    const sourceRows = Array.isArray(data?.rows) ? data.rows : [];
-    const rows = sourceRows
-      .filter((row) => isMflWalletPlayer(row, columns) && !hasHiddenJoinedDate(row, columns))
-      .sort((a, b) => compareOverallDescending(a, b, columns));
-    const selectedColumns = STATS_COLUMNS.filter((column) => columns.includes(column));
-    const selectedIndexes = selectedColumns.map((column) => columns.indexOf(column));
-    const selectedRows = rows.map((row) => selectedIndexes.map((index) => row[index]));
+    const fileNames = manifestDataFiles(manifest);
+    const dataSets = await Promise.all(fileNames.map((fileName) => readDataJson(fileName, request)));
+    const selectedColumns = STATS_COLUMNS.filter((column) => dataSets.some((data) => (
+      Array.isArray(data?.columns) && data.columns.includes(column)
+    )));
+    const playersById = new Map();
+
+    dataSets.forEach((data) => {
+      const columns = Array.isArray(data?.columns) ? data.columns : [];
+      const rows = Array.isArray(data?.rows) ? data.rows : [];
+      rows.forEach((row) => {
+        if (!isMflWalletPlayer(row, columns) || hasHiddenJoinedDate(row, columns)) return;
+        const playerId = String(valueFromRow(row, columns, "player_id") || "").trim();
+        if (!playerId || playersById.has(playerId)) return;
+        playersById.set(playerId, { row, columns });
+      });
+    });
+
+    const entries = Array.from(playersById.values()).sort(compareOverallDescending);
+    const selectedRows = entries.map(({ row, columns }) => (
+      selectedColumns.map((column) => valueFromRow(row, columns, column))
+    ));
 
     response.status(200).json({
       columns: selectedColumns,
