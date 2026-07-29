@@ -18,6 +18,7 @@
         const originalFetch = window.fetch.bind(window);
         const validPageSizes = new Set([25, 50, 100, 250]);
         let searchDataAllowed = false;
+        let searchBootstrapData = null;
         let searchBootstrapPromise = null;
         let evaluationSearchLoadPromise = null;
 
@@ -119,12 +120,16 @@
 
         function loadSearchBootstrap() {
           searchDataAllowed = true;
+          if (searchBootstrapData) {
+            return Promise.resolve(searchBootstrapData);
+          }
           if (!searchBootstrapPromise) {
             searchBootstrapPromise = originalFetch("/api/data?mode=bootstrap", { cache: "no-store" })
               .then(async (response) => {
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(data.error || "Could not load search data.");
-                return data;
+                searchBootstrapData = data;
+                return searchBootstrapData;
               })
               .catch((error) => {
                 searchBootstrapPromise = null;
@@ -308,7 +313,6 @@
           "physical_prog_all",
           "goalkeeping_prog_all",
         ];
-        let pendingQuickFilterPage = "";
 
         function versionParts(value) {
           const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -601,7 +605,9 @@
           button.innerHTML = `<strong>${escapeHtml(club.name)}</strong><span>Club &middot; #${escapeHtml(club.clubId)}${divisionHtml}</span>`;
           button.addEventListener("click", () => {
             if (typeof closeSearch === "function") closeSearch();
-            window.location.assign(`/clubs/${encodeURIComponent(club.clubId)}/attributes`);
+            if (typeof window.mflOpenClubPage === "function") {
+              window.mflOpenClubPage(club.clubId, "attributes");
+            }
           });
           return button;
         }
@@ -634,14 +640,6 @@
           if (pageName === "mfl" && newMintsInput?.checked && packableInput) packableInput.checked = false;
           if (newMintsLabel) newMintsLabel.textContent = pageName === "mfl" ? "Only aged players" : "Only new mints";
           hidePlayerCounter();
-        }
-
-        function previewNavigationTarget(event) {
-          const link = event.target instanceof Element ? event.target.closest(".navButton[data-page]") : null;
-          if (!link) return;
-          const pageName = String(link.dataset.page || "");
-          if (!TABLE_PAGES.has(pageName)) return;
-          pendingQuickFilterPage = pageName;
         }
 
         function seedClubHeader(route) {
@@ -679,25 +677,6 @@
         }
 
         function installRuntimeFixes() {
-          document.addEventListener("pointerdown", previewNavigationTarget, true);
-          document.addEventListener("click", previewNavigationTarget, true);
-
-          if (typeof syncQuickFilterLabels === "function") {
-            const originalSyncQuickFilterLabels = syncQuickFilterLabels;
-            syncQuickFilterLabels = function syncQuickFiltersWithoutDestinationFlash() {
-              const result = originalSyncQuickFilterLabels.apply(this, arguments);
-              const destinationReady = pendingQuickFilterPage
-                && document.body.dataset.page === pendingQuickFilterPage
-                && typeof state !== "undefined"
-                && state.currentPage === pendingQuickFilterPage;
-              if (destinationReady) {
-                previewQuickFilters(pendingQuickFilterPage);
-                pendingQuickFilterPage = "";
-              }
-              return result;
-            };
-          }
-
           if (typeof showTableBusyState === "function") {
             const originalShowTableBusyState = showTableBusyState;
             showTableBusyState = function showTableBusyStateWithHiddenPager() {
