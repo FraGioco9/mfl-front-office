@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.117.0";
+        const VERSION = "1.117.1";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -516,8 +516,8 @@
         }
 
         let source = request.responseText;
-        source = source.replace('/styles.css?v=1.117.0', `/styles.css?v=${VERSION}`);
-        source = source.replace('const VERSION = "1.117.0";', `const VERSION = "${VERSION}";`);
+        source = source.replace('/styles.css?v=1.117.1', `/styles.css?v=${VERSION}`);
+        source = source.replace('const VERSION = "1.117.1";', `const VERSION = "${VERSION}";`);
 
         source = source.replace(
           '      if (mflStatsAgeDistribution) {\n        mflStatsAgeDistribution.innerHTML = \'<p class="mflStatsEmpty">Loading players...</p>\';\n      }',
@@ -543,6 +543,38 @@
             #playerSearchResults.filledSearchResults > .searchResult {
               min-height: 0;
               box-sizing: border-box;
+            }
+
+            html:has(body[data-page="evaluation"]),
+            body[data-page="evaluation"] {
+              overflow-x: hidden !important;
+              scrollbar-width: none;
+            }
+
+            html:has(body[data-page="evaluation"])::-webkit-scrollbar,
+            body[data-page="evaluation"]::-webkit-scrollbar {
+              display: none;
+              width: 0;
+              height: 0;
+            }
+
+            body[data-page="evaluation"] #evaluationPage,
+            body[data-page="evaluation"] #evaluationPage .tableShell,
+            body[data-page="evaluation"] #evaluationPage .tableScroller {
+              max-width: 100%;
+              overflow-x: hidden !important;
+            }
+
+            body[data-page="evaluation"] #evaluationPage .evaluationTable {
+              width: 100% !important;
+              min-width: 0 !important;
+              table-layout: fixed;
+            }
+
+            body[data-page="evaluation"] #evaluationPage .evaluationTable th,
+            body[data-page="evaluation"] #evaluationPage .evaluationTable td {
+              white-space: normal;
+              overflow-wrap: anywhere;
             }
           </style>
         `;

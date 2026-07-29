@@ -11494,7 +11494,7 @@ async function startApp() {
   }
 }
 (() => {
-  const currentVersion = "1.117.0";
+  const currentVersion = "1.117.1";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
@@ -12681,7 +12681,7 @@ async function startApp() {
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.117.0";
+  const VERSION = "1.117.1";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12884,7 +12884,7 @@ async function startApp() {
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Keep every changelog description on one line";
+    description.textContent = "Prioritize Search results and hide Evaluation scrollbars";
     item.append(version, description);
     return item;
   }
@@ -13664,9 +13664,37 @@ async function startApp() {
     }
   }
 
+  function prioritizeTypedSearchResults() {
+    if (!playerSearchResults || !normalizeSearchText(playerSearchInput.value.trim())) {
+      return;
+    }
+
+    const resultPriority = (result) => {
+      const searchKey = String(result.dataset.searchKey || "");
+      if (result.classList.contains("clubSearchResult") || searchKey.startsWith("club:")) {
+        return 1;
+      }
+      if (searchKey.startsWith("agent:")) {
+        return 2;
+      }
+      return 0;
+    };
+    const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
+      .sort((a, b) => resultPriority(a) - resultPriority(b))
+      .slice(0, 5);
+
+    if (!results.length) {
+      return;
+    }
+
+    playerSearchResults.replaceChildren(...results);
+    playerSearchResults.classList.add("filledSearchResults");
+  }
+
   renderSearchResultsNow = function renderSearchResultsFromBootstrap() {
     const result = originalRenderSearchResultsNow.apply(this, arguments);
     injectBootstrapClubResults();
+    prioritizeTypedSearchResults();
     return result;
   };
 
