@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const APP_PATH = path.join(__dirname, "..", "app.js");
-const PATCH_VERSION = "1.151.14";
+const PATCH_VERSION = "1.151.15";
 let bundledSourcePromise = null;
 
 function replaceExact(source, before, after, label) {
@@ -273,7 +273,7 @@ function browserPatch() {
       const version = document.createElement("span");
       version.textContent = "v" + VERSION;
       const description = document.createElement("p");
-      description.textContent = "Show the MFL stats shell immediately and keep club page chrome fixed while table rows load";
+      description.textContent = "Activate destination-first MFL Stats loading and keep club title and page chrome fixed while rows load";
       item.append(version, description);
       patchList.prepend(item);
       const meta = section.querySelector(".changelogMinorMeta");
