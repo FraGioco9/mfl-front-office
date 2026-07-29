@@ -99,6 +99,25 @@ function browserPatch() {
   window.setTimeout(() => {
     const footer = document.querySelector('.siteFooter a[data-page="changelog"]');
     if (footer) footer.textContent = "MFL Front Office v" + VERSION;
+
+    const list = document.querySelector(".changelogList");
+    const section = Array.from(list?.querySelectorAll(":scope > .changelogMinorSection") || [])
+      .find((entry) => entry.querySelector(".changelogMinorVersion")?.textContent?.trim() === "v1.151");
+    const patchList = section?.querySelector(".changelogPatchList");
+    const alreadyListed = Array.from(patchList?.children || [])
+      .some((item) => item.querySelector(":scope > span")?.textContent?.trim() === "v" + VERSION);
+    if (patchList && !alreadyListed) {
+      const item = document.createElement("li");
+      const version = document.createElement("span");
+      version.textContent = "v" + VERSION;
+      const description = document.createElement("p");
+      description.textContent = "Load all MFL wallet stats players and keep MFL stats and club page chrome stable while rows load";
+      item.append(version, description);
+      patchList.prepend(item);
+      const meta = section.querySelector(".changelogMinorMeta");
+      const count = patchList.children.length;
+      if (meta) meta.textContent = count + (count === 1 ? " patch" : " patches");
+    }
   }, 0);
 })();
 `;
