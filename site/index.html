@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.151.29";
+        const VERSION = "1.151.30";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -520,7 +520,7 @@
         source = source.replace('const VERSION = "1.151.9";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";',
-          'const CHANGELOG_DESCRIPTION = "Preserve table filters while page data loads";',
+          'const CHANGELOG_DESCRIPTION = "Order recent searches by click time and synchronize filter counts and My Players quick filters immediately";',
         );
 
         source = source.replace(
