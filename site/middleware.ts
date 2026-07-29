@@ -1,4 +1,4 @@
-/* v1.151.15: serve the stabilized single app bundle before route startup. */
+/* v1.151.16: serve the stabilized single app bundle before route startup. */
 export const config = {
   matcher: "/app.js",
 };
