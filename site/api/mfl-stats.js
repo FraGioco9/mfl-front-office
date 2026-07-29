@@ -7,7 +7,6 @@ const HIDDEN_JOINED_DAYS = new Set([
   Date.UTC(2025, 9, 9) / 86400000,
   Date.UTC(2025, 9, 10) / 86400000,
 ]);
-const PLAYER_DATA_FILE = /^players_(?:\d{4}|public|mfl_public)\.json$/i;
 
 async function findFile(candidates) {
   for (const candidate of candidates) {
@@ -40,14 +39,13 @@ function requestOrigin(request) {
 }
 
 async function readDataJson(fileName, request) {
-  const normalizedName = path.basename(String(fileName || ""));
-  const filePath = await findDataFile(normalizedName);
+  const filePath = await findDataFile(fileName);
   if (filePath) return JSON.parse(await fs.readFile(filePath, "utf8"));
 
   const origin = requestOrigin(request);
-  if (!origin) throw new Error(`Data file not found: ${normalizedName}`);
-  const response = await fetch(`${origin}/data/${encodeURIComponent(normalizedName)}`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Data file not found: ${normalizedName}`);
+  if (!origin) throw new Error(`Data file not found: ${fileName}`);
+  const response = await fetch(`${origin}/data/${encodeURIComponent(fileName)}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Data file not found: ${fileName}`);
   return response.json();
 }
 
@@ -97,40 +95,12 @@ function compareOverallDescending(a, b) {
     - Number(valueFromRow(a.row, a.columns, "player_id") || 0);
 }
 
-function addManifestPlayerFiles(value, output) {
-  if (typeof value === "string") {
-    const fileName = path.basename(value.trim());
-    if (PLAYER_DATA_FILE.test(fileName)) output.add(fileName);
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((entry) => addManifestPlayerFiles(entry, output));
-    return;
-  }
-  if (!value || typeof value !== "object") return;
-  Object.values(value).forEach((entry) => addManifestPlayerFiles(entry, output));
-}
-
 function manifestDataFiles(manifest) {
-  const files = new Set();
-  addManifestPlayerFiles(manifest, files);
-
-  const publicFile = path.basename(String(manifest?.files?.public?.file || "").trim());
-  const mflFile = path.basename(String(manifest?.files?.mfl_public?.file || "").trim());
-  if (PLAYER_DATA_FILE.test(publicFile)) files.add(publicFile);
-  if (PLAYER_DATA_FILE.test(mflFile)) files.add(mflFile);
-  files.add("players_public.json");
-  files.add("players_mfl_public.json");
-
-  const rowCount = Number(manifest?.row_count || manifest?.total_rows || 0);
-  const hintedChunks = Number(manifest?.chunk_count || manifest?.chunks_count || 0);
-  const estimatedChunks = Number.isFinite(rowCount) && rowCount > 0 ? Math.ceil(rowCount / 5000) : 0;
-  const scanCount = Math.min(100, Math.max(hintedChunks, estimatedChunks));
-  for (let index = 0; index <= scanCount; index += 1) {
-    files.add(`players_${String(index).padStart(4, "0")}.json`);
-  }
-
-  return [...files];
+  const chunks = Array.isArray(manifest?.chunks)
+    ? manifest.chunks.map((chunk) => String(chunk?.file || "").trim()).filter(Boolean)
+    : [];
+  if (chunks.length) return [...new Set(chunks)];
+  return [manifest?.files?.mfl_public?.file || "players_mfl_public.json"];
 }
 
 module.exports = async function mflStatsHandler(request, response) {
@@ -140,28 +110,20 @@ module.exports = async function mflStatsHandler(request, response) {
   try {
     const manifest = await readDataJson("manifest.json", request);
     const fileNames = manifestDataFiles(manifest);
-    const settled = await Promise.allSettled(fileNames.map((fileName) => readDataJson(fileName, request)));
-    const dataSets = settled
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value)
-      .filter((data) => Array.isArray(data?.columns) && Array.isArray(data?.rows));
-
-    if (!dataSets.length) throw new Error("No player data files were available.");
-
-    const selectedColumns = STATS_COLUMNS.filter((column) => dataSets.some((data) => data.columns.includes(column)));
+    const dataSets = await Promise.all(fileNames.map((fileName) => readDataJson(fileName, request)));
+    const selectedColumns = STATS_COLUMNS.filter((column) => dataSets.some((data) => (
+      Array.isArray(data?.columns) && data.columns.includes(column)
+    )));
     const playersById = new Map();
 
     dataSets.forEach((data) => {
-      const columns = data.columns;
-      data.rows.forEach((row) => {
+      const columns = Array.isArray(data?.columns) ? data.columns : [];
+      const rows = Array.isArray(data?.rows) ? data.rows : [];
+      rows.forEach((row) => {
         if (!isMflWalletPlayer(row, columns) || hasHiddenJoinedDate(row, columns)) return;
         const playerId = String(valueFromRow(row, columns, "player_id") || "").trim();
-        if (!playerId) return;
-
-        const current = playersById.get(playerId);
-        if (!current || columns.length > current.columns.length) {
-          playersById.set(playerId, { row, columns });
-        }
+        if (!playerId || playersById.has(playerId)) return;
+        playersById.set(playerId, { row, columns });
       });
     });
 

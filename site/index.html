@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.151.21";
+        const VERSION = "1.151.20";
 
         function routeGuardFunction() {
           const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
@@ -84,50 +84,29 @@
             }
           }
 
+          function preparedClubTitle(clubId) {
+            const metadata = readClubMetadata(clubId);
+            const name = String(metadata?.name || "").trim();
+            if (!name) return `Club #${clubId}`;
+            const division = String(metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "").trim();
+            return division ? `${name} - ${division}` : name;
+          }
+
           function genericClubTitle(text, clubId) {
             const value = String(text || "").trim();
             return !value || value === "Club" || value === `Club #${clubId}` || value === `Club ${clubId}`;
           }
 
-          function hasRichDivisionMarkup(title) {
-            if (!title) return false;
-            return Boolean(title.querySelector("span"))
-              || /color\s*:/i.test(title.getAttribute("style") || "")
-              || /color\s*:/i.test(title.innerHTML);
-          }
-
-          function preparedClubTitle(clubId) {
-            const metadata = readClubMetadata(clubId);
-            const name = String(metadata?.name || "").trim();
-            if (!name) return { text: `Club #${clubId}`, html: "" };
-            const division = String(metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "").trim();
-            const color = String(metadata?.divisionColor || "").trim();
-            if (!division) return { text: name, html: "" };
-            if (!color) return { text: `${name} - ${division}`, html: "" };
-
-            const safeName = document.createElement("span");
-            safeName.textContent = name;
-            const safeDivision = document.createElement("span");
-            safeDivision.textContent = division;
-            safeDivision.style.color = color;
-            return { text: `${name} - ${division}`, html: `${safeName.innerHTML} - ${safeDivision.outerHTML}` };
-          }
-
           function captureClubTitle(route) {
             const title = document.getElementById("tablePageTitle");
-            if (!title || genericClubTitle(title.textContent, route.clubId)) return false;
+            if (!title || genericClubTitle(title.textContent, route.clubId)) return;
             const text = String(title.textContent || "").trim();
-            const sameClub = stableClubId === String(route.clubId) && stableClubTitleHtml;
-            const currentRich = hasRichDivisionMarkup(title);
-            const stableRich = /<span\b|color\s*:/i.test(stableClubTitleHtml);
-
-            if (sameClub && stableClubTitleText.includes(" - ") && !text.includes(" - ")) return false;
-            if (sameClub && stableRich && !currentRich && text === stableClubTitleText) return false;
-
+            if (stableClubId === String(route.clubId)
+                && stableClubTitleText.includes(" - ")
+                && !text.includes(" - ")) return;
             stableClubId = String(route.clubId);
             stableClubTitleHtml = title.innerHTML;
             stableClubTitleText = text;
-            return true;
           }
 
           function enforceClub(route) {
@@ -139,22 +118,14 @@
             if (title) {
               const sameClub = stableClubId === String(route.clubId) && stableClubTitleHtml;
               const currentText = String(title.textContent || "").trim();
-              const currentRich = hasRichDivisionMarkup(title);
-              const stableRich = /<span\b|color\s*:/i.test(stableClubTitleHtml);
-              const currentComplete = !genericClubTitle(currentText, route.clubId) && currentText.includes(" - ");
-
-              if (currentComplete && (!sameClub || (currentRich && !stableRich))) {
+              if (!genericClubTitle(currentText, route.clubId)
+                  && (!sameClub || (currentText.includes(" - ") && !stableClubTitleText.includes(" - ")))) {
                 captureClubTitle(route);
-              } else if (sameClub && (genericClubTitle(currentText, route.clubId)
-                  || (!currentText.includes(" - ") && stableClubTitleText.includes(" - "))
-                  || (stableRich && !currentRich && currentText === stableClubTitleText))) {
-                if (title.innerHTML !== stableClubTitleHtml) title.innerHTML = stableClubTitleHtml;
+              } else if (sameClub && title.innerHTML !== stableClubTitleHtml) {
+                title.innerHTML = stableClubTitleHtml;
               } else if (!sameClub) {
                 const prepared = preparedClubTitle(route.clubId);
-                if (prepared.html) title.innerHTML = prepared.html;
-                else if (title.textContent !== prepared.text) title.textContent = prepared.text;
-                captureClubTitle(route);
-              } else if (!currentRich && !stableRich && currentComplete && title.innerHTML !== stableClubTitleHtml) {
+                if (title.textContent !== prepared) title.textContent = prepared;
                 captureClubTitle(route);
               }
             }
@@ -169,10 +140,18 @@
             if (pendingClubView && route.view === pendingClubView) pendingClubView = "";
           }
 
+          function isBusy() {
+            return document.documentElement.classList.contains("appBusy")
+              || document.body.classList.contains("appBusy")
+              || document.body.classList.contains("loading")
+              || document.body.classList.contains("tableRowsLoading")
+              || (typeof state !== "undefined" && Number(state.interactionBusyDepth || 0) > 0);
+          }
+
           function captureStatsSnapshot() {
             const total = document.getElementById("mflStatsTotalPlayers");
             const text = String(total?.textContent || "").trim();
-            if (!/^\d[\d,.]*$/.test(text)) return false;
+            if (!/^\d[\d,.]*$/.test(text)) return;
             statsSnapshot = {
               total: text,
               packable: String(document.getElementById("mflStatsPackablePlayers")?.textContent || "-").trim(),
@@ -180,7 +159,6 @@
               other: String(document.getElementById("mflStatsOtherPlayers")?.textContent || "-").trim(),
               distribution: document.getElementById("mflStatsAgeDistribution")?.innerHTML || "",
             };
-            return true;
           }
 
           function blankStats() {
@@ -221,14 +199,14 @@
               button.classList.toggle("active", button.dataset.page === "mfl");
             });
 
+            captureStatsSnapshot();
             const appOnStats = typeof state !== "undefined" && state.currentPage === "mflstats";
-            if (appOnStats && captureStatsSnapshot()) {
+            if (!statsReady && appOnStats && !isBusy() && restoreStatsSnapshot()) {
               statsReady = true;
               pendingStats = false;
+              return;
             }
-
-            if (statsReady) restoreStatsSnapshot();
-            else blankStats();
+            if (!statsReady) blankStats();
           }
 
           function enforceWatchlist() {
@@ -244,19 +222,20 @@
           }
 
           function enforce() {
-            const shellReady = Boolean(document.getElementById("appShell"));
+            if (document.getElementById("appShell")) {
+              document.documentElement.classList.remove("bootPending");
+            }
+
             const route = pendingStats ? { page: "mflstats" } : routeInfo();
             if (route.page === "mflstats") enforceStats();
             else if (route.page === "club") enforceClub(route);
             else if (route.page === "watchlist") enforceWatchlist();
-
-            if (shellReady) document.documentElement.classList.remove("bootPending");
           }
 
           function schedule() {
             if (scheduled) return;
             scheduled = true;
-            queueMicrotask(() => {
+            requestAnimationFrame(() => {
               scheduled = false;
               enforce();
             });
@@ -270,7 +249,7 @@
               if (url.pathname.toLowerCase() === "/api/data"
                   && url.searchParams.get("mode") === "page"
                   && String(url.searchParams.get("scope") || "").toLowerCase() === "mflstats") {
-                return previousFetch("/api/mfl-stats", { ...init, cache: "no-store" });
+                return previousFetch("/api/mfl-stats", init);
               }
             } catch {
               // Preserve the original request when it cannot be parsed.
@@ -292,7 +271,7 @@
             if (route.page === "club" && viewButton && CLUB_VIEWS.has(viewButton.dataset.view)) {
               captureClubTitle(route);
               pendingClubView = viewButton.dataset.view;
-              enforceClub({ ...route, view: pendingClubView });
+              schedule();
             }
 
             if (viewButton?.dataset.view === "stats"
@@ -301,10 +280,6 @@
               statsReady = false;
               statsSnapshot = null;
               enforceStats();
-            } else if (viewButton && viewButton.dataset.view !== "stats" && pendingStats) {
-              pendingStats = false;
-              statsReady = false;
-              statsSnapshot = null;
             }
           }, true);
 
@@ -347,7 +322,7 @@
         source = source.replace('const VERSION = "1.151.9";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";',
-          'const CHANGELOG_DESCRIPTION = "Load complete MFL wallet stats and keep every refreshed page shell stable while table rows load";',
+          'const CHANGELOG_DESCRIPTION = "Load every MFL wallet player and keep watchlist and club page chrome stable while table rows load";',
         );
 
         const routeStyles = `
@@ -363,10 +338,7 @@
         const routeGuard = `(${routeGuardFunction.toString()})();`;
 
         source = source.replace("</head>", `${routeStyles}</head>`);
-        source = source.replace(
-          '<body data-page="home">',
-          `<body data-page="home"><script>${routeGuard}<\/script>`,
-        );
+        source = source.replace("</body>", `<script>${routeGuard}<\/script></body>`);
 
         document.open();
         document.write(source);
