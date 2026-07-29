@@ -1,7 +1,15 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@5617f23e98a8c7ab922ad19210bb946ea7c65983/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.117.4 - Extend the empty Evaluation page to the footer */
-body[data-page="evaluation"] #evaluationPage {
-  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px);
-  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px);
+/* v1.117.5 - Keep Search and Advanced Settings above page content */
+#searchModal:not([hidden]),
+#advancedSettingsModal:not([hidden]) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483645 !important;
+}
+
+#searchModal > .searchDialog,
+#advancedSettingsModal > .advancedSettingsDialog {
+  position: relative;
+  z-index: 1;
 }
