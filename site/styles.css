@@ -1,31 +1,20 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@742e7c36491dba2bd6e4a74f9ccaf668c73cb731/site/styles.css");
 
-/* v1.117.2 - Keep Evaluation search results above page content */
-body[data-page="evaluation"] #evaluationPage,
-body[data-page="evaluation"] #evaluationPage .evaluationTopBar,
-body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  overflow: visible !important;
-}
-
+/* v1.117.3 - Layer Evaluation search results above page content without changing overflow */
 body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
   position: relative;
   z-index: 1000;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
+body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+body[data-page="evaluation"] #evaluationPage .evaluationSearch {
   position: relative;
   z-index: 1001;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  position: relative;
-  z-index: 1002;
-}
-
 body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
   position: absolute;
-  z-index: 1003 !important;
+  z-index: 1002 !important;
 }
 
 body[data-page="evaluation"] #evaluationPanel {
