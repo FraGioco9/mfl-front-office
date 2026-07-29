@@ -1,8 +1,5 @@
 {
   "functions": {
-    "api/app-bundle.js": {
-      "includeFiles": "app.js"
-    },
     "api/data.js": {
       "includeFiles": "api/data-files/**"
     },
