@@ -11494,7 +11494,7 @@ async function startApp() {
   }
 }
 (() => {
-  const currentVersion = "1.116.25";
+  const currentVersion = "1.117.0";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
@@ -12681,7 +12681,7 @@ async function startApp() {
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.116.25";
+  const VERSION = "1.117.0";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];

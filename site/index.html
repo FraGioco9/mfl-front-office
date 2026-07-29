@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.116.25";
+        const VERSION = "1.117.0";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -516,8 +516,8 @@
         }
 
         let source = request.responseText;
-        source = source.replace('/styles.css?v=1.116.25', `/styles.css?v=${VERSION}`);
-        source = source.replace('const VERSION = "1.116.25";', `const VERSION = "${VERSION}";`);
+        source = source.replace('/styles.css?v=1.117.0', `/styles.css?v=${VERSION}`);
+        source = source.replace('const VERSION = "1.117.0";', `const VERSION = "${VERSION}";`);
 
         source = source.replace(
           '      if (mflStatsAgeDistribution) {\n        mflStatsAgeDistribution.innerHTML = \'<p class="mflStatsEmpty">Loading players...</p>\';\n      }',

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Permanent entrypoint for rebuilding the MFL database.
 
-Run this file directly to execute the complete ownership-driven rebuild workflow.
+Run this file directly to execute the complete API-paged rebuild workflow.
 """
 
 import sqlite3
@@ -168,22 +168,13 @@ def install_database_filename() -> None:
 def fetch_active_and_retired_player_sources(
     limiter: run_flow_rebuild_paged.RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Fetch only active and retired PlayMFL sources using the combined Flow IDs."""
-    if not run_flow_rebuild_paged.FLOW_WALLET_PLAYER_IDS:
-        raise RuntimeError("Wallet player IDs were not loaded before player batching")
-
-    all_flow_ids = sorted(
-        {
-            player_id
-            for wallet_ids in run_flow_rebuild_paged.FLOW_WALLET_PLAYER_IDS.values()
-            for player_id in wallet_ids
-        },
-        reverse=True,
-    )
-    anchors = run_flow_rebuild_paged.anchors_from_flow_ids(all_flow_ids)
+    """Fetch active and retired PlayMFL sources using the prepared API batches."""
+    if run_flow_rebuild_paged.PLAYER_BATCH_ANCHORS is None:
+        raise RuntimeError("Player ID batches were not prepared before player loading")
+    anchors = list(run_flow_rebuild_paged.PLAYER_BATCH_ANCHORS)
 
     run_flow_rebuild.log(
-        "Ownership-derived PlayMFL batches: "
+        "API-derived PlayMFL batches: "
         f"active {1 + len(anchors)}, retired {1 + len(anchors)}"
     )
 
@@ -367,7 +358,6 @@ def rebuild_directly() -> int:
 if __name__ == "__main__":
     install_database_filename()
     install_concise_progression_logging()
-    run_flow_rebuild_paged.FLOW_SPECIAL_WALLET_RANGE_SIZE = 3000
     run_flow_rebuild_paged.fetch_all_player_sources = fetch_active_and_retired_player_sources
     install_flow_wallet_id_cache()
     run_flow_rebuild.main = rebuild_directly

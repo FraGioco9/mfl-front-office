@@ -20,7 +20,7 @@ CANDIDATE_PATH = Path(__file__).with_name("mfl_progression_candidate.db")
 REPORT_PATH = Path(__file__).with_name("mfl_rebuild_report.json")
 
 LEADERBOARD_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/leaderboards/users/global"
-PLAYERS_URL = "https://api.playmfl.com/players"
+PLAYERS_URL = "https://api.playmfl.com/prod/players"
 PROGRESSIONS_URL = "https://api.playmfl.com/players/progressions"
 
 MFL_TRADE_WALLET_ADDRESS = "0x6fec8986261ecf49"
