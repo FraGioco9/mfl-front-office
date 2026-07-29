@@ -8937,6 +8937,10 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
   }
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
 
+  if (options.deferRules) {
+    return;
+  }
+
   const allowedColumns = new Set(availableFilterColumns(pageName));
   filterRules.replaceChildren();
 
@@ -10658,7 +10662,7 @@ function incrementalDataQuery(route, page = 1) {
     if (hideMflPlayersInput?.checked) query.set("hideMfl", "1");
     if (packablePlayersInput?.checked) query.set("packableOnly", "1");
     if (newMintsInput.checked) query.set("newMintsOnly", "1");
-    const rules = readFilterRules();
+    const rules = Array.isArray(route.filterRules) ? route.filterRules : readFilterRules();
     if (rules.length) query.set("filters", JSON.stringify(rules));
   }
 
@@ -13292,10 +13296,34 @@ async function startApp() {
   const originalSetView = setView;
   const originalRenderSearchResultsNow = renderSearchResultsNow;
 
+  function filterRulesForLoading(pageName, savedState, viewName) {
+    const normalizedView = normalizeViewForPage(viewName || savedState?.view, pageName);
+    const columns = (pageName === "mfl" || pageName === "agents")
+      ? baseFilterColumns.filter((column) => column !== agentColumn && (pageName !== "mfl" || column !== contractStatusFilterColumn))
+      : [...baseFilterColumns];
+
+    if (normalizedView === "current") {
+      columns.push(...statColumns.map((column) => `${column}_prog_current_season`));
+    } else if (normalizedView === "all") {
+      columns.push(...statColumns.map((column) => `${column}_prog_all`));
+    }
+
+    const allowedColumns = new Set(columns);
+    return (savedState?.rules || [])
+      .filter((rule) => allowedColumns.has(rule.column))
+      .filter((rule) => (rule.operator === "between" || rule.operator === "during")
+        ? String(rule.value || "").trim() && String(rule.valueTo || "").trim()
+        : String(rule.value || "").trim())
+      .map((rule) => ({ ...rule }));
+  }
+
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    if (!clubTarget && tablePages.has(pageName)) {
-      restoreSavedTableState(pageName, { view: options.view });
+    const savedPageState = !clubTarget && tablePages.has(pageName)
+      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
+      : null;
+    if (savedPageState) {
+      restoreSavedTableState(pageName, { view: options.view, deferRules: true });
     } else if (clubTarget) {
       state.view = clubTarget.view;
       state.page = 1;
@@ -13317,7 +13345,11 @@ async function startApp() {
       }
     }
 
-    return incrementalRouteTarget(pageName, options);
+    const route = incrementalRouteTarget(pageName, options);
+    if (route && savedPageState) {
+      route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);
+    }
+    return route;
   }
 
   function commitIncrementalLocation(pageName, updateHash, options = {}) {
@@ -13415,6 +13447,9 @@ async function startApp() {
 
   async function renderLoadedIncrementalRoute(pageName, updateHash, options, route) {
     await requestIncrementalRoute(route, 1);
+    if (tablePages.has(pageName)) {
+      restoreSavedTableState(pageName, { view: route.view || options.view });
+    }
     state.dataAccess = currentDataAccess(pageName);
     state.incrementalApplying = true;
     try {
@@ -13612,6 +13647,9 @@ async function startApp() {
     }
     const loadAndRender = async () => {
       await requestIncrementalRoute(route, 1);
+      if (tablePages.has(pageName)) {
+        restoreSavedTableState(pageName, { view: route.view || options.view });
+      }
       state.incrementalApplying = true;
       try {
         buildHeader();
