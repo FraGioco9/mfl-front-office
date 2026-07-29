@@ -8606,8 +8606,18 @@ function activeFilterCount() {
   return count;
 }
 
-function updateFilterSummary() {
-  const count = activeFilterCount();
+function activeFilterCountFromSavedRules(rules = []) {
+  return rules.filter((rule) => {
+    const operator = String(rule?.operator || "");
+    const value = String(rule?.value || "").trim();
+    const valueTo = String(rule?.valueTo || "").trim();
+    return operator === "between" || operator === "during"
+      ? Boolean(value && valueTo)
+      : Boolean(value);
+  }).length;
+}
+
+function updateFilterSummary(count = activeFilterCount()) {
   filterSummary.textContent = `${count} active`;
 }
 
@@ -8938,6 +8948,7 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
 
   if (options.deferRules) {
+    updateFilterSummary(activeFilterCountFromSavedRules(savedState.rules));
     return;
   }
 
@@ -8958,6 +8969,7 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
 
   populateAddFilterSelect(pageName);
   refreshRuleColumnSelects(pageName);
+  updateFilterSummary();
 }
 
 function readFilterDraftRules() {
@@ -8989,6 +9001,7 @@ function restoreFilterDraftRules(rules = []) {
 
   populateAddFilterSelect();
   refreshRuleColumnSelects();
+  updateFilterSummary();
 }
 
 function openFilters() {
@@ -9017,6 +9030,7 @@ function closeFilters(commitChanges = false) {
 function clearAdvancedFilters(applyNow = true) {
   filterRules.replaceChildren();
   populateAddFilterSelect();
+  updateFilterSummary();
 
   if (!applyNow) {
     return;
@@ -13416,6 +13430,7 @@ async function startApp() {
     });
 
     if (tableRoute) {
+      syncQuickFilterLabels();
       if (route.scope === "club") {
         const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
         tablePageTitle.textContent = club?.name || "Club";
@@ -13620,11 +13635,34 @@ async function startApp() {
           .filter(Boolean);
 
     const existingResults = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"));
+    const clubResults = clubs.slice(0, 5).map(clubSearchResult);
+
+    if (!query) {
+      const resultsByKey = new Map(
+        [...existingResults, ...clubResults]
+          .filter((result) => result.dataset.searchKey)
+          .map((result) => [result.dataset.searchKey, result]),
+      );
+      const chronologicalResults = state.recentSearchItems
+        .slice(0, 5)
+        .map((key) => resultsByKey.get(key))
+        .filter(Boolean);
+
+      if (chronologicalResults.length) {
+        playerSearchResults.replaceChildren(...chronologicalResults);
+        playerSearchResults.classList.add("filledSearchResults");
+      } else {
+        playerSearchResults.innerHTML = '<div class="searchHint">Recent searches will appear here.</div>';
+        playerSearchResults.classList.remove("filledSearchResults");
+      }
+      return;
+    }
+
     const playerResults = existingResults.filter((result) => !result.dataset.searchKey?.startsWith("agent:"));
     const agentResults = existingResults.filter((result) => result.dataset.searchKey?.startsWith("agent:"));
     const mergedResults = [
       ...playerResults,
-      ...clubs.slice(0, 5).map(clubSearchResult),
+      ...clubResults,
       ...agentResults,
     ].slice(0, 5);
 
