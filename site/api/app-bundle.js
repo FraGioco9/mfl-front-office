@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const APP_PATH = path.join(__dirname, "..", "app.js");
-const PATCH_VERSION = "1.151.15";
+const PATCH_VERSION = "1.151.16";
 let bundledSourcePromise = null;
 
 function replaceExact(source, before, after, label) {
@@ -127,6 +127,25 @@ function browserPatch() {
     });
   }
 
+  function clearClubLoadingState() {
+    document.documentElement.classList.remove("appBusy");
+    document.body.classList.remove(
+      "appBusy",
+      "tableRowsLoading",
+      "clubViewLoading",
+      "clubViewSwitching",
+    );
+    const loading = document.getElementById("loadingScreen");
+    if (loading) {
+      loading.hidden = true;
+      loading.setAttribute("aria-hidden", "true");
+      loading.classList.remove("failed", "complete", "leaving");
+    }
+    const body = document.getElementById("tableBody");
+    const empty = document.getElementById("emptyState");
+    if (empty && body?.children.length) empty.hidden = true;
+  }
+
   function restoreClubChrome(loading = false) {
     const route = currentClubRoute();
     if (!route || route.clubId !== savedClubId) return;
@@ -158,6 +177,8 @@ function browserPatch() {
         empty.textContent = "Loading players...";
       }
       document.body.classList.add("tableRowsLoading");
+    } else {
+      clearClubLoadingState();
     }
   }
 
@@ -174,7 +195,6 @@ function browserPatch() {
       }
       const pending = original.apply(this, arguments);
       if (statsTarget) showMflStatsLoadingShell();
-      if (clubTarget) restoreClubChrome(true);
       try {
         return await pending;
       } finally {
@@ -196,7 +216,6 @@ function browserPatch() {
       }
       const pending = original.apply(this, arguments);
       if (statsTarget) showMflStatsLoadingShell();
-      if (clubTarget) restoreClubChrome(true);
       try {
         return await pending;
       } finally {
@@ -213,10 +232,8 @@ function browserPatch() {
       if (!route || pageName !== "club") return original.apply(this, arguments);
       rememberClubTitle();
       restoreClubChrome(true);
-      const pending = original.apply(this, arguments);
-      restoreClubChrome(true);
       try {
-        return await pending;
+        return await original.apply(this, arguments);
       } finally {
         restoreClubChrome(false);
       }
@@ -273,7 +290,7 @@ function browserPatch() {
       const version = document.createElement("span");
       version.textContent = "v" + VERSION;
       const description = document.createElement("p");
-      description.textContent = "Activate destination-first MFL Stats loading and keep club title and page chrome fixed while rows load";
+      description.textContent = "Show route chrome before startup and finish club view loading after rows render";
       item.append(version, description);
       patchList.prepend(item);
       const meta = section.querySelector(".changelogMinorMeta");
@@ -302,7 +319,14 @@ async function buildBundledSource() {
     "club loading-title replacement",
   );
 
-  return `${source}${browserPatch()}`;
+  source = replaceExact(
+    source,
+    "\nstartApp();",
+    `${browserPatch()}\nstartApp();`,
+    "pre-start route patch injection",
+  );
+
+  return source;
 }
 
 module.exports = async function appBundleHandler(_request, response) {
