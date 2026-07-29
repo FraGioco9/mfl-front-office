@@ -216,7 +216,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.151.9">
+    <link rel="stylesheet" href="/styles.css?v=1.116.24">
     <style>
       html.bootPending body { visibility: hidden; }
       #watchlistPlayerCount { display: none !important; }
@@ -246,8 +246,7 @@
   <body data-page="home">
     <script>
       (() => {
-        const VERSION = "1.151.9";
-        const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";
+        const VERSION = "1.116.24";
         const TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"]);
         const CLUB_VIEWS = ["attributes", "contracts", "current", "all"];
         const CLUB_DIVISIONS = {
@@ -523,7 +522,6 @@
             const description = item.querySelector(":scope > p")?.textContent?.trim() || "";
             if (!entries.has(version)) entries.set(version, description);
           });
-          entries.set(`v${VERSION}`, CHANGELOG_DESCRIPTION);
 
           const groups = new Map();
           entries.forEach((description, version) => {

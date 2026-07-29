@@ -11494,20 +11494,12 @@ async function startApp() {
   }
 }
 (() => {
-  const currentVersion = "1.149.74";
+  const currentVersion = "1.116.24";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
 
-  const recoveredChangelog = [
-    ["1.149.74", "Keep every table column continuously visible during sidebar transitions and place recent patches in the v1.149 section"],
-    ["1.149.73", "Keep every table column visible during sidebar transitions and normalize the changelog"],
-    ["1.149.72", "Restore static source loading and remove the Vercel app bundle wrapper"],
-    ["1.149.71", "Limit notes to 100 characters, remember watchlist views, smooth sidebar transitions, and fix player pages"],
-    ["1.149.70", "Keep the current version visible in the footer"],
-    ["1.149.69", "Persist the last selected view for each watchlist"],
-    ["1.149.68", "Improve sidebar transitions and player page data loading"],
-  ];
+  const recoveredChangelog = [];
 
   function normalizePatchText(entry, label, description) {
     const version = entry.querySelector("span");
@@ -11533,6 +11525,7 @@ async function startApp() {
   }
 
   function syncChangelog() {
+    if (!recoveredChangelog.length) return true;
     const changelog = document.querySelector(".changelogList");
     if (!changelog) return false;
 
@@ -12688,7 +12681,7 @@ async function startApp() {
 
 /* Consolidated from v1500-club-polish.js */
 (() => {
-  const VERSION = "1.151.1";
+  const VERSION = "1.116.24";
   const MAX_SEARCH_RESULTS = 5;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
@@ -12891,7 +12884,7 @@ async function startApp() {
     const version = document.createElement("span");
     version.textContent = `v${VERSION}`;
     const description = document.createElement("p");
-    description.textContent = "Cache loaded route data until refresh and show destination-first local loading states";
+    description.textContent = "Rebuild the complete changelog from v1.0.0 with SemVer-classified minor and patch releases";
     item.append(version, description);
     return item;
   }
@@ -13015,7 +13008,6 @@ async function startApp() {
 
   function initialize() {
     setFooterVersion();
-    addChangelogSection();
     finalizeSearchResults();
   }
 
