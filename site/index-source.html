@@ -642,7 +642,6 @@
           const pageName = String(link.dataset.page || "");
           if (!TABLE_PAGES.has(pageName)) return;
           pendingQuickFilterPage = pageName;
-          previewQuickFilters(pageName);
         }
 
         function seedClubHeader(route) {
@@ -687,11 +686,13 @@
             const originalSyncQuickFilterLabels = syncQuickFilterLabels;
             syncQuickFilterLabels = function syncQuickFiltersWithoutDestinationFlash() {
               const result = originalSyncQuickFilterLabels.apply(this, arguments);
-              if (pendingQuickFilterPage) {
+              const destinationReady = pendingQuickFilterPage
+                && document.body.dataset.page === pendingQuickFilterPage
+                && typeof state !== "undefined"
+                && state.currentPage === pendingQuickFilterPage;
+              if (destinationReady) {
                 previewQuickFilters(pendingQuickFilterPage);
-                if (typeof state !== "undefined" && state.currentPage === pendingQuickFilterPage) {
-                  pendingQuickFilterPage = "";
-                }
+                pendingQuickFilterPage = "";
               }
               return result;
             };

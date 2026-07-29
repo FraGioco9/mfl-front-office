@@ -2943,7 +2943,6 @@ function tableTitleForPage(pageName) {
 
 function renderTableLoadingShell(pageName) {
   state.currentPage = pageName;
-  syncQuickFilterLabels();
   const tablePage = tablePages.has(pageName);
 
   if (!tablePage) {
@@ -2951,6 +2950,7 @@ function renderTableLoadingShell(pageName) {
   }
 
   restoreSavedTableState(pageName);
+  syncQuickFilterLabels();
   updateViewButtons();
   tablePageTitle.textContent = tableTitleForPage(pageName);
   emptyState.hidden = false;
@@ -3085,7 +3085,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   state.currentPage = pageName;
-  syncQuickFilterLabels();
   homePage.hidden = pageName !== "home";
   progressionPage.hidden = !tablePage;
   mflStatsPage.hidden = !mflStatsActive;
@@ -3101,6 +3100,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     updateViewButtons();
     buildHeader();
   }
+  syncQuickFilterLabels();
   emptyState.textContent = pageName === "watchlist"
     ? "No players in your watchlist yet."
     : pageName === "myplayers"
@@ -6314,7 +6314,7 @@ async function loadBootstrapData() {
 }
 
 async function ensureSearchIndexes() {
-  if (state.searchIndexesLoaded && state.searchIndex.length) {
+  if (state.searchIndexesLoaded) {
     return true;
   }
 
