@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.151.30";
+        const VERSION = "1.151.31";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -520,7 +520,7 @@
         source = source.replace('const VERSION = "1.151.9";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";',
-          'const CHANGELOG_DESCRIPTION = "Order recent searches by click time and synchronize filter counts and My Players quick filters immediately";',
+          'const CHANGELOG_DESCRIPTION = "Keep the five recent Search result boxes fixed while opening the popup";',
         );
 
         source = source.replace(
@@ -533,6 +533,20 @@
             body[data-page="watchlist"] #watchlistSwitcher {
               display: flex !important;
               visibility: visible !important;
+            }
+
+            #searchModal > .searchDialog {
+              transform: none !important;
+              transition: opacity 180ms ease !important;
+            }
+
+            #playerSearchResults.filledSearchResults {
+              overflow: hidden;
+            }
+
+            #playerSearchResults.filledSearchResults > .searchResult {
+              min-height: 0;
+              box-sizing: border-box;
             }
           </style>
         `;
