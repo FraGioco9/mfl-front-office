@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.116.24">
+    <link rel="stylesheet" href="/styles.css?v=1.116.25">
   </head>
   <body data-page="home">
     <div id="loadingScreen" class="loadingScreen" role="status" aria-live="polite" hidden aria-hidden="true">
@@ -369,57 +369,58 @@
           <h2>Changelog</h2>
           <p>All pushed updates for MFL Front Office, newest first.</p>
           <ol class="changelogList">
-              <li><span>v1.116.24</span><p>Rebuild the complete changelog from v1.0.0 with SemVer-classified minor and patch releases</p></li>
+              <li><span>v1.116.25</span><p>Keep every changelog description on one line</p></li>
+              <li><span>v1.116.24</span><p>Rebuild all releases from v1.0.0 with SemVer classification</p></li>
               <li><span>v1.116.23</span><p>Keep the five recent Search result boxes fixed while opening the popup</p></li>
-              <li><span>v1.116.22</span><p>Order recent searches by click time and synchronize filter counts and My Players quick filters immediately</p></li>
+              <li><span>v1.116.22</span><p>Order recent searches and sync filter and My Players controls</p></li>
               <li><span>v1.116.21</span><p>Preserve table filters while page data loads</p></li>
-              <li><span>v1.116.20</span><p>Commit destination quick filters before loading and retain search data across in-app navigation</p></li>
-              <li><span>v1.116.19</span><p>Change quick filters with the destination page and retain loaded search data until refresh</p></li>
-              <li><span>v1.116.18</span><p>Stabilize first club view widths, preload MFL Stats overall filters, and commit Database/MFL navigation before quick filters</p></li>
-              <li><span>v1.116.17</span><p>Highlight sidebar destinations immediately and preserve loaded club names with colored divisions across views</p></li>
-              <li><span>v1.116.16</span><p>Load correct MFL wallet stats and render club and Stats layouts before their data arrives</p></li>
-              <li><span>v1.116.15</span><p>Keep club views stable, open MFL Stats on the first click, and render club tables immediately</p></li>
-              <li><span>v1.116.14</span><p>Load complete MFL wallet stats and preserve stable page and club chrome while table rows load</p></li>
-              <li><span>v1.116.13</span><p>Load complete MFL wallet stats and keep every refreshed page shell stable while table rows load</p></li>
-              <li><span>v1.116.12</span><p>Load every MFL wallet player and keep watchlist and club page chrome stable while table rows load</p></li>
-              <li><span>v1.116.11</span><p>Keep club page chrome fixed during refresh and view changes, highlight loading destinations, and load every MFL stats player</p></li>
-              <li><span>v1.116.10</span><p>Load every eligible player and keep refreshed club pages fixed while only table rows load</p></li>
-              <li><span>v1.116.9</span><p>Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load</p></li>
-              <li><span>v1.116.8</span><p>Load complete club squads and keep refreshed club page content fixed while table rows load</p></li>
-              <li><span>v1.116.7</span><p>Remove table row counters, show destination quick filters immediately, and standardize table cell padding</p></li>
-              <li><span>v1.116.6</span><p>Show the loaded Database page over the complete player total and keep refreshed page chrome visible and stable while table rows load</p></li>
-              <li><span>v1.116.5</span><p>Include clubs in global search results, show the full Database player total, and stabilize refreshed page views and layout</p></li>
-              <li><span>v1.116.4</span><p>Load complete search indexes on activation, enforce page-sized table requests, preserve refreshed routes during loading, and remove homepage opt-in flicker</p></li>
-              <li><span>v1.116.3</span><p>Load live homepage totals, defer complete search indexes until activation, repair changelog sections, and keep table routes page-sized</p></li>
+              <li><span>v1.116.20</span><p>Load destination filters first and retain search data in-app</p></li>
+              <li><span>v1.116.19</span><p>Change filters with the page and retain search data until refresh</p></li>
+              <li><span>v1.116.18</span><p>Stabilize club columns and preload MFL Stats filters before navigation</p></li>
+              <li><span>v1.116.17</span><p>Highlight destinations and preserve colored club titles across views</p></li>
+              <li><span>v1.116.16</span><p>Fix MFL wallet stats and show club and Stats shells before data</p></li>
+              <li><span>v1.116.15</span><p>Stabilize club views and open MFL Stats and club tables immediately</p></li>
+              <li><span>v1.116.14</span><p>Load all MFL stats and keep page and club chrome stable</p></li>
+              <li><span>v1.116.13</span><p>Load all MFL stats and keep refreshed page shells stable</p></li>
+              <li><span>v1.116.12</span><p>Load all MFL wallet players and stabilize watchlist and club chrome</p></li>
+              <li><span>v1.116.11</span><p>Stabilize club chrome and loading destinations; load all MFL stats</p></li>
+              <li><span>v1.116.10</span><p>Load all eligible players and stabilize refreshed club pages</p></li>
+              <li><span>v1.116.9</span><p>Keep blank retirement data and stabilize club-table loading</p></li>
+              <li><span>v1.116.8</span><p>Load full club squads and stabilize refreshed club pages</p></li>
+              <li><span>v1.116.7</span><p>Remove row counts, show filters early, and normalize cell padding</p></li>
+              <li><span>v1.116.6</span><p>Show the loaded Database and keep refreshed page chrome stable</p></li>
+              <li><span>v1.116.5</span><p>Add clubs to Search, correct Database totals, and stabilize pages</p></li>
+              <li><span>v1.116.4</span><p>Load Search on demand and request one table page at a time</p></li>
+              <li><span>v1.116.3</span><p>Load live totals, defer Search data, and use paged table routes</p></li>
               <li><span>v1.116.2</span><p>Load complete search indexes only when Search is opened</p></li>
-              <li><span>v1.116.1</span><p>Cache loaded route data until refresh and show destination-first local loading states</p></li>
-              <li><span>v1.116.0</span><p>Replace full-page loading with interaction locking, prioritized search bootstrap, and incremental route data</p></li>
+              <li><span>v1.116.1</span><p>Cache routes until refresh and show destination-first loading</p></li>
+              <li><span>v1.116.0</span><p>Replace loading screens with locked, incremental route loading</p></li>
               <li><span>v1.115.20</span><p>Unify Evaluation and global search clear controls</p></li>
               <li><span>v1.115.19</span><p>Hide the Evaluation search clear control when the field is empty</p></li>
               <li><span>v1.115.18</span><p>Remove the duplicate and boxed Evaluation search clear control</p></li>
-              <li><span>v1.115.17</span><p>Match the rows selector and Evaluation clear button to shared view and popup controls</p></li>
+              <li><span>v1.115.17</span><p>Align rows and Evaluation clear controls with shared controls</p></li>
               <li><span>v1.115.16</span><p>Match the Evaluation search bar to table view-button hover behavior</p></li>
-              <li><span>v1.115.15</span><p>Match individual-player view buttons and filter value boxes to table view-button hover behavior</p></li>
-              <li><span>v1.115.14</span><p>Match Training controls and selected filter dropdowns to view-button hover behavior</p></li>
+              <li><span>v1.115.15</span><p>Match player view and filter-value hover styles to table views</p></li>
+              <li><span>v1.115.14</span><p>Match Training and selected-filter hover styles to table views</p></li>
               <li><span>v1.115.13</span><p>Remove the selected white border from filter dropdowns</p></li>
-              <li><span>v1.115.12</span><p>Reduce popup control shapes and match filter dropdown hover behavior to view buttons</p></li>
+              <li><span>v1.115.12</span><p>Refine popup controls and match filter dropdown hover styles</p></li>
               <li><span>v1.115.11</span><p>Center and restyle all popup close, add, and remove control shapes</p></li>
               <li><span>v1.115.10</span><p>Center all popup close-button shapes</p></li>
-              <li><span>v1.115.9</span><p>Prioritize higher-division clubs and agents with larger player rosters in search results</p></li>
-              <li><span>v1.115.8</span><p>Keep refreshed tables at their final width and show the club division in its league color</p></li>
-              <li><span>v1.115.7</span><p>Center pagination in the page layout and keep the table at its final width immediately after refresh</p></li>
-              <li><span>v1.115.6</span><p>Hide watchlist actions while opted out, center selected-player actions, stabilize refreshed tables and club loading, restore the full changelog, suppress loading toasts, and clip table headers to rounded borders</p></li>
-              <li><span>v1.115.5</span><p>Center toasts and opt-in states in the page layout, stabilize refreshed table widths, remove club page flicker and view transitions, keep MFL views ordered, and normalize the watchlist tooltip</p></li>
-              <li><span>v1.115.4</span><p>Fix guest page states, club transitions, shared table layout, and MFL wallet views</p></li>
-              <li><span>v1.115.3</span><p>Fix club loading, pinned layout spacing, table widths, and shared page presentation</p></li>
+              <li><span>v1.115.9</span><p>Rank clubs by division and agents by roster size in Search</p></li>
+              <li><span>v1.115.8</span><p>Stabilize refreshed table widths and color club divisions</p></li>
+              <li><span>v1.115.7</span><p>Center pagination and stabilize table width after refresh</p></li>
+              <li><span>v1.115.6</span><p>Fix watchlist, selection, loading, changelog, toast, and table UI</p></li>
+              <li><span>v1.115.5</span><p>Center overlays and stabilize tables, clubs, MFL views, and tooltip</p></li>
+              <li><span>v1.115.4</span><p>Fix guest states, club transitions, table layout, and MFL views</p></li>
+              <li><span>v1.115.3</span><p>Fix club loading, pinned spacing, table widths, and shared pages</p></li>
               <li><span>v1.115.2</span><p>Pin the sidebar layout and stabilize page and table transitions</p></li>
               <li><span>v1.115.1</span><p>Refine club navigation and public table behavior</p></li>
               <li><span>v1.115.0</span><p>Add public progression views to watchlist and club tables</p></li>
-              <li><span>v1.114.0</span><p>Add club pages, club search, club routing, division labels, and position-sorted club squads</p></li>
-              <li><span>v1.113.32</span><p>Keep every table column continuously visible during sidebar transitions and place recent patches in the v1.149 section</p></li>
-              <li><span>v1.113.31</span><p>Keep every table column visible during sidebar transitions and normalize the changelog</p></li>
+              <li><span>v1.114.0</span><p>Add club pages, Search, routes, divisions, and sorted squads</p></li>
+              <li><span>v1.113.32</span><p>Keep columns visible in sidebar transitions and regroup patches</p></li>
+              <li><span>v1.113.31</span><p>Keep columns visible in sidebar transitions and fix the changelog</p></li>
               <li><span>v1.113.30</span><p>Restore static source loading and remove the Vercel app bundle wrapper</p></li>
-              <li><span>v1.113.29</span><p>Limit notes to 100 characters, remember watchlist views, smooth sidebar transitions, and fix player pages</p></li>
+              <li><span>v1.113.29</span><p>Limit notes, remember watchlist views, and fix transitions and players</p></li>
               <li><span>v1.113.28</span><p>Keep the current version visible in the footer</p></li>
               <li><span>v1.113.27</span><p>Persist the last selected view for each watchlist</p></li>
               <li><span>v1.113.26</span><p>Improve sidebar transitions and player page data loading</p></li>
@@ -537,8 +538,8 @@
               <li><span>v1.102.4</span><p>Fix Agent tooltip alignment to a constant anchor</p></li>
               <li><span>v1.102.3</span><p>Polish setting hover states and Joined Agency tooltip alignment</p></li>
               <li><span>v1.102.2</span><p>Refine Joined Agency tooltips and date filter sizing</p></li>
-              <li><span>v1.102.1</span><p>Improve Joined Agency dates, tooltips, sorting, and MFL refresh ordering</p></li>
-              <li><span>v1.102.0</span><p>Add Joined Agency dates, date format settings, and ownership date filters</p></li>
+              <li><span>v1.102.1</span><p>Improve agency join dates, tooltips, sorting, and MFL refresh order</p></li>
+              <li><span>v1.102.0</span><p>Add agency join dates, date formats, and ownership date filters</p></li>
               <li><span>v1.101.0</span><p>Store ownership and active contract fields</p></li>
               <li><span>v1.100.15</span><p>Fetch MFL Flow season batches in parallel</p></li>
               <li><span>v1.100.14</span><p>Use smaller Flow season batches for MFL wallet</p></li>
@@ -588,7 +589,7 @@
               <li><span>v1.95.7</span><p>Refresh cached site data when exported database files change</p></li>
               <li><span>v1.95.6</span><p>Stop Watchlist dropdown hover flickering</p></li>
               <li><span>v1.95.5</span><p>Clear deleted Watchlist selections and harden Watchlist saves</p></li>
-              <li><span>v1.95.4</span><p>Polish Watchlist removal toasts, dropdown text, and duplicate-name validation</p></li>
+              <li><span>v1.95.4</span><p>Refine watchlist toasts, dropdown text, and name validation</p></li>
               <li><span>v1.95.3</span><p>Polish Watchlist add and move toasts</p></li>
               <li><span>v1.95.2</span><p>Improve Watchlist removal, move limits, toasts, and dropdown counts</p></li>
               <li><span>v1.95.1</span><p>Polish Watchlist chooser, counts, and player button state</p></li>
@@ -599,7 +600,7 @@
               <li><span>v1.94.10</span><p>Add Watchlist rename/delete toasts and delay invalid-link toast</p></li>
               <li><span>v1.94.9</span><p>Polish Watchlist spacing, delete hover, and invalid-link toast</p></li>
               <li><span>v1.94.8</span><p>Polish Watchlist delete confirmation and dropdown spacing</p></li>
-              <li><span>v1.94.7</span><p>Polish Watchlist dropdown sizing, tooltip, and delete confirmation styling</p></li>
+              <li><span>v1.94.7</span><p>Refine watchlist sizing, tooltip, and delete confirmation</p></li>
               <li><span>v1.94.6</span><p>Fix Watchlist dropdown sizing, hover, and modal close behavior</p></li>
               <li><span>v1.94.5</span><p>Polish Watchlist dropdown actions and delete confirmation</p></li>
               <li><span>v1.94.4</span><p>Fix Watchlist deep links and add dropdown rename/delete actions</p></li>
@@ -612,31 +613,31 @@
               <li><span>v1.93.5</span><p>Vertically center changelog version and patch text</p></li>
               <li><span>v1.93.4</span><p>Center changelog version and patch text</p></li>
               <li><span>v1.93.3</span><p>Align changelog patch rows and match minor-version hover styling</p></li>
-              <li><span>v1.93.2</span><p>Match changelog highlights to sidebar styling and simplify patch entries</p></li>
+              <li><span>v1.93.2</span><p>Match changelog highlights to the sidebar and simplify entries</p></li>
               <li><span>v1.93.1</span><p>Reorganize changelog versions for Semantic Versioning</p></li>
               <li><span>v1.93.0</span><p>Organize the changelog into collapsible minor-version sections</p></li>
               <li><span>v1.92.1</span><p>Add Advanced Settings reset action and remove Contracts Table shadows</p></li>
               <li><span>v1.92.0</span><p>Sync evaluation settings to wallet preferences</p></li>
               <li><span>v1.91.0</span><p>Show player progression to everyone and unify loading messages</p></li>
-              <li><span>v1.90.0</span><p>Load full individual-player data while keeping progression views permission-gated</p></li>
-              <li><span>v1.89.0</span><p>Recreate Contracts Table with matched sticky headers and clipped scrolling rows</p></li>
-              <li><span>v1.88.3</span><p>Prevent drag-outside modal closes and keep late-career reward header unhighlighted</p></li>
+              <li><span>v1.90.0</span><p>Load full player data while gating progression views</p></li>
+              <li><span>v1.89.0</span><p>Rebuild Contracts with sticky headers and clipped row scrolling</p></li>
+              <li><span>v1.88.3</span><p>Prevent drag-outside closes and unhighlight the late-career header</p></li>
               <li><span>v1.88.2</span><p>Polish late-career reward rate controls and add collapse animation</p></li>
-              <li><span>v1.88.1</span><p>Save late-career reward rates with evaluations and make Advanced Settings collapsible</p></li>
-              <li><span>v1.88.0</span><p>Add configurable late-career reward rates to Evaluation advanced settings</p></li>
+              <li><span>v1.88.1</span><p>Save late-career rates and collapse Advanced Settings</p></li>
+              <li><span>v1.88.0</span><p>Add late-career rates to Evaluation Advanced Settings</p></li>
               <li><span>v1.87.1</span><p>Keep table view sorting independent, update the footer version</p></li>
               <li><span>v1.87.0</span><p>Remove Database Next Overall, keep Next Overall sorting instant</p></li>
-              <li><span>v1.86.1</span><p>Show preparing-data completion and speed up first-load and Next Overall paths</p></li>
+              <li><span>v1.86.1</span><p>Show data-load completion and speed up first load and Next Overall</p></li>
               <li><span>v1.86.0</span><p>Load exported data through the protected API with static fallback</p></li>
               <li><span>v1.85.8</span><p>Fix exported data fallback for first-time and full-access loads</p></li>
-              <li><span>v1.85.7</span><p>Fix first-load data fallback and hide unavailable table tabs while loading</p></li>
-              <li><span>v1.85.6</span><p>Fill preparing-data progress, reveal pages immediately after Home refresh, and keep sorting session-only</p></li>
-              <li><span>v1.85.5</span><p>Fill the preparing-data progress step and speed up Next Overall sorting with indexed columns</p></li>
-              <li><span>v1.85.4</span><p>Keep loading progress monotonic and preserve saved sorting after refresh</p></li>
+              <li><span>v1.85.7</span><p>Fix first-load fallback and hide unavailable tabs while loading</p></li>
+              <li><span>v1.85.6</span><p>Fill loading progress, reveal pages early, and keep sorting in-session</p></li>
+              <li><span>v1.85.5</span><p>Fill loading progress and index Next Overall sorting</p></li>
+              <li><span>v1.85.4</span><p>Keep loading progress monotonic and retain sorting after refresh</p></li>
               <li><span>v1.85.3</span><p>Optimized refresh loading</p></li>
-              <li><span>v1.85.2</span><p>Show the loading screen immediately during refresh instead of leaving a blank page</p></li>
-              <li><span>v1.85.1</span><p>Restore cached player data on refresh and tighten Rome scheduled update gating</p></li>
-              <li><span>v1.85.0</span><p>Sync recent player searches across tabs, make searches accent-insensitive</p></li>
+              <li><span>v1.85.2</span><p>Show loading immediately on refresh instead of a blank page</p></li>
+              <li><span>v1.85.1</span><p>Restore cached players and tighten Rome update scheduling</p></li>
+              <li><span>v1.85.0</span><p>Sync recent searches across tabs and ignore accents in Search</p></li>
               <li><span>v1.84.3</span><p>Load Watchlist edits before revealing the page</p></li>
               <li><span>v1.84.2</span><p>Stabilize Watchlist sync and prevent row flicker</p></li>
               <li><span>v1.84.1</span><p>Merge concurrent Watchlist edits across tabs</p></li>
@@ -654,17 +655,17 @@
               <li><span>v1.83.11</span><p>Move Evaluation action buttons beside search</p></li>
               <li><span>v1.83.10</span><p>Refine Evaluation action layout</p></li>
               <li><span>v1.83.9</span><p>Refine Evaluation metrics and saved result details</p></li>
-              <li><span>v1.83.8</span><p>Keep saved Evaluation links public-safe after opt-out and refine action overlays</p></li>
+              <li><span>v1.83.8</span><p>Keep shared Evaluations safe after opt-out and refine overlays</p></li>
               <li><span>v1.83.7</span><p>Refine saved Evaluation links and overlays</p></li>
               <li><span>v1.83.6</span><p>Refine search hovers and saved Evaluation tooltips</p></li>
               <li><span>v1.83.5</span><p>Strengthen search result and saved Evaluation delete hover states</p></li>
               <li><span>v1.83.4</span><p>Polish search result and saved Evaluation delete hovers</p></li>
-              <li><span>v1.83.3</span><p>Match search result hovers and strengthen saved Evaluation delete hover</p></li>
+              <li><span>v1.83.3</span><p>Match Search hovers and strengthen saved Evaluation delete hover</p></li>
               <li><span>v1.83.2</span><p>Unify Evaluation result hovers and saved Evaluation action tooltips</p></li>
               <li><span>v1.83.1</span><p>Refine saved Evaluation list actions and share limit handling</p></li>
               <li><span>v1.83.0</span><p>Add saved Evaluation delete and share actions</p></li>
               <li><span>v1.82.4</span><p>Reset Evaluation navigation and refine saved Evaluation popup spacing</p></li>
-              <li><span>v1.82.3</span><p>Open Evaluation from the sidebar as a plain page and refine saved Evaluation scrolling</p></li>
+              <li><span>v1.82.3</span><p>Open Evaluation plainly from the sidebar and refine saved scrolling</p></li>
               <li><span>v1.82.2</span><p>Refine saved Evaluation popup details</p></li>
               <li><span>v1.82.1</span><p>Refine saved Evaluation popup behavior</p></li>
               <li><span>v1.82.0</span><p>Add saved Evaluation loading links</p></li>
@@ -713,7 +714,7 @@
               <li><span>v1.69.4</span><p>Make the loading bar follow actual data download progress</p></li>
               <li><span>v1.69.3</span><p>Avoid stack overflow when loading the single public player data file</p></li>
               <li><span>v1.69.2</span><p>Fix split data manifest loading</p></li>
-              <li><span>v1.69.1</span><p>Simplify data loading text and sync the loading bar with fetch progress</p></li>
+              <li><span>v1.69.1</span><p>Simplify loading text and sync the progress bar with fetching</p></li>
               <li><span>v1.69.0</span><p>Load split public and progression JSON data without chunk manifests</p></li>
               <li><span>v1.68.4</span><p>Refresh individual player pages after Dapper opt-in</p></li>
               <li><span>v1.68.3</span><p>Normalize Watchlist and player views after Dapper opt-out</p></li>
@@ -723,15 +724,15 @@
               <li><span>v1.67.14</span><p>Check wallet whitelist only on refresh and block clicks during opt-in</p></li>
               <li><span>v1.67.13</span><p>Restore whitelist progression access for Dapper account-proof opt-ins</p></li>
               <li><span>v1.67.12</span><p>Restore public database loading after progression access is removed</p></li>
-              <li><span>v1.67.11</span><p>Refresh whitelist access on page changes and switch between public and progression data automatically</p></li>
-              <li><span>v1.67.10</span><p>Reduce Dapper opt-in to one wallet popup when account proof is available</p></li>
-              <li><span>v1.67.9</span><p>Improve Dapper opt-in popup guidance, default Dapper authentication, and lazy progression data loading</p></li>
-              <li><span>v1.67.8</span><p>Show a red Not authorised loading state before redirecting Progression visitors home</p></li>
+              <li><span>v1.67.11</span><p>Refresh whitelist access and switch data access per page</p></li>
+              <li><span>v1.67.10</span><p>Use one Dapper popup when account proof is available</p></li>
+              <li><span>v1.67.9</span><p>Improve Dapper guidance, default auth, and lazy progression loading</p></li>
+              <li><span>v1.67.8</span><p>Show Not authorised before redirecting Progression visitors</p></li>
               <li><span>v1.67.7</span><p>Redirect unauthorized Progression access to the homepage</p></li>
               <li><span>v1.67.6</span><p>Reduce Dapper opt-in to one signing popup</p></li>
-              <li><span>v1.67.5</span><p>Load Dapper opt-in through the Dapper wallet UID before falling back to restricted Discovery</p></li>
+              <li><span>v1.67.5</span><p>Use the Dapper UID before restricted wallet Discovery</p></li>
               <li><span>v1.67.4</span><p>Use the Dapper provider address when loading the direct opt-in service</p></li>
-              <li><span>v1.67.3</span><p>Default Dapper opt-in directly to Dapper instead of showing wallet choices</p></li>
+              <li><span>v1.67.3</span><p>Default opt-in to Dapper without showing wallet choices</p></li>
               <li><span>v1.67.2</span><p>Load wallet names immediately after Dapper opt-in</p></li>
               <li><span>v1.67.1</span><p>Use the signed Dapper wallet for Progression access</p></li>
               <li><span>v1.67.0</span><p>Support Dapper wallets with separate signing addresses</p></li>
@@ -833,12 +834,12 @@
               <li><span>v1.52.0</span><p>Add Evaluation discount factors and MFL/USD conversion</p></li>
               <li><span>v1.51.1</span><p>Refine Evaluation summary and discount-rate layout</p></li>
               <li><span>v1.51.0</span><p>Add Evaluation summary and discount-rate panel</p></li>
-              <li><span>v1.50.1</span><p>Refine Evaluation search, route refresh behavior, and season table labeling</p></li>
+              <li><span>v1.50.1</span><p>Refine Evaluation search, refresh routes, and season labels</p></li>
               <li><span>v1.50.0</span><p>Add guest Evaluation page with player longevity table</p></li>
               <li><span>v1.49.2</span><p>Apply advanced filter edits only after confirmation</p></li>
               <li><span>v1.49.1</span><p>Use the latest database artifact for manual Vercel site updates</p></li>
               <li><span>v1.49.0</span><p>Add shift range selection to player tables</p></li>
-              <li><span>v1.48.6</span><p>Refine filter modal behavior and always refresh player seasons in Actions</p></li>
+              <li><span>v1.48.6</span><p>Refine filter modals and refresh player seasons in Actions</p></li>
               <li><span>v1.48.5</span><p>Refresh Progression filter options after page reloads</p></li>
               <li><span>v1.48.4</span><p>Keep Database filters free of progression fields after refresh</p></li>
               <li><span>v1.48.3</span><p>Align table ID tooltip and clear copy focus</p></li>
@@ -881,9 +882,9 @@
               <li><span>v1.42.4</span><p>Polish Next Overall maximum states and age marker alignment</p></li>
               <li><span>v1.42.3</span><p>Add player retiring markers and Next Overall attribute view</p></li>
               <li><span>v1.42.2</span><p>Fix Database refresh routing and sharpen the sidebar database icon</p></li>
-              <li><span>v1.42.1</span><p>Reveal the app shell together after loading and style table marker tooltips</p></li>
+              <li><span>v1.42.1</span><p>Reveal the app shell together and style table-marker tooltips</p></li>
               <li><span>v1.42.0</span><p>Split attributes into a dedicated Database page</p></li>
-              <li><span>v1.41.20</span><p>Keep brand on root, hide sidebar during login, and lighten progression text</p></li>
+              <li><span>v1.41.20</span><p>Keep brand on Home, hide login sidebar, and lighten progression text</p></li>
               <li><span>v1.41.19</span><p>Preserve page after login and reveal sidebar with loaded pages</p></li>
               <li><span>v1.41.18</span><p>Keep changelog navigation public and show sidebar while logged out</p></li>
               <li><span>v1.41.17</span><p>Prevent homepage sign-in flash on changelog navigation</p></li>
@@ -1031,7 +1032,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.116.24</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.116.25</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -1203,6 +1204,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.116.24"></script>
+    <script src="/app.js?v=1.116.25"></script>
   </body>
 </html>
