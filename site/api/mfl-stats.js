@@ -7,6 +7,7 @@ const HIDDEN_JOINED_DAYS = new Set([
   Date.UTC(2025, 9, 9) / 86400000,
   Date.UTC(2025, 9, 10) / 86400000,
 ]);
+const PLAYER_DATA_FILE = /^players_(?:\d{4}|public|mfl_public)\.json$/i;
 
 async function findFile(candidates) {
   for (const candidate of candidates) {
@@ -39,13 +40,14 @@ function requestOrigin(request) {
 }
 
 async function readDataJson(fileName, request) {
-  const filePath = await findDataFile(fileName);
+  const normalizedName = path.basename(String(fileName || ""));
+  const filePath = await findDataFile(normalizedName);
   if (filePath) return JSON.parse(await fs.readFile(filePath, "utf8"));
 
   const origin = requestOrigin(request);
-  if (!origin) throw new Error(`Data file not found: ${fileName}`);
-  const response = await fetch(`${origin}/data/${encodeURIComponent(fileName)}`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Data file not found: ${fileName}`);
+  if (!origin) throw new Error(`Data file not found: ${normalizedName}`);
+  const response = await fetch(`${origin}/data/${encodeURIComponent(normalizedName)}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Data file not found: ${normalizedName}`);
   return response.json();
 }
 
@@ -95,12 +97,28 @@ function compareOverallDescending(a, b) {
     - Number(valueFromRow(a.row, a.columns, "player_id") || 0);
 }
 
+function collectManifestPlayerFiles(value, files) {
+  if (typeof value === "string") {
+    const fileName = path.basename(value.trim());
+    if (PLAYER_DATA_FILE.test(fileName)) files.add(fileName);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectManifestPlayerFiles(entry, files));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  Object.values(value).forEach((entry) => collectManifestPlayerFiles(entry, files));
+}
+
 function manifestDataFiles(manifest) {
-  const chunks = Array.isArray(manifest?.chunks)
-    ? manifest.chunks.map((chunk) => String(chunk?.file || "").trim()).filter(Boolean)
-    : [];
-  if (chunks.length) return [...new Set(chunks)];
-  return [manifest?.files?.mfl_public?.file || "players_mfl_public.json"];
+  const files = new Set();
+  collectManifestPlayerFiles(manifest, files);
+  const publicFile = path.basename(String(manifest?.files?.public?.file || "").trim());
+  const mflFile = path.basename(String(manifest?.files?.mfl_public?.file || "").trim());
+  if (PLAYER_DATA_FILE.test(publicFile)) files.add(publicFile);
+  if (PLAYER_DATA_FILE.test(mflFile)) files.add(mflFile);
+  return [...files];
 }
 
 module.exports = async function mflStatsHandler(request, response) {
@@ -110,6 +128,8 @@ module.exports = async function mflStatsHandler(request, response) {
   try {
     const manifest = await readDataJson("manifest.json", request);
     const fileNames = manifestDataFiles(manifest);
+    if (!fileNames.length) throw new Error("The manifest does not reference player data files.");
+
     const dataSets = await Promise.all(fileNames.map((fileName) => readDataJson(fileName, request)));
     const selectedColumns = STATS_COLUMNS.filter((column) => dataSets.some((data) => (
       Array.isArray(data?.columns) && data.columns.includes(column)
@@ -122,8 +142,12 @@ module.exports = async function mflStatsHandler(request, response) {
       rows.forEach((row) => {
         if (!isMflWalletPlayer(row, columns) || hasHiddenJoinedDate(row, columns)) return;
         const playerId = String(valueFromRow(row, columns, "player_id") || "").trim();
-        if (!playerId || playersById.has(playerId)) return;
-        playersById.set(playerId, { row, columns });
+        if (!playerId) return;
+
+        const current = playersById.get(playerId);
+        if (!current || columns.length > current.columns.length) {
+          playersById.set(playerId, { row, columns });
+        }
       });
     });
 

@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.151.20";
+        const VERSION = "1.151.22";
 
         function routeGuardFunction() {
           const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
@@ -84,26 +84,47 @@
             }
           }
 
-          function preparedClubTitle(clubId) {
-            const metadata = readClubMetadata(clubId);
-            const name = String(metadata?.name || "").trim();
-            if (!name) return `Club #${clubId}`;
-            const division = String(metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "").trim();
-            return division ? `${name} - ${division}` : name;
-          }
-
           function genericClubTitle(text, clubId) {
             const value = String(text || "").trim();
             return !value || value === "Club" || value === `Club #${clubId}` || value === `Club ${clubId}`;
+          }
+
+          function richClubTitle(title) {
+            return Boolean(title?.querySelector("span[style*='color'], .clubDivision, .clubSearchDivision"))
+              || /color\s*:/i.test(title?.innerHTML || "");
+          }
+
+          function preparedClubTitle(clubId) {
+            const metadata = readClubMetadata(clubId);
+            const name = String(metadata?.name || "").trim();
+            if (!name) return { text: `Club #${clubId}`, html: "" };
+            const division = String(metadata?.divisionName || CLUB_DIVISIONS[Number(metadata?.division)] || "").trim();
+            const color = String(metadata?.divisionColor || "").trim();
+            if (!division) return { text: name, html: "" };
+            if (!color) return { text: `${name} - ${division}`, html: "" };
+
+            const nameNode = document.createElement("span");
+            nameNode.textContent = name;
+            const divisionNode = document.createElement("span");
+            divisionNode.textContent = division;
+            divisionNode.style.color = color;
+            return {
+              text: `${name} - ${division}`,
+              html: `${nameNode.innerHTML} - ${divisionNode.outerHTML}`,
+            };
           }
 
           function captureClubTitle(route) {
             const title = document.getElementById("tablePageTitle");
             if (!title || genericClubTitle(title.textContent, route.clubId)) return;
             const text = String(title.textContent || "").trim();
-            if (stableClubId === String(route.clubId)
-                && stableClubTitleText.includes(" - ")
-                && !text.includes(" - ")) return;
+            const sameClub = stableClubId === String(route.clubId) && stableClubTitleHtml;
+            const currentRich = richClubTitle(title);
+            const savedRich = /color\s*:/i.test(stableClubTitleHtml);
+
+            if (sameClub && stableClubTitleText.includes(" - ") && !text.includes(" - ")) return;
+            if (sameClub && savedRich && !currentRich && text === stableClubTitleText) return;
+
             stableClubId = String(route.clubId);
             stableClubTitleHtml = title.innerHTML;
             stableClubTitleText = text;
@@ -118,14 +139,20 @@
             if (title) {
               const sameClub = stableClubId === String(route.clubId) && stableClubTitleHtml;
               const currentText = String(title.textContent || "").trim();
-              if (!genericClubTitle(currentText, route.clubId)
-                  && (!sameClub || (currentText.includes(" - ") && !stableClubTitleText.includes(" - ")))) {
+              const currentRich = richClubTitle(title);
+              const savedRich = /color\s*:/i.test(stableClubTitleHtml);
+              const currentComplete = !genericClubTitle(currentText, route.clubId) && currentText.includes(" - ");
+
+              if (currentComplete && (!sameClub || (currentRich && !savedRich))) {
                 captureClubTitle(route);
-              } else if (sameClub && title.innerHTML !== stableClubTitleHtml) {
-                title.innerHTML = stableClubTitleHtml;
+              } else if (sameClub && (genericClubTitle(currentText, route.clubId)
+                  || (!currentText.includes(" - ") && stableClubTitleText.includes(" - "))
+                  || (savedRich && !currentRich && currentText === stableClubTitleText))) {
+                if (title.innerHTML !== stableClubTitleHtml) title.innerHTML = stableClubTitleHtml;
               } else if (!sameClub) {
                 const prepared = preparedClubTitle(route.clubId);
-                if (title.textContent !== prepared) title.textContent = prepared;
+                if (prepared.html) title.innerHTML = prepared.html;
+                else if (title.textContent !== prepared.text) title.textContent = prepared.text;
                 captureClubTitle(route);
               }
             }
@@ -140,18 +167,10 @@
             if (pendingClubView && route.view === pendingClubView) pendingClubView = "";
           }
 
-          function isBusy() {
-            return document.documentElement.classList.contains("appBusy")
-              || document.body.classList.contains("appBusy")
-              || document.body.classList.contains("loading")
-              || document.body.classList.contains("tableRowsLoading")
-              || (typeof state !== "undefined" && Number(state.interactionBusyDepth || 0) > 0);
-          }
-
           function captureStatsSnapshot() {
             const total = document.getElementById("mflStatsTotalPlayers");
             const text = String(total?.textContent || "").trim();
-            if (!/^\d[\d,.]*$/.test(text)) return;
+            if (!/^\d[\d,.]*$/.test(text)) return false;
             statsSnapshot = {
               total: text,
               packable: String(document.getElementById("mflStatsPackablePlayers")?.textContent || "-").trim(),
@@ -159,6 +178,7 @@
               other: String(document.getElementById("mflStatsOtherPlayers")?.textContent || "-").trim(),
               distribution: document.getElementById("mflStatsAgeDistribution")?.innerHTML || "",
             };
+            return true;
           }
 
           function blankStats() {
@@ -199,14 +219,14 @@
               button.classList.toggle("active", button.dataset.page === "mfl");
             });
 
-            captureStatsSnapshot();
             const appOnStats = typeof state !== "undefined" && state.currentPage === "mflstats";
-            if (!statsReady && appOnStats && !isBusy() && restoreStatsSnapshot()) {
+            if (appOnStats && captureStatsSnapshot()) {
               statsReady = true;
               pendingStats = false;
-              return;
             }
-            if (!statsReady) blankStats();
+
+            if (statsReady) restoreStatsSnapshot();
+            else blankStats();
           }
 
           function enforceWatchlist() {
@@ -222,10 +242,6 @@
           }
 
           function enforce() {
-            if (document.getElementById("appShell")) {
-              document.documentElement.classList.remove("bootPending");
-            }
-
             const route = pendingStats ? { page: "mflstats" } : routeInfo();
             if (route.page === "mflstats") enforceStats();
             else if (route.page === "club") enforceClub(route);
@@ -249,7 +265,7 @@
               if (url.pathname.toLowerCase() === "/api/data"
                   && url.searchParams.get("mode") === "page"
                   && String(url.searchParams.get("scope") || "").toLowerCase() === "mflstats") {
-                return previousFetch("/api/mfl-stats", init);
+                return previousFetch("/api/mfl-stats", { ...init, cache: "no-store" });
               }
             } catch {
               // Preserve the original request when it cannot be parsed.
@@ -322,7 +338,7 @@
         source = source.replace('const VERSION = "1.151.9";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const CHANGELOG_DESCRIPTION = "Keep players with blank retirement data, stabilize refreshed club tables, and hide pagination while rows load";',
-          'const CHANGELOG_DESCRIPTION = "Load every MFL wallet player and keep watchlist and club page chrome stable while table rows load";',
+          'const CHANGELOG_DESCRIPTION = "Load complete MFL wallet stats and preserve stable page and club chrome while table rows load";',
         );
 
         const routeStyles = `
