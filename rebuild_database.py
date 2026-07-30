@@ -356,6 +356,7 @@ def rebuild_directly() -> int:
 
 
 if __name__ == "__main__":
+    run_flow_rebuild.MFL_REQUESTS_PER_MINUTE = 50
     install_database_filename()
     install_concise_progression_logging()
     run_flow_rebuild_paged.fetch_all_player_sources = fetch_active_and_retired_player_sources
