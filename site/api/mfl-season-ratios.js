@@ -1,3 +1,6 @@
+const APP_VERSION = "1.118.4";
+const APP_CHANGELOG_DESCRIPTION = "Keep page scrollbars between the header and footer and sync the latest version";
+
 function supabaseConfig() {
   const url = String(
     process.env.SUPABASE_URL
@@ -27,11 +30,57 @@ function normalizeRows(value) {
 function runtimeScript(rows, warning = "") {
   const serializedRows = JSON.stringify(rows);
   const serializedWarning = JSON.stringify(String(warning || ""));
+  const serializedVersion = JSON.stringify(APP_VERSION);
+  const serializedDescription = JSON.stringify(APP_CHANGELOG_DESCRIPTION);
 
   return `(() => {
   const rows = ${serializedRows};
   const warning = ${serializedWarning};
+  const appVersion = ${serializedVersion};
+  const changelogDescription = ${serializedDescription};
   let attempts = 0;
+
+  function changelogItem(version, description) {
+    const item = document.createElement("li");
+    const versionLabel = document.createElement("span");
+    const descriptionLabel = document.createElement("p");
+    versionLabel.textContent = version;
+    descriptionLabel.textContent = description;
+    item.append(versionLabel, descriptionLabel);
+    return item;
+  }
+
+  function syncVersionUi() {
+    const versionLabel = "v" + appVersion;
+    const footerLink = document.querySelector('.siteFooter a[data-page="changelog"]');
+    if (footerLink) footerLink.textContent = "MFL Front Office " + versionLabel;
+
+    const list = document.querySelector(".changelogList");
+    if (!list) return;
+
+    const existing = Array.from(list.querySelectorAll("li span"))
+      .some((label) => String(label.textContent || "").trim() === versionLabel);
+    if (existing) return;
+
+    const minorLabel = versionLabel.replace(/\.\d+$/, "");
+    const groupedSection = Array.from(list.querySelectorAll(":scope > .changelogMinorSection"))
+      .find((section) => String(section.querySelector(".changelogMinorVersion")?.textContent || "").trim() === minorLabel);
+
+    if (groupedSection) {
+      const patchList = groupedSection.querySelector(".changelogPatchList");
+      if (patchList) {
+        patchList.prepend(changelogItem(versionLabel, changelogDescription));
+        const meta = groupedSection.querySelector(".changelogMinorMeta");
+        if (meta) {
+          const count = patchList.children.length;
+          meta.textContent = count + (count === 1 ? " patch" : " patches");
+        }
+      }
+      return;
+    }
+
+    list.prepend(changelogItem(versionLabel, changelogDescription));
+  }
 
   function install() {
     if (typeof evaluationDiscountRateValue !== "function") {
@@ -40,6 +89,7 @@ function runtimeScript(rows, warning = "") {
       return;
     }
 
+    syncVersionUi();
     if (warning) console.warn(warning);
     if (rows.length !== 5) return;
 
