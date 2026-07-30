@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.8";
+const APP_VERSION = "1.118.9";
 const APP_RELEASES = [
+  ["v1.118.9", "Restore MFL Stats interactions after loading"],
   ["v1.118.8", "Complete SemVer changelog history and keep the latest version current"],
   ["v1.118.7", "Enforce API limits, lock loading views, and rebuild version history"],
   ["v1.118.6", "Show the content-area scrollbar from the first page render"],
@@ -170,7 +171,72 @@ function runtimeScript(rows, warning = "") {
     });
   }
 
+  function mflStatsContentReady() {
+    const page = document.getElementById("mflStatsPage");
+    const totalPlayers = document.getElementById("mflStatsTotalPlayers");
+    return document.body.dataset.page === "mflstats"
+      && page
+      && !page.hidden
+      && /^\\d[\\d,.]*$/.test(String(totalPlayers?.textContent || "").trim());
+  }
+
+  function mflStatsRequestInProgress() {
+    try {
+      return typeof state === "object" && state && Boolean(
+        state.incrementalApplying
+        || Number(state.incrementalRequestPromises?.size) > 0
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function releaseFinishedMflStatsBusyState() {
+    if (!mflStatsContentReady() || mflStatsRequestInProgress()) return;
+
+    const appShell = document.getElementById("appShell");
+    let staleBusy = Boolean(
+      appShell?.inert
+      || document.documentElement.classList.contains("appBusy")
+      || document.body.classList.contains("appBusy")
+      || document.body.getAttribute("aria-busy") === "true"
+    );
+
+    try {
+      staleBusy = staleBusy || (typeof state === "object" && state && Number(state.interactionBusyDepth) > 0);
+    } catch {
+      // The fallback below still clears stale DOM state.
+    }
+
+    if (!staleBusy) return;
+
+    try {
+      if (typeof state === "object" && state) state.interactionBusyDepth = 0;
+      if (typeof syncInteractionBusyState === "function") {
+        syncInteractionBusyState();
+        return;
+      }
+    } catch (error) {
+      console.error("Could not clear the completed MFL Stats loading state.", error);
+    }
+
+    document.documentElement.classList.remove("appBusy");
+    document.body.classList.remove("appBusy");
+    document.body.setAttribute("aria-busy", "false");
+    Array.from(document.body.children).forEach((element) => {
+      if (element instanceof HTMLElement) element.inert = false;
+    });
+  }
+
+  function installMflStatsBusyRecovery() {
+    if (window.__mflStatsBusyRecoveryTimer) return;
+    window.__mflStatsBusyRecoveryTimer = window.setInterval(releaseFinishedMflStatsBusyState, 100);
+    window.addEventListener("pageshow", releaseFinishedMflStatsBusyState);
+    document.addEventListener("visibilitychange", releaseFinishedMflStatsBusyState);
+  }
+
   function loadingInProgress() {
+    releaseFinishedMflStatsBusyState();
     let stateBusy = false;
     try {
       stateBusy = typeof state === "object" && state && Boolean(
@@ -265,6 +331,7 @@ function runtimeScript(rows, warning = "") {
   }
 
   rebuildCompleteChangelog();
+  installMflStatsBusyRecovery();
   installViewLoadingGuard();
   window.setTimeout(rebuildCompleteChangelog, 0);
   window.setTimeout(rebuildCompleteChangelog, 250);
