@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.12";
+const APP_VERSION = "1.118.13";
 const APP_RELEASES = [
+  ["v1.118.13", "Allow opted-out evaluation shares, restore Stats filters, and focus empty Evaluation search"],
   ["v1.118.12", "Animate the discount tooltip, restore Stats filters, and support local season ratios"],
   ["v1.118.11", "Fix discount tooltip placement, Stats filters, and Season 16 discount history"],
   ["v1.118.10", "Fix Evaluation tooltip, Stats interactions, footer timing, and season ratios"],

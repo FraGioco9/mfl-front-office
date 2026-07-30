@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.12 - Match tooltip transitions, restore Stats filters, and support local ratios. */
+/* v1.118.13 - Allow public shares, restore Stats controls, and focus empty Evaluation search. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.12";
+  content: "MFL Front Office v1.118.13";
   font-size: 14px;
 }
 

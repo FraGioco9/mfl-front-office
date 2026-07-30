@@ -2,13 +2,14 @@
   const payload = window.__mflSeasonRatioPayload || {};
   const rows = Array.isArray(payload.rows) ? payload.rows : [];
   const releases = Array.isArray(payload.releases) ? payload.releases : [];
-  const version = String(payload.version || "1.118.12");
+  const version = String(payload.version || "1.118.13");
+  const busyEvents = ["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"];
   let activeStatsRequests = 0;
-  let statsReadySince = 0;
   let tooltip = null;
   let tooltipTarget = null;
   let tooltipHideTimer = 0;
   let discountAttempts = 0;
+  let emptyEvaluationFocused = false;
 
   function installRuntimeStyles() {
     if (document.getElementById("mflRuntimeFixStyles")) return;
@@ -150,19 +151,10 @@
     window.fetch = tracked;
   }
 
-  function unlockStats(force = false) {
-    if (!statsReady() || activeStatsRequests) {
-      statsReadySince = 0;
-      return false;
-    }
-    if (!statsReadySince) statsReadySince = Date.now();
-    if (!force && Date.now() - statsReadySince < 120) return false;
+  function unlockStats() {
+    if (!statsReady() || activeStatsRequests > 0) return false;
     try {
-      if (typeof state === "object" && state) {
-        state.interactionBusyDepth = 0;
-        state.incrementalApplying = false;
-        state.incrementalRequestPromises?.clear?.();
-      }
+      if (typeof state === "object" && state) state.interactionBusyDepth = 0;
       if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
     } catch (error) {
       console.error("Could not unlock completed MFL Stats controls.", error);
@@ -177,16 +169,128 @@
     return true;
   }
 
-  function installStatsPreBlocker() {
-    if (window.__mflStatsPreBlockerInstalled) return;
-    window.__mflStatsPreBlockerInstalled = true;
-    const release = (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest(".mflStatsFilterButton, .mflStatsDistributionModeButton")) unlockStats(true);
+  function installStatsRenderUnlock() {
+    if (typeof renderMflStatsPage !== "function" || renderMflStatsPage.__interactiveAfterRender) return;
+    const original = renderMflStatsPage;
+    const wrapped = function renderMflStatsPageInteractive() {
+      const result = original.apply(this, arguments);
+      queueMicrotask(unlockStats);
+      return result;
     };
-    ["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"].forEach((name) => {
-      window.addEventListener(name, release, true);
+    wrapped.__interactiveAfterRender = true;
+    renderMflStatsPage = wrapped;
+  }
+
+  function installStatsBusyHandler() {
+    if (window.__mflStatsBusyHandlerInstalled || typeof blockInteractionWhileBusy !== "function") return;
+    window.__mflStatsBusyHandlerInstalled = true;
+    const original = blockInteractionWhileBusy;
+    busyEvents.forEach((name) => document.removeEventListener(name, original, true));
+    const replacement = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const statsControl = target?.closest("#mflStatsOverallFilters .mflStatsFilterButton, .mflStatsDistributionModeButton");
+      if (statsControl && unlockStats()) return;
+      original(event);
+    };
+    busyEvents.forEach((name) => document.addEventListener(name, replacement, true));
+  }
+
+  async function ensureSharedPlayerRow(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id || typeof rowByPlayerId !== "function" || rowByPlayerId(id)) return;
+    if (typeof requestIncrementalRoute !== "function") return;
+    await requestIncrementalRoute({
+      pageName: "evaluation",
+      scope: "players",
+      view: "attributes",
+      access: typeof currentDataAccess === "function" ? currentDataAccess("evaluation") : "public",
+      playerIds: [id],
+    }, 1, { force: true });
+  }
+
+  function installPublicShareLoader() {
+    if (typeof loadSharedEvaluation !== "function" || loadSharedEvaluation.__publicViewerEnabled) return;
+    const original = loadSharedEvaluation;
+    const wrapped = async function loadSharedEvaluationForAnyUser(shareId) {
+      if (typeof hasWalletOptIn === "function" && hasWalletOptIn()) {
+        return original.apply(this, arguments);
+      }
+      const id = String(shareId || "").trim();
+      if (!id || (typeof state === "object" && state?.evaluationShareLoading)) return;
+      if (typeof state === "object" && state) state.evaluationShareLoading = true;
+      try {
+        const requestUrl = new URL("/api/evaluation-share", location.origin);
+        requestUrl.searchParams.set("id", id);
+        const urlPlayerId = new URLSearchParams(location.search).get("player") || "";
+        if (urlPlayerId) requestUrl.searchParams.set("player", urlPlayerId);
+        const response = await fetch(requestUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error("Share not found.");
+        const data = await response.json();
+        const playerId = String(data?.payload?.playerId || data?.playerId || urlPlayerId).trim();
+        await ensureSharedPlayerRow(playerId);
+        if (typeof state === "object" && state) state.evaluationShareId = id;
+        if (typeof applySharedEvaluationPayload === "function") applySharedEvaluationPayload(data.payload);
+      } catch (error) {
+        console.error("Could not load public evaluation share.", error);
+        if (typeof showToast === "function") showToast("Shared evaluation has expired or could not be loaded.");
+        if (typeof resetInvalidEvaluationLinkToPlainEvaluation === "function") resetInvalidEvaluationLinkToPlainEvaluation();
+        if (typeof renderEmptyEvaluationSelection === "function") renderEmptyEvaluationSelection(true);
+      } finally {
+        if (typeof state === "object" && state) state.evaluationShareLoading = false;
+      }
+    };
+    wrapped.__publicViewerEnabled = true;
+    loadSharedEvaluation = wrapped;
+  }
+
+  function loadPendingPublicShare() {
+    if (document.body.dataset.page !== "evaluation") return;
+    if (typeof hasWalletOptIn === "function" && hasWalletOptIn()) return;
+    const shareId = new URLSearchParams(location.search).get("share") || "";
+    if (!shareId || (typeof state === "object" && (state.evaluationShareId === shareId || state.evaluationShareLoading))) return;
+    void loadSharedEvaluation(shareId);
+  }
+
+  function focusEmptyEvaluationSearch() {
+    const page = document.getElementById("evaluationPage");
+    const input = document.getElementById("evaluationSearchInput");
+    const active = document.body.dataset.page === "evaluation" && page && !page.hidden;
+    const playerSelected = typeof state === "object" && Boolean(state?.evaluationPlayerId);
+    const busy = document.body.classList.contains("appBusy") || document.body.getAttribute("aria-busy") === "true";
+    if (!active || playerSelected || !input || busy) {
+      if (!active || playerSelected) emptyEvaluationFocused = false;
+      return;
+    }
+    if (emptyEvaluationFocused && document.activeElement !== document.body) return;
+    emptyEvaluationFocused = true;
+    requestAnimationFrame(() => {
+      if (document.body.dataset.page === "evaluation" && !(typeof state === "object" && state?.evaluationPlayerId)) {
+        input.focus({ preventScroll: true });
+      }
     });
+  }
+
+  function installEvaluationCompletionFocus() {
+    if (typeof finishLoading === "function" && !finishLoading.__focusEmptyEvaluation) {
+      const originalFinishLoading = finishLoading;
+      const wrappedFinishLoading = async function finishLoadingAndFocusEvaluation() {
+        const result = await originalFinishLoading.apply(this, arguments);
+        focusEmptyEvaluationSearch();
+        return result;
+      };
+      wrappedFinishLoading.__focusEmptyEvaluation = true;
+      finishLoading = wrappedFinishLoading;
+    }
+    if (typeof setPage === "function" && !setPage.__focusEmptyEvaluation) {
+      const originalSetPage = setPage;
+      const wrappedSetPage = async function setPageAndFocusEvaluation() {
+        const result = await originalSetPage.apply(this, arguments);
+        focusEmptyEvaluationSearch();
+        return result;
+      };
+      wrappedSetPage.__focusEmptyEvaluation = true;
+      setPage = wrappedSetPage;
+    }
   }
 
   function positionTooltip() {
@@ -273,9 +377,14 @@
   function maintain() {
     installRuntimeStyles();
     trackStatsFetch();
-    installStatsPreBlocker();
+    installStatsRenderUnlock();
+    installStatsBusyHandler();
+    installPublicShareLoader();
+    installEvaluationCompletionFocus();
     installTooltip();
     unlockStats();
+    loadPendingPublicShare();
+    focusEmptyEvaluationSearch();
   }
 
   installRuntimeStyles();
