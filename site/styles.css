@@ -16,51 +16,69 @@
   z-index: 1;
 }
 
-/* v1.118.3 - Layer Evaluation results without changing page overflow */
-body[data-page="evaluation"] #evaluationPage {
-  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px) !important;
-  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px) !important;
+/* Evaluation search results stay layered without creating a page scroll container. */
+html body[data-page="evaluation"] #evaluationPage {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
+html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
   position: relative;
-  z-index: 1000;
-}
-
-body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  position: relative;
-  z-index: 1001;
+  z-index: 2147483000 !important;
   overflow: visible !important;
 }
 
-body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
+html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+html body[data-page="evaluation"] #evaluationPage .evaluationSearch,
+html body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
+  position: relative;
+  overflow: visible !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+html body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+  z-index: 2147483001 !important;
+}
+
+html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
   position: absolute !important;
-  z-index: 2147482000 !important;
+  z-index: 2147483002 !important;
   max-height: none !important;
   overflow: visible !important;
 }
 
-body[data-page="evaluation"] #evaluationPanel {
+html body[data-page="evaluation"] #evaluationPanel {
   position: relative;
   z-index: 0;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover,
-body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus {
-  z-index: 2147481000 !important;
+/* Keep the empty Evaluation page compact so the footer remains in view. */
+html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
+  min-height: 0 !important;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after {
+html:has(body[data-page="evaluation"] #evaluationPanel[hidden]),
+html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) {
+  overflow-y: hidden !important;
+}
+
+/* The discount-rate tooltip must paint above page content and the sticky header. */
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover,
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus {
+  position: relative;
+  z-index: 2147483643 !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after {
   left: auto !important;
   right: 0 !important;
-  z-index: 2147481001 !important;
+  z-index: 2147483644 !important;
   width: max-content;
   max-width: min(320px, calc(100vw - 32px));
   transform: translateY(4px) !important;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover::after,
-body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus::after {
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover::after,
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus::after {
   transform: translateY(0) !important;
 }
