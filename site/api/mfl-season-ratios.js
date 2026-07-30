@@ -1,5 +1,5 @@
-const APP_VERSION = "1.118.5";
-const APP_CHANGELOG_DESCRIPTION = "Extend the global shell to the right edge and keep version UI current";
+const APP_VERSION = "1.118.6";
+const APP_CHANGELOG_DESCRIPTION = "Show the content-area scrollbar from the first page render";
 
 function supabaseConfig() {
   const url = String(

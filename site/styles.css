@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.5 - Remove reserved outer gutters and extend the shell to the right edge. */
+/* v1.118.6 - Show the content-area scrollbar from the first shell render. */
 html,
 body {
   width: 100%;
@@ -33,7 +33,7 @@ body > #appShell > main {
   min-height: 0 !important;
   height: 100% !important;
   overflow-x: clip !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overscroll-behavior: contain;
   scrollbar-gutter: auto !important;
 }
