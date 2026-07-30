@@ -16,27 +16,45 @@
   z-index: 1;
 }
 
-/* v1.118.2 - Keep the Evaluation tooltip visible and compact the empty page */
-body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
-  min-height: 0 !important;
+/* v1.118.3 - Layer Evaluation results without changing page overflow */
+body[data-page="evaluation"] #evaluationPage {
+  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px) !important;
+  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px) !important;
 }
 
-body[data-page="evaluation"] #evaluationPage .evaluationTopBar,
+body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
+  position: relative;
+  z-index: 1000;
+}
+
 body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-body[data-page="evaluation"] #evaluationPage .evaluationActions,
-body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
+body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+  position: relative;
+  z-index: 1001;
   overflow: visible !important;
+}
+
+body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
+  position: absolute !important;
+  z-index: 2147482000 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body[data-page="evaluation"] #evaluationPanel {
+  position: relative;
+  z-index: 0;
 }
 
 body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover,
 body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus {
-  z-index: 2147483000 !important;
+  z-index: 2147481000 !important;
 }
 
 body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after {
   left: auto !important;
   right: 0 !important;
-  z-index: 2147483001 !important;
+  z-index: 2147481001 !important;
   width: max-content;
   max-width: min(320px, calc(100vw - 32px));
   transform: translateY(4px) !important;
