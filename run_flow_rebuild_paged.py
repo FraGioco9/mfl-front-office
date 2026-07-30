@@ -9,6 +9,12 @@ from typing import Any
 import run_flow_rebuild as pipeline
 
 
+PLAYMFL_API_BASE_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod"
+pipeline.PLAYERS_URL = f"{PLAYMFL_API_BASE_URL}/players"
+pipeline.PROGRESSIONS_URL = f"{PLAYMFL_API_BASE_URL}/players/progressions"
+pipeline.flow_module.PLAYERS_URL = pipeline.PLAYERS_URL
+pipeline.flow_module._impl.PLAYERS_URL = pipeline.PLAYERS_URL
+
 FIRST_PLAYER_ID = 42
 PLAYER_BATCH_ANCHORS: list[int] | None = None
 
