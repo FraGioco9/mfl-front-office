@@ -18,7 +18,7 @@ MFL_WALLET_ADDRESS = _impl.MFL_WALLET_ADDRESS
 MFL_TRADE_WALLET_ADDRESS = _impl.MFL_TRADE_WALLET_ADDRESS
 FLOW_RETRY_DELAY_SECONDS = _impl.FLOW_RETRY_DELAY_SECONDS
 FLOW_STATIC_PLAYER_BATCH_SIZE = 3000
-MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 1000
+MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 500
 MIN_FLOW_SPLIT_BATCH_SIZE = _impl.MIN_FLOW_SPLIT_BATCH_SIZE
 FLOW_WORKERS = 25
 
@@ -248,6 +248,9 @@ def populate_flow_static_fields(
     include_mfl_wallet: bool = True,
 ) -> int:
     """Populate Flow seasons using wallet-sized batches with adaptive splitting."""
+    global MFL_FLOW_STATIC_PLAYER_BATCH_SIZE
+    MFL_FLOW_STATIC_PLAYER_BATCH_SIZE = 500
+
     _impl.ensure_flow_static_columns(connection)
     wallets = _impl.get_wallets_to_process(
         connection,
