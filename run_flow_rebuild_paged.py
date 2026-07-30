@@ -17,6 +17,7 @@ pipeline.flow_module._impl.PLAYERS_URL = pipeline.PLAYERS_URL
 
 FIRST_PLAYER_ID = 42
 PLAYER_BATCH_ANCHORS: list[int] | None = None
+PROGRESSION_BATCHES: tuple[tuple[int, ...], ...] | None = None
 
 
 class RollingRateLimiter:
@@ -216,11 +217,125 @@ def fetch_all_player_sources(
     return results
 
 
+def _owner_wallet_address(player: dict[str, Any]) -> str:
+    owner = player.get("ownedBy")
+    if not isinstance(owner, dict):
+        return ""
+    return str(owner.get("walletAddress") or "").strip().lower()
+
+
+def prepare_progression_batches(
+    active_players: list[dict[str, Any]],
+) -> tuple[tuple[int, ...], ...]:
+    """Build immutable progression batches from active, non-special-wallet players."""
+    excluded_wallets = {
+        pipeline.MFL_WALLET_ADDRESS.lower(),
+        pipeline.MFL_TRADE_WALLET_ADDRESS.lower(),
+    }
+    eligible_ids = sorted(
+        {
+            pipeline.player_id(player)
+            for player in active_players
+            if _owner_wallet_address(player) not in excluded_wallets
+        }
+    )
+    batches = tuple(
+        tuple(eligible_ids[index:index + pipeline.PROGRESSION_BATCH_SIZE])
+        for index in range(0, len(eligible_ids), pipeline.PROGRESSION_BATCH_SIZE)
+    )
+    excluded_count = len(active_players) - len(eligible_ids)
+    pipeline.log(
+        f"Progression batches ready: {len(batches)} predetermined batches of up to "
+        f"{pipeline.PROGRESSION_BATCH_SIZE} from {len(eligible_ids)} active players; "
+        f"excluded {excluded_count} MFL/MFL Trade players and all retired players"
+    )
+    return batches
+
+
+def fetch_player_sources_and_prepare_progressions(
+    fetcher: Any,
+    limiter: RollingRateLimiter,
+) -> dict[str, list[dict[str, Any]]]:
+    """Fetch players, then freeze progression batches from the active source."""
+    results = fetcher(limiter)
+    active_players = results.get("general")
+    if not isinstance(active_players, list):
+        raise RuntimeError("Active player source was not available for progression batching")
+
+    global PROGRESSION_BATCHES
+    PROGRESSION_BATCHES = prepare_progression_batches(active_players)
+    return results
+
+
+def refresh_progressions_from_prepared_batches(
+    connection: Any,
+    limiter: RollingRateLimiter,
+) -> dict[str, int]:
+    """Fetch both progression intervals using the batches frozen after active loading."""
+    if PROGRESSION_BATCHES is None:
+        raise RuntimeError("Progression batches were not prepared after active player loading")
+
+    batches = [list(batch) for batch in PROGRESSION_BATCHES]
+    jobs = [
+        (interval, suffix, batch)
+        for interval, suffix in (("ALL", "all"), ("CURRENT_SEASON", "current_season"))
+        for batch in batches
+    ]
+    totals = {"ALL": 0, "CURRENT_SEASON": 0}
+    completed = {"ALL": 0, "CURRENT_SEASON": 0}
+
+    with ThreadPoolExecutor(
+        max_workers=min(pipeline.MFL_WORKERS, max(1, len(jobs)))
+    ) as executor:
+        futures = {
+            executor.submit(
+                pipeline.progression_request,
+                batch,
+                interval,
+                limiter,
+            ): (interval, suffix, batch)
+            for interval, suffix, batch in jobs
+        }
+        for future in as_completed(futures):
+            interval, suffix, batch = futures[future]
+            data = future.result()
+            rows = [
+                tuple(
+                    pipeline.progression_value(data.get(str(player_id)), attribute)
+                    for attribute in pipeline.ATTRIBUTES
+                ) + (player_id,)
+                for player_id in batch
+            ]
+            assignments = ", ".join(
+                f"{attribute}_prog_{suffix} = ?"
+                for attribute in pipeline.ATTRIBUTES
+            )
+            connection.executemany(
+                f"UPDATE players SET {assignments} WHERE player_id = ?",
+                rows,
+            )
+            connection.commit()
+            completed[interval] += 1
+            totals[interval] += len(rows)
+            pipeline.log(
+                f"Progression {interval} batch {completed[interval]}/{len(batches)}: "
+                f"updated {len(rows)}"
+            )
+
+    return totals
+
+
 def main() -> int:
     pipeline.MFL_WORKERS = 320
     pipeline.RateLimiter = RollingRateLimiter
     pipeline.refresh_wallets = refresh_wallets_without_playmfl_limiter
-    pipeline.fetch_all_player_sources = fetch_all_player_sources
+
+    configured_player_fetcher = fetch_all_player_sources
+    pipeline.fetch_all_player_sources = lambda limiter: (
+        fetch_player_sources_and_prepare_progressions(configured_player_fetcher, limiter)
+    )
+    pipeline.refresh_progressions = refresh_progressions_from_prepared_batches
+
     pipeline.log(
         f"PlayMFL runtime configuration: "
         f"{pipeline.MFL_REQUESTS_PER_MINUTE} starts/min, "
