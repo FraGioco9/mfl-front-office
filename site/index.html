@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.118.0";
+        const VERSION = "1.118.1";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -72,6 +72,8 @@
           let pendingStats = false;
           let statsReady = false;
           let scheduled = false;
+          let evaluationAutoFocusDone = false;
+          let evaluationFocusFrame = 0;
 
           function routeInfo(pathname = window.location.pathname) {
             const path = String(pathname || "/").replace(/\/+$/, "") || "/";
@@ -388,11 +390,49 @@
             switcher.style.removeProperty("visibility");
           }
 
+          function syncEvaluationSearchFocus() {
+            const page = document.getElementById("evaluationPage");
+            const input = document.getElementById("evaluationSearchInput");
+            const evaluationActive = document.body.dataset.page === "evaluation" && page && !page.hidden;
+            const playerSelected = typeof state === "object" && Boolean(state.evaluationPlayerId);
+
+            if (!evaluationActive || playerSelected) {
+              evaluationAutoFocusDone = false;
+              if (evaluationFocusFrame) {
+                cancelAnimationFrame(evaluationFocusFrame);
+                evaluationFocusFrame = 0;
+              }
+              return;
+            }
+
+            if (!input
+                || evaluationAutoFocusDone
+                || document.body.classList.contains("loading")
+                || document.body.classList.contains("booting")
+                || document.body.classList.contains("appBusy")
+                || document.documentElement.classList.contains("loading")) {
+              return;
+            }
+
+            evaluationAutoFocusDone = true;
+            evaluationFocusFrame = requestAnimationFrame(() => {
+              evaluationFocusFrame = 0;
+              const stillActive = document.body.dataset.page === "evaluation" && !page.hidden;
+              const stillSelected = typeof state === "object" && Boolean(state.evaluationPlayerId);
+              if (!stillActive || stillSelected) {
+                evaluationAutoFocusDone = false;
+                return;
+              }
+              input.focus({ preventScroll: true });
+            });
+          }
+
           function enforce() {
             const route = pendingStats ? { page: "mflstats" } : routeInfo();
             if (route.page === "mflstats") prepareStatsPage();
             else if (route.page === "club") prepareClubPage(route);
             else if (route.page === "watchlist") showWatchlistSwitcher();
+            syncEvaluationSearchFocus();
           }
 
           function schedule() {
@@ -520,7 +560,7 @@
         source = source.replace('const VERSION = "1.117.1";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const entries = new Map();',
-          'const entries = new Map([["v1.118.0", "Use Supabase season ratios for discount rates"]]);',
+          'const entries = new Map([["v1.118.1", "Keep Evaluation header sticky and focus empty player search"], ["v1.118.0", "Use Supabase season ratios for discount rates"]]);',
         );
 
         source = source.replace(
@@ -551,8 +591,13 @@
 
             html:has(body[data-page="evaluation"]),
             body[data-page="evaluation"] {
-              overflow-x: hidden !important;
+              overflow-x: clip !important;
               scrollbar-width: none;
+            }
+
+            body[data-page="evaluation"] > .topbar {
+              position: sticky !important;
+              top: 0;
             }
 
             html:has(body[data-page="evaluation"])::-webkit-scrollbar,
