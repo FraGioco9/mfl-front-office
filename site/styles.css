@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.11 - Fix Stats filters and place the Evaluation discount tooltip above its box. */
+/* v1.118.12 - Match tooltip transitions, restore Stats filters, and support local ratios. */
 html,
 body {
   width: 100%;
@@ -45,17 +45,15 @@ body > .siteFooter {
   margin-top: 0 !important;
 }
 
-/* Show the current version as soon as the static shell and stylesheet render. */
 .siteFooter a[data-page="changelog"] {
   font-size: 0 !important;
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.11";
+  content: "MFL Front Office v1.118.12";
   font-size: 14px;
 }
 
-/* Keep Search, Advanced Settings, and Saved Evaluations above page content. */
 #searchModal:not([hidden]),
 #advancedSettingsModal:not([hidden]),
 #evaluationLoadModal:not([hidden]) {
@@ -71,7 +69,6 @@ body > .siteFooter {
   z-index: 1;
 }
 
-/* Keep Evaluation controls below the header. */
 html body[data-page="evaluation"] #evaluationPage {
   overflow-x: clip !important;
   overflow-y: visible !important;
@@ -107,7 +104,6 @@ html body[data-page="evaluation"] #evaluationPanel {
   z-index: 0;
 }
 
-/* Keep the populated Evaluation clear control visible after focus leaves the input. */
 html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown) + .evaluationSearchClearButton[hidden] {
   display: inline-flex !important;
   visibility: visible !important;
@@ -115,12 +111,10 @@ html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown)
   pointer-events: auto !important;
 }
 
-/* Keep the empty Evaluation page compact so the footer remains in view. */
 html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
   min-height: 0 !important;
 }
 
-/* Use the body-level tooltip portal instead of the clipped pseudo-element. */
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {
   content: none !important;
@@ -130,36 +124,46 @@ html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-t
 .evaluationDiscountTooltipPortal {
   position: fixed;
   z-index: 2147483647;
-  width: max-content;
-  max-width: min(340px, calc(100vw - 24px));
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.22));
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: var(--surface-raised, #171b22);
-  color: var(--text, #f4f5f7);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
   font-size: 13px;
-  font-weight: 400;
   line-height: 1.35;
-  text-align: left;
   white-space: normal;
   pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.evaluationDiscountTooltipPortal.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .evaluationDiscountTooltipPortal[hidden] {
   display: none !important;
 }
 
-/* Remove only stale Stats-page interaction blocking after its controls render. */
+body[data-page="mflstats"]::after,
 body[data-page="mflstats"].mflStatsInteractive::after {
   display: none !important;
   pointer-events: none !important;
 }
 
-body[data-page="mflstats"].mflStatsInteractive #appShell,
-body[data-page="mflstats"].mflStatsInteractive #mflStatsPage,
-body[data-page="mflstats"].mflStatsInteractive .mflStatsFilterButton,
-body[data-page="mflstats"].mflStatsInteractive .mflStatsDistributionModeButton {
+body[data-page="mflstats"] #appShell,
+body[data-page="mflstats"] #mflStatsPage,
+body[data-page="mflstats"] .mflStatsFilterButton,
+body[data-page="mflstats"] .mflStatsDistributionModeButton {
   pointer-events: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evaluationDiscountTooltipPortal {
+    transition: none;
+  }
 }
