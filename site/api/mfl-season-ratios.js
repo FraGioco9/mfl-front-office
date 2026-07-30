@@ -1,5 +1,5 @@
-const APP_VERSION = "1.118.4";
-const APP_CHANGELOG_DESCRIPTION = "Keep page scrollbars between the header and footer and sync the latest version";
+const APP_VERSION = "1.118.5";
+const APP_CHANGELOG_DESCRIPTION = "Extend the global shell to the right edge and keep version UI current";
 
 function supabaseConfig() {
   const url = String(
@@ -83,13 +83,14 @@ function runtimeScript(rows, warning = "") {
   }
 
   function install() {
+    syncVersionUi();
+
     if (typeof evaluationDiscountRateValue !== "function") {
       attempts += 1;
       if (attempts < 500) window.setTimeout(install, 20);
       return;
     }
 
-    syncVersionUi();
     if (warning) console.warn(warning);
     if (rows.length !== 5) return;
 
