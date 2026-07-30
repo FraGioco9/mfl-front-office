@@ -46,59 +46,37 @@ class RollingRateLimiter:
 
 
 def discover_player_batch_anchors(limiter: RollingRateLimiter) -> list[int]:
-    """Build real 1500-player API page boundaries through player ID 42."""
-    anchors: list[int] = []
-    before_player_id: int | None = None
-    batch_number = 1
-    highest_player_id: int | None = None
+    """Pre-determine fixed 1500-ID API page boundaries through player ID 42."""
+    page = pipeline.fetch_players_page(
+        limiter,
+        page_label="Highest player ID batch",
+    )
+    ids = sorted({pipeline.player_id(player) for player in page}, reverse=True)
+    if not ids:
+        raise RuntimeError("Highest player ID batch was empty")
 
-    while True:
-        page = pipeline.fetch_players_page(
-            limiter,
-            page_label=f"Player ID batch {batch_number}",
-            before_player_id=before_player_id,
-        )
-        ids = sorted({pipeline.player_id(player) for player in page}, reverse=True)
-        if not ids:
-            raise RuntimeError(
-                f"Player ID batch {batch_number} was empty before ID {FIRST_PLAYER_ID} was found"
-            )
-
-        if highest_player_id is None:
-            highest_player_id = ids[0]
-            pipeline.log(f"Highest PlayMFL player ID: {highest_player_id}")
-
-        lowest_player_id = ids[-1]
-        pipeline.log(
-            f"Player ID batch {batch_number}: {len(ids)} IDs, "
-            f"{ids[0]}-{lowest_player_id}"
+    highest_player_id = ids[0]
+    if highest_player_id < FIRST_PLAYER_ID:
+        raise RuntimeError(
+            f"Highest PlayMFL player ID {highest_player_id} is below "
+            f"the required first ID {FIRST_PLAYER_ID}"
         )
 
-        if FIRST_PLAYER_ID in ids:
-            pipeline.log(
-                f"Player ID batches ready: {batch_number} batches of up to "
-                f"{pipeline.MFL_PAGE_SIZE}, ending with ID {FIRST_PLAYER_ID}"
-            )
-            return anchors
+    player_id_span = highest_player_id - FIRST_PLAYER_ID + 1
+    total_batches = (
+        player_id_span + pipeline.MFL_PAGE_SIZE - 1
+    ) // pipeline.MFL_PAGE_SIZE
+    anchors = [
+        highest_player_id - batch_index * pipeline.MFL_PAGE_SIZE + 1
+        for batch_index in range(1, total_batches)
+    ]
 
-        if lowest_player_id < FIRST_PLAYER_ID:
-            raise RuntimeError(
-                f"Player ID batch {batch_number} passed below ID {FIRST_PLAYER_ID} "
-                "without including it"
-            )
-        if len(page) < pipeline.MFL_PAGE_SIZE:
-            raise RuntimeError(
-                f"Player ID batch {batch_number} returned only {len(page)} players "
-                f"before ID {FIRST_PLAYER_ID} was found"
-            )
-        if before_player_id is not None and lowest_player_id >= before_player_id:
-            raise RuntimeError(
-                f"Player ID pagination did not advance below {before_player_id}"
-            )
-
-        anchors.append(lowest_player_id)
-        before_player_id = lowest_player_id
-        batch_number += 1
+    pipeline.log(f"Highest PlayMFL player ID: {highest_player_id}")
+    pipeline.log(
+        f"Player ID batches ready: {total_batches} predetermined batches of up to "
+        f"{pipeline.MFL_PAGE_SIZE}, covering IDs {highest_player_id}-{FIRST_PLAYER_ID}"
+    )
+    return anchors
 
 
 def refresh_wallets_without_playmfl_limiter(
