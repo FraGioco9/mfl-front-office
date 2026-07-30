@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.117.1";
+        const VERSION = "1.118.0";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -518,6 +518,10 @@
         let source = request.responseText;
         source = source.replace('/styles.css?v=1.117.1', `/styles.css?v=${VERSION}`);
         source = source.replace('const VERSION = "1.117.1";', `const VERSION = "${VERSION}";`);
+        source = source.replace(
+          'const entries = new Map();',
+          'const entries = new Map([["v1.118.0", "Use Supabase season ratios for discount rates"]]);',
+        );
 
         source = source.replace(
           '      if (mflStatsAgeDistribution) {\n        mflStatsAgeDistribution.innerHTML = \'<p class="mflStatsEmpty">Loading players...</p>\';\n      }',
@@ -579,9 +583,10 @@
           </style>
         `;
         const routeGuard = `(${routeGuardFunction.toString()})();`;
+        const ratioScript = `<script src="/api/mfl-season-ratios?format=script&v=${VERSION}"><\/script>`;
 
         source = source.replace("</head>", `${routeStyles}</head>`);
-        source = source.replace("</body>", `<script>${routeGuard}<\/script></body>`);
+        source = source.replace("</body>", `${ratioScript}<script>${routeGuard}<\/script></body>`);
 
         document.open();
         document.write(source);
