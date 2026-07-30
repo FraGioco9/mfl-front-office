@@ -9,12 +9,6 @@ from typing import Any
 import run_flow_rebuild as pipeline
 
 
-PLAYMFL_API_BASE_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod"
-pipeline.PLAYERS_URL = f"{PLAYMFL_API_BASE_URL}/players"
-pipeline.PROGRESSIONS_URL = f"{PLAYMFL_API_BASE_URL}/players/progressions"
-pipeline.flow_module.PLAYERS_URL = pipeline.PLAYERS_URL
-pipeline.flow_module._impl.PLAYERS_URL = pipeline.PLAYERS_URL
-
 FIRST_PLAYER_ID = 42
 PLAYER_BATCH_ANCHORS: list[int] | None = None
 
@@ -133,67 +127,6 @@ def refresh_wallets_without_playmfl_limiter(
     return len(wallets)
 
 
-def fetch_predetermined_player_sources_parallel(
-    limiter: RollingRateLimiter,
-    jobs: dict[str, dict[str, Any]],
-) -> dict[str, list[dict[str, Any]]]:
-    """Submit every predetermined player batch to one shared 80-worker queue."""
-    requests: list[tuple[str, str, int, int | None, dict[str, Any]]] = []
-    totals: dict[str, int] = {}
-
-    for key, config in jobs.items():
-        anchors = list(config.get("anchors") or [])
-        label = str(config["label"])
-        totals[key] = 1 + len(anchors)
-        for batch_number, before_player_id in enumerate([None, *anchors], start=1):
-            requests.append((key, label, batch_number, before_player_id, config))
-
-    if not requests:
-        return {key: [] for key in jobs}
-
-    workers = min(len(requests), max(1, pipeline.MFL_REQUESTS_PER_MINUTE))
-    pipeline.log(
-        f"Submitting {len(requests)} predetermined PlayMFL batches to "
-        f"{workers} parallel workers, capped at "
-        f"{pipeline.MFL_REQUESTS_PER_MINUTE} starts/min"
-    )
-
-    players_by_source: dict[str, dict[int, dict[str, Any]]] = {
-        key: {} for key in jobs
-    }
-    completed_by_source: dict[str, int] = {key: 0 for key in jobs}
-
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(
-                pipeline.fetch_players_page,
-                limiter,
-                page_label=f"{label} batch {batch_number}/{totals[key]}",
-                before_player_id=before_player_id,
-                retired=config.get("retired"),
-                wallet_address=config.get("wallet_address"),
-            ): (key, label)
-            for key, label, batch_number, before_player_id, config in requests
-        }
-
-        for future in as_completed(futures):
-            key, label = futures[future]
-            page = future.result()
-            players_by_source[key].update(
-                {pipeline.player_id(player): player for player in page}
-            )
-            completed_by_source[key] += 1
-            pipeline.log(
-                f"{label} batch {completed_by_source[key]}/{totals[key]}: "
-                f"returned {len(page)}, total {len(players_by_source[key])}"
-            )
-
-    return {
-        key: list(players.values())
-        for key, players in players_by_source.items()
-    }
-
-
 def fetch_predetermined_player_source(
     limiter: RollingRateLimiter,
     *,
@@ -202,26 +135,69 @@ def fetch_predetermined_player_source(
     retired: bool | None = None,
     wallet_address: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Compatibility wrapper for callers that request one predetermined source."""
-    key = "source"
-    return fetch_predetermined_player_sources_parallel(
+    """Fetch one source concurrently using API-derived batch anchors."""
+    first_page = pipeline.fetch_players_page(
         limiter,
-        {
-            key: {
-                "label": label,
-                "anchors": anchors,
-                "retired": retired,
-                "wallet_address": wallet_address,
-            }
-        },
-    )[key]
+        page_label=f"{label} initial batch",
+        retired=retired,
+        wallet_address=wallet_address,
+    )
+    players: dict[int, dict[str, Any]] = {
+        pipeline.player_id(player): player for player in first_page
+    }
+    total_batches = 1 + len(anchors)
+    completed_batches = 1
+    pipeline.log(
+        f"{label} batch {completed_batches}/{total_batches}: "
+        f"returned {len(first_page)}, total {len(players)}"
+    )
+
+    if not anchors:
+        return list(players.values())
+
+    with ThreadPoolExecutor(
+        max_workers=min(pipeline.MFL_WORKERS, len(anchors))
+    ) as executor:
+        futures = {
+            executor.submit(
+                pipeline.fetch_players_page,
+                limiter,
+                page_label=f"{label} queued batch",
+                before_player_id=before_player_id,
+                retired=retired,
+                wallet_address=wallet_address,
+            ): before_player_id
+            for before_player_id in anchors
+        }
+
+        for future in as_completed(futures):
+            page = future.result()
+            players.update({pipeline.player_id(player): player for player in page})
+            completed_batches += 1
+            pipeline.log(
+                f"{label} batch {completed_batches}/{total_batches}: "
+                f"returned {len(page)}, total {len(players)}"
+            )
+
+    return list(players.values())
 
 
-def _prepared_jobs(include_special_wallets: bool) -> dict[str, dict[str, Any]]:
+def fetch_all_player_sources(
+    limiter: RollingRateLimiter,
+) -> dict[str, list[dict[str, Any]]]:
     if PLAYER_BATCH_ANCHORS is None:
         raise RuntimeError("Player ID batches were not prepared before player loading")
     anchors = list(PLAYER_BATCH_ANCHORS)
-    jobs: dict[str, dict[str, Any]] = {
+
+    pipeline.log(
+        "API-derived PlayMFL batches: "
+        f"active {1 + len(anchors)}, "
+        f"retired {1 + len(anchors)}, "
+        f"MFL {1 + len(anchors)}, "
+        f"MFL Trade {1 + len(anchors)}"
+    )
+
+    jobs = {
         "general": {
             "label": "Active players",
             "anchors": anchors,
@@ -232,56 +208,27 @@ def _prepared_jobs(include_special_wallets: bool) -> dict[str, dict[str, Any]]:
             "anchors": anchors,
             "retired": True,
         },
+        "mfl": {
+            "label": "MFL wallet",
+            "anchors": anchors,
+            "wallet_address": pipeline.MFL_WALLET_ADDRESS,
+        },
+        "mfl_trade": {
+            "label": "MFL Trade wallet",
+            "anchors": anchors,
+            "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
+        },
     }
-    if include_special_wallets:
-        jobs.update(
-            {
-                "mfl": {
-                    "label": "MFL wallet",
-                    "anchors": anchors,
-                    "wallet_address": pipeline.MFL_WALLET_ADDRESS,
-                },
-                "mfl_trade": {
-                    "label": "MFL Trade wallet",
-                    "anchors": anchors,
-                    "wallet_address": pipeline.MFL_TRADE_WALLET_ADDRESS,
-                },
-            }
-        )
-    return jobs
 
+    results: dict[str, list[dict[str, Any]]] = {}
+    with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
+        futures = {
+            executor.submit(fetch_predetermined_player_source, limiter, **config): key
+            for key, config in jobs.items()
+        }
+        for future in as_completed(futures):
+            results[futures[future]] = future.result()
 
-def fetch_all_player_sources(
-    limiter: RollingRateLimiter,
-) -> dict[str, list[dict[str, Any]]]:
-    jobs = _prepared_jobs(include_special_wallets=True)
-    pipeline.log(
-        "API-derived PlayMFL batches: "
-        + ", ".join(
-            f"{config['label']} {1 + len(config['anchors'])}"
-            for config in jobs.values()
-        )
-    )
-    return fetch_predetermined_player_sources_parallel(limiter, jobs)
-
-
-_DEFAULT_FETCH_ALL_PLAYER_SOURCES = fetch_all_player_sources
-
-
-def fetch_active_and_retired_player_sources_parallel(
-    limiter: RollingRateLimiter,
-) -> dict[str, list[dict[str, Any]]]:
-    jobs = _prepared_jobs(include_special_wallets=False)
-    pipeline.log(
-        "API-derived PlayMFL batches: "
-        + ", ".join(
-            f"{config['label']} {1 + len(config['anchors'])}"
-            for config in jobs.values()
-        )
-    )
-    results = fetch_predetermined_player_sources_parallel(limiter, jobs)
-    results["mfl"] = []
-    results["mfl_trade"] = []
     return results
 
 
@@ -289,23 +236,11 @@ def main() -> int:
     pipeline.MFL_WORKERS = 320
     pipeline.RateLimiter = RollingRateLimiter
     pipeline.refresh_wallets = refresh_wallets_without_playmfl_limiter
-
-    configured_fetcher = fetch_all_player_sources
-    if configured_fetcher is _DEFAULT_FETCH_ALL_PLAYER_SOURCES:
-        pipeline.fetch_all_player_sources = _DEFAULT_FETCH_ALL_PLAYER_SOURCES
-    elif (
-        getattr(configured_fetcher, "__module__", "") in {"__main__", "rebuild_database"}
-        and getattr(configured_fetcher, "__name__", "")
-        == "fetch_active_and_retired_player_sources"
-    ):
-        pipeline.fetch_all_player_sources = fetch_active_and_retired_player_sources_parallel
-    else:
-        pipeline.fetch_all_player_sources = configured_fetcher
-
+    pipeline.fetch_all_player_sources = fetch_all_player_sources
     pipeline.log(
         f"PlayMFL runtime configuration: "
         f"{pipeline.MFL_REQUESTS_PER_MINUTE} starts/min, "
-        f"{min(pipeline.MFL_REQUESTS_PER_MINUTE, pipeline.MFL_WORKERS)} parallel workers"
+        f"{pipeline.MFL_WORKERS} workers"
     )
     return pipeline.main()
 
