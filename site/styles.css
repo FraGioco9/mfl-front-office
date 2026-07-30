@@ -16,7 +16,7 @@
   z-index: 1;
 }
 
-/* Evaluation search results stay layered without creating a page scroll container. */
+/* Keep Evaluation controls below the header except for active tooltips. */
 html body[data-page="evaluation"] #evaluationPage {
   overflow-x: clip !important;
   overflow-y: visible !important;
@@ -24,7 +24,7 @@ html body[data-page="evaluation"] #evaluationPage {
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
   position: relative;
-  z-index: 2147483000 !important;
+  z-index: 10 !important;
   overflow: visible !important;
 }
 
@@ -37,12 +37,12 @@ html body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
 
 html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
 html body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  z-index: 2147483001 !important;
+  z-index: 11 !important;
 }
 
 html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
   position: absolute !important;
-  z-index: 2147483002 !important;
+  z-index: 12 !important;
   max-height: none !important;
   overflow: visible !important;
 }
@@ -50,6 +50,14 @@ html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
 html body[data-page="evaluation"] #evaluationPanel {
   position: relative;
   z-index: 0;
+}
+
+/* Keep the populated Evaluation clear control visible after focus leaves the input. */
+html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown) + .evaluationSearchClearButton[hidden] {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Keep the empty Evaluation page compact so the footer remains in view. */
@@ -62,7 +70,12 @@ html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) {
   overflow-y: hidden !important;
 }
 
-/* The discount-rate tooltip must paint above page content and the sticky header. */
+/* Raise only the active discount tooltip above the sticky header. */
+html body[data-page="evaluation"] #evaluationPage .evaluationTopBar:has(.evaluationDiscountRate[data-tooltip]:hover),
+html body[data-page="evaluation"] #evaluationPage .evaluationTopBar:has(.evaluationDiscountRate[data-tooltip]:focus) {
+  z-index: 2147483642 !important;
+}
+
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover,
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus {
   position: relative;

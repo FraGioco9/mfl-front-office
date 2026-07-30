@@ -44,7 +44,7 @@ jobs:
           fi
 
       - name: Rebuild database
-        run: python rebuild_database.py
+        run: python rebuild_database_runner.py
 
       - name: Send progression emails
         if: hashFiles('previous-database/mfl_database.db') != ''

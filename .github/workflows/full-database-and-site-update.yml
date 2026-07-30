@@ -91,7 +91,7 @@ jobs:
 
       - name: Rebuild database
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
-        run: python rebuild_database.py
+        run: python rebuild_database_runner.py
 
       - name: Send progression emails
         if: (github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true') && hashFiles('previous-database/mfl_database.db') != ''
