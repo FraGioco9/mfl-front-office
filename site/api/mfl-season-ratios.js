@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.10";
+const APP_VERSION = "1.118.11";
 const APP_RELEASES = [
+  ["v1.118.11", "Fix discount tooltip placement, Stats filters, and Season 16 discount history"],
   ["v1.118.10", "Fix Evaluation tooltip, Stats interactions, footer timing, and season ratios"],
   ["v1.118.9", "Restore MFL Stats interactions after loading"],
   ["v1.118.8", "Complete SemVer changelog history and keep the latest version current"],
@@ -57,12 +58,12 @@ function runtimeScript(rows, warning = "") {
   const warning = ${serializedWarning};
   const appVersion = ${serializedVersion};
   const currentReleases = ${serializedReleases};
+  const busyEventNames = ["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"];
   let attempts = 0;
-  let viewCaptureInstalled = false;
   let activeMflStatsRequests = 0;
-  let mflStatsFetchWrapped = false;
-  let mflStatsRenderWrapped = false;
-  let mflStatsSetPageWrapped = false;
+  let busyListenerReplacement = null;
+  let tooltipElement = null;
+  let tooltipTarget = null;
 
   function versionParts(value) {
     const match = String(value || "").trim().match(/^v?(\\d+)\\.(\\d+)\\.(\\d+)$/);
@@ -176,18 +177,27 @@ function runtimeScript(rows, warning = "") {
     });
   }
 
-  function mflStatsContentReady() {
+  function mflStatsPageActive() {
     const page = document.getElementById("mflStatsPage");
-    const totalPlayers = document.getElementById("mflStatsTotalPlayers");
-    return document.body.dataset.page === "mflstats"
-      && page
+    return Boolean(
+      page
       && !page.hidden
-      && /^\\d[\\d,.]*$/.test(String(totalPlayers?.textContent || "").trim());
+      && (document.body.dataset.page === "mflstats" || window.location.pathname === "/mfl/stats")
+    );
+  }
+
+  function mflStatsControlsReady() {
+    if (!mflStatsPageActive()) return false;
+    const totalText = String(document.getElementById("mflStatsTotalPlayers")?.textContent || "").trim();
+    return Boolean(
+      document.querySelector("#mflStatsOverallFilters .mflStatsFilterButton")
+      && /\\d/.test(totalText)
+    );
   }
 
   function isMflStatsRequest(input) {
     try {
-      const value = input instanceof Request ? input.url : String(input || "");
+      const value = typeof Request !== "undefined" && input instanceof Request ? input.url : String(input || "");
       const url = new URL(value, window.location.href);
       return url.pathname === "/api/mfl-stats"
         || (url.pathname === "/api/data"
@@ -197,17 +207,32 @@ function runtimeScript(rows, warning = "") {
     }
   }
 
-  function releaseFinishedMflStatsBusyState() {
-    if (!mflStatsContentReady() || activeMflStatsRequests > 0) return;
+  function unlockMflStatsPage() {
+    if (!mflStatsControlsReady() || activeMflStatsRequests > 0) return false;
 
+    const appShell = document.getElementById("appShell");
+    let staleBusy = Boolean(
+      appShell?.inert
+      || document.documentElement.classList.contains("appBusy")
+      || document.body.classList.contains("appBusy")
+      || document.body.getAttribute("aria-busy") === "true"
+    );
     try {
-      if (typeof state === "object" && state) {
-        state.interactionBusyDepth = 0;
-        state.incrementalApplying = false;
-        state.incrementalRequestPromises?.clear?.();
+      staleBusy = staleBusy || Boolean(typeof state === "object" && state && Number(state.interactionBusyDepth) > 0);
+    } catch {
+      // DOM state below is sufficient when application state is unavailable.
+    }
+
+    if (staleBusy) {
+      try {
+        if (typeof endInteractionBusy === "function") {
+          endInteractionBusy({ reset: true });
+        } else if (typeof state === "object" && state) {
+          state.interactionBusyDepth = 0;
+        }
+      } catch (error) {
+        console.error("Could not reset the completed MFL Stats loading state.", error);
       }
-    } catch (error) {
-      console.error("Could not reset the completed MFL Stats state.", error);
     }
 
     document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending");
@@ -218,25 +243,26 @@ function runtimeScript(rows, warning = "") {
       "tableRowsLoading",
       "tableLayoutPending",
       "clubViewLoading",
-      "clubViewSwitching",
+      "clubViewSwitching"
     );
+    document.body.classList.add("mflStatsInteractive");
     document.body.setAttribute("aria-busy", "false");
     Array.from(document.body.children).forEach((element) => {
       if (element instanceof HTMLElement) element.inert = false;
     });
+    return true;
   }
 
-  function scheduleMflStatsBusyRelease() {
+  function scheduleMflStatsUnlock() {
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(releaseFinishedMflStatsBusyState);
+      window.requestAnimationFrame(unlockMflStatsPage);
     });
   }
 
-  function installMflStatsRequestTracking() {
-    if (mflStatsFetchWrapped) return;
-    mflStatsFetchWrapped = true;
+  function installMflStatsFetchTracking() {
+    if (typeof window.fetch !== "function" || window.fetch.__mflStatsTracked) return;
     const previousFetch = window.fetch.bind(window);
-    window.fetch = async function trackedMflStatsFetch(input, init) {
+    const trackedFetch = async function trackedMflStatsFetch(input, init) {
       const tracked = isMflStatsRequest(input);
       if (tracked) activeMflStatsRequests += 1;
       try {
@@ -244,71 +270,71 @@ function runtimeScript(rows, warning = "") {
       } finally {
         if (tracked) {
           activeMflStatsRequests = Math.max(0, activeMflStatsRequests - 1);
-          scheduleMflStatsBusyRelease();
+          scheduleMflStatsUnlock();
         }
       }
     };
+    trackedFetch.__mflStatsTracked = true;
+    window.fetch = trackedFetch;
   }
 
-  function installMflStatsCompletionHooks() {
-    if (typeof renderMflStatsPage === "function" && !mflStatsRenderWrapped) {
-      mflStatsRenderWrapped = true;
-      const originalRenderMflStatsPage = renderMflStatsPage;
-      renderMflStatsPage = function renderMflStatsPageWithInteractionRelease() {
-        const result = originalRenderMflStatsPage.apply(this, arguments);
-        scheduleMflStatsBusyRelease();
-        return result;
-      };
-    }
-
-    if (typeof setPage === "function" && !mflStatsSetPageWrapped) {
-      mflStatsSetPageWrapped = true;
-      const originalSetPage = setPage;
-      setPage = async function setPageWithMflStatsInteractionRelease(pageName) {
-        try {
-          return await originalSetPage.apply(this, arguments);
-        } finally {
-          if (pageName === "mflstats"
-              || (pageName === "mfl" && String(arguments[2]?.view || "") === "stats")
-              || window.location.pathname === "/mfl/stats") {
-            scheduleMflStatsBusyRelease();
-          }
-        }
-      };
-    }
+  function installMflStatsRenderHook() {
+    if (typeof renderMflStatsPage !== "function" || renderMflStatsPage.__mflStatsUnlockWrapped) return;
+    const originalRenderMflStatsPage = renderMflStatsPage;
+    const wrappedRender = function renderMflStatsPageWithUnlock() {
+      const result = originalRenderMflStatsPage.apply(this, arguments);
+      scheduleMflStatsUnlock();
+      return result;
+    };
+    wrappedRender.__mflStatsUnlockWrapped = true;
+    renderMflStatsPage = wrappedRender;
   }
 
-  function installMflStatsBusyRecovery() {
-    installMflStatsRequestTracking();
-    installMflStatsCompletionHooks();
-    if (window.__mflStatsBusyRecoveryTimer) return;
-    window.__mflStatsBusyRecoveryTimer = window.setInterval(() => {
-      installMflStatsCompletionHooks();
-      releaseFinishedMflStatsBusyState();
-    }, 100);
-    window.addEventListener("pageshow", scheduleMflStatsBusyRelease);
-    document.addEventListener("visibilitychange", scheduleMflStatsBusyRelease);
+  function installBusyListenerOverride() {
+    if (busyListenerReplacement || typeof blockInteractionWhileBusy !== "function") return;
+
+    busyEventNames.forEach((eventName) => {
+      document.removeEventListener(eventName, blockInteractionWhileBusy, true);
+    });
+
+    busyListenerReplacement = function allowCompletedMflStatsInteraction(event) {
+      if (mflStatsControlsReady() && activeMflStatsRequests === 0) {
+        unlockMflStatsPage();
+        return;
+      }
+      blockInteractionWhileBusy(event);
+    };
+
+    busyEventNames.forEach((eventName) => {
+      document.addEventListener(eventName, busyListenerReplacement, true);
+    });
   }
 
-  function loadingInProgress() {
-    releaseFinishedMflStatsBusyState();
+  function actualLoadingInProgress() {
     let stateBusy = false;
     try {
       stateBusy = typeof state === "object" && state && Boolean(
-        Number(state.interactionBusyDepth) > 0
-        || state.incrementalApplying
+        state.incrementalApplying
         || Number(state.incrementalRequestPromises?.size) > 0
+        || Number(state.interactionBusyDepth) > 0
       );
     } catch {
       stateBusy = false;
     }
 
-    return stateBusy
-      || document.documentElement.classList.contains("appBusy")
+    if (mflStatsControlsReady() && activeMflStatsRequests === 0) {
+      stateBusy = Boolean(
+        typeof state === "object"
+        && state
+        && (state.incrementalApplying || Number(state.incrementalRequestPromises?.size) > 0)
+      );
+    }
+
+    return activeMflStatsRequests > 0
+      || stateBusy
       || document.documentElement.classList.contains("loading")
       || document.documentElement.classList.contains("bootPending")
       || document.documentElement.classList.contains("table-layout-pending")
-      || document.body.classList.contains("appBusy")
       || document.body.classList.contains("loading")
       || document.body.classList.contains("booting")
       || document.body.classList.contains("tableRowsLoading")
@@ -318,17 +344,16 @@ function runtimeScript(rows, warning = "") {
   }
 
   function installViewLoadingGuard() {
-    if (!viewCaptureInstalled) {
-      viewCaptureInstalled = true;
+    if (!window.__mflViewCaptureInstalled) {
+      window.__mflViewCaptureInstalled = true;
       const blockViewSwitch = (event) => {
         const button = event.target instanceof Element
           ? event.target.closest(".viewButton[data-view]")
           : null;
-        if (!button || !loadingInProgress()) return;
+        if (!button || !actualLoadingInProgress()) return;
         event.preventDefault();
         event.stopImmediatePropagation();
       };
-
       ["pointerdown", "mousedown", "click", "auxclick"].forEach((eventName) => {
         document.addEventListener(eventName, blockViewSwitch, true);
       });
@@ -337,7 +362,7 @@ function runtimeScript(rows, warning = "") {
     if (typeof setView === "function" && !setView.__mflLoadingGuard) {
       const originalSetView = setView;
       const guardedSetView = function guardedSetView() {
-        if (loadingInProgress()) return undefined;
+        if (actualLoadingInProgress()) return undefined;
         return originalSetView.apply(this, arguments);
       };
       guardedSetView.__mflLoadingGuard = true;
@@ -345,12 +370,91 @@ function runtimeScript(rows, warning = "") {
     }
   }
 
-  function install() {
-    installViewLoadingGuard();
+  function ensureDiscountTooltip() {
+    const box = document.querySelector(".evaluationDiscountRate[data-tooltip]");
+    if (!box) return;
 
+    if (!tooltipElement) {
+      tooltipElement = document.createElement("div");
+      tooltipElement.id = "evaluationDiscountTooltipPortal";
+      tooltipElement.className = "evaluationDiscountTooltipPortal";
+      tooltipElement.setAttribute("role", "tooltip");
+      tooltipElement.hidden = true;
+      document.body.appendChild(tooltipElement);
+
+      const reposition = () => {
+        if (!tooltipElement.hidden && tooltipTarget) positionDiscountTooltip();
+      };
+      window.addEventListener("resize", reposition);
+      document.addEventListener("scroll", reposition, true);
+    }
+
+    if (box.__discountTooltipInstalled) return;
+    box.__discountTooltipInstalled = true;
+    box.setAttribute("aria-describedby", tooltipElement.id);
+
+    const show = () => {
+      tooltipTarget = box;
+      tooltipElement.textContent = String(box.dataset.tooltip || "");
+      tooltipElement.hidden = false;
+      positionDiscountTooltip();
+    };
+    const hide = () => {
+      tooltipElement.hidden = true;
+      tooltipTarget = null;
+    };
+
+    box.addEventListener("mouseenter", show);
+    box.addEventListener("mouseleave", hide);
+    box.addEventListener("focusin", show);
+    box.addEventListener("focusout", hide);
+    box.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") hide();
+    });
+  }
+
+  function positionDiscountTooltip() {
+    if (!tooltipElement || tooltipElement.hidden || !tooltipTarget) return;
+
+    const targetRect = tooltipTarget.getBoundingClientRect();
+    tooltipElement.style.left = "0px";
+    tooltipElement.style.top = "0px";
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    const margin = 12;
+    const gap = 6;
+    const maxLeft = Math.max(margin, window.innerWidth - tooltipRect.width - margin);
+    const left = Math.min(maxLeft, Math.max(margin, targetRect.right - tooltipRect.width));
+    let top = targetRect.top - tooltipRect.height - gap;
+
+    if (top < margin) {
+      top = Math.min(
+        window.innerHeight - tooltipRect.height - margin,
+        targetRect.bottom + gap
+      );
+    }
+
+    tooltipElement.style.left = Math.round(left) + "px";
+    tooltipElement.style.top = Math.round(top) + "px";
+  }
+
+  function maintainRuntimeFixes() {
+    installMflStatsFetchTracking();
+    installMflStatsRenderHook();
+    installBusyListenerOverride();
+    installViewLoadingGuard();
+    ensureDiscountTooltip();
+
+    if (mflStatsPageActive()) {
+      scheduleMflStatsUnlock();
+    } else {
+      document.body.classList.remove("mflStatsInteractive");
+    }
+  }
+
+  function installDiscountRate() {
     if (typeof evaluationDiscountRateValue !== "function") {
       attempts += 1;
-      if (attempts < 500) window.setTimeout(install, 20);
+      if (attempts < 500) window.setTimeout(installDiscountRate, 20);
       return;
     }
 
@@ -369,22 +473,25 @@ function runtimeScript(rows, warning = "") {
 
     const discountRate = Math.pow(
       changes.reduce((product, change) => product * change, 1),
-      1 / changes.length,
+      1 / changes.length
     ) - 1;
     if (!Number.isFinite(discountRate)) return;
 
     window.mflSeasonRatios = Object.freeze(ordered.map((row) => Object.freeze({ ...row })));
-    const firstSeason = ordered[0].season;
-    const lastSeason = ordered[ordered.length - 1].season;
+    const firstCompletedSeason = ordered[0].season;
+    const lastCompletedSeason = ordered[ordered.length - 1].season;
+    const currentSeason = lastCompletedSeason + 1;
     const discountRateBox = document.querySelector(".evaluationDiscountRate[data-tooltip]");
     if (discountRateBox) {
-      discountRateBox.dataset.tooltip = "Discount Rate is the geometric mean of the four season-over-season MFL/USD growth factors across the latest five season values from Supabase. It uses Seasons "
-        + firstSeason + "-" + lastSeason + ".";
+      discountRateBox.dataset.tooltip = "Discount Rate is the geometric mean of the four season-over-season MFL/USD growth factors from the latest five completed seasons in Supabase (Seasons "
+        + firstCompletedSeason + "-" + lastCompletedSeason + "). Current season is " + currentSeason + ".";
     }
+
     evaluationDiscountRateValue = function evaluationDiscountRateFromSupabase() {
       return discountRate;
     };
 
+    ensureDiscountTooltip();
     if (typeof renderEvaluationPage === "function"
         && typeof state !== "undefined"
         && state.currentPage === "evaluation") {
@@ -393,11 +500,11 @@ function runtimeScript(rows, warning = "") {
   }
 
   rebuildCompleteChangelog();
-  installMflStatsBusyRecovery();
-  installViewLoadingGuard();
+  maintainRuntimeFixes();
   window.setTimeout(rebuildCompleteChangelog, 0);
   window.setTimeout(rebuildCompleteChangelog, 250);
-  install();
+  window.setInterval(maintainRuntimeFixes, 100);
+  installDiscountRate();
 })();\n`;
 }
 

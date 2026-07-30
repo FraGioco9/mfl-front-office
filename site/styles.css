@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.10 - Restore Stats interactions, current footer version, and Evaluation tooltip placement. */
+/* v1.118.11 - Fix Stats filters and place the Evaluation discount tooltip above its box. */
 html,
 body {
   width: 100%;
@@ -51,7 +51,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.10";
+  content: "MFL Front Office v1.118.11";
   font-size: 14px;
 }
 
@@ -71,7 +71,7 @@ body > .siteFooter {
   z-index: 1;
 }
 
-/* Keep Evaluation controls below the header except for active tooltips. */
+/* Keep Evaluation controls below the header. */
 html body[data-page="evaluation"] #evaluationPage {
   overflow-x: clip !important;
   overflow-y: visible !important;
@@ -120,31 +120,46 @@ html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage 
   min-height: 0 !important;
 }
 
-/* Raise only the active discount tooltip above the header and the scrolling viewport. */
-html body[data-page="evaluation"] #evaluationPage .evaluationTopBar:has(.evaluationDiscountRate[data-tooltip]:hover),
-html body[data-page="evaluation"] #evaluationPage .evaluationTopBar:has(.evaluationDiscountRate[data-tooltip]:focus) {
-  z-index: 2147483642 !important;
+/* Use the body-level tooltip portal instead of the clipped pseudo-element. */
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {
+  content: none !important;
+  display: none !important;
 }
 
-html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover,
-html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus {
-  position: relative;
-  z-index: 2147483643 !important;
-}
-
-html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after {
-  position: absolute !important;
-  top: auto !important;
-  right: 0 !important;
-  bottom: calc(100% + 8px) !important;
-  left: auto !important;
-  z-index: 2147483644 !important;
+.evaluationDiscountTooltipPortal {
+  position: fixed;
+  z-index: 2147483647;
   width: max-content;
-  max-width: min(320px, calc(100vw - 48px));
-  transform: translateY(4px) !important;
+  max-width: min(340px, calc(100vw - 24px));
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.22));
+  border-radius: 8px;
+  background: var(--surface-raised, #171b22);
+  color: var(--text, #f4f5f7);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
 }
 
-html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:hover::after,
-html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]:focus::after {
-  transform: translateY(0) !important;
+.evaluationDiscountTooltipPortal[hidden] {
+  display: none !important;
+}
+
+/* Remove only stale Stats-page interaction blocking after its controls render. */
+body[data-page="mflstats"].mflStatsInteractive::after {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body[data-page="mflstats"].mflStatsInteractive #appShell,
+body[data-page="mflstats"].mflStatsInteractive #mflStatsPage,
+body[data-page="mflstats"].mflStatsInteractive .mflStatsFilterButton,
+body[data-page="mflstats"].mflStatsInteractive .mflStatsDistributionModeButton {
+  pointer-events: auto !important;
 }
