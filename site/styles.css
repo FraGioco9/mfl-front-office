@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.6 - Show the content-area scrollbar from the first shell render. */
+/* v1.118.10 - Restore Stats interactions, current footer version, and Evaluation tooltip placement. */
 html,
 body {
   width: 100%;
@@ -43,6 +43,16 @@ body > .siteFooter {
   position: relative !important;
   z-index: 2147483000;
   margin-top: 0 !important;
+}
+
+/* Show the current version as soon as the static shell and stylesheet render. */
+.siteFooter a[data-page="changelog"] {
+  font-size: 0 !important;
+}
+
+.siteFooter a[data-page="changelog"]::before {
+  content: "MFL Front Office v1.118.10";
+  font-size: 14px;
 }
 
 /* Keep Search, Advanced Settings, and Saved Evaluations above page content. */
@@ -123,10 +133,10 @@ html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-t
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after {
-  position: fixed !important;
-  top: 12px !important;
-  right: 24px !important;
-  bottom: auto !important;
+  position: absolute !important;
+  top: auto !important;
+  right: 0 !important;
+  bottom: calc(100% + 8px) !important;
   left: auto !important;
   z-index: 2147483644 !important;
   width: max-content;

@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.9";
+const APP_VERSION = "1.118.10";
 const APP_RELEASES = [
+  ["v1.118.10", "Fix Evaluation tooltip, Stats interactions, footer timing, and season ratios"],
   ["v1.118.9", "Restore MFL Stats interactions after loading"],
   ["v1.118.8", "Complete SemVer changelog history and keep the latest version current"],
   ["v1.118.7", "Enforce API limits, lock loading views, and rebuild version history"],
@@ -58,6 +59,10 @@ function runtimeScript(rows, warning = "") {
   const currentReleases = ${serializedReleases};
   let attempts = 0;
   let viewCaptureInstalled = false;
+  let activeMflStatsRequests = 0;
+  let mflStatsFetchWrapped = false;
+  let mflStatsRenderWrapped = false;
+  let mflStatsSetPageWrapped = false;
 
   function versionParts(value) {
     const match = String(value || "").trim().match(/^v?(\\d+)\\.(\\d+)\\.(\\d+)$/);
@@ -180,59 +185,109 @@ function runtimeScript(rows, warning = "") {
       && /^\\d[\\d,.]*$/.test(String(totalPlayers?.textContent || "").trim());
   }
 
-  function mflStatsRequestInProgress() {
+  function isMflStatsRequest(input) {
     try {
-      return typeof state === "object" && state && Boolean(
-        state.incrementalApplying
-        || Number(state.incrementalRequestPromises?.size) > 0
-      );
+      const value = input instanceof Request ? input.url : String(input || "");
+      const url = new URL(value, window.location.href);
+      return url.pathname === "/api/mfl-stats"
+        || (url.pathname === "/api/data"
+          && String(url.searchParams.get("scope") || "").toLowerCase() === "mflstats");
     } catch {
       return false;
     }
   }
 
   function releaseFinishedMflStatsBusyState() {
-    if (!mflStatsContentReady() || mflStatsRequestInProgress()) return;
-
-    const appShell = document.getElementById("appShell");
-    let staleBusy = Boolean(
-      appShell?.inert
-      || document.documentElement.classList.contains("appBusy")
-      || document.body.classList.contains("appBusy")
-      || document.body.getAttribute("aria-busy") === "true"
-    );
+    if (!mflStatsContentReady() || activeMflStatsRequests > 0) return;
 
     try {
-      staleBusy = staleBusy || (typeof state === "object" && state && Number(state.interactionBusyDepth) > 0);
-    } catch {
-      // The fallback below still clears stale DOM state.
-    }
-
-    if (!staleBusy) return;
-
-    try {
-      if (typeof state === "object" && state) state.interactionBusyDepth = 0;
-      if (typeof syncInteractionBusyState === "function") {
-        syncInteractionBusyState();
-        return;
+      if (typeof state === "object" && state) {
+        state.interactionBusyDepth = 0;
+        state.incrementalApplying = false;
+        state.incrementalRequestPromises?.clear?.();
       }
     } catch (error) {
-      console.error("Could not clear the completed MFL Stats loading state.", error);
+      console.error("Could not reset the completed MFL Stats state.", error);
     }
 
-    document.documentElement.classList.remove("appBusy");
-    document.body.classList.remove("appBusy");
+    document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending");
+    document.body.classList.remove(
+      "appBusy",
+      "loading",
+      "booting",
+      "tableRowsLoading",
+      "tableLayoutPending",
+      "clubViewLoading",
+      "clubViewSwitching",
+    );
     document.body.setAttribute("aria-busy", "false");
     Array.from(document.body.children).forEach((element) => {
       if (element instanceof HTMLElement) element.inert = false;
     });
   }
 
+  function scheduleMflStatsBusyRelease() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(releaseFinishedMflStatsBusyState);
+    });
+  }
+
+  function installMflStatsRequestTracking() {
+    if (mflStatsFetchWrapped) return;
+    mflStatsFetchWrapped = true;
+    const previousFetch = window.fetch.bind(window);
+    window.fetch = async function trackedMflStatsFetch(input, init) {
+      const tracked = isMflStatsRequest(input);
+      if (tracked) activeMflStatsRequests += 1;
+      try {
+        return await previousFetch(input, init);
+      } finally {
+        if (tracked) {
+          activeMflStatsRequests = Math.max(0, activeMflStatsRequests - 1);
+          scheduleMflStatsBusyRelease();
+        }
+      }
+    };
+  }
+
+  function installMflStatsCompletionHooks() {
+    if (typeof renderMflStatsPage === "function" && !mflStatsRenderWrapped) {
+      mflStatsRenderWrapped = true;
+      const originalRenderMflStatsPage = renderMflStatsPage;
+      renderMflStatsPage = function renderMflStatsPageWithInteractionRelease() {
+        const result = originalRenderMflStatsPage.apply(this, arguments);
+        scheduleMflStatsBusyRelease();
+        return result;
+      };
+    }
+
+    if (typeof setPage === "function" && !mflStatsSetPageWrapped) {
+      mflStatsSetPageWrapped = true;
+      const originalSetPage = setPage;
+      setPage = async function setPageWithMflStatsInteractionRelease(pageName) {
+        try {
+          return await originalSetPage.apply(this, arguments);
+        } finally {
+          if (pageName === "mflstats"
+              || (pageName === "mfl" && String(arguments[2]?.view || "") === "stats")
+              || window.location.pathname === "/mfl/stats") {
+            scheduleMflStatsBusyRelease();
+          }
+        }
+      };
+    }
+  }
+
   function installMflStatsBusyRecovery() {
+    installMflStatsRequestTracking();
+    installMflStatsCompletionHooks();
     if (window.__mflStatsBusyRecoveryTimer) return;
-    window.__mflStatsBusyRecoveryTimer = window.setInterval(releaseFinishedMflStatsBusyState, 100);
-    window.addEventListener("pageshow", releaseFinishedMflStatsBusyState);
-    document.addEventListener("visibilitychange", releaseFinishedMflStatsBusyState);
+    window.__mflStatsBusyRecoveryTimer = window.setInterval(() => {
+      installMflStatsCompletionHooks();
+      releaseFinishedMflStatsBusyState();
+    }, 100);
+    window.addEventListener("pageshow", scheduleMflStatsBusyRelease);
+    document.addEventListener("visibilitychange", scheduleMflStatsBusyRelease);
   }
 
   function loadingInProgress() {
@@ -319,6 +374,13 @@ function runtimeScript(rows, warning = "") {
     if (!Number.isFinite(discountRate)) return;
 
     window.mflSeasonRatios = Object.freeze(ordered.map((row) => Object.freeze({ ...row })));
+    const firstSeason = ordered[0].season;
+    const lastSeason = ordered[ordered.length - 1].season;
+    const discountRateBox = document.querySelector(".evaluationDiscountRate[data-tooltip]");
+    if (discountRateBox) {
+      discountRateBox.dataset.tooltip = "Discount Rate is the geometric mean of the four season-over-season MFL/USD growth factors across the latest five season values from Supabase. It uses Seasons "
+        + firstSeason + "-" + lastSeason + ".";
+    }
     evaluationDiscountRateValue = function evaluationDiscountRateFromSupabase() {
       return discountRate;
     };
