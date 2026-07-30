@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.118.1";
+        const VERSION = "1.118.2";
 
         function routeGuardFunction() {
           const PAGE_IDS = [
@@ -560,7 +560,7 @@
         source = source.replace('const VERSION = "1.117.1";', `const VERSION = "${VERSION}";`);
         source = source.replace(
           'const entries = new Map();',
-          'const entries = new Map([["v1.118.1", "Keep Evaluation header sticky and focus empty player search"], ["v1.118.0", "Use Supabase season ratios for discount rates"]]);',
+          'const entries = new Map([["v1.118.2", "Fix Evaluation tooltip and empty height; cap MFL API at 50/min"], ["v1.118.1", "Keep Evaluation header sticky and focus empty player search"], ["v1.118.0", "Use Supabase season ratios for discount rates"]]);',
         );
 
         source = source.replace(
