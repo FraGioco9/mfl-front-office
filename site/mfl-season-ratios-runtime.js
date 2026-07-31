@@ -1,7 +1,7 @@
 (() => {
-  const VERSION = "1.118.35";
+  const VERSION = "1.118.36";
   const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Make Contract team links navigate reliably and match Agent link styling";
+  const RELEASE_DESCRIPTION = "Set Contract team links to 16px and #e8eef3";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
   const pendingPlayerRequests = new Set();
   const completedPlayerRequests = new Set();
@@ -42,8 +42,9 @@
         color: var(--text-muted, var(--muted, currentColor));
       }
       #playerDetail .contractDetailCard .playerContractTeamLink {
-        color: inherit !important;
+        color: #e8eef3 !important;
         font: inherit !important;
+        font-size: 16px !important;
         font-weight: inherit !important;
         text-decoration: none !important;
         cursor: pointer !important;
