@@ -1,6 +1,6 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@0c61a234c292c9d7ceee1893ea20611603a33307/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f0e345b091a65f605b9af648b1c90325e68bd1cf/site/styles.css");
 
-/* v1.119.3 - Keep table header bottom corners square while data is loading. */
+/* v1.119.4 - Stabilize loading tables, footer version, and Changelog navigation. */
 html body .siteFooter.siteFooter a[data-page="changelog"],
 html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
@@ -10,33 +10,13 @@ html body .siteFooter.siteFooter a[href="/changelog"] {
 
 html body .siteFooter.siteFooter a[data-page="changelog"]::before,
 html body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.3" !important;
+  content: "MFL Front Office v1.119.4" !important;
   display: inline !important;
   font-size: 14px !important;
 }
 
 html.bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html.bootPending body .siteFooter.siteFooter a[href="/changelog"]::before,
-html.appBusy body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html.appBusy body .siteFooter.siteFooter a[href="/changelog"]::before,
-body.booting .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.booting .siteFooter.siteFooter a[href="/changelog"]::before,
-body.loading .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.loading .siteFooter.siteFooter a[href="/changelog"]::before,
-body.appBusy .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.appBusy .siteFooter.siteFooter a[href="/changelog"]::before,
-body.tableRowsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.tableRowsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-body.tableLayoutPending .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.tableLayoutPending .siteFooter.siteFooter a[href="/changelog"]::before,
-body.clubViewLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.clubViewLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-body.clubViewSwitching .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.clubViewSwitching .siteFooter.siteFooter a[href="/changelog"]::before,
-body.mflStatsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.mflStatsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-body.mflStatsStableLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-body.mflStatsStableLoading .siteFooter.siteFooter a[href="/changelog"]::before {
+html.bootPending body .siteFooter.siteFooter a[href="/changelog"]::before {
   content: "MFL Front Office -" !important;
 }
 
@@ -81,4 +61,14 @@ body.mflStatsStableLoading table thead tr,
 body.mflStatsStableLoading table thead th {
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
+}
+
+body.mflDatabaseRoutePending #tableBody {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.mflDatabaseRoutePending #emptyState {
+  display: block !important;
+  visibility: visible !important;
 }
