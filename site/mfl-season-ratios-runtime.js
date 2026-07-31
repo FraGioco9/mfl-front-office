@@ -1,14 +1,16 @@
 (() => {
-  const RELEASE_VERSION = "1.118.17";
+  const RELEASE_VERSION = "1.118.18";
   const RELEASE = [
     `v${RELEASE_VERSION}`,
-    "Restore Evaluation metric format, hide Load on player routes, and enable MFL Stats filters",
+    "Remove loading header rounding, prevent Evaluation flashes, and restore MFL Stats filters",
   ];
   const CORE_RUNTIME_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@446d875082f0c06605646ed77adec816840b2ce8/site/mfl-season-ratios-runtime.js";
   const payload = window.__mflSeasonRatioPayload || (window.__mflSeasonRatioPayload = {});
+  const busyEvents = ["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"];
   let syncTimer = 0;
   let renderHookInstalled = false;
   let statsFilterGuardInstalled = false;
+  let statsBusyHandlerInstalled = false;
 
   payload.version = RELEASE_VERSION;
   payload.releases = Array.isArray(payload.releases) ? payload.releases : [];
@@ -50,14 +52,13 @@
     const rate = currentDiscountRate();
     if (!Number.isFinite(rate)) return false;
     const label = formatDiscountRate(rate);
-
     const value = document.getElementById("evaluationDiscountRate");
-    if (value && value.textContent !== label) value.textContent = label;
+    if (!value) return false;
 
+    if (value.textContent !== label) value.textContent = label;
     const advancedValue = document.getElementById("advancedDiscountRateValue");
-    if (advancedValue && advancedValue.textContent !== label) {
-      advancedValue.textContent = label;
-    }
+    if (advancedValue && advancedValue.textContent !== label) advancedValue.textContent = label;
+    document.body.classList.add("evaluationDiscountRateReady");
     return true;
   }
 
@@ -67,13 +68,15 @@
     document.body.classList.toggle("evaluationPlayerRoute", playerRoute);
 
     const loadButton = document.getElementById("evaluationLoadButton");
-    if (!loadButton) return;
-    if (playerRoute) {
-      loadButton.hidden = true;
-      loadButton.setAttribute("aria-hidden", "true");
-    } else {
-      loadButton.removeAttribute("aria-hidden");
+    if (loadButton) {
+      if (playerRoute) {
+        loadButton.hidden = true;
+        loadButton.setAttribute("aria-hidden", "true");
+      } else {
+        loadButton.removeAttribute("aria-hidden");
+      }
     }
+    document.body.classList.add("evaluationRouteActionsReady");
   }
 
   function installEvaluationRenderSync() {
@@ -99,34 +102,69 @@
     renderHookInstalled = true;
   }
 
-  function statsFilterButtonFromEvent(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target || (document.body.dataset.page !== "mflstats" && location.pathname !== "/mfl/stats")) {
-      return null;
-    }
-    return target.closest("#mflStatsOverallFilters .mflStatsFilterButton");
+  function statsPage() {
+    const page = document.getElementById("mflStatsPage");
+    if (!page || page.hidden) return null;
+    if (document.body.dataset.page !== "mflstats" && location.pathname !== "/mfl/stats") return null;
+    return page;
   }
 
-  function preserveStatsFilterPointer(event) {
-    if (!statsFilterButtonFromEvent(event)) return;
-    event.stopImmediatePropagation();
+  function statsFinishedLoading() {
+    const page = statsPage();
+    if (!page) return false;
+    const buttons = page.querySelectorAll("#mflStatsOverallFilters .mflStatsFilterButton");
+    if (!buttons.length) return false;
+    return !Array.from(page.querySelectorAll(".mflStatsEmpty"))
+      .some((element) => /loading/i.test(String(element.textContent || "")));
+  }
+
+  function unlockStatsFilters() {
+    if (!statsFinishedLoading()) return false;
+
+    try {
+      if (typeof state === "object" && state) state.interactionBusyDepth = 0;
+      if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
+    } catch (error) {
+      console.error("Could not reset the MFL Stats interaction state.", error);
+    }
+
+    document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending");
+    document.body.classList.remove(
+      "appBusy", "loading", "booting", "tableRowsLoading", "tableLayoutPending",
+      "clubViewLoading", "clubViewSwitching"
+    );
+    document.body.classList.add("mflStatsInteractive");
+    document.body.setAttribute("aria-busy", "false");
+    document.querySelectorAll("[inert]").forEach((element) => {
+      if (element instanceof HTMLElement) element.inert = false;
+    });
+    document.querySelectorAll("#mflStatsOverallFilters .mflStatsFilterButton").forEach((button) => {
+      button.disabled = false;
+      button.removeAttribute("aria-disabled");
+    });
+    return true;
+  }
+
+  function statsFilterButtonFromEvent(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || !statsPage()) return null;
+    return target.closest("#mflStatsOverallFilters .mflStatsFilterButton");
   }
 
   function activateStatsFilter(event) {
     const button = statsFilterButtonFromEvent(event);
-    if (!button) return;
+    if (!button || !unlockStatsFilters()) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
-
     try {
       if (typeof mflStatsOverallFilterOptions === "undefined"
           || typeof state !== "object" || !state
-          || typeof renderMflStatsPage !== "function") {
-        return;
-      }
+          || typeof renderMflStatsPage !== "function") return;
       const label = String(button.textContent || "").trim();
-      const filter = mflStatsOverallFilterOptions.find((entry) => String(entry?.label || "").trim() === label);
+      const filter = mflStatsOverallFilterOptions.find(
+        (entry) => String(entry?.label || "").trim() === label,
+      );
       if (!filter) return;
       state.mflStatsOverallFilter = filter.id;
       renderMflStatsPage();
@@ -138,17 +176,29 @@
   function installStatsFilterGuard() {
     if (statsFilterGuardInstalled) return;
     statsFilterGuardInstalled = true;
-    window.addEventListener("pointerdown", preserveStatsFilterPointer, true);
-    window.addEventListener("mousedown", preserveStatsFilterPointer, true);
     window.addEventListener("click", activateStatsFilter, true);
+  }
+
+  function installStatsBusyHandler() {
+    if (statsBusyHandlerInstalled || typeof blockInteractionWhileBusy !== "function") return;
+    statsBusyHandlerInstalled = true;
+    const original = blockInteractionWhileBusy;
+    busyEvents.forEach((name) => document.removeEventListener(name, original, true));
+    const replacement = (event) => {
+      if (statsFilterButtonFromEvent(event) && unlockStatsFilters()) return;
+      original(event);
+    };
+    busyEvents.forEach((name) => document.addEventListener(name, replacement, true));
   }
 
   function maintainDisplayAndControls() {
     syncImmediateVersionStyle();
     installEvaluationRenderSync();
     installStatsFilterGuard();
+    installStatsBusyHandler();
     syncDiscountRateDisplay();
     syncEvaluationPlayerRouteActions();
+    unlockStatsFilters();
   }
 
   function startDisplayAndControlSync() {
