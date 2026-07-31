@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.28";
+const APP_VERSION = "1.118.29";
 const APP_RELEASES = [
+  ["v1.118.29", "Restore native MFL Stats filter interactions after loading"],
   ["v1.118.28", "Prevent Evaluation refresh stalls and require Supabase for the Discount Rate"],
   ["v1.118.27", "Restore immediate Home startup while keeping Evaluation and MFL Stats fixes route-scoped"],
   ["v1.118.26", "Prevent Evaluation value flashes, synchronize the Load action, and stabilize MFL Stats controls"],
@@ -133,7 +134,6 @@ function loaderScript() {
 
   return `(() => {
   const VERSION = ${JSON.stringify(APP_VERSION)};
-  const RELEASES = ${JSON.stringify(APP_RELEASES)};
   const evaluationRoute = location.pathname === "/evaluation";
   const statsRoute = location.pathname === "/mfl/stats";
   window.__mflSeasonRatioPayload = ${payload};
@@ -171,6 +171,12 @@ function loaderScript() {
     body.evaluationPlayerRoute #evaluationLoadButton { display: none !important; }
     html.mflStatsStableLoading,
     html.mflStatsStableLoading * { cursor: wait !important; }
+    body[data-page="mflstats"] #mflStatsPage,
+    body[data-page="mflstats"] .mflStatsFilters,
+    body[data-page="mflstats"] #mflStatsOverallFilters,
+    body[data-page="mflstats"] .mflStatsFilterButton {
+      pointer-events: auto !important;
+    }
   \`;
 
   function storedWalletOptIn() {
@@ -310,95 +316,114 @@ function loaderScript() {
   }
 
   const FILTER_SELECTOR = "#mflStatsOverallFilters .mflStatsFilterButton";
-  const FILTER_IDS = new Map([
-    ["All", "all"], ["90-94", "90-94"], ["Legendary", "legendary"],
-    ["85-89", "85-89"], ["80-84", "80-84"], ["Rare", "rare"],
-    ["75-79", "75-79"], ["70-74", "70-74"], ["Uncommon", "uncommon"],
-    ["65-69", "65-69"], ["60-64", "60-64"], ["55-59", "55-59"],
-    ["50-54", "50-54"], ["Common", "common"],
-  ]);
 
-  function statsReady() {
+  function statsControlsRendered() {
     if (!statsRoute) return false;
     const page = document.getElementById("mflStatsPage");
-    if (!page || page.hidden) return false;
-    const total = String(document.getElementById("mflStatsTotalPlayers")?.textContent || "").trim();
-    const loading = Array.from(page.querySelectorAll(".mflStatsEmpty"))
-      .some((element) => /loading/i.test(String(element.textContent || "")));
-    return /^\\d[\\d,.]*$/.test(total) && !loading;
+    const filters = document.getElementById("mflStatsOverallFilters");
+    return Boolean(page && !page.hidden && filters?.querySelector(FILTER_SELECTOR));
   }
 
-  function releaseStats() {
-    if (!statsRoute) return;
+  function statsStillLoading() {
+    const page = document.getElementById("mflStatsPage");
+    return Boolean(page && Array.from(page.querySelectorAll(".mflStatsEmpty"))
+      .some((element) => /loading/i.test(String(element.textContent || ""))));
+  }
+
+  function clearInert(element) {
+    if (!(element instanceof HTMLElement)) return;
+    element.inert = false;
+    element.removeAttribute("inert");
+  }
+
+  function releaseStatsInteractions() {
+    if (!statsRoute) return false;
     try {
       if (typeof state === "object" && state) state.interactionBusyDepth = 0;
       if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
     } catch {
       // DOM cleanup below remains authoritative.
     }
-    document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending", "mflStatsLoading");
+
+    document.documentElement.classList.remove(
+      "appBusy", "loading", "bootPending", "table-layout-pending",
+      "mflStatsLoading", "mflStatsStableLoading",
+    );
     document.body?.classList.remove(
       "appBusy", "loading", "booting", "tableRowsLoading", "tableLayoutPending",
       "clubViewLoading", "clubViewSwitching", "mflStatsLoading",
     );
     document.body?.classList.add("mflStatsInteractive");
     document.body?.setAttribute("aria-busy", "false");
-    [document.body, document.getElementById("appShell"), document.querySelector("main"),
-      document.getElementById("mflStatsPage"), document.getElementById("mflStatsOverallFilters")]
-      .forEach((element) => {
-        if (!(element instanceof HTMLElement)) return;
-        element.inert = false;
-        element.removeAttribute("inert");
-      });
-    document.querySelectorAll("#mflStatsPage [inert]").forEach((element) => {
-      if (element instanceof HTMLElement) {
-        element.inert = false;
-        element.removeAttribute("inert");
-      }
+
+    const loadingScreen = document.getElementById("loadingScreen");
+    if (loadingScreen) {
+      loadingScreen.hidden = true;
+      loadingScreen.setAttribute("aria-hidden", "true");
+      loadingScreen.style.pointerEvents = "none";
+    }
+
+    const page = document.getElementById("mflStatsPage");
+    const filters = document.getElementById("mflStatsOverallFilters");
+    for (let element = filters; element; element = element.parentElement) clearInert(element);
+    [document.body, document.getElementById("appShell"), document.querySelector("main"), page, filters]
+      .forEach(clearInert);
+    page?.querySelectorAll("[inert]").forEach(clearInert);
+
+    [page, page?.querySelector(".mflStatsFilters"), filters].forEach((element) => {
+      if (element instanceof HTMLElement) element.style.pointerEvents = "auto";
     });
     document.querySelectorAll(FILTER_SELECTOR + ", .mflStatsDistributionModeButton").forEach((button) => {
       button.disabled = false;
       button.removeAttribute("aria-disabled");
       button.style.pointerEvents = "auto";
     });
+    return true;
+  }
+
+  function statsFilterTarget(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    return target?.closest(FILTER_SELECTOR) || null;
   }
 
   function startStats() {
     if (!statsRoute) return;
     document.documentElement.classList.add("mflStatsStableLoading");
-    const target = (event) => event.target instanceof Element ? event.target.closest(FILTER_SELECTOR) : null;
-    ["pointerdown", "mousedown"].forEach((name) => {
-      window.addEventListener(name, (event) => {
-        if (!target(event)) return;
-        releaseStats();
-        event.stopPropagation();
-      }, true);
+
+    const releaseForFilter = (event) => {
+      if (!statsFilterTarget(event)) return;
+      releaseStatsInteractions();
+      queueMicrotask(releaseStatsInteractions);
+    };
+    ["pointerdown", "mousedown", "touchstart", "click"].forEach((name) => {
+      window.addEventListener(name, releaseForFilter, true);
     });
-    window.addEventListener("click", (event) => {
-      const button = target(event);
-      if (!button) return;
-      const filterId = FILTER_IDS.get(String(button.textContent || "").trim());
-      if (!filterId) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      releaseStats();
-      try {
-        if (typeof state === "object") state.mflStatsOverallFilter = filterId;
-        if (typeof renderMflStatsPage === "function") renderMflStatsPage();
-      } catch (error) {
-        console.error("Could not apply the MFL Stats filter.", error);
-      }
-      queueMicrotask(releaseStats);
-      requestAnimationFrame(releaseStats);
+
+    window.addEventListener("keydown", (event) => {
+      if (!statsFilterTarget(event) || !["Enter", " "].includes(event.key)) return;
+      releaseStatsInteractions();
     }, true);
+
     const frame = () => {
       if (location.pathname !== "/mfl/stats") return;
-      const ready = statsReady();
-      document.documentElement.classList.toggle("mflStatsStableLoading", !ready);
-      if (ready) releaseStats();
+      if (statsControlsRendered() && !statsStillLoading()) {
+        releaseStatsInteractions();
+      } else {
+        document.documentElement.classList.add("mflStatsStableLoading");
+      }
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+
+    const observer = new MutationObserver(() => {
+      if (statsControlsRendered() && !statsStillLoading()) releaseStatsInteractions();
+    });
+    const observe = () => {
+      const page = document.getElementById("mflStatsPage");
+      if (page) observer.observe(page, { childList: true, subtree: true, attributes: true });
+      else requestAnimationFrame(observe);
+    };
+    observe();
   }
 
   startEvaluation();
