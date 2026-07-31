@@ -1,10 +1,11 @@
 (() => {
-  const VERSION = "1.118.34";
+  const VERSION = "1.118.35";
   const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Prevent transient player-not-found states and make Contract teams reliable club links";
+  const RELEASE_DESCRIPTION = "Make Contract team links navigate reliably and match Agent link styling";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
   const pendingPlayerRequests = new Set();
   const completedPlayerRequests = new Set();
+  const pendingClubResolutions = new Map();
 
   let playerRouteId = "";
   let playerRouteStartedAt = 0;
@@ -40,15 +41,18 @@
         text-align: center;
         color: var(--text-muted, var(--muted, currentColor));
       }
-      .contractDetailCard .playerContractTeamLink {
+      #playerDetail .contractDetailCard .playerContractTeamLink {
         color: inherit !important;
+        font: inherit !important;
+        font-weight: inherit !important;
         text-decoration: none !important;
         cursor: pointer !important;
         pointer-events: auto !important;
       }
-      .contractDetailCard .playerContractTeamLink:hover,
-      .contractDetailCard .playerContractTeamLink:focus-visible {
-        text-decoration: underline !important;
+      #playerDetail .contractDetailCard .playerContractTeamLink:hover,
+      #playerDetail .contractDetailCard .playerContractTeamLink:focus-visible {
+        color: var(--accent, #8d76ff) !important;
+        text-decoration: none !important;
       }
     `;
   }
@@ -60,7 +64,9 @@
 
   function syncVersionUi() {
     const footer = document.querySelector('.siteFooter a[data-page="changelog"]');
-    if (footer) footer.textContent = `MFL Front Office v${VERSION}`;
+    if (footer && footer.textContent !== `MFL Front Office v${VERSION}`) {
+      footer.textContent = `MFL Front Office v${VERSION}`;
+    }
 
     const list = document.querySelector(".changelogList");
     if (!list || list.dataset.playerRuntimeVersion === VERSION) return;
@@ -295,41 +301,66 @@
   }
 
   async function resolveClubId(teamName, playerId) {
-    let clubId = clubIdFromRow(rowForPlayer(playerId)) || clubIdFromIndexes(teamName);
-    if (clubId) return clubId;
+    const rowId = clubIdFromRow(rowForPlayer(playerId));
+    if (rowId) return rowId;
+    const indexedId = clubIdFromIndexes(teamName);
+    if (indexedId) return indexedId;
     const clubs = await loadBootstrapClubs();
     const normalized = String(teamName || "").trim().toLowerCase();
     const match = clubs.find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
     return String(match?.clubId || "").trim();
   }
 
-  function makeContractLink() {
-    const playerId = currentPlayerId();
-    if (!playerId || !rowForPlayer(playerId)) return false;
-    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
-    if (!team) return false;
-    const teamName = String(team.textContent || "").trim();
-    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
-    const immediateClubId = clubIdFromRow(rowForPlayer(playerId)) || clubIdFromIndexes(teamName);
-
-    if (team instanceof HTMLAnchorElement && team.dataset.playerContractVersion === VERSION) {
-      if (immediateClubId && !team.dataset.clubId) {
-        team.dataset.clubId = immediateClubId;
-        team.href = `/clubs/${encodeURIComponent(immediateClubId)}/attributes`;
-      }
+  function replaceTeamWithLink(team, playerId, teamName, clubId) {
+    if (!clubId || !team?.isConnected) return false;
+    const href = `/clubs/${encodeURIComponent(clubId)}/attributes`;
+    if (team instanceof HTMLAnchorElement) {
+      team.className = "agentTableLink playerAgentLink playerContractTeam playerContractTeamLink clubPageLink";
+      team.dataset.playerContractVersion = VERSION;
+      team.dataset.playerId = playerId;
+      team.dataset.teamName = teamName;
+      team.dataset.clubId = clubId;
+      team.href = href;
       return true;
     }
 
     const link = document.createElement("a");
-    link.className = `${String(team.className || "playerContractTeam")} clubPageLink playerContractTeamLink`;
+    link.className = "agentTableLink playerAgentLink playerContractTeam playerContractTeamLink clubPageLink";
     link.textContent = teamName;
     link.dataset.playerContractVersion = VERSION;
     link.dataset.playerId = playerId;
     link.dataset.teamName = teamName;
-    link.dataset.clubId = immediateClubId;
-    link.href = immediateClubId ? `/clubs/${encodeURIComponent(immediateClubId)}/attributes` : "#";
+    link.dataset.clubId = clubId;
+    link.href = href;
     team.replaceWith(link);
     return true;
+  }
+
+  function makeContractLink() {
+    const playerId = currentPlayerId();
+    const row = rowForPlayer(playerId);
+    if (!playerId || !row) return false;
+    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
+    if (!team) return false;
+    const teamName = String(team.textContent || "").trim();
+    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
+
+    const immediateClubId = clubIdFromRow(row) || clubIdFromIndexes(teamName);
+    if (immediateClubId) return replaceTeamWithLink(team, playerId, teamName, immediateClubId);
+
+    const key = `${playerId}:${teamName.toLowerCase()}`;
+    if (!pendingClubResolutions.has(key)) {
+      const resolution = resolveClubId(teamName, playerId)
+        .then((clubId) => {
+          if (!clubId || currentPlayerId() !== playerId) return false;
+          const currentTeam = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
+          if (!currentTeam || String(currentTeam.textContent || "").trim() !== teamName) return false;
+          return replaceTeamWithLink(currentTeam, playerId, teamName, clubId);
+        })
+        .finally(() => pendingClubResolutions.delete(key));
+      pendingClubResolutions.set(key, resolution);
+    }
+    return false;
   }
 
   function releaseBusyBlocker() {
@@ -339,7 +370,7 @@
         if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
       }
     } catch {
-      // Navigation fallback remains available.
+      // Native navigation remains authoritative.
     }
   }
 
@@ -356,22 +387,12 @@
     const link = contractLinkFromEvent(event);
     if (!link) return;
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
+    const href = String(link.getAttribute("href") || "").trim();
+    if (!href || href === "#") return;
     event.preventDefault();
     event.stopImmediatePropagation();
     releaseBusyBlocker();
-    void (async () => {
-      const playerId = String(link.dataset.playerId || currentPlayerId() || "").trim();
-      const teamName = String(link.dataset.teamName || link.textContent || "").trim();
-      const clubId = String(link.dataset.clubId || "").trim() || await resolveClubId(teamName, playerId);
-      if (!clubId) {
-        if (typeof showToast === "function") showToast("Club page could not be loaded.");
-        return;
-      }
-      link.dataset.clubId = clubId;
-      link.href = `/clubs/${encodeURIComponent(clubId)}/attributes`;
-      if (typeof window.mflOpenClubPage === "function") window.mflOpenClubPage(clubId, "attributes");
-      else location.assign(link.href);
-    })();
+    window.location.assign(href);
   }, true);
 
   function syncPlayerRoute() {
