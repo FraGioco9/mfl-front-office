@@ -1,10 +1,11 @@
 (() => {
-  const VERSION = "1.119.7";
+  const VERSION = "1.119.8";
   const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@55797cced17e5cd2d5a40e65a58b5a022c7b7099/site/mfl-season-ratios-runtime.js";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
   const RELEASES = [
+    ["v1.119.8", "Keep the last rendered table row rounded while loading"],
     ["v1.119.7", "Complete Changelog history, disable the current-page footer link, and keep loading table bottoms square"],
     ["v1.119.6", "Reveal rows as soon as data renders, keep loading headers square, and restore the native Changelog link"],
     ["v1.119.5", "Keep the footer stable, restore Changelog navigation, and square loading table bottoms"],
@@ -21,18 +22,15 @@
   let transitionDepth = 0;
   let currentRouteGuardInstalled = false;
 
-  document.documentElement.dataset.mflReleaseVersion = VERSION;
-
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
   }
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflCompleteChangelogReleaseStyles");
+    let style = document.getElementById("mflRoundedLoadingRowReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflCompleteChangelogReleaseStyles";
-      document.head.appendChild(style);
+      style.id = "mflRoundedLoadingRowReleaseStyles";
     }
     style.textContent = `
       html body .siteFooter.siteFooter a[href="/changelog"] {
@@ -49,17 +47,33 @@
         cursor: default !important;
       }
       html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        :is(.tableShell, .tableScroller, .tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
-          table, table thead, table thead tr, table thead th,
+        :is(.tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
+          table thead, table thead tr, table thead th,
           table thead th:first-child, table thead th:last-child),
       body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
         .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
         .mflTableDataLoading)
-        :is(.tableShell, .tableScroller, .tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
-          table, table thead, table thead tr, table thead th,
+        :is(.tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
+          table thead, table thead tr, table thead th,
           table thead th:first-child, table thead th:last-child) {
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
+      }
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        #tableBody > tr:last-child > :first-child,
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        #tableBody > tr:last-child > :first-child {
+        border-bottom-left-radius: 10px !important;
+      }
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        #tableBody > tr:last-child > :last-child,
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        #tableBody > tr:last-child > :last-child {
+        border-bottom-right-radius: 10px !important;
       }
       body.mflTableDataLoading #tableBody {
         visibility: hidden !important;
@@ -76,6 +90,7 @@
         display: none !important;
       }
     `;
+    document.head.appendChild(style);
   }
 
   function footerLink() {
@@ -115,22 +130,18 @@
     if (currentRouteGuardInstalled) return;
     currentRouteGuardInstalled = true;
 
-    window.addEventListener("click", (event) => {
+    const stopCurrentChangelogNavigation = (event) => {
       if (cleanPath() !== "/changelog") return;
       const target = event.target instanceof Element ? event.target : null;
-      const link = target?.closest('.siteFooter a[href="/changelog"]');
-      if (!link) return;
+      if (!target?.closest('.siteFooter a[href="/changelog"]')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-    }, true);
+    };
 
+    window.addEventListener("click", stopCurrentChangelogNavigation, true);
     window.addEventListener("keydown", (event) => {
-      if (cleanPath() !== "/changelog" || !["Enter", " "].includes(event.key)) return;
-      const target = event.target instanceof Element ? event.target : null;
-      const link = target?.closest('.siteFooter a[href="/changelog"]');
-      if (!link) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
+      if (!["Enter", " "].includes(event.key)) return;
+      stopCurrentChangelogNavigation(event);
     }, true);
   }
 
@@ -200,12 +211,12 @@
   }
 
   function installPageTransitionGuard() {
-    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflCompleteChangelogVersion === VERSION) {
+    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflRoundedLoadingRowVersion === VERSION) {
       return;
     }
 
     const originalSetPage = setPage;
-    const wrappedSetPage = async function completeChangelogPageTransition(pageName, updateHash = true, options = {}) {
+    const wrappedSetPage = async function roundedLoadingRowPageTransition(pageName, updateHash = true, options = {}) {
       const destination = String(pageName || "").toLowerCase();
       const ownsTransition = TABLE_PAGES.has(destination) && transitionDepth === 0;
 
@@ -229,7 +240,7 @@
       }
     };
 
-    wrappedSetPage.__mflCompleteChangelogVersion = VERSION;
+    wrappedSetPage.__mflRoundedLoadingRowVersion = VERSION;
     wrappedSetPage.__mflOriginalSetPage = originalSetPage;
     setPage = wrappedSetPage;
     guardedSetPage = wrappedSetPage;
