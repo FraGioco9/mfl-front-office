@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.13";
+const APP_VERSION = "1.118.14";
 const APP_RELEASES = [
+  ["v1.118.14", "Keep the Evaluation search inactive when a player is selected"],
   ["v1.118.13", "Allow opted-out evaluation shares, restore Stats filters, and focus empty Evaluation search"],
   ["v1.118.12", "Animate the discount tooltip, restore Stats filters, and support local season ratios"],
   ["v1.118.11", "Fix discount tooltip placement, Stats filters, and Season 16 discount history"],
@@ -88,6 +89,15 @@ function loaderScript(rows, warning = "") {
   script.id = "mflSeasonRatioRuntime";
   script.src = "/mfl-season-ratios-runtime.js?v=${APP_VERSION}";
   script.async = false;
+  script.addEventListener("load", () => {
+    const existingGuard = document.getElementById("evaluationFocusGuard");
+    if (existingGuard) existingGuard.remove();
+    const guard = document.createElement("script");
+    guard.id = "evaluationFocusGuard";
+    guard.src = "/evaluation-focus-guard.js?v=${APP_VERSION}";
+    guard.async = false;
+    document.head.appendChild(guard);
+  });
   document.head.appendChild(script);
 })();\n`;
 }

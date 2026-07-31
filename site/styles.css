@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.13 - Allow public shares, restore Stats controls, and focus empty Evaluation search. */
+/* v1.118.14 - Keep selected-player Evaluation search inactive after loading. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.13";
+  content: "MFL Front Office v1.118.14";
   font-size: 14px;
 }
 
