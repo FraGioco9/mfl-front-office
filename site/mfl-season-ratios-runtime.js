@@ -1,10 +1,21 @@
 (() => {
-  const VERSION = "1.119.8";
+  const VERSION = "1.119.9";
   const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@55797cced17e5cd2d5a40e65a58b5a022c7b7099/site/mfl-season-ratios-runtime.js";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
+  const PAGE_IDS = [
+    "homePage",
+    "progressionPage",
+    "mflStatsPage",
+    "myPlayersLockedPage",
+    "evaluationPage",
+    "playerPage",
+    "settingsPage",
+    "changelogPage",
+  ];
   const RELEASES = [
+    ["v1.119.9", "Round the rendered loading table bottom and show Changelog immediately on refresh"],
     ["v1.119.8", "Keep the last rendered table row rounded while loading"],
     ["v1.119.7", "Complete Changelog history, disable the current-page footer link, and keep loading table bottoms square"],
     ["v1.119.6", "Reveal rows as soon as data renders, keep loading headers square, and restore the native Changelog link"],
@@ -26,11 +37,60 @@
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
   }
 
+  document.documentElement.dataset.mflReleaseVersion = VERSION;
+  if (cleanPath() === "/changelog") {
+    document.documentElement.dataset.initialPage = "changelog";
+    document.documentElement.classList.remove("mflInitialRouteResolved");
+  }
+
+  function prepareInitialChangelogRoute() {
+    if (cleanPath() !== "/changelog") return false;
+
+    const root = document.documentElement;
+    const body = document.body;
+    root.dataset.initialPage = "changelog";
+    if (!body) return false;
+
+    body.dataset.page = "changelog";
+    PAGE_IDS.forEach((id) => {
+      const page = document.getElementById(id);
+      if (page) page.hidden = id !== "changelogPage";
+    });
+
+    const changelogPage = document.getElementById("changelogPage");
+    if (changelogPage) {
+      changelogPage.hidden = false;
+      changelogPage.removeAttribute("aria-hidden");
+    }
+
+    const loadingScreen = document.getElementById("loadingScreen");
+    if (loadingScreen) {
+      loadingScreen.hidden = true;
+      loadingScreen.setAttribute("aria-hidden", "true");
+      loadingScreen.style.pointerEvents = "none";
+    }
+
+    root.classList.remove("bootPending", "appBusy", "table-layout-pending");
+    body.classList.remove(
+      "booting",
+      "loading",
+      "appBusy",
+      "tableRowsLoading",
+      "tableLayoutPending",
+      "clubViewLoading",
+      "clubViewSwitching",
+      "mflTableDataLoading",
+    );
+    body.setAttribute("aria-busy", "false");
+    root.classList.add("mflInitialRouteResolved");
+    return true;
+  }
+
   function installReleaseStyles() {
-    let style = document.getElementById("mflRoundedLoadingRowReleaseStyles");
+    let style = document.getElementById("mflRoundedLoadingRouteReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRoundedLoadingRowReleaseStyles";
+      style.id = "mflRoundedLoadingRouteReleaseStyles";
     }
     style.textContent = `
       html body .siteFooter.siteFooter a[href="/changelog"] {
@@ -46,6 +106,17 @@
       html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
         cursor: default !important;
       }
+      html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"]
+        :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
+        display: none !important;
+        visibility: hidden !important;
+      }
+      html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"] #changelogPage,
+      html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
       html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
         :is(.tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
           table thead, table thead tr, table thead th,
@@ -60,6 +131,32 @@
         border-bottom-right-radius: 0 !important;
       }
       html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        :is(.tableShell, .tableScroller, table):has(#tableBody > tr),
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        :is(.tableShell, .tableScroller, table):has(#tableBody > tr) {
+        border-bottom-left-radius: 10px !important;
+        border-bottom-right-radius: 10px !important;
+      }
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        .tableShell:has(#tableBody > tr),
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        .tableShell:has(#tableBody > tr) {
+        overflow: hidden !important;
+      }
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        table:has(#tableBody > tr),
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        table:has(#tableBody > tr) {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+      }
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
         #tableBody > tr:last-child > :first-child,
       body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
         .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
@@ -68,11 +165,11 @@
         border-bottom-left-radius: 10px !important;
       }
       html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        #tableBody > tr:last-child > :last-child,
+        #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))),
       body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
         .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
         .mflTableDataLoading)
-        #tableBody > tr:last-child > :last-child {
+        #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))) {
         border-bottom-right-radius: 10px !important;
       }
       body.mflTableDataLoading #tableBody {
@@ -211,12 +308,12 @@
   }
 
   function installPageTransitionGuard() {
-    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflRoundedLoadingRowVersion === VERSION) {
+    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflRoundedLoadingRouteVersion === VERSION) {
       return;
     }
 
     const originalSetPage = setPage;
-    const wrappedSetPage = async function roundedLoadingRowPageTransition(pageName, updateHash = true, options = {}) {
+    const wrappedSetPage = async function roundedLoadingRoutePageTransition(pageName, updateHash = true, options = {}) {
       const destination = String(pageName || "").toLowerCase();
       const ownsTransition = TABLE_PAGES.has(destination) && transitionDepth === 0;
 
@@ -240,7 +337,7 @@
       }
     };
 
-    wrappedSetPage.__mflRoundedLoadingRowVersion = VERSION;
+    wrappedSetPage.__mflRoundedLoadingRouteVersion = VERSION;
     wrappedSetPage.__mflOriginalSetPage = originalSetPage;
     setPage = wrappedSetPage;
     guardedSetPage = wrappedSetPage;
@@ -346,6 +443,7 @@
   }
 
   function maintain() {
+    prepareInitialChangelogRoute();
     installReleaseStyles();
     initializeVersionUi();
     installPageTransitionGuard();
@@ -362,10 +460,12 @@
     });
   }
 
+  prepareInitialChangelogRoute();
   installReleaseStyles();
   initializeVersionUi();
 
   const observer = new MutationObserver(() => {
+    prepareInitialChangelogRoute();
     releaseTableWhenReady();
     schedule();
   });
