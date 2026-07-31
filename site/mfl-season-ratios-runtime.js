@@ -1,99 +1,127 @@
 (() => {
-  const VERSION = "1.119.2";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@d6b09d4794046c2dec0b7364830bebeda41e760c/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Show a stable footer version immediately after loading";
+  const VERSION = "1.119.3";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@935892e4bda381265991b56db27caf861918afb7/site/mfl-season-ratios-runtime.js";
+  const RELEASE_DESCRIPTION = "Keep table header bottom corners square while loading";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
-  const textContentDescriptor = Object.getOwnPropertyDescriptor(Node.prototype, "textContent");
   let scheduled = false;
 
-  function writeNodeText(node, value) {
-    if (!node) return;
-    if (textContentDescriptor?.set) {
-      textContentDescriptor.set.call(node, value);
-    } else {
-      node.replaceChildren(document.createTextNode(value));
-    }
-  }
-
-  function readNodeText(node) {
-    if (!node) return "";
-    if (textContentDescriptor?.get) {
-      return String(textContentDescriptor.get.call(node) || "");
-    }
-    return String(node.innerText || "");
-  }
-
-  function lockNodeText(node, allowedValue, rejectPattern) {
-    if (!node || node.dataset.mflVersionLock === VERSION || !textContentDescriptor) return;
-    writeNodeText(node, allowedValue);
-    try {
-      Object.defineProperty(node, "textContent", {
-        configurable: true,
-        enumerable: false,
-        get() {
-          return String(textContentDescriptor.get.call(this) || "");
-        },
-        set(value) {
-          const nextValue = String(value ?? "");
-          if (rejectPattern.test(nextValue) && nextValue !== allowedValue) return;
-          textContentDescriptor.set.call(this, value);
-        },
-      });
-      node.dataset.mflVersionLock = VERSION;
-    } catch {
-      // The visual CSS fallback still prevents stale versions from appearing.
-    }
-  }
-
-  function installFooterStyles() {
-    let style = document.getElementById("mflDeterministicFooterVersionStyles");
+  function installReleaseStyles() {
+    let style = document.getElementById("mflLoadingHeaderCornersReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflDeterministicFooterVersionStyles";
-      document.head.appendChild(style);
+      style.id = "mflLoadingHeaderCornersReleaseStyles";
     }
     style.textContent = `
-      html body .siteFooter.siteFooter a[data-page="changelog"],
-      html body .siteFooter.siteFooter a[href="/changelog"] {
+      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[data-page="changelog"],
+      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[href="/changelog"] {
         font-size: 0 !important;
         pointer-events: auto !important;
         cursor: pointer !important;
       }
-      html body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html body .siteFooter.siteFooter a[href="/changelog"]::before {
+      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "${FOOTER_LABEL}" !important;
         display: inline !important;
         font-size: 14px !important;
       }
-      html.bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html.bootPending body .siteFooter.siteFooter a[href="/changelog"]::before {
+      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"].appBusy body .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"].appBusy body .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.booting .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.booting .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.loading .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.loading .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.appBusy .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.appBusy .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "MFL Front Office -" !important;
       }
+
+      html[data-mfl-release-version="${VERSION}"].bootPending table thead,
+      html[data-mfl-release-version="${VERSION}"].bootPending table thead tr,
+      html[data-mfl-release-version="${VERSION}"].bootPending table thead th,
+      html[data-mfl-release-version="${VERSION}"].appBusy table thead,
+      html[data-mfl-release-version="${VERSION}"].appBusy table thead tr,
+      html[data-mfl-release-version="${VERSION}"].appBusy table thead th,
+      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead,
+      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead th,
+      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead,
+      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.booting table thead,
+      html[data-mfl-release-version="${VERSION}"] body.booting table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.booting table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.loading table thead,
+      html[data-mfl-release-version="${VERSION}"] body.loading table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.loading table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead,
+      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead,
+      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead,
+      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead th,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead tr,
+      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead th {
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+      }
     `;
+    document.head.appendChild(style);
   }
 
-  function footerLink() {
-    return document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
+  function unlockTextContent(element) {
+    if (!element || !Object.prototype.hasOwnProperty.call(element, "textContent")) return;
+    try {
+      delete element.textContent;
+    } catch {
+      // The visible release label is supplied by the release stylesheet.
+    }
   }
 
   function syncVersionUi() {
-    const link = footerLink();
-    if (link) {
-      lockNodeText(link, FOOTER_LABEL, /^MFL Front Office(?:\s+v\d+\.\d+\.\d+|\s+-)$/);
-      if (readNodeText(link) !== FOOTER_LABEL) writeNodeText(link, FOOTER_LABEL);
-      link.dataset.releaseLabel = FOOTER_LABEL;
-      link.dataset.page = "changelog";
-      link.setAttribute("href", "/changelog");
-      link.setAttribute("aria-label", `${FOOTER_LABEL}, open Changelog`);
-      link.removeAttribute("aria-disabled");
-      link.removeAttribute("inert");
-      link.tabIndex = 0;
+    document.documentElement.dataset.mflReleaseVersion = VERSION;
+    const footer = document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
+    if (footer) {
+      unlockTextContent(footer);
+      footer.textContent = FOOTER_LABEL;
+      footer.dataset.page = "changelog";
+      footer.dataset.releaseLabel = FOOTER_LABEL;
+      footer.href = "/changelog";
+      footer.setAttribute("aria-label", `${FOOTER_LABEL}, open Changelog`);
+      footer.removeAttribute("aria-disabled");
+      footer.removeAttribute("inert");
+      footer.tabIndex = 0;
     }
-
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
-      lockNodeText(element, SHORT_LABEL, /^v\d+\.\d+\.\d+$/);
-      if (readNodeText(element) !== SHORT_LABEL) writeNodeText(element, SHORT_LABEL);
+      unlockTextContent(element);
+      element.textContent = SHORT_LABEL;
     });
   }
 
@@ -115,10 +143,8 @@
   function syncChangelog() {
     const list = document.querySelector(".changelogList");
     if (!list || changelogEntryExists(list)) return;
-
     let section = Array.from(list.querySelectorAll(".changelogMinorSection"))
       .find((candidate) => String(candidate.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.119");
-
     if (!section) {
       section = document.createElement("li");
       section.className = "changelogMinorSection is-expanded";
@@ -142,7 +168,6 @@
       });
       list.prepend(section);
     }
-
     const patches = section.querySelector(".changelogPatchList");
     if (patches) patches.prepend(createPatchItem());
     const count = section.querySelectorAll(".changelogPatchList > li").length;
@@ -157,37 +182,27 @@
         return;
       }
     } catch {
-      // Fall through to popstate routing.
+      // Fall through to popstate navigation.
     }
-    if (window.location.pathname !== "/changelog") {
-      window.history.pushState({}, "", "/changelog");
-    }
+    if (window.location.pathname !== "/changelog") window.history.pushState({}, "", "/changelog");
     window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
   }
 
-  function footerLinkFromEvent(event) {
+  function footerFromEvent(event) {
     const target = event.target instanceof Element ? event.target : null;
     return target?.closest('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]') || null;
   }
 
   window.addEventListener("click", (event) => {
-    const link = footerLinkFromEvent(event);
-    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    openChangelog();
-  }, true);
-
-  window.addEventListener("keydown", (event) => {
-    const link = footerLinkFromEvent(event);
-    if (!link || !["Enter", " "].includes(event.key)) return;
+    const footer = footerFromEvent(event);
+    if (!footer || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     openChangelog();
   }, true);
 
   function maintain() {
-    installFooterStyles();
+    installReleaseStyles();
     syncVersionUi();
     syncChangelog();
   }
@@ -201,14 +216,15 @@
     });
   }
 
+  installReleaseStyles();
   maintain();
   const observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["class", "data-page", "href", "hidden", "aria-disabled"],
     childList: true,
-    subtree: true,
     characterData: true,
+    subtree: true,
   });
   ["popstate", "hashchange"].forEach((name) => window.addEventListener(name, schedule));
   [0, 50, 150, 400, 1000, 2000, 4000, 7000].forEach((delay) => setTimeout(maintain, delay));
