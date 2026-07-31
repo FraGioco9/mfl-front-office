@@ -1,16 +1,19 @@
 (() => {
-  const VERSION = "1.119.3";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@935892e4bda381265991b56db27caf861918afb7/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Keep table header bottom corners square while loading";
+  const VERSION = "1.119.4";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f0e345b091a65f605b9af648b1c90325e68bd1cf/site/mfl-season-ratios-runtime.js";
+  const RELEASE_DESCRIPTION = "Prevent stale table rows and keep footer navigation stable";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
   let scheduled = false;
+  let guardedSetPage = null;
+  let databaseTransitionSerial = 0;
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflLoadingHeaderCornersReleaseStyles");
+    let style = document.getElementById("mflStablePageLoadingReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflLoadingHeaderCornersReleaseStyles";
+      style.id = "mflStablePageLoadingReleaseStyles";
+      document.head.appendChild(style);
     }
     style.textContent = `
       html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[data-page="changelog"],
@@ -26,30 +29,9 @@
         font-size: 14px !important;
       }
       html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"].appBusy body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"].appBusy body .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.booting .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.booting .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.loading .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.loading .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.appBusy .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.appBusy .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading .siteFooter.siteFooter a[href="/changelog"]::before {
+      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "MFL Front Office -" !important;
       }
-
       html[data-mfl-release-version="${VERSION}"].bootPending table thead,
       html[data-mfl-release-version="${VERSION}"].bootPending table thead tr,
       html[data-mfl-release-version="${VERSION}"].bootPending table thead th,
@@ -92,8 +74,15 @@
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
       }
+      html[data-mfl-release-version="${VERSION}"] body.mflDatabaseRoutePending #tableBody {
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+      html[data-mfl-release-version="${VERSION}"] body.mflDatabaseRoutePending #emptyState {
+        display: block !important;
+        visibility: visible !important;
+      }
     `;
-    document.head.appendChild(style);
   }
 
   function unlockTextContent(element) {
@@ -101,28 +90,88 @@
     try {
       delete element.textContent;
     } catch {
-      // The visible release label is supplied by the release stylesheet.
+      // The release stylesheet remains authoritative for the visible label.
     }
+  }
+
+  function footerLink() {
+    return document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
   }
 
   function syncVersionUi() {
     document.documentElement.dataset.mflReleaseVersion = VERSION;
-    const footer = document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
+    const footer = footerLink();
     if (footer) {
       unlockTextContent(footer);
-      footer.textContent = FOOTER_LABEL;
+      if (footer.textContent !== FOOTER_LABEL) footer.textContent = FOOTER_LABEL;
       footer.dataset.page = "changelog";
       footer.dataset.releaseLabel = FOOTER_LABEL;
-      footer.href = "/changelog";
+      footer.setAttribute("href", "/changelog");
       footer.setAttribute("aria-label", `${FOOTER_LABEL}, open Changelog`);
       footer.removeAttribute("aria-disabled");
       footer.removeAttribute("inert");
       footer.tabIndex = 0;
+      footer.parentElement?.removeAttribute("inert");
     }
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       unlockTextContent(element);
-      element.textContent = SHORT_LABEL;
+      if (element.textContent !== SHORT_LABEL) element.textContent = SHORT_LABEL;
     });
+  }
+
+  function currentPageName() {
+    try {
+      if (typeof state === "object" && state?.currentPage) return String(state.currentPage).toLowerCase();
+    } catch {
+      // Fall back to the route and body state.
+    }
+    const bodyPage = String(document.body?.dataset.page || "").toLowerCase();
+    if (bodyPage) return bodyPage;
+    return /^\/my-players(?:\/|$)/i.test(location.pathname) ? "myplayers" : "";
+  }
+
+  function beginDatabaseTransition() {
+    const body = document.body;
+    if (!body) return;
+    body.classList.add("mflDatabaseRoutePending", "tableRowsLoading");
+    const tableBody = document.getElementById("tableBody");
+    const emptyState = document.getElementById("emptyState");
+    if (tableBody) tableBody.replaceChildren();
+    if (emptyState) {
+      emptyState.hidden = false;
+      emptyState.textContent = "Loading players...";
+    }
+  }
+
+  function finishDatabaseTransition(serial) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (serial !== databaseTransitionSerial) return;
+      document.body?.classList.remove("mflDatabaseRoutePending");
+    }));
+  }
+
+  function installPageTransitionGuard() {
+    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflDatabaseRowsGuard) return;
+    const originalSetPage = setPage;
+    const wrappedSetPage = async function guardedDatabasePage(pageName, updateHash = true, options = {}) {
+      const destination = String(pageName || "").toLowerCase();
+      const source = currentPageName();
+      const guardRows = destination === "database"
+        && (source === "myplayers" || /^\/my-players(?:\/|$)/i.test(location.pathname));
+      if (!guardRows) return originalSetPage.call(this, pageName, updateHash, options);
+
+      const serial = ++databaseTransitionSerial;
+      beginDatabaseTransition();
+      try {
+        return await originalSetPage.call(this, pageName, updateHash, options);
+      } finally {
+        finishDatabaseTransition(serial);
+      }
+    };
+    wrappedSetPage.__mflDatabaseRowsGuard = true;
+    wrappedSetPage.__mflOriginalSetPage = originalSetPage;
+    setPage = wrappedSetPage;
+    guardedSetPage = wrappedSetPage;
   }
 
   function changelogEntryExists(list) {
@@ -175,17 +224,18 @@
     if (meta) meta.textContent = `${count} ${count === 1 ? "patch" : "patches"}`;
   }
 
-  function openChangelog() {
+  async function openChangelog() {
+    const targetPath = "/changelog";
+    if (location.pathname !== targetPath) history.pushState({}, "", targetPath);
     try {
       if (typeof setPage === "function") {
-        Promise.resolve(setPage("changelog", true, { replaceUrl: "/changelog" })).catch(() => {});
+        await setPage("changelog", false);
         return;
       }
     } catch {
-      // Fall through to popstate navigation.
+      // Use the application's popstate route as a fallback.
     }
-    if (window.location.pathname !== "/changelog") window.history.pushState({}, "", "/changelog");
-    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
   }
 
   function footerFromEvent(event) {
@@ -193,17 +243,33 @@
     return target?.closest('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]') || null;
   }
 
+  window.addEventListener("pointerdown", (event) => {
+    const footer = footerFromEvent(event);
+    if (!footer) return;
+    footer.removeAttribute("inert");
+    footer.parentElement?.removeAttribute("inert");
+  }, true);
+
   window.addEventListener("click", (event) => {
     const footer = footerFromEvent(event);
     if (!footer || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    openChangelog();
+    void openChangelog();
+  }, true);
+
+  window.addEventListener("keydown", (event) => {
+    const footer = footerFromEvent(event);
+    if (!footer || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void openChangelog();
   }, true);
 
   function maintain() {
     installReleaseStyles();
     syncVersionUi();
+    installPageTransitionGuard();
     syncChangelog();
   }
 
@@ -216,7 +282,6 @@
     });
   }
 
-  installReleaseStyles();
   maintain();
   const observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
