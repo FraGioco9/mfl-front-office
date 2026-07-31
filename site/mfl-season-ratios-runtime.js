@@ -1,7 +1,7 @@
 (() => {
-  const VERSION = "1.118.38";
+  const VERSION = "1.118.39";
   const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Restore Contract team hover transition";
+  const RELEASE_DESCRIPTION = "Keep the app shell visible when opening Contract teams";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
   const pendingPlayerRequests = new Set();
   const completedPlayerRequests = new Set();
@@ -374,13 +374,31 @@
         if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
       }
     } catch {
-      // Native navigation remains authoritative.
+      // In-app navigation remains authoritative.
     }
   }
 
   function contractLinkFromEvent(event) {
     const target = event.target instanceof Element ? event.target : null;
     return target?.closest("#playerDetail .contractDetailCard .playerContractTeamLink") || null;
+  }
+
+  function navigateContractClub(link) {
+    const href = String(link?.getAttribute("href") || "").trim();
+    if (!href || href === "#") return false;
+    let target;
+    try {
+      target = new URL(href, window.location.href);
+    } catch {
+      return false;
+    }
+    if (target.origin !== window.location.origin) return false;
+    const route = `${target.pathname}${target.search}`;
+    if (`${window.location.pathname}${window.location.search}` !== route) {
+      window.history.pushState({}, "", route);
+    }
+    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    return true;
   }
 
   window.addEventListener("pointerdown", (event) => {
@@ -391,12 +409,10 @@
     const link = contractLinkFromEvent(event);
     if (!link) return;
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
-    const href = String(link.getAttribute("href") || "").trim();
-    if (!href || href === "#") return;
     event.preventDefault();
     event.stopImmediatePropagation();
     releaseBusyBlocker();
-    window.location.assign(href);
+    navigateContractClub(link);
   }, true);
 
   function syncPlayerRoute() {
