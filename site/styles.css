@@ -1,6 +1,6 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@d6b09d4794046c2dec0b7364830bebeda41e760c/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@0c61a234c292c9d7ceee1893ea20611603a33307/site/styles.css");
 
-/* v1.119.2 - Keep the footer version deterministic during initial loading. */
+/* v1.119.3 - Keep table header bottom corners square while data is loading. */
 html body .siteFooter.siteFooter a[data-page="changelog"],
 html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
@@ -10,12 +10,75 @@ html body .siteFooter.siteFooter a[href="/changelog"] {
 
 html body .siteFooter.siteFooter a[data-page="changelog"]::before,
 html body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.2" !important;
+  content: "MFL Front Office v1.119.3" !important;
   display: inline !important;
   font-size: 14px !important;
 }
 
 html.bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html.bootPending body .siteFooter.siteFooter a[href="/changelog"]::before {
+html.bootPending body .siteFooter.siteFooter a[href="/changelog"]::before,
+html.appBusy body .siteFooter.siteFooter a[data-page="changelog"]::before,
+html.appBusy body .siteFooter.siteFooter a[href="/changelog"]::before,
+body.booting .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.booting .siteFooter.siteFooter a[href="/changelog"]::before,
+body.loading .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.loading .siteFooter.siteFooter a[href="/changelog"]::before,
+body.appBusy .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.appBusy .siteFooter.siteFooter a[href="/changelog"]::before,
+body.tableRowsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.tableRowsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+body.tableLayoutPending .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.tableLayoutPending .siteFooter.siteFooter a[href="/changelog"]::before,
+body.clubViewLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.clubViewLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+body.clubViewSwitching .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.clubViewSwitching .siteFooter.siteFooter a[href="/changelog"]::before,
+body.mflStatsLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.mflStatsLoading .siteFooter.siteFooter a[href="/changelog"]::before,
+body.mflStatsStableLoading .siteFooter.siteFooter a[data-page="changelog"]::before,
+body.mflStatsStableLoading .siteFooter.siteFooter a[href="/changelog"]::before {
   content: "MFL Front Office -" !important;
+}
+
+html.bootPending table thead,
+html.bootPending table thead tr,
+html.bootPending table thead th,
+html.appBusy table thead,
+html.appBusy table thead tr,
+html.appBusy table thead th,
+html.mflStatsLoading table thead,
+html.mflStatsLoading table thead tr,
+html.mflStatsLoading table thead th,
+html.mflStatsStableLoading table thead,
+html.mflStatsStableLoading table thead tr,
+html.mflStatsStableLoading table thead th,
+body.booting table thead,
+body.booting table thead tr,
+body.booting table thead th,
+body.loading table thead,
+body.loading table thead tr,
+body.loading table thead th,
+body.appBusy table thead,
+body.appBusy table thead tr,
+body.appBusy table thead th,
+body.tableRowsLoading table thead,
+body.tableRowsLoading table thead tr,
+body.tableRowsLoading table thead th,
+body.tableLayoutPending table thead,
+body.tableLayoutPending table thead tr,
+body.tableLayoutPending table thead th,
+body.clubViewLoading table thead,
+body.clubViewLoading table thead tr,
+body.clubViewLoading table thead th,
+body.clubViewSwitching table thead,
+body.clubViewSwitching table thead tr,
+body.clubViewSwitching table thead th,
+body.mflStatsLoading table thead,
+body.mflStatsLoading table thead tr,
+body.mflStatsLoading table thead th,
+body.mflStatsStableLoading table thead,
+body.mflStatsStableLoading table thead tr,
+body.mflStatsStableLoading table thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
