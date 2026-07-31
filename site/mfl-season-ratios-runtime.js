@@ -1,42 +1,63 @@
 (() => {
-  const VERSION = "1.119.6";
+  const VERSION = "1.119.7";
   const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@55797cced17e5cd2d5a40e65a58b5a022c7b7099/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Reveal rows as soon as data renders, keep loading headers square, and restore the native Changelog link";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
+  const RELEASES = [
+    ["v1.119.7", "Complete Changelog history, disable the current-page footer link, and keep loading table bottoms square"],
+    ["v1.119.6", "Reveal rows as soon as data renders, keep loading headers square, and restore the native Changelog link"],
+    ["v1.119.5", "Keep the footer stable, restore Changelog navigation, and square loading table bottoms"],
+    ["v1.119.4", "Prevent stale table rows and keep footer navigation stable"],
+    ["v1.119.3", "Keep table header bottom corners square while loading"],
+    ["v1.119.2", "Show a stable footer version immediately after loading"],
+    ["v1.119.1", "Restore the Changelog footer link and synchronize the displayed version"],
+    ["v1.119.0", "Optimize paged data loading, cache responses, and link player contract clubs"],
+  ];
 
   let scheduled = false;
   let guardedSetPage = null;
   let transitionSerial = 0;
   let transitionDepth = 0;
+  let currentRouteGuardInstalled = false;
 
   document.documentElement.dataset.mflReleaseVersion = VERSION;
 
+  function cleanPath() {
+    return String(location.pathname || "/").replace(/\/+$/, "") || "/";
+  }
+
   function installReleaseStyles() {
-    let style = document.getElementById("mflRenderedTableReleaseStyles");
+    let style = document.getElementById("mflCompleteChangelogReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRenderedTableReleaseStyles";
+      style.id = "mflCompleteChangelogReleaseStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
       html body .siteFooter.siteFooter a[href="/changelog"] {
         font-size: 0 !important;
         pointer-events: auto !important;
-        cursor: pointer !important;
       }
       html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "${FOOTER_LABEL}" !important;
         display: inline !important;
         font-size: 14px !important;
       }
+      body[data-page="changelog"] .siteFooter a[href="/changelog"],
+      html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
+        cursor: default !important;
+      }
       html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
+        :is(.tableShell, .tableScroller, .tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
+          table, table thead, table thead tr, table thead th,
+          table thead th:first-child, table thead th:last-child),
       body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
         .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
         .mflTableDataLoading)
-        :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
+        :is(.tableShell, .tableScroller, .tableHeader, .tableHeaderRow, #tableHead, #tableHeader,
+          table, table thead, table thead tr, table thead th,
+          table thead th:first-child, table thead th:last-child) {
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
       }
@@ -61,7 +82,7 @@
     return document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
   }
 
-  function prepareNativeFooterLink() {
+  function prepareFooterLink() {
     let link = footerLink();
     if (!link) return;
 
@@ -74,11 +95,6 @@
       replacement.dataset.releaseLabel = FOOTER_LABEL;
       replacement.setAttribute("aria-label", `${FOOTER_LABEL}, open Changelog`);
       replacement.textContent = FOOTER_LABEL;
-      replacement.addEventListener("click", (event) => {
-        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
-          event.stopPropagation();
-        }
-      });
       link.replaceWith(replacement);
       link = replacement;
     }
@@ -88,15 +104,40 @@
     link.removeAttribute("inert");
     link.setAttribute("href", "/changelog");
     link.tabIndex = 0;
+    link.toggleAttribute("aria-current", cleanPath() === "/changelog");
 
     for (let element = link.parentElement; element && element !== document.body; element = element.parentElement) {
       element.removeAttribute("inert");
     }
   }
 
+  function installCurrentRouteGuard() {
+    if (currentRouteGuardInstalled) return;
+    currentRouteGuardInstalled = true;
+
+    window.addEventListener("click", (event) => {
+      if (cleanPath() !== "/changelog") return;
+      const target = event.target instanceof Element ? event.target : null;
+      const link = target?.closest('.siteFooter a[href="/changelog"]');
+      if (!link) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+
+    window.addEventListener("keydown", (event) => {
+      if (cleanPath() !== "/changelog" || !["Enter", " "].includes(event.key)) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const link = target?.closest('.siteFooter a[href="/changelog"]');
+      if (!link) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
+
   function initializeVersionUi() {
     document.documentElement.dataset.mflReleaseVersion = VERSION;
-    prepareNativeFooterLink();
+    prepareFooterLink();
+    installCurrentRouteGuard();
 
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       if (element.dataset.mflReleaseVersion === VERSION) return;
@@ -159,12 +200,12 @@
   }
 
   function installPageTransitionGuard() {
-    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflRenderedRowsVersion === VERSION) {
+    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflCompleteChangelogVersion === VERSION) {
       return;
     }
 
     const originalSetPage = setPage;
-    const wrappedSetPage = async function renderedRowsPageTransition(pageName, updateHash = true, options = {}) {
+    const wrappedSetPage = async function completeChangelogPageTransition(pageName, updateHash = true, options = {}) {
       const destination = String(pageName || "").toLowerCase();
       const ownsTransition = TABLE_PAGES.has(destination) && transitionDepth === 0;
 
@@ -188,63 +229,109 @@
       }
     };
 
-    wrappedSetPage.__mflRenderedRowsVersion = VERSION;
+    wrappedSetPage.__mflCompleteChangelogVersion = VERSION;
     wrappedSetPage.__mflOriginalSetPage = originalSetPage;
     setPage = wrappedSetPage;
     guardedSetPage = wrappedSetPage;
   }
 
-  function changelogEntryExists(list) {
-    return Array.from(list.querySelectorAll(".changelogPatchList li > span, .changelogList > li > span"))
-      .some((label) => String(label.textContent || "").trim() === SHORT_LABEL);
+  function semver(value) {
+    const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
+    return match ? match.slice(1).map(Number) : null;
   }
 
-  function createPatchItem() {
-    const item = document.createElement("li");
-    const version = document.createElement("span");
-    const description = document.createElement("p");
-    version.textContent = SHORT_LABEL;
-    description.textContent = RELEASE_DESCRIPTION;
-    item.append(version, description);
-    return item;
+  function releaseEntries(list) {
+    const entries = new Map();
+
+    list.querySelectorAll(".changelogPatchList > li, .changelogList > li:not(.changelogMinorSection)").forEach((item) => {
+      const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
+      const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
+      if (semver(label)) entries.set(label.startsWith("v") ? label : `v${label}`, description);
+    });
+
+    const payloadReleases = Array.isArray(window.__mflSeasonRatioPayload?.releases)
+      ? window.__mflSeasonRatioPayload.releases
+      : [];
+    payloadReleases.forEach(([label, description]) => {
+      const normalized = String(label || "").trim();
+      if (semver(normalized)) entries.set(normalized.startsWith("v") ? normalized : `v${normalized}`, String(description || ""));
+    });
+
+    RELEASES.forEach(([label, description]) => entries.set(label, description));
+    return entries;
+  }
+
+  function createMinorSection(minor, patches, expanded) {
+    const section = document.createElement("li");
+    section.className = "changelogMinorSection";
+    if (expanded) section.classList.add("is-expanded");
+
+    const toggle = document.createElement("button");
+    toggle.className = "changelogMinorToggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    toggle.innerHTML = `<span class="changelogMinorVersion">v${minor}</span><span class="changelogMinorMeta">${patches.length} ${patches.length === 1 ? "patch" : "patches"}</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>`;
+
+    const panel = document.createElement("div");
+    panel.className = "changelogMinorPanel";
+    const inner = document.createElement("div");
+    inner.className = "changelogMinorPanelInner";
+    const patchList = document.createElement("ol");
+    patchList.className = "changelogPatchList";
+
+    patches.forEach(({ label, description }) => {
+      const item = document.createElement("li");
+      const version = document.createElement("span");
+      const text = document.createElement("p");
+      version.textContent = label;
+      text.textContent = description;
+      item.append(version, text);
+      patchList.appendChild(item);
+    });
+
+    inner.appendChild(patchList);
+    panel.appendChild(inner);
+    section.append(toggle, panel);
+    toggle.addEventListener("click", () => {
+      const nextExpanded = section.classList.toggle("is-expanded");
+      toggle.setAttribute("aria-expanded", nextExpanded ? "true" : "false");
+    });
+    return section;
   }
 
   function syncChangelog() {
     const list = document.querySelector(".changelogList");
-    if (!list || changelogEntryExists(list)) return;
+    if (!list) return;
 
-    let section = Array.from(list.querySelectorAll(".changelogMinorSection"))
-      .find((candidate) => String(candidate.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.119");
-
-    if (!section) {
-      section = document.createElement("li");
-      section.className = "changelogMinorSection is-expanded";
-      const toggle = document.createElement("button");
-      toggle.className = "changelogMinorToggle";
-      toggle.type = "button";
-      toggle.setAttribute("aria-expanded", "true");
-      toggle.innerHTML = '<span class="changelogMinorVersion">v1.119</span><span class="changelogMinorMeta">0 patches</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>';
-      const panel = document.createElement("div");
-      panel.className = "changelogMinorPanel";
-      const inner = document.createElement("div");
-      inner.className = "changelogMinorPanelInner";
-      const patches = document.createElement("ol");
-      patches.className = "changelogPatchList";
-      inner.appendChild(patches);
-      panel.appendChild(inner);
-      section.append(toggle, panel);
-      toggle.addEventListener("click", () => {
-        const expanded = section.classList.toggle("is-expanded");
-        toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-      });
-      list.prepend(section);
+    const entries = releaseEntries(list);
+    if (RELEASES.every(([label]) => entries.has(label))
+        && list.dataset.completeReleaseVersion === VERSION
+        && list.querySelectorAll(".changelogPatchList > li").length === entries.size) {
+      return;
     }
 
-    const patches = section.querySelector(".changelogPatchList");
-    if (patches) patches.prepend(createPatchItem());
-    const count = section.querySelectorAll(".changelogPatchList > li").length;
-    const meta = section.querySelector(".changelogMinorMeta");
-    if (meta) meta.textContent = `${count} ${count === 1 ? "patch" : "patches"}`;
+    const groups = new Map();
+    entries.forEach((description, label) => {
+      const parts = semver(label);
+      if (!parts) return;
+      const minor = `${parts[0]}.${parts[1]}`;
+      if (!groups.has(minor)) groups.set(minor, []);
+      groups.get(minor).push({ label, description, patch: parts[2] });
+    });
+
+    const sections = [...groups.entries()]
+      .sort(([a], [b]) => {
+        const left = a.split(".").map(Number);
+        const right = b.split(".").map(Number);
+        return right[0] - left[0] || right[1] - left[1];
+      })
+      .map(([minor, patches], index) => {
+        patches.sort((a, b) => b.patch - a.patch);
+        return createMinorSection(minor, patches, index === 0);
+      });
+
+    list.replaceChildren(...sections);
+    list.dataset.completeReleaseVersion = VERSION;
   }
 
   function maintain() {
