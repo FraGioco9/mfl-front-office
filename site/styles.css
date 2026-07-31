@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.14 - Keep selected-player Evaluation search inactive after loading. */
+/* v1.118.17 - Restore Evaluation metric format, hide player-route Load, and enable Stats filters. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.14";
+  content: "MFL Front Office v1.118.17";
   font-size: 14px;
 }
 
@@ -121,6 +121,10 @@ html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-t
   display: none !important;
 }
 
+body.evaluationPlayerRoute #evaluationLoadButton {
+  display: none !important;
+}
+
 .evaluationDiscountTooltipPortal {
   position: fixed;
   z-index: 2147483647;
@@ -157,6 +161,8 @@ body[data-page="mflstats"].mflStatsInteractive::after {
 
 body[data-page="mflstats"] #appShell,
 body[data-page="mflstats"] #mflStatsPage,
+body[data-page="mflstats"] .mflStatsFilters,
+body[data-page="mflstats"] #mflStatsOverallFilters,
 body[data-page="mflstats"] .mflStatsFilterButton,
 body[data-page="mflstats"] .mflStatsDistributionModeButton {
   pointer-events: auto !important;
