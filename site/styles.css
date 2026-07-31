@@ -1,8 +1,44 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1d50936eb022922200ef4ee55961727fcbb6698a/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@b18df9adc1282923b834bb421c6f28a504505bfb/site/styles.css");
 
-/* v1.119.8 - Preserve rounded bottom corners on the last rendered row while loading. */
-html[data-mfl-release-version="1.119.8"] body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.8" !important;
+/* v1.119.9 - Round the rendered loading table bottom and show Changelog immediately on refresh. */
+html[data-mfl-release-version="1.119.9"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+  content: "MFL Front Office v1.119.9" !important;
+}
+
+html[data-initial-page="changelog"] body[data-page="home"]
+  :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+html[data-initial-page="changelog"] body[data-page="home"] #changelogPage,
+html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  :is(.tableShell, .tableScroller, table):has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  :is(.tableShell, .tableScroller, table):has(#tableBody > tr) {
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  .tableShell:has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  .tableShell:has(#tableBody > tr) {
+  overflow: hidden !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  table:has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  table:has(#tableBody > tr) {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
 }
 
 html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
@@ -13,8 +49,8 @@ body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .c
 }
 
 html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  #tableBody > tr:last-child > :last-child,
+  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))),
 body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  #tableBody > tr:last-child > :last-child {
+  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))) {
   border-bottom-right-radius: 10px !important;
 }
