@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.23 - Keep player loading truthful, link contract teams, and reveal the Evaluation shell immediately. */
+/* v1.118.26 - Prevent Evaluation value flashes and stabilize MFL Stats loading and controls. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.23";
+  content: "MFL Front Office v1.118.26";
   font-size: 14px;
 }
 
@@ -85,6 +85,32 @@ body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
 body[data-page="evaluation"]::after {
   display: none !important;
   pointer-events: none !important;
+}
+
+html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
+body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
+  visibility: hidden !important;
+}
+
+html[data-initial-page="evaluation"]:not(.mflEvaluationInitialStateReady) #evaluationPage .evaluationSearchGroup {
+  visibility: hidden !important;
+}
+
+html.mflEvaluationInitialStateReady #evaluationPage .evaluationSearchGroup {
+  visibility: visible !important;
+}
+
+html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
+html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+html.mflEvaluationInitialStateReady:not(.mflEvaluationInitialLoadVisible) #evaluationLoadButton,
+body.evaluationPlayerRoute #evaluationLoadButton {
+  display: none !important;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
@@ -131,11 +157,6 @@ html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage 
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {
   content: none !important;
-  display: none !important;
-}
-
-html[data-initial-page="evaluation"] body:not(.evaluationRouteResolved) #evaluationLoadButton,
-body.evaluationPlayerRoute #evaluationLoadButton {
   display: none !important;
 }
 
@@ -223,6 +244,8 @@ body.mflStatsLoading table thead th {
   display: none !important;
 }
 
+html.mflStatsStableLoading,
+html.mflStatsStableLoading *,
 html.mflStatsLoading,
 html.mflStatsLoading *,
 body.mflStatsLoading,
