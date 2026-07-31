@@ -19,6 +19,24 @@
           "value": "no-store, max-age=0"
         }
       ]
+    },
+    {
+      "source": "/mfl-season-ratios-runtime.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/styles.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ],
   "redirects": [
