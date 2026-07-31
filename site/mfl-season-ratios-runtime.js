@@ -1,7 +1,7 @@
 (() => {
-  const VERSION = "1.118.39";
+  const VERSION = "1.119.0";
   const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Keep the app shell visible when opening Contract teams";
+  const RELEASE_DESCRIPTION = "Cache and reuse site data to speed up loading across pages";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
   const pendingPlayerRequests = new Set();
   const completedPlayerRequests = new Set();
@@ -11,6 +11,7 @@
   let playerRouteStartedAt = 0;
   let requestHookInstalled = false;
   let renderHookInstalled = false;
+  let dataFetchHookInstalled = false;
   let bootstrapClubsPromise = null;
   let scheduled = false;
 
@@ -59,6 +60,57 @@
         text-decoration: none !important;
       }
     `;
+  }
+
+  function installDataFetchHook() {
+    if (dataFetchHookInstalled || typeof window.fetch !== "function" || window.fetch.__mflDataCacheOptimization) return;
+    const nativeFetch = window.fetch.bind(window);
+    const optimizedFetch = function optimizedDataFetch(input, init = {}) {
+      let target;
+      try {
+        const sourceUrl = input instanceof Request ? input.url : String(input || "");
+        target = new URL(sourceUrl, window.location.href);
+      } catch {
+        return nativeFetch(input, init);
+      }
+
+      if (target.origin !== window.location.origin || target.pathname !== "/api/data") {
+        return nativeFetch(input, init);
+      }
+
+      const mode = String(target.searchParams.get("mode") || "");
+      const access = String(target.searchParams.get("access") || "");
+      const view = String(target.searchParams.get("view") || "attributes").toLowerCase();
+      const scope = String(target.searchParams.get("scope") || "database").toLowerCase();
+      const includeProgression = String(target.searchParams.get("includeProgression") || "") === "1";
+      const headers = new Headers(input instanceof Request ? input.headers : undefined);
+      new Headers(init.headers || undefined).forEach((value, name) => headers.set(name, value));
+      const hasWalletProof = headers.has("x-dapper-wallet-address")
+        || headers.has("x-wallet-signing-address")
+        || headers.has("x-wallet-signatures");
+      const publicRequest = !hasWalletProof
+        && access !== "full-progression"
+        && access !== "owned-progression"
+        && (mode === "bootstrap" || (
+          mode === "page"
+          && !includeProgression
+          && !["current", "all"].includes(view)
+          && scope !== "myplayers"
+        ));
+
+      if (!publicRequest) {
+        return nativeFetch(input, init);
+      }
+
+      const requestedCache = init.cache || (input instanceof Request ? input.cache : "");
+      if (requestedCache !== "no-store") {
+        return nativeFetch(input, init);
+      }
+      return nativeFetch(input, { ...init, cache: "default" });
+    };
+    optimizedFetch.__mflDataCacheOptimization = true;
+    window.fetch = optimizedFetch;
+    dataFetchHookInstalled = true;
   }
 
   function semver(value) {
@@ -455,6 +507,7 @@
   }
 
   function maintain() {
+    installDataFetchHook();
     installStyles();
     syncVersionUi();
     installRequestHook();
@@ -484,6 +537,7 @@
     [0, 50, 150, 400, 1000, 2000, 3500, 6000].forEach((delay) => setTimeout(maintain, delay));
   }
 
+  installDataFetchHook();
   installStyles();
   const legacy = document.createElement("script");
   legacy.src = LEGACY_RUNTIME;
