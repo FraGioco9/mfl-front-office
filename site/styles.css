@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.18 - Remove loading header rounding and prevent Evaluation control/value flashes. */
+/* v1.118.19 - Align loading UI, Evaluation readiness, player team links, and MFL Stats controls. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.18";
+  content: "MFL Front Office v1.118.19";
   font-size: 14px;
 }
 
@@ -72,6 +72,10 @@ body > .siteFooter {
 html body[data-page="evaluation"] #evaluationPage {
   overflow-x: clip !important;
   overflow-y: visible !important;
+}
+
+body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationPage {
+  visibility: hidden !important;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
@@ -126,20 +130,51 @@ body.evaluationPlayerRoute #evaluationLoadButton {
   display: none !important;
 }
 
-body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
-  visibility: hidden !important;
+.playerContractTeamLink {
+  color: inherit;
+  text-decoration: none;
 }
 
+.playerContractTeamLink:hover,
+.playerContractTeamLink:focus-visible {
+  text-decoration: underline;
+}
+
+html.bootPending table thead,
+html.bootPending table thead tr,
 html.bootPending table thead th,
+html.appBusy table thead,
+html.appBusy table thead tr,
 html.appBusy table thead th,
+html.mflStatsLoading table thead,
+html.mflStatsLoading table thead tr,
+html.mflStatsLoading table thead th,
+body.booting table thead,
+body.booting table thead tr,
 body.booting table thead th,
+body.loading table thead,
+body.loading table thead tr,
 body.loading table thead th,
+body.appBusy table thead,
+body.appBusy table thead tr,
 body.appBusy table thead th,
+body.tableRowsLoading table thead,
+body.tableRowsLoading table thead tr,
 body.tableRowsLoading table thead th,
+body.tableLayoutPending table thead,
+body.tableLayoutPending table thead tr,
 body.tableLayoutPending table thead th,
+body.clubViewLoading table thead,
+body.clubViewLoading table thead tr,
 body.clubViewLoading table thead th,
-body.clubViewSwitching table thead th {
-  border-radius: 0 !important;
+body.clubViewSwitching table thead,
+body.clubViewSwitching table thead tr,
+body.clubViewSwitching table thead th,
+body.mflStatsLoading table thead,
+body.mflStatsLoading table thead tr,
+body.mflStatsLoading table thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 
 .evaluationDiscountTooltipPortal {
@@ -168,6 +203,13 @@ body.clubViewSwitching table thead th {
 
 .evaluationDiscountTooltipPortal[hidden] {
   display: none !important;
+}
+
+html.mflStatsLoading,
+html.mflStatsLoading *,
+body.mflStatsLoading,
+body.mflStatsLoading * {
+  cursor: wait !important;
 }
 
 body[data-page="mflstats"]::after,
