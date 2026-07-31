@@ -1,5 +1,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const crypto = require("node:crypto");
+const { performance } = require("node:perf_hooks");
 const fcl = require("@onflow/fcl");
 
 fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
@@ -57,6 +59,23 @@ const POSITION_ORDER = [
   "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
 ];
 const POSITION_RANK = new Map(POSITION_ORDER.map((position, index) => [position, index]));
+const PUBLIC_CACHEABLE_DATA_FILES = new Set([
+  "manifest.json",
+  "players_public.json",
+  "players_mfl_public.json",
+  "players_search.json",
+  "agents_search.json",
+]);
+const DATA_FILE_PATH_CACHE = new Map();
+const DATA_JSON_CACHE = new Map();
+const DATA_JSON_PROMISES = new Map();
+const COLUMN_INDEX_CACHE = new WeakMap();
+const MERGED_PROGRESSION_CACHE = new WeakMap();
+const PUBLIC_RESPONSE_CACHE = new Map();
+const WALLET_PERMISSION_CACHE = new Map();
+const MAX_PUBLIC_RESPONSE_CACHE_ENTRIES = 75;
+const PUBLIC_RESPONSE_CACHE_TTL_MS = 5 * 60 * 1000;
+const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 1000;
 
 function normalizeWalletAddress(address) {
   const value = String(address || "").trim().toLowerCase();
@@ -76,6 +95,135 @@ function stringToHex(value) {
   return Buffer.from(value, "utf8").toString("hex");
 }
 
+function recordTiming(request, name, duration) {
+  if (!request || !Number.isFinite(duration)) {
+    return;
+  }
+  if (!request.mflDataTimings) {
+    request.mflDataTimings = new Map();
+  }
+  request.mflDataTimings.set(name, (request.mflDataTimings.get(name) || 0) + duration);
+}
+
+function setBoundedCache(cache, key, value, maximumEntries) {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, value);
+  while (cache.size > maximumEntries) {
+    cache.delete(cache.keys().next().value);
+  }
+}
+
+function publicResponseCacheKey(request) {
+  return String(request.url || request.originalUrl || "");
+}
+
+function getPublicResponseCache(request) {
+  const key = publicResponseCacheKey(request);
+  const cached = PUBLIC_RESPONSE_CACHE.get(key);
+  if (!cached) {
+    return null;
+  }
+  if (cached.expiresAt <= Date.now()) {
+    PUBLIC_RESPONSE_CACHE.delete(key);
+    return null;
+  }
+  PUBLIC_RESPONSE_CACHE.delete(key);
+  PUBLIC_RESPONSE_CACHE.set(key, cached);
+  return cached.data;
+}
+
+function setPublicResponseCache(request, data) {
+  setBoundedCache(PUBLIC_RESPONSE_CACHE, publicResponseCacheKey(request), {
+    data,
+    expiresAt: Date.now() + PUBLIC_RESPONSE_CACHE_TTL_MS,
+  }, MAX_PUBLIC_RESPONSE_CACHE_ENTRIES);
+}
+
+function requestHasWalletProof(request) {
+  return Boolean(
+    request.headers["x-dapper-wallet-address"]
+    || request.headers["x-wallet-signing-address"]
+    || request.headers["x-wallet-signatures"],
+  );
+}
+
+function publicCacheableRequest(request, signedWallet, mode, fileName) {
+  if (signedWallet || requestHasWalletProof(request)) {
+    return false;
+  }
+
+  const accessMode = String(request.query.access || "");
+  if (accessMode === "full-progression" || accessMode === "owned-progression") {
+    return false;
+  }
+
+  if (mode === "bootstrap") {
+    return true;
+  }
+
+  if (mode === "page") {
+    const view = String(request.query.view || "attributes").toLowerCase();
+    const scope = String(request.query.scope || "database").toLowerCase();
+    return String(request.query.includeProgression || "") !== "1"
+      && !["current", "all"].includes(view)
+      && scope !== "myplayers";
+  }
+
+  return PUBLIC_CACHEABLE_DATA_FILES.has(fileName);
+}
+
+function responseGeneratedAt(data) {
+  return String(
+    data?.generatedAt
+    || data?.generated_at
+    || data?.manifest?.generated_at
+    || "static",
+  );
+}
+
+function responseEtag(request, data) {
+  const seed = `${responseGeneratedAt(data)}|${publicResponseCacheKey(request)}`;
+  return `"${crypto.createHash("sha1").update(seed).digest("base64url")}"`;
+}
+
+function setServerTiming(request, response, startedAt) {
+  const timings = [];
+  if (request?.mflDataTimings instanceof Map) {
+    request.mflDataTimings.forEach((duration, name) => {
+      const safeName = String(name).replace(/[^a-zA-Z0-9_-]/g, "_");
+      timings.push(`${safeName};dur=${duration.toFixed(1)}`);
+    });
+  }
+  timings.push(`total;dur=${Math.max(0, performance.now() - startedAt).toFixed(1)}`);
+  response.setHeader("Server-Timing", timings.join(", "));
+}
+
+function sendJson(request, response, status, data, options = {}) {
+  const cacheable = options.cacheable === true && status >= 200 && status < 300;
+  response.setHeader("Content-Type", "application/json; charset=utf-8");
+  setServerTiming(request, response, options.startedAt || performance.now());
+
+  if (cacheable) {
+    response.setHeader("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=3600");
+    response.setHeader("Vary", "x-dapper-wallet-address, x-wallet-signing-address, x-wallet-signatures");
+    const etag = responseEtag(request, data);
+    response.setHeader("ETag", etag);
+    const requestEtags = String(request.headers["if-none-match"] || "")
+      .split(",")
+      .map((value) => value.trim());
+    if (requestEtags.includes(etag) || requestEtags.includes("*")) {
+      response.status(304).end();
+      return;
+    }
+  } else {
+    response.setHeader("Cache-Control", "private, no-store");
+  }
+
+  response.status(status).json(data);
+}
+
 async function findFile(candidates) {
   for (const candidate of candidates) {
     try {
@@ -90,7 +238,11 @@ async function findFile(candidates) {
 }
 
 async function findDataFile(fileName) {
-  return findFile([
+  if (DATA_FILE_PATH_CACHE.has(fileName)) {
+    return DATA_FILE_PATH_CACHE.get(fileName);
+  }
+
+  const lookup = findFile([
     path.join(__dirname, "data-files", fileName),
     path.join(__dirname, "..", "data", fileName),
     path.join(process.cwd(), "api", "data-files", fileName),
@@ -98,6 +250,10 @@ async function findDataFile(fileName) {
     path.join(process.cwd(), "site", "api", "data-files", fileName),
     path.join(process.cwd(), "site", "data", fileName),
   ]);
+  DATA_FILE_PATH_CACHE.set(fileName, lookup);
+  const filePath = await lookup;
+  DATA_FILE_PATH_CACHE.set(fileName, filePath);
+  return filePath;
 }
 
 function requestOrigin(request) {
@@ -111,26 +267,58 @@ function requestOrigin(request) {
 }
 
 async function readDataJson(fileName, request) {
+  const startedAt = performance.now();
   const filePath = await findDataFile(fileName);
+  const origin = filePath ? "" : requestOrigin(request);
 
-  if (filePath) {
-    return JSON.parse(await fs.readFile(filePath, "utf8"));
-  }
-
-  const origin = requestOrigin(request);
-  if (!origin) {
+  if (!filePath && !origin) {
     throw new Error(`Data file not found: ${fileName}`);
   }
 
-  const staticResponse = await fetch(`${origin}/data/${encodeURIComponent(fileName)}`, {
-    cache: "no-store",
-  });
+  const sourceKey = filePath
+    ? `file:${filePath}`
+    : `url:${origin}/data/${encodeURIComponent(fileName)}`;
 
-  if (!staticResponse.ok) {
-    throw new Error(`Data file not found: ${fileName}`);
+  if (DATA_JSON_CACHE.has(sourceKey)) {
+    recordTiming(request, "data_cache", performance.now() - startedAt);
+    return DATA_JSON_CACHE.get(sourceKey);
   }
 
-  return staticResponse.json();
+  let loadPromise = DATA_JSON_PROMISES.get(sourceKey);
+  if (!loadPromise) {
+    loadPromise = (async () => {
+      if (filePath) {
+        return JSON.parse(await fs.readFile(filePath, "utf8"));
+      }
+
+      const staticResponse = await fetch(`${origin}/data/${encodeURIComponent(fileName)}`, {
+        cache: "force-cache",
+      });
+
+      if (!staticResponse.ok) {
+        throw new Error(`Data file not found: ${fileName}`);
+      }
+
+      return staticResponse.json();
+    })()
+      .then((data) => {
+        DATA_JSON_CACHE.set(sourceKey, data);
+        return data;
+      })
+      .finally(() => {
+        DATA_JSON_PROMISES.delete(sourceKey);
+      });
+    DATA_JSON_PROMISES.set(sourceKey, loadPromise);
+  }
+
+  try {
+    const data = await loadPromise;
+    recordTiming(request, "data_read", performance.now() - startedAt);
+    return data;
+  } catch (error) {
+    DATA_JSON_CACHE.delete(sourceKey);
+    throw error;
+  }
 }
 
 function supabaseConfig() {
@@ -145,13 +333,19 @@ function supabaseConfig() {
 }
 
 async function walletAllowed(wallet) {
+  const normalizedWallet = normalizeWalletAddress(wallet).toLowerCase();
+  const cached = WALLET_PERMISSION_CACHE.get(normalizedWallet);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.allowed;
+  }
+
   const config = supabaseConfig();
 
   if (!config) {
     return false;
   }
 
-  const response = await fetch(`${config.url}/rest/v1/wallet_permissions?select=wallet_address&wallet_address=eq.${encodeURIComponent(wallet)}&can_view_progression=eq.true&limit=1`, {
+  const response = await fetch(`${config.url}/rest/v1/wallet_permissions?select=wallet_address&wallet_address=eq.${encodeURIComponent(normalizedWallet)}&can_view_progression=eq.true&limit=1`, {
     headers: {
       apikey: config.key,
       Authorization: `Bearer ${config.key}`,
@@ -164,7 +358,12 @@ async function walletAllowed(wallet) {
   }
 
   const rows = await response.json();
-  return Array.isArray(rows) && rows.length > 0;
+  const allowed = Array.isArray(rows) && rows.length > 0;
+  WALLET_PERMISSION_CACHE.set(normalizedWallet, {
+    allowed,
+    expiresAt: Date.now() + WALLET_PERMISSION_CACHE_TTL_MS,
+  });
+  return allowed;
 }
 
 async function signedWalletFromRequest(request) {
@@ -267,8 +466,20 @@ function searchAgentsDataFile(manifest) {
   return manifest?.files?.search_agents?.file || "agents_search.json";
 }
 
+function columnIndex(columns, column) {
+  if (!Array.isArray(columns)) {
+    return -1;
+  }
+  let indexes = COLUMN_INDEX_CACHE.get(columns);
+  if (!indexes) {
+    indexes = new Map(columns.map((name, index) => [name, index]));
+    COLUMN_INDEX_CACHE.set(columns, indexes);
+  }
+  return indexes.has(column) ? indexes.get(column) : -1;
+}
+
 function valueFromRow(row, columns, column) {
-  const index = columns.indexOf(column);
+  const index = columnIndex(columns, column);
   return index >= 0 ? row[index] : null;
 }
 
@@ -538,13 +749,23 @@ function mergeProgressionRows(publicData, progressionData) {
     return publicData;
   }
 
+  let progressionCache = MERGED_PROGRESSION_CACHE.get(publicData);
+  if (!progressionCache) {
+    progressionCache = new WeakMap();
+    MERGED_PROGRESSION_CACHE.set(publicData, progressionCache);
+  }
+  const cachedMerge = progressionCache.get(progressionData);
+  if (cachedMerge) {
+    return cachedMerge;
+  }
+
   const publicColumns = Array.isArray(publicData?.columns) ? publicData.columns : [];
   const publicRows = Array.isArray(publicData?.rows) ? publicData.rows : [];
   const progressionColumns = progressionData.columns;
-  const progressionPlayerIndex = progressionColumns.indexOf("player_id");
-  const publicPlayerIndex = publicColumns.indexOf("player_id");
+  const progressionPlayerIndex = columnIndex(progressionColumns, "player_id");
+  const publicPlayerIndex = columnIndex(publicColumns, "player_id");
   const addedColumns = progressionColumns.filter((column) => column !== "player_id" && !publicColumns.includes(column));
-  const addedIndexes = addedColumns.map((column) => progressionColumns.indexOf(column));
+  const addedIndexes = addedColumns.map((column) => columnIndex(progressionColumns, column));
   const progressionByPlayerId = new Map();
 
   if (progressionPlayerIndex < 0 || publicPlayerIndex < 0) {
@@ -555,7 +776,7 @@ function mergeProgressionRows(publicData, progressionData) {
     progressionByPlayerId.set(String(row[progressionPlayerIndex]), row);
   });
 
-  return {
+  const merged = {
     columns: [...publicColumns, ...addedColumns],
     rows: publicRows.map((row) => {
       const progressionRow = progressionByPlayerId.get(String(row[publicPlayerIndex]));
@@ -565,6 +786,8 @@ function mergeProgressionRows(publicData, progressionData) {
       ];
     }),
   };
+  progressionCache.set(progressionData, merged);
+  return merged;
 }
 
 async function bootstrapData(request) {
@@ -600,7 +823,7 @@ async function bootstrapData(request) {
 
   const agentColumns = Array.isArray(agentsSearch?.columns) ? agentsSearch.columns : [];
   const agentRows = Array.isArray(agentsSearch?.rows) ? agentsSearch.rows : [];
-  const walletAddressIndex = agentColumns.indexOf("wallet_address");
+  const walletAddressIndex = columnIndex(agentColumns, "wallet_address");
 
   return {
     manifest,
@@ -738,37 +961,52 @@ async function pagedData(request, signedWallet) {
 }
 
 module.exports = async function handler(request, response) {
-  response.setHeader("Cache-Control", "no-store");
+  const startedAt = performance.now();
+  request.mflDataTimings = new Map();
 
   const mode = String(request.query.mode || "");
   const accessMode = String(request.query.access || "");
+  const authStartedAt = performance.now();
   const signedWallet = await signedWalletFromRequest(request);
   const fullAccess = accessMode === "full-progression" || (signedWallet ? await walletAllowed(signedWallet) : false);
   const ownedProgression = accessMode === "owned-progression" && Boolean(signedWallet);
   const publicDatabase = accessMode === "public-database" || (!fullAccess && !ownedProgression);
   const fileName = String(request.query.file || "");
+  recordTiming(request, "auth", performance.now() - authStartedAt);
+  const cacheable = publicCacheableRequest(request, signedWallet, mode, fileName);
 
   if (mode === "bootstrap" || mode === "page") {
     try {
-      response.setHeader("Content-Type", "application/json; charset=utf-8");
+      if (cacheable) {
+        const cachedData = getPublicResponseCache(request);
+        if (cachedData) {
+          recordTiming(request, "response_cache", 0.1);
+          sendJson(request, response, 200, cachedData, { cacheable: true, startedAt });
+          return;
+        }
+      }
+
+      const processingStartedAt = performance.now();
       const data = mode === "bootstrap"
         ? await bootstrapData(request)
         : await pagedData(request, signedWallet);
-      response.status(200).json(data);
+      recordTiming(request, mode, performance.now() - processingStartedAt);
+      if (cacheable) {
+        setPublicResponseCache(request, data);
+      }
+      sendJson(request, response, 200, data, { cacheable, startedAt });
     } catch (error) {
-      response.status(500).json({ error: `Could not load requested data: ${error.message}` });
+      sendJson(request, response, 500, { error: `Could not load requested data: ${error.message}` }, { startedAt });
     }
     return;
   }
 
   if (!DATA_FILE_PATTERN.test(fileName)) {
-    response.status(400).json({ error: "Invalid data file." });
+    sendJson(request, response, 400, { error: "Invalid data file." }, { startedAt });
     return;
   }
 
   try {
-    response.setHeader("Content-Type", "application/json; charset=utf-8");
-
     const data = await readDataJson(fileName, request);
     const requestedColumns = String(request.query.columns || "")
       .split(",")
@@ -783,13 +1021,13 @@ module.exports = async function handler(request, response) {
         ? [...publicColumns, ...data.files.progression.columns.filter((column) => !publicColumns.includes(column))]
         : (Array.isArray(data.columns) ? data.columns : publicColumns);
 
-      response.status(200).json({
+      sendJson(request, response, 200, {
         ...data,
         columns: publicDatabase ? publicColumns : fullColumns,
         publicAccess: publicDatabase ? "database" : undefined,
         ownedAccess: ownedProgression ? "progression" : undefined,
         partialAccess: !publicDatabase && requestedColumns.length ? "columns" : undefined,
-      });
+      }, { cacheable, startedAt });
       return;
     }
 
@@ -798,7 +1036,7 @@ module.exports = async function handler(request, response) {
 
     if (ownedProgression && !fullAccess) {
       const ownedPlayerIds = await ownedPlayerIdsForWallet(request, signedWallet);
-      const playerIdIndex = dataColumns.indexOf("player_id");
+      const playerIdIndex = columnIndex(dataColumns, "player_id");
       dataRows = playerIdIndex >= 0
         ? dataRows.filter((row) => ownedPlayerIds.has(String(row[playerIdIndex])))
         : [];
@@ -809,13 +1047,13 @@ module.exports = async function handler(request, response) {
       : (requestedColumns.length
         ? requestedColumns.filter((column) => dataColumns.includes(column))
         : dataColumns);
-    const selectedColumnIndexes = selectedColumns.map((column) => dataColumns.indexOf(column));
+    const selectedColumnIndexes = selectedColumns.map((column) => columnIndex(dataColumns, column));
 
-    response.status(200).json({
+    sendJson(request, response, 200, {
       columns: selectedColumns,
       rows: dataRows.map((row) => selectedColumnIndexes.map((index) => row[index])),
-    });
+    }, { cacheable, startedAt });
   } catch (error) {
-    response.status(500).json({ error: `Could not read data file: ${error.message}` });
+    sendJson(request, response, 500, { error: `Could not read data file: ${error.message}` }, { startedAt });
   }
 };
