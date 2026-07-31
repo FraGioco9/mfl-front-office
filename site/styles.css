@@ -5,13 +5,13 @@ html[data-mfl-release-version="1.119.9"] body .siteFooter.siteFooter a[href="/ch
   content: "MFL Front Office v1.119.9" !important;
 }
 
-html[data-initial-page="changelog"] body[data-page="home"]
+html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"]
   :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
   display: none !important;
   visibility: hidden !important;
 }
 
-html[data-initial-page="changelog"] body[data-page="home"] #changelogPage,
+html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"] #changelogPage,
 html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
   display: block !important;
   visibility: visible !important;
