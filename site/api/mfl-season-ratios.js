@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.21";
+const APP_VERSION = "1.118.22";
 const APP_RELEASES = [
+  ["v1.118.22", "Keep player routes loading, link teams, restore Stats controls, and reveal the Evaluation shell"],
   ["v1.118.21", "Fix tooltip placement, player team links, Stats loading controls, and the Evaluation loading shell"],
   ["v1.118.20", "Keep tooltips clear of the header, link player teams, restore Stats filters, and reveal Evaluation together"],
   ["v1.118.19", "Reset Evaluation routes, link player teams, align loading UI, and restore MFL Stats filters"],
@@ -30,46 +31,147 @@ const APP_RELEASES = [
   ["v1.117.1", "Prioritize Search results and hide Evaluation scrollbars"],
   ["v1.117.0", "Build player batches from PlayMFL instead of Flow"],
 ];
-const PRODUCTION_ORIGIN = String(process.env.MFL_FRONT_OFFICE_PRODUCTION_ORIGIN || "https://mfl-front-office.vercel.app").replace(/\/+$/, "");
 
-const CLIENT_SOURCE = [
-  "(() => {\n  const payload = window.__mflSeasonRatioPayload || {};\n  const ratios = Array.isArray(payload.rows) ? payload.rows : [];\n  const events = [\"pointerdown\", \"mousedown\", \"click\", \"auxclick\", \"dblclick\", \"contextmenu\"];\n  const clubIdColumns = [\"active_contract_club_id\", \"club_id\", \"current_club_id\", \"active_club_id\"];\n  let protectedEvaluationRoute = location.pathname === \"/evaluation\" && /[?&](player|share)=/.test(location.search)\n    ? location.pathname + location.search : \"\";\n  let playerLoadPromise = null;\n  let statsRequests = 0;\n  let tooltipAnchor = null;\n  let emptyFocused = false;\n\n  function style() {\n    let el = document.getElementById(\"mflRuntimeFixStyles\");\n    if (!el) { el = document.createElement(\"style\"); el.id = \"mflRuntimeFixStyles\"; document.head.appendChild(el)",
-  "; }\n    el.textContent = `\n      .siteFooter a[data-page=\"changelog\"]{font-size:0!important}.siteFooter a[data-page=\"changelog\"]::before{content:\"MFL Front Office v${payload.version || \"1.118.21\"}\";font-size:14px}\n      html body[data-page=\"evaluation\"] #evaluationPage,html body[data-page=\"evaluation\"]:not(.evaluationPageReady) #evaluationPage{visibility:visible!important}\n      body[data-page=\"evaluation\"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate{visibility:hidden!important}\n      body.evaluationPlayerRoute #evaluationLoadButton{display:none!important}\n      .playerContractTeamLink{color:inherit!important;text-decoration:none;cursor:pointer}.playerContractTeamLink:hover,.playerContractTeamLink:focus-visible{text-decoration:underline}\n      .playerNoteFloatingTooltip{z-ind",
-  "ex:2147483647!important}\n      html.mflStatsLoading,html.mflStatsLoading *,body.mflStatsLoading,body.mflStatsLoading *{cursor:wait!important}\n      body[data-page=\"mflstats\"].mflStatsInteractive::after{display:none!important;pointer-events:none!important}\n      body[data-page=\"mflstats\"] #appShell,body[data-page=\"mflstats\"] #mflStatsPage,body[data-page=\"mflstats\"] .mflStatsFilters,body[data-page=\"mflstats\"] #mflStatsOverallFilters,body[data-page=\"mflstats\"] .mflStatsFilterButton,body[data-page=\"mflstats\"] .mflStatsDistributionModeButton{pointer-events:auto!important}\n      .evaluationDiscountRate[data-tooltip]::before,.evaluationDiscountRate[data-tooltip]::after{content:none!important;display:none!important}\n      .evaluationDiscountTooltipPortal{position:fixed;z-index:2147483647;max-width",
-  ":320px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.18);font-size:13px;line-height:1.35;pointer-events:none;visibility:hidden;opacity:0;transform:translateY(4px);transition:opacity 120ms ease,transform 120ms ease,visibility 0s linear 120ms}.evaluationDiscountTooltipPortal.visible{visibility:visible;opacity:1;transform:translateY(0);transition:opacity 120ms ease,transform 120ms ease,visibility 0s}\n    `;\n  }\n\n  function currentUrl(value) { try { return new URL(String(value || \"\"), location.href); } catch { return null; } }\n  const replaceState = history.replaceState.bind(history);\n  const pushState = history.pushState.bind(history);\n  function remember(url) {\n    if (!url || url.pathna",
-  "me !== \"/evaluation\") { protectedEvaluationRoute = \"\"; return; }\n    protectedEvaluationRoute = url.searchParams.get(\"player\") || url.searchParams.get(\"share\") ? url.pathname + url.search : \"\";\n  }\n  history.replaceState = function(stateValue, title, urlValue) {\n    const target = urlValue == null ? null : currentUrl(urlValue);\n    if (protectedEvaluationRoute && target?.pathname === \"/evaluation\") {\n      const old = currentUrl(protectedEvaluationRoute);\n      if ((old?.searchParams.get(\"player\") && !target.searchParams.get(\"player\")) || (old?.searchParams.get(\"share\") && !target.searchParams.get(\"share\"))) {\n        return replaceState(stateValue, title, protectedEvaluationRoute);\n      }\n    }\n    remember(target); return replaceState(stateValue, title, urlValue);\n  };\n  history.pushSta",
-  "te = function(stateValue, title, urlValue) { const target = urlValue == null ? null : currentUrl(urlValue); remember(target); return pushState(stateValue, title, urlValue); };\n\n  function selectedEvaluation() {\n    if (document.body.dataset.page !== \"evaluation\") return false;\n    try { if (typeof state === \"object\" && state?.evaluationPlayerId) return true; } catch {}\n    const p = new URLSearchParams(location.search);\n    return Boolean(p.get(\"player\") || p.get(\"share\") || p.get(\"saved\") || (document.getElementById(\"evaluationPanel\") && !document.getElementById(\"evaluationPanel\").hidden));\n  }\n  function focusGuard() {\n    const input = document.getElementById(\"evaluationSearchInput\");\n    if (!input || input.__mflFocusGuard) return;\n    const original = input.focus;\n    input.focus = fu",
-  "nction(...args) { if (!selectedEvaluation()) return original.apply(this, args); };\n    input.__mflFocusGuard = true;\n  }\n\n  async function ensurePlayer(id) {\n    id = String(id || \"\").trim();\n    if (!id || typeof rowByPlayerId !== \"function\") return false;\n    if (rowByPlayerId(id)) return true;\n    if (playerLoadPromise) return playerLoadPromise;\n    playerLoadPromise = (async () => {\n      try {\n        if (typeof requestIncrementalRoute === \"function\") await requestIncrementalRoute({pageName:\"evaluation\",scope:\"evaluation\",playerId:id,view:\"attributes\",access:typeof currentDataAccess === \"function\" ? currentDataAccess(\"evaluation\") : \"public\"},1,{force:true});\n        else if (typeof window.mflLoadIncrementalRoutePage === \"function\") await window.mflLoadIncrementalRoutePage(\"evaluation",
-  "\",{playerId:id});\n      } catch (error) { console.error(\"Could not load Evaluation player.\", error); }\n      finally { playerLoadPromise = null; }\n      return Boolean(rowByPlayerId(id));\n    })();\n    return playerLoadPromise;\n  }\n\n  function routeGuard() {\n    if (typeof renderEvaluationPage === \"function\" && !renderEvaluationPage.__mflRouteGuard) {\n      const original = renderEvaluationPage;\n      renderEvaluationPage = async function() {\n        const p = new URLSearchParams(location.search); const id = p.get(\"player\") || \"\";\n        if (id && typeof rowByPlayerId === \"function\" && !rowByPlayerId(id)) await ensurePlayer(id);\n        if (id && typeof state === \"object\" && state) state.evaluationPlayerId = id;\n        return original.apply(this, arguments);\n      };\n      renderEvaluati",
-  "onPage.__mflRouteGuard = true;\n    }\n    if (typeof applySharedEvaluationPayload === \"function\" && !applySharedEvaluationPayload.__mflRouteGuard) {\n      const original = applySharedEvaluationPayload;\n      applySharedEvaluationPayload = function(data) {\n        const id = String(data?.playerId || data?.player_id || \"\").trim();\n        if (id && typeof rowByPlayerId === \"function\" && !rowByPlayerId(id)) { void ensurePlayer(id).then(() => original.call(this, data)); return; }\n        return original.apply(this, arguments);\n      };\n      applySharedEvaluationPayload.__mflRouteGuard = true;\n    }\n    if (protectedEvaluationRoute && location.pathname === \"/evaluation\" && location.pathname + location.search !== protectedEvaluationRoute) replaceState(history.state,\"\",protectedEvaluationRoute);\n",
-  "  }\n\n  function clearRoute() {\n    if (document.__mflEvaluationClear) return; document.__mflEvaluationClear = true;\n    document.addEventListener(\"pointerdown\", event => {\n      const target = event.target instanceof Element ? event.target : null;\n      if (!target?.closest(\"#evaluationSearchClearButton\")) return;\n      protectedEvaluationRoute = \"\";\n      if (location.pathname === \"/evaluation\") pushState(history.state,\"\",\"/evaluation\");\n    }, true);\n  }\n\n  function publicShares() {\n    if (typeof loadSharedEvaluation !== \"function\" || loadSharedEvaluation.__mflPublic) return;\n    const original = loadSharedEvaluation;\n    loadSharedEvaluation = async function(shareId) {\n      if (typeof hasWalletOptIn === \"function\" && hasWalletOptIn()) return original.apply(this, arguments);\n      cons",
-  "t id = String(shareId || \"\").trim(); if (!id || state?.evaluationShareLoading) return;\n      state.evaluationShareLoading = true;\n      try {\n        const response = await fetch(`/api/evaluation-share?id=${encodeURIComponent(id)}`,{cache:\"no-store\"});\n        if (!response.ok) throw new Error(\"Share not found\");\n        const data = await response.json(); const playerId = String(data?.payload?.playerId || data?.playerId || \"\");\n        await ensurePlayer(playerId); state.evaluationShareId = id; applySharedEvaluationPayload(data.payload);\n      } catch (error) { console.error(error); if (typeof showToast === \"function\") showToast(\"Shared evaluation has expired or could not be loaded.\"); }\n      finally { state.evaluationShareLoading = false; }\n    };\n    loadSharedEvaluation.__mflPublic = ",
-  "true;\n  }\n  function pendingShare() {\n    if (document.body.dataset.page !== \"evaluation\" || (typeof hasWalletOptIn === \"function\" && hasWalletOptIn())) return;\n    const id = new URLSearchParams(location.search).get(\"share\") || \"\";\n    if (id && state?.evaluationShareId !== id && !state?.evaluationShareLoading) void loadSharedEvaluation(id);\n  }\n\n  function discount() {\n    if (ratios.length !== 5 || typeof evaluationDiscountRateValue !== \"function\") return;\n    const ordered = ratios.slice().sort((a,b) => a.season-b.season);\n    const rate = Math.pow(ordered.slice(1).reduce((p,row,i) => p*(Number(row.ratio)/Number(ordered[i].ratio)),1),1/4)-1;\n    if (!Number.isFinite(rate)) return;\n    evaluationDiscountRateValue = () => rate;\n    const label = typeof formatEvaluationRate === \"function\"",
-  " ? formatEvaluationRate(rate) : `${(rate*100).toFixed(2)}%`;\n    const value = document.getElementById(\"evaluationDiscountRate\"); if (value) value.textContent = label;\n    const advanced = document.getElementById(\"advancedDiscountRateValue\"); if (advanced) advanced.textContent = label;\n    const box = document.querySelector(\".evaluationDiscountRate[data-tooltip]\");\n    if (box) box.dataset.tooltip = `Discount Rate is the geometric mean of the four season-over-season MFL/USD growth factors from the latest five completed seasons in Supabase (Seasons ${ordered[0].season}-${ordered[4].season}). Current season is ${ordered[4].season+1}.`;\n    document.body.classList.add(\"evaluationDiscountRateReady\");\n  }\n\n  let discountTip;\n  function discountTooltip() {\n    const box = document.querySelector(",
-  "\".evaluationDiscountRate[data-tooltip]\"); if (!box || box.__mflTip) return;\n    box.__mflTip = true;\n    discountTip = document.createElement(\"div\"); discountTip.className = \"evaluationDiscountTooltipPortal\"; document.body.appendChild(discountTip);\n    const position = () => { const a=box.getBoundingClientRect(),r=discountTip.getBoundingClientRect(),m=8,g=10; discountTip.style.left=`${Math.max(m,Math.min(a.left+a.width/2-r.width/2,innerWidth-r.width-m))}px`; discountTip.style.top=`${a.top-r.height-g}px`; };\n    const show=()=>{discountTip.textContent=box.dataset.tooltip||\"\";position();requestAnimationFrame(()=>discountTip.classList.add(\"visible\"));};\n    const hide=()=>discountTip.classList.remove(\"visible\"); box.addEventListener(\"mouseenter\",show);box.addEventListener(\"mouseleave\",hide);b",
-  "ox.addEventListener(\"focusin\",show);box.addEventListener(\"focusout\",hide);\n  }\n\n  function clubId(row,name) {\n    try { for (const column of clubIdColumns) { const id=String(getValue(row,column)||\"\").trim(); if(id)return id; } } catch {}\n    const normalized=String(name||\"\").trim().toLowerCase();\n    const clubs=[...(Array.isArray(state?.clubSearchIndex)?state.clubSearchIndex:[]),...(Array.isArray(state?.bootstrapData?.clubs)?state.bootstrapData.clubs:[])];\n    const found=clubs.find(c=>String(c?.name||\"\").trim().toLowerCase()===normalized); return String(found?.clubId||\"\").trim();\n  }\n  function teamLink() {\n    if (document.body.dataset.page !== \"player\" && !/^\\/players?\\//i.test(location.pathname)) return;\n    const team=document.querySelector(\"#playerDetail .playerContractTeam\"); if(!t",
-  "eam||team.tagName===\"A\")return;\n    const name=String(team.textContent||\"\").trim(); if(!name||/^(free agent|development center)$/i.test(name))return;\n    let row=null; try { const id=typeof playerIdFromUrl===\"function\"?playerIdFromUrl():(location.pathname.match(/^\\/players?\\/([^/]+)/i)?.[1]||\"\"); row=typeof rowByPlayerId===\"function\"?rowByPlayerId(id):null; } catch {}\n    let id=clubId(row,name); const link=document.createElement(\"a\"); link.className=`${team.className} clubPageLink playerContractTeamLink`;link.textContent=name;link.href=id?`/clubs/${encodeURIComponent(id)}/attributes`:\"#\";\n    link.addEventListener(\"click\",async event=>{if(event.ctrlKey||event.metaKey||event.button===1)return;event.preventDefault();if(!id&&typeof loadBootstrapData===\"function\"){try{await loadBootstrapData(",
-  ");id=clubId(row,name);}catch{}}if(!id)return typeof showToast===\"function\"&&showToast(\"Club page could not be loaded.\");const path=`/clubs/${encodeURIComponent(id)}/attributes`;if(typeof window.mflOpenClubPage===\"function\")window.mflOpenClubPage(id,\"attributes\");else location.href=path;});team.replaceWith(link);\n  }\n  function playerHook() { if(typeof renderPlayerPage!==\"function\"||renderPlayerPage.__mflClubLink)return;const original=renderPlayerPage;renderPlayerPage=function(){const result=original.apply(this,arguments);queueMicrotask(teamLink);return result;};renderPlayerPage.__mflClubLink=true; }\n\n  function copyTooltip() {\n    if(typeof showPlayerNoteTooltip!==\"function\"||showPlayerNoteTooltip.__mflAbove)return;\n    const original=showPlayerNoteTooltip; showPlayerNoteTooltip=function(a",
-  "nchor){const result=original.apply(this,arguments);if(String(anchor?.dataset?.tooltip||anchor?.dataset?.noteTooltip||\"\").toLowerCase()===\"click to copy\"){tooltipAnchor=anchor;positionCopy();requestAnimationFrame(positionCopy);}return result;};showPlayerNoteTooltip.__mflAbove=true;\n  }\n  function positionCopy(){if(!tooltipAnchor?.isConnected)return;const tip=Array.from(document.querySelectorAll(\".playerNoteFloatingTooltip\")).find(e=>String(e.textContent||\"\").trim().toLowerCase()===\"click to copy\");if(!tip)return;const a=tooltipAnchor.getBoundingClientRect(),r=tip.getBoundingClientRect(),m=8;tip.style.left=`${Math.max(m,Math.min(a.left+a.width/2-r.width/2,innerWidth-r.width-m))}px`;tip.style.top=`${a.top-r.height-10}px`;tip.style.zIndex=\"2147483647\";}\n\n  function isStatsRequest(input){try{co",
-  "nst value=typeof Request!==\"undefined\"&&input instanceof Request?input.url:String(input||\"\");const url=new URL(value,location.href);return url.pathname===\"/api/mfl-stats\"||(url.pathname===\"/api/data\"&&String(url.searchParams.get(\"scope\")||\"\").toLowerCase()===\"mflstats\");}catch{return false;}}\n  function trackStats(){if(typeof fetch!==\"function\"||fetch.__mflStats)return;const previous=fetch.bind(window);window.fetch=async(input,init)=>{const yes=isStatsRequest(input);if(yes){statsRequests++;document.documentElement.classList.add(\"mflStatsLoading\");document.body.classList.add(\"mflStatsLoading\");}try{return await previous(input,init);}finally{if(yes)statsRequests=Math.max(0,statsRequests-1);}};window.fetch.__mflStats=true;}\n  function statsActive(){return location.pathname===\"/mfl/stats\"||doc",
-  "ument.body.dataset.page===\"mflstats\";}\n  function statsReady(){const page=document.getElementById(\"mflStatsPage\");const total=String(document.getElementById(\"mflStatsTotalPlayers\")?.textContent||\"\").trim();return Boolean(statsActive()&&page&&!page.hidden&&/^\\d[\\d,.]*$/.test(total)&&page.querySelector(\"#mflStatsOverallFilters .mflStatsFilterButton\"));}\n  function unlockStats(){if(!statsReady()||statsRequests>0)return false;try{state.interactionBusyDepth=0;if(typeof syncInteractionBusyState===\"function\")syncInteractionBusyState();}catch{}document.documentElement.classList.remove(\"appBusy\",\"loading\",\"bootPending\",\"table-layout-pending\",\"mflStatsLoading\");document.body.classList.remove(\"appBusy\",\"loading\",\"booting\",\"tableRowsLoading\",\"tableLayoutPending\",\"clubViewLoading\",\"clubViewSwitching\",\"",
-  "mflStatsLoading\");document.body.classList.add(\"mflStatsInteractive\");document.body.setAttribute(\"aria-busy\",\"false\");document.querySelectorAll(\"[inert]\").forEach(e=>{if(e instanceof HTMLElement)e.inert=false;});document.querySelectorAll(\"#mflStatsOverallFilters .mflStatsFilterButton,.mflStatsDistributionModeButton\").forEach(b=>{b.disabled=false;b.removeAttribute(\"aria-disabled\");});return true;}\n  function statsHandlers(){if(typeof blockInteractionWhileBusy===\"function\"&&!blockInteractionWhileBusy.__mflReplaced){const original=blockInteractionWhileBusy;events.forEach(n=>document.removeEventListener(n,original,true));const replacement=e=>{const t=e.target instanceof Element?e.target.closest(\"#mflStatsOverallFilters .mflStatsFilterButton,.mflStatsDistributionModeButton\"):null;if(t&&unlockSta",
-  "ts())return;original(e);};events.forEach(n=>document.addEventListener(n,replacement,true));blockInteractionWhileBusy.__mflReplaced=true;}if(window.__mflStatsClick)return;window.__mflStatsClick=true;window.addEventListener(\"click\",e=>{const b=e.target instanceof Element?e.target.closest(\"#mflStatsOverallFilters .mflStatsFilterButton\"):null;if(!b||!statsReady())return;unlockStats();try{const option=mflStatsOverallFilterOptions.find(o=>String(o.label).trim()===String(b.textContent).trim());if(!option)return;e.preventDefault();e.stopImmediatePropagation();state.mflStatsOverallFilter=option.id;renderMflStatsPage();queueMicrotask(unlockStats);}catch(error){console.error(error);}},true);}\n  function statsLoading(){const loading=statsActive()&&(!statsReady()||statsRequests>0);document.documentElem",
-  "ent.classList.toggle(\"mflStatsLoading\",loading);document.body.classList.toggle(\"mflStatsLoading\",loading);if(!loading)unlockStats();}\n\n  function versionUi(){const footer=document.querySelector('.siteFooter a[data-page=\"changelog\"]');if(footer)footer.textContent=`MFL Front Office v${payload.version||\"1.118.21\"}`;const list=document.querySelector(\".changelogList\");if(!list||list.dataset.mflVersion===payload.version)return;list.dataset.mflVersion=payload.version;const existing=new Map();list.querySelectorAll(\"li\").forEach(li=>{const v=String(li.querySelector(\"span\")?.textContent||\"\").trim();const d=String(li.querySelector(\"p\")?.textContent||\"\").trim();if(/^v\\d+\\.\\d+\\.\\d+$/.test(v))existing.set(v,d);});(payload.releases||[]).forEach(([v,d])=>existing.set(v,d));const items=[...existing].sort((",
-  "a,b)=>{const x=a[0].slice(1).split(\".\").map(Number),y=b[0].slice(1).split(\".\").map(Number);return y[0]-x[0]||y[1]-x[1]||y[2]-x[2];});list.replaceChildren(...items.map(([v,d])=>{const li=document.createElement(\"li\");const s=document.createElement(\"span\");const p=document.createElement(\"p\");s.textContent=v;p.textContent=d;li.append(s,p);return li;}));}\n\n  function maintain(){style();focusGuard();routeGuard();clearRoute();publicShares();pendingShare();discount();discountTooltip();playerHook();teamLink();copyTooltip();positionCopy();trackStats();statsHandlers();statsLoading();versionUi();document.body.classList.toggle(\"evaluationPlayerRoute\",location.pathname===\"/evaluation\"&&Boolean(new URLSearchParams(location.search).get(\"player\")));if(document.body.dataset.page===\"evaluation\"&&!selectedEva",
-  "luation()&&!emptyFocused&&!document.body.classList.contains(\"appBusy\")){const input=document.getElementById(\"evaluationSearchInput\");if(input){emptyFocused=true;input.focus({preventScroll:true});}}else if(selectedEvaluation()||document.body.dataset.page!==\"evaluation\")emptyFocused=false;}\n  if(location.pathname===\"/mfl/stats\"){document.documentElement.classList.add(\"mflStatsLoading\");document.body.classList.add(\"mflStatsLoading\");}\n  style();maintain();setInterval(maintain,50);\n})();",
-].join("");
+const PRODUCTION_ORIGIN = String(
+  process.env.MFL_FRONT_OFFICE_PRODUCTION_ORIGIN || "https://mfl-front-office.vercel.app",
+).replace(/\/+$/, "");
 
 function normalizeRows(value) {
-  return (Array.isArray(value) ? value : []).map(row => ({season:Number(row?.season),ratio:Number(row?.ratio)}))
-    .filter(row => Number.isInteger(row.season) && row.season > 0 && Number.isFinite(row.ratio) && row.ratio > 0)
-    .sort((a,b) => b.season-a.season).slice(0,5);
+  return (Array.isArray(value) ? value : [])
+    .map((row) => ({ season: Number(row?.season), ratio: Number(row?.ratio) }))
+    .filter((row) => Number.isInteger(row.season) && row.season > 0
+      && Number.isFinite(row.ratio) && row.ratio > 0)
+    .sort((a, b) => b.season - a.season)
+    .slice(0, 5);
 }
-function supabaseConfig() { const url=String(process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||"").replace(/\/+$/,"");const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||"");return url&&key?{url,key}:null; }
-function requestHostname(request){const value=String(request?.headers?.["x-forwarded-host"]||request?.headers?.host||"").split(",")[0].trim().toLowerCase();if(value.startsWith("["))return value.slice(1,value.indexOf("]"));return value.split(":")[0];}
-function isLocalRequest(request){const h=requestHostname(request);return h==="localhost"||h==="127.0.0.1"||h==="::1"||h.endsWith(".localhost");}
-async function loadFromSupabase(config){const response=await fetch(`${config.url}/rest/v1/mfl_season_ratios?select=season,ratio&order=season.desc&limit=5`,{cache:"no-store",headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});if(!response.ok)throw new Error(`MFL season ratio query failed with ${response.status}: ${await response.text()}`);return normalizeRows(await response.json());}
-async function loadFromDeployment(){const response=await fetch(`${PRODUCTION_ORIGIN}/api/mfl-season-ratios?source=vercel-dev`,{cache:"no-store",headers:{Accept:"application/json"}});if(!response.ok)throw new Error(`Deployed MFL season ratio fallback failed with ${response.status}.`);return normalizeRows((await response.json())?.ratios);}
-async function loadRatios(request){const config=supabaseConfig();if(config)return loadFromSupabase(config);if(isLocalRequest(request))return loadFromDeployment();throw new Error("Supabase is not configured for MFL season ratios.");}
-function loaderScript(rows,warning=""){const payload=JSON.stringify({version:APP_VERSION,releases:APP_RELEASES,rows,warning:String(warning||"")});const source=JSON.stringify(CLIENT_SOURCE);return `(()=>{window.__mflSeasonRatioPayload=${payload};const s=document.createElement("script");s.id="mflSeasonRatioRuntime";s.textContent=${source};document.getElementById(s.id)?.remove();document.head.appendChild(s);})();\n`;}
-module.exports=async function handler(request,response){response.setHeader("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");response.setHeader("CDN-Cache-Control","no-store");response.setHeader("Surrogate-Control","no-store");response.setHeader("Pragma","no-cache");response.setHeader("Expires","0");if(request.method!=="GET"){response.setHeader("Allow","GET");response.status(405).json({error:"Method not allowed."});return;}const scriptMode=String(request.query?.format||"").toLowerCase()==="script";try{const ratios=await loadRatios(request);if(ratios.length!==5)throw new Error(`Expected 5 MFL season ratios, received ${ratios.length}.`);if(scriptMode){response.setHeader("Content-Type","application/javascript; charset=utf-8");response.status(200).send(loaderScript(ratios));}else response.status(200).json({ratios});}catch(error){const message=error instanceof Error?error.message:"Could not load MFL season ratios.";console.error(message);if(scriptMode){response.setHeader("Content-Type","application/javascript; charset=utf-8");response.status(200).send(loaderScript([],`${message} Using the built-in discount-rate history.`));}else response.status(500).json({error:message});}};
+
+function supabaseConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
+  return url && key ? { url, key } : null;
+}
+
+function requestHostname(request) {
+  const value = String(request?.headers?.["x-forwarded-host"] || request?.headers?.host || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  if (value.startsWith("[")) return value.slice(1, value.indexOf("]"));
+  return value.split(":")[0];
+}
+
+function isLocalRequest(request) {
+  const hostname = requestHostname(request);
+  return hostname === "localhost"
+    || hostname === "127.0.0.1"
+    || hostname === "::1"
+    || hostname.endsWith(".localhost");
+}
+
+async function loadFromSupabase(config) {
+  const response = await fetch(
+    `${config.url}/rest/v1/mfl_season_ratios?select=season,ratio&order=season.desc&limit=5`,
+    {
+      cache: "no-store",
+      headers: {
+        apikey: config.key,
+        Authorization: `Bearer ${config.key}`,
+      },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`MFL season ratio query failed with ${response.status}: ${await response.text()}`);
+  }
+  return normalizeRows(await response.json());
+}
+
+async function loadFromDeployment() {
+  const response = await fetch(`${PRODUCTION_ORIGIN}/api/mfl-season-ratios?source=vercel-dev`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`Deployed MFL season ratio fallback failed with ${response.status}.`);
+  return normalizeRows((await response.json())?.ratios);
+}
+
+async function loadRatios(request) {
+  const config = supabaseConfig();
+  if (config) return loadFromSupabase(config);
+  if (isLocalRequest(request)) return loadFromDeployment();
+  throw new Error("Supabase is not configured for MFL season ratios.");
+}
+
+function loaderScript(rows, warning = "") {
+  const payload = JSON.stringify({
+    version: APP_VERSION,
+    releases: APP_RELEASES,
+    rows,
+    warning: String(warning || ""),
+  });
+  return `(() => {
+  window.__mflSeasonRatioPayload = ${payload};
+  let critical = document.getElementById("mflCriticalRuntimeStyles");
+  if (!critical) {
+    critical = document.createElement("style");
+    critical.id = "mflCriticalRuntimeStyles";
+    document.head.appendChild(critical);
+  }
+  critical.textContent = \`
+    html body[data-page="evaluation"] #evaluationPage,
+    html body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage { visibility: visible !important; }
+    body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate { visibility: hidden !important; }
+    body.evaluationPlayerRoute #evaluationLoadButton { display: none !important; }
+    html.mflStatsLoading, html.mflStatsLoading *, body.mflStatsLoading, body.mflStatsLoading * { cursor: wait !important; }
+  \`;
+  const evaluationParams = new URLSearchParams(location.search);
+  const evaluationPlayerRoute = location.pathname === "/evaluation" && Boolean(evaluationParams.get("player"));
+  document.body.classList.toggle("evaluationPlayerRoute", evaluationPlayerRoute);
+  if (location.pathname === "/evaluation") document.body.classList.add("evaluationRouteResolved");
+  if (location.pathname === "/mfl/stats") {
+    document.documentElement.classList.add("mflStatsLoading");
+    document.body.classList.add("mflStatsLoading");
+  }
+  document.getElementById("mflSeasonRatioRuntime")?.remove();
+  const script = document.createElement("script");
+  script.id = "mflSeasonRatioRuntime";
+  script.src = "/mfl-season-ratios-runtime.js?v=${APP_VERSION}";
+  script.async = false;
+  document.head.appendChild(script);
+})();
+`;
+}
+
+module.exports = async function handler(request, response) {
+  response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.setHeader("CDN-Cache-Control", "no-store");
+  response.setHeader("Surrogate-Control", "no-store");
+  response.setHeader("Pragma", "no-cache");
+  response.setHeader("Expires", "0");
+
+  if (request.method !== "GET") {
+    response.setHeader("Allow", "GET");
+    response.status(405).json({ error: "Method not allowed." });
+    return;
+  }
+
+  const scriptMode = String(request.query?.format || "").toLowerCase() === "script";
+  try {
+    const ratios = await loadRatios(request);
+    if (ratios.length !== 5) throw new Error(`Expected 5 MFL season ratios, received ${ratios.length}.`);
+    if (scriptMode) {
+      response.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      response.status(200).send(loaderScript(ratios));
+    } else {
+      response.status(200).json({ ratios });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not load MFL season ratios.";
+    console.error(message);
+    if (scriptMode) {
+      response.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      response.status(200).send(loaderScript([], `${message} Using the built-in discount-rate history.`));
+    } else {
+      response.status(500).json({ error: message });
+    }
+  }
+};
