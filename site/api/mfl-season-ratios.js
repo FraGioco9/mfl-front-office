@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.30";
+const APP_VERSION = "1.118.31";
 const APP_RELEASES = [
+  ["v1.118.31", "Remove the legacy Evaluation rate, stabilize Stats filters, and link player contracts"],
   ["v1.118.30", "Remove the legacy Evaluation rate, link player contracts, and restore MFL Stats controls"],
   ["v1.118.29", "Restore native MFL Stats filter interactions after loading"],
   ["v1.118.28", "Prevent Evaluation refresh stalls and require Supabase for the Discount Rate"],
@@ -29,7 +30,7 @@ const APP_RELEASES = [
   ["v1.118.4", "Keep page scrollbars between the header and footer and sync the latest version"],
   ["v1.118.3", "Layer Evaluation search results above page content"],
   ["v1.118.2", "Fix Evaluation tooltip and empty height; cap MFL API at 50/min"],
-  ["v1.118.1", "Keep the Evaluation header sticky and focus empty Evaluation search"],
+  ["v1.118.1", "Keep the Evaluation header sticky and focus empty player search"],
   ["v1.118.0", "Use Supabase season ratios for Evaluation discount rates"],
   ["v1.117.6", "Keep Search, Advanced Settings, and Saved Evaluations above page content"],
   ["v1.117.5", "Keep Search and Advanced Settings above page content"],
@@ -132,26 +133,10 @@ function loaderScript() {
     rows: [],
     warning: "",
   });
-
-  return `(() => {
-  const VERSION = ${JSON.stringify(APP_VERSION)};
-  const evaluationRoute = location.pathname === "/evaluation";
-  const statsRoute = location.pathname === "/mfl/stats";
-  const playerMatch = location.pathname.match(/^\\/players?\\/([^/]+)\\/?$/i);
-  const playerRoute = Boolean(playerMatch);
-  const playerId = playerMatch ? decodeURIComponent(playerMatch[1]) : "";
-  window.__mflSeasonRatioPayload = ${payload};
-
-  let critical = document.getElementById("mflCriticalRuntimeStyles");
-  if (!critical) {
-    critical = document.createElement("style");
-    critical.id = "mflCriticalRuntimeStyles";
-    document.head.appendChild(critical);
-  }
-  critical.textContent = \`
+  const criticalCss = `
     .siteFooter a[data-page="changelog"] { font-size: 0 !important; }
     .siteFooter a[data-page="changelog"]::before {
-      content: "MFL Front Office v\${VERSION}" !important;
+      content: "MFL Front Office v${APP_VERSION}" !important;
       font-size: 14px !important;
     }
     html body[data-page="evaluation"] #evaluationPage,
@@ -164,19 +149,28 @@ function loaderScript() {
       display: none !important;
       pointer-events: none !important;
     }
-    html.mflEvaluationRatePending #evaluationDiscountRate,
-    html.mflEvaluationRatePending #advancedDiscountRateValue {
+    html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #evaluationDiscountRate,
+    html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #advancedDiscountRateValue {
       color: transparent !important;
       position: relative !important;
+      text-align: right !important;
     }
-    html.mflEvaluationRatePending #evaluationDiscountRate::after,
-    html.mflEvaluationRatePending #advancedDiscountRateValue::after {
+    html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #evaluationDiscountRate::after,
+    html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #advancedDiscountRateValue::after {
       content: "-" !important;
       position: absolute !important;
       inset: 0 !important;
-      display: grid !important;
-      place-items: center !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
       color: var(--text, #f5f5f5) !important;
+      text-align: right !important;
+      pointer-events: none !important;
+    }
+    html.mflEvaluationRateResolved body[data-page="evaluation"] #evaluationDiscountRate::after,
+    html.mflEvaluationRateResolved body[data-page="evaluation"] #advancedDiscountRateValue::after {
+      content: none !important;
+      display: none !important;
     }
     html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
     html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
@@ -210,11 +204,35 @@ function loaderScript() {
     .contractDetailCard .playerContractTeamLink:focus-visible {
       text-decoration: underline !important;
     }
-  \`;
+  `;
+
+  return `(() => {
+  const VERSION = ${JSON.stringify(APP_VERSION)};
+  window.__mflSeasonRatioPayload = ${payload};
+
+  function cleanPath() {
+    return String(location.pathname || "/").replace(/\\/+$/, "") || "/";
+  }
+
+  function isEvaluationRoute() {
+    return cleanPath() === "/evaluation" || document.body?.dataset.page === "evaluation";
+  }
+
+  function isStatsRoute() {
+    return cleanPath() === "/mfl/stats" || document.body?.dataset.page === "mflstats";
+  }
+
+  let critical = document.getElementById("mflCriticalRuntimeStyles");
+  if (!critical) {
+    critical = document.createElement("style");
+    critical.id = "mflCriticalRuntimeStyles";
+    document.head.appendChild(critical);
+  }
+  critical.textContent = ${JSON.stringify(criticalCss)};
 
   function syncVersion() {
     const footer = document.querySelector('.siteFooter a[data-page="changelog"]');
-    if (footer) footer.textContent = \`MFL Front Office v\${VERSION}\`;
+    if (footer) footer.textContent = "MFL Front Office v" + VERSION;
   }
 
   function storedWalletOptIn() {
@@ -239,7 +257,7 @@ function loaderScript() {
   }
 
   function syncEvaluationShell() {
-    if (!evaluationRoute) return;
+    if (!isEvaluationRoute()) return;
     let optedIn = storedWalletOptIn();
     try {
       if (typeof hasWalletOptIn === "function") optedIn = hasWalletOptIn();
@@ -247,16 +265,12 @@ function loaderScript() {
       // Stored proof is available before application state.
     }
     const showLoad = optedIn && !evaluationHasSelection();
-    document.documentElement.classList.add("mflEvaluationInitialStateReady", "mflEvaluationRatePending");
+    document.documentElement.classList.add("mflEvaluationInitialStateReady");
     document.documentElement.classList.toggle("mflEvaluationInitialLoadVisible", showLoad);
     if (document.body) {
       document.body.classList.toggle("evaluationPlayerRoute", Boolean(new URLSearchParams(location.search).get("player")));
-      document.body.classList.add("evaluationRouteResolved", "evaluationDiscountRateReady");
+      document.body.classList.add("evaluationRouteResolved", "evaluationDiscountRateReady", "evaluationPageReady");
     }
-    const value = document.getElementById("evaluationDiscountRate");
-    const advanced = document.getElementById("advancedDiscountRateValue");
-    if (value && value.textContent !== "-") value.textContent = "-";
-    if (advanced && advanced.textContent !== "-") advanced.textContent = "-";
     const button = document.getElementById("evaluationLoadButton");
     if (button) {
       button.hidden = !showLoad;
@@ -279,102 +293,104 @@ function loaderScript() {
     return Number.isFinite(rate) ? { rate, ordered } : null;
   }
 
-  function formatRate(rate) {
-    return (Number(rate) * 100).toFixed(2) + "%";
+  let evaluationActive = false;
+  let evaluationController = null;
+  let evaluationRequestSequence = 0;
+  let evaluationResolvedRate = null;
+  let evaluationResolvedLabel = "";
+
+  function assignEvaluationRateFunction(rate) {
+    try {
+      if (typeof evaluationDiscountRateValue === "function") {
+        evaluationDiscountRateValue = () => Number.isFinite(rate) ? rate : 0;
+      }
+    } catch {
+      // The rendered values remain authoritative.
+    }
   }
 
-  function applySupabaseRate(rows) {
-    const calculated = calculateRate(rows);
-    if (!calculated) return false;
-    const { rate, ordered } = calculated;
-    try {
-      evaluationDiscountRateValue = () => rate;
-    } catch {
-      // The DOM values remain authoritative.
-    }
-    window.mflSeasonRatios = Object.freeze(ordered.map((row) => Object.freeze({ ...row })));
-    const label = formatRate(rate);
+  function enforceEvaluationRate() {
+    if (!isEvaluationRoute()) return;
+    syncEvaluationShell();
     const value = document.getElementById("evaluationDiscountRate");
     const advanced = document.getElementById("advancedDiscountRateValue");
-    if (value) value.textContent = label;
-    if (advanced) advanced.textContent = label;
+    if (evaluationResolvedLabel) {
+      document.documentElement.classList.add("mflEvaluationRateResolved");
+      assignEvaluationRateFunction(evaluationResolvedRate);
+      if (value && value.textContent !== evaluationResolvedLabel) value.textContent = evaluationResolvedLabel;
+      if (advanced && advanced.textContent !== evaluationResolvedLabel) advanced.textContent = evaluationResolvedLabel;
+    } else {
+      document.documentElement.classList.remove("mflEvaluationRateResolved");
+      assignEvaluationRateFunction(0);
+      if (value && value.textContent !== "-") value.textContent = "-";
+      if (advanced && advanced.textContent !== "-") advanced.textContent = "-";
+    }
+  }
+
+  function applySupabaseRate(rows, requestSequence) {
+    if (requestSequence !== evaluationRequestSequence || !isEvaluationRoute()) return false;
+    const calculated = calculateRate(rows);
+    if (!calculated) return false;
+    evaluationResolvedRate = calculated.rate;
+    evaluationResolvedLabel = (calculated.rate * 100).toFixed(2) + "%";
+    window.mflSeasonRatios = Object.freeze(calculated.ordered.map((row) => Object.freeze({ ...row })));
+    window.__mflSeasonRatioResult = { rows: calculated.ordered, warning: "" };
     const box = document.querySelector(".evaluationDiscountRate[data-tooltip]");
     if (box) {
-      box.dataset.tooltip = \`Discount Rate is calculated from the latest five completed seasons stored in Supabase (Seasons \${ordered[0].season}-\${ordered[4].season}).\`;
+      box.dataset.tooltip = "Discount Rate is calculated from the latest five completed seasons stored in Supabase (Seasons "
+        + calculated.ordered[0].season + "-" + calculated.ordered[4].season + ").";
     }
-    document.documentElement.classList.remove("mflEvaluationRatePending");
-    document.body?.classList.add("evaluationDiscountRateReady");
+    enforceEvaluationRate();
+    try {
+      if (typeof renderEvaluationPage === "function") renderEvaluationPage();
+    } catch {
+      // The current page may not have a selected player.
+    }
+    queueMicrotask(enforceEvaluationRate);
+    requestAnimationFrame(enforceEvaluationRate);
+    window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", {
+      detail: window.__mflSeasonRatioResult,
+    }));
     return true;
   }
 
-  function startEvaluation() {
-    if (!evaluationRoute) return;
-    document.documentElement.classList.add("mflEvaluationRatePending");
-    syncEvaluationShell();
-
-    let shellFrames = 0;
-    const shellFrame = () => {
-      syncEvaluationShell();
-      syncVersion();
-      shellFrames += 1;
-      if (shellFrames < 240 && document.documentElement.classList.contains("mflEvaluationRatePending")) {
-        requestAnimationFrame(shellFrame);
-      }
-    };
-    requestAnimationFrame(shellFrame);
-
-    const observer = new MutationObserver(() => {
-      if (document.documentElement.classList.contains("mflEvaluationRatePending")) syncEvaluationShell();
-      syncVersion();
-    });
-    const observe = () => {
-      const page = document.getElementById("evaluationPage");
-      if (page) observer.observe(page, { childList: true, subtree: true, attributes: true });
-      else requestAnimationFrame(observe);
-    };
-    observe();
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5500);
-    fetch(\`/api/mfl-season-ratios?v=\${VERSION}\`, {
+  function startEvaluationRequest() {
+    evaluationRequestSequence += 1;
+    const requestSequence = evaluationRequestSequence;
+    evaluationResolvedRate = null;
+    evaluationResolvedLabel = "";
+    document.documentElement.classList.remove("mflEvaluationRateResolved");
+    evaluationController?.abort();
+    evaluationController = new AbortController();
+    const timeout = setTimeout(() => evaluationController?.abort(), 5500);
+    fetch("/api/mfl-season-ratios?v=" + encodeURIComponent(VERSION), {
       cache: "no-store",
       headers: { Accept: "application/json" },
-      signal: controller.signal,
+      signal: evaluationController.signal,
     })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not load MFL season ratios.");
-        if (!applySupabaseRate(data.ratios)) throw new Error("Supabase did not return five valid season ratios.");
-        window.__mflSeasonRatioResult = { rows: data.ratios, warning: "" };
-        window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", {
-          detail: window.__mflSeasonRatioResult,
-        }));
+        if (!applySupabaseRate(data.ratios, requestSequence)) {
+          throw new Error("Supabase did not return five valid season ratios.");
+        }
       })
       .catch((error) => {
-        console.error("Could not load the Evaluation Discount Rate from Supabase.", error);
-        syncEvaluationShell();
-        window.__mflSeasonRatioResult = { rows: [], warning: String(error?.message || error || "") };
+        if (error?.name !== "AbortError") {
+          console.error("Could not load the Evaluation Discount Rate from Supabase.", error);
+        }
+        if (requestSequence === evaluationRequestSequence) enforceEvaluationRate();
       })
       .finally(() => clearTimeout(timeout));
   }
 
   const FILTER_SELECTOR = "#mflStatsOverallFilters .mflStatsFilterButton";
   const FILTER_IDS = new Map([
-    ["All", "all"],
-    ["90-94", "90-94"],
-    ["Legendary", "legendary"],
-    ["85-89", "85-89"],
-    ["80-84", "80-84"],
-    ["Rare", "rare"],
-    ["75-79", "75-79"],
-    ["70-74", "70-74"],
-    ["Uncommon", "uncommon"],
-    ["65-69", "65-69"],
-    ["60-64", "60-64"],
-    ["Limited", "limited"],
-    ["55-59", "55-59"],
-    ["50-54", "50-54"],
-    ["Common", "common"],
+    ["All", "all"], ["90-94", "90-94"], ["Legendary", "legendary"],
+    ["85-89", "85-89"], ["80-84", "80-84"], ["Rare", "rare"],
+    ["75-79", "75-79"], ["70-74", "70-74"], ["Uncommon", "uncommon"],
+    ["65-69", "65-69"], ["60-64", "60-64"], ["Limited", "limited"],
+    ["55-59", "55-59"], ["50-54", "50-54"], ["Common", "common"],
   ]);
 
   function statsFilterTarget(event) {
@@ -388,10 +404,24 @@ function loaderScript() {
     element.removeAttribute("inert");
   }
 
+  function statsDataReady() {
+    if (!isStatsRoute()) return false;
+    const page = document.getElementById("mflStatsPage");
+    const filters = document.getElementById("mflStatsOverallFilters");
+    if (!page || page.hidden || !filters?.querySelector(FILTER_SELECTOR)) return false;
+    const loadingMessage = Array.from(page.querySelectorAll(".mflStatsEmpty"))
+      .some((element) => /loading/i.test(String(element.textContent || "")));
+    const totalText = String(document.getElementById("mflStatsTotalPlayers")?.textContent || "")
+      .replace(/,/g, "")
+      .trim();
+    return !loadingMessage && totalText !== "" && Number.isFinite(Number(totalText));
+  }
+
   function unlockStats() {
-    if (!statsRoute) return;
+    if (!isStatsRoute()) return;
     try {
       if (typeof state === "object" && state) state.interactionBusyDepth = 0;
+      if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
     } catch {
       // DOM cleanup remains authoritative.
     }
@@ -402,25 +432,23 @@ function loaderScript() {
     );
     document.body?.classList.add("mflStatsInteractive");
     document.body?.setAttribute("aria-busy", "false");
-
     const page = document.getElementById("mflStatsPage");
     const filters = document.getElementById("mflStatsOverallFilters");
     for (let element = filters; element; element = element.parentElement) clearInert(element);
     [document.body, document.getElementById("appShell"), document.querySelector("main"), page, filters]
       .forEach(clearInert);
     page?.querySelectorAll("[inert]").forEach(clearInert);
-
+    document.querySelectorAll(FILTER_SELECTOR + ", .mflStatsDistributionModeButton").forEach((button) => {
+      button.disabled = false;
+      button.removeAttribute("aria-disabled");
+      button.style.pointerEvents = "auto";
+    });
     const loadingScreen = document.getElementById("loadingScreen");
     if (loadingScreen) {
       loadingScreen.hidden = true;
       loadingScreen.setAttribute("aria-hidden", "true");
       loadingScreen.style.pointerEvents = "none";
     }
-    document.querySelectorAll(FILTER_SELECTOR + ", .mflStatsDistributionModeButton").forEach((button) => {
-      button.disabled = false;
-      button.removeAttribute("aria-disabled");
-      button.style.pointerEvents = "auto";
-    });
   }
 
   function applyStatsFilter(button) {
@@ -428,13 +456,11 @@ function loaderScript() {
     if (!filterId) return false;
     unlockStats();
     try {
-      if (typeof state !== "object" || !state) return false;
+      if (typeof state !== "object" || !state || typeof renderMflStatsPage !== "function") return false;
       state.interactionBusyDepth = 0;
       state.mflStatsOverallFilter = filterId;
-      document.querySelectorAll(FILTER_SELECTOR).forEach((candidate) => {
-        candidate.classList.toggle("active", candidate === button);
-      });
-      if (typeof renderMflStatsPage === "function") renderMflStatsPage();
+      renderMflStatsPage();
+      unlockStats();
       return true;
     } catch (error) {
       console.error("Could not apply the MFL Stats filter.", error);
@@ -442,183 +468,114 @@ function loaderScript() {
     }
   }
 
-  function statsDataReady() {
-    const page = document.getElementById("mflStatsPage");
-    const filters = document.getElementById("mflStatsOverallFilters");
-    if (!page || page.hidden || !filters?.querySelector(FILTER_SELECTOR)) return false;
-    const loadingMessage = Array.from(page.querySelectorAll(".mflStatsEmpty"))
-      .some((element) => /loading/i.test(String(element.textContent || "")));
-    const total = String(document.getElementById("mflStatsTotalPlayers")?.textContent || "").trim();
-    return !loadingMessage && /^\\d[\\d,.]*$/.test(total);
-  }
+  let statsActive = false;
+  let statsReadyLatched = false;
+  let statsReadyFrames = 0;
 
-  function startStats() {
-    if (!statsRoute) return;
-    document.documentElement.classList.add("mflStatsStableLoading");
-    document.body?.classList.add("mflStatsStableLoading");
-
-    ["pointerdown", "mousedown", "touchstart"].forEach((name) => {
-      window.addEventListener(name, (event) => {
-        if (!statsFilterTarget(event)) return;
-        unlockStats();
-      }, true);
-    });
-
-    window.addEventListener("click", (event) => {
-      const button = statsFilterTarget(event);
-      if (!button) return;
-      event.preventDefault();
+  ["pointerdown", "mousedown", "touchstart"].forEach((name) => {
+    window.addEventListener(name, (event) => {
+      if (!statsFilterTarget(event) || !(statsReadyLatched || statsDataReady())) return;
+      unlockStats();
       event.stopImmediatePropagation();
-      applyStatsFilter(button);
-      queueMicrotask(unlockStats);
-      requestAnimationFrame(unlockStats);
     }, true);
+  });
 
-    window.addEventListener("keydown", (event) => {
-      const button = statsFilterTarget(event);
-      if (!button || !["Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      applyStatsFilter(button);
-    }, true);
+  window.addEventListener("click", (event) => {
+    const button = statsFilterTarget(event);
+    if (!button || !(statsReadyLatched || statsDataReady())) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    applyStatsFilter(button);
+  }, true);
 
-    let readyFrames = 0;
-    let finished = false;
-    const frame = () => {
-      if (location.pathname !== "/mfl/stats" || finished) return;
-      if (statsDataReady()) readyFrames += 1;
-      else readyFrames = 0;
-      if (readyFrames >= 12) {
-        finished = true;
-        unlockStats();
+  window.addEventListener("keydown", (event) => {
+    const button = statsFilterTarget(event);
+    if (!button || !["Enter", " "].includes(event.key) || !(statsReadyLatched || statsDataReady())) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    applyStatsFilter(button);
+  }, true);
+
+  function syncRouteControllers() {
+    const evaluationNow = isEvaluationRoute();
+    if (evaluationNow && !evaluationActive) {
+      evaluationActive = true;
+      startEvaluationRequest();
+    } else if (!evaluationNow && evaluationActive) {
+      evaluationActive = false;
+      evaluationRequestSequence += 1;
+      evaluationController?.abort();
+      evaluationController = null;
+      evaluationResolvedRate = null;
+      evaluationResolvedLabel = "";
+      document.documentElement.classList.remove(
+        "mflEvaluationRateResolved", "mflEvaluationInitialStateReady", "mflEvaluationInitialLoadVisible",
+      );
+    }
+    if (evaluationNow) enforceEvaluationRate();
+
+    const statsNow = isStatsRoute();
+    if (statsNow && !statsActive) {
+      statsActive = true;
+      statsReadyLatched = false;
+      statsReadyFrames = 0;
+    } else if (!statsNow && statsActive) {
+      statsActive = false;
+      statsReadyLatched = false;
+      statsReadyFrames = 0;
+      document.documentElement.classList.remove("mflStatsStableLoading");
+      document.body?.classList.remove("mflStatsStableLoading");
+    }
+
+    if (statsNow) {
+      if (!statsReadyLatched) {
+        document.documentElement.classList.add("mflStatsStableLoading");
+        document.body?.classList.add("mflStatsStableLoading");
+        if (statsDataReady()) statsReadyFrames += 1;
+        else statsReadyFrames = 0;
+        if (statsReadyFrames >= 6) statsReadyLatched = true;
+      }
+      if (statsReadyLatched) {
         document.documentElement.classList.remove("mflStatsStableLoading");
         document.body?.classList.remove("mflStatsStableLoading");
-        syncVersion();
-        return;
+        unlockStats();
       }
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  }
-
-  const CLUB_ID_COLUMNS = [
-    "active_contract_club_id",
-    "club_id",
-    "current_club_id",
-    "active_club_id",
-  ];
-
-  function playerRow() {
-    try {
-      if (typeof rowByPlayerId === "function") return rowByPlayerId(playerId);
-      if (typeof state === "object" && Array.isArray(state?.rows) && Array.isArray(state?.columns)) {
-        const idIndex = state.columns.indexOf("player_id");
-        return idIndex >= 0 ? state.rows.find((row) => String(row[idIndex]) === String(playerId)) : null;
-      }
-    } catch {
-      return null;
     }
-    return null;
+
+    syncVersion();
   }
 
-  function playerClubId(row) {
-    if (!row) return "";
-    try {
-      if (typeof getValue === "function") {
-        for (const column of CLUB_ID_COLUMNS) {
-          const value = String(getValue(row, column) || "").trim();
-          if (value) return value;
-        }
-      }
-      if (typeof state === "object" && Array.isArray(state?.columns)) {
-        for (const column of CLUB_ID_COLUMNS) {
-          const index = state.columns.indexOf(column);
-          const value = index >= 0 ? String(row[index] || "").trim() : "";
-          if (value) return value;
-        }
-      }
-    } catch {
-      return "";
-    }
-    return "";
+  function routeControllerFrame() {
+    syncRouteControllers();
+    requestAnimationFrame(routeControllerFrame);
   }
 
-  function syncPlayerContractLink() {
-    if (!playerRoute) return false;
-    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam");
-    if (!team) return false;
-    if (team.tagName === "A") return true;
-    const teamName = String(team.textContent || "").trim();
-    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
-    const clubId = playerClubId(playerRow());
-    if (!clubId) return false;
-
-    const link = document.createElement("a");
-    link.className = team.className + " clubPageLink playerContractTeamLink";
-    link.textContent = teamName;
-    link.href = \`/clubs/\${encodeURIComponent(clubId)}/attributes\`;
-    link.addEventListener("click", (event) => {
-      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
-      if (typeof window.mflOpenClubPage === "function") {
-        event.preventDefault();
-        window.mflOpenClubPage(clubId, "attributes");
-      }
-    });
-    team.replaceWith(link);
-    return true;
-  }
-
-  function startPlayerContractLink() {
-    if (!playerRoute) return;
-    let hookInstalled = false;
-    const installHook = () => {
-      if (hookInstalled || typeof renderPlayerPage !== "function") return;
-      const originalRender = renderPlayerPage;
-      renderPlayerPage = function linkedContractPlayerRender() {
-        const result = originalRender.apply(this, arguments);
-        queueMicrotask(syncPlayerContractLink);
-        requestAnimationFrame(syncPlayerContractLink);
-        return result;
-      };
-      hookInstalled = true;
+  const previousPushState = history.pushState.bind(history);
+  const previousReplaceState = history.replaceState.bind(history);
+  if (!history.pushState.__mflRouteControllers) {
+    history.pushState = function routeAwarePushState() {
+      const result = previousPushState.apply(this, arguments);
+      queueMicrotask(syncRouteControllers);
+      return result;
     };
-
-    let frames = 0;
-    const frame = () => {
-      installHook();
-      syncPlayerContractLink();
-      syncVersion();
-      frames += 1;
-      if (frames < 600 && location.pathname.match(/^\\/players?\\//i)) requestAnimationFrame(frame);
+    history.pushState.__mflRouteControllers = true;
+    history.replaceState = function routeAwareReplaceState() {
+      const result = previousReplaceState.apply(this, arguments);
+      queueMicrotask(syncRouteControllers);
+      return result;
     };
-    requestAnimationFrame(frame);
-
-    const observer = new MutationObserver(() => {
-      installHook();
-      syncPlayerContractLink();
-    });
-    const observe = () => {
-      const detail = document.getElementById("playerDetail");
-      if (detail) observer.observe(detail, { childList: true, subtree: true });
-      else requestAnimationFrame(observe);
-    };
-    observe();
+    history.replaceState.__mflRouteControllers = true;
   }
+  window.addEventListener("popstate", () => queueMicrotask(syncRouteControllers));
 
-  startEvaluation();
-  startStats();
-  startPlayerContractLink();
-  syncVersion();
-  requestAnimationFrame(syncVersion);
+  document.getElementById("mflSeasonRatioRuntime")?.remove();
+  const runtime = document.createElement("script");
+  runtime.id = "mflSeasonRatioRuntime";
+  runtime.src = "/mfl-season-ratios-runtime.js?v=" + encodeURIComponent(VERSION);
+  runtime.async = false;
+  document.head.appendChild(runtime);
 
-  if (!evaluationRoute && !statsRoute) {
-    document.getElementById("mflSeasonRatioRuntime")?.remove();
-    const runtime = document.createElement("script");
-    runtime.id = "mflSeasonRatioRuntime";
-    runtime.src = \`/mfl-season-ratios-runtime.js?v=\${VERSION}\`;
-    runtime.async = false;
-    document.head.appendChild(runtime);
-  }
+  routeControllerFrame();
 })();
 `;
 }
