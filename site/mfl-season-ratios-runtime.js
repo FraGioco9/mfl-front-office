@@ -1,518 +1,153 @@
 (() => {
-  const VERSION = "1.119.0";
-  const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Cache and reuse site data to speed up loading across pages";
-  const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
-  const pendingPlayerRequests = new Set();
-  const completedPlayerRequests = new Set();
-  const pendingClubResolutions = new Map();
-
-  let playerRouteId = "";
-  let playerRouteStartedAt = 0;
-  let requestHookInstalled = false;
-  let renderHookInstalled = false;
-  let dataFetchHookInstalled = false;
-  let bootstrapClubsPromise = null;
+  const VERSION = "1.119.1";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@55797cced17e5cd2d5a40e65a58b5a022c7b7099/site/mfl-season-ratios-runtime.js";
+  const RELEASE_DESCRIPTION = "Restore the footer version and Changelog navigation";
   let scheduled = false;
 
-  function installStyles() {
-    let style = document.getElementById("mflPlayerRouteFixStyles");
+  function installFooterStyles() {
+    let style = document.getElementById("mflFooterVersionPatchStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflPlayerRouteFixStyles";
+      style.id = "mflFooterVersionPatchStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
-      .siteFooter a[data-page="changelog"] { font-size: 0 !important; }
-      .siteFooter a[data-page="changelog"]::before {
-        content: "MFL Front Office v${VERSION}" !important;
+      html body .siteFooter a[data-page="changelog"],
+      html body .siteFooter a[href="/changelog"] {
         font-size: 14px !important;
-      }
-      body[data-page="player"].playerRouteLoading #playerDetail {
-        position: relative;
-        min-height: 72px;
-      }
-      body[data-page="player"].playerRouteLoading #playerDetail > .emptyState {
-        visibility: hidden !important;
-      }
-      body[data-page="player"].playerRouteLoading #playerDetail::after {
-        content: "Loading player...";
-        display: block;
-        padding: 24px;
-        text-align: center;
-        color: var(--text-muted, var(--muted, currentColor));
-      }
-      #playerDetail .contractDetailCard .playerContractTeamLink {
-        font: inherit !important;
-        font-size: 16px !important;
-        font-weight: inherit !important;
-        text-decoration: none !important;
-        cursor: pointer !important;
         pointer-events: auto !important;
-        transition: color 120ms ease !important;
+        cursor: pointer !important;
       }
-      #playerDetail .contractDetailCard .playerContractTeamLink:not(:hover):not(:focus-visible) {
-        color: #e8eef3 !important;
-      }
-      #playerDetail .contractDetailCard .playerContractTeamLink:hover,
-      #playerDetail .contractDetailCard .playerContractTeamLink:focus-visible {
-        color: var(--primary) !important;
-        text-decoration: none !important;
+      html body .siteFooter a[data-page="changelog"]::before,
+      html body .siteFooter a[href="/changelog"]::before {
+        content: none !important;
+        display: none !important;
       }
     `;
   }
 
-  function installDataFetchHook() {
-    if (dataFetchHookInstalled || typeof window.fetch !== "function" || window.fetch.__mflDataCacheOptimization) return;
-    const nativeFetch = window.fetch.bind(window);
-    const optimizedFetch = function optimizedDataFetch(input, init = {}) {
-      let target;
-      try {
-        const sourceUrl = input instanceof Request ? input.url : String(input || "");
-        target = new URL(sourceUrl, window.location.href);
-      } catch {
-        return nativeFetch(input, init);
-      }
-
-      if (target.origin !== window.location.origin || target.pathname !== "/api/data") {
-        return nativeFetch(input, init);
-      }
-
-      const mode = String(target.searchParams.get("mode") || "");
-      const access = String(target.searchParams.get("access") || "");
-      const view = String(target.searchParams.get("view") || "attributes").toLowerCase();
-      const scope = String(target.searchParams.get("scope") || "database").toLowerCase();
-      const includeProgression = String(target.searchParams.get("includeProgression") || "") === "1";
-      const headers = new Headers(input instanceof Request ? input.headers : undefined);
-      new Headers(init.headers || undefined).forEach((value, name) => headers.set(name, value));
-      const hasWalletProof = headers.has("x-dapper-wallet-address")
-        || headers.has("x-wallet-signing-address")
-        || headers.has("x-wallet-signatures");
-      const publicRequest = !hasWalletProof
-        && access !== "full-progression"
-        && access !== "owned-progression"
-        && (mode === "bootstrap" || (
-          mode === "page"
-          && !includeProgression
-          && !["current", "all"].includes(view)
-          && scope !== "myplayers"
-        ));
-
-      if (!publicRequest) {
-        return nativeFetch(input, init);
-      }
-
-      const requestedCache = init.cache || (input instanceof Request ? input.cache : "");
-      if (requestedCache !== "no-store") {
-        return nativeFetch(input, init);
-      }
-      return nativeFetch(input, { ...init, cache: "default" });
-    };
-    optimizedFetch.__mflDataCacheOptimization = true;
-    window.fetch = optimizedFetch;
-    dataFetchHookInstalled = true;
+  function footerLink() {
+    return document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
   }
 
-  function semver(value) {
-    const match = String(value || "").match(/^v?(\d+)\.(\d+)\.(\d+)$/);
-    return match ? match.slice(1).map(Number) : null;
-  }
-
-  function syncVersionUi() {
-    const footer = document.querySelector('.siteFooter a[data-page="changelog"]');
-    if (footer && footer.textContent !== `MFL Front Office v${VERSION}`) {
-      footer.textContent = `MFL Front Office v${VERSION}`;
+  function syncFooter() {
+    const link = footerLink();
+    if (link) {
+      const label = `MFL Front Office v${VERSION}`;
+      if (link.textContent !== label) link.textContent = label;
+      if (link.getAttribute("href") !== "/changelog") link.setAttribute("href", "/changelog");
+      if (link.dataset.page !== "changelog") link.dataset.page = "changelog";
+      link.removeAttribute("aria-disabled");
+      link.removeAttribute("inert");
+      link.tabIndex = 0;
     }
+    document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
+      const label = `v${VERSION}`;
+      if (element.textContent !== label) element.textContent = label;
+    });
+  }
 
+  function changelogEntryExists(list) {
+    return Array.from(list.querySelectorAll(".changelogPatchList li > span, .changelogList > li > span"))
+      .some((label) => String(label.textContent || "").trim() === `v${VERSION}`);
+  }
+
+  function updateMinorMeta(section) {
+    const items = section?.querySelectorAll(".changelogPatchList > li") || [];
+    const meta = section?.querySelector(".changelogMinorMeta");
+    if (meta) meta.textContent = `${items.length} ${items.length === 1 ? "patch" : "patches"}`;
+  }
+
+  function createPatchItem() {
+    const item = document.createElement("li");
+    const version = document.createElement("span");
+    const description = document.createElement("p");
+    version.textContent = `v${VERSION}`;
+    description.textContent = RELEASE_DESCRIPTION;
+    item.append(version, description);
+    return item;
+  }
+
+  function createMinorSection() {
+    const section = document.createElement("li");
+    section.className = "changelogMinorSection is-expanded";
+    const toggle = document.createElement("button");
+    toggle.className = "changelogMinorToggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.innerHTML = '<span class="changelogMinorVersion">v1.119</span><span class="changelogMinorMeta">1 patch</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>';
+    const panel = document.createElement("div");
+    panel.className = "changelogMinorPanel";
+    const inner = document.createElement("div");
+    inner.className = "changelogMinorPanelInner";
+    const patches = document.createElement("ol");
+    patches.className = "changelogPatchList";
+    patches.appendChild(createPatchItem());
+    inner.appendChild(patches);
+    panel.appendChild(inner);
+    section.append(toggle, panel);
+    toggle.addEventListener("click", () => {
+      const expanded = section.classList.toggle("is-expanded");
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+    return section;
+  }
+
+  function syncChangelog() {
     const list = document.querySelector(".changelogList");
-    if (!list || list.dataset.playerRuntimeVersion === VERSION) return;
-    const entries = new Map([[`v${VERSION}`, RELEASE_DESCRIPTION]]);
-    list.querySelectorAll(".changelogPatchList li, .changelogList > li:not(.changelogMinorSection)").forEach((item) => {
-      const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
-      if (semver(label) && !entries.has(label)) {
-        entries.set(label, String(item.querySelector(":scope > p")?.textContent || "").trim());
-      }
-    });
-
-    const groups = new Map();
-    entries.forEach((description, label) => {
-      const parts = semver(label);
-      const key = `${parts[0]}.${parts[1]}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push({ label, description, patch: parts[2] });
-    });
-
-    list.replaceChildren();
-    [...groups.entries()]
-      .sort(([a], [b]) => {
-        const x = a.split(".").map(Number);
-        const y = b.split(".").map(Number);
-        return y[0] - x[0] || y[1] - x[1];
-      })
-      .forEach(([minor, patches], index) => {
-        patches.sort((a, b) => b.patch - a.patch);
-        const section = document.createElement("li");
-        section.className = "changelogMinorSection";
-        if (!index) section.classList.add("is-expanded");
-        const toggle = document.createElement("button");
-        toggle.className = "changelogMinorToggle";
-        toggle.type = "button";
-        toggle.setAttribute("aria-expanded", !index ? "true" : "false");
-        toggle.innerHTML = `<span class="changelogMinorVersion">v${minor}</span><span class="changelogMinorMeta">${patches.length} ${patches.length === 1 ? "patch" : "patches"}</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>`;
-        const panel = document.createElement("div");
-        panel.className = "changelogMinorPanel";
-        const inner = document.createElement("div");
-        inner.className = "changelogMinorPanelInner";
-        const patchList = document.createElement("ol");
-        patchList.className = "changelogPatchList";
-        patches.forEach(({ label, description }) => {
-          const item = document.createElement("li");
-          const version = document.createElement("span");
-          const text = document.createElement("p");
-          version.textContent = label;
-          text.textContent = description;
-          item.append(version, text);
-          patchList.appendChild(item);
-        });
-        inner.appendChild(patchList);
-        panel.appendChild(inner);
-        section.append(toggle, panel);
-        toggle.addEventListener("click", () => {
-          const expanded = section.classList.toggle("is-expanded");
-          toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-        });
-        list.appendChild(section);
-      });
-    list.dataset.playerRuntimeVersion = VERSION;
+    if (!list || changelogEntryExists(list)) return;
+    const section = Array.from(list.querySelectorAll(".changelogMinorSection"))
+      .find((candidate) => String(candidate.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.119");
+    if (section) {
+      const patches = section.querySelector(".changelogPatchList");
+      if (patches) patches.prepend(createPatchItem());
+      updateMinorMeta(section);
+      return;
+    }
+    list.prepend(createMinorSection());
   }
 
-  function cleanPath() {
-    return String(location.pathname || "/").replace(/\/+$/, "") || "/";
-  }
-
-  function currentPlayerId() {
-    const match = cleanPath().match(/^\/players?\/([^/]+)$/i);
-    return match ? decodeURIComponent(match[1]) : "";
-  }
-
-  function rowForPlayer(playerId) {
-    const id = String(playerId || "").trim();
-    if (!id) return null;
+  function openChangelog() {
     try {
-      if (typeof rowByPlayerId === "function") return rowByPlayerId(id);
-      if (typeof state === "object" && Array.isArray(state?.rows) && Array.isArray(state?.columns)) {
-        const index = state.columns.indexOf("player_id");
-        return index >= 0 ? state.rows.find((row) => String(row[index]) === id) : null;
+      if (typeof setPage === "function") {
+        Promise.resolve(setPage("changelog", true, { replaceUrl: "/changelog" })).catch(() => {});
+        return true;
       }
     } catch {
-      return null;
+      // Fall back to the application's popstate router.
     }
-    return null;
-  }
-
-  function appBusy() {
-    try {
-      if (typeof state === "object" && state) {
-        if (state.incrementalApplying || state.interactionBusyDepth > 0 || state.dataLoadPromise) return true;
-        if (state.incrementalRequestPromises instanceof Map && state.incrementalRequestPromises.size > 0) return true;
-      }
-    } catch {
-      // DOM state remains available.
-    }
-    return document.documentElement.classList.contains("bootPending")
-      || document.documentElement.classList.contains("appBusy")
-      || document.body.classList.contains("booting")
-      || document.body.classList.contains("loading")
-      || document.body.classList.contains("appBusy")
-      || document.body.classList.contains("tableRowsLoading");
-  }
-
-  function playerStillLoading(playerId) {
-    const id = String(playerId || "").trim();
-    if (!id || rowForPlayer(id)) return false;
-    if (pendingPlayerRequests.has(id)) return true;
-    if (completedPlayerRequests.has(id)) return false;
-    if (appBusy()) return true;
-    return id === playerRouteId && Date.now() - playerRouteStartedAt < 3500;
-  }
-
-  function markLoading() {
-    document.body.classList.add("playerRouteLoading");
-    document.body.classList.remove("playerRouteSettled", "playerRouteGuardReady");
-    const detail = document.getElementById("playerDetail");
-    if (!detail) return;
-    const text = String(detail.textContent || "").trim();
-    if (!detail.children.length || /not found|loading player/i.test(text)) {
-      detail.innerHTML = '<div class="emptyState">Loading player...</div>';
-    }
-  }
-
-  function markSettled() {
-    document.body.classList.remove("playerRouteLoading");
-    document.body.classList.add("playerRouteSettled", "playerRouteGuardReady");
-  }
-
-  function installRequestHook() {
-    if (requestHookInstalled || typeof requestIncrementalRoute !== "function") return;
-    const originalRequest = requestIncrementalRoute;
-    requestIncrementalRoute = async function trackedPlayerRequest(route) {
-      const playerId = String(route?.scope === "player" ? route.playerId || currentPlayerId() : "").trim();
-      if (playerId) {
-        pendingPlayerRequests.add(playerId);
-        completedPlayerRequests.delete(playerId);
-        playerRouteId = playerId;
-        playerRouteStartedAt = Date.now();
-        markLoading();
-      }
-      try {
-        return await originalRequest.apply(this, arguments);
-      } finally {
-        if (playerId) {
-          pendingPlayerRequests.delete(playerId);
-          completedPlayerRequests.add(playerId);
-          schedule();
-        }
-      }
-    };
-    requestIncrementalRoute.__mflPlayerRequestGuard = true;
-    requestHookInstalled = true;
-  }
-
-  function installRenderHook() {
-    if (renderHookInstalled || typeof renderPlayerPage !== "function") return;
-    const originalRender = renderPlayerPage;
-    renderPlayerPage = function guardedPlayerRender(playerId) {
-      const id = String(playerId || currentPlayerId() || "").trim();
-      if (id && !rowForPlayer(id) && playerStillLoading(id)) {
-        markLoading();
-        return undefined;
-      }
-      const result = originalRender.apply(this, arguments);
-      queueMicrotask(syncPlayerRoute);
-      requestAnimationFrame(syncPlayerRoute);
-      return result;
-    };
-    renderPlayerPage.__mflPlayerLifecycleGuard = true;
-    renderHookInstalled = true;
-  }
-
-  function clubIdFromRow(row) {
-    if (!row) return "";
-    try {
-      if (typeof getValue === "function") {
-        for (const column of CLUB_ID_COLUMNS) {
-          const value = String(getValue(row, column) || "").trim();
-          if (value) return value;
-        }
-      }
-      if (typeof state === "object" && Array.isArray(state?.columns)) {
-        for (const column of CLUB_ID_COLUMNS) {
-          const index = state.columns.indexOf(column);
-          const value = index >= 0 ? String(row[index] || "").trim() : "";
-          if (value) return value;
-        }
-      }
-    } catch {
-      return "";
-    }
-    return "";
-  }
-
-  function clubIdFromIndexes(teamName) {
-    const normalized = String(teamName || "").trim().toLowerCase();
-    if (!normalized) return "";
-    try {
-      const clubs = [
-        ...(Array.isArray(state?.clubSearchIndex) ? state.clubSearchIndex : []),
-        ...(Array.isArray(state?.bootstrapData?.clubs) ? state.bootstrapData.clubs : []),
-      ];
-      const match = clubs.find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
-      return String(match?.clubId || "").trim();
-    } catch {
-      return "";
-    }
-  }
-
-  function loadBootstrapClubs() {
-    if (bootstrapClubsPromise) return bootstrapClubsPromise;
-    bootstrapClubsPromise = new Promise((resolve) => {
-      const request = new XMLHttpRequest();
-      request.open("GET", `/api/data?mode=bootstrap&v=${encodeURIComponent(VERSION)}`, true);
-      request.timeout = 6000;
-      request.onload = () => {
-        try {
-          const value = JSON.parse(request.responseText || "{}");
-          resolve(Array.isArray(value?.clubs) ? value.clubs : []);
-        } catch {
-          resolve([]);
-        }
-      };
-      request.onerror = () => resolve([]);
-      request.ontimeout = () => resolve([]);
-      request.send(null);
-    }).finally(() => {
-      bootstrapClubsPromise = null;
-    });
-    return bootstrapClubsPromise;
-  }
-
-  async function resolveClubId(teamName, playerId) {
-    const rowId = clubIdFromRow(rowForPlayer(playerId));
-    if (rowId) return rowId;
-    const indexedId = clubIdFromIndexes(teamName);
-    if (indexedId) return indexedId;
-    const clubs = await loadBootstrapClubs();
-    const normalized = String(teamName || "").trim().toLowerCase();
-    const match = clubs.find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
-    return String(match?.clubId || "").trim();
-  }
-
-  function replaceTeamWithLink(team, playerId, teamName, clubId) {
-    if (!clubId || !team?.isConnected) return false;
-    const href = `/clubs/${encodeURIComponent(clubId)}/attributes`;
-    if (team instanceof HTMLAnchorElement) {
-      team.className = "agentTableLink playerAgentLink playerContractTeam playerContractTeamLink clubPageLink";
-      team.dataset.playerContractVersion = VERSION;
-      team.dataset.playerId = playerId;
-      team.dataset.teamName = teamName;
-      team.dataset.clubId = clubId;
-      team.href = href;
-      return true;
-    }
-
-    const link = document.createElement("a");
-    link.className = "agentTableLink playerAgentLink playerContractTeam playerContractTeamLink clubPageLink";
-    link.textContent = teamName;
-    link.dataset.playerContractVersion = VERSION;
-    link.dataset.playerId = playerId;
-    link.dataset.teamName = teamName;
-    link.dataset.clubId = clubId;
-    link.href = href;
-    team.replaceWith(link);
-    return true;
-  }
-
-  function makeContractLink() {
-    const playerId = currentPlayerId();
-    const row = rowForPlayer(playerId);
-    if (!playerId || !row) return false;
-    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
-    if (!team) return false;
-    const teamName = String(team.textContent || "").trim();
-    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
-
-    const immediateClubId = clubIdFromRow(row) || clubIdFromIndexes(teamName);
-    if (immediateClubId) return replaceTeamWithLink(team, playerId, teamName, immediateClubId);
-
-    const key = `${playerId}:${teamName.toLowerCase()}`;
-    if (!pendingClubResolutions.has(key)) {
-      const resolution = resolveClubId(teamName, playerId)
-        .then((clubId) => {
-          if (!clubId || currentPlayerId() !== playerId) return false;
-          const currentTeam = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
-          if (!currentTeam || String(currentTeam.textContent || "").trim() !== teamName) return false;
-          return replaceTeamWithLink(currentTeam, playerId, teamName, clubId);
-        })
-        .finally(() => pendingClubResolutions.delete(key));
-      pendingClubResolutions.set(key, resolution);
-    }
-    return false;
-  }
-
-  function releaseBusyBlocker() {
-    try {
-      if (typeof state === "object" && state && state.interactionBusyDepth > 0) {
-        state.interactionBusyDepth = 0;
-        if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
-      }
-    } catch {
-      // In-app navigation remains authoritative.
-    }
-  }
-
-  function contractLinkFromEvent(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    return target?.closest("#playerDetail .contractDetailCard .playerContractTeamLink") || null;
-  }
-
-  function navigateContractClub(link) {
-    const href = String(link?.getAttribute("href") || "").trim();
-    if (!href || href === "#") return false;
-    let target;
-    try {
-      target = new URL(href, window.location.href);
-    } catch {
-      return false;
-    }
-    if (target.origin !== window.location.origin) return false;
-    const route = `${target.pathname}${target.search}`;
-    if (`${window.location.pathname}${window.location.search}` !== route) {
-      window.history.pushState({}, "", route);
+    if (window.location.pathname !== "/changelog") {
+      window.history.pushState({}, "", "/changelog");
     }
     window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
     return true;
   }
 
-  window.addEventListener("pointerdown", (event) => {
-    if (contractLinkFromEvent(event)) releaseBusyBlocker();
-  }, true);
-
-  window.addEventListener("click", (event) => {
-    const link = contractLinkFromEvent(event);
-    if (!link) return;
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    releaseBusyBlocker();
-    navigateContractClub(link);
-  }, true);
-
-  function syncPlayerRoute() {
-    const playerId = currentPlayerId();
-    if (!playerId) {
-      playerRouteId = "";
-      playerRouteStartedAt = 0;
-      document.body.classList.remove("playerRouteLoading", "playerRouteSettled", "playerRouteGuardReady");
-      return;
-    }
-    if (playerRouteId !== playerId) {
-      playerRouteId = playerId;
-      playerRouteStartedAt = Date.now();
-      completedPlayerRequests.delete(playerId);
-    }
-
-    const row = rowForPlayer(playerId);
-    if (row) {
-      markSettled();
-      const detail = document.getElementById("playerDetail");
-      const text = String(detail?.textContent || "").trim();
-      if (detail && (!detail.querySelector(".playerHero") || /not found|loading player/i.test(text))
-          && typeof renderPlayerPage === "function") {
-        renderPlayerPage(playerId);
-      }
-      makeContractLink();
-      return;
-    }
-
-    if (playerStillLoading(playerId)) {
-      markLoading();
-      return;
-    }
-
-    markSettled();
-    const detail = document.getElementById("playerDetail");
-    if (detail && /loading player/i.test(String(detail.textContent || "")) && typeof renderPlayerPage === "function") {
-      renderPlayerPage(playerId);
-    }
+  function footerLinkFromEvent(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    return target?.closest('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]') || null;
   }
 
+  window.addEventListener("click", (event) => {
+    const link = footerLinkFromEvent(event);
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openChangelog();
+  }, true);
+
+  window.addEventListener("keydown", (event) => {
+    const link = footerLinkFromEvent(event);
+    if (!link || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openChangelog();
+  }, true);
+
   function maintain() {
-    installDataFetchHook();
-    installStyles();
-    syncVersionUi();
-    installRequestHook();
-    installRenderHook();
-    syncPlayerRoute();
+    installFooterStyles();
+    syncFooter();
+    syncChangelog();
   }
 
   function schedule() {
@@ -529,20 +164,20 @@
     const observer = new MutationObserver(schedule);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "data-page", "hidden", "inert", "aria-busy"],
+      attributeFilter: ["class", "data-page", "href", "hidden", "aria-disabled"],
       childList: true,
       subtree: true,
+      characterData: true,
     });
     ["popstate", "hashchange"].forEach((name) => window.addEventListener(name, schedule));
-    [0, 50, 150, 400, 1000, 2000, 3500, 6000].forEach((delay) => setTimeout(maintain, delay));
+    [0, 50, 150, 400, 1000, 2000, 4000, 7000].forEach((delay) => setTimeout(maintain, delay));
   }
 
-  installDataFetchHook();
-  installStyles();
-  const legacy = document.createElement("script");
-  legacy.src = LEGACY_RUNTIME;
-  legacy.async = false;
-  legacy.addEventListener("load", startPatch, { once: true });
-  legacy.addEventListener("error", startPatch, { once: true });
-  document.head.appendChild(legacy);
+  installFooterStyles();
+  const previous = document.createElement("script");
+  previous.src = PREVIOUS_RUNTIME;
+  previous.async = false;
+  previous.addEventListener("load", startPatch, { once: true });
+  previous.addEventListener("error", startPatch, { once: true });
+  document.head.appendChild(previous);
 })();
