@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.19 - Align loading UI, Evaluation readiness, player team links, and MFL Stats controls. */
+/* v1.118.20 - Keep tooltips clear of the header and synchronize Evaluation and Stats readiness. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.19";
+  content: "MFL Front Office v1.118.20";
   font-size: 14px;
 }
 
@@ -74,7 +74,7 @@ html body[data-page="evaluation"] #evaluationPage {
   overflow-y: visible !important;
 }
 
-body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationPage {
+body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
   visibility: hidden !important;
 }
 
@@ -125,7 +125,7 @@ html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-t
   display: none !important;
 }
 
-html[data-initial-page="evaluation"] body:not(.evaluationRouteActionsReady) #evaluationLoadButton,
+html[data-initial-page="evaluation"] body:not(.evaluationRouteResolved) #evaluationLoadButton,
 body.evaluationPlayerRoute #evaluationLoadButton {
   display: none !important;
 }
@@ -133,11 +133,16 @@ body.evaluationPlayerRoute #evaluationLoadButton {
 .playerContractTeamLink {
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .playerContractTeamLink:hover,
 .playerContractTeamLink:focus-visible {
   text-decoration: underline;
+}
+
+.playerNoteFloatingTooltip {
+  z-index: 2147483647 !important;
 }
 
 html.bootPending table thead,
