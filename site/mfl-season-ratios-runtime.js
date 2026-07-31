@@ -1,139 +1,95 @@
 (() => {
-  const VERSION = "1.119.4";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f0e345b091a65f605b9af648b1c90325e68bd1cf/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Prevent stale table rows and keep footer navigation stable";
+  const VERSION = "1.119.5";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f8fd9ac9eb4cb59367d6595e8c6389477b994548/site/mfl-season-ratios-runtime.js";
+  const RELEASE_DESCRIPTION = "Keep the footer stable, restore Changelog navigation, and square loading table bottoms";
   const FOOTER_LABEL = `MFL Front Office v${VERSION}`;
   const SHORT_LABEL = `v${VERSION}`;
+  const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
+
   let scheduled = false;
   let guardedSetPage = null;
-  let databaseTransitionSerial = 0;
+  let transitionSerial = 0;
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflStablePageLoadingReleaseStyles");
+    let style = document.getElementById("mflStableFooterAndTablesStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflStablePageLoadingReleaseStyles";
+      style.id = "mflStableFooterAndTablesStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
-      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[data-page="changelog"],
-      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[href="/changelog"] {
+      html body .siteFooter.siteFooter a[data-page="changelog"],
+      html body .siteFooter.siteFooter a[href="/changelog"] {
         font-size: 0 !important;
         pointer-events: auto !important;
         cursor: pointer !important;
       }
-      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+      html:not(.mflReleaseReady) body .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html:not(.mflReleaseReady) body .siteFooter.siteFooter a[href="/changelog"]::before {
+        content: "MFL Front Office -" !important;
+        display: inline !important;
+        font-size: 14px !important;
+      }
+      html.mflReleaseReady.mflReleaseReady body .siteFooter.siteFooter a[data-page="changelog"]::before,
+      html.mflReleaseReady.mflReleaseReady body .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "${FOOTER_LABEL}" !important;
         display: inline !important;
         font-size: 14px !important;
       }
-      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[data-page="changelog"]::before,
-      html[data-mfl-release-version="${VERSION}"].bootPending body .siteFooter.siteFooter a[href="/changelog"]::before {
-        content: "MFL Front Office -" !important;
-      }
-      html[data-mfl-release-version="${VERSION}"].bootPending table thead,
-      html[data-mfl-release-version="${VERSION}"].bootPending table thead tr,
-      html[data-mfl-release-version="${VERSION}"].bootPending table thead th,
-      html[data-mfl-release-version="${VERSION}"].appBusy table thead,
-      html[data-mfl-release-version="${VERSION}"].appBusy table thead tr,
-      html[data-mfl-release-version="${VERSION}"].appBusy table thead th,
-      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead,
-      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"].mflStatsLoading table thead th,
-      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead,
-      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"].mflStatsStableLoading table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.booting table thead,
-      html[data-mfl-release-version="${VERSION}"] body.booting table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.booting table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.loading table thead,
-      html[data-mfl-release-version="${VERSION}"] body.loading table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.loading table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead,
-      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.appBusy table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead,
-      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.tableRowsLoading table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead,
-      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.tableLayoutPending table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewLoading table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.clubViewSwitching table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsLoading table thead th,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead tr,
-      html[data-mfl-release-version="${VERSION}"] body.mflStatsStableLoading table thead th {
+      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+        :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
+      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+        .mflTableDataLoading)
+        :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
       }
-      html[data-mfl-release-version="${VERSION}"] body.mflDatabaseRoutePending #tableBody {
+      body.mflTableDataLoading #tableBody {
         visibility: hidden !important;
         pointer-events: none !important;
       }
-      html[data-mfl-release-version="${VERSION}"] body.mflDatabaseRoutePending #emptyState {
+      body.mflTableDataLoading #emptyState {
         display: block !important;
         visibility: visible !important;
       }
     `;
   }
 
-  function unlockTextContent(element) {
-    if (!element || !Object.prototype.hasOwnProperty.call(element, "textContent")) return;
-    try {
-      delete element.textContent;
-    } catch {
-      // The release stylesheet remains authoritative for the visible label.
-    }
-  }
-
   function footerLink() {
     return document.querySelector('.siteFooter a[data-page="changelog"], .siteFooter a[href="/changelog"]');
   }
 
-  function syncVersionUi() {
-    document.documentElement.dataset.mflReleaseVersion = VERSION;
+  function initializeVersionUi() {
+    const root = document.documentElement;
+    root.dataset.mflReleaseVersion = VERSION;
+    root.classList.add("mflReleaseReady");
+
     const footer = footerLink();
-    if (footer) {
-      unlockTextContent(footer);
-      if (footer.textContent !== FOOTER_LABEL) footer.textContent = FOOTER_LABEL;
+    if (footer && footer.dataset.mflReleaseVersion !== VERSION) {
+      footer.dataset.mflReleaseVersion = VERSION;
       footer.dataset.page = "changelog";
       footer.dataset.releaseLabel = FOOTER_LABEL;
       footer.setAttribute("href", "/changelog");
       footer.setAttribute("aria-label", `${FOOTER_LABEL}, open Changelog`);
       footer.removeAttribute("aria-disabled");
       footer.removeAttribute("inert");
-      footer.tabIndex = 0;
       footer.parentElement?.removeAttribute("inert");
+      footer.tabIndex = 0;
+      footer.textContent = FOOTER_LABEL;
     }
+
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
-      unlockTextContent(element);
-      if (element.textContent !== SHORT_LABEL) element.textContent = SHORT_LABEL;
+      if (element.dataset.mflReleaseVersion === VERSION) return;
+      element.dataset.mflReleaseVersion = VERSION;
+      element.textContent = SHORT_LABEL;
     });
   }
 
-  function currentPageName() {
-    try {
-      if (typeof state === "object" && state?.currentPage) return String(state.currentPage).toLowerCase();
-    } catch {
-      // Fall back to the route and body state.
-    }
-    const bodyPage = String(document.body?.dataset.page || "").toLowerCase();
-    if (bodyPage) return bodyPage;
-    return /^\/my-players(?:\/|$)/i.test(location.pathname) ? "myplayers" : "";
-  }
-
-  function beginDatabaseTransition() {
+  function beginTableTransition() {
     const body = document.body;
     if (!body) return;
-    body.classList.add("mflDatabaseRoutePending", "tableRowsLoading");
+    body.classList.add("mflTableDataLoading");
     const tableBody = document.getElementById("tableBody");
     const emptyState = document.getElementById("emptyState");
     if (tableBody) tableBody.replaceChildren();
@@ -143,32 +99,35 @@
     }
   }
 
-  function finishDatabaseTransition(serial) {
+  function finishTableTransition(serial) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (serial !== databaseTransitionSerial) return;
-      document.body?.classList.remove("mflDatabaseRoutePending");
+      if (serial !== transitionSerial) return;
+      document.body?.classList.remove("mflTableDataLoading");
     }));
   }
 
   function installPageTransitionGuard() {
-    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflDatabaseRowsGuard) return;
-    const originalSetPage = setPage;
-    const wrappedSetPage = async function guardedDatabasePage(pageName, updateHash = true, options = {}) {
-      const destination = String(pageName || "").toLowerCase();
-      const source = currentPageName();
-      const guardRows = destination === "database"
-        && (source === "myplayers" || /^\/my-players(?:\/|$)/i.test(location.pathname));
-      if (!guardRows) return originalSetPage.call(this, pageName, updateHash, options);
+    if (typeof setPage !== "function" || setPage === guardedSetPage || setPage.__mflTableTransitionVersion === VERSION) {
+      return;
+    }
 
-      const serial = ++databaseTransitionSerial;
-      beginDatabaseTransition();
+    const originalSetPage = setPage;
+    const wrappedSetPage = async function stableTablePageTransition(pageName, updateHash = true, options = {}) {
+      const destination = String(pageName || "").toLowerCase();
+      if (!TABLE_PAGES.has(destination)) {
+        return originalSetPage.call(this, pageName, updateHash, options);
+      }
+
+      const serial = ++transitionSerial;
+      beginTableTransition();
       try {
         return await originalSetPage.call(this, pageName, updateHash, options);
       } finally {
-        finishDatabaseTransition(serial);
+        finishTableTransition(serial);
       }
     };
-    wrappedSetPage.__mflDatabaseRowsGuard = true;
+
+    wrappedSetPage.__mflTableTransitionVersion = VERSION;
     wrappedSetPage.__mflOriginalSetPage = originalSetPage;
     setPage = wrappedSetPage;
     guardedSetPage = wrappedSetPage;
@@ -192,8 +151,10 @@
   function syncChangelog() {
     const list = document.querySelector(".changelogList");
     if (!list || changelogEntryExists(list)) return;
+
     let section = Array.from(list.querySelectorAll(".changelogMinorSection"))
       .find((candidate) => String(candidate.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.119");
+
     if (!section) {
       section = document.createElement("li");
       section.className = "changelogMinorSection is-expanded";
@@ -217,25 +178,12 @@
       });
       list.prepend(section);
     }
+
     const patches = section.querySelector(".changelogPatchList");
     if (patches) patches.prepend(createPatchItem());
     const count = section.querySelectorAll(".changelogPatchList > li").length;
     const meta = section.querySelector(".changelogMinorMeta");
     if (meta) meta.textContent = `${count} ${count === 1 ? "patch" : "patches"}`;
-  }
-
-  async function openChangelog() {
-    const targetPath = "/changelog";
-    if (location.pathname !== targetPath) history.pushState({}, "", targetPath);
-    try {
-      if (typeof setPage === "function") {
-        await setPage("changelog", false);
-        return;
-      }
-    } catch {
-      // Use the application's popstate route as a fallback.
-    }
-    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
   }
 
   function footerFromEvent(event) {
@@ -252,10 +200,10 @@
 
   window.addEventListener("click", (event) => {
     const footer = footerFromEvent(event);
-    if (!footer || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
+    if (!footer || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void openChangelog();
+    window.location.assign("/changelog");
   }, true);
 
   window.addEventListener("keydown", (event) => {
@@ -263,12 +211,12 @@
     if (!footer || !["Enter", " "].includes(event.key)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void openChangelog();
+    window.location.assign("/changelog");
   }, true);
 
   function maintain() {
     installReleaseStyles();
-    syncVersionUi();
+    initializeVersionUi();
     installPageTransitionGuard();
     syncChangelog();
   }
@@ -282,17 +230,18 @@
     });
   }
 
-  maintain();
+  installReleaseStyles();
+  initializeVersionUi();
+
   const observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["class", "data-page", "href", "hidden", "aria-disabled"],
     childList: true,
-    characterData: true,
     subtree: true,
   });
   ["popstate", "hashchange"].forEach((name) => window.addEventListener(name, schedule));
-  [0, 50, 150, 400, 1000, 2000, 4000, 7000].forEach((delay) => setTimeout(maintain, delay));
+  [0, 50, 150, 400, 1000, 2000, 4000].forEach((delay) => setTimeout(maintain, delay));
 
   const previous = document.createElement("script");
   previous.src = PREVIOUS_RUNTIME;
