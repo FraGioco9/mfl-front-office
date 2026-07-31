@@ -1,24 +1,23 @@
 (() => {
-  const payload = window.__mflSeasonRatioPayload || {};
-  const VERSION = String(payload.version || "1.118.31");
-  const releases = Array.isArray(payload.releases) ? payload.releases : [];
-  const clubIdColumns = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
+  const VERSION = "1.118.34";
+  const LEGACY_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@515be7576f3be7232430a68f0a08019fe7aa7f67/site/mfl-season-ratios-runtime.js";
+  const RELEASE_DESCRIPTION = "Prevent transient player-not-found states and make Contract teams reliable club links";
+  const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
+  const pendingPlayerRequests = new Set();
+  const completedPlayerRequests = new Set();
 
-  let protectedEvaluationRoute = location.pathname === "/evaluation" && /[?&](player|share)=/.test(location.search)
-    ? `${location.pathname}${location.search}`
-    : "";
-  let evaluationPlayerLoadPromise = null;
-  let playerRouteKey = "";
+  let playerRouteId = "";
   let playerRouteStartedAt = 0;
-  let discountTooltip = null;
-  let discountTooltipTarget = null;
-  let emptyEvaluationFocused = false;
+  let requestHookInstalled = false;
+  let renderHookInstalled = false;
+  let bootstrapClubsPromise = null;
+  let scheduled = false;
 
   function installStyles() {
-    let style = document.getElementById("mflRuntimeFixStyles");
+    let style = document.getElementById("mflPlayerRouteFixStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRuntimeFixStyles";
+      style.id = "mflPlayerRouteFixStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
@@ -27,48 +26,29 @@
         content: "MFL Front Office v${VERSION}" !important;
         font-size: 14px !important;
       }
-      html body[data-page="evaluation"] #evaluationPage,
-      html body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
-        visibility: visible !important;
+      body[data-page="player"].playerRouteLoading #playerDetail {
+        position: relative;
+        min-height: 72px;
       }
-      body.evaluationPlayerRoute #evaluationLoadButton { display: none !important; }
+      body[data-page="player"].playerRouteLoading #playerDetail > .emptyState {
+        visibility: hidden !important;
+      }
+      body[data-page="player"].playerRouteLoading #playerDetail::after {
+        content: "Loading player...";
+        display: block;
+        padding: 24px;
+        text-align: center;
+        color: var(--text-muted, var(--muted, currentColor));
+      }
       .contractDetailCard .playerContractTeamLink {
         color: inherit !important;
         text-decoration: none !important;
         cursor: pointer !important;
+        pointer-events: auto !important;
       }
       .contractDetailCard .playerContractTeamLink:hover,
       .contractDetailCard .playerContractTeamLink:focus-visible {
         text-decoration: underline !important;
-      }
-      .evaluationDiscountRate[data-tooltip]::before,
-      .evaluationDiscountRate[data-tooltip]::after {
-        content: none !important;
-        display: none !important;
-      }
-      .evaluationDiscountTooltipPortal {
-        position: fixed;
-        z-index: 2147483647;
-        max-width: 320px;
-        padding: 9px 12px;
-        border: 1px solid var(--border-strong);
-        border-radius: 8px;
-        background: var(--surface);
-        color: var(--text);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
-        font-size: 13px;
-        line-height: 1.35;
-        pointer-events: none;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateY(4px);
-        transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms;
-      }
-      .evaluationDiscountTooltipPortal.visible {
-        visibility: visible;
-        opacity: 1;
-        transform: translateY(0);
-        transition: opacity 120ms ease, transform 120ms ease, visibility 0s;
       }
     `;
   }
@@ -78,19 +58,18 @@
     return match ? match.slice(1).map(Number) : null;
   }
 
-  function rebuildVersionUi() {
+  function syncVersionUi() {
     const footer = document.querySelector('.siteFooter a[data-page="changelog"]');
     if (footer) footer.textContent = `MFL Front Office v${VERSION}`;
-    const list = document.querySelector(".changelogList");
-    if (!list || list.dataset.runtimeVersion === VERSION) return;
 
-    const entries = new Map();
+    const list = document.querySelector(".changelogList");
+    if (!list || list.dataset.playerRuntimeVersion === VERSION) return;
+    const entries = new Map([[`v${VERSION}`, RELEASE_DESCRIPTION]]);
     list.querySelectorAll(".changelogPatchList li, .changelogList > li:not(.changelogMinorSection)").forEach((item) => {
       const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
-      if (semver(label)) entries.set(label, String(item.querySelector(":scope > p")?.textContent || "").trim());
-    });
-    releases.forEach(([label, description]) => {
-      if (semver(label)) entries.set(String(label), String(description || ""));
+      if (semver(label) && !entries.has(label)) {
+        entries.set(label, String(item.querySelector(":scope > p")?.textContent || "").trim());
+      }
     });
 
     const groups = new Map();
@@ -113,11 +92,11 @@
         const section = document.createElement("li");
         section.className = "changelogMinorSection";
         if (!index) section.classList.add("is-expanded");
-        const button = document.createElement("button");
-        button.className = "changelogMinorToggle";
-        button.type = "button";
-        button.setAttribute("aria-expanded", !index ? "true" : "false");
-        button.innerHTML = `<span class="changelogMinorVersion">v${minor}</span><span class="changelogMinorMeta">${patches.length} ${patches.length === 1 ? "patch" : "patches"}</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>`;
+        const toggle = document.createElement("button");
+        toggle.className = "changelogMinorToggle";
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", !index ? "true" : "false");
+        toggle.innerHTML = `<span class="changelogMinorVersion">v${minor}</span><span class="changelogMinorMeta">${patches.length} ${patches.length === 1 ? "patch" : "patches"}</span><span class="changelogMinorChevron" aria-hidden="true">&gt;</span>`;
         const panel = document.createElement("div");
         panel.className = "changelogMinorPanel";
         const inner = document.createElement("div");
@@ -135,419 +114,340 @@
         });
         inner.appendChild(patchList);
         panel.appendChild(inner);
-        section.append(button, panel);
-        button.addEventListener("click", () => {
+        section.append(toggle, panel);
+        toggle.addEventListener("click", () => {
           const expanded = section.classList.toggle("is-expanded");
-          button.setAttribute("aria-expanded", expanded ? "true" : "false");
+          toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
         });
         list.appendChild(section);
       });
-    list.dataset.runtimeVersion = VERSION;
+    list.dataset.playerRuntimeVersion = VERSION;
   }
 
-  function asUrl(value) {
-    try {
-      return new URL(String(value || ""), location.href);
-    } catch {
-      return null;
-    }
-  }
-
-  const originalReplaceState = history.replaceState.bind(history);
-  const originalPushState = history.pushState.bind(history);
-
-  function rememberProtectedEvaluationRoute(url) {
-    if (!url || url.pathname !== "/evaluation") {
-      protectedEvaluationRoute = "";
-      return;
-    }
-    protectedEvaluationRoute = url.searchParams.get("player") || url.searchParams.get("share")
-      ? `${url.pathname}${url.search}`
-      : "";
-  }
-
-  function installHistoryGuards() {
-    if (history.replaceState.__mflEvaluationGuard) return;
-    history.replaceState = function guardedReplaceState(stateValue, title, urlValue) {
-      const target = urlValue == null ? null : asUrl(urlValue);
-      if (protectedEvaluationRoute && target?.pathname === "/evaluation") {
-        const protectedUrl = asUrl(protectedEvaluationRoute);
-        const stripsPlayer = protectedUrl?.searchParams.get("player") && !target.searchParams.get("player");
-        const stripsShare = protectedUrl?.searchParams.get("share") && !target.searchParams.get("share");
-        if (stripsPlayer || stripsShare) return originalReplaceState(stateValue, title, protectedEvaluationRoute);
-      }
-      rememberProtectedEvaluationRoute(target);
-      return originalReplaceState(stateValue, title, urlValue);
-    };
-    history.replaceState.__mflEvaluationGuard = true;
-    history.pushState = function guardedPushState(stateValue, title, urlValue) {
-      const target = urlValue == null ? null : asUrl(urlValue);
-      rememberProtectedEvaluationRoute(target);
-      return originalPushState(stateValue, title, urlValue);
-    };
-    history.pushState.__mflEvaluationGuard = true;
-  }
-
-  function evaluationHasSelection() {
-    if (document.body.dataset.page !== "evaluation" && location.pathname !== "/evaluation") return false;
-    try {
-      if (typeof state === "object" && state && String(state.evaluationPlayerId || "").trim()) return true;
-    } catch {
-      // URL and rendered state remain available.
-    }
-    const params = new URLSearchParams(location.search);
-    if (params.get("player") || params.get("share") || params.get("saved")) return true;
-    const panel = document.getElementById("evaluationPanel");
-    return Boolean(panel && !panel.hidden);
-  }
-
-  function hasOptIn() {
-    try {
-      return typeof hasWalletOptIn === "function" && hasWalletOptIn();
-    } catch {
-      return false;
-    }
-  }
-
-  function syncEvaluationShell() {
-    const active = location.pathname === "/evaluation" || document.body.dataset.page === "evaluation";
-    if (!active) return;
-    const params = new URLSearchParams(location.search);
-    const routeHasSelection = Boolean(params.get("player") || params.get("share") || params.get("saved"));
-    document.body.classList.toggle("evaluationPlayerRoute", Boolean(params.get("player")));
-    document.body.classList.add("evaluationRouteResolved", "evaluationPageReady");
-    const page = document.getElementById("evaluationPage");
-    if (page) page.style.setProperty("visibility", "visible", "important");
-    const loadButton = document.getElementById("evaluationLoadButton");
-    if (loadButton) {
-      const show = hasOptIn() && !routeHasSelection && !evaluationHasSelection();
-      loadButton.hidden = !show;
-      loadButton.toggleAttribute("aria-hidden", !show);
-      if (show) loadButton.style.removeProperty("display");
-    }
-  }
-
-  function installEvaluationClearRoute() {
-    if (document.__mflEvaluationClearRoute) return;
-    document.__mflEvaluationClearRoute = true;
-    document.addEventListener("pointerdown", (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest("#evaluationSearchClearButton")) return;
-      protectedEvaluationRoute = "";
-      if (location.pathname === "/evaluation") originalPushState(history.state, "", "/evaluation");
-    }, true);
-  }
-
-  function installEvaluationFocusGuard() {
-    const input = document.getElementById("evaluationSearchInput");
-    if (!input || input.__mflSelectionFocusGuard) return;
-    const originalFocus = input.focus;
-    input.focus = function guardedEvaluationFocus(...args) {
-      if (evaluationHasSelection()) return;
-      return originalFocus.apply(this, args);
-    };
-    input.__mflSelectionFocusGuard = true;
-  }
-
-  async function ensureEvaluationPlayerRow(playerId) {
-    const id = String(playerId || "").trim();
-    if (!id || typeof rowByPlayerId !== "function") return false;
-    if (rowByPlayerId(id)) return true;
-    if (evaluationPlayerLoadPromise) return evaluationPlayerLoadPromise;
-    evaluationPlayerLoadPromise = (async () => {
-      try {
-        if (typeof requestIncrementalRoute === "function") {
-          await requestIncrementalRoute({
-            pageName: "evaluation",
-            scope: "evaluation",
-            playerId: id,
-            view: "attributes",
-            access: typeof currentDataAccess === "function" ? currentDataAccess("evaluation") : "public",
-          }, 1, { force: true });
-        } else if (typeof window.mflLoadIncrementalRoutePage === "function") {
-          await window.mflLoadIncrementalRoutePage("evaluation", { playerId: id });
-        }
-      } catch (error) {
-        console.error("Could not load the requested Evaluation player.", error);
-      } finally {
-        evaluationPlayerLoadPromise = null;
-      }
-      return Boolean(rowByPlayerId(id));
-    })();
-    return evaluationPlayerLoadPromise;
-  }
-
-  function installEvaluationRouteGuards() {
-    if (typeof renderEvaluationPage === "function" && !renderEvaluationPage.__mflRouteGuard) {
-      const originalRender = renderEvaluationPage;
-      renderEvaluationPage = async function guardedEvaluationRender() {
-        const params = new URLSearchParams(location.search);
-        const playerId = String(params.get("player") || "").trim();
-        if (playerId && typeof rowByPlayerId === "function" && !rowByPlayerId(playerId)) {
-          try {
-            if (typeof state === "object" && state) state.evaluationPlayerId = playerId;
-          } catch {
-            // The URL remains authoritative.
-          }
-          await ensureEvaluationPlayerRow(playerId);
-        }
-        if (playerId && typeof state === "object" && state) state.evaluationPlayerId = playerId;
-        return originalRender.apply(this, arguments);
-      };
-      renderEvaluationPage.__mflRouteGuard = true;
-    }
-
-    if (typeof applySharedEvaluationPayload === "function" && !applySharedEvaluationPayload.__mflRouteGuard) {
-      const originalApply = applySharedEvaluationPayload;
-      applySharedEvaluationPayload = function guardedSharedPayload(data) {
-        const playerId = String(data?.playerId || data?.player_id || "").trim();
-        if (playerId && typeof rowByPlayerId === "function" && !rowByPlayerId(playerId)) {
-          void ensureEvaluationPlayerRow(playerId).then(() => originalApply.call(this, data));
-          return;
-        }
-        return originalApply.apply(this, arguments);
-      };
-      applySharedEvaluationPayload.__mflRouteGuard = true;
-    }
-
-    if (typeof resetInvalidEvaluationLinkToPlainEvaluation === "function"
-        && !resetInvalidEvaluationLinkToPlainEvaluation.__mflRouteGuard) {
-      const originalReset = resetInvalidEvaluationLinkToPlainEvaluation;
-      resetInvalidEvaluationLinkToPlainEvaluation = function guardedInvalidEvaluationReset() {
-        if (new URLSearchParams(location.search).get("share")) return false;
-        return originalReset.apply(this, arguments);
-      };
-      resetInvalidEvaluationLinkToPlainEvaluation.__mflRouteGuard = true;
-    }
-
-    if (protectedEvaluationRoute && location.pathname === "/evaluation"
-        && `${location.pathname}${location.search}` !== protectedEvaluationRoute) {
-      originalReplaceState(history.state, "", protectedEvaluationRoute);
-    }
-  }
-
-  function installPublicShareLoader() {
-    if (typeof loadSharedEvaluation !== "function" || loadSharedEvaluation.__mflPublicViewer) return;
-    const originalLoad = loadSharedEvaluation;
-    loadSharedEvaluation = async function publicSharedEvaluation(shareId) {
-      if (hasOptIn()) return originalLoad.apply(this, arguments);
-      const id = String(shareId || "").trim();
-      if (!id || (typeof state === "object" && state?.evaluationShareLoading)) return;
-      if (typeof state === "object" && state) state.evaluationShareLoading = true;
-      try {
-        const response = await fetch(`/api/evaluation-share?id=${encodeURIComponent(id)}`, { cache: "no-store" });
-        if (!response.ok) throw new Error("Share not found.");
-        const data = await response.json();
-        const playerId = String(data?.payload?.playerId || data?.playerId || "").trim();
-        await ensureEvaluationPlayerRow(playerId);
-        if (typeof state === "object" && state) state.evaluationShareId = id;
-        if (typeof applySharedEvaluationPayload === "function") applySharedEvaluationPayload(data.payload);
-      } catch (error) {
-        console.error("Could not load public Evaluation share.", error);
-        if (typeof showToast === "function") showToast("Shared evaluation has expired or could not be loaded.");
-      } finally {
-        if (typeof state === "object" && state) state.evaluationShareLoading = false;
-      }
-    };
-    loadSharedEvaluation.__mflPublicViewer = true;
-  }
-
-  function loadPendingPublicShare() {
-    if (document.body.dataset.page !== "evaluation" || hasOptIn()) return;
-    const shareId = String(new URLSearchParams(location.search).get("share") || "").trim();
-    if (!shareId || (typeof state === "object" && (state.evaluationShareId === shareId || state.evaluationShareLoading))) return;
-    void loadSharedEvaluation(shareId);
-  }
-
-  function positionDiscountTooltip() {
-    if (!discountTooltip || !discountTooltipTarget) return;
-    const target = discountTooltipTarget.getBoundingClientRect();
-    discountTooltip.style.left = "0px";
-    discountTooltip.style.top = "0px";
-    const rect = discountTooltip.getBoundingClientRect();
-    const margin = 8;
-    const gap = 10;
-    const left = Math.max(margin, Math.min(target.left + target.width / 2 - rect.width / 2, innerWidth - rect.width - margin));
-    const top = target.top - rect.height - gap;
-    discountTooltip.style.left = `${Math.round(left)}px`;
-    discountTooltip.style.top = `${Math.round(top)}px`;
-  }
-
-  function installDiscountTooltip() {
-    const box = document.querySelector(".evaluationDiscountRate[data-tooltip]");
-    if (!box || box.__mflDiscountTooltip) return;
-    box.__mflDiscountTooltip = true;
-    if (!discountTooltip) {
-      discountTooltip = document.createElement("div");
-      discountTooltip.className = "evaluationDiscountTooltipPortal";
-      document.body.appendChild(discountTooltip);
-    }
-    const show = () => {
-      discountTooltipTarget = box;
-      discountTooltip.textContent = String(box.dataset.tooltip || "");
-      positionDiscountTooltip();
-      requestAnimationFrame(() => discountTooltip.classList.add("visible"));
-    };
-    const hide = () => discountTooltip.classList.remove("visible");
-    box.addEventListener("mouseenter", show);
-    box.addEventListener("mouseleave", hide);
-    box.addEventListener("focusin", show);
-    box.addEventListener("focusout", hide);
+  function cleanPath() {
+    return String(location.pathname || "/").replace(/\/+$/, "") || "/";
   }
 
   function currentPlayerId() {
-    try {
-      if (typeof playerIdFromUrl === "function") return String(playerIdFromUrl() || "").trim();
-    } catch {
-      // Path fallback remains available.
-    }
-    const match = location.pathname.match(/^\/players?\/([^/]+)/i);
+    const match = cleanPath().match(/^\/players?\/([^/]+)$/i);
     return match ? decodeURIComponent(match[1]) : "";
   }
 
-  function currentPlayerRow(playerId) {
+  function rowForPlayer(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return null;
     try {
-      return playerId && typeof rowByPlayerId === "function" ? rowByPlayerId(playerId) : null;
+      if (typeof rowByPlayerId === "function") return rowByPlayerId(id);
+      if (typeof state === "object" && Array.isArray(state?.rows) && Array.isArray(state?.columns)) {
+        const index = state.columns.indexOf("player_id");
+        return index >= 0 ? state.rows.find((row) => String(row[index]) === id) : null;
+      }
     } catch {
       return null;
     }
+    return null;
   }
 
-  function appDataBusy() {
-    let incrementalApplying = false;
+  function appBusy() {
     try {
-      incrementalApplying = Boolean(typeof state === "object" && state?.incrementalApplying);
+      if (typeof state === "object" && state) {
+        if (state.incrementalApplying || state.interactionBusyDepth > 0 || state.dataLoadPromise) return true;
+        if (state.incrementalRequestPromises instanceof Map && state.incrementalRequestPromises.size > 0) return true;
+      }
     } catch {
-      incrementalApplying = false;
+      // DOM state remains available.
     }
-    return incrementalApplying
-      || document.documentElement.classList.contains("bootPending")
+    return document.documentElement.classList.contains("bootPending")
       || document.documentElement.classList.contains("appBusy")
       || document.body.classList.contains("booting")
       || document.body.classList.contains("loading")
-      || document.body.classList.contains("appBusy");
+      || document.body.classList.contains("appBusy")
+      || document.body.classList.contains("tableRowsLoading");
   }
 
-  function suppressTransientPlayerNotFound() {
-    const playerId = currentPlayerId();
-    const playerRoute = Boolean(playerId && (document.body.dataset.page === "player" || /^\/players?\//i.test(location.pathname)));
-    if (!playerRoute) {
-      playerRouteKey = "";
-      playerRouteStartedAt = 0;
-      return;
-    }
-    if (playerRouteKey !== playerId) {
-      playerRouteKey = playerId;
-      playerRouteStartedAt = Date.now();
-    }
+  function playerStillLoading(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id || rowForPlayer(id)) return false;
+    if (pendingPlayerRequests.has(id)) return true;
+    if (completedPlayerRequests.has(id)) return false;
+    if (appBusy()) return true;
+    return id === playerRouteId && Date.now() - playerRouteStartedAt < 3500;
+  }
+
+  function markLoading() {
+    document.body.classList.add("playerRouteLoading");
+    document.body.classList.remove("playerRouteSettled", "playerRouteGuardReady");
     const detail = document.getElementById("playerDetail");
     if (!detail) return;
-    const row = currentPlayerRow(playerId);
-    if (row) {
-      if (!detail.querySelector(".playerHero") && typeof renderPlayerPage === "function") renderPlayerPage(playerId);
-      return;
-    }
-    const gracePeriod = Date.now() - playerRouteStartedAt < 3500;
-    if (appDataBusy() || gracePeriod) {
-      const text = String(detail.textContent || "").trim();
-      if (!/loading player/i.test(text)) detail.innerHTML = '<div class="emptyState">Loading player...</div>';
+    const text = String(detail.textContent || "").trim();
+    if (!detail.children.length || /not found|loading player/i.test(text)) {
+      detail.innerHTML = '<div class="emptyState">Loading player...</div>';
     }
   }
 
-  function resolveClubId(row, teamName) {
+  function markSettled() {
+    document.body.classList.remove("playerRouteLoading");
+    document.body.classList.add("playerRouteSettled", "playerRouteGuardReady");
+  }
+
+  function installRequestHook() {
+    if (requestHookInstalled || typeof requestIncrementalRoute !== "function") return;
+    const originalRequest = requestIncrementalRoute;
+    requestIncrementalRoute = async function trackedPlayerRequest(route) {
+      const playerId = String(route?.scope === "player" ? route.playerId || currentPlayerId() : "").trim();
+      if (playerId) {
+        pendingPlayerRequests.add(playerId);
+        completedPlayerRequests.delete(playerId);
+        playerRouteId = playerId;
+        playerRouteStartedAt = Date.now();
+        markLoading();
+      }
+      try {
+        return await originalRequest.apply(this, arguments);
+      } finally {
+        if (playerId) {
+          pendingPlayerRequests.delete(playerId);
+          completedPlayerRequests.add(playerId);
+          schedule();
+        }
+      }
+    };
+    requestIncrementalRoute.__mflPlayerRequestGuard = true;
+    requestHookInstalled = true;
+  }
+
+  function installRenderHook() {
+    if (renderHookInstalled || typeof renderPlayerPage !== "function") return;
+    const originalRender = renderPlayerPage;
+    renderPlayerPage = function guardedPlayerRender(playerId) {
+      const id = String(playerId || currentPlayerId() || "").trim();
+      if (id && !rowForPlayer(id) && playerStillLoading(id)) {
+        markLoading();
+        return undefined;
+      }
+      const result = originalRender.apply(this, arguments);
+      queueMicrotask(syncPlayerRoute);
+      requestAnimationFrame(syncPlayerRoute);
+      return result;
+    };
+    renderPlayerPage.__mflPlayerLifecycleGuard = true;
+    renderHookInstalled = true;
+  }
+
+  function clubIdFromRow(row) {
+    if (!row) return "";
     try {
-      if (row && typeof getValue === "function") {
-        for (const column of clubIdColumns) {
-          const id = String(getValue(row, column) || "").trim();
-          if (id) return id;
+      if (typeof getValue === "function") {
+        for (const column of CLUB_ID_COLUMNS) {
+          const value = String(getValue(row, column) || "").trim();
+          if (value) return value;
+        }
+      }
+      if (typeof state === "object" && Array.isArray(state?.columns)) {
+        for (const column of CLUB_ID_COLUMNS) {
+          const index = state.columns.indexOf(column);
+          const value = index >= 0 ? String(row[index] || "").trim() : "";
+          if (value) return value;
         }
       }
     } catch {
-      // Search indexes remain available below.
+      return "";
     }
+    return "";
+  }
+
+  function clubIdFromIndexes(teamName) {
     const normalized = String(teamName || "").trim().toLowerCase();
+    if (!normalized) return "";
     try {
-      const indexed = [
+      const clubs = [
         ...(Array.isArray(state?.clubSearchIndex) ? state.clubSearchIndex : []),
         ...(Array.isArray(state?.bootstrapData?.clubs) ? state.bootstrapData.clubs : []),
-      ].find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
-      return String(indexed?.clubId || "").trim();
+      ];
+      const match = clubs.find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
+      return String(match?.clubId || "").trim();
     } catch {
       return "";
     }
   }
 
-  function makePlayerTeamClickable() {
+  function loadBootstrapClubs() {
+    if (bootstrapClubsPromise) return bootstrapClubsPromise;
+    bootstrapClubsPromise = new Promise((resolve) => {
+      const request = new XMLHttpRequest();
+      request.open("GET", `/api/data?mode=bootstrap&v=${encodeURIComponent(VERSION)}`, true);
+      request.timeout = 6000;
+      request.onload = () => {
+        try {
+          const value = JSON.parse(request.responseText || "{}");
+          resolve(Array.isArray(value?.clubs) ? value.clubs : []);
+        } catch {
+          resolve([]);
+        }
+      };
+      request.onerror = () => resolve([]);
+      request.ontimeout = () => resolve([]);
+      request.send(null);
+    }).finally(() => {
+      bootstrapClubsPromise = null;
+    });
+    return bootstrapClubsPromise;
+  }
+
+  async function resolveClubId(teamName, playerId) {
+    let clubId = clubIdFromRow(rowForPlayer(playerId)) || clubIdFromIndexes(teamName);
+    if (clubId) return clubId;
+    const clubs = await loadBootstrapClubs();
+    const normalized = String(teamName || "").trim().toLowerCase();
+    const match = clubs.find((club) => String(club?.name || "").trim().toLowerCase() === normalized);
+    return String(match?.clubId || "").trim();
+  }
+
+  function makeContractLink() {
     const playerId = currentPlayerId();
-    if (!playerId || (document.body.dataset.page !== "player" && !/^\/players?\//i.test(location.pathname))) return false;
-    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam");
+    if (!playerId || !rowForPlayer(playerId)) return false;
+    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
     if (!team) return false;
-    if (team.tagName === "A") return true;
     const teamName = String(team.textContent || "").trim();
     if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
-    const row = currentPlayerRow(playerId);
-    const clubId = resolveClubId(row, teamName);
-    if (!clubId) return false;
-    const link = document.createElement("a");
-    link.className = `${team.className} clubPageLink playerContractTeamLink`;
-    link.textContent = teamName;
-    link.href = `/clubs/${encodeURIComponent(clubId)}/attributes`;
-    link.addEventListener("click", (event) => {
-      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
-      if (typeof window.mflOpenClubPage === "function") {
-        event.preventDefault();
-        window.mflOpenClubPage(clubId, "attributes");
+    const immediateClubId = clubIdFromRow(rowForPlayer(playerId)) || clubIdFromIndexes(teamName);
+
+    if (team instanceof HTMLAnchorElement && team.dataset.playerContractVersion === VERSION) {
+      if (immediateClubId && !team.dataset.clubId) {
+        team.dataset.clubId = immediateClubId;
+        team.href = `/clubs/${encodeURIComponent(immediateClubId)}/attributes`;
       }
-    });
+      return true;
+    }
+
+    const link = document.createElement("a");
+    link.className = `${String(team.className || "playerContractTeam")} clubPageLink playerContractTeamLink`;
+    link.textContent = teamName;
+    link.dataset.playerContractVersion = VERSION;
+    link.dataset.playerId = playerId;
+    link.dataset.teamName = teamName;
+    link.dataset.clubId = immediateClubId;
+    link.href = immediateClubId ? `/clubs/${encodeURIComponent(immediateClubId)}/attributes` : "#";
     team.replaceWith(link);
     return true;
   }
 
-  function installPlayerRenderHook() {
-    if (typeof renderPlayerPage !== "function" || renderPlayerPage.__mflContractLink) return;
-    const originalRender = renderPlayerPage;
-    renderPlayerPage = function linkedContractPlayerRender() {
-      const result = originalRender.apply(this, arguments);
-      queueMicrotask(makePlayerTeamClickable);
-      requestAnimationFrame(makePlayerTeamClickable);
-      return result;
-    };
-    renderPlayerPage.__mflContractLink = true;
+  function releaseBusyBlocker() {
+    try {
+      if (typeof state === "object" && state && state.interactionBusyDepth > 0) {
+        state.interactionBusyDepth = 0;
+        if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
+      }
+    } catch {
+      // Navigation fallback remains available.
+    }
   }
 
-  function focusEmptyEvaluationSearch() {
-    const page = document.getElementById("evaluationPage");
-    const input = document.getElementById("evaluationSearchInput");
-    const active = document.body.dataset.page === "evaluation" && page && !page.hidden;
-    if (!active || evaluationHasSelection() || !input || appDataBusy()) {
-      if (!active || evaluationHasSelection()) emptyEvaluationFocused = false;
+  function contractLinkFromEvent(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    return target?.closest("#playerDetail .contractDetailCard .playerContractTeamLink") || null;
+  }
+
+  window.addEventListener("pointerdown", (event) => {
+    if (contractLinkFromEvent(event)) releaseBusyBlocker();
+  }, true);
+
+  window.addEventListener("click", (event) => {
+    const link = contractLinkFromEvent(event);
+    if (!link) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button === 1) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    releaseBusyBlocker();
+    void (async () => {
+      const playerId = String(link.dataset.playerId || currentPlayerId() || "").trim();
+      const teamName = String(link.dataset.teamName || link.textContent || "").trim();
+      const clubId = String(link.dataset.clubId || "").trim() || await resolveClubId(teamName, playerId);
+      if (!clubId) {
+        if (typeof showToast === "function") showToast("Club page could not be loaded.");
+        return;
+      }
+      link.dataset.clubId = clubId;
+      link.href = `/clubs/${encodeURIComponent(clubId)}/attributes`;
+      if (typeof window.mflOpenClubPage === "function") window.mflOpenClubPage(clubId, "attributes");
+      else location.assign(link.href);
+    })();
+  }, true);
+
+  function syncPlayerRoute() {
+    const playerId = currentPlayerId();
+    if (!playerId) {
+      playerRouteId = "";
+      playerRouteStartedAt = 0;
+      document.body.classList.remove("playerRouteLoading", "playerRouteSettled", "playerRouteGuardReady");
       return;
     }
-    if (emptyEvaluationFocused) return;
-    emptyEvaluationFocused = true;
-    requestAnimationFrame(() => {
-      if (document.body.dataset.page === "evaluation" && !evaluationHasSelection()) input.focus({ preventScroll: true });
-    });
+    if (playerRouteId !== playerId) {
+      playerRouteId = playerId;
+      playerRouteStartedAt = Date.now();
+      completedPlayerRequests.delete(playerId);
+    }
+
+    const row = rowForPlayer(playerId);
+    if (row) {
+      markSettled();
+      const detail = document.getElementById("playerDetail");
+      const text = String(detail?.textContent || "").trim();
+      if (detail && (!detail.querySelector(".playerHero") || /not found|loading player/i.test(text))
+          && typeof renderPlayerPage === "function") {
+        renderPlayerPage(playerId);
+      }
+      makeContractLink();
+      return;
+    }
+
+    if (playerStillLoading(playerId)) {
+      markLoading();
+      return;
+    }
+
+    markSettled();
+    const detail = document.getElementById("playerDetail");
+    if (detail && /loading player/i.test(String(detail.textContent || "")) && typeof renderPlayerPage === "function") {
+      renderPlayerPage(playerId);
+    }
   }
 
   function maintain() {
     installStyles();
-    rebuildVersionUi();
-    installHistoryGuards();
-    installEvaluationClearRoute();
-    installEvaluationFocusGuard();
-    installEvaluationRouteGuards();
-    installPublicShareLoader();
-    loadPendingPublicShare();
-    installDiscountTooltip();
-    syncEvaluationShell();
-    suppressTransientPlayerNotFound();
-    installPlayerRenderHook();
-    makePlayerTeamClickable();
-    focusEmptyEvaluationSearch();
+    syncVersionUi();
+    installRequestHook();
+    installRenderHook();
+    syncPlayerRoute();
+  }
+
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      maintain();
+    });
+  }
+
+  function startPatch() {
+    maintain();
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-page", "hidden", "inert", "aria-busy"],
+      childList: true,
+      subtree: true,
+    });
+    ["popstate", "hashchange"].forEach((name) => window.addEventListener(name, schedule));
+    [0, 50, 150, 400, 1000, 2000, 3500, 6000].forEach((delay) => setTimeout(maintain, delay));
   }
 
   installStyles();
-  maintain();
-  window.setInterval(maintain, 100);
+  const legacy = document.createElement("script");
+  legacy.src = LEGACY_RUNTIME;
+  legacy.async = false;
+  legacy.addEventListener("load", startPatch, { once: true });
+  legacy.addEventListener("error", startPatch, { once: true });
+  document.head.appendChild(legacy);
 })();
