@@ -1,30 +1,63 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f8fd9ac9eb4cb59367d6595e8c6389477b994548/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1e694270664eaa9d2f4fa0f6d86dbfca0ee0e135/site/styles.css");
 
-/* v1.119.6 - Release table loading when rows render and keep footer navigation native. */
+/* v1.119.7 - Complete Changelog history and keep loading table bottoms square. */
 html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
   pointer-events: auto !important;
-  cursor: pointer !important;
 }
 
-html:not([data-mfl-release-version]) body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office -" !important;
+html[data-mfl-release-version="1.119.7"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+  content: "MFL Front Office v1.119.7" !important;
   display: inline !important;
   font-size: 14px !important;
 }
 
-html[data-mfl-release-version="1.119.6"] body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.6" !important;
-  display: inline !important;
-  font-size: 14px !important;
+body[data-page="changelog"] .siteFooter a[href="/changelog"],
+html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
+  cursor: default !important;
 }
 
 html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
-  .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
-  .mflTableDataLoading)
-  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
+  :is(
+    .tableShell,
+    .tableScroller,
+    .tableHeader,
+    .tableHeaderRow,
+    #tableHead,
+    #tableHeader,
+    table,
+    table thead,
+    table thead tr,
+    table thead th,
+    table thead th:first-child,
+    table thead th:last-child
+  ),
+body:is(
+    .booting,
+    .loading,
+    .appBusy,
+    .tableRowsLoading,
+    .tableLayoutPending,
+    .clubViewLoading,
+    .clubViewSwitching,
+    .mflStatsLoading,
+    .mflStatsStableLoading,
+    .mflTableDataLoading
+  )
+  :is(
+    .tableShell,
+    .tableScroller,
+    .tableHeader,
+    .tableHeaderRow,
+    #tableHead,
+    #tableHeader,
+    table,
+    table thead,
+    table thead tr,
+    table thead th,
+    table thead th:first-child,
+    table thead th:last-child
+  ) {
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
