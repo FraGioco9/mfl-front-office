@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.32";
+const APP_VERSION = "1.118.33";
 const APP_RELEASES = [
+  ["v1.118.33", "Preserve native MFL Stats filters, keep the loading cursor, and link player contract teams"],
   ["v1.118.32", "Make player contract teams native links and restore MFL Stats filter clicks"],
   ["v1.118.31", "Remove the legacy Evaluation rate, stabilize Stats filters, and link player contracts"],
   ["v1.118.30", "Remove the legacy Evaluation rate, link player contracts, and restore MFL Stats controls"],
@@ -128,13 +129,7 @@ async function loadRatios(request) {
 }
 
 function loaderScript() {
-  const payload = JSON.stringify({
-    version: APP_VERSION,
-    releases: APP_RELEASES,
-    rows: [],
-    warning: "",
-  });
-
+  const payload = JSON.stringify({ version: APP_VERSION, releases: APP_RELEASES, rows: [], warning: "" });
   const criticalCss = `
     .siteFooter a[data-page="changelog"] { font-size: 0 !important; }
     .siteFooter a[data-page="changelog"]::before {
@@ -174,9 +169,7 @@ function loaderScript() {
       pointer-events: auto !important;
     }
     html.mflEvaluationInitialStateReady:not(.mflEvaluationInitialLoadVisible) #evaluationLoadButton,
-    body.evaluationPlayerRoute #evaluationLoadButton {
-      display: none !important;
-    }
+    body.evaluationPlayerRoute #evaluationLoadButton { display: none !important; }
 
     html.mflStatsStableLoading,
     html.mflStatsStableLoading *,
@@ -216,13 +209,7 @@ function loaderScript() {
   window.__mflSeasonRatioPayload = ${payload};
 
   const FILTER_SELECTOR = "#mflStatsOverallFilters .mflStatsFilterButton";
-  const FILTER_IDS = new Map([
-    ["All", "all"], ["90-94", "90-94"], ["Legendary", "legendary"],
-    ["85-89", "85-89"], ["80-84", "80-84"], ["Rare", "rare"],
-    ["75-79", "75-79"], ["70-74", "70-74"], ["Uncommon", "uncommon"],
-    ["65-69", "65-69"], ["60-64", "60-64"], ["Limited", "limited"],
-    ["55-59", "55-59"], ["50-54", "50-54"], ["Common", "common"],
-  ]);
+  const BUSY_EVENTS = ["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"];
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
 
   let evaluationRequestStarted = false;
@@ -231,6 +218,9 @@ function loaderScript() {
   let evaluationController = null;
   let maintainQueued = false;
   let bootstrapClubsPromise = null;
+  let statsRendererWrapped = false;
+  let statsBlockerWrapped = false;
+  let playerRendererWrapped = false;
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\\/+$/, "") || "/";
@@ -395,17 +385,84 @@ function loaderScript() {
       .finally(() => clearTimeout(timeout));
   }
 
-  function statsFilterId(button) {
-    const label = String(button?.textContent || "").trim();
+  function statsFilterTarget(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    return target?.closest(FILTER_SELECTOR) || null;
+  }
+
+  function syncNativeStatsButtons() {
+    if (!isStatsRoute()) return;
+    let activeId = "all";
     try {
-      if (typeof mflStatsOverallFilterOptions !== "undefined") {
-        const option = mflStatsOverallFilterOptions.find((item) => String(item?.label || "").trim() === label);
-        if (option?.id) return option.id;
-      }
+      if (typeof state === "object" && state?.mflStatsOverallFilter) activeId = state.mflStatsOverallFilter;
     } catch {
-      // Static mapping remains available.
+      activeId = "all";
     }
-    return FILTER_IDS.get(label) || "";
+    document.querySelectorAll(FILTER_SELECTOR).forEach((button) => {
+      button.disabled = false;
+      button.removeAttribute("disabled");
+      button.removeAttribute("aria-disabled");
+      button.style.pointerEvents = "auto";
+      try {
+        if (typeof mflStatsOverallFilterOptions !== "undefined") {
+          const option = mflStatsOverallFilterOptions.find((item) => (
+            String(item?.label || "").trim() === String(button.textContent || "").trim()
+          ));
+          if (option?.id) button.classList.toggle("active", option.id === activeId);
+        }
+      } catch {
+        // Native render state remains available.
+      }
+    });
+  }
+
+  function installStatsRendererGuard() {
+    if (statsRendererWrapped || typeof renderMflStatsFilterButtons !== "function") return;
+    const originalRender = renderMflStatsFilterButtons;
+    renderMflStatsFilterButtons = function stableMflStatsFilterButtons() {
+      const filters = document.getElementById("mflStatsOverallFilters");
+      if (filters?.querySelector(".mflStatsFilterButton")) {
+        syncNativeStatsButtons();
+        return;
+      }
+      const result = originalRender.apply(this, arguments);
+      queueMicrotask(syncNativeStatsButtons);
+      return result;
+    };
+    renderMflStatsFilterButtons.__mflStableRenderer = true;
+    statsRendererWrapped = true;
+  }
+
+  function installStatsBusyBypass() {
+    if (statsBlockerWrapped || typeof blockInteractionWhileBusy !== "function") return;
+    const originalBlocker = blockInteractionWhileBusy;
+    BUSY_EVENTS.forEach((eventName) => document.removeEventListener(eventName, originalBlocker, true));
+    const replacement = (event) => {
+      if (isStatsRoute() && statsFilterTarget(event)) return;
+      originalBlocker(event);
+    };
+    BUSY_EVENTS.forEach((eventName) => document.addEventListener(eventName, replacement, true));
+    blockInteractionWhileBusy.__mflStatsBypass = true;
+    statsBlockerWrapped = true;
+  }
+
+  function statsDataReady() {
+    if (!isStatsRoute()) return false;
+    const page = document.getElementById("mflStatsPage");
+    const filters = document.getElementById("mflStatsOverallFilters");
+    if (!page || page.hidden || !filters?.querySelector(".mflStatsFilterButton")) return false;
+    const loadingMessage = Array.from(page.querySelectorAll(".mflStatsEmpty"))
+      .some((element) => /loading/i.test(String(element.textContent || "")));
+    const total = String(document.getElementById("mflStatsTotalPlayers")?.textContent || "")
+      .replace(/,/g, "")
+      .trim();
+    let incrementalApplying = false;
+    try {
+      incrementalApplying = Boolean(typeof state === "object" && state?.incrementalApplying);
+    } catch {
+      incrementalApplying = false;
+    }
+    return !loadingMessage && !incrementalApplying && total !== "" && Number.isFinite(Number(total));
   }
 
   function clearInert(element) {
@@ -414,125 +471,61 @@ function loaderScript() {
     element.removeAttribute("inert");
   }
 
-  function unlockStats() {
-    if (!isStatsRoute()) return;
+  function releaseStatsWhenReady() {
+    if (!statsDataReady()) return false;
     try {
       if (typeof state === "object" && state) state.interactionBusyDepth = 0;
+      if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
     } catch {
       // DOM cleanup remains authoritative.
     }
-    document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending", "mflStatsLoading");
+    document.documentElement.classList.remove("appBusy", "loading", "bootPending", "table-layout-pending");
     document.body?.classList.remove(
       "appBusy", "loading", "booting", "tableRowsLoading", "tableLayoutPending",
-      "clubViewLoading", "clubViewSwitching", "mflStatsLoading",
+      "clubViewLoading", "clubViewSwitching",
     );
     document.documentElement.classList.add("mflStatsNativeReady");
     document.body?.classList.add("mflStatsInteractive", "mflStatsNativeReady");
     document.body?.setAttribute("aria-busy", "false");
-
-    const page = document.getElementById("mflStatsPage");
     const filters = document.getElementById("mflStatsOverallFilters");
     for (let element = filters; element; element = element.parentElement) clearInert(element);
-    [document.body, document.getElementById("appShell"), document.querySelector("main"), page, filters]
+    [document.body, document.getElementById("appShell"), document.querySelector("main"), document.getElementById("mflStatsPage")]
       .forEach(clearInert);
-    page?.querySelectorAll("[inert]").forEach(clearInert);
-
+    document.getElementById("mflStatsPage")?.querySelectorAll("[inert]").forEach(clearInert);
     const loadingScreen = document.getElementById("loadingScreen");
     if (loadingScreen) {
       loadingScreen.hidden = true;
       loadingScreen.setAttribute("aria-hidden", "true");
       loadingScreen.style.pointerEvents = "none";
     }
+    syncNativeStatsButtons();
+    return true;
   }
 
-  function applyStatsFilter(button) {
-    const filterId = statsFilterId(button);
-    if (!filterId) return false;
-    unlockStats();
-    try {
-      if (typeof state !== "object" || !state || typeof renderMflStatsPage !== "function") return false;
-      state.interactionBusyDepth = 0;
-      state.mflStatsOverallFilter = filterId;
-      document.querySelectorAll(FILTER_SELECTOR).forEach((candidate) => {
-        candidate.classList.toggle("active", String(candidate.textContent || "").trim() === String(button.textContent || "").trim());
-      });
-      renderMflStatsPage();
-      queueMicrotask(bindStatsButtons);
-      requestAnimationFrame(bindStatsButtons);
-      return true;
-    } catch (error) {
-      console.error("Could not apply the MFL Stats filter.", error);
-      return false;
+  function syncStatsLoading() {
+    const active = isStatsRoute();
+    const loading = active && !statsDataReady();
+    document.documentElement.classList.toggle("mflStatsStableLoading", loading);
+    document.body?.classList.toggle("mflStatsStableLoading", loading);
+    if (!active) {
+      document.documentElement.classList.remove("mflStatsNativeReady");
+      document.body?.classList.remove("mflStatsNativeReady", "mflStatsInteractive");
+      return;
     }
+    if (!loading) releaseStatsWhenReady();
   }
 
-  function bindStatsButton(button) {
-    if (!(button instanceof HTMLButtonElement)) return;
-    button.disabled = false;
-    button.removeAttribute("disabled");
-    button.removeAttribute("aria-disabled");
-    button.style.pointerEvents = "auto";
-    if (button.dataset.mflNativeFilter === VERSION) return;
-
-    const clone = button.cloneNode(true);
-    clone.disabled = false;
-    clone.removeAttribute("disabled");
-    clone.removeAttribute("aria-disabled");
-    clone.dataset.mflNativeFilter = VERSION;
-    clone.style.pointerEvents = "auto";
-    clone.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      applyStatsFilter(clone);
+  ["pointerdown", "mousedown", "click"].forEach((eventName) => {
+    window.addEventListener(eventName, (event) => {
+      if (!isStatsRoute() || !statsFilterTarget(event) || !statsDataReady()) return;
+      try {
+        if (typeof state === "object" && state) state.interactionBusyDepth = 0;
+        if (typeof syncInteractionBusyState === "function") syncInteractionBusyState();
+      } catch {
+        // The document blocker replacement still permits the event.
+      }
     }, true);
-    clone.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      applyStatsFilter(clone);
-    }, true);
-    clone.addEventListener("keydown", (event) => {
-      if (!["Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      applyStatsFilter(clone);
-    }, true);
-    button.replaceWith(clone);
-  }
-
-  function bindStatsButtons() {
-    if (!isStatsRoute()) return;
-    unlockStats();
-    document.querySelectorAll(FILTER_SELECTOR).forEach(bindStatsButton);
-    document.documentElement.classList.remove("mflStatsStableLoading");
-    document.body?.classList.remove("mflStatsStableLoading");
-  }
-
-  function statsButtonFromEvent(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    return target?.closest(FILTER_SELECTOR) || null;
-  }
-
-  window.addEventListener("pointerdown", (event) => {
-    const button = statsButtonFromEvent(event);
-    if (!button || !isStatsRoute()) return;
-    unlockStats();
-  }, true);
-
-  window.addEventListener("click", (event) => {
-    const button = statsButtonFromEvent(event);
-    if (!button || !isStatsRoute()) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    applyStatsFilter(button);
-  }, true);
-
-  window.addEventListener("keydown", (event) => {
-    const button = statsButtonFromEvent(event);
-    if (!button || !isStatsRoute() || !["Enter", " "].includes(event.key)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    applyStatsFilter(button);
-  }, true);
+  });
 
   function rowForPlayer(playerId) {
     try {
@@ -618,12 +611,12 @@ function loaderScript() {
 
   function bindPlayerContractLink() {
     const playerId = currentPlayerId();
-    if (!playerId) return;
+    if (!playerId) return false;
     const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam");
-    if (!team) return;
-    if (team.tagName === "A" && team.dataset.mflContractLink === VERSION) return;
+    if (!team) return false;
+    if (team.tagName === "A" && team.dataset.mflContractLink === VERSION) return true;
     const teamName = String(team.textContent || "").trim();
-    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return;
+    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return false;
 
     const immediateClubId = clubIdFromRow(rowForPlayer(playerId)) || clubIdFromIndexes(teamName);
     const link = document.createElement("a");
@@ -654,16 +647,33 @@ function loaderScript() {
       }
     }, true);
     team.replaceWith(link);
+    return true;
+  }
+
+  function installPlayerRendererHook() {
+    if (playerRendererWrapped || typeof renderPlayerPage !== "function") return;
+    const originalRender = renderPlayerPage;
+    renderPlayerPage = function linkedPlayerContractRender() {
+      const result = originalRender.apply(this, arguments);
+      queueMicrotask(bindPlayerContractLink);
+      requestAnimationFrame(bindPlayerContractLink);
+      return result;
+    };
+    renderPlayerPage.__mflContractLink = true;
+    playerRendererWrapped = true;
   }
 
   function maintain() {
     syncVersion();
+    installStatsRendererGuard();
+    installStatsBusyBypass();
+    installPlayerRendererHook();
     if (isEvaluationRoute()) {
       syncEvaluationShell();
       enforceEvaluationRate();
       startEvaluationRequest();
     }
-    if (isStatsRoute()) bindStatsButtons();
+    syncStatsLoading();
     if (currentPlayerId()) bindPlayerContractLink();
   }
 
@@ -681,16 +691,19 @@ function loaderScript() {
     attributes: true,
     attributeFilter: ["class", "data-page", "hidden", "disabled", "inert", "aria-disabled"],
     childList: true,
+    characterData: true,
     subtree: true,
   });
 
   ["popstate", "hashchange", "mfl:season-ratios-ready"].forEach((name) => {
     window.addEventListener(name, scheduleMaintain);
   });
-  document.addEventListener("pointermove", (event) => {
-    if (event.target instanceof Element && event.target.closest(FILTER_SELECTOR)) scheduleMaintain();
-  }, true);
   document.addEventListener("focusin", scheduleMaintain, true);
+
+  if (isStatsRoute()) {
+    document.documentElement.classList.add("mflStatsStableLoading");
+    document.body?.classList.add("mflStatsStableLoading");
+  }
 
   maintain();
   [0, 50, 150, 400, 1000, 2000].forEach((delay) => setTimeout(maintain, delay));
