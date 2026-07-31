@@ -1,29 +1,30 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@fea3914e21e033f2afafdb324b328d7f7be69336/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@f8fd9ac9eb4cb59367d6595e8c6389477b994548/site/styles.css");
 
-/* v1.119.5 - Keep the footer stable and remove loading table bottom rounding. */
-html body .siteFooter.siteFooter a[data-page="changelog"],
+/* v1.119.6 - Release table loading when rows render and keep footer navigation native. */
 html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
 }
 
-html:not(.mflReleaseReady) body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html:not(.mflReleaseReady) body .siteFooter.siteFooter a[href="/changelog"]::before {
+html:not([data-mfl-release-version]) body .siteFooter.siteFooter a[href="/changelog"]::before {
   content: "MFL Front Office -" !important;
   display: inline !important;
   font-size: 14px !important;
 }
 
-html.mflReleaseReady.mflReleaseReady body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html.mflReleaseReady.mflReleaseReady body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.5" !important;
+html[data-mfl-release-version="1.119.6"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+  content: "MFL Front Office v1.119.6" !important;
   display: inline !important;
   font-size: 14px !important;
 }
 
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+  .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+  .mflTableDataLoading)
+  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
@@ -33,7 +34,15 @@ body.mflTableDataLoading #tableBody {
   pointer-events: none !important;
 }
 
+body.mflTableDataLoading #tableBody:has(> tr) {
+  visibility: visible !important;
+}
+
 body.mflTableDataLoading #emptyState {
   display: block !important;
   visibility: visible !important;
+}
+
+body.mflTableDataLoading:has(#tableBody > tr) #emptyState {
+  display: none !important;
 }
