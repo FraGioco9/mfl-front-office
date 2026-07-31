@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc43f22f27558b044e99407f5e6cea0ba4117e2b/site/styles.css");
 
-/* v1.118.20 - Keep tooltips clear of the header and synchronize Evaluation and Stats readiness. */
+/* v1.118.23 - Keep player loading truthful, link contract teams, and reveal the Evaluation shell immediately. */
 html,
 body {
   width: 100%;
@@ -50,7 +50,7 @@ body > .siteFooter {
 }
 
 .siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.118.20";
+  content: "MFL Front Office v1.118.23";
   font-size: 14px;
 }
 
@@ -70,12 +70,21 @@ body > .siteFooter {
 }
 
 html body[data-page="evaluation"] #evaluationPage {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   overflow-x: clip !important;
   overflow-y: visible !important;
 }
 
 body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
-  visibility: hidden !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body[data-page="evaluation"]::after {
+  display: none !important;
+  pointer-events: none !important;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
@@ -128,6 +137,10 @@ html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-t
 html[data-initial-page="evaluation"] body:not(.evaluationRouteResolved) #evaluationLoadButton,
 body.evaluationPlayerRoute #evaluationLoadButton {
   display: none !important;
+}
+
+html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGuardReady) #playerDetail > .emptyState {
+  visibility: hidden !important;
 }
 
 .playerContractTeamLink {
