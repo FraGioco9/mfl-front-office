@@ -6,12 +6,11 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.30";
+        const VERSION = "1.119.29";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
-          ["v1.119.30", "Reuse loaded club views through the native incremental route cache"],
           ["v1.119.29", "Restore loaded club views without loading or rebuilding"],
           ["v1.119.28", "Keep loaded club views available throughout the session"],
           ["v1.119.27", "Keep Changelog geometry stable and restore cached club views instantly"],
@@ -165,7 +164,6 @@
           </style>`;
           const patchMarker = '        const routeStyles = `';
           const releaseShellCall = `(${seedReleaseShell.toString()})(shell, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
-          const clubCacheScript = `<script src="/club-view-cache-runtime.js?v=${VERSION}"><\/script>`;
           const extraSourcePatches = `
         source = source.replace(
           '/styles.css?v=1.117.1',
@@ -174,10 +172,6 @@
         source = source.replace(
           '</head>',
           ${JSON.stringify(`${criticalStyle}</head>`)},
-        );
-        source = source.replace(
-          '</body>',
-          ${JSON.stringify(`${clubCacheScript}</body>`)},
         );
         source = source.replace(
           '          const groups = new Map();',
