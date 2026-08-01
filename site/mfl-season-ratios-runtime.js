@@ -1,36 +1,55 @@
 (() => {
-  const VERSION = "1.119.15";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1ab9b6aeb9836e0f80353c03cbdd648a65880b9c/site/mfl-season-ratios-runtime.js";
+  const VERSION = "1.119.16";
+  const LABEL = `MFL Front Office v${VERSION}`;
+  let footerObserver = null;
+  let documentObserver = null;
 
-  function syncVersion() {
+  function synchronizeFooter() {
     const root = document.documentElement;
-    root.classList.add("mflRelease115Ready");
+    root.classList.add("mflRelease116Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
 
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-    if (footer) {
-      const label = `MFL Front Office v${VERSION}`;
-      footer.textContent = label;
-      footer.setAttribute("href", "/changelog");
-      footer.dataset.releaseLabel = label;
-      footer.setAttribute("aria-label", `${label}, open Changelog`);
-      footer.style.cursor = "pointer";
+    if (!footer) return false;
+
+    if (footer.textContent !== LABEL) footer.textContent = LABEL;
+    if (footer.getAttribute("href") !== "/changelog") footer.setAttribute("href", "/changelog");
+    if (footer.dataset.releaseLabel !== LABEL) footer.dataset.releaseLabel = LABEL;
+    const ariaLabel = `${LABEL}, open Changelog`;
+    if (footer.getAttribute("aria-label") !== ariaLabel) footer.setAttribute("aria-label", ariaLabel);
+    if (footer.style.cursor !== "pointer") footer.style.cursor = "pointer";
+
+    if (!footerObserver) {
+      footerObserver = new MutationObserver(synchronizeFooter);
+      footerObserver.observe(footer, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
     }
+
+    if (documentObserver) {
+      documentObserver.disconnect();
+      documentObserver = null;
+    }
+    return true;
   }
 
-  syncVersion();
+  function startWatching() {
+    if (synchronizeFooter()) return;
+    if (documentObserver) return;
+    documentObserver = new MutationObserver(() => synchronizeFooter());
+    documentObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  startWatching();
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", syncVersion, { once: true });
+    document.addEventListener("DOMContentLoaded", startWatching, { once: true });
   }
-
-  const previous = document.createElement("script");
-  previous.src = PREVIOUS_RUNTIME;
-  previous.async = false;
-  previous.addEventListener("load", () => {
-    syncVersion();
-    [0, 50, 250, 1000, 2500].forEach((delay) => setTimeout(syncVersion, delay));
-  }, { once: true });
-  previous.addEventListener("error", syncVersion, { once: true });
-  document.head.appendChild(previous);
+  [0, 50, 250, 1000, 2500, 5000].forEach((delay) => setTimeout(startWatching, delay));
 })();

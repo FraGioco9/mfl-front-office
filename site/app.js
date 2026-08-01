@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.15";
+  const VERSION = "1.119.16";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -45,7 +45,7 @@
 
   function fail(message) {
     console.error(message);
-    document.documentElement.classList.remove("bootPending", "loading", "appBusy", "table-layout-pending");
+    document.documentElement.classList.remove("bootPending", "loading", "appBusy", "table-layout-pending", "mflInitialChromePreparing");
     document.body?.classList.remove("booting", "loading", "appBusy", "tableLayoutPending");
     const loadingScreen = document.getElementById("loadingScreen");
     if (loadingScreen) loadingScreen.hidden = true;
