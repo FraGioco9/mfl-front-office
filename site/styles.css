@@ -6806,6 +6806,8 @@ html.mflInitialChromePreparing *::after {
 
 /* v1.119.28 - Keep loaded club views available throughout the session. */
 
+/* v1.119.29 - Restore loaded club views without loading or rebuilding. */
+
 [data-tooltip]::before,
 [data-tooltip]::after,
 [data-note-tooltip]::before,

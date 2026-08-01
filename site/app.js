@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.28";
+  const VERSION = "1.119.29";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -276,8 +276,26 @@ function cachedIncrementalPayload(route, page = 1) {
   if (!route || route.scope === "empty") {
     return null;
   }
+  if (route.scope === "club") {
+    const clubPayload = cachedClubViewPayload(route);
+    if (clubPayload) return clubPayload;
+  }
   return state.incrementalPayloadCache.get(incrementalRequestDetails(route, page).cacheKey) || null;
 }`,
+    );
+    patchedSource = patchedSource.replace(
+      `  const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const cachedPayload = state.incrementalPayloadCache.get(cacheKey);`,
+      `  const dedicatedClubPayload = route.scope === "club" ? cachedClubViewPayload(route) : null;
+  if (dedicatedClubPayload) {
+    applyIncrementalPayload(route, dedicatedClubPayload);
+    state.incrementalLastKey = incrementalRequestDetails(route, page).requestKey;
+    state.incrementalLastLoadedAt = Date.now();
+    return dedicatedClubPayload;
+  }
+
+  const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const cachedPayload = state.incrementalPayloadCache.get(cacheKey);`,
     );
     patchedSource = patchedSource.replace(
       `function applyIncrementalPayload(route, payload) {
@@ -290,18 +308,61 @@ function cachedIncrementalPayload(route, page = 1) {
       '  let activeClubId = "";\n  let openingClub = false;',
       `  let activeClubId = "";
   let openingClub = false;
+  const clubViewRenderCache = new Map();
+
+  function clubViewRenderCacheKey(clubId = activeClubId, view = state.view, access = "") {
+    const resolvedAccess = access || (typeof incrementalRouteTarget === "function"
+      ? incrementalRouteTarget("club", { view })?.access
+      : "public") || "public";
+    return String(clubId || "") + ":" + String(view || "attributes") + ":" + String(resolvedAccess);
+  }
+
+  function cloneClubRows(rows) {
+    return rows.map((row) => Array.isArray(row)
+      ? [...row]
+      : row && typeof row === "object"
+        ? { ...row }
+        : row);
+  }
+
+  function captureClubView(view = state.view) {
+    if (!activeClubId || state.currentPage !== CLUB_PAGE || !state.dataLoaded || !Array.isArray(state.rows)) return;
+    const route = typeof incrementalRouteTarget === "function"
+      ? incrementalRouteTarget("club", { view })
+      : null;
+    if (!route) return;
+    clubViewRenderCache.set(clubViewRenderCacheKey(activeClubId, view, route.access), {
+      route: { ...route },
+      payload: {
+        columns: Array.isArray(state.columns) ? [...state.columns] : [],
+        rows: cloneClubRows(state.rows),
+        page: 1,
+        pageSize: state.pageSize,
+        totalRows: state.incrementalTotalRows,
+        sourceRows: state.incrementalSourceRows,
+        generatedAt: state.manifest?.generated_at || null,
+      },
+    });
+  }
+
   function restoreCachedClubView(view) {
     if (typeof incrementalRouteTarget !== "function"
       || typeof cachedClubViewPayload !== "function"
       || typeof applyIncrementalPayload !== "function") return false;
     const route = incrementalRouteTarget("club", { view });
     if (!route) return false;
-    const payload = cachedClubViewPayload(route);
+    const snapshot = clubViewRenderCache.get(clubViewRenderCacheKey(activeClubId, view, route.access));
+    const payload = snapshot?.payload || cachedClubViewPayload(route);
     if (!payload) return false;
-    applyIncrementalPayload(route, payload);
+    applyIncrementalPayload(snapshot?.route || route, {
+      ...payload,
+      columns: Array.isArray(payload.columns) ? [...payload.columns] : [],
+      rows: Array.isArray(payload.rows) ? cloneClubRows(payload.rows) : [],
+    });
     state.currentPage = CLUB_PAGE;
     state.view = view;
     state.page = 1;
+    state.pageSize = Number(payload.pageSize || state.pageSize);
     state.sortKey = "positions";
     state.sortDirection = "asc";
     if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
@@ -322,6 +383,7 @@ function cachedIncrementalPayload(route, page = 1) {
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
+      captureClubView(nextView);
     } finally {`,
     );
     patchedSource = patchedSource.replace(
@@ -347,6 +409,7 @@ function cachedIncrementalPayload(route, page = 1) {
     })();`,
       `    const nextView = viewButton.dataset.view;
     if (nextView === state.view) return;
+    captureClubView(state.view);
     window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
     state.view = nextView;
     state.page = 1;
@@ -363,6 +426,7 @@ function cachedIncrementalPayload(route, page = 1) {
           if (typeof buildHeader === "function") buildHeader();
           if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
         }
+        captureClubView(nextView);
       } finally {
         await finishClubSwitch();
       }

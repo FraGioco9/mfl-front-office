@@ -1,5 +1,6 @@
-const APP_VERSION = "1.119.28";
+const APP_VERSION = "1.119.29";
 const APP_RELEASES = [
+  ["v1.119.29", "Restore loaded club views without loading or rebuilding"],
   ["v1.119.28", "Keep loaded club views available throughout the session"],
   ["v1.119.27", "Keep Changelog geometry stable and restore cached club views instantly"],
   ["v1.119.26", "Cache club views and stabilize player and refresh rendering"],
