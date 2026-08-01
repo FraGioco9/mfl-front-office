@@ -1,5 +1,6 @@
-const APP_VERSION = "1.119.24";
+const APP_VERSION = "1.119.25";
 const APP_RELEASES = [
+  ["v1.119.25", "Use native footer text and stable first-paint layout"],
   ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
   ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
   ["v1.118.33", "Preserve native MFL Stats filters, keep the loading cursor, and link player contract teams"],
@@ -134,10 +135,6 @@ function loaderScript() {
   const payload = JSON.stringify({ version: APP_VERSION, releases: APP_RELEASES, rows: [], warning: "" });
   const criticalCss = `
     .siteFooter a[data-page="changelog"] { font-size: 14px !important; }
-    .siteFooter a[data-page="changelog"]::before {
-      content: none !important;
-      display: none !important;
-    }
 
     html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #evaluationDiscountRate,
     html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #advancedDiscountRateValue {

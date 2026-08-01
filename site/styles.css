@@ -1,6 +1,6763 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
+:root {
+  color-scheme: light;
+  font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+  --page-bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-muted: #fbfcfe;
+  --color-bg-default-secondary: #fbfcfe;
+  --border: #d9dee7;
+  --border-strong: #c9d1dc;
+  --text: #172026;
+  --text-muted: #5f6b76;
+  --text-soft: #687581;
+  --header-bg: #eef3f7;
+  --row-hover: #f4f8fb;
+  --contracts-cell-hover: #dbe8f1;
+  --primary: #1d5f8a;
+  --primary-hover: #174d70;
+  --danger: #b42318;
+  background: var(--page-bg);
+  color: var(--text);
+}
 
-/* v1.119.24 - Fix player team links, footer label, and refresh alignment. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #101418;
+  --surface: #171d22;
+  --surface-muted: #1d252c;
+  --color-bg-default-secondary: #1d252c;
+  --border: #303b44;
+  --border-strong: #46535e;
+  --text: #e8eef3;
+  --text-muted: #a9b4bd;
+  --text-soft: #8f9ba5;
+  --header-bg: #222b33;
+  --row-hover: #202a32;
+  --contracts-cell-hover: #31404b;
+  --primary: #4aa3df;
+  --primary-hover: #65b5ea;
+  --danger: #ff8a80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+html.loading,
+body.loading,
+body.booting {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  scrollbar-gutter: stable;
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+body.loading .topbar,
+body.loading main,
+body.loading .menuRail,
+body.loading .sidebar,
+body.loading .modalBackdrop,
+body.loading .siteFooter,
+body.booting .topbar,
+body.booting main,
+body.booting .menuRail,
+body.booting .sidebar,
+body.booting .modalBackdrop,
+body.booting .siteFooter {
+  visibility: hidden;
+}
+
+body.walletOptingIn::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  background: transparent;
+  cursor: wait;
+}
+.loadingScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0;
+  padding: 24px;
+  background: var(--page-bg);
+  opacity: 1;
+  transition: opacity 220ms ease;
+}
+
+.loadingScreen[hidden] {
+  display: none;
+}
+
+.loadingBox {
+  width: min(420px, 100%);
+  transition: opacity 220ms ease;
+}
+
+.loadingScreen.leaving {
+  opacity: 0;
+}
+.loadingText {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.loadingBar {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.loadingBarFill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), background 160ms ease;
+  will-change: width;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingBarFill {
+    transition: none;
+  }
+}
+
+.loadingScreen.failed .loadingBarFill {
+  background: #b42318;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(460px, 1fr) minmax(420px, 560px) minmax(460px, 1fr);
+  align-items: center;
+  height: 102px;
+  min-height: 102px;
+  box-sizing: border-box;
+  gap: 24px;
+  padding: 14px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.brandLink {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brandLink:hover {
+  color: var(--primary);
+}
+
+p {
+  margin: 7px 0 0;
+  color: var(--text-muted);
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.searchButton {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, 100%);
+  min-width: 420px;
+  height: 40px;
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text);
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.searchButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.searchButton span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.searchLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.searchShortcut {
+  justify-self: end;
+}
+
+.searchButton .searchEmoji {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.accountMenu {
+  position: relative;
+  width: 124px;
+}
+
+.accountDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: 100%;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--header-bg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+
+.accountDropdown[hidden],
+.accountMenu[hidden] {
+  display: none;
+}
+
+.accountMenu .compactButton,
+.accountDropdownItem {
+  width: 100%;
+}
+
+.accountMenu .compactButton {
+  height: 50px;
+}
+
+.accountDropdownItem {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 0 9px;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountDropdown button.accountDropdownItem {
+  cursor: pointer;
+}
+
+.accountDropdown button.accountDropdownItem:disabled,
+.accountDropdown button.accountDropdownItem:disabled:hover {
+  cursor: default;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.accountSettingsButton:not(:disabled) {
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.accountUserButton:hover:not(:disabled),
+.accountSettingsButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+#linkWalletButton:not(:disabled) {
+  background: transparent;
+  color: #2fbf62;
+}
+
+#linkWalletButton:hover:not(:disabled) {
+  background: var(--row-hover);
+  color: #249b50;
+}
+
+#linkWalletButton.walletOptOut {
+  background: transparent;
+  color: #d84b4b;
+}
+
+#linkWalletButton.walletOptOut:hover {
+  background: var(--row-hover);
+  color: #ff6b6b;
+}
+.accountDropdownItem + .accountDropdownItem {
+  margin-top: 2px;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  width: 100%;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition: width var(--menu-transition, 0ms ease), color 120ms ease;
+}
+
+.menuIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.menuText {
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  max-width: 80px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
+}
+
+.menuButton[hidden] {
+  display: none;
+}
+
+.themeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+body[data-page="home"] .topbar .stats {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stats div {
+  box-sizing: border-box;
+  display: grid;
+  align-content: center;
+  min-width: 116px;
+  height: 50px;
+  padding: 7px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.stats span {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.stats label {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.appShell {
+  --sidebar-offset: 190px;
+  display: block;
+  flex: 1 0 auto;
+  min-height: 0;
+  transition: none;
+}
+
+.appShell.menuAnimating {
+  --menu-transition: 220ms ease;
+}
+
+.appShell.menuClosed {
+  --sidebar-offset: 70px;
+}
+
+.appShell.menuClosed .menuRail {
+  width: 70px;
+  padding-left: 0;
+  padding-right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.menuRail {
+  position: fixed;
+  top: 102px;
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  width: 190px;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 14px 14px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  transition: width var(--menu-transition, 0ms ease);
+}
+
+.menuRail[hidden] {
+  display: none;
+}
+
+.menuRail[hidden] + main {
+  margin-left: 0;
+}
+
+.changelogPage {
+  max-width: 860px;
+  margin: 14px auto 0;
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
+}
+
+.changelogPage h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.changelogPage > p {
+  margin: 0 0 18px;
+  color: var(--text-soft);
+}
+
+.changelogList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changelogMinorSection {
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.changelogMinorSection:hover {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.changelogMinorSection.is-expanded:hover {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.changelogMinorSection.is-expanded {
+  border-color: var(--primary);
+}
+
+.changelogMinorToggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.changelogMinorToggle:hover,
+.changelogMinorToggle:hover:not(:disabled) {
+  background: transparent;
+}
+
+.changelogMinorSection.is-expanded > .changelogMinorToggle {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.changelogMinorSection.is-expanded > .changelogMinorToggle:hover,
+.changelogMinorSection.is-expanded > .changelogMinorToggle:hover:not(:disabled) {
+  background: var(--primary);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.changelogMinorVersion {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.changelogMinorSection.is-expanded > .changelogMinorToggle .changelogMinorVersion {
+  color: #ffffff;
+}
+
+.changelogMinorMeta {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.changelogMinorSection.is-expanded > .changelogMinorToggle .changelogMinorMeta {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.changelogMinorChevron {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 100%;
+  color: var(--text-soft);
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.changelogMinorSection.is-expanded > .changelogMinorToggle .changelogMinorChevron {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.changelogMinorSection.is-expanded .changelogMinorChevron {
+  transform: rotate(180deg);
+}
+
+.changelogMinorPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 220ms ease, opacity 180ms ease;
+}
+
+.changelogMinorSection.is-expanded .changelogMinorPanel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.changelogMinorPanelInner {
+  overflow: hidden;
+}
+
+.changelogPatchList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 10px;
+  list-style: none;
+}
+
+.changelogPatchList li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.changelogPatchList li + li {
+  border-top: 1px solid var(--border);
+}
+
+.changelogPatchList span {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 24px;
+  color: var(--primary);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.changelogPatchList p {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 24px;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.appShell.menuClosed .menuButton {
+  margin: 0 auto;
+  width: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.appShell.menuClosed .menuIcon {
+  width: 42px;
+  height: 42px;
+  font-size: 22px;
+}
+
+.appShell.menuClosed .menuText {
+  margin-left: 0;
+  max-width: 0;
+  opacity: 0;
+}
+
+.sidebar {
+  width: 162px;
+  margin-top: 12px;
+  min-height: calc(100vh - 188px);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  transform: translateX(0);
+  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
+}
+
+.sidebar[hidden] {
+  display: none;
+}
+
+.appShell.menuClosed .sidebar {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  max-height: none;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.settingsNavButton {
+  margin-top: auto;
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 40px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  gap: 8px;
+  padding: 0 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: width var(--menu-transition, 0ms ease), padding var(--menu-transition, 0ms ease), background 120ms ease, border-color 120ms ease;
+}
+
+.tablePageTitle {
+  margin: 14px 0 12px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.navEmoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex: 0 0 18px;
+  color: currentColor;
+  font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
+}
+
+.appShell.menuClosed .navButton {
+  justify-content: center;
+  width: 42px;
+  gap: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0;
+}
+
+.appShell.menuClosed .navEmoji {
+  width: 18px;
+  transform: scale(1.04);
+}
+
+.appShell.menuAnimating .sidebar {
+  transition: opacity var(--menu-transition, 220ms ease), transform var(--menu-transition, 220ms ease), max-height var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
+}
+
+.appShell.menuAnimating .navEmoji {
+  transition: transform var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
+}
+
+.navDatabaseIcon,
+.navTrendIcon,
+.navEvaluationIcon,
+.navSettingsIcon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navJerseyIcon {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.navDatabaseIcon {
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navTrendIcon {
+  stroke-width: 2.8;
+}
+
+.navMflIcon {
+  width: 18px;
+  flex-basis: 18px;
+  height: auto;
+  fill: currentColor;
+  stroke: none;
+}
+
+.appShell.menuClosed .navMflIcon {
+  width: 18px;
+}
+
+.navEvaluationIcon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navJerseyIcon {
+  width: 15px;
+  flex-basis: 15px;
+  transform: none;
+}
+
+:root:not([data-theme="dark"]) .navJerseyIcon {
+  color: #000000;
+  fill: #000000;
+  stroke: #000000;
+}
+
+:root[data-theme="dark"] .navJerseyIcon {
+  color: #ffffff;
+  fill: #ffffff;
+  stroke: #ffffff;
+}
+
+.navBinocularsIcon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navText {
+  display: inline-block;
+  max-width: 112px;
+  overflow: hidden;
+  opacity: 1;
+  white-space: nowrap;
+  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
+}
+
+.appShell.menuClosed .navText {
+  max-width: 0;
+  opacity: 0;
+}
+
+.navButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+body.guest .navButton[data-page="progression"] {
+  display: none;
+}
+
+body.filtersOpen .navButton:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+.navButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.pageView[hidden] {
+  display: none;
+}
+
+.homePage {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  width: min(780px, 100%);
+  min-height: calc(100vh - 298px);
+  margin: 0 auto;
+  padding-top: 0;
+  text-align: center;
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
+}
+
+.homeIntro p {
+  max-width: 700px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.homeStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+  width: min(480px, 100%);
+}
+
+.homeStats div {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.homeStats span {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.homeStats label {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.homeOptInButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 124px;
+  height: 40px;
+  margin-top: 2px;
+  border-color: #2fbf62;
+  background: #2fbf62;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.homeOptInButton:hover:not(:disabled) {
+  border-color: #249b50;
+  background: #249b50;
+  color: #ffffff;
+}
+
+.homeOptInButton[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.homeOptInIcon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: translateY(1px);
+}
+
+.buttonGear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.siteFooter {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  min-height: 40px;
+  padding: 10px 28px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.siteFooter a {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.siteFooter a:hover {
+  color: var(--primary);
+}
+
+.siteFooter #statusText {
+  color: var(--text-soft);
+  font-size: 11px;
+}
+main {
+  min-width: 0;
+  margin-left: var(--sidebar-offset, 0px);
+  transition: margin-left var(--menu-transition, 0ms ease);
+  padding: 4px 28px 6px;
+}
+
+.views {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.viewButton {
+  width: 116px;
+  height: 40px;
+  justify-content: center;
+  padding: 0 3px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.viewButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.watchlistSwitcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.watchlistSwitcher[hidden] {
+  display: none;
+}
+
+.watchlistSwitcherLabel {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.watchlistButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 350px;
+  height: 40px;
+  padding: 0 10px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.watchlistButton:hover,
+.watchlistButton:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.watchlistButton span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistButtonChevron {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.watchlistDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: 350px;
+  min-width: 350px;
+  max-width: calc(100vw - 24px);
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--header-bg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+
+.watchlistDropdown[hidden] {
+  display: none;
+}
+
+.watchlistDropdownItem {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 2px 4px 2px 9px;
+  line-height: 1.25;
+  transition: none;
+}
+
+.watchlistDropdownItem:not(.watchlistDropdownAdd) + .watchlistDropdownItem:not(.watchlistDropdownAdd) {
+  margin-top: 2px;
+}
+
+.watchlistDropdownItem:hover,
+.watchlistDropdownItem:focus-within {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--primary-hover);
+}
+
+.watchlistDropdownItem.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.watchlistDropdownName {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 30px;
+  height: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 1.25;
+}
+
+.watchlistDropdownNameText {
+  min-width: 0;
+  line-height: 1.25;
+  padding-block: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistDropdownCount {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.watchlistDropdownName:hover,
+.watchlistDropdownName:focus-visible {
+  background: transparent;
+  color: inherit;
+}
+
+.watchlistDropdownActions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.watchlistDropdownAction {
+  margin: 0;
+}
+
+.watchlistDropdownRename {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  transition: none;
+}
+
+.watchlistDropdownRename:hover:not(:disabled),
+.watchlistDropdownRename:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.watchlistDropdownSeparator {
+  height: 1px;
+  margin: 2px 4px 5px;
+  background: var(--border);
+}
+
+.watchlistDropdownAdd {
+  justify-content: flex-start;
+  min-height: 36px;
+  height: 36px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.watchlistDropdownAdd:hover,
+.watchlistDropdownAdd:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.addWatchlistError {
+  min-height: 18px;
+  margin: 6px 0 0;
+  color: #e06b6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#addWatchlistNameInput[aria-invalid="true"] {
+  border-color: #e06b6b;
+}
+
+.deleteWatchlistDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.deleteWatchlistBody {
+  padding: 18px;
+}
+
+.deleteWatchlistBody p {
+  margin: 0;
+  color: var(--text);
+}
+
+.deleteWatchlistFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.deleteWatchlistFooter button {
+  width: 104px;
+  justify-content: center;
+}
+
+.deleteWatchlistConfirmButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+}
+
+.deleteWatchlistConfirmButton:hover,
+.deleteWatchlistConfirmButton:focus-visible {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.addWatchlistDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.addWatchlistBody {
+  padding: 14px;
+}
+
+.addWatchlistBody .field {
+  width: 100%;
+}
+
+.addWatchlistBody input {
+  width: 100%;
+}
+
+.addWatchlistFooter button {
+  width: 104px;
+  justify-content: center;
+}
+
+.quickFilters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: -2px;
+}
+
+.quickFilters label {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.quickFilters label[hidden] {
+  display: none;
+}
+
+.quickFilters input {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.controlsBar {
+  display: grid;
+  grid-template-columns: max-content max-content auto 150px;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  padding-top: 0;
+}
+
+.field.rowsField {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field.rowsField span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 40px;
+  text-transform: uppercase;
+}
+.compactButton {
+  width: fit-content;
+  padding: 0 10px;
+}
+
+#openFiltersButton,
+#quickClearFiltersButton {
+  width: 92px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field.compact {
+  gap: 0;
+  align-self: end;
+}
+
+.field.compact.rowsField {
+  gap: 12px;
+}
+
+.field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+input,
+select {
+  height: 40px;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 11px;
+}
+
+select {
+  padding-right: 32px;
+}
+
+button {
+  height: 40px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+.searchButton:hover:not(:disabled),
+.viewButton:not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.watchlistButton:hover:not(:disabled),
+.watchlistButton:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownItem:hover .watchlistDropdownName,
+.watchlistDropdownItem:focus-within .watchlistDropdownName,
+.watchlistDropdownName:hover:not(:disabled),
+.watchlistDropdownName:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+.watchlistDropdownItem:hover:not(.active),
+.watchlistDropdownItem:focus-within:not(.active),
+.watchlistDropdownAdd:hover:not(:disabled),
+.watchlistDropdownAdd:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--primary-hover);
+}
+
+.watchlistDropdownRename:hover:not(:disabled),
+.watchlistDropdownRename:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownDelete:hover:not(:disabled),
+.watchlistDropdownDelete:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.viewButton.active:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.menuButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--primary);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+#filterSummary {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  height: 40px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.modalBackdrop > section {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.modalBackdrop.modalOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modalBackdrop.modalOpen > section {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.modalBackdrop.modalClosing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modalBackdrop.modalClosing > section {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+
+.modalBackdrop[hidden] {
+  display: none;
+}
+
+.filtersDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  max-height: min(820px, 92vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.filtersHeader,
+.filtersFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filtersFooter {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.filtersFooter button {
+  min-width: 92px;
+  width: 92px;
+}
+
+.filtersHeader h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.advancedSettingsDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  max-height: min(860px, 92vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.advancedSettingsBody {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding: 16px 18px 18px;
+}
+
+.advancedSettingsSection {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.advancedSettingsSection h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.advancedSettingSummary {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.advancedSettingSummary:hover,
+.advancedSettingSummary:hover:not(:disabled),
+.advancedSettingSummary:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+.advancedSettingChevron {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 800;
+  transform: rotate(0deg);
+  transition: transform 0.18s ease;
+}
+
+.advancedLateSeasonRewardsSection:not(.is-expanded) .advancedSettingChevron {
+  transform: rotate(-90deg);
+}
+
+.advancedSettingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+}
+
+.advancedSettingHeaderControl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.advancedMflUsdControl {
+  display: grid;
+  grid-template-columns: 18px 112px;
+  gap: 4px;
+  align-items: center;
+}
+
+.advancedMflUsdInput {
+  width: 100%;
+  height: 42px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.advancedMflUsdResetButton {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.advancedMflUsdStepper {
+  display: grid;
+  gap: 2px;
+}
+
+.advancedMflUsdStepper button {
+  width: 18px;
+  height: 13px;
+  min-height: 13px;
+  padding: 0;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.advancedLateSeasonRewardsContent {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  opacity: 1;
+  transition: grid-template-rows 0.2s ease, opacity 0.18s ease;
+}
+
+.advancedLateSeasonRewardsSection:not(.is-expanded) .advancedLateSeasonRewardsContent {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.advancedLateSeasonRewardsGrid {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.advancedLateSeasonRewardSetting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.advancedLateSeasonRewardLabel {
+  line-height: 1.2;
+}
+
+.advancedRewardRateControlGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.advancedRewardRateResetButton {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 5px;
+  font-size: 10px;
+}
+
+.advancedPercentControl {
+  display: inline-grid;
+  grid-template-columns: 18px 92px auto;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.advancedRewardRateStepper {
+  display: grid;
+  gap: 2px;
+}
+
+.advancedRewardRateStepper button {
+  width: 18px;
+  height: 13px;
+  min-height: 13px;
+  padding: 0;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.advancedRewardRateInput {
+  width: 100%;
+  height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.advancedSettingsFooter {
+  flex: 0 0 auto;
+}
+
+.advancedSettingsFooter button {
+  width: 104px;
+}
+
+.advancedSettingValue {
+  width: 112px;
+  min-width: 112px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.advancedPlayerTableSection {
+  position: relative;
+  min-width: 0;
+}
+
+.advancedPlayerTable {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  min-width: 100%;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  font-size: 12px;
+  isolation: isolate;
+}
+
+.advancedPlayerTable th,
+.advancedPlayerTable td {
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  height: 32px;
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.advancedPlayerTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable thead::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.advancedPlayerTable thead tr {
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable th {
+  background: var(--header-bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.advancedPlayerTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 32;
+}
+
+.advancedPlayerTable thead th:first-child,
+.advancedPlayerTable tbody th {
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  position: sticky;
+  left: 0;
+  z-index: 22;
+}
+
+.advancedPlayerTable thead th:first-child {
+  z-index: 34;
+  border-top-left-radius: 7px;
+}
+
+.advancedPlayerTable thead th:last-child {
+  border-top-right-radius: 7px;
+}
+
+.advancedPlayerTable tbody th {
+  border-bottom-color: var(--header-bg);
+}
+
+.advancedPlayerTable tbody tr:last-child th {
+  border-bottom-left-radius: 7px;
+}
+
+.advancedPlayerTable tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 7px;
+}
+
+.evaluationSummaryTable tbody tr:hover,
+.evaluationSummaryTable tbody tr:hover td,
+.advancedPlayerTable tbody tr:hover,
+.advancedPlayerTable tbody tr:hover td {
+  background: transparent;
+}
+
+.advancedPlayerTable tbody tr:hover th {
+  background: var(--header-bg);
+}
+
+.advancedPlayerTable tbody tr:hover td:hover,
+.advancedPlayerTable tbody td:hover {
+  background-color: var(--contracts-cell-hover) !important;
+  background-image: linear-gradient(var(--contracts-cell-hover), var(--contracts-cell-hover)) !important;
+}
+
+.filterBuilder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  padding: 16px 18px 18px;
+}
+
+.addFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addFilterRow .iconButton,
+.addFilterRow select {
+  height: 44px;
+}
+
+.addFilterRow select {
+  width: min(320px, 100%);
+}
+
+.filterRules {
+  display: grid;
+  gap: 10px;
+}
+
+.filterRule {
+  display: grid;
+  grid-template-columns: 88px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.filterRule select[hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+.betweenValue {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.dateValue {
+  width: 100%;
+}
+
+.dateRangeValue {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
+}
+
+.connectorSelect:disabled {
+  opacity: 0;
+}
+
+.tableShell {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tableScroller {
+  width: 100%;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 1240px;
+}
+
+.col-select {
+  width: 51.09px;
+}
+
+.col-id {
+  width: 68.13px;
+}
+
+.copyPlayerIdButton {
+  position: relative;
+  appearance: none;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.copyPlayerIdButton:hover,
+.copyPlayerIdButton:focus,
+.copyPlayerIdButton.tableInteractiveHovered,
+.copyPlayerIdButton:hover:not(:disabled) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: inherit;
+  box-shadow: none !important;
+  outline: 0;
+  text-decoration: underline;
+}
+
+.col-flag {
+  width: 45.41px;
+}
+
+.col-name {
+  width: 212.89px;
+}
+
+.col-nationality {
+  width: 141.92px;
+}
+
+.col-age {
+  width: 65.28px;
+}
+
+.col-positions {
+  width: 119.22px;
+}
+
+.col-seasons {
+  width: 82.31px;
+}
+
+.col-stat {
+  width: 107.86px;
+}
+
+.col-overall {
+  font-weight: 800;
+}
+
+.col-agent {
+  width: 187.34px;
+}
+
+.col-contract-revenue {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.col-contract-club {
+  width: 227.16px;
+  min-width: 227.16px;
+  max-width: 227.16px;
+}
+
+.col-contract-division {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+}
+
+.contractDivisionLabel {
+  font-weight: 700;
+}
+
+.col-link {
+  width: 48.39px;
+}
+
+th,
+td {
+  cursor: default;
+  user-select: none;
+  height: 38px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 6px;
+  text-align: left;
+  white-space: nowrap;
+  line-height: 38px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+td {
+  font-size: 14px;
+}
+
+#tableBody a,
+#tableBody button,
+#tableBody input {
+  cursor: pointer;
+}
+
+#tableBody td {
+  line-height: 1.2;
+}
+
+#tableBody .selectionCell,
+#tableBody .flagCell,
+#tableBody td.col-id,
+#tableBody td.nameCell {
+  vertical-align: middle;
+}
+
+#tableBody .selectionCell input {
+  display: block;
+  margin: 0 auto;
+}
+
+#tableBody .flagCell .flagImage {
+  display: block;
+  margin: 0 auto;
+}
+
+#tableBody .copyPlayerIdButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 38px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+#tableBody .playerNameCell {
+  min-height: 38px;
+  align-items: center;
+}
+
+td.nameCell,
+td.col-id {
+  overflow: visible;
+}
+
+td.col-id {
+  position: relative;
+  z-index: 4;
+}
+
+.flagCell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.flagCell .flagImage {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+}
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--header-bg);
+  color: var(--text);
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: default;
+}
+
+th.sortable {
+  cursor: pointer;
+}
+
+th.sortable:hover {
+  background: var(--surface-muted);
+}
+
+.sortArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+.sortArrow.asc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid var(--text);
+}
+
+.sortArrow.desc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--text);
+}
+
+#tableBody tr:hover > td,
+#tableBody tr:hover > th,
+#tableBody tr.tableRowHovered > td,
+#tableBody tr.tableRowHovered > th {
+  background: var(--row-hover);
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
+}
+
+.selectionCell {
+  text-align: center;
+}
+
+.selectionCell input {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.nameCell {
+  width: 100%;
+}
+
+td a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.playerNameCell {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 150px;
+  vertical-align: middle;
+}
+
+.playerNameLink {
+  color: var(--text);
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerNameLink:hover,
+.playerNameLink.tableInteractiveHovered {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.agentTableLink {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.agentTableLink:hover,
+.agentTableLink.tableInteractiveHovered {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.watchlistStar {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.watchlistStar.active {
+  color: #d69e00;
+}
+
+.progressionValue.positive {
+  color: #2fbf62;
+  font-weight: inherit;
+}
+
+.progressionValue.negative {
+  color: #b42318;
+  font-weight: inherit;
+}
+
+.retirementMarker,
+.newMintMarker {
+  position: relative;
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.retirementMarker[data-tooltip]::after,
+.newMintMarker[data-tooltip]::after,
+.playerNoteIcon[data-tooltip]::after,
+.copyPlayerIdButton[data-tooltip]::after,
+.playerIdText[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.retirementMarker[data-tooltip]:hover::after,
+.retirementMarker[data-tooltip]:focus::after,
+.newMintMarker[data-tooltip]:hover::after,
+.newMintMarker[data-tooltip]:focus::after,
+.playerNoteIcon[data-tooltip]:hover::after,
+.playerNoteIcon[data-tooltip]:focus::after,
+.copyPlayerIdButton[data-tooltip]:hover::after,
+.copyPlayerIdButton[data-tooltip]:focus::after,
+.playerIdText[data-tooltip]:hover::after,
+.playerIdText[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.emptyState {
+  padding: 42px;
+  text-align: center;
+  color: var(--text-soft);
+}
+
+.pager {
+  position: relative;
+  left: calc(var(--sidebar-offset, 0px) / -2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.pager button {
+  width: 92px;
+}
+
+#pageText {
+  min-width: 160px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .headerControls {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .searchButton {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .appShell {
+    --sidebar-offset: 0px;
+  }
+
+  .menuRail {
+    position: static;
+    width: auto;
+    min-height: 0;
+  }
+
+  .sidebar {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+
+  .navButton {
+    width: auto;
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+  main {
+    margin-left: 0;
+    padding: 14px;
+  }
+
+  .controlsBar {
+    grid-template-columns: 1fr;
+  }
+
+  .views {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .viewButton {
+    width: 100%;
+  }
+
+
+.quickFilters {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filterRule {
+    grid-template-columns: 1fr;
+  }
+
+  .controlsBar button {
+    width: 100%;
+  }
+}
+
+.selectionBar {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 10px 14px;
+  border: 1px solid #7db8de;
+  border-radius: 8px;
+  background: #d9efff;
+  color: #12364f;
+  box-shadow: 0 16px 42px rgba(28, 95, 138, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(0.96);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+:root[data-theme="dark"] .selectionBar {
+  border-color: #5ba7d8;
+  background: #12364f;
+  color: #e8f5ff;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34);
+}
+
+.selectionBar.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.selectionBar[hidden] {
+  display: inline-flex;
+}
+
+.selectionSummary {
+  display: grid;
+  align-items: center;
+  min-width: 96px;
+}
+
+.selectionBar span {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.selectionActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectionBar button {
+  height: 34px;
+  padding: 0 11px;
+  border-color: #1d5f8a;
+  background: #1d5f8a;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.selectionBar .textButton {
+  width: fit-content;
+  height: auto;
+  border: 0;
+  background: transparent;
+  color: #1d5f8a;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.selectionBar .textButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: #12364f;
+}
+
+:root[data-theme="dark"] .selectionBar .textButton {
+  color: #9fd4f5;
+}
+
+:root[data-theme="dark"] .selectionBar .textButton:hover:not(:disabled) {
+  color: #e8f5ff;
+}
+
+.toastMessage {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  z-index: 10020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(360px, calc(100vw - 64px));
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid #7db8de;
+  border-radius: 8px;
+  background: #d9efff;
+  color: #12364f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 0 14px 36px rgba(28, 95, 138, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transform: translate(-50%, 14px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0ms linear 180ms;
+}
+
+:root[data-theme="dark"] .toastMessage {
+  border-color: #5ba7d8;
+  background: #12364f;
+  color: #e8f5ff;
+}
+
+.toastMessage.visible {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition-delay: 0ms;
+}
+
+.toastWatchlistContent,
+.toastPlayerIdContent {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+}
+
+.toastLink {
+  width: auto;
+  height: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.toastMessage .toastLink:hover {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+
+.searchDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100vw - 32px));
+  height: 492px;
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.searchBody {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.searchResults {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  height: 366px;
+  max-height: 366px;
+  grid-auto-rows: 66px;
+  align-content: start;
+  overflow: auto;
+}
+
+.searchResults.filledSearchResults {
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  align-content: stretch;
+  box-sizing: border-box;
+  padding-bottom: 12px;
+}
+
+.searchResults.filledSearchResults .searchResult {
+  height: 100%;
+  align-content: center;
+}
+
+.searchResult {
+  display: grid;
+  gap: 3px;
+  min-height: 66px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.searchResult:hover,
+.searchResult:focus-visible,
+.evaluationSearchResult:hover,
+.evaluationSearchResult:focus-visible,
+.evaluationLoadResult:hover,
+.evaluationLoadResult:focus-within {
+  border-color: var(--primary);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.searchResults .searchResult:hover,
+.searchResults .searchResult:focus-visible,
+.evaluationSearchResults .evaluationSearchResult:hover,
+.evaluationSearchResults .evaluationSearchResult:focus-visible,
+.evaluationLoadList .evaluationLoadResult:hover,
+.evaluationLoadList .evaluationLoadResult:focus-within {
+  border-color: var(--primary);
+  background: var(--row-hover);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.searchResult span,
+.searchHint {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.playerPage {
+  max-width: 1180px;
+  min-height: 0;
+  margin: 0 auto;
+}
+
+.playerDetail {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.playerHero,
+.playerPanel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.playerHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 12px 7px;
+}
+
+.playerHero h2,
+.playerPanel h3 {
+  margin: 0;
+}
+
+.playerHero h2 {
+  margin-top: 0;
+}
+
+.playerHero p {
+  margin-top: 3px;
+}
+
+.playerEyebrow {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.playerEvaluateButton,
+.playerWatchlistButton,
+.playerExternalButton {
+  width: 172px;
+  min-width: 172px;
+}
+
+.playerHeroActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playerEvaluateButton,
+.playerExternalButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 0 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.playerEvaluateButton:hover,
+.playerExternalButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.playerWatchlistButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.watchlistButtonStar {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.45em;
+  line-height: 1;
+}
+
+.playerWatchlistButton.active {
+  border-color: #d69e00;
+  background: #d69e00;
+  color: #172026;
+}
+
+.playerWatchlistButton.active:hover {
+  border-color: #e7b923;
+  background: #e7b923;
+  color: #172026;
+}
+
+.playerIdText {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  color: var(--text-soft);
+  line-height: 0.9;
+  cursor: pointer;
+}
+
+.playerIdText:hover,
+.playerIdText:focus,
+.playerIdText:active {
+  background: transparent !important;
+  box-shadow: none;
+  outline: 0;
+  color: var(--text-soft);
+  text-decoration: underline;
+}
+
+.flagText {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
+  font-weight: 400;
+}
+
+.flagImage {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  object-fit: contain;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+
+.playerPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.playerAttributeViews {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.playerAttributeViewButton {
+  width: 98px;
+  height: 30px;
+  padding: 0 4px;
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.playerAttributeViewButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.playerAttributeCard strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 20px;
+  line-height: 1;
+  color: #111820;
+  text-shadow: none;
+}
+
+.playerAttributeCard .attributeValueText {
+  color: #111820;
+  font-size: inherit;
+  line-height: 1;
+  text-shadow: none;
+}
+.playerAttributeCard .attributeValueText[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+.playerAttributeCard .attributeValueText[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.playerAttributeCard .attributeValueText[data-tooltip]:hover::after,
+.playerAttributeCard .attributeValueText[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+:root[data-theme="dark"] .playerAttributeCard strong,
+:root[data-theme="dark"] .playerAttributeCard .attributeValueText {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.playerAttributeCard.featured {
+  border-color: var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rarity-color) 67%, transparent) 0%, var(--color-bg-default-secondary) 100%), linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
+  color: var(--text);
+}
+
+.playerAttributeCard.featured > span,
+.playerAttributeCard.featured .attributeValueText {
+  color: #111820;
+}
+
+:root[data-theme="dark"] .playerAttributeCard.featured > span,
+:root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
+  color: #ffffff;
+}
+
+.playerAttributeCard.featured .progressionValue.positive {
+  color: #2fbf62;
+}
+
+.playerAttributeCard.featured .progressionValue.negative {
+  color: #ff8b8b;
+}
+
+.playerAttributeCard .progressionValue,
+.playerAttributeCard .nextOverallValue {
+  color: #2fbf62;
+  font-size: 10px;
+}
+
+.playerAttributeCard .trainingDelta {
+  font-size: 10px;
+}
+
+.playerAttributeCard .trainingDelta.positive {
+  color: #2fbf62;
+}
+
+.playerAttributeCard {
+  cursor: default;
+  user-select: none;
+}
+
+.playerAttributeCard button {
+  cursor: pointer;
+}
+.playerAttributeCard .trainingDelta.negative {
+  color: #d92d20;
+}
+
+.nextOverallValue.easy {
+  color: #2fbf62;
+}
+
+.nextOverallValue.medium {
+  color: #f1c232;
+}
+
+.nextOverallValue.hard {
+  color: #f28c28;
+}
+
+.nextOverallValue.veryHard {
+  color: #d92d20;
+}
+
+.nextOverallValue.neutral {
+  color: var(--text-soft);
+}
+
+.tableNextOverallValue {
+  font-weight: 400;
+}
+
+.tableNextOverallValueOverall {
+  font-weight: 800;
+}
+
+.playerAttributeCard.featured .progressionValue,
+.playerAttributeCard.featured .nextOverallValue {
+  font-size: 13px;
+}
+
+.playerAttributeCard.trainingCard strong {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.playerAttributeCard.trainingCard .attributeValueText {
+  min-width: 0;
+}
+
+.trainingStatControls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.trainingStatControls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-color: var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.trainingStatControls button:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.trainingStatControls .trainingResetButton {
+  width: auto;
+  min-width: 50px;
+  padding: 0 8px;
+  font-size: 11px;
+  transform: none;
+}
+
+.playerAgeMarker {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+.playerAttributeCard.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.playerAttributeCard.featured {
+  min-height: 44px;
+}
+
+.playerAttributeCard.featured strong {
+  font-size: 26px;
+}
+
+.playerAttributeCard.featured .attributeValueText {
+  width: fit-content;
+  border-radius: 6px;
+  background: transparent;
+  color: #111820;
+  padding: 0;
+  text-shadow: none;
+}
+
+:root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
+  color: #ffffff;
+}
+
+.attributesPanel {
+  grid-column: 1 / -1;
+}
+
+.playerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: start;
+  gap: 8px;
+}
+
+.playerPanel {
+  padding: 10px;
+}
+
+.playerStack {
+  display: grid;
+  gap: 6px;
+  grid-template-rows: auto auto minmax(110px, 1fr);
+}
+
+.playerInfoPanel {
+  min-height: 0;
+}
+
+.pitchPanel {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-self: start;
+  align-content: start;
+  justify-items: center;
+}
+
+.pitchPanel h3 {
+  justify-self: stretch;
+}
+
+.detailGrid,
+.attributeGrid {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.detailGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.playerInfoPanel .detailGrid {
+  min-height: 152px;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+}
+
+.attributeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detailGrid div,
+.playerAttributeCard {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.detailGrid div {
+  min-height: 32px;
+  padding: 3px 10px;
+}
+
+.detailGrid strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playerContractLine {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1;
+}
+
+.playerContractTeam {
+  display: inline-block;
+  line-height: inherit;
+  pointer-events: none;
+}
+
+.detailGrid .contractDetailCard strong .playerContractTeam {
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: none !important;
+}
+
+.playerContractDivision {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 0.9em;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateY(-0.01em);
+}
+
+.playerAttributeCard {
+  min-height: 30px;
+  padding: 3px 10px;
+}
+
+.detailGrid span,
+.playerAttributeCard span {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pitch {
+  display: grid;
+  align-content: space-between;
+  gap: 5px;
+  position: relative;
+  width: 360px;
+  min-height: 0;
+  height: 498px;
+  margin: 8px auto 0;
+  padding: 10px 8px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d8f57 0 50%, #27824f 50% 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.pitchRow {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--pitch-columns), minmax(0, 1fr));
+  gap: 6px;
+  justify-items: center;
+}
+
+.pitchPositionSlot {
+  display: grid;
+  min-width: 58px;
+  place-items: center;
+}
+
+.pitchPositionCircle {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  color: #000000;
+  font-weight: 800;
+  line-height: 0.9;
+  text-align: center;
+}
+
+.pitchPositionCircle strong {
+  font-size: 18px;
+}
+
+.pitchPositionCircle small {
+  margin-top: 0;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pitchPositionCircle.primary {
+  background: #05f82c;
+}
+
+.pitchPositionCircle.secondary {
+  background: #adff2f;
+}
+
+.pitchPositionCircle.fair {
+  background: #ffc107;
+}
+
+.pitchPositionCircle.some {
+  background: #ff5722;
+  color: #000000;
+}
+
+.pitchPositionBlank {
+  display: block;
+  width: 50px;
+  height: 50px;
+}
+
+.pitch::before,
+.pitch::after {
+  position: absolute;
+  left: 50%;
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.pitch::before {
+  top: 50%;
+  width: 82px;
+  height: 82px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch::after {
+  top: 50%;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.56);
+}
+
+.pitchLine {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.pitchBoxTop,
+.pitchBoxBottom {
+  width: 68%;
+  height: 18%;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.pitchBoxTop {
+  top: 0;
+  border-top: 0;
+}
+
+.pitchBoxBottom {
+  bottom: 0;
+  border-bottom: 0;
+}
+
+.pitchGoalTop,
+.pitchGoalBottom {
+  width: 36%;
+  height: 7%;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+}
+
+.pitchArcTop,
+.pitchArcBottom {
+  width: 28%;
+  height: 11%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+}
+
+.pitchArcTop {
+  top: 12.5%;
+  clip-path: inset(50% 0 0 0);
+}
+
+.pitchArcBottom {
+  bottom: 12.5%;
+  clip-path: inset(0 0 50% 0);
+}
+.pitchGoalTop {
+  top: 0;
+  border-top: 0;
+}
+
+.pitchGoalBottom {
+  bottom: 0;
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .playerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .attributeGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.evaluationPage {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.evaluationTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 14px 0 12px;
+}
+
+.evaluationPage .tablePageTitle {
+  margin: 0;
+}
+
+.advancedSettingsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 178px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.advancedSettingsButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+.advancedSettingsButton span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.evaluationTopBar {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.evaluationSearchGroup {
+  display: grid;
+  grid-template-columns: minmax(320px, 560px) minmax(520px, 1fr);
+  column-gap: 8px;
+  row-gap: 8px;
+  align-items: end;
+  justify-content: space-between;
+  min-width: 0;
+}
+.evaluationSearch {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+  flex: 1 1 auto;
+}
+
+.evaluationSearch .field {
+  position: relative;
+  gap: 6px;
+}
+
+.evaluationSearch .field::after {
+  content: "x";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.evaluationSearch input {
+  height: 42px;
+  padding-right: 40px;
+}
+
+.evaluationSearch input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
+}
+
+.evaluationSearchResults {
+  position: absolute;
+  z-index: 12;
+  top: 72px;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}
+
+.evaluationSearchResults[hidden] {
+  display: none;
+}
+
+.evaluationSearchResult {
+  display: grid;
+  gap: 2px;
+  min-height: 58px;
+  padding: 8px 10px;
+  align-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.evaluationSearchResult span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.evaluationMetric {
+  position: relative;
+  width: 112px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: 18px 1fr;
+  align-items: center;
+  gap: 3px;
+  height: 64px;
+  min-height: 64px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  justify-self: end;
+  text-align: right;
+}
+
+.evaluationMetric span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.evaluationMetric strong {
+  font-size: 22px;
+}
+.evaluationMflUsdGroup {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 112px;
+}
+
+.evaluationMflUsdMetric {
+  overflow: hidden;
+}
+
+.evaluationMetricLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.evaluationMetricIconButton {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.evaluationMetricIconButton:hover {
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.evaluationMflUsdEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  gap: 4px;
+  align-items: center;
+}
+
+.evaluationMflUsdEditor[hidden] {
+  display: none;
+}
+
+.evaluationMflUsdInput {
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.evaluationMflUsdStepper {
+  display: grid;
+  gap: 2px;
+}
+
+.evaluationMflUsdStepper button {
+  width: 18px;
+  height: 13px;
+  min-height: 13px;
+  padding: 0;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.evaluationMetricResetButton {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  width: auto;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  transform: translateX(-50%);
+}
+.evaluationSummaryShell {
+  margin-bottom: 14px;
+}
+
+.evaluationActions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: end;
+  justify-self: stretch;
+  min-width: 0;
+}
+
+.evaluationButtons,
+.evaluationMetrics {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+}
+
+.evaluationButtons {
+  justify-content: flex-start;
+  justify-self: start;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.evaluationButtons[hidden] {
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.evaluationButtons[hidden] .evaluationPlayerPageButton[hidden] {
+  display: inline-flex;
+}
+
+.evaluationPlayerPageButton[hidden] {
+  display: none;
+}
+.evaluationMetrics {
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+.evaluationPlayerPageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 42px;
+  min-height: 42px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.evaluationFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.evaluationFooterButton {
+  gap: 8px;
+}
+
+.evaluationFooterActions #evaluationSaveButton[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.evaluationButtonIcon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
+.evaluationMetric[data-tooltip] {
+  cursor: help;
+}
+.evaluationMetric[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.evaluationMetric[data-tooltip]:hover::after,
+.evaluationMetric[data-tooltip]:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.evaluationSummaryShell .tableScroller {
+  overflow: hidden;
+}
+
+.evaluationSummaryTable {
+  min-width: 0;
+}
+
+.evaluationSummaryTable th,
+.evaluationSummaryTable td {
+  white-space: normal;
+}
+
+.evaluationSummaryTable th:nth-child(1),
+.evaluationSummaryTable td:nth-child(1) {
+  width: 24%;
+}
+
+.evaluationSummaryTable th:nth-child(2),
+.evaluationSummaryTable td:nth-child(2) {
+  width: 10%;
+}
+
+.evaluationSummaryTable th:nth-child(3),
+.evaluationSummaryTable td:nth-child(3) {
+  width: 8.5%;
+}
+
+.evaluationSummaryTable th:nth-child(4),
+.evaluationSummaryTable td:nth-child(4) {
+  width: 12.5%;
+}
+
+.evaluationSummaryTable th:nth-child(5),
+.evaluationSummaryTable td:nth-child(5) {
+  width: 16.25%;
+}
+
+.evaluationSummaryTable th:nth-child(6),
+.evaluationSummaryTable td:nth-child(6) {
+  width: 16.25%;
+}
+
+.evaluationSummaryTable th:nth-child(7),
+.evaluationSummaryTable td:nth-child(7) {
+  width: 12.5%;
+}
+
+.evaluationSummaryTable td:nth-child(7) {
+  font-weight: 800;
+}
+
+.evaluationSummaryPositionSelect {
+  display: inline-block;
+  width: 52px;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0 12px 0 4px;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+  appearance: none;
+  user-select: none;
+}
+
+.evaluationSummaryPositionSelect:focus {
+  outline: none;
+  box-shadow: none;
+}
+.evaluationSummaryPositionSelect option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.evaluationSummaryTable td:nth-child(2) {
+  position: relative;
+  text-align: left;
+  user-select: none;
+}
+
+.evaluationSummaryTable td:nth-child(2):has(.evaluationSummaryPositionSelect)::after {
+  content: "";
+  position: absolute;
+  left: 46px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  pointer-events: none;
+  transform: translateY(-65%) rotate(45deg);
+}
+
+.evaluationOverallControl {
+  display: grid;
+  grid-template-columns: 24px 28px 24px;
+  align-items: center;
+  justify-content: end;
+  justify-items: center;
+  gap: 5px;
+  width: 86px;
+  margin-left: 0;
+  height: 24px;
+  line-height: 24px;
+}
+
+.evaluationOverallControl button,
+.evaluationOverallControlSpacer {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.evaluationOverallControl button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.evaluationOverallControlSpacer {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.evaluationOverallControl strong {
+  min-width: 28px;
+  text-align: center;
+  line-height: 24px;
+}
+.evaluationPanel h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.evaluationTableShell table {
+  min-width: 900px;
+}
+.evaluationTableShell th:nth-child(1),
+.evaluationTableShell td:nth-child(1) {
+  width: 24%;
+}
+
+.evaluationTableShell th:nth-child(2),
+.evaluationTableShell td:nth-child(2) {
+  width: 10%;
+}
+
+.evaluationTableShell th:nth-child(3),
+.evaluationTableShell td:nth-child(3) {
+  width: 8.5%;
+}
+
+.evaluationTableShell th:nth-child(4),
+.evaluationTableShell td:nth-child(4),
+.evaluationTableShell th:nth-child(8),
+.evaluationTableShell td:nth-child(8) {
+  width: 12.5%;
+}
+
+.evaluationTableShell th:nth-child(5),
+.evaluationTableShell td:nth-child(5) {
+  width: 9%;
+}
+
+.evaluationTableShell th:nth-child(6),
+.evaluationTableShell td:nth-child(6) {
+  width: 9%;
+}
+
+.evaluationTableShell th:nth-child(7),
+.evaluationTableShell td:nth-child(7) {
+  width: 14.5%;
+}
+
+.evaluationTable th,
+.evaluationTable td {
+  text-align: left;
+}
+
+.evaluationTable th:first-child,
+.evaluationTable td:first-child {
+  padding-left: 18px;
+}
+
+.evaluationTable th {
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .evaluationSearchGroup {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluationActions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.evaluationOptionFilters {
+  display: flex;
+  grid-column: 1;
+  gap: 12px;
+  align-items: center;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evaluationOptionFilters[hidden] {
+  display: none;
+}
+
+.evaluationOptionFilters label {
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.evaluationOptionFilters input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.playerNotesPanel {
+  display: grid;
+  gap: 10px;
+  min-height: 130px;
+}
+
+.playerNotesPanel h3 {
+  margin-bottom: 2px;
+}
+
+.playerNotesInputWrap {
+  position: relative;
+}
+
+.playerNotesInput {
+  width: 100%;
+  min-height: 118px;
+  resize: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text);
+  padding: 10px 12px 24px;
+  font: inherit;
+  line-height: 1.35;
+}
+
+.playerNotesInput:focus {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.playerNotesCount {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.playerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.05;
+}
+
+.playerTitleNoteIcon {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+}
+
+.playerNoteIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.playerHero h2 .playerNoteIcon {
+  font-size: 20px;
+}
+
+.playerNameCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.playerNameCell .playerNameLink {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.playerNameMarkers {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.playerNameCell .playerNoteIcon,
+.playerNameCell .retirementMarker,
+.playerNameCell .newMintMarker {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip],
+.playerNoteIcon[data-note-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip]::after {
+  left: 50%;
+  right: auto;
+  z-index: 220;
+  width: max-content;
+  max-width: 260px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  transform: translate(-50%, 4px);
+}
+
+.playerNameCell .playerNoteIcon[data-tooltip]:hover::after,
+.playerNameCell .playerNoteIcon[data-tooltip]:focus::after {
+  transform: translate(-50%, 0);
+}
+
+.myPlayersLockedPage {
+  position: fixed;
+  top: 102px;
+  right: 0;
+  bottom: 52px;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.myPlayersLockedPage[hidden] {
+  display: none;
+}
+
+.myPlayersLockedContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 420px;
+  padding: 32px;
+  pointer-events: auto;
+}
+
+.myPlayersLockedContent h2 {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 42px);
+}
+
+.myPlayersLockedContent p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+
+.playerNoteFloatingTooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.playerNoteFloatingTooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.playerNameCell .playerNoteIcon[data-note-tooltip]::after {
+  display: none;
+}
+
+.evaluationLoadDialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100vw - 32px));
+  height: 492px;
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.evaluationLoadDialog::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  height: 16px;
+  background: var(--surface);
+  pointer-events: none;
+}
+
+.evaluationLoadList {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+  grid-auto-rows: 66px;
+  align-content: start;
+  margin-bottom: 16px;
+  padding: 16px 18px 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.evaluationLoadEmpty {
+  margin: 0;
+  padding: 18px;
+  color: var(--text-soft);
+  text-align: center;
+  align-self: center;
+  justify-self: center;
+}
+
+.evaluationLoadResult {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  text-align: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.evaluationLoadResultMain {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  justify-items: start;
+  text-align: left;
+}
+
+.evaluationLoadResultMain span,
+.evaluationLoadResultMain strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.evaluationLoadResultMain span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.evaluationLoadPresentValue {
+  min-width: 112px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.evaluationLoadActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.evaluationLoadIconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.evaluationLoadIconButton svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.evaluationLoadIconButton[data-tooltip] {
+  position: relative;
+}
+
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
+.evaluationLoadDeleteButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.evaluationLoadDeleteButton:hover,
+.evaluationLoadDeleteButton:focus-visible,
+.evaluationLoadResult .evaluationLoadDeleteButton:hover:not(:disabled),
+.evaluationLoadResult .evaluationLoadDeleteButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+/* v1.89.20 */
+.searchResults .searchResult:hover,
+.searchResults .searchResult:focus-visible,
+.evaluationSearchResults .evaluationSearchResult:hover,
+.evaluationSearchResults .evaluationSearchResult:focus-visible {
+  border-color: var(--primary);
+  background: var(--row-hover);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+#evaluationSaveButton .evaluationButtonIcon {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
+/* v1.89.20 */
+.toastMessage {
+  z-index: 10000;
+}
+
+.evaluationLoadIconButton[data-tooltip]::after { display: none; }
+.evaluationLoadDialog,
+.evaluationLoadList,
+.evaluationLoadResult,
+.evaluationLoadActions {
+  overflow: visible;
+}
+
+.evaluationLoadList {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+.floatingActionTooltip {
+  position: fixed;
+  z-index: 10030;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.floatingActionTooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* v1.89.22 */
+.evaluationFooterSavedActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.evaluationFooterDeleteButton {
+  align-self: center;
+}
+
+.evaluationFooterDeleteButton[hidden] {
+  display: none;
+}
+
+/* v1.89.25 */
+.evaluationFooterDeleteButton {
+  gap: 8px;
+}
+
+.evaluationFooterDeleteButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.evaluationFooterDeleteButton[hidden] {
+  display: none;
+}
+
+/* v1.89.25 */
+.evaluationFooterDeleteButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
+.evaluationFooterDeleteButton:hover:not(:disabled),
+.evaluationFooterDeleteButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+/* v1.143.9 */
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+/* v1.143.10 */
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.watchlistDropdownSeparator {
+  margin-top: 2px;
+}
+
+.watchlistChoiceDialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.28);
+}
+
+.watchlistChoiceList {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.watchlistChoiceItem {
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.watchlistChoiceItem:hover:not(:disabled),
+.watchlistChoiceItem:focus-visible:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistChoiceAddNew {
+  margin-top: 5px;
+  border-top-color: var(--border-strong);
+}
+
+/* v1.144.2 */
+.watchlistPlayerCount {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.watchlistChoiceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.watchlistChoiceName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlistChoiceCount {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.watchlistChoiceSeparator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+.watchlistChoiceAddNew {
+  justify-content: center;
+  margin-top: 0;
+}
+
+.deleteWatchlistConfirmButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
+.deleteWatchlistConfirmButton:hover:not(:disabled),
+.deleteWatchlistConfirmButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+@media (max-width: 760px) {
+  .watchlistPlayerCount {
+    margin-left: 0;
+  }
+}
+
+/* v1.144.10 */
+.watchlistButton,
+.watchlistButton:hover:not(:disabled),
+.watchlistButton:focus-visible,
+.watchlistButton[aria-expanded="true"] {
+  box-sizing: border-box;
+}
+
+.watchlistButton[aria-expanded="true"],
+.watchlistButton[aria-expanded="true"]:hover:not(:disabled),
+.watchlistButton[aria-expanded="true"]:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownItem,
+.watchlistDropdownName,
+.watchlistDropdownAction,
+.watchlistDropdownAdd {
+  transition: none !important;
+}
+
+.watchlistDropdownItem:hover:not(.active),
+.watchlistDropdownItem:focus-within:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.watchlistDropdownItem:hover .watchlistDropdownName,
+.watchlistDropdownItem:focus-within .watchlistDropdownName,
+.watchlistDropdownName:hover:not(:disabled),
+.watchlistDropdownName:focus-visible {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.watchlistDropdownAction[data-tooltip] {
+  position: relative;
+}
+
+.watchlistDropdownAction[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: block;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: #171717;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(50%);
+}
+
+.watchlistDropdownAction[data-tooltip][data-tooltip-placement="left"]::after {
+  right: -6px;
+  transform: none;
+}
+
+.watchlistDropdownAction[data-tooltip]:hover::after,
+.watchlistDropdownAction[data-tooltip]:focus-visible::after {
+  opacity: 1;
+}
+
+/* v1.145.3 */
+#tableBody tr {
+  isolation: isolate;
+}
+
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover,
+#tableBody tr:hover button:hover,
+#tableBody tr.tableRowHovered .playerNameLink:hover,
+#tableBody tr.tableRowHovered a:hover,
+#tableBody tr.tableRowHovered button:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+#tableBody .copyPlayerIdButton[data-tooltip]::after {
+  transform: translate(-50%, 0) !important;
+  transition: opacity 80ms linear !important;
+}
+
+#tableBody .copyPlayerIdButton[data-tooltip]:hover::after,
+#tableBody .copyPlayerIdButton[data-tooltip]:focus::after {
+  transform: translate(-50%, 0) !important;
+}
+
+#tableBody .retirementMarker[data-tooltip]::after,
+#tableBody .newMintMarker[data-tooltip]::after,
+#tableBody .copyPlayerIdButton[data-tooltip]::after {
+  display: none;
+}
+
+/* v1.144.16 */
+#tableBody tr,
+#tableBody tr *,
+#tableBody td,
+#tableBody td * {
+  transition: none !important;
+  animation: none !important;
+}
+
+#tableBody tr:hover > td,
+#tableBody tr:hover > th,
+#tableBody tr.tableRowHovered > td,
+#tableBody tr.tableRowHovered > th {
+  background: var(--row-hover) !important;
+  background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
+}
+
+#tableBody tr:hover .playerNameLink:hover,
+#tableBody tr:hover a:hover,
+#tableBody tr.tableRowHovered .playerNameLink:hover,
+#tableBody tr.tableRowHovered a:hover {
+  transition: none !important;
+}
+
+.mflStatsPage {
+  width: 100%;
+  margin: 0;
+}
+
+.mflStatsViews {
+  margin-bottom: 7px;
+}
+
+.mflStatsFilters {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 7px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.mflStatsFilters > span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mflStatsFilterButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mflStatsFilterButton {
+  width: 86px;
+  height: 26px;
+  justify-content: center;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mflStatsFilterButton:hover:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.mflStatsFilterButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.mflStatsCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.mflStatsCards article,
+.mflStatsDistribution {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.mflStatsCards article {
+  min-height: 68px;
+  padding: 8px 10px;
+}
+
+.mflStatsCards span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.mflStatsCards strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mflStatsCards small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mflStatsDistribution {
+  padding: 8px 10px;
+}
+
+.mflStatsDistributionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.mflStatsDistribution h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.mflStatsDistributionModeButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.mflStatsDistributionModeButton {
+  height: 28px;
+  min-width: 78px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mflStatsDistributionModeButton:hover:not(.active) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.mflStatsDistributionModeButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.mflStatsAgeDistribution {
+  height: clamp(240px, calc(100vh - 380px), 450px);
+  overflow: visible;
+}
+
+.mflStatsHistogram {
+  display: grid;
+  grid-template-columns: repeat(var(--mfl-stats-bars, 1), minmax(0, 1fr));
+  align-items: end;
+  gap: clamp(3px, 0.45vw, 7px);
+  width: 100%;
+  height: 100%;
+  padding-top: 34px;
+  animation: mflStatsHistogramFade 170ms ease-out;
+}
+
+.mflStatsHistogramItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  gap: 3px;
+  text-align: center;
+}
+
+.mflStatsHistogramBar {
+  position: relative;
+  width: min(98%, var(--mfl-stats-bar-width, 34px));
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow: visible;
+  cursor: default;
+}
+
+.mflStatsHistogramBar::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--bar-height, 0%);
+  min-height: 2px;
+  border-radius: 6px 6px 3px 3px;
+  background: #4db4ee;
+  content: "";
+  transform-origin: bottom;
+  animation: mflStatsBarRise 220ms ease-out;
+}
+
+.mflStatsHistogramBar::before {
+  position: absolute;
+  left: 50%;
+  bottom: min(calc(var(--bar-height, 0%) + 8px), calc(100% - 28px));
+  z-index: 10;
+  width: max-content;
+  max-width: 140px;
+  padding: 4px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  content: attr(data-tooltip);
+  font-size: clamp(8px, 0.58vw, 11px);
+  font-weight: 800;
+  line-height: 1.1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.mflStatsHistogramBar:hover::before,
+.mflStatsHistogramBar:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.mflStatsHistogramLabel {
+  min-width: 0;
+  min-height: 16px;
+  color: var(--text-soft);
+  font-size: clamp(8px, 0.72vw, 11px);
+  font-weight: 800;
+}
+
+@keyframes mflStatsHistogramFade {
+  from {
+    opacity: 0.55;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mflStatsBarRise {
+  from {
+    transform: scaleY(0.18);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.mflStatsEmpty {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .mflStatsCards {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+.settingsPage {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.settingsPanel {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.settingsIdentity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settingsIdentity div,
+.settingsSection {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 14px;
+}
+
+.settingsIdentity span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.settingsIdentity strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settingsSection h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.settingsDateFormatOptions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settingsToggleButton {
+  min-width: 120px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.settingsToggleButton:not(.active):hover,
+.settingsToggleButton:not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+.settingsToggleButton.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.settingsEmailAddressRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settingsEmailAddressInput {
+  width: min(360px, 100%);
+  height: 38px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.settingsEmailAddressInput.invalid {
+  border-color: #e95656;
+}
+
+.settingsEmailAddressInput:focus {
+  outline: none;
+}
+
+.settingsEmailActionButton {
+  height: 38px;
+  min-width: 84px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+
+.settingsEmailDiscardButton {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.settingsEmailDiscardButton:hover:not(:disabled),
+.settingsEmailDiscardButton:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.settingsEmailActionButton.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.settingsEmailActionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settingsEmailOptions {
+  display: grid;
+  gap: 8px;
+}
+
+.settingsCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  color: var(--text);
+  font-weight: 700;
+  user-select: none;
+}
+
+.settingsCheckbox.disabled {
+  color: var(--text-soft);
+  cursor: not-allowed;
+}
+
+.settingsCheckbox.disabled[data-tooltip] {
+  position: relative;
+}
+
+.settingsCheckbox.disabled[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.settingsCheckbox.disabled[data-tooltip]:hover::after,
+.settingsCheckbox.disabled[data-tooltip]:focus-within::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.settingsCheckbox.disabled input,
+.settingsCheckbox.disabled span {
+  opacity: 0.62;
+}
+
+.settingsCheckbox.disabled input {
+  cursor: not-allowed;
+}
+
+.settingsCheckbox input {
+  width: 15px;
+  height: 15px;
+}
+
+.playerIdText[data-tooltip]::after {
+  display: none;
+}
+
+/* v1.149.63 - Compact individual player notes panel */
+.playerStack {
+  grid-template-rows: auto auto auto;
+}
+
+.playerNotesPanel {
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.playerNotesPanel h3 {
+  margin-bottom: 4px;
+}
+
+.playerNotesInputWrap {
+  min-height: 0;
+}
+
+.playerNotesInput {
+  height: 58px;
+  min-height: 58px;
+  resize: none;
+}
+
+/* v1.149.64 - Fit player table inside the viewport with the sidebar open */
+.appShell:not(.menuClosed) .tableScroller table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+
+.appShell:not(.menuClosed) .tableScroller col {
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-select {
+  width: 3.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-id {
+  width: 5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-flag {
+  width: 3.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-name {
+  width: 15% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-nationality {
+  width: 10% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-age {
+  width: 4.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-positions {
+  width: 8% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-seasons {
+  width: 5.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-stat {
+  width: 7.5% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-agent {
+  width: 13% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-revenue {
+  width: 10% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-club {
+  width: 18% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-contract-division {
+  width: 14% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller .col-link {
+  width: 4% !important;
+}
+
+.appShell:not(.menuClosed) .tableScroller th,
+.appShell:not(.menuClosed) .tableScroller td {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* v1.149.65 - Use numeric endpoints in both sidebar directions */
+.appShell.menuAnimating .tableScroller table,
+.appShell.menuAnimating .tableScroller col {
+  transition: width 220ms ease, min-width 220ms ease !important;
+}
+
+.appShell.menuClosed .tableScroller table {
+  width: 100% !important;
+  min-width: 1240px !important;
+  table-layout: fixed;
+}
+
+.appShell.menuClosed .tableScroller .col-select {
+  width: 51.09px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-id {
+  width: 68.13px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-flag {
+  width: 45.41px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-name {
+  width: 212.89px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-nationality {
+  width: 141.92px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-age {
+  width: 65.28px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-positions {
+  width: 119.22px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-seasons {
+  width: 82.31px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-stat {
+  width: 107.86px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-agent {
+  width: 187.34px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-revenue {
+  width: 140px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-club {
+  width: 227.16px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-contract-division {
+  width: 280px !important;
+}
+
+.appShell.menuClosed .tableScroller .col-link {
+  width: 48.39px !important;
+}
+
+.appShell.menuClosed .tableScroller th,
+.appShell.menuClosed .tableScroller td {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* v1.149.66 - Preserve cell alignment for the full sidebar transition */
+.appShell .tableScroller table {
+  table-layout: fixed;
+}
+
+.appShell .tableScroller th,
+.appShell .tableScroller td {
+  vertical-align: middle;
+}
+
+.appShell.menuAnimating .tableScroller th,
+.appShell.menuAnimating .tableScroller td {
+  transition: none !important;
+}
+
+.appShell.menuAnimating .tableScroller .selectionCell,
+.appShell.menuAnimating .tableScroller .flagCell,
+.appShell.menuAnimating .tableScroller .statCell,
+.appShell.menuAnimating .tableScroller .overallCell,
+.appShell.menuAnimating .tableScroller .ageCell,
+.appShell.menuAnimating .tableScroller .positionsCell,
+.appShell.menuAnimating .tableScroller .seasonsCell {
+  text-align: center;
+}
+
+/* v1.149.67 - Keep the checkbox column visible during sidebar transitions */
+.appShell .tableScroller .col-select {
+  width: max(3.5%, 44px) !important;
+  min-width: 44px !important;
+}
+
+.appShell.menuAnimating .tableScroller .col-select {
+  width: 44px !important;
+  min-width: 44px !important;
+}
+
+.appShell .tableScroller .selectionCell {
+  min-width: 44px;
+  width: 44px;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+
+.appShell .tableScroller .selectionCell input[type="checkbox"] {
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+/* v1.150.6 - Pinned content grid, guest centering, and flicker-free tables */
+:root {
+  --pinned-sidebar-width: 190px;
+  --pinned-topbar-height: 102px;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+.appShell,
+.appShell.menuClosed,
+.appShell.sidebarClosed,
+.appShell.sidebarCollapsed,
+.appShell.collapsed {
+  --sidebar-offset: var(--pinned-sidebar-width) !important;
+  transition: none !important;
+}
+
+.menuRail,
+.appShell.menuClosed .menuRail,
+.appShell.sidebarClosed .menuRail,
+.appShell.sidebarCollapsed .menuRail,
+.appShell.collapsed .menuRail {
+  width: var(--pinned-sidebar-width) !important;
+  padding: 14px !important;
+  align-items: stretch !important;
+  transition: none !important;
+}
+
+.sidebar,
+.appShell.menuClosed .sidebar,
+.appShell.sidebarClosed .sidebar,
+.appShell.sidebarCollapsed .sidebar,
+.appShell.collapsed .sidebar {
+  width: 162px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  align-items: stretch !important;
+  transition: none !important;
+}
+
+.menuButton,
+.appShell.menuClosed .menuButton,
+.appShell.sidebarClosed .menuButton,
+.appShell.sidebarCollapsed .menuButton,
+.appShell.collapsed .menuButton {
+  width: 100% !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  transition: none !important;
+}
+
+.appShell.menuClosed .menuText,
+.appShell.sidebarClosed .menuText,
+.appShell.sidebarCollapsed .menuText,
+.appShell.collapsed .menuText,
+.appShell.menuClosed .navText,
+.appShell.sidebarClosed .navText,
+.appShell.sidebarCollapsed .navText,
+.appShell.collapsed .navText {
+  max-width: 112px !important;
+  margin-left: 8px !important;
+  opacity: 1 !important;
+}
+
+.appShell.menuClosed .navButton,
+.appShell.sidebarClosed .navButton,
+.appShell.sidebarCollapsed .navButton,
+.appShell.collapsed .navButton {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  gap: 8px !important;
+  padding: 0 14px !important;
+}
+
+main,
+.siteFooter {
+  box-sizing: border-box !important;
+  transition: none !important;
+}
+
+body.pinnedSidebarVisible main,
+body.pinnedSidebarVisible .siteFooter {
+  width: calc(100% - var(--pinned-sidebar-width)) !important;
+  margin-left: var(--pinned-sidebar-width) !important;
+}
+
+body:not(.pinnedSidebarVisible) main,
+body:not(.pinnedSidebarVisible) .siteFooter,
+.menuRail[hidden] + main {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+.siteFooter {
+  justify-items: center !important;
+  text-align: center !important;
+}
+
+main > .pageView,
+.homePage,
+.changelogPage,
+.myPlayersLockedPage {
+  width: 100% !important;
+  left: auto !important;
+}
+
+.myPlayersLockedPage:not([hidden]),
+body.guest main > [class*="LockedPage"]:not([hidden]),
+body.guest main > [class*="OptInPage"]:not([hidden]) {
+  display: grid !important;
+  place-items: center !important;
+  min-height: calc(100vh - var(--pinned-topbar-height) - 52px) !important;
+  margin: 0 !important;
+  padding: 24px !important;
+}
+
+.myPlayersLockedContent,
+body.guest main [class*="LockedContent"],
+body.guest main [class*="OptInContent"] {
+  width: min(520px, 100%) !important;
+  margin: auto !important;
+  text-align: center !important;
+}
+
+#progressionPage {
+  transition: opacity 180ms ease, transform 180ms ease !important;
+}
+
+html.table-layout-pending #progressionPage,
+body.tableLayoutPending #progressionPage,
+body.clubViewSwitching #progressionPage {
+  visibility: visible !important;
+  opacity: 0 !important;
+  transform: translateY(6px) !important;
+  pointer-events: none !important;
+}
+
+html.table-layout-pending #loadingScreen,
+body.tableLayoutPending #loadingScreen,
+body.clubViewLoading #loadingScreen {
+  display: grid !important;
+  visibility: visible !important;
+  align-content: center !important;
+  justify-items: center !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+body.clubViewSwitching:not(.clubViewLoading) #loadingScreen {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body.clubViewSwitching .navButton.active {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+body[data-page="club"] #progressionPage .quickFilters,
+body[data-page="club"] #progressionPage .controlsBar,
+body[data-page="club"] #progressionPage .pager,
+body[data-page="club"] #progressionPage nav.pager {
+  display: none !important;
+}
+
+body[data-page="watchlist"] #progressionPage .views {
+  display: flex !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="attributes"] { order: 1 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="next"] { order: 2 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="contracts"] { order: 3 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="current"] { order: 4 !important; }
+body[data-page="watchlist"] #progressionPage .viewButton[data-view="all"] { order: 5 !important; }
+body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
+  order: 10 !important;
+  margin-left: auto !important;
+}
+
+#progressionPage .tableShell,
+#progressionPage .tableScroller,
+#progressionPage .tableScroller table {
+  box-sizing: border-box !important;
+}
+
+#progressionPage .tableShell,
+#progressionPage .tableScroller {
+  overflow: visible !important;
+}
+
+#progressionPage .tableScroller table {
+  table-layout: fixed !important;
+  border-spacing: 0 !important;
+}
+
+#progressionPage .tableScroller table,
+#progressionPage .tableScroller col,
+#progressionPage .tableScroller th,
+#progressionPage .tableScroller td {
+  transition: none !important;
+  animation: none !important;
+}
+
+#progressionPage .tableScroller .col-shared-width-filler,
+#progressionPage .tableScroller .col-stable-width-filler,
+#progressionPage .tableScroller .col-exact-width-filler {
+  padding: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  background: inherit !important;
+  pointer-events: none !important;
+}
+
+@media (min-width: 901px) {
+  body:not(.loading):not(.booting).pinnedSidebarVisible.tableLayoutPending #loadingScreen,
+  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewLoading #loadingScreen {
+    inset: var(--pinned-topbar-height) 0 0 var(--pinned-sidebar-width) !important;
+    width: auto !important;
+    height: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #progressionPage {
+    transition: none !important;
+  }
+}
+
+/* v1.150.7 - Layout-centered states and stable shared view presentation */
+.toastMessage {
+  left: var(--toast-center-x, 50%) !important;
+}
+
+.selectionBar {
+  left: var(--selection-center-x, 50%) !important;
+}
+
+body.pinnedSidebarVisible .myPlayersLockedPage {
+  right: 0 !important;
+  left: var(--pinned-sidebar-width) !important;
+  width: auto !important;
+}
+
+body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
+  right: 0 !important;
+  left: 0 !important;
+  width: auto !important;
+}
+
+body[data-page="club"] #progressionPage,
+body[data-page="club"] #progressionPage * {
+  transition: none !important;
+  animation: none !important;
+}
+
+body[data-page="club"].clubViewSwitching:not(.clubViewLoading) #progressionPage {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+body[data-page="mfl"] #progressionPage .viewButton[data-view="attributes"],
+body[data-page="mflstats"] #progressionPage .viewButton[data-view="attributes"] {
+  order: 1 !important;
+}
+
+body[data-page="mfl"] #progressionPage .viewButton[data-view="stats"],
+body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
+  order: 2 !important;
+}
+
+.watchlistDropdownAction:disabled {
+  opacity: 1 !important;
+}
+
+.watchlistDropdownAction:disabled > svg {
+  opacity: 0.45;
+}
+
+.watchlistDropdownAction:disabled[data-tooltip]::after {
+  opacity: 0;
+}
+
+.watchlistDropdownAction:disabled[data-tooltip]:hover::after,
+.watchlistDropdownAction:disabled[data-tooltip]:focus-visible::after {
+  opacity: 1;
+}
+
+#progressionPage .tableShell {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+#progressionPage .tableScroller {
+  border-radius: inherit !important;
+  overflow: hidden !important;
+}
+
+#progressionPage .tableScroller thead,
+#progressionPage .tableScroller thead tr {
+  background-clip: padding-box !important;
+}
+
+#progressionPage .tableScroller thead th:first-child {
+  border-top-left-radius: inherit;
+}
+
+#progressionPage .tableScroller thead th:last-child {
+  border-top-right-radius: inherit;
+}
+
+html.table-layout-pending #progressionPage .tableScroller:not(.tableWidthsReady) table,
+body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) table {
+  visibility: hidden !important;
+}
+
+/* v1.150.8 - Content-area pagination and stable initial table width */
+#progressionPage nav.pager {
+  left: 0 !important;
+  width: 100% !important;
+}
+
+/* v1.150.13 - Refined popup controls and filter dropdown hover */
+.popupCloseButton,
+.popupAddButton,
+.popupMinusButton {
+  position: relative;
+  font-size: 0;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.popupCloseButton::before,
+.popupCloseButton::after,
+.popupAddButton::before,
+.popupAddButton::after,
+.popupMinusButton::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.popupCloseButton::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.popupCloseButton::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.popupAddButton::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.popupCloseButton:hover:not(:disabled),
+.popupAddButton:hover:not(:disabled),
+.popupMinusButton:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.filtersDialog select {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog select:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.filtersDialog select:focus:not(:disabled),
+.filtersDialog select:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+/* v1.150.15 - Training control hover replay and selected filter styling */
+.trainingStatControls button {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.trainingStatControls button:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.trainingStatControls button.trainingHoverReset,
+.trainingStatControls button.trainingHoverReset:hover:not(:disabled) {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  transition: none !important;
+}
+
+/* v1.150.16 - Match player views and filter values to table view-button hover */
+.playerAttributeViewButton {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.playerAttributeViewButton:not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+.playerAttributeViewButton.active:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.filtersDialog [data-filter-value] {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog [data-filter-value]:hover:not(:disabled),
+.filtersDialog [data-filter-value]:focus:not(:disabled),
+.filtersDialog [data-filter-value]:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+/* v1.150.17 - Match Evaluation search to table view-button hover */
+#evaluationSearchInput {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#evaluationSearchInput:hover:not(:disabled),
+#evaluationSearchInput:focus:not(:disabled),
+#evaluationSearchInput:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+/* v1.150.18 - Match rows selector and Evaluation clear control */
+#pageSizeSelect {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#pageSizeSelect:hover:not(:disabled),
+#pageSizeSelect:focus:not(:disabled),
+#pageSizeSelect:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.evaluationSearchControl {
+  position: relative;
+}
+
+.evaluationSearchControl #evaluationSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.evaluationSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+}
+
+/* v1.150.19 - Single unboxed Evaluation search clear control */
+.evaluationSearchClearButton,
+.evaluationSearchClearButton:hover:not(:disabled),
+.evaluationSearchClearButton:focus:not(:disabled),
+.evaluationSearchClearButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* v1.150.20 - Hide the empty Evaluation search clear control */
+.evaluationSearchClearButton[hidden] {
+  display: none !important;
+}
+
+/* v1.150.21 - Unified Evaluation and global search clear controls */
+.evaluationSearch .field::after {
+  content: none !important;
+  display: none !important;
+}
+
+.globalSearchControl {
+  position: relative;
+}
+
+.globalSearchControl #playerSearchInput {
+  width: 100%;
+  padding-right: 42px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.globalSearchControl #playerSearchInput:hover:not(:disabled),
+.globalSearchControl #playerSearchInput:focus:not(:disabled),
+.globalSearchControl #playerSearchInput:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.playerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+}
+
+.playerSearchClearButton,
+.playerSearchClearButton:hover:not(:disabled),
+.playerSearchClearButton:focus:not(:disabled),
+.playerSearchClearButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.playerSearchClearButton[hidden] {
+  display: none !important;
+}
+
+/* v1.151.0 - Interaction-only loading and incremental data routes */
+#loadingScreen,
+html.table-layout-pending #loadingScreen,
+body.tableLayoutPending #loadingScreen,
+body.clubViewLoading #loadingScreen,
+body.clubViewSwitching #loadingScreen {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+html.appBusy,
+html.appBusy *,
+body.appBusy,
+body.appBusy * {
+  cursor: wait !important;
+}
+
+body.appBusy::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  background: transparent;
+  cursor: wait;
+  pointer-events: auto;
+}
+
+body.appBusy .toastMessage {
+  visibility: hidden !important;
+}
+
+/* v1.117.3 - Layer Evaluation search results above page content without changing overflow */
+body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
+  position: relative;
+  z-index: 1000;
+}
+
+body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+  position: relative;
+  z-index: 1001;
+}
+
+body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
+  position: absolute;
+  z-index: 1002 !important;
+}
+
+body[data-page="evaluation"] #evaluationPanel {
+  position: relative;
+  z-index: 0;
+}
+
+/* v1.117.4 - Extend the empty Evaluation page to the footer */
+body[data-page="evaluation"] #evaluationPage {
+  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px);
+  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px);
+}
+
+/* v1.118.26 - Prevent Evaluation value flashes and stabilize MFL Stats loading and controls. */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+}
+
+body {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+body > .topbar {
+  grid-row: 1;
+  position: relative !important;
+  top: auto !important;
+  z-index: 2147483000;
+}
+
+body > #appShell {
+  grid-row: 2;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+body > #appShell > main {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-x: clip !important;
+  overflow-y: scroll !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto !important;
+}
+
+body > .siteFooter {
+  grid-row: 3;
+  position: relative !important;
+  z-index: 2147483000;
+  margin-top: 0 !important;
+}
+
+.siteFooter a[data-page="changelog"] {
+  font-size: 0 !important;
+}
+
+#searchModal:not([hidden]),
+#advancedSettingsModal:not([hidden]),
+#evaluationLoadModal:not([hidden]) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483645 !important;
+}
+
+#searchModal > .searchDialog,
+#advancedSettingsModal > .advancedSettingsDialog,
+#evaluationLoadModal > .evaluationLoadDialog {
+  position: relative;
+  z-index: 1;
+}
+
+html body[data-page="evaluation"] #evaluationPage {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
+body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body[data-page="evaluation"]::after {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
+body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
+  visibility: hidden !important;
+}
+
+html[data-initial-page="evaluation"]:not(.mflEvaluationInitialStateReady) #evaluationPage .evaluationSearchGroup {
+  visibility: hidden !important;
+}
+
+html.mflEvaluationInitialStateReady #evaluationPage .evaluationSearchGroup {
+  visibility: visible !important;
+}
+
+html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
+html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+html.mflEvaluationInitialStateReady:not(.mflEvaluationInitialLoadVisible) #evaluationLoadButton,
+body.evaluationPlayerRoute #evaluationLoadButton {
+  display: none !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
+  position: relative;
+  z-index: 10 !important;
+  overflow: visible !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+html body[data-page="evaluation"] #evaluationPage .evaluationSearch,
+html body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
+  position: relative;
+  overflow: visible !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+html body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+  z-index: 11 !important;
+}
+
+html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
+  position: absolute !important;
+  z-index: 12 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+html body[data-page="evaluation"] #evaluationPanel {
+  position: relative;
+  z-index: 0;
+}
+
+html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown) + .evaluationSearchClearButton[hidden] {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
+  min-height: 0 !important;
+}
+
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
+html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGuardReady) #playerDetail > .emptyState {
+  visibility: hidden !important;
+}
+
+.playerContractTeamLink {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.playerContractTeamLink:hover,
+.playerContractTeamLink:focus-visible {
+  text-decoration: underline;
+}
+
+.playerNoteFloatingTooltip {
+  z-index: 2147483647 !important;
+}
+
+html.bootPending table thead,
+html.bootPending table thead tr,
+html.bootPending table thead th,
+html.appBusy table thead,
+html.appBusy table thead tr,
+html.appBusy table thead th,
+html.mflStatsLoading table thead,
+html.mflStatsLoading table thead tr,
+html.mflStatsLoading table thead th,
+body.booting table thead,
+body.booting table thead tr,
+body.booting table thead th,
+body.loading table thead,
+body.loading table thead tr,
+body.loading table thead th,
+body.appBusy table thead,
+body.appBusy table thead tr,
+body.appBusy table thead th,
+body.tableRowsLoading table thead,
+body.tableRowsLoading table thead tr,
+body.tableRowsLoading table thead th,
+body.tableLayoutPending table thead,
+body.tableLayoutPending table thead tr,
+body.tableLayoutPending table thead th,
+body.clubViewLoading table thead,
+body.clubViewLoading table thead tr,
+body.clubViewLoading table thead th,
+body.clubViewSwitching table thead,
+body.clubViewSwitching table thead tr,
+body.clubViewSwitching table thead th,
+body.mflStatsLoading table thead,
+body.mflStatsLoading table thead tr,
+body.mflStatsLoading table thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.evaluationDiscountTooltipPortal {
+  position: fixed;
+  z-index: 2147483647;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.evaluationDiscountTooltipPortal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.evaluationDiscountTooltipPortal[hidden] {
+  display: none !important;
+}
+
+html.mflStatsStableLoading,
+html.mflStatsStableLoading *,
+html.mflStatsLoading,
+html.mflStatsLoading *,
+body.mflStatsLoading,
+body.mflStatsLoading * {
+  cursor: wait !important;
+}
+
+body[data-page="mflstats"]::after,
+body[data-page="mflstats"].mflStatsInteractive::after {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body[data-page="mflstats"] #appShell,
+body[data-page="mflstats"] #mflStatsPage,
+body[data-page="mflstats"] .mflStatsFilters,
+body[data-page="mflstats"] #mflStatsOverallFilters,
+body[data-page="mflstats"] .mflStatsFilterButton,
+body[data-page="mflstats"] .mflStatsDistributionModeButton {
+  pointer-events: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evaluationDiscountTooltipPortal {
+    transition: none;
+  }
+}
+
+/* v1.119.2 - Keep the footer version deterministic during initial loading. */
+html body .siteFooter.siteFooter a[data-page="changelog"],
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* v1.119.3 - Keep table header bottom corners square while data is loading. */
+html body .siteFooter.siteFooter a[data-page="changelog"],
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+html.bootPending table thead,
+html.bootPending table thead tr,
+html.bootPending table thead th,
+html.appBusy table thead,
+html.appBusy table thead tr,
+html.appBusy table thead th,
+html.mflStatsLoading table thead,
+html.mflStatsLoading table thead tr,
+html.mflStatsLoading table thead th,
+html.mflStatsStableLoading table thead,
+html.mflStatsStableLoading table thead tr,
+html.mflStatsStableLoading table thead th,
+body.booting table thead,
+body.booting table thead tr,
+body.booting table thead th,
+body.loading table thead,
+body.loading table thead tr,
+body.loading table thead th,
+body.appBusy table thead,
+body.appBusy table thead tr,
+body.appBusy table thead th,
+body.tableRowsLoading table thead,
+body.tableRowsLoading table thead tr,
+body.tableRowsLoading table thead th,
+body.tableLayoutPending table thead,
+body.tableLayoutPending table thead tr,
+body.tableLayoutPending table thead th,
+body.clubViewLoading table thead,
+body.clubViewLoading table thead tr,
+body.clubViewLoading table thead th,
+body.clubViewSwitching table thead,
+body.clubViewSwitching table thead tr,
+body.clubViewSwitching table thead th,
+body.mflStatsLoading table thead,
+body.mflStatsLoading table thead tr,
+body.mflStatsLoading table thead th,
+body.mflStatsStableLoading table thead,
+body.mflStatsStableLoading table thead tr,
+body.mflStatsStableLoading table thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* v1.119.4 - Stabilize loading tables, footer version, and Changelog navigation. */
+html body .siteFooter.siteFooter a[data-page="changelog"],
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+html.bootPending table thead,
+html.bootPending table thead tr,
+html.bootPending table thead th,
+html.appBusy table thead,
+html.appBusy table thead tr,
+html.appBusy table thead th,
+html.mflStatsLoading table thead,
+html.mflStatsLoading table thead tr,
+html.mflStatsLoading table thead th,
+html.mflStatsStableLoading table thead,
+html.mflStatsStableLoading table thead tr,
+html.mflStatsStableLoading table thead th,
+body.booting table thead,
+body.booting table thead tr,
+body.booting table thead th,
+body.loading table thead,
+body.loading table thead tr,
+body.loading table thead th,
+body.appBusy table thead,
+body.appBusy table thead tr,
+body.appBusy table thead th,
+body.tableRowsLoading table thead,
+body.tableRowsLoading table thead tr,
+body.tableRowsLoading table thead th,
+body.tableLayoutPending table thead,
+body.tableLayoutPending table thead tr,
+body.tableLayoutPending table thead th,
+body.clubViewLoading table thead,
+body.clubViewLoading table thead tr,
+body.clubViewLoading table thead th,
+body.clubViewSwitching table thead,
+body.clubViewSwitching table thead tr,
+body.clubViewSwitching table thead th,
+body.mflStatsLoading table thead,
+body.mflStatsLoading table thead tr,
+body.mflStatsLoading table thead th,
+body.mflStatsStableLoading table thead,
+body.mflStatsStableLoading table thead tr,
+body.mflStatsStableLoading table thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+body.mflDatabaseRoutePending #tableBody {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.mflDatabaseRoutePending #emptyState {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* v1.119.5 - Keep the footer stable and remove loading table bottom rounding. */
+html body .siteFooter.siteFooter a[data-page="changelog"],
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+body.mflTableDataLoading #tableBody {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.mflTableDataLoading #emptyState {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* v1.119.6 - Release table loading when rows render and keep footer navigation native. */
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
+  .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
+  .mflTableDataLoading)
+  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+body.mflTableDataLoading #tableBody {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.mflTableDataLoading #tableBody:has(> tr) {
+  visibility: visible !important;
+}
+
+body.mflTableDataLoading #emptyState {
+  display: block !important;
+  visibility: visible !important;
+}
+
+body.mflTableDataLoading:has(#tableBody > tr) #emptyState {
+  display: none !important;
+}
+
+/* v1.119.7 - Complete Changelog history and keep loading table bottoms square. */
+html body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+  pointer-events: auto !important;
+}
+
+body[data-page="changelog"] .siteFooter a[href="/changelog"],
+html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
+  cursor: default !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  :is(
+    .tableShell,
+    .tableScroller,
+    .tableHeader,
+    .tableHeaderRow,
+    #tableHead,
+    #tableHeader,
+    table,
+    table thead,
+    table thead tr,
+    table thead th,
+    table thead th:first-child,
+    table thead th:last-child
+  ),
+body:is(
+    .booting,
+    .loading,
+    .appBusy,
+    .tableRowsLoading,
+    .tableLayoutPending,
+    .clubViewLoading,
+    .clubViewSwitching,
+    .mflStatsLoading,
+    .mflStatsStableLoading,
+    .mflTableDataLoading
+  )
+  :is(
+    .tableShell,
+    .tableScroller,
+    .tableHeader,
+    .tableHeaderRow,
+    #tableHead,
+    #tableHeader,
+    table,
+    table thead,
+    table thead tr,
+    table thead th,
+    table thead th:first-child,
+    table thead th:last-child
+  ) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+body.mflTableDataLoading #tableBody {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.mflTableDataLoading #tableBody:has(> tr) {
+  visibility: visible !important;
+}
+
+body.mflTableDataLoading #emptyState {
+  display: block !important;
+  visibility: visible !important;
+}
+
+body.mflTableDataLoading:has(#tableBody > tr) #emptyState {
+  display: none !important;
+}
+
+/* v1.119.8 - Preserve rounded bottom corners on the last rendered row while loading. */
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  #tableBody > tr:last-child > :first-child,
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  #tableBody > tr:last-child > :first-child {
+  border-bottom-left-radius: 10px !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  #tableBody > tr:last-child > :last-child,
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  #tableBody > tr:last-child > :last-child {
+  border-bottom-right-radius: 10px !important;
+}
+
+/* v1.119.9 - Round the rendered loading table bottom and show Changelog immediately on refresh. */
+
+html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"]
+  :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"] #changelogPage,
+html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  :is(.tableShell, .tableScroller, table):has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  :is(.tableShell, .tableScroller, table):has(#tableBody > tr) {
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  .tableShell:has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  .tableShell:has(#tableBody > tr) {
+  overflow: hidden !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  table:has(#tableBody > tr),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  table:has(#tableBody > tr) {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  #tableBody > tr:last-child > :first-child,
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  #tableBody > tr:last-child > :first-child {
+  border-bottom-left-radius: 10px !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))) {
+  border-bottom-right-radius: 10px !important;
+}
+
+/* v1.119.10 - Finish the data-free Changelog boot and round the loading placeholder row. */
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  .tableShell:has(> #emptyState:not([hidden])),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  .tableShell:has(> #emptyState:not([hidden])) {
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  .tableShell:has(> #emptyState:not([hidden])) > .tableScroller,
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  .tableShell:has(> #emptyState:not([hidden])) > .tableScroller {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
+  .tableShell > #emptyState:not([hidden]),
+body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
+  .tableShell > #emptyState:not([hidden]) {
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+/* v1.119.11 - Render Changelog before summary and account startup. */
+
+/* v1.119.12 - Show the current footer version and complete Changelog before reveal. */
+html.mflRelease112Ready body .siteFooter.siteFooter a[href="/changelog"],
+html[data-mfl-latest-release-version="1.119.12"] body .siteFooter.siteFooter a[href="/changelog"] {
+  font-size: 0 !important;
+}
+
+/* v1.119.13 - Reveal page chrome immediately and synchronize release content on first paint. */
+html body .siteFooter.siteFooter a[href="/changelog"],
+html body .siteFooter.siteFooter a[data-page="changelog"] {
+  font-size: 0 !important;
+}
+
+/* v1.119.15 - Stabilize first-paint page chrome, footer version, and Changelog history. */
+html.mflRelease115Ready body .siteFooter.siteFooter a[href="/changelog"],
+html[data-mfl-release-version="1.119.15"] body .siteFooter.siteFooter a[href="/changelog"],
+html body .siteFooter.siteFooter a[data-page="changelog"] {
+  font-size: 0 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+body[data-page="changelog"] .siteFooter a[href="/changelog"],
+html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
+  cursor: pointer !important;
+}
+
+/* v1.119.17 - Restore Home routing, first-paint release UI, and the Discount Rate tooltip. */
+html body .siteFooter.siteFooter a[href="/changelog"],
+html body .siteFooter.siteFooter a[data-page="changelog"] {
+  font-size: 0 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* v1.119.25 - Use native footer text and stable first-paint layout. */
 html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   display: inline-block !important;
@@ -11,12 +6768,6 @@ html body .siteFooter.siteFooter a[data-page="changelog"] {
   pointer-events: auto !important;
   position: relative;
   z-index: 1;
-}
-
-html body .siteFooter.siteFooter a[href="/changelog"]::before,
-html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: none !important;
-  display: none !important;
 }
 
 html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {

@@ -6,11 +6,12 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.24";
+        const VERSION = "1.119.25";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
+          ["v1.119.25", "Use native footer text and stable first-paint layout"],
           ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
           ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
           ["v1.119.22", "Reveal saved Evaluation chrome immediately and stabilize footer and Changelog first paint"],
@@ -43,13 +44,10 @@
             footer.style.cursor = "pointer";
           }
 
-          let menuOpen = true;
-          try {
-            const savedState = JSON.parse(localStorage.getItem("mfl-table-filters-v1") || "null");
-            if (typeof savedState?.menuOpen === "boolean") menuOpen = savedState.menuOpen;
-          } catch {
-            menuOpen = true;
-          }
+          // The consolidated application runtime permanently keeps the sidebar
+          // expanded. Seed that exact layout before inserting the shell so the
+          // content never moves horizontally during startup.
+          const menuOpen = true;
           root.querySelector("#appShell")?.classList.toggle("menuClosed", !menuOpen);
           const menuButton = root.querySelector("#menuButton");
           if (menuButton) menuButton.setAttribute("aria-expanded", String(menuOpen));
@@ -157,11 +155,6 @@
               font-size: 14px !important;
               cursor: pointer !important;
               pointer-events: auto !important;
-            }
-            html body .siteFooter.siteFooter a[href="/changelog"]::before,
-            html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-              content: none !important;
-              display: none !important;
             }
           </style>`;
           const patchMarker = '        const routeStyles = `';
