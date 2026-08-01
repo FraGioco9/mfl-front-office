@@ -1,37 +1,36 @@
 (() => {
-  const VERSION = "1.119.21";
+  const VERSION = "1.119.22";
   const LABEL = `MFL Front Office v${VERSION}`;
   const DISCOUNT_TOOLTIP = "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 16, so it uses seasons 11-15.";
   const TOOLTIP_HIDE_DURATION = 170;
+  let footerObserver = null;
+  let observedFooter = null;
   let tooltipObserver = null;
   let discountTooltip = null;
   let discountTooltipTarget = null;
   let discountTooltipHideTimer = null;
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflRelease121RuntimeStyles");
+    let style = document.getElementById("mflRelease122RuntimeStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRelease121RuntimeStyles";
+      style.id = "mflRelease122RuntimeStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
       html body .siteFooter.siteFooter a[href="/changelog"],
       html body .siteFooter.siteFooter a[data-page="changelog"] {
         display: inline-block !important;
-        font-size: 0 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 14px !important;
         cursor: pointer !important;
         pointer-events: auto !important;
       }
       html body .siteFooter.siteFooter a[href="/changelog"]::before,
       html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-        content: "${LABEL}" !important;
-        display: inline !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        font-size: 14px !important;
-        cursor: pointer !important;
-        pointer-events: none !important;
+        content: none !important;
+        display: none !important;
       }
     `;
   }
@@ -39,11 +38,24 @@
   function syncFooter() {
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     if (!footer) return false;
-    footer.textContent = LABEL;
-    footer.setAttribute("href", "/changelog");
-    footer.dataset.releaseLabel = LABEL;
-    footer.setAttribute("aria-label", `${LABEL}, open Changelog`);
-    footer.style.cursor = "pointer";
+    if (footer.textContent !== LABEL) footer.textContent = LABEL;
+    if (footer.getAttribute("href") !== "/changelog") footer.setAttribute("href", "/changelog");
+    if (footer.dataset.releaseLabel !== LABEL) footer.dataset.releaseLabel = LABEL;
+    const ariaLabel = `${LABEL}, open Changelog`;
+    if (footer.getAttribute("aria-label") !== ariaLabel) footer.setAttribute("aria-label", ariaLabel);
+    if (footer.style.cursor !== "pointer") footer.style.cursor = "pointer";
+
+    if (observedFooter !== footer) {
+      footerObserver?.disconnect();
+      observedFooter = footer;
+      footerObserver = new MutationObserver(syncFooter);
+      footerObserver.observe(footer, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    }
     return true;
   }
 
@@ -142,7 +154,7 @@
 
   function synchronizeReleaseUi() {
     const root = document.documentElement;
-    root.classList.add("mflRelease121Ready");
+    root.classList.add("mflRelease122Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
     installReleaseStyles();

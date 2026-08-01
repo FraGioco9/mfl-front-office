@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.21";
+  const VERSION = "1.119.22";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -29,10 +29,14 @@
 
   const revealInitialAppShell = () => {
     loadingScreen.hidden = true;
-    document.documentElement.classList.remove("loading", "table-layout-pending", "bootPending", "mflInitialChromePreparing");
+    document.documentElement.classList.remove("loading", "table-layout-pending", "bootPending");
     document.body.classList.remove("booting", "loading", "tableLayoutPending");
     revealAppShell();
     showAppShell();
+    void document.documentElement.offsetWidth;
+    window.requestAnimationFrame(() => {
+      document.documentElement.classList.remove("mflInitialChromePreparing");
+    });
   };
 
   if (initialPage === "changelog") {
@@ -43,9 +47,7 @@
     return;
   }
 
-  if (!initialSavedEvaluationId) {
-    revealInitialAppShell();
-  }
+  revealInitialAppShell();
 
   beginInteractionBusy();
   try {
@@ -72,7 +74,6 @@
         window.history.replaceState({}, "", savedUrl.pathname + savedUrl.search);
       }
 
-      revealInitialAppShell();
       return;
     }
 

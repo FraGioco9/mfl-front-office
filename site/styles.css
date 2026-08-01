@@ -1,10 +1,12 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
 
-/* v1.119.21 - Restore footer version, stable Changelog first paint, and owned saved Evaluation refresh. */
+/* v1.119.22 - Reveal saved Evaluation chrome immediately and stabilize footer and Changelog first paint. */
 html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   display: inline-block !important;
-  font-size: 0 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-size: 14px !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   position: relative;
@@ -13,13 +15,8 @@ html body .siteFooter.siteFooter a[data-page="changelog"] {
 
 html body .siteFooter.siteFooter a[href="/changelog"]::before,
 html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.119.21" !important;
-  display: inline !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  font-size: 14px !important;
-  cursor: pointer !important;
-  pointer-events: none !important;
+  content: none !important;
+  display: none !important;
 }
 
 html.mflInitialChromePreparing *,

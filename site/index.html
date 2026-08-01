@@ -6,11 +6,12 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.21";
+        const VERSION = "1.119.22";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
+          ["v1.119.22", "Reveal saved Evaluation chrome immediately and stabilize footer and Changelog first paint"],
           ["v1.119.21", "Restore footer version, stable Changelog first paint, and owned saved Evaluation refresh"],
           ["v1.119.20", "Fade tooltips and stabilize Changelog and saved Evaluation refresh"],
           ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"],
@@ -39,6 +40,17 @@
             footer.setAttribute("aria-label", `${label}, open Changelog`);
             footer.style.cursor = "pointer";
           }
+
+          let menuOpen = true;
+          try {
+            const savedState = JSON.parse(localStorage.getItem("mfl-table-filters-v1") || "null");
+            if (typeof savedState?.menuOpen === "boolean") menuOpen = savedState.menuOpen;
+          } catch {
+            menuOpen = true;
+          }
+          root.querySelector("#appShell")?.classList.toggle("menuClosed", !menuOpen);
+          const menuButton = root.querySelector("#menuButton");
+          if (menuButton) menuButton.setAttribute("aria-expanded", String(menuOpen));
 
           const list = root.querySelector(".changelogList");
           if (!list) return;
@@ -138,18 +150,16 @@
             html body .siteFooter.siteFooter a[href="/changelog"],
             html body .siteFooter.siteFooter a[data-page="changelog"] {
               display: inline-block !important;
-              font-size: 0 !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              font-size: 14px !important;
               cursor: pointer !important;
               pointer-events: auto !important;
             }
             html body .siteFooter.siteFooter a[href="/changelog"]::before,
             html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-              content: "MFL Front Office v${VERSION}" !important;
-              display: inline !important;
-              visibility: visible !important;
-              opacity: 1 !important;
-              font-size: 14px !important;
-              pointer-events: none !important;
+              content: none !important;
+              display: none !important;
             }
           </style>`;
           const patchMarker = '        const routeStyles = `';
@@ -173,7 +183,7 @@
         );
         source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;')},
+          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;\n          document.documentElement.classList.remove("bootPending");')},
         );
         source = source.replace(
           '            installRuntimeFixes();\\n            rebuildChangelog();\\n            window.setTimeout(rebuildChangelog, 0);\\n            finalizeRouteChrome();',
@@ -181,7 +191,7 @@
         );
         source = source.replace(
           '          requestAnimationFrame(() => requestAnimationFrame(() => {\\n            document.documentElement.classList.remove("bootPending");\\n          }));',
-          '          // startApp reveals the shell only after the initial route is final.',
+          '          // The prepared shell is already visible; startApp only unlocks transitions.',
         );
 `;
           if (!source.includes(patchMarker)) {
