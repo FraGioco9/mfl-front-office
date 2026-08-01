@@ -6,10 +6,11 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.13";
+        const VERSION = "1.119.14";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES = [
+          ["v1.119.14", "Show correctly positioned page chrome and authoritative release content on first paint"],
           ["v1.119.13", "Reveal page chrome immediately and synchronize the footer and Changelog on first paint"],
           ["v1.119.12", "Show the current footer version and complete Changelog on first paint"],
           ["v1.119.11", "Render Changelog before summary and account startup"],
@@ -34,7 +35,7 @@
           ["v1.118.26", "Prevent Evaluation value flashes, synchronize the Load action, and stabilize MFL Stats controls"],
           ["v1.118.25", "Link contract teams, reveal the Evaluation Load action early, and restore Stats filter clicks"],
           ["v1.118.24", "Prevent Home boot stalls and keep route fixes scoped to their pages"],
-          ["v1.118.23", "Prevent false player-not-found flashes, link contract teams, and reveal the Evaluation shell immediately"],
+          ["v1.118.23", "Prevent false player-not-found flashes, link player teams, and reveal the Evaluation shell immediately"],
           ["v1.118.22", "Keep player routes loading, link teams, restore Stats controls, and reveal the Evaluation shell"],
           ["v1.118.21", "Fix tooltip placement, player team links, Stats loading controls, and the Evaluation loading shell"],
           ["v1.118.20", "Keep tooltips clear of the header, link player teams, restore Stats filters, and reveal Evaluation together"],
@@ -73,17 +74,34 @@
             footer.setAttribute("href", "/changelog");
             footer.dataset.releaseLabel = label;
             footer.setAttribute("aria-label", `${label}, open Changelog`);
+            footer.style.cursor = "pointer";
           }
 
           const list = root.querySelector(".changelogList");
           if (!list) return;
 
+          const renderedItems = Array.from(list.querySelectorAll(".changelogPatchList > li, :scope > li:not(.changelogMinorSection)"));
           const entries = new Map();
-          list.querySelectorAll(".changelogPatchList > li, :scope > li:not(.changelogMinorSection)").forEach((item) => {
+          renderedItems.forEach((item) => {
             const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
             const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
             if (/^v\d+\.\d+\.\d+$/.test(label)) entries.set(label, description);
           });
+
+          const expectedCount = Number(list.dataset.completeReleaseCount || 0);
+          const firstVersion = String(
+            list.querySelector(".changelogPatchList > li > span, :scope > li:not(.changelogMinorSection) > span")?.textContent || "",
+          ).trim();
+          const releaseDescriptionsCurrent = releases.every(([label, description]) => entries.get(label) === description);
+          if (list.dataset.completeReleaseVersion === version
+              && expectedCount > 0
+              && renderedItems.length === expectedCount
+              && entries.size === expectedCount
+              && firstVersion === `v${version}`
+              && releaseDescriptionsCurrent) {
+            return;
+          }
+
           releases.forEach(([label, description]) => entries.set(label, description));
 
           const groups = new Map();
@@ -152,6 +170,173 @@
           list.replaceChildren(...sections);
           list.dataset.sectioned = "true";
           list.dataset.completeReleaseVersion = version;
+          list.dataset.completeReleaseCount = String(entries.size);
+        }
+
+        function installReleaseGuard(root, version, releases, prepare) {
+          let scheduled = false;
+          const sync = () => {
+            scheduled = false;
+            prepare(root, version, releases);
+          };
+          const schedule = () => {
+            if (scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(sync);
+          };
+
+          const footer = root.querySelector(".siteFooter");
+          const list = root.querySelector(".changelogList");
+          if (footer) {
+            new MutationObserver(schedule).observe(footer, {
+              attributes: true,
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
+          }
+          if (list) {
+            new MutationObserver(schedule).observe(list, {
+              attributes: true,
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
+          }
+          schedule();
+        }
+
+        function prepareStaticRouteChrome(root) {
+          const path = String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
+          const slugToView = {
+            attributes: "attributes",
+            stats: "stats",
+            "next-overall": "next",
+            contracts: "contracts",
+            "current-season": "current",
+            "all-time": "all",
+          };
+          const pageViews = {
+            database: ["attributes", "contracts"],
+            mfl: ["attributes", "stats"],
+            agents: ["attributes", "next", "contracts", "current", "all"],
+            progression: ["current", "all"],
+            watchlist: ["attributes", "next", "contracts", "current", "all"],
+            myplayers: ["attributes", "next", "contracts", "current", "all"],
+            club: ["attributes", "contracts", "current", "all"],
+          };
+          const defaultViews = {
+            database: "attributes",
+            mfl: "attributes",
+            agents: "attributes",
+            progression: "current",
+            watchlist: "current",
+            myplayers: "attributes",
+            club: "attributes",
+          };
+
+          let page = "home";
+          let title = "";
+          let view = "";
+          let table = false;
+          let navPage = "";
+          const segments = path.split("/").filter(Boolean);
+          const lastView = slugToView[segments.at(-1)] || "";
+
+          if (/^\/mfl\/stats$/i.test(path)) {
+            page = "mflstats";
+            navPage = "mfl";
+          } else if (/^\/database(?:\/|$)/i.test(path)) {
+            page = "database"; title = "Database"; table = true; navPage = "database"; view = lastView || defaultViews.database;
+          } else if (/^\/mfl(?:\/|$)/i.test(path)) {
+            page = "mfl"; title = "MFL Wallet"; table = true; navPage = "mfl"; view = lastView || defaultViews.mfl;
+          } else if (/^\/progression(?:\/|$)/i.test(path)) {
+            page = "progression"; title = "Progression"; table = true; navPage = "progression"; view = lastView || defaultViews.progression;
+          } else if (/^\/watchlist(?:\/|$)/i.test(path)) {
+            page = "watchlist"; title = "Watchlist"; table = true; navPage = "watchlist"; view = lastView || defaultViews.watchlist;
+          } else if (/^\/my-players(?:\/|$)/i.test(path)) {
+            page = "myplayers"; title = "My Players"; table = true; navPage = "myplayers"; view = lastView || defaultViews.myplayers;
+          } else if (/^\/agents?\/[^/]+(?:\/|$)/i.test(path)) {
+            page = "agents"; title = "Agent"; table = true; view = lastView || defaultViews.agents;
+          } else if (/^\/clubs?\/[^/]+(?:\/|$)/i.test(path)) {
+            page = "club"; title = root.querySelector("#tablePageTitle")?.textContent || "Club"; table = true; view = lastView || defaultViews.club;
+          } else if (/^\/players\/[^/]+$/i.test(path)) {
+            page = "player";
+          } else if (/^\/evaluation$/i.test(path)) {
+            page = "evaluation"; navPage = "evaluation";
+          } else if (/^\/settings$/i.test(path)) {
+            page = "settings"; navPage = "settings";
+          } else if (/^\/changelog$/i.test(path)) {
+            page = "changelog";
+          }
+
+          const pageIds = ["homePage", "progressionPage", "mflStatsPage", "myPlayersLockedPage", "evaluationPage", "playerPage", "settingsPage", "changelogPage"];
+          const targetId = table ? "progressionPage" : {
+            home: "homePage",
+            mflstats: "mflStatsPage",
+            player: "playerPage",
+            evaluation: "evaluationPage",
+            settings: "settingsPage",
+            changelog: "changelogPage",
+          }[page];
+          pageIds.forEach((id) => {
+            const element = root.getElementById(id);
+            if (element) element.hidden = id !== targetId;
+          });
+
+          root.body.dataset.page = page;
+          try {
+            const address = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim();
+            const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+            const optedIn = Boolean(address && proof?.address && proof?.message && Array.isArray(proof?.signatures) && proof.signatures.length);
+            root.body.classList.toggle("guest", !optedIn);
+          } catch {
+            root.body.classList.add("guest");
+          }
+
+          const menuRail = root.getElementById("menuRail");
+          const sidebar = root.getElementById("sidebar");
+          if (menuRail) menuRail.hidden = false;
+          if (sidebar) sidebar.hidden = false;
+          root.getElementById("appShell")?.classList.remove("menuClosed");
+          root.querySelectorAll(".navButton[data-page]").forEach((button) => {
+            button.classList.toggle("active", Boolean(navPage) && button.dataset.page === navPage);
+          });
+          if (page === "mflstats") {
+            root.querySelectorAll("#mflStatsPage .viewButton[data-view]").forEach((button) => {
+              button.classList.toggle("active", button.dataset.view === "stats");
+            });
+          }
+
+          if (table) {
+            const pageElement = root.getElementById("progressionPage");
+            const heading = root.getElementById("tablePageTitle");
+            if (heading && page !== "club") heading.textContent = title;
+            const allowed = pageViews[page] || [];
+            const normalizedView = allowed.includes(view) ? view : (defaultViews[page] || allowed[0]);
+            pageElement?.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+              const visible = allowed.includes(button.dataset.view);
+              button.hidden = !visible;
+              button.classList.toggle("active", visible && button.dataset.view === normalizedView);
+            });
+
+            const switcher = root.getElementById("watchlistSwitcher");
+            if (switcher) switcher.hidden = page !== "watchlist";
+            if (page === "club") {
+              pageElement?.querySelector(".quickFilters")?.setAttribute("hidden", "");
+              pageElement?.querySelector(".controlsBar")?.setAttribute("hidden", "");
+              pageElement?.querySelectorAll(".pager, nav.pager").forEach((pager) => { pager.hidden = true; });
+            }
+            root.getElementById("tableBody")?.replaceChildren();
+            const emptyState = root.getElementById("emptyState");
+            if (emptyState) {
+              emptyState.hidden = false;
+              emptyState.textContent = "Loading players...";
+            }
+            root.body.classList.add("tableRowsLoading");
+          }
+
+          root.documentElement?.classList?.add("mflInitialChromePrepared", "mflInitialChromePreparing");
         }
 
         function fail(message) {
@@ -173,15 +358,31 @@
           source = source.replace('const VERSION = "1.118.3";', `const VERSION = "${VERSION}";`);
 
           const patchMarker = '        const routeStyles = `';
-          const releaseCall = `(${prepareReleaseShell.toString()})(document, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
+          const releaseCallDocument = `(${prepareReleaseShell.toString()})(document, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
+          const releaseCallShell = `(${prepareReleaseShell.toString()})(shell, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
+          const chromeCallDocument = `(${prepareStaticRouteChrome.toString()})(document);`;
+          const chromeCallShell = `(${prepareStaticRouteChrome.toString()})(shell);`;
+          const releaseGuardCall = `(${installReleaseGuard.toString()})(document, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)}, ${prepareReleaseShell.toString()});`;
           const extraSourcePatches = `
         source = source.replace(
           '            if (!entries.has(version)) entries.set(version, description);',
           '            entries.set(version, description);',
         );
         source = source.replace(
+          '          prepareInitialShell(shell);',
+          ${JSON.stringify(`          prepareInitialShell(shell);\n          ${releaseCallShell}\n          ${chromeCallShell}`)},
+        );
+        source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify(`          document.body.innerHTML = shell.body.innerHTML;\n          ${releaseCall}\n          document.documentElement.classList.remove("bootPending");`)},
+          ${JSON.stringify(`          document.body.innerHTML = shell.body.innerHTML;\n          ${releaseCallDocument}\n          ${chromeCallDocument}\n          ${releaseGuardCall}\n          requestAnimationFrame(() => {\n            document.documentElement.classList.remove("bootPending");\n            document.documentElement.classList.add("mflInitialChromeVisible");\n          });`)},
+        );
+        source = source.replace(
+          '            rebuildChangelog();\n            window.setTimeout(rebuildChangelog, 0);',
+          ${JSON.stringify(`            ${releaseCallDocument}\n            window.setTimeout(() => { ${releaseCallDocument} }, 0);`)},
+        );
+        source = source.replace(
+          '            finalizeRouteChrome();',
+          ${JSON.stringify(`            finalizeRouteChrome();\n            requestAnimationFrame(() => requestAnimationFrame(() => {\n              document.documentElement.classList.remove("mflInitialChromePreparing");\n            }));`)},
         );
 `;
           if (!source.includes(patchMarker)) {
