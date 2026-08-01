@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.27";
+  const VERSION = "1.119.28";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -244,16 +244,59 @@
       '  const contractTeamName = formatContractClubName(row);\n  const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();\n  const contractTeamHtml = contractClubId\n    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/attributes" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`\n    : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;\n  const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;',
     );
     patchedSource = patchedSource.replace(
+      `function cachedIncrementalPayload(route, page = 1) {
+  if (!route || route.scope === "empty") {
+    return null;
+  }
+  return state.incrementalPayloadCache.get(incrementalRequestDetails(route, page).cacheKey) || null;
+}`,
+      `const clubViewPayloadCache = new Map();
+
+function clubViewPayloadCacheKey(route) {
+  if (!route || route.scope !== "club" || !route.clubId || !route.view) return "";
+  return String(route.clubId) + ":" + String(route.view) + ":" + String(route.access || "public");
+}
+
+function rememberClubViewPayload(route, payload) {
+  const key = clubViewPayloadCacheKey(route);
+  if (!key || !payload || !Array.isArray(payload.rows)) return;
+  clubViewPayloadCache.set(key, {
+    ...payload,
+    columns: Array.isArray(payload.columns) ? [...payload.columns] : [],
+    rows: [...payload.rows],
+  });
+}
+
+function cachedClubViewPayload(route) {
+  const key = clubViewPayloadCacheKey(route);
+  return key ? clubViewPayloadCache.get(key) || null : null;
+}
+
+function cachedIncrementalPayload(route, page = 1) {
+  if (!route || route.scope === "empty") {
+    return null;
+  }
+  return state.incrementalPayloadCache.get(incrementalRequestDetails(route, page).cacheKey) || null;
+}`,
+    );
+    patchedSource = patchedSource.replace(
+      `function applyIncrementalPayload(route, payload) {
+  const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);`,
+      `function applyIncrementalPayload(route, payload) {
+  rememberClubViewPayload(route, payload);
+  const tableRoute = ["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope);`,
+    );
+    patchedSource = patchedSource.replace(
       '  let activeClubId = "";\n  let openingClub = false;',
       `  let activeClubId = "";
   let openingClub = false;
   function restoreCachedClubView(view) {
     if (typeof incrementalRouteTarget !== "function"
-      || typeof cachedIncrementalPayload !== "function"
+      || typeof cachedClubViewPayload !== "function"
       || typeof applyIncrementalPayload !== "function") return false;
     const route = incrementalRouteTarget("club", { view });
     if (!route) return false;
-    const payload = cachedIncrementalPayload(route, 1);
+    const payload = cachedClubViewPayload(route);
     if (!payload) return false;
     applyIncrementalPayload(route, payload);
     state.currentPage = CLUB_PAGE;

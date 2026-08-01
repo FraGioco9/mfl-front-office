@@ -6804,6 +6804,8 @@ html.mflInitialChromePreparing *::after {
 
 /* v1.119.27 - Keep Changelog geometry stable and restore cached club views instantly. */
 
+/* v1.119.28 - Keep loaded club views available throughout the session. */
+
 [data-tooltip]::before,
 [data-tooltip]::after,
 [data-note-tooltip]::before,
