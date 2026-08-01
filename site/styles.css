@@ -1,17 +1,72 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@400f58c5a90766919d37e7674b2ee7cd46d5b3f7/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
 
-/* v1.119.17 - Restore Home routing, first-paint release UI, and the Discount Rate tooltip. */
-html body .siteFooter.siteFooter a[href="/changelog"],
+/* v1.119.18 - Unify tooltip transitions, restore the footer version, and stabilize Changelog first paint. */
+html body .siteFooter.siteFooter a[href="/changelog"][data-page="changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   font-size: 0 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
 }
 
-html body .siteFooter.siteFooter a[href="/changelog"]::before,
-html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.119.17" !important;
+html body .siteFooter.siteFooter a[href="/changelog"][data-page="changelog"]::before,
+html body .siteFooter.siteFooter a[data-page="changelog"]::before,
+html[data-mfl-latest-release-version="1.119.18"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+  content: "MFL Front Office v1.119.18" !important;
   display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   font-size: 14px !important;
   cursor: pointer !important;
+}
+
+html.mflInitialChromePreparing *,
+html.mflInitialChromePreparing *::before,
+html.mflInitialChromePreparing *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+[data-tooltip]::before,
+[data-tooltip]::after,
+[data-note-tooltip]::before,
+[data-note-tooltip]::after,
+.floatingActionTooltip,
+.playerNoteFloatingTooltip {
+  display: none !important;
+}
+
+.mflUnifiedTooltip {
+  position: fixed;
+  z-index: 2147483647;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: var(--tooltip-bg, rgba(20, 20, 24, 0.96));
+  color: var(--tooltip-text, #fff);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.24);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity 170ms ease,
+    transform 170ms ease,
+    visibility 0s linear 170ms;
+}
+
+.mflUnifiedTooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.mflUnifiedTooltip.is-hiding {
+  opacity: 0;
+  visibility: visible;
+  transform: translateY(4px);
 }

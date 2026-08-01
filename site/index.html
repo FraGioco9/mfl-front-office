@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.17";
+        const VERSION = "1.119.18";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
@@ -37,26 +37,76 @@
           const list = root.querySelector(".changelogList");
           if (!list) return;
 
-          const existing = new Map();
-          list.querySelectorAll("li").forEach((item) => {
+          const entries = new Map();
+          list.querySelectorAll(".changelogPatchList > li, :scope > li:not(.changelogMinorSection)").forEach((item) => {
             const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
-            if (/^v\d+\.\d+\.\d+$/.test(label)) existing.set(label, item);
+            const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
+            if (/^v\d+\.\d+\.\d+$/.test(label)) entries.set(label, description);
+          });
+          releases.forEach(([label, description]) => entries.set(label, description));
+
+          const groups = new Map();
+          entries.forEach((description, label) => {
+            const match = label.match(/^v(\d+)\.(\d+)\.(\d+)$/);
+            if (!match) return;
+            const key = `${match[1]}.${match[2]}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ label, description, patch: Number(match[3]) });
           });
 
-          releases.slice().reverse().forEach(([label, description]) => {
-            let item = existing.get(label);
-            if (!item) {
-              item = root.createElement("li");
-              const versionLabel = root.createElement("span");
-              const descriptionLabel = root.createElement("p");
-              versionLabel.textContent = label;
-              item.append(versionLabel, descriptionLabel);
-              list.prepend(item);
-              existing.set(label, item);
-            }
-            const descriptionLabel = item.querySelector(":scope > p");
-            if (descriptionLabel) descriptionLabel.textContent = description;
-          });
+          const sections = [...groups.entries()]
+            .sort(([left], [right]) => {
+              const a = left.split(".").map(Number);
+              const b = right.split(".").map(Number);
+              return b[0] - a[0] || b[1] - a[1];
+            })
+            .map(([minor, patches], index) => {
+              patches.sort((a, b) => b.patch - a.patch);
+              const section = root.createElement("li");
+              section.className = "changelogMinorSection";
+              if (index === 0) section.classList.add("is-expanded");
+
+              const toggle = root.createElement("button");
+              toggle.className = "changelogMinorToggle";
+              toggle.type = "button";
+              toggle.setAttribute("aria-expanded", index === 0 ? "true" : "false");
+
+              const title = root.createElement("span");
+              title.className = "changelogMinorVersion";
+              title.textContent = `v${minor}`;
+              const meta = root.createElement("span");
+              meta.className = "changelogMinorMeta";
+              meta.textContent = `${patches.length} ${patches.length === 1 ? "patch" : "patches"}`;
+              const chevron = root.createElement("span");
+              chevron.className = "changelogMinorChevron";
+              chevron.setAttribute("aria-hidden", "true");
+              chevron.textContent = ">";
+              toggle.append(title, meta, chevron);
+
+              const panel = root.createElement("div");
+              panel.className = "changelogMinorPanel";
+              const inner = root.createElement("div");
+              inner.className = "changelogMinorPanelInner";
+              const patchList = root.createElement("ol");
+              patchList.className = "changelogPatchList";
+              patches.forEach(({ label, description }) => {
+                const item = root.createElement("li");
+                const versionLabel = root.createElement("span");
+                versionLabel.textContent = label;
+                const descriptionLabel = root.createElement("p");
+                descriptionLabel.textContent = description;
+                item.append(versionLabel, descriptionLabel);
+                patchList.appendChild(item);
+              });
+              inner.appendChild(patchList);
+              panel.appendChild(inner);
+              section.append(toggle, panel);
+              return section;
+            });
+
+          list.replaceChildren(...sections);
+          list.dataset.sectioned = "true";
+          list.dataset.completeReleaseVersion = version;
         }
 
         function fail(message) {
@@ -95,7 +145,11 @@
         );
         source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify(`          document.body.innerHTML = shell.body.innerHTML;\n          requestAnimationFrame(() => document.documentElement.classList.remove("bootPending"));`)},
+          ${JSON.stringify(`          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;\n          requestAnimationFrame(() => document.documentElement.classList.remove("bootPending"));`)},
+        );
+        source = source.replace(
+          '            finalizeRouteChrome();',
+          '            finalizeRouteChrome();\\n            document.documentElement.classList.remove("mflInitialChromePreparing");',
         );
 `;
           if (!source.includes(patchMarker)) {
