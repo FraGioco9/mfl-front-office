@@ -1,6 +1,9 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@36e2966fe7d74d4223d3f304581518ae2e33f6be/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@0c70e9157c96a9b542022e8ae28e361783918436/site/styles.css");
 
-/* v1.119.11 - Render Changelog before summary and account startup. */
-html.mflRelease111Ready body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.11" !important;
+/* v1.119.12 - Show the current footer version and complete Changelog on first paint. */
+html.mflRelease112Ready body .siteFooter.siteFooter a[href="/changelog"]::before,
+html[data-mfl-release-version="1.119.12"] body .siteFooter.siteFooter a[href="/changelog"]::before {
+  content: "MFL Front Office v1.119.12" !important;
+  display: inline !important;
+  font-size: 14px !important;
 }
