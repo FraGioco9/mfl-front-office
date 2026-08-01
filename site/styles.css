@@ -1,24 +1,14 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@8b07416402a218a9b2643f2b56e77c7ea55f38f4/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1d890d674695429d14297bc173452cb9b962cd36/site/styles.css");
 
-/* v1.119.14 - Keep first-paint chrome stable and release UI authoritative. */
+/* v1.119.13 - Reveal page chrome immediately and synchronize release content on first paint. */
 html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   font-size: 0 !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
 }
 
 html body .siteFooter.siteFooter a[href="/changelog"]::before,
 html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.119.14" !important;
+  content: "MFL Front Office v1.119.13" !important;
   display: inline !important;
   font-size: 14px !important;
-  cursor: pointer !important;
-}
-
-html.mflInitialChromePreparing *,
-html.mflInitialChromePreparing *::before,
-html.mflInitialChromePreparing *::after {
-  transition: none !important;
-  animation: none !important;
 }
