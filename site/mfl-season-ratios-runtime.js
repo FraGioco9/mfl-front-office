@@ -1,36 +1,65 @@
 (() => {
-  const VERSION = "1.119.15";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1ab9b6aeb9836e0f80353c03cbdd648a65880b9c/site/mfl-season-ratios-runtime.js";
+  const VERSION = "1.119.17";
+  const LABEL = `MFL Front Office v${VERSION}`;
+  const DISCOUNT_TOOLTIP = "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.";
+  let footerObserver = null;
+  let tooltipObserver = null;
 
-  function syncVersion() {
+  function syncFooter() {
+    const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    if (!footer) return false;
+
+    if (footer.textContent !== LABEL) footer.textContent = LABEL;
+    if (footer.getAttribute("href") !== "/changelog") footer.setAttribute("href", "/changelog");
+    if (footer.dataset.releaseLabel !== LABEL) footer.dataset.releaseLabel = LABEL;
+    const ariaLabel = `${LABEL}, open Changelog`;
+    if (footer.getAttribute("aria-label") !== ariaLabel) footer.setAttribute("aria-label", ariaLabel);
+    if (footer.style.cursor !== "pointer") footer.style.cursor = "pointer";
+
+    if (!footerObserver) {
+      footerObserver = new MutationObserver(syncFooter);
+      footerObserver.observe(footer, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    }
+    return true;
+  }
+
+  function syncDiscountTooltip() {
+    const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
+    if (!metric) return false;
+
+    if (metric.dataset.tooltip !== DISCOUNT_TOOLTIP) {
+      metric.dataset.tooltip = DISCOUNT_TOOLTIP;
+    }
+
+    if (!tooltipObserver) {
+      tooltipObserver = new MutationObserver(syncDiscountTooltip);
+      tooltipObserver.observe(metric, {
+        attributes: true,
+        attributeFilter: ["data-tooltip"],
+      });
+    }
+    return true;
+  }
+
+  function synchronizeReleaseUi() {
     const root = document.documentElement;
-    root.classList.add("mflRelease115Ready");
+    root.classList.add("mflRelease117Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
-
-    const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-    if (footer) {
-      const label = `MFL Front Office v${VERSION}`;
-      footer.textContent = label;
-      footer.setAttribute("href", "/changelog");
-      footer.dataset.releaseLabel = label;
-      footer.setAttribute("aria-label", `${label}, open Changelog`);
-      footer.style.cursor = "pointer";
-    }
+    syncFooter();
+    syncDiscountTooltip();
   }
 
-  syncVersion();
+  synchronizeReleaseUi();
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", syncVersion, { once: true });
+    document.addEventListener("DOMContentLoaded", synchronizeReleaseUi, { once: true });
   }
-
-  const previous = document.createElement("script");
-  previous.src = PREVIOUS_RUNTIME;
-  previous.async = false;
-  previous.addEventListener("load", () => {
-    syncVersion();
-    [0, 50, 250, 1000, 2500].forEach((delay) => setTimeout(syncVersion, delay));
-  }, { once: true });
-  previous.addEventListener("error", syncVersion, { once: true });
-  document.head.appendChild(previous);
+  [0, 50, 250, 1000, 2500, 5000].forEach((delay) => {
+    setTimeout(synchronizeReleaseUi, delay);
+  });
 })();

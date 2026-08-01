@@ -1,24 +1,17 @@
-@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1ab9b6aeb9836e0f80353c03cbdd648a65880b9c/site/styles.css");
+@import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@400f58c5a90766919d37e7674b2ee7cd46d5b3f7/site/styles.css");
 
-/* v1.119.15 - Stabilize first-paint page chrome, footer version, and Changelog history. */
-html.mflRelease115Ready body .siteFooter.siteFooter a[href="/changelog"],
-html[data-mfl-release-version="1.119.15"] body .siteFooter.siteFooter a[href="/changelog"],
+/* v1.119.17 - Restore Home routing, first-paint release UI, and the Discount Rate tooltip. */
+html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   font-size: 0 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
 }
 
-html.mflRelease115Ready body .siteFooter.siteFooter a[href="/changelog"]::before,
-html[data-mfl-release-version="1.119.15"] body .siteFooter.siteFooter a[href="/changelog"]::before,
+html body .siteFooter.siteFooter a[href="/changelog"]::before,
 html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.119.15" !important;
+  content: "MFL Front Office v1.119.17" !important;
   display: inline !important;
   font-size: 14px !important;
-  cursor: pointer !important;
-}
-
-body[data-page="changelog"] .siteFooter a[href="/changelog"],
-html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
   cursor: pointer !important;
 }
