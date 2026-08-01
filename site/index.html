@@ -183,10 +183,6 @@
           '          document.body.innerHTML = shell.body.innerHTML;',
           ${JSON.stringify(`          document.body.innerHTML = shell.body.innerHTML;\n          ${releaseCall}\n          document.documentElement.classList.remove("bootPending");`)},
         );
-        source = source.replace(
-          '          const footerLink = document.querySelector(\'.siteFooter a[data-page="changelog"]\');',
-          '          const footerLink = document.querySelector(\'.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]\');',
-        );
 `;
           if (!source.includes(patchMarker)) {
             fail("Could not locate the route shell loader.");
