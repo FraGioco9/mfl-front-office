@@ -30,6 +30,17 @@
     `;
   }
 
+  function loadClubViewCacheRuntime() {
+    if (document.getElementById("mflClubViewCacheRuntime")) return true;
+    const script = document.createElement("script");
+    script.id = "mflClubViewCacheRuntime";
+    script.src = "/club-view-cache-runtime.js?v=1.119.30-safe";
+    script.async = false;
+    script.addEventListener("error", () => script.remove(), { once: true });
+    document.head.appendChild(script);
+    return true;
+  }
+
   function syncFooter() {
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     if (!footer) return false;
@@ -153,6 +164,7 @@
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
     installReleaseStyles();
+    loadClubViewCacheRuntime();
     syncFooter();
     syncDiscountTooltip();
   }
