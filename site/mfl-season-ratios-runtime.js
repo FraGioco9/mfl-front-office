@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.22";
+  const VERSION = "1.119.23";
   const LABEL = `MFL Front Office v${VERSION}`;
   const DISCOUNT_TOOLTIP = "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 16, so it uses seasons 11-15.";
   const TOOLTIP_HIDE_DURATION = 170;
@@ -27,8 +27,8 @@
         cursor: pointer !important;
         pointer-events: auto !important;
       }
-      html body .siteFooter.siteFooter a[href="/changelog"]::before,
-      html body .siteFooter.siteFooter a[data-page="changelog"]::before {
+      html body #appShell .siteFooter a[href="/changelog"]::before,
+      html body #appShell .siteFooter a[data-page="changelog"]::before {
         content: none !important;
         display: none !important;
       }

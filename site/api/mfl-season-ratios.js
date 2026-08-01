@@ -1,5 +1,6 @@
-const APP_VERSION = "1.118.33";
+const APP_VERSION = "1.119.23";
 const APP_RELEASES = [
+  ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
   ["v1.118.33", "Preserve native MFL Stats filters, keep the loading cursor, and link player contract teams"],
   ["v1.118.32", "Make player contract teams native links and restore MFL Stats filter clicks"],
   ["v1.118.31", "Remove the legacy Evaluation rate, stabilize Stats filters, and link player contracts"],

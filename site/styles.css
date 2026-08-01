@@ -1,6 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
 
-/* v1.119.22 - Reveal saved Evaluation chrome immediately and stabilize footer and Changelog first paint. */
+/* v1.119.23 - Restore navigation, player links, Watchlists, and stable release UI. */
 html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   display: inline-block !important;
@@ -13,10 +13,19 @@ html body .siteFooter.siteFooter a[data-page="changelog"] {
   z-index: 1;
 }
 
-html body .siteFooter.siteFooter a[href="/changelog"]::before,
-html body .siteFooter.siteFooter a[data-page="changelog"]::before {
+html body #appShell .siteFooter a[href="/changelog"]::before,
+html body #appShell .siteFooter a[data-page="changelog"]::before {
   content: none !important;
   display: none !important;
+}
+
+html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {
+  visibility: hidden !important;
+}
+
+#playerDetail .contractDetailCard .playerContractTeamLink,
+#playerDetail .contractDetailCard .playerContractTeamLink:not(:hover):not(:focus-visible) {
+  font-weight: 600 !important;
 }
 
 html.mflInitialChromePreparing *,

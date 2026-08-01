@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.22";
+  const VERSION = "1.119.23";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -33,16 +33,20 @@
     document.body.classList.remove("booting", "loading", "tableLayoutPending");
     revealAppShell();
     showAppShell();
+  };
+
+  const finishInitialChrome = () => {
     void document.documentElement.offsetWidth;
-    window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       document.documentElement.classList.remove("mflInitialChromePreparing");
-    });
+    }));
   };
 
   if (initialPage === "changelog") {
     updateAccountState();
     await showHomeShell("changelog", false, initialTarget.options);
     revealInitialAppShell();
+    finishInitialChrome();
     window.__mflRestoringSavedEvaluation = false;
     return;
   }
@@ -81,6 +85,7 @@
   } finally {
     window.__mflRestoringSavedEvaluation = false;
     endInteractionBusy({ reset: true });
+    finishInitialChrome();
   }
 }`;
 
@@ -188,6 +193,44 @@
       '  window.requestAnimationFrame(() => tooltip.classList.add("visible"));',
       '  tooltip.classList.remove("tooltipHiding");\n  window.requestAnimationFrame(() => tooltip.classList.add("visible"));',
     );
+    patchedSource = patchedSource.replace(
+      `      if (Array.isArray(data.watchlists) && data.watchlists.length) {
+        const requestedId = String(watchlistIdFromUrl() || state.pendingWatchlistRouteId || "").trim();
+        applyWatchlists(data.watchlists, requestedId, []);
+        state.watchlistPlayerIdsAdded.clear();
+        state.watchlistPlayerIdsRemoved.clear();
+      } else {
+        ensureDefaultWatchlist();
+        state.watchlistPlayerIdsAdded.clear();
+        state.watchlistPlayerIdsRemoved.clear();
+      }`,
+      `      const watchlistsHaveContent = (value) => {
+        if (!Array.isArray(value) || !value.length) return false;
+        if (value.some((item) => typeof item === "string" && String(item).trim())) return true;
+        const lists = value.filter((item) => item && typeof item === "object" && !Array.isArray(item));
+        return lists.length > 1 || lists.some((item) => {
+          const ids = item.playerIds ?? item.player_ids ?? item.watchlistPlayerIds;
+          return (Array.isArray(ids) && ids.length > 0)
+            || String(item.name || DEFAULT_WATCHLIST_NAME).trim() !== DEFAULT_WATCHLIST_NAME;
+        });
+      };
+      const localWatchlistsHaveContent = watchlistsHaveContent(localWatchlists);
+      const cloudWatchlistsHaveContent = watchlistsHaveContent(data.watchlists);
+      if (cloudWatchlistsHaveContent || !localWatchlistsHaveContent) {
+        if (Array.isArray(data.watchlists) && data.watchlists.length) {
+          const requestedId = String(watchlistIdFromUrl() || state.pendingWatchlistRouteId || "").trim();
+          applyWatchlists(data.watchlists, requestedId, []);
+        } else {
+          ensureDefaultWatchlist();
+        }
+      } else {
+        // Supabase has been cleared but this browser still has the last usable
+        // copy. Keep it active and write it back to the authoritative column.
+        void saveWalletPreferencesNow();
+      }
+      state.watchlistPlayerIdsAdded.clear();
+      state.watchlistPlayerIdsRemoved.clear();`,
+    );
 
     patchedSource += `
 ;(() => {
@@ -214,6 +257,100 @@
     const expanded = section.classList.toggle("is-expanded");
     toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
   });
+})();`;
+
+    patchedSource += `
+;(() => {
+  const RELEASE_VERSION = ${JSON.stringify(VERSION)};
+
+  function contractClubId(playerId, teamName) {
+    try {
+      const row = rowByPlayerId(String(playerId || ""));
+      const directId = String(getValue(row, "active_contract_club_id") || "").trim();
+      if (directId) return directId;
+      const normalizedName = String(teamName || "").trim().toLowerCase();
+      const clubs = [
+        ...(Array.isArray(state?.clubSearchIndex) ? state.clubSearchIndex : []),
+        ...(Array.isArray(state?.bootstrapData?.clubs) ? state.bootstrapData.clubs : []),
+      ];
+      const club = clubs.find((item) => String(item?.name || "").trim().toLowerCase() === normalizedName);
+      return String(club?.clubId || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function bindContractTeamLink(playerId) {
+    const team = document.querySelector("#playerDetail .contractDetailCard .playerContractTeam, #playerDetail .contractDetailCard .playerContractTeamLink");
+    if (!team) return;
+    const teamName = String(team.textContent || "").trim();
+    if (!teamName || /^(free agent|development center)$/i.test(teamName)) return;
+    const clubId = contractClubId(playerId, teamName);
+    if (!clubId) return;
+    const href = "/clubs/" + encodeURIComponent(clubId) + "/attributes";
+    const link = team instanceof HTMLAnchorElement ? team : document.createElement("a");
+    if (link !== team) {
+      link.className = String(team.className || "playerContractTeam");
+      link.textContent = teamName;
+      team.replaceWith(link);
+    }
+    link.classList.add("clubPageLink", "playerContractTeamLink");
+    link.href = href;
+    link.dataset.clubId = clubId;
+    if (link.dataset.mflReleaseContractBound === RELEASE_VERSION) return;
+    link.dataset.mflReleaseContractBound = RELEASE_VERSION;
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      if (typeof window.mflOpenClubPage !== "function") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.mflOpenClubPage(clubId, "attributes");
+    }, true);
+  }
+
+  if (typeof renderPlayerPage === "function") {
+    const originalRenderPlayerPage = renderPlayerPage;
+    renderPlayerPage = function renderPlayerPageWithStableContractLink(playerId) {
+      const result = originalRenderPlayerPage.apply(this, arguments);
+      bindContractTeamLink(playerId);
+      return result;
+    };
+  }
+
+  function enforceHomePage() {
+    if (window.location.pathname !== "/") return;
+    homePage.hidden = false;
+    progressionPage.hidden = true;
+    mflStatsPage.hidden = true;
+    myPlayersLockedPage.hidden = true;
+    evaluationPage.hidden = true;
+    playerPage.hidden = true;
+    settingsPage.hidden = true;
+    changelogPage.hidden = true;
+    document.body.dataset.page = "home";
+    navButtons.forEach((button) => button.classList.remove("active"));
+  }
+
+  if (typeof setPage === "function") {
+    const originalSetPage = setPage;
+    setPage = async function setPageWithStableHome(pageName) {
+      const result = await originalSetPage.apply(this, arguments);
+      if (pageName === "home") {
+        enforceHomePage();
+        window.requestAnimationFrame(enforceHomePage);
+      }
+      return result;
+    };
+  }
+
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const home = event.target.closest('.brandLink[href="/"], .brandLink[data-page="home"]');
+    if (!home || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void Promise.resolve(setPage("home", true));
+  }, true);
 })();`;
     patchedSource += `\n//# sourceURL=mfl-front-office-app-v${VERSION}.js`;
 
