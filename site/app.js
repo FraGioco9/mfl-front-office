@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.20";
+  const VERSION = "1.119.21";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -29,7 +29,7 @@
 
   const revealInitialAppShell = () => {
     loadingScreen.hidden = true;
-    document.documentElement.classList.remove("loading", "table-layout-pending", "bootPending");
+    document.documentElement.classList.remove("loading", "table-layout-pending", "bootPending", "mflInitialChromePreparing");
     document.body.classList.remove("booting", "loading", "tableLayoutPending");
     revealAppShell();
     showAppShell();
@@ -43,32 +43,40 @@
     return;
   }
 
-  revealInitialAppShell();
+  if (!initialSavedEvaluationId) {
+    revealInitialAppShell();
+  }
+
   beginInteractionBusy();
   try {
-    if (initialSavedEvaluationId) {
-      await Promise.resolve(ensureFlowWallet()).catch(() => false);
-    } else {
-      void ensureFlowWallet();
-    }
+    void ensureFlowWallet();
     applyStoredWalletPermission();
     await loadSummary();
     await loadWalletPreferences();
     applyStoredWalletPermission();
     updateAccountState();
-    await showHomeShell(initialPage, false, initialTarget.options);
 
-    if (initialSavedEvaluationId && state.evaluationSavedId !== initialSavedEvaluationId) {
+    if (initialSavedEvaluationId) {
+      state.evaluationPlayerId = initialSavedEvaluationPlayerId || null;
+      await showHomeShell("evaluation", false, {
+        ...initialTarget.options,
+        playerId: initialSavedEvaluationPlayerId,
+      });
       await loadSavedEvaluation(initialSavedEvaluationId, initialSavedEvaluationPlayerId);
+
       if (state.evaluationSavedId === initialSavedEvaluationId) {
         const savedUrl = new URL("/evaluation", window.location.origin);
-        if (initialSavedEvaluationPlayerId) {
-          savedUrl.searchParams.set("player", initialSavedEvaluationPlayerId);
-        }
+        const loadedPlayerId = String(state.evaluationPlayerId || initialSavedEvaluationPlayerId || "").trim();
+        if (loadedPlayerId) savedUrl.searchParams.set("player", loadedPlayerId);
         savedUrl.searchParams.set("saved", initialSavedEvaluationId);
         window.history.replaceState({}, "", savedUrl.pathname + savedUrl.search);
       }
+
+      revealInitialAppShell();
+      return;
     }
+
+    await showHomeShell(initialPage, false, initialTarget.options);
   } finally {
     window.__mflRestoringSavedEvaluation = false;
     endInteractionBusy({ reset: true });
@@ -77,7 +85,7 @@
 
   function fail(message) {
     console.error(message);
-    document.documentElement.classList.remove("bootPending", "loading", "appBusy", "table-layout-pending");
+    document.documentElement.classList.remove("bootPending", "loading", "appBusy", "table-layout-pending", "mflInitialChromePreparing");
     document.body?.classList.remove("booting", "loading", "appBusy", "tableLayoutPending");
     const loadingScreen = document.getElementById("loadingScreen");
     if (loadingScreen) loadingScreen.hidden = true;
@@ -108,12 +116,30 @@
       `const currentVersion = "${VERSION}";`,
     );
     patchedSource = patchedSource.replace(
-      '  if (savedId && !hasWalletOptIn()) {',
-      '  if (savedId && !hasWalletOptIn() && !window.__mflRestoringSavedEvaluation) {',
+      `  const savedId = evaluationSavedIdFromUrl();
+  if (savedId && !hasWalletOptIn()) {`,
+      `  const savedId = evaluationSavedIdFromUrl();
+  if (savedId && window.__mflRestoringSavedEvaluation && state.evaluationSavedId !== savedId) {
+    renderEmptyEvaluationSelection(false);
+    return;
+  }
+  if (savedId && !hasWalletOptIn()) {`,
     );
     patchedSource = patchedSource.replace(
-      '  } else if (savedId && state.evaluationSavedId !== savedId) {',
-      '  } else if (savedId && state.evaluationSavedId !== savedId && !window.__mflRestoringSavedEvaluation) {',
+      `    const data = await response.json();
+    state.evaluationSavedId = id;`,
+      `    const data = await response.json();
+    const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
+    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: payloadPlayerId,
+      }, 1, { force: true });
+    }
+    state.evaluationSavedId = id;`,
     );
     patchedSource = patchedSource.replace(
       'let evaluationLoadFloatingTooltip = null;',
@@ -174,21 +200,34 @@
     event.stopImmediatePropagation();
     if (window.location.pathname === "/changelog") return;
     if (typeof setPage === "function") {
-      void Promise.resolve(setPage("changelog", true)).catch(() => {
-        window.history.pushState({}, "", "/changelog");
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      });
-      return;
+      void Promise.resolve(setPage("changelog", true));
     }
-    window.history.pushState({}, "", "/changelog");
-    window.dispatchEvent(new PopStateEvent("popstate"));
   }, true);
+
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const toggle = event.target.closest(".changelogMinorToggle");
+    if (!toggle) return;
+    const section = toggle.closest(".changelogMinorSection");
+    if (!section) return;
+    const expanded = section.classList.toggle("is-expanded");
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  });
 })();`;
     patchedSource += `\n//# sourceURL=mfl-front-office-app-v${VERSION}.js`;
 
     const script = document.createElement("script");
     script.textContent = patchedSource;
     document.head.appendChild(script);
+
+    const existingReleaseRuntime = document.getElementById("mflReleaseRuntime");
+    if (!existingReleaseRuntime) {
+      const releaseRuntime = document.createElement("script");
+      releaseRuntime.id = "mflReleaseRuntime";
+      releaseRuntime.src = `/mfl-season-ratios-runtime.js?v=${encodeURIComponent(VERSION)}`;
+      releaseRuntime.async = false;
+      document.head.appendChild(releaseRuntime);
+    }
   } catch (error) {
     fail(error?.message || "Could not initialize the application.");
   }

@@ -6,10 +6,15 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.19";
+        const VERSION = "1.119.21";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
+        const CURRENT_RELEASES = [
+          ["v1.119.21", "Restore footer version, stable Changelog first paint, and owned saved Evaluation refresh"],
+          ["v1.119.20", "Fade tooltips and stabilize Changelog and saved Evaluation refresh"],
+          ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"],
+        ];
 
         function loadReleases() {
           const request = new XMLHttpRequest();
@@ -20,9 +25,8 @@
           }
           const releases = JSON.parse(request.responseText);
           if (!Array.isArray(releases)) throw new Error("Release history is invalid.");
-          const currentRelease = ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"];
-          const filtered = releases.filter(([label]) => label !== currentRelease[0]);
-          return [currentRelease, ...filtered];
+          const currentLabels = new Set(CURRENT_RELEASES.map(([label]) => label));
+          return [...CURRENT_RELEASES, ...releases.filter(([label]) => !currentLabels.has(label))];
         }
 
         function seedReleaseShell(root, version, releases) {
@@ -130,12 +134,34 @@
           let source = request.responseText;
           source = source.replace('const VERSION = "1.118.3";', `const VERSION = "${VERSION}";`);
 
+          const criticalStyle = `<style id="mflReleaseCriticalStyles">
+            html body .siteFooter.siteFooter a[href="/changelog"],
+            html body .siteFooter.siteFooter a[data-page="changelog"] {
+              display: inline-block !important;
+              font-size: 0 !important;
+              cursor: pointer !important;
+              pointer-events: auto !important;
+            }
+            html body .siteFooter.siteFooter a[href="/changelog"]::before,
+            html body .siteFooter.siteFooter a[data-page="changelog"]::before {
+              content: "MFL Front Office v${VERSION}" !important;
+              display: inline !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              font-size: 14px !important;
+              pointer-events: none !important;
+            }
+          </style>`;
           const patchMarker = '        const routeStyles = `';
           const releaseShellCall = `(${seedReleaseShell.toString()})(shell, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
           const extraSourcePatches = `
         source = source.replace(
           '/styles.css?v=1.117.1',
           '/styles.css?v=${VERSION}',
+        );
+        source = source.replace(
+          '</head>',
+          ${JSON.stringify(`${criticalStyle}</head>`)},
         );
         source = source.replace(
           '          const groups = new Map();',
@@ -147,7 +173,7 @@
         );
         source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify(`          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;`)},
+          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;')},
         );
         source = source.replace(
           '            installRuntimeFixes();\\n            rebuildChangelog();\\n            window.setTimeout(rebuildChangelog, 0);\\n            finalizeRouteChrome();',
@@ -155,7 +181,7 @@
         );
         source = source.replace(
           '          requestAnimationFrame(() => requestAnimationFrame(() => {\\n            document.documentElement.classList.remove("bootPending");\\n          }));',
-          '          requestAnimationFrame(() => requestAnimationFrame(() => {\\n            document.documentElement.classList.remove("bootPending", "mflInitialChromePreparing");\\n          }));',
+          '          // startApp reveals the shell only after the initial route is final.',
         );
 `;
           if (!source.includes(patchMarker)) {
