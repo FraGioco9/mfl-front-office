@@ -1,185 +1,71 @@
 (() => {
-  const VERSION = "1.119.10";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@a371c45a6a566892ab872785db8f11b9b232ca13/site/mfl-season-ratios-runtime.js";
-  const RELEASE_DESCRIPTION = "Finish the data-free Changelog boot and round the loading placeholder row";
-  const PAGE_IDS = [
-    "homePage",
-    "progressionPage",
-    "mflStatsPage",
-    "myPlayersLockedPage",
-    "evaluationPage",
-    "playerPage",
-    "settingsPage",
-    "changelogPage",
+  const VERSION = "1.119.11";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@b18df9adc1282923b834bb421c6f28a504505bfb/site/mfl-season-ratios-runtime.js";
+  const RELEASES = [
+    ["v1.119.11", "Render Changelog before summary and account startup"],
+    ["v1.119.10", "Finish the data-free Changelog boot and round the loading placeholder row"],
+    ["v1.119.9", "Round the rendered loading table bottom and show Changelog immediately on refresh"],
   ];
 
-  let routeCallStarted = false;
-
-  function cleanPath() {
-    return String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  }
+  let scheduled = false;
 
   function installStyles() {
-    let style = document.getElementById("mflChangelogBootAndLoadingRowStyles");
+    let style = document.getElementById("mflDirectChangelogReleaseStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflChangelogBootAndLoadingRowStyles";
+      style.id = "mflDirectChangelogReleaseStyles";
       document.head.appendChild(style);
     }
 
     style.textContent = `
-      html.mflRelease110Ready body .siteFooter.siteFooter a[href="/changelog"]::before {
+      html.mflRelease111Ready body .siteFooter.siteFooter a[href="/changelog"]::before {
         content: "MFL Front Office v${VERSION}" !important;
-      }
-      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        .tableShell:has(> #emptyState:not([hidden])),
-      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
-        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
-        .mflTableDataLoading)
-        .tableShell:has(> #emptyState:not([hidden])) {
-        border-bottom-left-radius: 10px !important;
-        border-bottom-right-radius: 10px !important;
-        overflow: hidden !important;
-      }
-      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        .tableShell:has(> #emptyState:not([hidden])) > .tableScroller,
-      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
-        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
-        .mflTableDataLoading)
-        .tableShell:has(> #emptyState:not([hidden])) > .tableScroller {
-        border-bottom-left-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-      }
-      html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-        .tableShell > #emptyState:not([hidden]),
-      body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
-        .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
-        .mflTableDataLoading)
-        .tableShell > #emptyState:not([hidden]) {
-        border-bottom-left-radius: 10px !important;
-        border-bottom-right-radius: 10px !important;
-        overflow: hidden !important;
+        display: inline !important;
+        font-size: 14px !important;
       }
     `;
   }
 
-  function clearChangelogBusyState() {
-    if (cleanPath() !== "/changelog") return;
-
-    try {
-      if (typeof state === "object" && state) state.interactionBusyDepth = 0;
-    } catch {
-      // The DOM fallback below still releases the route.
-    }
-
-    if (typeof endInteractionBusy === "function") {
-      try {
-        endInteractionBusy({ reset: true });
-      } catch {
-        // Continue with the DOM fallback.
-      }
-    }
-
+  function syncVersion() {
     const root = document.documentElement;
-    const body = document.body;
-    root.classList.remove("bootPending", "loading", "appBusy", "table-layout-pending");
-    body?.classList.remove(
-      "booting",
-      "loading",
-      "appBusy",
-      "tableRowsLoading",
-      "tableLayoutPending",
-      "clubViewLoading",
-      "clubViewSwitching",
-      "mflTableDataLoading",
-    );
-    body?.setAttribute("aria-busy", "false");
-    body?.style.removeProperty("cursor");
+    root.classList.add("mflRelease111Ready");
+    root.dataset.mflReleaseVersion = VERSION;
 
-    const loadingScreen = document.getElementById("loadingScreen");
-    if (loadingScreen) {
-      loadingScreen.hidden = true;
-      loadingScreen.setAttribute("aria-hidden", "true");
-      loadingScreen.style.pointerEvents = "none";
+    const link = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    if (link) {
+      link.setAttribute("href", "/changelog");
+      link.dataset.releaseLabel = `MFL Front Office v${VERSION}`;
+      link.setAttribute("aria-label", `MFL Front Office v${VERSION}, open Changelog`);
     }
 
-    if (typeof revealAppShell === "function") {
-      try { revealAppShell(); } catch { /* The shell is also revealed directly below. */ }
-    }
-    if (typeof showAppShell === "function") {
-      try { showAppShell(); } catch { /* The shell is also revealed directly below. */ }
-    }
-
-    const appShell = document.getElementById("appShell");
-    if (appShell) {
-      appShell.hidden = false;
-      appShell.removeAttribute("aria-hidden");
-      appShell.style.removeProperty("visibility");
-      appShell.style.removeProperty("opacity");
-      appShell.style.removeProperty("pointer-events");
-    }
+    document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
+      element.dataset.mflReleaseVersion = VERSION;
+      element.textContent = `v${VERSION}`;
+    });
   }
 
-  function showChangelogImmediately() {
-    if (cleanPath() !== "/changelog") return false;
-
-    const root = document.documentElement;
-    const body = document.body;
-    root.dataset.initialPage = "changelog";
-    root.classList.add("mflInitialRouteResolved", "mflChangelogReady");
-
-    if (body) {
-      body.dataset.page = "changelog";
-      PAGE_IDS.forEach((id) => {
-        const page = document.getElementById(id);
-        if (page) page.hidden = id !== "changelogPage";
-      });
-
-      const page = document.getElementById("changelogPage");
-      if (page) {
-        page.hidden = false;
-        page.removeAttribute("aria-hidden");
-        page.style.removeProperty("display");
-        page.style.removeProperty("visibility");
-        page.style.removeProperty("opacity");
-      }
-    }
-
-    clearChangelogBusyState();
-
-    if (!routeCallStarted && typeof setPage === "function") {
-      routeCallStarted = true;
-      Promise.resolve(setPage("changelog", false, { skipNavigationLoading: true }))
-        .catch(() => false)
-        .finally(() => {
-          clearChangelogBusyState();
-          syncReleaseEntry();
-        });
-    }
-
-    return true;
-  }
-
-  function syncReleaseEntry() {
+  function syncReleaseEntries() {
     const list = document.querySelector(".changelogList");
     if (!list) return false;
-
-    const exists = Array.from(list.querySelectorAll(".changelogPatchList > li > span, .changelogList > li > span"))
-      .some((label) => String(label.textContent || "").trim() === `v${VERSION}`);
-    if (exists) return true;
 
     const section = Array.from(list.querySelectorAll(".changelogMinorSection"))
       .find((candidate) => String(candidate.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.119");
     const patches = section?.querySelector(".changelogPatchList");
     if (!patches) return false;
 
-    const item = document.createElement("li");
-    const version = document.createElement("span");
-    const description = document.createElement("p");
-    version.textContent = `v${VERSION}`;
-    description.textContent = RELEASE_DESCRIPTION;
-    item.append(version, description);
-    patches.prepend(item);
+    RELEASES.slice().reverse().forEach(([label, description]) => {
+      const exists = Array.from(patches.querySelectorAll(":scope > li > span"))
+        .some((version) => String(version.textContent || "").trim() === label);
+      if (exists) return;
+
+      const item = document.createElement("li");
+      const version = document.createElement("span");
+      const text = document.createElement("p");
+      version.textContent = label;
+      text.textContent = description;
+      item.append(version, text);
+      patches.prepend(item);
+    });
 
     const count = patches.querySelectorAll(":scope > li").length;
     const meta = section.querySelector(".changelogMinorMeta");
@@ -188,17 +74,31 @@
   }
 
   function maintain() {
-    document.documentElement.classList.add("mflRelease110Ready");
     installStyles();
-    showChangelogImmediately();
-    syncReleaseEntry();
+    syncVersion();
+    syncReleaseEntries();
+  }
+
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      maintain();
+    });
   }
 
   maintain();
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", maintain, { once: true });
-  }
-  [0, 25, 100, 300, 1000, 3000].forEach((delay) => setTimeout(maintain, delay));
+
+  const observer = new MutationObserver(schedule);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-mfl-release-version"],
+    childList: true,
+    subtree: true,
+  });
+
+  [0, 50, 200, 750, 2000].forEach((delay) => setTimeout(maintain, delay));
 
   const previous = document.createElement("script");
   previous.src = PREVIOUS_RUNTIME;
