@@ -1,10 +1,10 @@
 (() => {
-  const VERSION = "1.119.13";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@521a73e745b499a7e88aabd2954067d2d19eaf35/site/mfl-season-ratios-runtime.js";
+  const VERSION = "1.119.15";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@1ab9b6aeb9836e0f80353c03cbdd648a65880b9c/site/mfl-season-ratios-runtime.js";
 
   function syncVersion() {
     const root = document.documentElement;
-    root.classList.add("mflRelease113Ready");
+    root.classList.add("mflRelease115Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
 
@@ -15,12 +15,8 @@
       footer.setAttribute("href", "/changelog");
       footer.dataset.releaseLabel = label;
       footer.setAttribute("aria-label", `${label}, open Changelog`);
+      footer.style.cursor = "pointer";
     }
-
-    document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
-      element.textContent = `v${VERSION}`;
-      element.dataset.mflLatestReleaseVersion = VERSION;
-    });
   }
 
   syncVersion();
