@@ -1,6 +1,12 @@
 (() => {
-  const VERSION = "1.119.30";
+  const VERSION = "1.119.30-cache-hotfix";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
+  const VIEW_SLUGS = {
+    attributes: "attributes",
+    contracts: "contracts",
+    current: "current-season",
+    all: "all-time",
+  };
   const viewCache = new Map();
   let installed = false;
   let installTimer = 0;
@@ -18,6 +24,10 @@
       clubId: decodeURIComponent(match[1]),
       view,
     };
+  }
+
+  function canonicalClubPath(clubId, view) {
+    return `/clubs/${encodeURIComponent(String(clubId || ""))}/${VIEW_SLUGS[view] || "attributes"}`;
   }
 
   function cacheKey(clubId, view) {
@@ -47,6 +57,18 @@
     return clubId && CLUB_VIEWS.has(view) ? { clubId, view } : null;
   }
 
+  function snapshotFromState() {
+    return {
+      columns: Array.isArray(state.columns) ? [...state.columns] : [],
+      rows: cloneRows(state.rows),
+      page: 1,
+      pageSize: Number(state.pageSize || 100),
+      totalRows: Number(state.incrementalTotalRows || state.rows.length),
+      sourceRows: Number(state.incrementalSourceRows || state.rows.length),
+      generatedAt: state.manifest?.generated_at || null,
+    };
+  }
+
   function rememberPayload(route, payload) {
     const clubRoute = resolvedClubRoute(route);
     if (!route || route.scope !== "club" || !clubRoute) return;
@@ -58,15 +80,68 @@
     if (typeof state === "undefined" || state.currentPage !== "club" || !state.dataLoaded) return;
     const current = clubRouteFromLocation(state.view);
     if (!current || !CLUB_VIEWS.has(current.view) || !Array.isArray(state.rows)) return;
-    viewCache.set(cacheKey(current.clubId, current.view), {
-      columns: Array.isArray(state.columns) ? [...state.columns] : [],
-      rows: cloneRows(state.rows),
-      page: 1,
-      pageSize: Number(state.pageSize || 100),
-      totalRows: Number(state.incrementalTotalRows || state.rows.length),
-      sourceRows: Number(state.incrementalSourceRows || state.rows.length),
-      generatedAt: state.manifest?.generated_at || null,
+    viewCache.set(cacheKey(current.clubId, current.view), snapshotFromState());
+  }
+
+  function renderCachedView(clubId, nextView, cachedPayload) {
+    const path = canonicalClubPath(clubId, nextView);
+    window.history.replaceState({}, "", path);
+
+    state.currentPage = "club";
+    state.view = nextView;
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+
+    const route = typeof incrementalRouteTarget === "function"
+      ? incrementalRouteTarget("club", { view: nextView })
+      : {
+          pageName: "club",
+          scope: "club",
+          clubId,
+          view: nextView,
+          access: state.dataAccess || "public",
+        };
+
+    applyIncrementalPayload(route, clonePayload(cachedPayload));
+
+    if (typeof updateViewButtons === "function") updateViewButtons();
+    if (typeof syncQuickFilterLabels === "function") syncQuickFilterLabels();
+
+    state.incrementalApplying = true;
+    try {
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+    } finally {
+      state.incrementalApplying = false;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (typeof buildTableColGroup === "function") buildTableColGroup();
+      if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
     });
+  }
+
+  function handleClubViewClick(event) {
+    if (!(event.target instanceof Element)) return;
+    if (typeof state === "undefined" || state.currentPage !== "club") return;
+
+    const button = event.target.closest(".viewButton[data-view]");
+    if (!button) return;
+
+    const nextView = String(button.dataset.view || "");
+    if (!CLUB_VIEWS.has(nextView) || nextView === state.view) return;
+
+    const current = clubRouteFromLocation(state.view);
+    if (!current) return;
+
+    rememberCurrentView();
+    const cached = viewCache.get(cacheKey(current.clubId, nextView));
+    if (!cached) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    renderCachedView(current.clubId, nextView, cached);
   }
 
   function installCache() {
@@ -96,37 +171,15 @@
 
       const payload = await originalRequestIncrementalRoute.apply(this, arguments);
       if (clubRoute && Number(page) === 1) {
-        rememberPayload(route, payload || {
-          columns: state.columns,
-          rows: state.rows,
-          page: 1,
-          pageSize: state.pageSize,
-          totalRows: state.incrementalTotalRows,
-          sourceRows: state.incrementalSourceRows,
-          generatedAt: state.manifest?.generated_at || null,
-        });
+        rememberPayload(route, payload || snapshotFromState());
       }
       return payload;
     };
 
-    document.addEventListener("pointerdown", (event) => {
-      if (!(event.target instanceof Element)) return;
-      const button = event.target.closest(".viewButton[data-view]");
-      if (!button || typeof state === "undefined" || state.currentPage !== "club") return;
-      const nextView = String(button.dataset.view || "");
-      if (!CLUB_VIEWS.has(nextView) || nextView === state.view) return;
-      rememberCurrentView();
-    }, true);
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      if (!(event.target instanceof Element)) return;
-      const button = event.target.closest(".viewButton[data-view]");
-      if (!button || typeof state === "undefined" || state.currentPage !== "club") return;
-      const nextView = String(button.dataset.view || "");
-      if (!CLUB_VIEWS.has(nextView) || nextView === state.view) return;
-      rememberCurrentView();
-    }, true);
+    // The native club listener is attached to document in capture phase.
+    // Window capture runs first, so cached views are restored before the
+    // native handler can enter its "Loading players..." state.
+    window.addEventListener("click", handleClubViewClick, true);
 
     installed = true;
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
