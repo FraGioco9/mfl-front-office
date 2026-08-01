@@ -1,5 +1,6 @@
-const APP_VERSION = "1.119.25";
+const APP_VERSION = "1.119.26";
 const APP_RELEASES = [
+  ["v1.119.26", "Cache club views and stabilize player and refresh rendering"],
   ["v1.119.25", "Use native footer text and stable first-paint layout"],
   ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
   ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],

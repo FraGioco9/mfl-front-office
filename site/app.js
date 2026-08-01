@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.25";
+  const VERSION = "1.119.26";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -27,7 +27,15 @@
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
 
-  const revealInitialAppShell = () => {
+  const waitForInitialFonts = async () => {
+    if (document.fonts?.status !== "loaded") {
+      await document.fonts?.ready?.catch(() => undefined);
+    }
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+  };
+
+  const revealInitialAppShell = async () => {
+    await waitForInitialFonts();
     loadingScreen.hidden = true;
     document.documentElement.classList.remove("loading", "table-layout-pending", "bootPending");
     document.body.classList.remove("booting", "loading", "tableLayoutPending");
@@ -45,13 +53,13 @@
   if (initialPage === "changelog") {
     updateAccountState();
     await showHomeShell("changelog", false, initialTarget.options);
-    revealInitialAppShell();
+    await revealInitialAppShell();
     finishInitialChrome();
     window.__mflRestoringSavedEvaluation = false;
     return;
   }
 
-  revealInitialAppShell();
+  await revealInitialAppShell();
 
   beginInteractionBusy();
   try {
@@ -230,6 +238,122 @@
       }
       state.watchlistPlayerIdsAdded.clear();
       state.watchlistPlayerIdsRemoved.clear();`,
+    );
+    patchedSource = patchedSource.replace(
+      '  const contractLabel = `<span class="playerContractLine"><span class="playerContractTeam">${escapeHtml(formatContractClubName(row))}</span>${contractDivisionHtml}</span>`;',
+      '  const contractTeamName = formatContractClubName(row);\n  const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();\n  const contractTeamHtml = contractClubId\n    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/attributes" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`\n    : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;\n  const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;',
+    );
+    patchedSource = patchedSource.replace(
+      '  let activeClubId = "";\n  let openingClub = false;',
+      `  let activeClubId = "";
+  let openingClub = false;
+  const clubViewRenderCache = new Map();
+
+  function clubViewRenderCacheKey(clubId = activeClubId, view = state.view) {
+    return String(clubId || "") + ":" + String(view || "attributes");
+  }
+
+  function captureClubView(view = state.view) {
+    if (!activeClubId || state.currentPage !== CLUB_PAGE || !state.dataLoaded || !Array.isArray(state.rows)) return;
+    clubViewRenderCache.set(clubViewRenderCacheKey(activeClubId, view), {
+      columns: Array.isArray(state.columns) ? [...state.columns] : [],
+      rows: state.rows.map((row) => Array.isArray(row) ? [...row] : row),
+      pageSize: state.pageSize,
+      totalRows: state.incrementalTotalRows,
+      sourceRows: state.incrementalSourceRows,
+      generatedAt: state.manifest?.generated_at || null,
+    });
+  }
+
+  function restoreClubView(view) {
+    const snapshot = clubViewRenderCache.get(clubViewRenderCacheKey(activeClubId, view));
+    if (!snapshot || typeof incrementalRouteTarget !== "function" || typeof applyIncrementalPayload !== "function") return false;
+    const route = incrementalRouteTarget("club", { view });
+    if (!route) return false;
+    applyIncrementalPayload(route, {
+      columns: [...snapshot.columns],
+      rows: snapshot.rows.map((row) => Array.isArray(row) ? [...row] : row),
+      page: 1,
+      pageSize: snapshot.pageSize,
+      totalRows: snapshot.totalRows,
+      sourceRows: snapshot.sourceRows,
+      generatedAt: snapshot.generatedAt,
+    });
+    state.currentPage = CLUB_PAGE;
+    state.view = view;
+    state.page = 1;
+    state.pageSize = snapshot.pageSize;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
+    if (typeof updateViewButtons === "function") updateViewButtons();
+    if (typeof buildHeader === "function") buildHeader();
+    if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+    applyClubPresentation();
+    return true;
+  }`,
+    );
+    patchedSource = patchedSource.replace(
+      `      if (typeof updateViewButtons === "function") updateViewButtons();
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false });
+      applyClubPresentation();
+    } finally {`,
+      `      if (typeof updateViewButtons === "function") updateViewButtons();
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      applyClubPresentation();
+      captureClubView(nextView);
+    } finally {`,
+    );
+    patchedSource = patchedSource.replace(
+      `    const nextView = viewButton.dataset.view;
+    window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
+    setClubSwitching(true, { showLoading: false });
+    state.view = nextView;
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    if (typeof updateViewButtons === "function") updateViewButtons();
+    void (async () => {
+      try {
+        if (typeof window.mflLoadIncrementalRoutePage === "function") {
+          await window.mflLoadIncrementalRoutePage("club", { view: nextView });
+        } else {
+          if (typeof buildHeader === "function") buildHeader();
+          if (typeof applyFilters === "function") applyFilters({ save: false });
+        }
+      } finally {
+        await finishClubSwitch();
+      }
+    })();`,
+      `    const nextView = viewButton.dataset.view;
+    if (nextView === state.view) return;
+    captureClubView(state.view);
+    window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
+    setClubSwitching(true, { showLoading: false });
+    state.view = nextView;
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    if (restoreClubView(nextView)) {
+      void finishClubSwitch();
+      return;
+    }
+    if (typeof updateViewButtons === "function") updateViewButtons();
+    void (async () => {
+      try {
+        if (typeof window.mflLoadIncrementalRoutePage === "function") {
+          await window.mflLoadIncrementalRoutePage("club", { view: nextView });
+        } else {
+          if (typeof buildHeader === "function") buildHeader();
+          if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+        }
+        captureClubView(nextView);
+      } finally {
+        await finishClubSwitch();
+      }
+    })();`,
     );
 
     patchedSource += `

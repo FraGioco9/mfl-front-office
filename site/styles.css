@@ -6263,14 +6263,18 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
 }
 
 .playerContractTeamLink {
-  color: inherit;
+  color: var(--text);
+  font-weight: 600;
   text-decoration: none;
   cursor: pointer;
+  pointer-events: auto;
+  transition: none;
 }
 
 .playerContractTeamLink:hover,
 .playerContractTeamLink:focus-visible {
-  text-decoration: underline;
+  color: var(--primary);
+  text-decoration: none;
 }
 
 .playerNoteFloatingTooltip {
@@ -6780,6 +6784,7 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
   text-decoration: none !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+  transition: none !important;
 }
 
 #playerDetail .contractDetailCard strong .playerContractTeamLink:hover,
@@ -6794,6 +6799,8 @@ html.mflInitialChromePreparing *::after {
   transition: none !important;
   animation: none !important;
 }
+
+/* v1.119.26 - Cache club views and stabilize player and refresh rendering. */
 
 [data-tooltip]::before,
 [data-tooltip]::after,

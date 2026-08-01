@@ -6,11 +6,12 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.25";
+        const VERSION = "1.119.26";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
+          ["v1.119.26", "Cache club views and stabilize player and refresh rendering"],
           ["v1.119.25", "Use native footer text and stable first-paint layout"],
           ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
           ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
@@ -178,7 +179,7 @@
         );
         source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;\n          document.documentElement.classList.remove("bootPending");')},
+          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;')},
         );
         source = source.replace(
           '            installRuntimeFixes();\\n            rebuildChangelog();\\n            window.setTimeout(rebuildChangelog, 0);\\n            finalizeRouteChrome();',
