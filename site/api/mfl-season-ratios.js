@@ -1,5 +1,6 @@
-const APP_VERSION = "1.119.23";
+const APP_VERSION = "1.119.24";
 const APP_RELEASES = [
+  ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
   ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
   ["v1.118.33", "Preserve native MFL Stats filters, keep the loading cursor, and link player contract teams"],
   ["v1.118.32", "Make player contract teams native links and restore MFL Stats filter clicks"],
@@ -132,10 +133,10 @@ async function loadRatios(request) {
 function loaderScript() {
   const payload = JSON.stringify({ version: APP_VERSION, releases: APP_RELEASES, rows: [], warning: "" });
   const criticalCss = `
-    .siteFooter a[data-page="changelog"] { font-size: 0 !important; }
+    .siteFooter a[data-page="changelog"] { font-size: 14px !important; }
     .siteFooter a[data-page="changelog"]::before {
-      content: "MFL Front Office v${APP_VERSION}" !important;
-      font-size: 14px !important;
+      content: none !important;
+      display: none !important;
     }
 
     html:not(.mflEvaluationRateResolved) body[data-page="evaluation"] #evaluationDiscountRate,
@@ -194,14 +195,17 @@ function loaderScript() {
       pointer-events: auto !important;
     }
 
-    .contractDetailCard .playerContractTeamLink {
-      color: inherit !important;
+    #playerDetail .contractDetailCard strong .playerContractTeamLink {
+      color: var(--text) !important;
+      font-weight: 600 !important;
       text-decoration: none !important;
+      pointer-events: auto !important;
       cursor: pointer !important;
     }
-    .contractDetailCard .playerContractTeamLink:hover,
-    .contractDetailCard .playerContractTeamLink:focus-visible {
-      text-decoration: underline !important;
+    #playerDetail .contractDetailCard strong .playerContractTeamLink:hover,
+    #playerDetail .contractDetailCard strong .playerContractTeamLink:focus-visible {
+      color: var(--primary) !important;
+      text-decoration: none !important;
     }
   `;
 

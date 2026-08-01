@@ -6,11 +6,12 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.23";
+        const VERSION = "1.119.24";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
+          ["v1.119.24", "Fix player team links, footer label, and refresh alignment"],
           ["v1.119.23", "Restore navigation, player links, Watchlists, and stable release UI"],
           ["v1.119.22", "Reveal saved Evaluation chrome immediately and stabilize footer and Changelog first paint"],
           ["v1.119.21", "Restore footer version, stable Changelog first paint, and owned saved Evaluation refresh"],
@@ -42,9 +43,13 @@
             footer.style.cursor = "pointer";
           }
 
-          // The runtime keeps the sidebar expanded. Seed the same state before
-          // first paint so centered pages never shift during startup.
-          const menuOpen = true;
+          let menuOpen = true;
+          try {
+            const savedState = JSON.parse(localStorage.getItem("mfl-table-filters-v1") || "null");
+            if (typeof savedState?.menuOpen === "boolean") menuOpen = savedState.menuOpen;
+          } catch {
+            menuOpen = true;
+          }
           root.querySelector("#appShell")?.classList.toggle("menuClosed", !menuOpen);
           const menuButton = root.querySelector("#menuButton");
           if (menuButton) menuButton.setAttribute("aria-expanded", String(menuOpen));
@@ -153,8 +158,8 @@
               cursor: pointer !important;
               pointer-events: auto !important;
             }
-            html body #appShell .siteFooter a[href="/changelog"]::before,
-            html body #appShell .siteFooter a[data-page="changelog"]::before {
+            html body .siteFooter.siteFooter a[href="/changelog"]::before,
+            html body .siteFooter.siteFooter a[data-page="changelog"]::before {
               content: none !important;
               display: none !important;
             }

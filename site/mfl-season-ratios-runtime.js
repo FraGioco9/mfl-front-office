@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.23";
+  const VERSION = "1.119.24";
   const LABEL = `MFL Front Office v${VERSION}`;
   const DISCOUNT_TOOLTIP = "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 16, so it uses seasons 11-15.";
   const TOOLTIP_HIDE_DURATION = 170;
@@ -11,10 +11,10 @@
   let discountTooltipHideTimer = null;
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflRelease122RuntimeStyles");
+    let style = document.getElementById("mflRelease124RuntimeStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRelease122RuntimeStyles";
+      style.id = "mflRelease124RuntimeStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
@@ -27,8 +27,8 @@
         cursor: pointer !important;
         pointer-events: auto !important;
       }
-      html body #appShell .siteFooter a[href="/changelog"]::before,
-      html body #appShell .siteFooter a[data-page="changelog"]::before {
+      html body .siteFooter.siteFooter a[href="/changelog"]::before,
+      html body .siteFooter.siteFooter a[data-page="changelog"]::before {
         content: none !important;
         display: none !important;
       }
@@ -154,7 +154,7 @@
 
   function synchronizeReleaseUi() {
     const root = document.documentElement;
-    root.classList.add("mflRelease122Ready");
+    root.classList.add("mflRelease124Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
     installReleaseStyles();
