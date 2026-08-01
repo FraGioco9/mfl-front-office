@@ -1,29 +1,24 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
 
-/* v1.119.18 - Unify tooltip transitions, restore the footer version, and stabilize Changelog first paint. */
-html body .siteFooter.siteFooter a[href="/changelog"][data-page="changelog"],
+/* v1.119.19 - Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint. */
+html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
   font-size: 0 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
 }
 
-html body .siteFooter.siteFooter a[href="/changelog"][data-page="changelog"]::before,
-html body .siteFooter.siteFooter a[data-page="changelog"]::before,
-html[data-mfl-latest-release-version="1.119.18"] body .siteFooter.siteFooter a[href="/changelog"]::before {
-  content: "MFL Front Office v1.119.18" !important;
+html body .siteFooter.siteFooter a[href="/changelog"]::before,
+html body .siteFooter.siteFooter a[data-page="changelog"]::before {
+  content: "MFL Front Office v1.119.19" !important;
   display: inline !important;
   visibility: visible !important;
   opacity: 1 !important;
   font-size: 14px !important;
   cursor: pointer !important;
-}
-
-html.mflInitialChromePreparing *,
-html.mflInitialChromePreparing *::before,
-html.mflInitialChromePreparing *::after {
-  transition: none !important;
-  animation: none !important;
+  pointer-events: none !important;
 }
 
 [data-tooltip]::before,
@@ -32,41 +27,13 @@ html.mflInitialChromePreparing *::after {
 [data-note-tooltip]::after,
 .floatingActionTooltip,
 .playerNoteFloatingTooltip {
-  display: none !important;
+  transition-duration: 170ms !important;
+  transition-timing-function: ease !important;
 }
 
-.mflUnifiedTooltip {
-  position: fixed;
-  z-index: 2147483647;
-  max-width: min(280px, calc(100vw - 16px));
-  padding: 6px 9px;
-  border-radius: 6px;
-  background: var(--tooltip-bg, rgba(20, 20, 24, 0.96));
-  color: var(--tooltip-text, #fff);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.24);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(4px);
-  transition:
-    opacity 170ms ease,
-    transform 170ms ease,
-    visibility 0s linear 170ms;
-}
-
-.mflUnifiedTooltip.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  transition-delay: 0s;
-}
-
-.mflUnifiedTooltip.is-hiding {
-  opacity: 0;
-  visibility: visible;
-  transform: translateY(4px);
+.floatingActionTooltip.tooltipHiding {
+  opacity: 0 !important;
+  visibility: visible !important;
+  transform: translateY(4px) !important;
+  pointer-events: none !important;
 }

@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.18";
+        const VERSION = "1.119.19";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
@@ -20,7 +20,9 @@
           }
           const releases = JSON.parse(request.responseText);
           if (!Array.isArray(releases)) throw new Error("Release history is invalid.");
-          return releases;
+          const currentRelease = ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"];
+          const filtered = releases.filter(([label]) => label !== currentRelease[0]);
+          return [currentRelease, ...filtered];
         }
 
         function seedReleaseShell(root, version, releases) {
@@ -142,14 +144,6 @@
         source = source.replace(
           '          prepareInitialShell(shell);',
           ${JSON.stringify(`          prepareInitialShell(shell);\n          ${releaseShellCall}`)},
-        );
-        source = source.replace(
-          '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify(`          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;\n          requestAnimationFrame(() => document.documentElement.classList.remove("bootPending"));`)},
-        );
-        source = source.replace(
-          '            finalizeRouteChrome();',
-          '            finalizeRouteChrome();\\n            document.documentElement.classList.remove("mflInitialChromePreparing");',
         );
 `;
           if (!source.includes(patchMarker)) {
