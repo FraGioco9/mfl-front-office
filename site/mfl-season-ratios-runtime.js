@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.29";
+  const VERSION = "1.119.31";
   const LABEL = `MFL Front Office v${VERSION}`;
   const DISCOUNT_TOOLTIP = "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 16, so it uses seasons 11-15.";
   const TOOLTIP_HIDE_DURATION = 170;
@@ -11,10 +11,10 @@
   let discountTooltipHideTimer = null;
 
   function installReleaseStyles() {
-    let style = document.getElementById("mflRelease129RuntimeStyles");
+    let style = document.getElementById("mflRelease131RuntimeStyles");
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflRelease129RuntimeStyles";
+      style.id = "mflRelease131RuntimeStyles";
       document.head.appendChild(style);
     }
     style.textContent = `
@@ -31,10 +31,13 @@
   }
 
   function loadClubViewCacheRuntime() {
-    if (document.getElementById("mflClubViewCacheRuntime")) return true;
+    const existing = document.getElementById("mflClubViewCacheRuntime");
+    if (existing?.dataset?.version === VERSION) return true;
+    existing?.remove();
     const script = document.createElement("script");
     script.id = "mflClubViewCacheRuntime";
-    script.src = "/club-view-cache-runtime.js?v=1.119.30-safe";
+    script.dataset.version = VERSION;
+    script.src = `/club-view-cache-runtime.js?v=${encodeURIComponent(VERSION)}`;
     script.async = false;
     script.addEventListener("error", () => script.remove(), { once: true });
     document.head.appendChild(script);
@@ -160,7 +163,7 @@
 
   function synchronizeReleaseUi() {
     const root = document.documentElement;
-    root.classList.add("mflRelease129Ready");
+    root.classList.add("mflRelease131Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
     root.dataset.mflReleaseVersion = VERSION;
     installReleaseStyles();

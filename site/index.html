@@ -6,11 +6,12 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.29";
+        const VERSION = "1.119.31";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
         const CURRENT_RELEASES = [
+          ["v1.119.31", "Restore cached club views before loading and enable club table sorting"],
           ["v1.119.29", "Restore loaded club views without loading or rebuilding"],
           ["v1.119.28", "Keep loaded club views available throughout the session"],
           ["v1.119.27", "Keep Changelog geometry stable and restore cached club views instantly"],
@@ -183,7 +184,7 @@
         );
         source = source.replace(
           '          document.body.innerHTML = shell.body.innerHTML;',
-          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;')},
+          ${JSON.stringify('          document.documentElement.classList.add("mflInitialChromePreparing");\n          document.body.innerHTML = shell.body.innerHTML;\n          const currentReleaseRuntime = document.getElementById("mflReleaseRuntime");\n          if (currentReleaseRuntime) currentReleaseRuntime.remove();\n          const releaseRuntime = document.createElement("script");\n          releaseRuntime.id = "mflReleaseRuntime";\n          releaseRuntime.src = "/mfl-season-ratios-runtime.js?v=1.119.31";\n          releaseRuntime.async = false;\n          document.head.appendChild(releaseRuntime);')},
         );
         source = source.replace(
           '            installRuntimeFixes();\\n            rebuildChangelog();\\n            window.setTimeout(rebuildChangelog, 0);\\n            finalizeRouteChrome();',
