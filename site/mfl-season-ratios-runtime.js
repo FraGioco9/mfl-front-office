@@ -14,9 +14,10 @@
       const label = `MFL Front Office v${VERSION}`;
       if (footer.textContent !== label) footer.textContent = label;
       if (footer.getAttribute("href") !== "/changelog") footer.setAttribute("href", "/changelog");
-      footer.dataset.releaseLabel = label;
-      footer.setAttribute("aria-label", `${label}, open Changelog`);
-      footer.style.cursor = "pointer";
+      if (footer.dataset.releaseLabel !== label) footer.dataset.releaseLabel = label;
+      const ariaLabel = `${label}, open Changelog`;
+      if (footer.getAttribute("aria-label") !== ariaLabel) footer.setAttribute("aria-label", ariaLabel);
+      if (footer.style.cursor !== "pointer") footer.style.cursor = "pointer";
 
       if (!footerObserver) {
         footerObserver = new MutationObserver(() => syncVersion());
@@ -31,7 +32,9 @@
 
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       if (element.textContent !== `v${VERSION}`) element.textContent = `v${VERSION}`;
-      element.dataset.mflLatestReleaseVersion = VERSION;
+      if (element.dataset.mflLatestReleaseVersion !== VERSION) {
+        element.dataset.mflLatestReleaseVersion = VERSION;
+      }
     });
   }
 
