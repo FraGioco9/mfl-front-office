@@ -1,8 +1,9 @@
 @import url("https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@230903a376698339ed75402d962811bb15c6f468/site/styles.css");
 
-/* v1.119.19 - Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint. */
+/* v1.119.20 - Fade tooltips and stabilize Changelog and saved Evaluation refresh. */
 html body .siteFooter.siteFooter a[href="/changelog"],
 html body .siteFooter.siteFooter a[data-page="changelog"] {
+  display: inline-block !important;
   font-size: 0 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
@@ -12,7 +13,7 @@ html body .siteFooter.siteFooter a[data-page="changelog"] {
 
 html body .siteFooter.siteFooter a[href="/changelog"]::before,
 html body .siteFooter.siteFooter a[data-page="changelog"]::before {
-  content: "MFL Front Office v1.119.19" !important;
+  content: "MFL Front Office v1.119.20" !important;
   display: inline !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -26,14 +27,37 @@ html body .siteFooter.siteFooter a[data-page="changelog"]::before {
 [data-note-tooltip]::before,
 [data-note-tooltip]::after,
 .floatingActionTooltip,
-.playerNoteFloatingTooltip {
-  transition-duration: 170ms !important;
-  transition-timing-function: ease !important;
+.playerNoteFloatingTooltip,
+.evaluationDiscountTooltipPortal {
+  transition:
+    opacity 170ms ease,
+    transform 170ms ease,
+    visibility 0s linear 170ms !important;
 }
 
-.floatingActionTooltip.tooltipHiding {
+.floatingActionTooltip.visible,
+.playerNoteFloatingTooltip.visible,
+.evaluationDiscountTooltipPortal.visible {
+  transition-delay: 0s !important;
+}
+
+.floatingActionTooltip.tooltipHiding,
+.playerNoteFloatingTooltip.tooltipHiding,
+.evaluationDiscountTooltipPortal.tooltipHiding {
   opacity: 0 !important;
   visibility: visible !important;
   transform: translateY(4px) !important;
   pointer-events: none !important;
+}
+
+.evaluationDiscountTooltipPortal {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+}
+
+.evaluationDiscountTooltipPortal.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }

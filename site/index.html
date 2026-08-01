@@ -6,10 +6,14 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.19";
+        const VERSION = "1.119.20";
         const BASE_COMMIT = "1d890d674695429d14297bc173452cb9b962cd36";
         const BASE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${BASE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${encodeURIComponent(VERSION)}`;
+        const CURRENT_RELEASES = [
+          ["v1.119.20", "Fade tooltips and stabilize Changelog and saved Evaluation refresh"],
+          ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"],
+        ];
 
         function loadReleases() {
           const request = new XMLHttpRequest();
@@ -20,9 +24,13 @@
           }
           const releases = JSON.parse(request.responseText);
           if (!Array.isArray(releases)) throw new Error("Release history is invalid.");
-          const currentRelease = ["v1.119.19", "Restore native tooltips, footer navigation, saved Evaluation refresh, and stable Changelog first paint"];
-          const filtered = releases.filter(([label]) => label !== currentRelease[0]);
-          return [currentRelease, ...filtered];
+          const currentLabels = new Set(CURRENT_RELEASES.map(([label]) => label));
+          return [...CURRENT_RELEASES, ...releases.filter(([label]) => !currentLabels.has(label))];
+        }
+
+        function versionParts(value) {
+          const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
+          return match ? match.slice(1).map(Number) : null;
         }
 
         function seedReleaseShell(root, version, releases) {
@@ -43,72 +51,53 @@
           list.querySelectorAll(".changelogPatchList > li, :scope > li:not(.changelogMinorSection)").forEach((item) => {
             const label = String(item.querySelector(":scope > span")?.textContent || "").trim();
             const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
-            if (/^v\d+\.\d+\.\d+$/.test(label)) entries.set(label, description);
+            if (versionParts(label)) entries.set(label, description);
           });
           releases.forEach(([label, description]) => entries.set(label, description));
 
-          const groups = new Map();
-          entries.forEach((description, label) => {
-            const match = label.match(/^v(\d+)\.(\d+)\.(\d+)$/);
-            if (!match) return;
-            const key = `${match[1]}.${match[2]}`;
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key).push({ label, description, patch: Number(match[3]) });
-          });
-
-          const sections = [...groups.entries()]
+          const fragment = root.createDocumentFragment();
+          [...entries.entries()]
             .sort(([left], [right]) => {
-              const a = left.split(".").map(Number);
-              const b = right.split(".").map(Number);
-              return b[0] - a[0] || b[1] - a[1];
+              const a = versionParts(left) || [0, 0, 0];
+              const b = versionParts(right) || [0, 0, 0];
+              return b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
             })
-            .map(([minor, patches], index) => {
-              patches.sort((a, b) => b.patch - a.patch);
-              const section = root.createElement("li");
-              section.className = "changelogMinorSection";
-              if (index === 0) section.classList.add("is-expanded");
-
-              const toggle = root.createElement("button");
-              toggle.className = "changelogMinorToggle";
-              toggle.type = "button";
-              toggle.setAttribute("aria-expanded", index === 0 ? "true" : "false");
-
-              const title = root.createElement("span");
-              title.className = "changelogMinorVersion";
-              title.textContent = `v${minor}`;
-              const meta = root.createElement("span");
-              meta.className = "changelogMinorMeta";
-              meta.textContent = `${patches.length} ${patches.length === 1 ? "patch" : "patches"}`;
-              const chevron = root.createElement("span");
-              chevron.className = "changelogMinorChevron";
-              chevron.setAttribute("aria-hidden", "true");
-              chevron.textContent = ">";
-              toggle.append(title, meta, chevron);
-
-              const panel = root.createElement("div");
-              panel.className = "changelogMinorPanel";
-              const inner = root.createElement("div");
-              inner.className = "changelogMinorPanelInner";
-              const patchList = root.createElement("ol");
-              patchList.className = "changelogPatchList";
-              patches.forEach(({ label, description }) => {
-                const item = root.createElement("li");
-                const versionLabel = root.createElement("span");
-                versionLabel.textContent = label;
-                const descriptionLabel = root.createElement("p");
-                descriptionLabel.textContent = description;
-                item.append(versionLabel, descriptionLabel);
-                patchList.appendChild(item);
-              });
-              inner.appendChild(patchList);
-              panel.appendChild(inner);
-              section.append(toggle, panel);
-              return section;
+            .forEach(([label, description]) => {
+              const item = root.createElement("li");
+              const versionLabel = root.createElement("span");
+              const descriptionLabel = root.createElement("p");
+              versionLabel.textContent = label;
+              descriptionLabel.textContent = description;
+              item.append(versionLabel, descriptionLabel);
+              fragment.appendChild(item);
             });
-
-          list.replaceChildren(...sections);
-          list.dataset.sectioned = "true";
+          list.replaceChildren(fragment);
+          delete list.dataset.sectioned;
           list.dataset.completeReleaseVersion = version;
+        }
+
+        function ratioLoaderMarkup(version, releases) {
+          const payload = JSON.stringify({ version, releases, rows: [], warning: "" });
+          const code = `(() => {
+            const request = new XMLHttpRequest();
+            request.open("GET", "/api/mfl-season-ratios?format=script&v=${encodeURIComponent(version)}", false);
+            try {
+              request.send(null);
+            } catch {
+              return;
+            }
+            if (!(request.status >= 200 && request.status < 300) || !request.responseText) return;
+            let runtimeSource = request.responseText.replaceAll("1.118.33", ${JSON.stringify(version)});
+            runtimeSource = runtimeSource.replace(
+              /window\\.__mflSeasonRatioPayload\\s*=\\s*[^;]+;/,
+              ${JSON.stringify(`window.__mflSeasonRatioPayload = ${payload};`)},
+            );
+            const script = document.createElement("script");
+            script.textContent = runtimeSource + "\\n//# sourceURL=mfl-season-ratio-loader-v${version}.js";
+            document.head.appendChild(script);
+            script.remove();
+          })();`;
+          return `<script>${code}<\/script>`;
         }
 
         function fail(message) {
@@ -130,6 +119,28 @@
           let source = request.responseText;
           source = source.replace('const VERSION = "1.118.3";', `const VERSION = "${VERSION}";`);
 
+          const originalRatioDeclaration = '        const ratioScript = `<script src="/api/mfl-season-ratios?format=script&v=${VERSION}"><\\/script>`;';
+          const ratioDeclaration = `        const ratioScript = window.location.pathname === "/changelog" ? "" : ${JSON.stringify(ratioLoaderMarkup(VERSION, RELEASES))};`;
+          source = source.replace(originalRatioDeclaration, ratioDeclaration);
+
+          const criticalStyle = `<style id="mflReleaseCriticalStyles">
+            html body .siteFooter.siteFooter a[href="/changelog"],
+            html body .siteFooter.siteFooter a[data-page="changelog"] {
+              display: inline-block !important;
+              font-size: 0 !important;
+              cursor: pointer !important;
+              pointer-events: auto !important;
+            }
+            html body .siteFooter.siteFooter a[href="/changelog"]::before,
+            html body .siteFooter.siteFooter a[data-page="changelog"]::before {
+              content: "MFL Front Office v${VERSION}" !important;
+              display: inline !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              font-size: 14px !important;
+              pointer-events: none !important;
+            }
+          </style>`;
           const patchMarker = '        const routeStyles = `';
           const releaseShellCall = `(${seedReleaseShell.toString()})(shell, ${JSON.stringify(VERSION)}, ${JSON.stringify(RELEASES)});`;
           const extraSourcePatches = `
@@ -138,12 +149,20 @@
           '/styles.css?v=${VERSION}',
         );
         source = source.replace(
-          '          const groups = new Map();',
-          ${JSON.stringify(`          ${JSON.stringify(RELEASES)}.forEach(([version, description]) => entries.set(version, description));\n\n          const groups = new Map();`)},
+          '</head>',
+          ${JSON.stringify(`${criticalStyle}</head>`)},
         );
         source = source.replace(
           '          prepareInitialShell(shell);',
           ${JSON.stringify(`          prepareInitialShell(shell);\n          ${releaseShellCall}`)},
+        );
+        source = source.replace(
+          '            installRuntimeFixes();\\n            rebuildChangelog();\\n            window.setTimeout(rebuildChangelog, 0);\\n            finalizeRouteChrome();',
+          '            installRuntimeFixes();\\n            finalizeRouteChrome();',
+        );
+        source = source.replace(
+          '          requestAnimationFrame(() => requestAnimationFrame(() => {\\n            document.documentElement.classList.remove("bootPending");\\n          }));',
+          '          // startApp reveals the shell after route-specific chrome is ready.',
         );
 `;
           if (!source.includes(patchMarker)) {

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.19";
+  const VERSION = "1.119.20";
   const SOURCE_COMMIT = "dc3265ceb18ee501e6107f3a31869c6500738e92";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
   const START_MARKER = "async function startApp() {";
@@ -18,6 +18,7 @@
     ? String(initialSearchParams.get("player") || "").trim()
     : "";
 
+  window.__mflRestoringSavedEvaluation = Boolean(initialSavedEvaluationId);
   loadSavedTableState();
   applyStoredWalletPermission();
   loadEvaluationMflPerUsd();
@@ -38,6 +39,7 @@
     updateAccountState();
     await showHomeShell("changelog", false, initialTarget.options);
     revealInitialAppShell();
+    window.__mflRestoringSavedEvaluation = false;
     return;
   }
 
@@ -56,10 +58,7 @@
     updateAccountState();
     await showHomeShell(initialPage, false, initialTarget.options);
 
-    if (
-      initialSavedEvaluationId
-      && state.evaluationSavedId !== initialSavedEvaluationId
-    ) {
+    if (initialSavedEvaluationId && state.evaluationSavedId !== initialSavedEvaluationId) {
       await loadSavedEvaluation(initialSavedEvaluationId, initialSavedEvaluationPlayerId);
       if (state.evaluationSavedId === initialSavedEvaluationId) {
         const savedUrl = new URL("/evaluation", window.location.origin);
@@ -71,6 +70,7 @@
       }
     }
   } finally {
+    window.__mflRestoringSavedEvaluation = false;
     endInteractionBusy({ reset: true });
   }
 }`;
@@ -107,6 +107,83 @@
       /const currentVersion = "\d+\.\d+\.\d+";/g,
       `const currentVersion = "${VERSION}";`,
     );
+    patchedSource = patchedSource.replace(
+      '  if (savedId && !hasWalletOptIn()) {',
+      '  if (savedId && !hasWalletOptIn() && !window.__mflRestoringSavedEvaluation) {',
+    );
+    patchedSource = patchedSource.replace(
+      '  } else if (savedId && state.evaluationSavedId !== savedId) {',
+      '  } else if (savedId && state.evaluationSavedId !== savedId && !window.__mflRestoringSavedEvaluation) {',
+    );
+    patchedSource = patchedSource.replace(
+      'let evaluationLoadFloatingTooltip = null;',
+      'let evaluationLoadFloatingTooltip = null;\nlet evaluationLoadTooltipHideTimer = null;',
+    );
+    patchedSource = patchedSource.replace(
+      `function hideEvaluationLoadActionTooltip() {
+  if (evaluationLoadFloatingTooltip) {
+    evaluationLoadFloatingTooltip.remove();
+    evaluationLoadFloatingTooltip = null;
+  }
+}`,
+      `function hideEvaluationLoadActionTooltip() {
+  if (evaluationLoadTooltipHideTimer) {
+    window.clearTimeout(evaluationLoadTooltipHideTimer);
+    evaluationLoadTooltipHideTimer = null;
+  }
+  if (!evaluationLoadFloatingTooltip) return;
+  const tooltip = evaluationLoadFloatingTooltip;
+  evaluationLoadFloatingTooltip = null;
+  tooltip.classList.remove("visible");
+  tooltip.classList.add("tooltipHiding");
+  evaluationLoadTooltipHideTimer = window.setTimeout(() => {
+    tooltip.remove();
+    evaluationLoadTooltipHideTimer = null;
+  }, 170);
+}`,
+    );
+    patchedSource = patchedSource.replace(
+      `  if (immediate) {
+    removePlayerNoteTooltip();
+    return;
+  }
+  state.playerNoteTooltipHideTimer = window.setTimeout(removePlayerNoteTooltip, 90);`,
+      `  const tooltip = document.querySelector(".playerNoteFloatingTooltip");
+  if (!tooltip) {
+    removePlayerNoteTooltip();
+    return;
+  }
+  tooltip.classList.remove("visible");
+  tooltip.classList.add("tooltipHiding");
+  state.playerNoteTooltipHideTimer = window.setTimeout(removePlayerNoteTooltip, 170);`,
+    );
+    patchedSource = patchedSource.replace(
+      '  window.requestAnimationFrame(() => tooltip.classList.add("visible"));',
+      '  tooltip.classList.remove("tooltipHiding");\n  window.requestAnimationFrame(() => tooltip.classList.add("visible"));',
+    );
+
+    patchedSource += `
+;(() => {
+  if (window.__mflFooterSpaNavigationBound) return;
+  window.__mflFooterSpaNavigationBound = true;
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const footer = event.target.closest('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    if (!footer || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (window.location.pathname === "/changelog") return;
+    if (typeof setPage === "function") {
+      void Promise.resolve(setPage("changelog", true)).catch(() => {
+        window.history.pushState({}, "", "/changelog");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      return;
+    }
+    window.history.pushState({}, "", "/changelog");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, true);
+})();`;
     patchedSource += `\n//# sourceURL=mfl-front-office-app-v${VERSION}.js`;
 
     const script = document.createElement("script");
