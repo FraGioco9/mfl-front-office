@@ -1,11 +1,12 @@
 (() => {
-  const VERSION = "1.119.12";
-  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@840e22b5a01cafb70e0cffe6a54d86c2c7696c8a/site/mfl-season-ratios-runtime.js";
+  const VERSION = "1.119.13";
+  const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@521a73e745b499a7e88aabd2954067d2d19eaf35/site/mfl-season-ratios-runtime.js";
 
   function syncVersion() {
     const root = document.documentElement;
-    root.classList.add("mflRelease112Ready");
+    root.classList.add("mflRelease113Ready");
     root.dataset.mflLatestReleaseVersion = VERSION;
+    root.dataset.mflReleaseVersion = VERSION;
 
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     if (footer) {
