@@ -2,6 +2,28 @@
   const VERSION = "1.119.14";
   const PREVIOUS_RUNTIME = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@25706e938db204eb0b2f6f43c9db900767a8a133/site/mfl-season-ratios-runtime.js";
   let footerObserver = null;
+  let changelogDelegationBound = false;
+
+  function installChangelogDelegation() {
+    if (changelogDelegationBound) return;
+    const list = document.querySelector(".changelogList");
+    if (!list) return;
+
+    changelogDelegationBound = true;
+    list.addEventListener("click", (event) => {
+      const toggle = event.target instanceof Element
+        ? event.target.closest(".changelogMinorToggle")
+        : null;
+      if (!toggle || !list.contains(toggle)) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const section = toggle.closest(".changelogMinorSection");
+      if (!section) return;
+      const expanded = section.classList.toggle("is-expanded");
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    }, true);
+  }
 
   function syncVersion() {
     const root = document.documentElement;
@@ -36,6 +58,7 @@
         element.dataset.mflLatestReleaseVersion = VERSION;
       }
     });
+    installChangelogDelegation();
   }
 
   syncVersion();
