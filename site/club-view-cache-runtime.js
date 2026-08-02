@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.31";
+  const VERSION = "1.119.32";
   const CLUB_PAGE = "club";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const VIEW_SLUGS = {
@@ -19,20 +19,21 @@
   ];
   const POSITION_RANK = new Map(POSITION_ORDER.map((position, index) => [position, index]));
   const viewCache = new Map();
+  const pendingCaptures = new Map();
   let installed = false;
   let installTimer = 0;
   let filteringClubRows = false;
-  let clubDelegatePage = "database";
 
   function clubRouteFromLocation(viewOverride = "") {
     const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/([^/]+))?\/?$/i);
     if (!match) return null;
-    const view = viewOverride || ({
+    const pathView = {
       attributes: "attributes",
       contracts: "contracts",
       "current-season": "current",
       "all-time": "all",
-    }[String(match[2] || "attributes").toLowerCase()] || "attributes");
+    }[String(match[2] || "attributes").toLowerCase()] || "attributes";
+    const view = CLUB_VIEWS.has(viewOverride) ? viewOverride : pathView;
     return {
       clubId: decodeURIComponent(match[1]),
       view,
@@ -55,24 +56,16 @@
     }) : [];
   }
 
-  function clonePayload(payload) {
-    return {
-      ...payload,
-      columns: Array.isArray(payload?.columns) ? [...payload.columns] : [],
-      rows: cloneRows(payload?.rows),
-    };
-  }
-
-  function clubIdColumn() {
-    if (typeof state === "undefined" || !Array.isArray(state.columns)) return "";
+  function clubIdColumn(columns = state?.columns) {
+    if (!Array.isArray(columns)) return "";
     return CLUB_ID_COLUMNS.find((column) => {
-      if (typeof hasColumn === "function") return hasColumn(column);
-      return state.columns.includes(column);
+      if (typeof hasColumn === "function" && columns === state.columns) return hasColumn(column);
+      return colums.includes(column);
     }) || "";
   }
 
-  function rowsForClub(rows, clubId) {
-    const idColumn = clubIdColumn();
+  function rowsForClub(rows, clubId, columns = state?.columns) {
+    const idColumn = clubIdColumn(columns);
     if (!idColumn || !clubId || !Array.isArray(rows)) return Array.isArray(rows) ? rows : [];
     return rows.filter((row) => String(getValue(row, idColumn)) === String(clubId));
   }
@@ -89,57 +82,82 @@
     const bPosition = primaryPosition(b);
     const aRank = POSITION_RANK.has(aPosition) ? POSITION_RANK.get(aPosition) : POSITION_ORDER.length;
     const bRank = POSITION_RANK.has(bPosition) ? POSITION_RANK.get(bPosition) : POSITION_ORDER.length;
-    let result = aRank - bRank;
-    if (!result) {
-      const aOverall = Number(getValue(a, "overall"));
-      const bOverall = Number(getValue(b, "overall"));
-      if (Number.isFinite(aOverall) && Number.isFinite(bOverall) && aOverall !== bOverall) {
-        result = bOverall - aOverall;
-      }
-    }
-    if (!result) {
-      result = String(getValue(a, "name") || "").localeCompare(String(getValue(b, "name") || ""));
-    }
-    return state.sortDirection === "desc" ? -result : result;
-  }
+    const rankDifference = aRank - bRank;
+    if (rankDifference) return state.sortDirection === "desc" ? -rankDifference : rankDifference;
 
-  function resolvedClubRoute(route = null) {
-    const fallback = clubRouteFromLocation(route?.view || (typeof state !== "undefined" ? state.view : ""));
-    const clubId = String(route?.clubId || fallback?.clubId || "").trim();
-    const view = String(route?.view || fallback?.view || "attributes");
-    return clubId && CLUB_VIEWS.has(view) ? { clubId, view } : null;
+    const aOverall = Number(getValue(a, "overall"));
+    const bOverall = Number(getValue(b, "overall");
+    if (Number.isFinite(aOverall) && Number.isFinite(bOverall) && aOverall !== bOverall) {
+      return bOverall - aOverall;
+    }
+    return String(getValue(a, "name") || "").localeCompare(String(getValue(b, "name") || ""));
   }
 
   function snapshotFromState() {
     return {
       columns: Array.isArray(state.columns) ? [...state.columns] : [],
       rows: cloneRows(state.rows),
-      page: 1,
       pageSize: Number(state.pageSize || 100),
-      totalRows: Number(state.incrementalTotalRows || state.rows.length),
-      sourceRows: Number(state.incrementalSourceRows || state.rows.length),
+      totalRows: Number(state.incrementalTotalRows || state.rows?.length || 0),
+      sourceRows: Number(state.incrementalSourceRows || state.rows?.length || 0),
       generatedAt: state.manifest?.generated_at || null,
+      dataAccess: state.dataAccess || null,
+      incrementalRoute: state.incrementalRoute ? { ...state.incrementalRoute } : null,
       sortKey: String(state.sortKey || "positions"),
       sortDirection: String(state.sortDirection || "asc"),
     };
   }
 
-  function rememberPayload(route, payload) {
-    const clubRoute = resolvedClubRoute(route);
-    if (!route || route.scope !== "club" || !clubRoute) return;
-    if (!payload || !Array.isArray(payload.rows)) return;
-    viewCache.set(cacheKey(clubRoute.clubId, clubRoute.view), {
-      ...clonePayload(payload),
-      sortKey: String(state.sortKey || "positions"),
-      sortDirection: String(state.sortDirection || "asc"),
-    });
+  function rememberView(clubId, view) {
+    if (!clubId || !CLUB_VIEWS.has(view) || !Array.isArray(state?.rows) || !Array.isArray(state?.columns)) return false;
+    viewCache.set(cacheKey(clubId, view), snapshotFromState());
+    return true;
   }
 
   function rememberCurrentView() {
-    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE || !state.dataLoaded) return;
+    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE) return false;
     const current = clubRouteFromLocation(state.view);
-    if (!current || !CLUB_VIEWS.has(current.view) || !Array.isArray(state.rows)) return;
-    viewCache.set(cacheKey(current.clubId, current.view), snapshotFromState());
+    return Boolean(current && rememberView(current.clubId, current.view));
+  }
+
+  function clubViewReady(clubId, view) {
+    const route = clubRouteFromLocation();
+    if (!route || route.clubId !== String(clubId) || route.view !== view) return false;
+    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE  || state.view !== view) return false;
+    if ( Array.isArray(state.rows) === false || Array.isArray(state.columns) === false || !state.columns.length) return false;
+    return !document.body.classList.contains("clubViewSwitching")
+      && !document.body.classList.contains("clubViewLoading");
+  }
+
+  function scheduleLoadedViewCapture(clubId, view) {
+    const key = cacheKey(clubId, view);
+    const existing = pendingCaptures.get(key);
+    if (existing) window.cancelAnimationFrame(existing);
+
+    let frames = 0;
+    const check = () => {
+      if (clubViewReady(clubId, view)) {
+        // Native club navigation establishes the default before the first render.
+        // Keep that default explicit for every newly loaded club view.
+        if (!viewCache.has(key)) {
+          state.sortKey = "positions";
+          state.sortDirection = "asc";
+          state.page = 1;
+          if (typeof buildHeader === "function") buildHeader();
+          if (typeof applyFilters === "function") applyFilters({ save: false });
+        }
+        rememberView(clubId, view);
+        pendingCaptures.delete(key);
+        return;
+      }
+      frames += 1;
+      if (frames >= 600) {
+        pendingCaptures.delete(key);
+        return;
+      }
+      pendingCaptures.set(key, window.requestAnimationFrame(check));
+    };
+    pendingCaptures.set(key, window.requestAnimationFrame(check));
   }
 
   function restoreClubPresentation() {
@@ -159,43 +177,35 @@
     }
   }
 
-  function renderCachedView(clubId, nextView, cachedPayload) {
-    window.history.replaceState({}, "", canonicalClubPath(clubId, nextView));
+  function restoreSnapshot(clubId, view, snapshot) {
+    window.history.replaceState({}, "", canonicalClubPath(clubId, view));
+    document.body.classList.remove("clubViewSwitching", "clubViewLoading");
 
     state.currentPage = CLUB_PAGE;
-    state.view = nextView;
+    state.view = view;
     state.page = 1;
-    state.sortKey = String(cachedPayload.sortKey || "positions");
-    state.sortDirection = String(cachedPayload.sortDirection || "asc");
-    state.pageSize = Number(cachedPayload.pageSize || state.pageSize || 100);
+    state.pageSize = Number(snapshot.pageSize || 100);
+    state.columns = [...snapshot.columns];
+    state.columnIndexMap = null;
+    state.rows = cloneRows(snapshot.rows);
+    state.filteredRows = [];
+    state.tableSourceRowsCount = 0;
+    state.incrementalTotalRows = Number(snapshot.totalRows || state.rows.length);
+    state.incrementalSourceRows = Number(snapshot.sourceRows || state.rows.length);
+    state.incrementalRoute = snapshot.incrementalRoute ? { ...snapshot.incrementalRoute, view, clubId } : state.incrementalRoute;
+    if (snapshot.dataAccess) state.dataAccess = snapshot.dataAccess;
+    state.dataLoaded = true;
+    state.sortKey = String(snapshot.sortKey || "positions");
+    state.sortDirection = String(snapshot.sortDirection || "asc");
 
-    const route = typeof incrementalRouteTarget === "function"
-      ? incrementalRouteTarget("club", { view: nextView })
-      : {
-          pageName: "club",
-          scope: "club",
-          clubId,
-          view: nextView,
-          access: state.dataAccess || "public",
-        };
-
-    applyIncrementalPayload(route, clonePayload(cachedPayload));
-    state.currentPage = CLUB_PAGE;
-    state.view = nextView;
-    state.sortKey = String(cachedPayload.sortKey || "positions");
-    state.sortDirection = String(cachedPayload.sortDirection || "asc");
-    state.pageSize = Number(cachedPayload.pageSize || state.pageSize || 100);
-
-    if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) {
-      pageSizeSelect.value = String(state.pageSize);
-    }
+    if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
     if (typeof updateViewButtons === "function") updateViewButtons();
+    if (typeof buildTableColGroup === "function") buildTableColGroup();
     if (typeof buildHeader === "function") buildHeader();
     if (typeof applyFilters === "function") applyFilters({ save: false });
     restoreClubPresentation();
 
     window.requestAnimationFrame(() => {
-      if (typeof buildTableColGroup === "function") buildTableColGroup();
       if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
       restoreClubPresentation();
     });
@@ -207,27 +217,30 @@
 
     const button = event.target.closest(".viewButton[data-view]");
     if (!button) return;
-
     const nextView = String(button.dataset.view || "");
     if (!CLUB_VIEWS.has(nextView) || nextView === state.view) return;
 
     const current = clubRouteFromLocation(state.view);
     if (!current) return;
 
+    // Capture the rendered source view before the native handler changes state.
     rememberCurrentView();
     const cached = viewCache.get(cacheKey(current.clubId, nextView));
-    if (!cached) return;
+    if (cached) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      restoreSnapshot(current.clubId, nextView, cached);
+      return;
+    }
 
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    renderCachedView(current.clubId, nextView, cached);
+    // Let the native first load run, then cache the completed destination rather
+    // than relying on the request's delegated database/progression scope.
+    scheduleLoadedViewCapture(current.clubId, nextView);
   }
 
   function installCacheAndSorting() {
     if (installed) return true;
     if (typeof state === "undefined"
-        || typeof requestIncrementalRoute !== "function"
-        || typeof applyIncrementalPayload !== "function"
         || typeof applyFilters !== "function"
         || typeof compareRows !== "function") {
       return false;
@@ -235,29 +248,24 @@
 
     const nativeCompareRows = compareRows;
     compareRows = function compareRowsWithSortableClubColumns(a, b) {
-      if ((state.currentPage === CLUB_PAGE || filteringClubRows) && state.sortKey === "positions") {
-        return compareClubPositions(a, b);
+      if (filteringClubRows && state.sortKey === "positions") return compareClubPositions(a, b);
+      if (filteringClubRows) return nativeCompareRows.call(this, a, b);
+      if (state.currentPage !== CLUB_PAGE) return nativeCompareRows.call(this, a, b);
+
+      const previousPage = state.currentPage;
+      state.currentPage = ["current", "all"].includes(state.view) ? "progression" : "database";
+      try {
+        return state.sortKey === "positions"
+          ? compareClubPositions(a, b)
+          : nativeCompareRows.call(this, a, b);
+      } finally {
+        state.currentPage = previousPage;
       }
-      if (filteringClubRows) {
-        return nativeCompareRows.call(this, a, b);
-      }
-      if (state.currentPage === CLUB_PAGE) {
-        const previousPage = state.currentPage;
-        state.currentPage = ["current", "all"].includes(state.view) ? "progression" : "database";
-        try {
-          return nativeCompareRows.call(this, a, b);
-        } finally {
-          state.currentPage = previousPage;
-        }
-      }
-      return nativeCompareRows.call(this, a, b);
     };
 
     const nativeApplyFilters = applyFilters;
     applyFilters = function applyFiltersWithSortableClubRows(options = {}) {
-      if (state.currentPage !== CLUB_PAGE) {
-        return nativeApplyFilters.apply(this, arguments);
-      }
+      if (state.currentPage !== CLUB_PAGE) return nativeApplyFilters.apply(this, arguments);
 
       const route = clubRouteFromLocation(state.view);
       if (!route) return nativeApplyFilters.apply(this, arguments);
@@ -266,12 +274,11 @@
       const originalPage = state.currentPage;
       const requestedSortKey = String(state.sortKey || "positions");
       const requestedSortDirection = String(state.sortDirection || "asc");
-      const sourceRows = rowsForClub(originalRows, route.clubId);
+      const sourceRows = rowsForClub(originalRows, route.clubId, state.columns);
 
       filteringClubRows = true;
-      clubDelegatePage = ["current", "all"].includes(route.view) ? "progression" : "database";
       state.rows = sourceRows;
-      state.currentPage = clubDelegatePage;
+      state.currentPage = ["current", "all"].includes(route.view) ? "progression" : "database";
       state.sortKey = requestedSortKey;
       state.sortDirection = requestedSortDirection;
       try {
@@ -285,41 +292,20 @@
         state.sortDirection = requestedSortDirection;
         filteringClubRows = false;
         restoreClubPresentation();
-        window.requestAnimationFrame(restoreClubPresentation);
+        window.requestAnimationFrame(() => {
+          rememberCurrentView();
+          restoreClubPresentation();
+        });
       }
     };
 
-    const nativeRequestIncrementalRoute = requestIncrementalRoute;
-    requestIncrementalRoute = async function requestIncrementalRouteWithClubViewCache(route, page = 1, options = {}) {
-      const clubRoute = route?.scope === "club" ? resolvedClubRoute(route) : null;
-      if (clubRoute && Number(page) === 1 && !options?.force) {
-        const cached = viewCache.get(cacheKey(clubRoute.clubId, clubRoute.view));
-        if (cached) {
-          const payload = clonePayload(cached);
-          applyIncrementalPayload(route, payload);
-          if (typeof incrementalRequestDetails === "function") {
-            state.incrementalLastKey = incrementalRequestDetails(route, page).requestKey;
-          }
-          state.incrementalLastLoadedAt = Date.now();
-          return payload;
-        }
-      }
-
-      const payload = await nativeRequestIncrementalRoute.apply(this, arguments);
-      if (clubRoute && Number(page) === 1) {
-        rememberPayload(route, payload || snapshotFromState());
-      }
-      return payload;
-    };
-
-    // The native club view handler is registered on document in capture phase.
-    // Window capture runs first, so a cached destination is restored before
-    // the native handler can display "Loading players...".
     window.addEventListener("click", handleClubViewClick, true);
-
     installed = true;
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
     if (installTimer) window.clearInterval(installTimer);
+
+    const current = clubRouteFromLocation(state.view);
+    if (current && state.currentPage === CLUB_PAGE) scheduleLoadedViewCapture(current.clubId, current.view);
     return true;
   }
 
