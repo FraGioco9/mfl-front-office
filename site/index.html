@@ -6,8 +6,8 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.34";
-        const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
+        const VERSION = "1.119.35";
+        const SOURCE_COMMIT = "55acaf30f69b393f70dc52dbdc7ce9802619f065";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
 
         function fail(message) {
@@ -26,9 +26,9 @@
           }
 
           let source = request.responseText;
-          const versionMarker = 'const VERSION = "1.119.33";';
-          const releaseMarker = '["v1.119.33", "Keep completed club views cached and reset club sorting to Position"],';
-          const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.33';
+          const versionMarker = 'const VERSION = "1.119.34";';
+          const releaseMarker = '["v1.119.34", "Use the native club cache for reliable view returns"],';
+          const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.34';
           if (!source.includes(versionMarker) || !source.includes(releaseMarker) || !source.includes(runtimeMarker)) {
             fail("Could not locate the release shell markers.");
             return;
@@ -37,7 +37,7 @@
           source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
           source = source.replace(
             releaseMarker,
-            `["v${VERSION}", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
+            `["v${VERSION}", "Cache completed club views and show a wait cursor while sharing evaluations"],\n          ${releaseMarker}`,
           );
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
