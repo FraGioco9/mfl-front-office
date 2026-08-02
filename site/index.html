@@ -41,10 +41,8 @@
             `["v${VERSION}", "Keep club view buttons stable and unlock selection after loading"],\n          ["v1.119.43", "Keep club view controls and selection column stable while loading"],\n          ["v1.119.42", "Use the initial club route loader when switching views"],\n          ["v1.119.41", "Restore completed club views before repeated loading starts"],\n          ["v1.119.40", "Use one club-view cache and prevent repeated view loading"],\n          ["v1.119.37", "Match player-page MFL navigation and restore cached club views instantly"],\n          ["v1.119.36", "Reuse completed club views and show wait cursor while sharing evaluations"],\n          ["v1.119.34", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
           );
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
-          source = source.replace(
-            bodyMarker,
-            `<script src="/club-view-stability-runtime.js?v=${VERSION}"></script>\n</body>`,
-          );
+          const stabilityRuntimeTag = `<script src="/club-view-stability-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          source = source.replace(bodyMarker, `${stabilityRuntimeTag}\n${bodyMarker}`);
 
           document.open();
           document.write(source);
