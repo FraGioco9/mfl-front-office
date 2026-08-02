@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.35";
+  const VERSION = "1.119.34";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
 
@@ -25,36 +25,15 @@
     let source = request.responseText;
     const versionMarker = 'const VERSION = "1.119.29";';
     const guardedCapture = 'if (!activeClubId || state.currentPage !== CLUB_PAGE || !state.dataLoaded || !Array.isArray(state.rows)) return;';
-    const keyPattern = /function clubViewRenderCacheKey\(clubId = activeClubId, view = state\.view, access = ""\) \{[\s\S]*?return String\(clubId \|\| ""\) \+ ":" \+ String\(view \|\| "attributes"\) \+ ":" \+ String\(resolvedAccess\);\n  \}/;
-    const routeCapture = `    const route = typeof incrementalRouteTarget === "function"\n      ? incrementalRouteTarget("club", { view })\n      : null;\n    if (!route) return;`;
-    const stableRouteCapture = `    const route = (typeof incrementalRouteTarget === "function"\n      ? incrementalRouteTarget("club", { view })\n      : null) || {\n      pageName: CLUB_PAGE,\n      scope: CLUB_PAGE,\n      view,\n      clubId: activeClubId,\n      access: "public",\n    };`;
-    const captureBeforeFinish = `        captureClubView(nextView);\n      } finally {\n        await finishClubSwitch();\n      }`;
-    const captureAfterFinish = `      } finally {\n        await finishClubSwitch();\n        captureClubView(nextView);\n      }`;
+    const unguardedCapture = 'if (!activeClubId || state.currentPage !== CLUB_PAGE || !Array.isArray(state.rows)) return;';
 
-    if (!source.includes(versionMarker)
-        || !source.includes(guardedCapture)
-        || !keyPattern.test(source)
-        || !source.includes(routeCapture)
-        || !source.includes(captureBeforeFinish)) {
-      fail("Could not locate the native club view cache markers.");
+    if (!source.includes(versionMarker) || !source.includes(guardedCapture)) {
+      fail("Could not locate the native club cache runtime.");
       return;
     }
 
     source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
-    source = source.replace(
-      guardedCapture,
-      'if (!activeClubId || state.currentPage !== CLUB_PAGE || !Array.isArray(state.rows)) return;',
-    );
-    source = source.replace(
-      keyPattern,
-      `function clubViewRenderCacheKey(clubId = activeClubId, view = state.view) {\n    return String(clubId || "") + ":" + String(view || "attributes");\n  }`,
-    );
-    source = source.replaceAll(
-      "clubViewRenderCacheKey(activeClubId, view, route.access)",
-      "clubViewRenderCacheKey(activeClubId, view)",
-    );
-    source = source.replace(routeCapture, stableRouteCapture);
-    source = source.replace(captureBeforeFinish, captureAfterFinish);
+    source = source.replace(guardedCapture, unguardedCapture);
     source += `\n//# sourceURL=mfl-front-office-loader-v${VERSION}.js`;
 
     const script = document.createElement("script");
