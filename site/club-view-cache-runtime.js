@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.41";
+  const VERSION = "1.119.42";
   const CLUB_PAGE = "club";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
@@ -8,7 +8,6 @@
   ];
   const POSITION_RANK = new Map(POSITION_ORDER.map((position, index) => [position, index]));
   const activeShareButtons = new Set();
-  const clubViewSnapshots = new Map();
 
   const previousRuntime = window.__mflClubViewRuntimeState;
   if (previousRuntime?.clickHandler) {
@@ -45,11 +44,9 @@
 
   let installed = false;
   let installTimer = 0;
-  let monitorTimer = 0;
   let filteringClubRows = false;
   let clickHandler = null;
   let shareClickHandler = null;
-  let nativeClubApplyFilters = null;
 
   function syncShareCursor() {
     document.documentElement.classList.toggle("evaluationShareBusy", activeShareButtons.size > 0);
@@ -110,128 +107,6 @@
     return { clubId: decodeURIComponent(match[1]), view };
   }
 
-  function canonicalClubRoute(clubId, view) {
-    const slug = view === "current"
-      ? "current-season"
-      : view === "all"
-        ? "all-time"
-        : view === "contracts"
-          ? "contracts"
-          : "attributes";
-    return `/clubs/${encodeURIComponent(clubId)}/${slug}`;
-  }
-
-  function clubViewKey(clubId, view) {
-    return `${String(clubId || "")}:${String(view || "attributes")}`;
-  }
-
-  function cloneRows(rows) {
-    return (Array.isArray(rows) ? rows : []).map((row) => Array.isArray(row)
-      ? [...row]
-      : row && typeof row === "object"
-        ? { ...row }
-        : row);
-  }
-
-  function loadingPlayersVisible() {
-    return Array.from(document.querySelectorAll("#progressionPage .emptyState, #emptyState"))
-      .some((element) => {
-        if (!(element instanceof HTMLElement) || element.hidden) return false;
-        const visible = element.getClientRects().length > 0;
-        return visible && /loading\s+players?/i.test(String(element.textContent || ""));
-      });
-  }
-
-  function captureCurrentClubView(options = {}) {
-    if (typeof state === "undefined") return false;
-    const route = routeFromLocation();
-    if (!route || state.currentPage !== CLUB_PAGE || state.view !== route.view) return false;
-    if (!Array.isArray(state.columns) || !state.columns.length || !Array.isArray(state.rows)) return false;
-    if (loadingPlayersVisible()) return false;
-    if (!options.force && document.body.classList.contains("clubViewSwitching")) return false;
-
-    clubViewSnapshots.set(clubViewKey(route.clubId, route.view), {
-      clubId: route.clubId,
-      view: route.view,
-      access: String(state.dataAccess || state.incrementalRoute?.access || "public"),
-      columns: [...state.columns],
-      rows: cloneRows(state.rows),
-      pageSize: Number(state.pageSize || 100),
-      totalRows: Number(state.incrementalTotalRows || state.rows.length),
-      sourceRows: Number(state.incrementalSourceRows || state.rows.length),
-      generatedAt: state.manifest?.generated_at || null,
-    });
-    return true;
-  }
-
-  function restoreClubViewSnapshot(snapshot) {
-    if (!snapshot || typeof state === "undefined") return false;
-    const route = {
-      pageName: CLUB_PAGE,
-      scope: CLUB_PAGE,
-      clubId: snapshot.clubId,
-      view: snapshot.view,
-      access: snapshot.access || "public",
-    };
-    const payload = {
-      columns: [...snapshot.columns],
-      rows: cloneRows(snapshot.rows),
-      page: 1,
-      pageSize: snapshot.pageSize,
-      totalRows: snapshot.totalRows,
-      sourceRows: snapshot.sourceRows,
-      generatedAt: snapshot.generatedAt,
-    };
-
-    window.history.replaceState({}, "", canonicalClubRoute(snapshot.clubId, snapshot.view));
-    if (typeof applyIncrementalPayload === "function") {
-      applyIncrementalPayload(route, payload);
-    } else {
-      state.columns = payload.columns;
-      state.rows = payload.rows;
-      state.filteredRows = [...payload.rows];
-      state.incrementalRoute = { ...route };
-      state.incrementalTotalRows = payload.totalRows;
-      state.incrementalSourceRows = payload.sourceRows;
-      state.tableSourceRowsCount = payload.sourceRows;
-      state.dataAccess = route.access;
-      state.dataLoaded = true;
-      state.dataLoadPromise = null;
-      if (typeof rebuildColumnIndexMap === "function") rebuildColumnIndexMap();
-      if (typeof clearRowSortCache === "function") clearRowSortCache();
-    }
-
-    state.currentPage = CLUB_PAGE;
-    state.view = snapshot.view;
-    state.page = 1;
-    state.pageSize = snapshot.pageSize;
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
-    state.incrementalLastLoadedAt = Date.now();
-    document.body.dataset.page = CLUB_PAGE;
-    document.body.classList.remove("clubViewSwitching", "clubViewLoading");
-
-    if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) {
-      pageSizeSelect.value = String(state.pageSize);
-    }
-    if (typeof updateViewButtons === "function") updateViewButtons();
-    if (typeof buildHeader === "function") buildHeader();
-    if (typeof nativeClubApplyFilters === "function") {
-      nativeClubApplyFilters.call(window, { save: false, localOnly: true });
-    } else if (typeof applyFilters === "function") {
-      applyFilters({ save: false, localOnly: true });
-    }
-
-    window.requestAnimationFrame(() => {
-      if (typeof buildTableColGroup === "function") buildTableColGroup();
-      if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-      window.requestAnimationFrame(() => {
-        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-      });
-    });
-    return true;
-  }
-
   function clubViewButton(event) {
     if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE || !(event.target instanceof Element)) {
       return null;
@@ -240,28 +115,31 @@
     return button && CLUB_VIEWS.has(String(button.dataset.view || "")) ? button : null;
   }
 
-  function handleClubViewClick(event) {
+  function handleClubViewNavigation(event) {
     const button = clubViewButton(event);
     if (!button) return false;
     const route = routeFromLocation();
     if (!route) return false;
 
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
     const nextView = String(button.dataset.view || "");
-    if (nextView === route.view) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
+    if (!nextView || nextView === route.view) return true;
+
+    if (typeof window.mflOpenClubPage === "function") {
+      window.mflOpenClubPage(route.clubId, nextView);
       return true;
     }
 
-    // Save the view while it is still on screen. This makes the first return
-    // reliable even if a background monitor did not run between two clicks.
-    captureCurrentClubView({ force: true });
-    const snapshot = clubViewSnapshots.get(clubViewKey(route.clubId, nextView));
-    if (!snapshot) return false;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    restoreClubViewSnapshot(snapshot);
+    const slug = nextView === "current"
+      ? "current-season"
+      : nextView === "all"
+        ? "all-time"
+        : nextView === "contracts"
+          ? "contracts"
+          : "attributes";
+    window.location.assign(`/clubs/${encodeURIComponent(route.clubId)}/${slug}`);
     return true;
   }
 
@@ -409,7 +287,7 @@
       return;
     }
     if (handlePlayerMflNavigation(event)) return;
-    if (handleClubViewClick(event)) return;
+    if (handleClubViewNavigation(event)) return;
     resetSortCycle(event);
   }
 
@@ -437,7 +315,6 @@
     };
 
     const nativeApplyFilters = applyFilters;
-    nativeClubApplyFilters = nativeApplyFilters;
     applyFilters = function applyFiltersWithClubRows(options = {}) {
       if (state.currentPage !== CLUB_PAGE) return nativeApplyFilters.apply(this, arguments);
       const route = routeFromLocation();
@@ -469,18 +346,14 @@
 
     clickHandler = handleWindowClick;
     window.addEventListener("click", clickHandler, true);
-    monitorTimer = window.setInterval(() => captureCurrentClubView(), 50);
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
     window.__mflClubViewRuntimeState = {
       clickHandler,
       shareClickHandler,
-      monitorTimer,
       installTimer: 0,
-      snapshots: clubViewSnapshots,
     };
     installed = true;
     if (installTimer) window.clearInterval(installTimer);
-    captureCurrentClubView();
     return true;
   }
 
