@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.34";
+        const VERSION = "1.119.36";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
 
@@ -37,7 +37,7 @@
           source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
           source = source.replace(
             releaseMarker,
-            `["v${VERSION}", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
+            `["v${VERSION}", "Reuse completed club views and show wait cursor while sharing evaluations"],\n          ["v1.119.34", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
           );
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
