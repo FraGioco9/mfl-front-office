@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.34";
+  const VERSION = "1.119.36";
   const CLUB_PAGE = "club";
   const CLUB_ID_COLUMNS = [
     "active_contract_club_id",
@@ -11,6 +11,7 @@
     "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
   ];
   const POSITION_RANK = new Map(POSITION_ORDER.map((position, index) => [position, index]));
+  const activeShareButtons = new Set();
 
   const previousRuntime = window.__mflClubViewRuntimeState;
   if (previousRuntime?.clickHandler) {
@@ -29,6 +30,58 @@
   let installed = false;
   let installTimer = 0;
   let filteringClubRows = false;
+
+  function syncShareCursor() {
+    document.documentElement.classList.toggle("evaluationShareBusy", activeShareButtons.size > 0);
+  }
+
+  function finishShareCursor(button) {
+    activeShareButtons.delete(button);
+    syncShareCursor();
+  }
+
+  function trackShareButton(button) {
+    activeShareButtons.add(button);
+    syncShareCursor();
+    const startedAt = Date.now();
+
+    const check = () => {
+      const shareLoading = typeof state !== "undefined" && Boolean(state?.evaluationShareLoading);
+      const buttonLoading = button.isConnected && button.disabled;
+      if ((shareLoading || buttonLoading) && Date.now() - startedAt < 45000) {
+        window.setTimeout(check, 50);
+        return;
+      }
+      finishShareCursor(button);
+    };
+
+    window.requestAnimationFrame(check);
+  }
+
+  function installShareCursor() {
+    let style = document.getElementById("evaluationShareBusyCursorStyles");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "evaluationShareBusyCursorStyles";
+      style.textContent = `
+        html.evaluationShareBusy,
+        html.evaluationShareBusy body,
+        html.evaluationShareBusy body * {
+          cursor: wait !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    if (window.__mflEvaluationShareCursorBound) return;
+    window.__mflEvaluationShareCursorBound = true;
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+      const button = event.target.closest("#evaluationShareButton, .evaluationLoadShareButton");
+      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+      trackShareButton(button);
+    }, true);
+  }
 
   function routeFromLocation() {
     const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/([^/]+))?\/?$/i);
@@ -163,6 +216,7 @@
     return true;
   }
 
+  installShareCursor();
   if (!install()) {
     installTimer = window.setInterval(install, 25);
     window.setTimeout(() => {
