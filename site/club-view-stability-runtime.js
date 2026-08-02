@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.44";
+  const VERSION = "1.119.45";
   const CLUB_PAGE = "club";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const VIEW_ORDER = ["attributes", "contracts", "current", "all"];
@@ -72,8 +72,14 @@
   function syncSelectionCheckbox() {
     const input = selectionCheckbox();
     if (!(input instanceof HTMLInputElement)) return;
-    input.disabled = Boolean(pendingView);
-    input.setAttribute("aria-disabled", String(Boolean(pendingView)));
+    const loading = Boolean(pendingView)
+      && document.body.classList.contains("clubViewStableLoading");
+    input.disabled = false;
+    if (loading) {
+      input.setAttribute("aria-disabled", "true");
+    } else {
+      input.removeAttribute("aria-disabled");
+    }
   }
 
   function loadingPlayersVisible() {
@@ -108,11 +114,7 @@
       settleTimer = 0;
     }
     if (nativeUpdateViewButtons) nativeUpdateViewButtons();
-    const input = selectionCheckbox();
-    if (input instanceof HTMLInputElement) {
-      input.disabled = false;
-      input.removeAttribute("aria-disabled");
-    }
+    syncSelectionCheckbox();
     document.documentElement.dataset.clubStableLastView = finishedView;
   }
 
@@ -186,6 +188,15 @@
       && (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
     ) {
       delegatedClickHandler?.(event);
+      return;
+    }
+
+    const clickedSelectionCheckbox = event.target instanceof Element
+      ? event.target.closest("#progressionPage #selectVisiblePlayersInput")
+      : null;
+    if (clickedSelectionCheckbox && pendingView) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       return;
     }
 
