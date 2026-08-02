@@ -1,13 +1,12 @@
 (() => {
-  const VERSION = "1.119.39";
+  const VERSION = "1.119.40";
   const CLUB_PAGE = "club";
   const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
-  const CLUB_VIEW_SLUGS = {
-    attributes: "attributes",
-    contracts: "contracts",
-    current: "current-season",
-    all: "all-time",
-  };
+  const POSITION_ORDER = [
+    "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
+  ];
+  const POSITION_RANK = new Map(POSITION_ORDER.map((position, index) => [position, index]));
+  const activeShareButtons = new Set();
 
   const previousRuntime = window.__mflClubViewRuntimeState;
   if (previousRuntime?.clickHandler) {
@@ -21,6 +20,9 @@
   }
   if (previousRuntime?.installTimer) {
     window.clearInterval(previousRuntime.installTimer);
+  }
+  if (previousRuntime?.captureTimers instanceof Map) {
+    previousRuntime.captureTimers.forEach((timer) => window.clearTimeout(timer));
   }
   if (
     previousRuntime?.requestWrapper
@@ -37,234 +39,13 @@
   ) {
     window.mflLoadIncrementalRoutePage = previousRuntime.nativeLoadIncrementalRoutePage;
   }
-
-  document.documentElement.classList.remove("globalSearchLoading");
-
-  const clubPayloadCache = previousRuntime?.clubPayloadCache instanceof Map
-    ? previousRuntime.clubPayloadCache
-    : new Map();
-  const activeShareButtons = new Set();
+  delete window.__mflClubViewRuntimeState;
 
   let installed = false;
   let installTimer = 0;
-  let monitorTimer = 0;
+  let filteringClubRows = false;
   let clickHandler = null;
   let shareClickHandler = null;
-  let nativeRequestIncrementalRoute = null;
-  let requestWrapper = null;
-  let searchLoadingPromise = null;
-
-  function cloneRows(rows) {
-    return (Array.isArray(rows) ? rows : []).map((row) => (
-      Array.isArray(row)
-        ? [...row]
-        : row && typeof row === "object"
-          ? { ...row }
-          : row
-    ));
-  }
-
-  function clonePayload(payload) {
-    return {
-      ...(payload || {}),
-      columns: Array.isArray(payload?.columns) ? [...payload.columns] : [],
-      rows: cloneRows(payload?.rows),
-    };
-  }
-
-  function routeFromLocation() {
-    const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/([^/]+))?\/?$/i);
-    if (!match) return null;
-    const view = {
-      attributes: "attributes",
-      contracts: "contracts",
-      "current-season": "current",
-      "all-time": "all",
-    }[String(match[2] || "attributes").toLowerCase()] || "attributes";
-    return {
-      clubId: decodeURIComponent(match[1]),
-      view,
-    };
-  }
-
-  function canonicalClubRoute(clubId, view) {
-    const slug = CLUB_VIEW_SLUGS[view] || CLUB_VIEW_SLUGS.attributes;
-    return `/clubs/${encodeURIComponent(String(clubId || ""))}/${slug}`;
-  }
-
-  function clubCacheKey(clubId, view) {
-    return `${String(clubId || "")}:${String(view || "attributes")}`;
-  }
-
-  function routeClubId(route) {
-    return String(route?.clubId || route?.club_id || "").trim();
-  }
-
-  function cacheClubPayload(route, payload) {
-    const clubId = routeClubId(route);
-    const view = String(route?.view || "attributes");
-    if (!clubId || !Object.hasOwn(CLUB_VIEW_SLUGS, view)) return false;
-    if (!payload || !Array.isArray(payload.rows) || !Array.isArray(payload.columns)) return false;
-
-    clubPayloadCache.set(clubCacheKey(clubId, view), {
-      route: {
-        ...(route || {}),
-        pageName: CLUB_PAGE,
-        scope: CLUB_PAGE,
-        clubId,
-        view,
-      },
-      payload: clonePayload(payload),
-    });
-    return true;
-  }
-
-  function loadingPlayersVisible() {
-    const empty = document.querySelector("#emptyState");
-    return Boolean(
-      empty
-      && !empty.hidden
-      && /loading players/i.test(String(empty.textContent || "")),
-    );
-  }
-
-  function clubPageIsSettled() {
-    return typeof state !== "undefined"
-      && state.currentPage === CLUB_PAGE
-      && Number(state.interactionBusyDepth || 0) === 0
-      && !document.documentElement.classList.contains("appBusy")
-      && !document.body.classList.contains("appBusy")
-      && !document.body.classList.contains("clubViewSwitching")
-      && !loadingPlayersVisible();
-  }
-
-  function captureSettledClubView() {
-    if (!clubPageIsSettled()) return false;
-    const locationRoute = routeFromLocation();
-    if (!locationRoute || state.view !== locationRoute.view) return false;
-    if (!Array.isArray(state.columns) || !Array.isArray(state.rows)) return false;
-
-    const incrementalRoute = state.incrementalRoute && typeof state.incrementalRoute === "object"
-      ? state.incrementalRoute
-      : {};
-    const route = {
-      ...incrementalRoute,
-      pageName: CLUB_PAGE,
-      scope: CLUB_PAGE,
-      clubId: locationRoute.clubId,
-      view: locationRoute.view,
-      access: incrementalRoute.access
-        || (typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public"),
-    };
-    const payload = {
-      columns: [...state.columns],
-      rows: cloneRows(state.rows),
-      page: 1,
-      pageSize: Number(state.pageSize || 100),
-      totalRows: Number(state.incrementalTotalRows || state.rows.length || 0),
-      sourceRows: Number(state.incrementalSourceRows || state.rows.length || 0),
-      generatedAt: state.manifest?.generated_at || null,
-    };
-    return cacheClubPayload(route, payload);
-  }
-
-  function wrapIncrementalRequest() {
-    if (typeof requestIncrementalRoute !== "function") return false;
-    if (requestIncrementalRoute?.__mflClubPayloadCacheVersion === VERSION) return true;
-
-    nativeRequestIncrementalRoute = requestIncrementalRoute;
-    requestWrapper = async function requestIncrementalRouteWithClubCache(route, page = 1) {
-      const payload = await nativeRequestIncrementalRoute.apply(this, arguments);
-      if (route?.scope === CLUB_PAGE && Number(page) === 1) {
-        cacheClubPayload(route, payload);
-      }
-      return payload;
-    };
-    requestWrapper.__mflClubPayloadCacheVersion = VERSION;
-    requestIncrementalRoute = requestWrapper;
-    return true;
-  }
-
-  function restoreClubPayload(clubId, view) {
-    const entry = clubPayloadCache.get(clubCacheKey(clubId, view));
-    if (!entry || typeof state === "undefined" || typeof applyIncrementalPayload !== "function") {
-      return false;
-    }
-
-    const route = {
-      ...entry.route,
-      pageName: CLUB_PAGE,
-      scope: CLUB_PAGE,
-      clubId: String(clubId),
-      view,
-    };
-    const payload = clonePayload(entry.payload);
-    const previousApplying = Boolean(state.incrementalApplying);
-
-    window.history.replaceState({}, "", canonicalClubRoute(clubId, view));
-    state.incrementalApplying = true;
-    try {
-      applyIncrementalPayload(route, payload);
-      state.currentPage = CLUB_PAGE;
-      state.view = view;
-      state.page = 1;
-      state.pageSize = Number(payload.pageSize || state.pageSize || 100);
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
-      state.incrementalMode = true;
-      state.incrementalRoute = { ...route };
-      state.dataLoaded = true;
-
-      document.body.dataset.page = CLUB_PAGE;
-      document.body.classList.remove("clubViewSwitching");
-      document.querySelectorAll(".navButton.active").forEach((button) => {
-        button.classList.remove("active");
-      });
-
-      if (typeof rebuildColumnIndexMap === "function") rebuildColumnIndexMap();
-      if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) {
-        pageSizeSelect.value = String(state.pageSize);
-      }
-      if (typeof updateViewButtons === "function") updateViewButtons();
-      if (typeof buildTableColGroup === "function") buildTableColGroup();
-      if (typeof buildHeader === "function") buildHeader();
-      if (typeof applyFilters === "function") {
-        applyFilters({ save: false, localOnly: true });
-      }
-    } finally {
-      state.incrementalApplying = previousApplying;
-    }
-
-    if (typeof revealAppShell === "function") revealAppShell();
-    if (typeof showAppShell === "function") showAppShell();
-    if (typeof syncHomeLoginButton === "function") syncHomeLoginButton();
-    if (typeof window.applyExactPlayerTableWidths === "function") {
-      window.applyExactPlayerTableWidths();
-      window.requestAnimationFrame(() => window.applyExactPlayerTableWidths());
-    }
-    return true;
-  }
-
-  function handleCachedClubView(event) {
-    if (!clubPageIsSettled() || !(event.target instanceof Element)) return false;
-    const button = event.target.closest("#progressionPage .viewButton[data-view]");
-    if (!button) return false;
-
-    const currentRoute = routeFromLocation();
-    const nextView = String(button.dataset.view || "");
-    if (
-      !currentRoute
-      || !Object.hasOwn(CLUB_VIEW_SLUGS, nextView)
-      || nextView === currentRoute.view
-      || !clubPayloadCache.has(clubCacheKey(currentRoute.clubId, nextView))
-    ) {
-      return false;
-    }
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return restoreClubPayload(currentRoute.clubId, nextView);
-  }
 
   function syncShareCursor() {
     document.documentElement.classList.toggle("evaluationShareBusy", activeShareButtons.size > 0);
@@ -276,7 +57,7 @@
     const startedAt = Date.now();
 
     const check = () => {
-      const shareLoading = typeof state !== "undefined" && Boolean(state.evaluationShareLoading);
+      const shareLoading = typeof state !== "undefined" && Boolean(state?.evaluationShareLoading);
       const buttonLoading = button.isConnected && button.disabled;
       if ((shareLoading || buttonLoading) && Date.now() - startedAt < 45000) {
         window.setTimeout(check, 50);
@@ -285,6 +66,7 @@
       activeShareButtons.delete(button);
       syncShareCursor();
     };
+
     window.requestAnimationFrame(check);
   }
 
@@ -301,10 +83,6 @@
       html.evaluationShareBusy body * {
         cursor: wait !important;
       }
-      html.globalSearchLoading #searchModal,
-      html.globalSearchLoading #searchModal * {
-        cursor: wait !important;
-      }
     `;
 
     shareClickHandler = (event) => {
@@ -316,86 +94,86 @@
     document.addEventListener("click", shareClickHandler, true);
   }
 
-  function searchModalIsVisible() {
-    return Boolean(
-      typeof searchModal !== "undefined"
-      && searchModal
-      && !searchModal.hidden,
-    );
+  function routeFromLocation() {
+    const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/([^/]+))?\/?$/i);
+    if (!match) return null;
+    const view = {
+      attributes: "attributes",
+      contracts: "contracts",
+      "current-season": "current",
+      "all-time": "all",
+    }[String(match[2] || "attributes").toLowerCase()] || "attributes";
+    return { clubId: decodeURIComponent(match[1]), view };
   }
 
-  function setSearchLoading(active) {
-    document.documentElement.classList.toggle("globalSearchLoading", active);
-    if (typeof searchModal !== "undefined" && searchModal) {
-      searchModal.classList.toggle("searchDataLoading", active);
-      searchModal.setAttribute("aria-busy", String(active));
-    }
-    if (typeof playerSearchInput !== "undefined" && playerSearchInput) {
-      playerSearchInput.disabled = active;
-    }
+  function clubIdColumn(columns = state?.columns) {
+    if (!Array.isArray(columns)) return "";
+    return [
+      "active_contract_club_id",
+      "club_id",
+      "current_club_id",
+      "active_club_id",
+    ].find((column) => columns.includes(column)) || "";
   }
 
-  async function openGlobalSearch() {
-    if (
-      typeof searchModal === "undefined"
-      || !searchModal
-      || typeof playerSearchInput === "undefined"
-      || !playerSearchInput
-      || typeof playerSearchResults === "undefined"
-      || !playerSearchResults
-    ) {
-      if (typeof openSearch === "function") await openSearch();
-      return;
-    }
-
-    if (typeof showModal === "function") showModal(searchModal);
-    playerSearchInput.value = "";
-    if (typeof syncPlayerSearchClearButton === "function") syncPlayerSearchClearButton();
-
-    if (typeof state !== "undefined" && state.searchIndexesLoaded) {
-      setSearchLoading(false);
-      if (typeof renderSearchResultsNow === "function") renderSearchResultsNow();
-      window.setTimeout(() => playerSearchInput.focus(), 0);
-      return;
-    }
-
-    playerSearchResults.classList.remove("filledSearchResults");
-    playerSearchResults.innerHTML = '<div class="searchHint">Loading search data...</div>';
-    setSearchLoading(true);
-
-    if (!searchLoadingPromise) {
-      searchLoadingPromise = (async () => {
-        try {
-          const loaded = typeof ensureSearchIndexes === "function"
-            ? await ensureSearchIndexes()
-            : false;
-          if (!loaded && !(typeof state !== "undefined" && state.searchIndexesLoaded)) {
-            throw new Error("Could not load search data.");
-          }
-          if (typeof renderSearchResultsNow === "function") renderSearchResultsNow();
-        } catch (error) {
-          playerSearchResults.classList.remove("filledSearchResults");
-          playerSearchResults.innerHTML = `<div class="searchHint">${String(error?.message || "Could not load search data.")}</div>`;
-        } finally {
-          setSearchLoading(false);
-          searchLoadingPromise = null;
-          if (searchModalIsVisible()) {
-            window.setTimeout(() => playerSearchInput.focus(), 0);
-          }
-        }
-      })();
-    }
-    await searchLoadingPromise;
+  function rowsForClub(rows, clubId, columns = state?.columns) {
+    const idColumn = clubIdColumn(columns);
+    if (!idColumn || !clubId || !Array.isArray(rows)) return Array.isArray(rows) ? rows : [];
+    return rows.filter((row) => String(getValue(row, idColumn)) === String(clubId));
   }
 
-  function handleGlobalSearchClick(event) {
-    if (!(event.target instanceof Element)) return false;
-    const trigger = event.target.closest("#openSearchButton");
-    if (!trigger) return false;
+  function primaryPosition(row) {
+    if (typeof playerPositions === "function") {
+      return String(playerPositions(row)?.[0] || "").trim().toUpperCase();
+    }
+    return String(getValue(row, "positions") || "").split(",")[0].trim().toUpperCase();
+  }
+
+  function comparePositions(a, b) {
+    const aPosition = primaryPosition(a);
+    const bPosition = primaryPosition(b);
+    const aRank = POSITION_RANK.has(aPosition) ? POSITION_RANK.get(aPosition) : POSITION_ORDER.length;
+    const bRank = POSITION_RANK.has(bPosition) ? POSITION_RANK.get(bPosition) : POSITION_ORDER.length;
+    const direction = state.sortDirection === "desc" ? -1 : 1;
+    if (aRank !== bRank) return (aRank - bRank) * direction;
+
+    const aOverall = Number(getValue(a, "overall"));
+    const bOverall = Number(getValue(b, "overall"));
+    if (Number.isFinite(aOverall) && Number.isFinite(bOverall) && aOverall !== bOverall) {
+      return bOverall - aOverall;
+    }
+    return String(getValue(a, "name") || "").localeCompare(String(getValue(b, "name") || ""));
+  }
+
+  function headerColumn(event) {
+    if (!(event.target instanceof Element)) return "";
+    const cell = event.target.closest("#tableHead th.sortable");
+    if (!cell || typeof currentViewColumns !== "function") return "";
+    const row = cell.parentElement;
+    if (!row) return "";
+    const index = Array.from(row.children).indexOf(cell) - 1;
+    const columns = currentViewColumns();
+    return index >= 0 && index < columns.length ? String(columns[index] || "") : "";
+  }
+
+  function resetSortCycle(event) {
+    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE) return false;
+    const column = headerColumn(event);
+    if (!column || state.sortKey !== column) return false;
+
+    const defaultDirection = typeof numberColumns !== "undefined" && numberColumns.has(column)
+      ? "desc"
+      : "asc";
+    const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
+    if (state.sortDirection !== reverseDirection) return false;
 
     event.preventDefault();
     event.stopImmediatePropagation();
-    void openGlobalSearch();
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    state.page = 1;
+    if (typeof buildHeader === "function") buildHeader();
+    if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
     return true;
   }
 
@@ -471,38 +249,70 @@
     ) {
       return;
     }
-    if (handleGlobalSearchClick(event)) return;
     if (handlePlayerMflNavigation(event)) return;
-    handleCachedClubView(event);
+    resetSortCycle(event);
   }
 
   function install() {
     if (installed) return true;
-    if (
-      typeof state === "undefined"
-      || typeof requestIncrementalRoute !== "function"
-      || typeof applyIncrementalPayload !== "function"
-    ) {
+    if (typeof state === "undefined" || typeof compareRows !== "function" || typeof applyFilters !== "function") {
       return false;
     }
 
-    wrapIncrementalRequest();
+    const nativeCompareRows = compareRows;
+    compareRows = function compareRowsWithClubPositionOrder(a, b) {
+      if (filteringClubRows && state.sortKey === "positions") return comparePositions(a, b);
+      if (filteringClubRows) return nativeCompareRows.call(this, a, b);
+      if (state.currentPage !== CLUB_PAGE) return nativeCompareRows.call(this, a, b);
+
+      const previousPage = state.currentPage;
+      state.currentPage = ["current", "all"].includes(state.view) ? "progression" : "database";
+      try {
+        return state.sortKey === "positions"
+          ? comparePositions(a, b)
+          : nativeCompareRows.call(this, a, b);
+      } finally {
+        state.currentPage = previousPage;
+      }
+    };
+
+    const nativeApplyFilters = applyFilters;
+    applyFilters = function applyFiltersWithClubRows(options = {}) {
+      if (state.currentPage !== CLUB_PAGE) return nativeApplyFilters.apply(this, arguments);
+      const route = routeFromLocation();
+      if (!route) return nativeApplyFilters.apply(this, arguments);
+
+      const originalRows = state.rows;
+      const originalPage = state.currentPage;
+      const requestedSortKey = String(state.sortKey || "positions");
+      const requestedSortDirection = String(state.sortDirection || "asc");
+      const sourceRows = rowsForClub(originalRows, route.clubId, state.columns);
+
+      filteringClubRows = true;
+      state.rows = sourceRows;
+      state.currentPage = ["current", "all"].includes(route.view) ? "progression" : "database";
+      state.sortKey = requestedSortKey;
+      state.sortDirection = requestedSortDirection;
+      try {
+        const result = nativeApplyFilters.call(this, { ...options, save: false, localOnly: true });
+        state.tableSourceRowsCount = sourceRows.length;
+        return result;
+      } finally {
+        state.rows = originalRows;
+        state.currentPage = originalPage;
+        state.sortKey = requestedSortKey;
+        state.sortDirection = requestedSortDirection;
+        filteringClubRows = false;
+      }
+    };
+
     clickHandler = handleWindowClick;
     window.addEventListener("click", clickHandler, true);
-    monitorTimer = window.setInterval(() => {
-      wrapIncrementalRequest();
-      captureSettledClubView();
-    }, 100);
-
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
     window.__mflClubViewRuntimeState = {
       clickHandler,
       shareClickHandler,
-      monitorTimer,
       installTimer: 0,
-      clubPayloadCache,
-      nativeRequestIncrementalRoute,
-      requestWrapper,
     };
     installed = true;
     if (installTimer) window.clearInterval(installTimer);
