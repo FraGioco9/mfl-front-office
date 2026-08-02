@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.47";
+  const VERSION = "1.119.48";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
 
@@ -34,6 +34,119 @@
     return source
       .replace(routeSetupMarker, routeSetupReplacement)
       .replace(duplicatePermissionMarker, duplicatePermissionReplacement);
+  }
+
+  function patchGlobalSearchLoading(source) {
+    const nestedPatchAnchor = `    patchedSource = patchedSource.replace(
+      /const currentVersion = "\\d+\\.\\d+\\.\\d+";/g,`;
+    const openSearchMarker = `async function openSearch() {
+  const needsSearchData = !state.searchIndexesLoaded;
+  if (needsSearchData) {
+    beginInteractionBusy();
+  }
+  try {
+    await ensureSearchIndexes();
+  } finally {
+    if (needsSearchData) {
+      endInteractionBusy();
+    }
+  }
+  showModal(searchModal);
+  playerSearchInput.value = "";
+  renderSearchResultsNow();
+  window.setTimeout(() => playerSearchInput.focus(), 0);
+}`;
+    const openSearchReplacement = `let globalSearchLoadingActive = false;
+let globalSearchLoadingBlocker = null;
+
+function beginGlobalSearchLoading() {
+  if (globalSearchLoadingActive) return false;
+  globalSearchLoadingActive = true;
+  hideToast();
+
+  let style = document.getElementById("globalSearchLoadingStyles");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "globalSearchLoadingStyles";
+    style.textContent = [
+      "html.globalSearchLoading,",
+      "html.globalSearchLoading *,",
+      "body.globalSearchLoading,",
+      "body.globalSearchLoading * {",
+      "  cursor: wait !important;",
+      "}",
+      "body.globalSearchLoading > *:not(#globalSearchLoadingBlocker) {",
+      "  pointer-events: none !important;",
+      "}",
+      "#globalSearchLoadingBlocker {",
+      "  position: fixed;",
+      "  inset: 0;",
+      "  z-index: 2147483647;",
+      "  background: transparent;",
+      "  pointer-events: auto;",
+      "  cursor: wait !important;",
+      "}"
+    ].join("\\n");
+    document.head.appendChild(style);
+  }
+
+  globalSearchLoadingBlocker = document.createElement("div");
+  globalSearchLoadingBlocker.id = "globalSearchLoadingBlocker";
+  globalSearchLoadingBlocker.setAttribute("aria-hidden", "true");
+  ["pointerdown", "pointerup", "mousedown", "mouseup", "click", "dblclick", "contextmenu"].forEach((type) => {
+    globalSearchLoadingBlocker.addEventListener(type, (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    });
+  });
+  document.body.appendChild(globalSearchLoadingBlocker);
+  document.documentElement.classList.add("globalSearchLoading");
+  document.body.classList.add("globalSearchLoading");
+  return true;
+}
+
+function endGlobalSearchLoading() {
+  if (!globalSearchLoadingActive) return;
+  globalSearchLoadingActive = false;
+  globalSearchLoadingBlocker?.remove();
+  globalSearchLoadingBlocker = null;
+  document.documentElement.classList.remove("globalSearchLoading");
+  document.body.classList.remove("globalSearchLoading");
+}
+
+async function openSearch() {
+  if (globalSearchLoadingActive) return;
+  const needsSearchData = !state.searchIndexesLoaded;
+  const searchLocked = needsSearchData ? beginGlobalSearchLoading() : false;
+  try {
+    await ensureSearchIndexes();
+    showModal(searchModal);
+    playerSearchInput.value = "";
+    renderSearchResultsNow();
+    window.setTimeout(() => playerSearchInput.focus(), 0);
+  } finally {
+    if (searchLocked) {
+      endGlobalSearchLoading();
+    }
+  }
+}`;
+
+    if (!source.includes(nestedPatchAnchor)) {
+      throw new Error("Could not locate the nested application patch anchor.");
+    }
+
+    const nestedPatch = `    const globalSearchOpenMarker = ${JSON.stringify(openSearchMarker)};
+    if (!patchedSource.includes(globalSearchOpenMarker)) {
+      fail("Could not locate the global search loading function.");
+      return;
+    }
+    patchedSource = patchedSource.replace(
+      globalSearchOpenMarker,
+      ${JSON.stringify(openSearchReplacement)},
+    );
+${nestedPatchAnchor}`;
+
+    return source.replace(nestedPatchAnchor, nestedPatch);
   }
 
   function patchClubViewCache(source) {
@@ -157,6 +270,7 @@
     source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
     source = patchInitialMyPlayersRoute(source);
     source = patchClubViewCache(source);
+    source = patchGlobalSearchLoading(source);
     source += `\n//# sourceURL=mfl-front-office-loader-v${VERSION}.js`;
 
     const script = document.createElement("script");
