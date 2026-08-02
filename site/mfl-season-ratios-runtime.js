@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.38";
+  const VERSION = "1.119.39";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/mfl-season-ratios-runtime.js`;
 
@@ -17,8 +17,8 @@
       throw new Error("Could not locate the release runtime version marker.");
     }
     source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
-    source = source.replaceAll("mflRelease133RuntimeStyles", "mflRelease138RuntimeStyles");
-    source = source.replaceAll("mflRelease133Ready", "mflRelease138Ready");
+    source = source.replaceAll("mflRelease133RuntimeStyles", "mflRelease139RuntimeStyles");
+    source = source.replaceAll("mflRelease133Ready", "mflRelease139Ready");
     source += `\n//# sourceURL=mfl-release-runtime-v${VERSION}.js`;
 
     const script = document.createElement("script");
