@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.37";
+  const VERSION = "1.119.38";
   const CLUB_PAGE = "club";
   const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
   const CLUB_ID_COLUMNS = [
@@ -30,16 +30,29 @@
   if (previousRuntime?.installTimer) {
     window.clearInterval(previousRuntime.installTimer);
   }
+  if (previousRuntime?.captureTimers instanceof Map) {
+    previousRuntime.captureTimers.forEach((timer) => window.clearTimeout(timer));
+  }
+  if (
+    previousRuntime?.loadWrapper
+    && previousRuntime?.nativeLoadIncrementalRoutePage
+    && window.mflLoadIncrementalRoutePage === previousRuntime.loadWrapper
+  ) {
+    window.mflLoadIncrementalRoutePage = previousRuntime.nativeLoadIncrementalRoutePage;
+  }
 
   const clubViewSnapshots = previousRuntime?.clubViewSnapshots instanceof Map
     ? previousRuntime.clubViewSnapshots
     : new Map();
+  const captureTimers = new Map();
 
   let installed = false;
   let installTimer = 0;
   let monitorTimer = 0;
   let filteringClubRows = false;
   let clickHandler = null;
+  let nativeLoadIncrementalRoutePage = null;
+  let loadWrapper = null;
 
   function syncShareCursor() {
     document.documentElement.classList.toggle("evaluationShareBusy", activeShareButtons.size > 0);
@@ -135,20 +148,35 @@
     return rows.filter((row) => String(getValue(row, idColumn)) === String(clubId));
   }
 
-  function clubViewIsSettled(route) {
+  function loadingPlayersVisible() {
+    const empty = document.querySelector("#emptyState");
+    return Boolean(
+      empty
+      && !empty.hidden
+      && /loading players/i.test(String(empty.textContent || "")),
+    );
+  }
+
+  function clubViewCanBeCaptured(route, force = false) {
     if (!route || typeof state === "undefined") return false;
     if (state.currentPage !== CLUB_PAGE || state.view !== route.view) return false;
     if (!Array.isArray(state.columns) || !Array.isArray(state.rows)) return false;
+    if (force) return true;
+    if (loadingPlayersVisible()) return false;
+    if (document.body.classList.contains("clubViewSwitching")) return false;
     if (Number(state.interactionBusyDepth || 0) > 0) return false;
-    if (document.documentElement.classList.contains("appBusy")) return false;
-    if (document.body.classList.contains("appBusy") || document.body.classList.contains("clubViewSwitching")) return false;
-    const empty = document.querySelector("#emptyState");
-    if (empty && !empty.hidden && /loading players/i.test(String(empty.textContent || ""))) return false;
     return true;
   }
 
-  function captureClubView(route = routeFromLocation()) {
-    if (!clubViewIsSettled(route)) return false;
+  function captureClubView(route = routeFromLocation(), options = {}) {
+    if (!clubViewCanBeCaptured(route, Boolean(options.force))) return false;
+
+    const currentRoute = state.incrementalRoute && typeof state.incrementalRoute === "object"
+      ? state.incrementalRoute
+      : null;
+    const access = currentRoute?.access
+      || (typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public");
+
     clubViewSnapshots.set(clubSnapshotKey(route.clubId, route.view), {
       columns: [...state.columns],
       rows: cloneRows(state.rows),
@@ -158,9 +186,14 @@
       incrementalSourceRows: Number(state.incrementalSourceRows || state.rows.length || 0),
       incrementalLastKey: String(state.incrementalLastKey || ""),
       incrementalLastLoadedAt: Number(state.incrementalLastLoadedAt || Date.now()),
-      incrementalRoute: state.incrementalRoute && typeof state.incrementalRoute === "object"
-        ? { ...state.incrementalRoute }
-        : null,
+      incrementalRoute: {
+        ...(currentRoute || {}),
+        pageName: CLUB_PAGE,
+        scope: CLUB_PAGE,
+        clubId: String(route.clubId),
+        view: route.view,
+        access,
+      },
       dataAccess: state.dataAccess,
       dataLoaded: Boolean(state.dataLoaded),
       manifest: state.manifest,
@@ -168,11 +201,65 @@
     return true;
   }
 
+  function scheduleClubViewCapture(route, options = {}) {
+    if (!route?.clubId || !Object.hasOwn(CLUB_VIEW_SLUGS, route.view)) return;
+    const key = clubSnapshotKey(route.clubId, route.view);
+    const existing = captureTimers.get(key);
+    if (existing) window.clearTimeout(existing);
+
+    const startedAt = Date.now();
+    const forceFirstAttempt = Boolean(options.force);
+    let firstAttempt = true;
+
+    const attempt = () => {
+      const shouldForce = forceFirstAttempt && firstAttempt;
+      firstAttempt = false;
+      if (captureClubView(route, { force: shouldForce })) {
+        captureTimers.delete(key);
+        return;
+      }
+      if (Date.now() - startedAt >= 15000) {
+        captureTimers.delete(key);
+        return;
+      }
+      const timer = window.setTimeout(attempt, 50);
+      captureTimers.set(key, timer);
+    };
+
+    const timer = window.setTimeout(() => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
+    }, 0);
+    captureTimers.set(key, timer);
+  }
+
+  function clearRestoredBusyState() {
+    if (typeof state !== "undefined") {
+      state.interactionBusyDepth = 0;
+    }
+    if (typeof syncInteractionBusyState === "function") {
+      syncInteractionBusyState();
+    } else {
+      document.documentElement.classList.remove("appBusy", "loading", "table-layout-pending");
+      document.body.classList.remove("appBusy", "loading", "tableLayoutPending");
+      document.body.setAttribute("aria-busy", "false");
+      Array.from(document.body.children).forEach((element) => {
+        if (element instanceof HTMLElement) element.inert = false;
+      });
+    }
+
+    document.documentElement.classList.remove("appBusy", "loading", "table-layout-pending");
+    document.body.classList.remove("appBusy", "loading", "tableLayoutPending", "clubViewSwitching");
+    const loadingScreen = document.getElementById("loadingScreen");
+    if (loadingScreen) loadingScreen.hidden = true;
+  }
+
   function restoreClubView(clubId, view) {
     const snapshot = clubViewSnapshots.get(clubSnapshotKey(clubId, view));
     if (!snapshot || typeof state === "undefined") return false;
 
     window.history.replaceState({}, "", canonicalClubRoute(clubId, view));
+    clearRestoredBusyState();
+
     state.currentPage = CLUB_PAGE;
     state.view = view;
     state.page = 1;
@@ -187,14 +274,19 @@
     state.incrementalSourceRows = snapshot.incrementalSourceRows;
     state.incrementalLastKey = snapshot.incrementalLastKey;
     state.incrementalLastLoadedAt = snapshot.incrementalLastLoadedAt;
-    state.incrementalRoute = snapshot.incrementalRoute ? { ...snapshot.incrementalRoute, view, clubId } : null;
+    state.incrementalRoute = {
+      ...(snapshot.incrementalRoute || {}),
+      pageName: CLUB_PAGE,
+      scope: CLUB_PAGE,
+      clubId: String(clubId),
+      view,
+    };
     state.incrementalMode = true;
     state.dataAccess = snapshot.dataAccess;
     state.dataLoaded = true;
     state.manifest = snapshot.manifest;
 
     document.body.dataset.page = CLUB_PAGE;
-    document.body.classList.remove("clubViewSwitching");
     document.querySelectorAll(".navButton.active").forEach((button) => button.classList.remove("active"));
 
     if (typeof rebuildColumnIndexMap === "function") rebuildColumnIndexMap();
@@ -213,13 +305,16 @@
       state.incrementalApplying = previousApplying;
     }
 
+    clearRestoredBusyState();
     if (typeof revealAppShell === "function") revealAppShell();
+    if (typeof showAppShell === "function") showAppShell();
     if (typeof syncHomeLoginButton === "function") syncHomeLoginButton();
     if (typeof window.applyExactPlayerTableWidths === "function") {
       window.applyExactPlayerTableWidths();
       window.requestAnimationFrame(() => window.applyExactPlayerTableWidths());
     }
-    captureClubView({ clubId, view });
+
+    captureClubView({ clubId, view }, { force: true });
     return true;
   }
 
@@ -344,7 +439,7 @@
     return true;
   }
 
-  function handleCachedClubView(event) {
+  function handleClubViewClick(event) {
     if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE) return false;
     if (!(event.target instanceof Element)) return false;
     const button = event.target.closest(".viewButton[data-view]");
@@ -355,7 +450,11 @@
     if (!route || !Object.hasOwn(CLUB_VIEW_SLUGS, nextView) || nextView === route.view) return false;
 
     captureClubView(route);
-    if (!clubViewSnapshots.has(clubSnapshotKey(route.clubId, nextView))) return false;
+    const nextRoute = { clubId: route.clubId, view: nextView };
+    if (!clubViewSnapshots.has(clubSnapshotKey(route.clubId, nextView))) {
+      scheduleClubViewCapture(nextRoute);
+      return false;
+    }
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -365,8 +464,32 @@
   function handleWindowClick(event) {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     if (handlePlayerMflNavigation(event)) return;
-    if (handleCachedClubView(event)) return;
+    if (handleClubViewClick(event)) return;
     resetSortCycle(event);
+  }
+
+  function wrapClubLoader() {
+    if (typeof window.mflLoadIncrementalRoutePage !== "function") return false;
+    if (window.mflLoadIncrementalRoutePage?.__mflClubViewCacheVersion === VERSION) return true;
+
+    nativeLoadIncrementalRoutePage = window.mflLoadIncrementalRoutePage;
+    loadWrapper = async function loadIncrementalRoutePageWithClubCapture(pageName, options = {}) {
+      const routeBeforeLoad = pageName === CLUB_PAGE
+        ? {
+            ...(routeFromLocation() || {}),
+            view: String(options.view || routeFromLocation()?.view || "attributes"),
+          }
+        : null;
+
+      const result = await nativeLoadIncrementalRoutePage.apply(this, arguments);
+      if (routeBeforeLoad?.clubId && Object.hasOwn(CLUB_VIEW_SLUGS, routeBeforeLoad.view)) {
+        scheduleClubViewCapture(routeBeforeLoad, { force: true });
+      }
+      return result;
+    };
+    loadWrapper.__mflClubViewCacheVersion = VERSION;
+    window.mflLoadIncrementalRoutePage = loadWrapper;
+    return true;
   }
 
   function install() {
@@ -420,15 +543,22 @@
       }
     };
 
+    wrapClubLoader();
     clickHandler = handleWindowClick;
     window.addEventListener("click", clickHandler, true);
-    monitorTimer = window.setInterval(() => captureClubView(), 100);
+    monitorTimer = window.setInterval(() => {
+      wrapClubLoader();
+      captureClubView();
+    }, 100);
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
     window.__mflClubViewRuntimeState = {
       clickHandler,
       monitorTimer,
       installTimer: 0,
       clubViewSnapshots,
+      captureTimers,
+      nativeLoadIncrementalRoutePage,
+      loadWrapper,
     };
     installed = true;
     if (installTimer) window.clearInterval(installTimer);
