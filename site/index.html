@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.48";
+        const VERSION = "1.119.49";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
 
@@ -38,15 +38,16 @@
           source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
           source = source.replace(
             releaseMarker,
-            `["v${VERSION}", "Lock global search loading without hiding table data"],\n          ["v1.119.47", "Preserve My Players views and hide incomplete table rows"],\n          ["v1.119.46", "Anchor the selection bar to the page content area"],\n          ["v1.119.45", "Keep the club select-all checkbox interactive after loading"],\n          ["v1.119.44", "Keep club view buttons stable and unlock selection after loading"],\n          ["v1.119.43", "Keep club view controls and selection column stable while loading"],\n          ["v1.119.42", "Use the initial club route loader when switching views"],\n          ["v1.119.41", "Restore completed club views before repeated loading starts"],\n          ["v1.119.40", "Use one club-view cache and prevent repeated view loading"],\n          ["v1.119.37", "Match player-page MFL navigation and restore cached club views instantly"],\n          ["v1.119.36", "Reuse completed club views and show wait cursor while sharing evaluations"],\n          ["v1.119.34", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
+            `["v${VERSION}", "Use current MFL/USD in the four-period Discount Ratio"],\n          ["v1.119.48", "Lock global search loading without hiding table data"],\n          ["v1.119.47", "Preserve My Players views and hide incomplete table rows"],\n          ["v1.119.46", "Anchor the selection bar to the page content area"],\n          ["v1.119.45", "Keep the club select-all checkbox interactive after loading"],\n          ["v1.119.44", "Keep club view buttons stable and unlock selection after loading"],\n          ["v1.119.43", "Keep club view controls and selection column stable while loading"],\n          ["v1.119.42", "Use the initial club route loader when switching views"],\n          ["v1.119.41", "Restore completed club views before repeated loading starts"],\n          ["v1.119.40", "Use one club-view cache and prevent repeated view loading"],\n          ["v1.119.37", "Match player-page MFL navigation and restore cached club views instantly"],\n          ["v1.119.36", "Reuse completed club views and show wait cursor while sharing evaluations"],\n          ["v1.119.34", "Use the native club cache for reliable view returns"],\n          ${releaseMarker}`,
           );
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
           const stabilityRuntimeTag = '<script src="/club-view-stability-runtime.js?v=1.119.45"></scr' + 'ipt>';
           const selectionLayoutRuntimeTag = `<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const tableLoadingRuntimeTag = `<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const evaluationDiscountRuntimeTag = `<script src="/evaluation-discount-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           source = source.replace(
             bodyMarker,
-            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${bodyMarker}`,
+            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${bodyMarker}`,
           );
 
           document.open();
