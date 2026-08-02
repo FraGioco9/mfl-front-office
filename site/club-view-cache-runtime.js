@@ -60,7 +60,7 @@
     if (!Array.isArray(columns)) return "";
     return CLUB_ID_COLUMNS.find((column) => {
       if (typeof hasColumn === "function" && columns === state.columns) return hasColumn(column);
-      return colums.includes(column);
+      return columns.includes(column);
     }) || "";
   }
 
@@ -86,7 +86,7 @@
     if (rankDifference) return state.sortDirection === "desc" ? -rankDifference : rankDifference;
 
     const aOverall = Number(getValue(a, "overall"));
-    const bOverall = Number(getValue(b, "overall");
+    const bOverall = Number(getValue(b, "overall"));
     if (Number.isFinite(aOverall) && Number.isFinite(bOverall) && aOverall !== bOverall) {
       return bOverall - aOverall;
     }
@@ -123,8 +123,8 @@
   function clubViewReady(clubId, view) {
     const route = clubRouteFromLocation();
     if (!route || route.clubId !== String(clubId) || route.view !== view) return false;
-    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE  || state.view !== view) return false;
-    if ( Array.isArray(state.rows) === false || Array.isArray(state.columns) === false || !state.columns.length) return false;
+    if (typeof state === "undefined" || state.currentPage !== CLUB_PAGE || state.view !== view) return false;
+    if (!Array.isArray(state.rows) || !Array.isArray(state.columns) || !state.columns.length) return false;
     return !document.body.classList.contains("clubViewSwitching")
       && !document.body.classList.contains("clubViewLoading");
   }
