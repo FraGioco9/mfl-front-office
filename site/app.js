@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.46";
+  const VERSION = "1.119.47";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
 
@@ -11,6 +11,29 @@
     if (loadingScreen) loadingScreen.hidden = true;
     const main = document.querySelector("main");
     if (main) main.innerHTML = '<p class="emptyState">Could not load MFL Front Office.</p>';
+  }
+
+  function patchInitialMyPlayersRoute(source) {
+    const routeSetupMarker = `  loadTheme();
+  setupChangelogSections();
+  const initialTarget = pageTargetFromPath`;
+    const routeSetupReplacement = `  loadTheme();
+  setupChangelogSections();
+  applyStoredWalletPermission();
+  const initialTarget = pageTargetFromPath`;
+    const duplicatePermissionMarker = `  loadSavedTableState();
+  applyStoredWalletPermission();
+  loadEvaluationMflPerUsd();`;
+    const duplicatePermissionReplacement = `  loadSavedTableState();
+  loadEvaluationMflPerUsd();`;
+
+    if (!source.includes(routeSetupMarker) || !source.includes(duplicatePermissionMarker)) {
+      throw new Error("Could not locate the initial route permission markers.");
+    }
+
+    return source
+      .replace(routeSetupMarker, routeSetupReplacement)
+      .replace(duplicatePermissionMarker, duplicatePermissionReplacement);
   }
 
   function patchClubViewCache(source) {
@@ -132,6 +155,7 @@
     }
 
     source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
+    source = patchInitialMyPlayersRoute(source);
     source = patchClubViewCache(source);
     source += `\n//# sourceURL=mfl-front-office-loader-v${VERSION}.js`;
 
