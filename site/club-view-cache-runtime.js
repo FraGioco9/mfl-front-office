@@ -1,7 +1,8 @@
 (() => {
-  const VERSION = "1.119.42";
+  const VERSION = "1.119.43";
   const CLUB_PAGE = "club";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
+  const SELECTION_COLUMN_WIDTH = 51.09;
   const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
   const POSITION_ORDER = [
     "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
@@ -16,14 +17,28 @@
   if (previousRuntime?.shareClickHandler) {
     document.removeEventListener("click", previousRuntime.shareClickHandler, true);
   }
+  if (previousRuntime?.controlObserver) {
+    previousRuntime.controlObserver.disconnect();
+  }
   if (previousRuntime?.monitorTimer) {
     window.clearInterval(previousRuntime.monitorTimer);
+  }
+  if (previousRuntime?.settleTimer) {
+    window.clearTimeout(previousRuntime.settleTimer);
   }
   if (previousRuntime?.installTimer) {
     window.clearInterval(previousRuntime.installTimer);
   }
   if (previousRuntime?.captureTimers instanceof Map) {
     previousRuntime.captureTimers.forEach((timer) => window.clearTimeout(timer));
+  }
+  if (
+    previousRuntime?.buildHeaderWrapper
+    && previousRuntime?.nativeBuildHeader
+    && typeof buildHeader === "function"
+    && buildHeader === previousRuntime.buildHeaderWrapper
+  ) {
+    buildHeader = previousRuntime.nativeBuildHeader;
   }
   if (
     previousRuntime?.requestWrapper
@@ -44,9 +59,16 @@
 
   let installed = false;
   let installTimer = 0;
+  let settleTimer = 0;
+  let controlObserver = null;
+  let pendingClubView = "";
   let filteringClubRows = false;
+  let enforcingClubControls = false;
   let clickHandler = null;
   let shareClickHandler = null;
+  let nativeBuildHeader = null;
+  let buildHeaderWrapper = null;
+  let runtimeState = null;
 
   function syncShareCursor() {
     document.documentElement.classList.toggle("evaluationShareBusy", activeShareButtons.size > 0);
@@ -95,6 +117,43 @@
     document.addEventListener("click", shareClickHandler, true);
   }
 
+  function installStableClubStyles() {
+    let style = document.getElementById("clubViewStableSwitchStyles");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "clubViewStableSwitchStyles";
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+      body.clubViewRouteChanging #progressionPage .views,
+      body.clubViewRouteChanging #progressionPage .viewButtons {
+        visibility: visible !important;
+      }
+      body.clubViewRouteChanging #progressionPage .viewButton {
+        transition: none !important;
+        animation: none !important;
+      }
+      body.clubViewRouteChanging #progressionPage .viewButton[data-view="attributes"] { order: 1; }
+      body.clubViewRouteChanging #progressionPage .viewButton[data-view="contracts"] { order: 2; }
+      body.clubViewRouteChanging #progressionPage .viewButton[data-view="current"] { order: 3; }
+      body.clubViewRouteChanging #progressionPage .viewButton[data-view="all"] { order: 4; }
+      body.clubViewRouteChanging #progressionPage #tableColGroup col:first-child,
+      body.clubViewRouteChanging #progressionPage #tableHead th:first-child,
+      body.clubViewRouteChanging #progressionPage #tableBody td:first-child {
+        width: ${SELECTION_COLUMN_WIDTH}px !important;
+        min-width: ${SELECTION_COLUMN_WIDTH}px !important;
+        max-width: ${SELECTION_COLUMN_WIDTH}px !important;
+        box-sizing: border-box !important;
+      }
+      body.clubViewRouteChanging #progressionPage #selectVisiblePlayersInput {
+        visibility: visible !important;
+        opacity: 1 !important;
+        transition: none !important;
+        animation: none !important;
+      }
+    `;
+  }
+
   function routeFromLocation() {
     const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/([^/]+))?\/?$/i);
     if (!match) return null;
@@ -115,6 +174,141 @@
     return button && CLUB_VIEWS.has(String(button.dataset.view || "")) ? button : null;
   }
 
+  function clubButtons() {
+    return Array.from(document.querySelectorAll("#progressionPage .viewButton[data-view]"))
+      .filter((button) => CLUB_VIEWS.has(String(button.dataset.view || "")));
+  }
+
+  function enforceStableClubControls() {
+    if (!pendingClubView || enforcingClubControls) return;
+    enforcingClubControls = true;
+    try {
+      clubButtons().forEach((button) => {
+        const active = String(button.dataset.view || "") === pendingClubView;
+        if (button.hidden) button.hidden = false;
+        if (button.classList.contains("active") !== active) {
+          button.classList.toggle("active", active);
+        }
+      });
+    } finally {
+      enforcingClubControls = false;
+    }
+  }
+
+  function loadingPlayersVisible() {
+    const loadingElement = document.querySelector("#progressionPage #emptyState, #progressionPage .emptyState");
+    return loadingElement instanceof HTMLElement
+      && !loadingElement.hidden
+      && loadingElement.getClientRects().length > 0
+      && /loading\s+players?/i.test(String(loadingElement.textContent || ""));
+  }
+
+  function clubTransitionReady(targetView) {
+    const route = routeFromLocation();
+    const busy = Boolean(
+      document.body.classList.contains("clubViewSwitching")
+      || document.body.classList.contains("appBusy")
+      || document.documentElement.classList.contains("appBusy")
+      || Number(state?.interactionBusyDepth || 0) > 0
+      || loadingPlayersVisible()
+    );
+    return !busy
+      && route?.view === targetView
+      && state?.currentPage === CLUB_PAGE
+      && state?.view === targetView;
+  }
+
+  function finishStableClubTransition() {
+    pendingClubView = "";
+    document.body.classList.remove("clubViewRouteChanging");
+    delete document.body.dataset.clubTargetView;
+    if (controlObserver) {
+      controlObserver.disconnect();
+      controlObserver = null;
+    }
+    if (runtimeState) runtimeState.controlObserver = null;
+    if (settleTimer) {
+      window.clearTimeout(settleTimer);
+      settleTimer = 0;
+    }
+    if (runtimeState) runtimeState.settleTimer = 0;
+  }
+
+  function waitForStableClubTransition(targetView, startedAt = Date.now(), stableFrames = 0) {
+    if (pendingClubView !== targetView) return;
+    enforceStableClubControls();
+
+    if (clubTransitionReady(targetView)) {
+      if (stableFrames >= 2) {
+        finishStableClubTransition();
+        return;
+      }
+      window.requestAnimationFrame(() => waitForStableClubTransition(targetView, startedAt, stableFrames + 1));
+      return;
+    }
+
+    if (Date.now() - startedAt >= 20000) {
+      finishStableClubTransition();
+      return;
+    }
+
+    settleTimer = window.setTimeout(() => waitForStableClubTransition(targetView, startedAt, 0), 16);
+    if (runtimeState) runtimeState.settleTimer = settleTimer;
+  }
+
+  function beginStableClubTransition(targetView) {
+    finishStableClubTransition();
+    pendingClubView = targetView;
+    document.body.classList.add("clubViewRouteChanging");
+    document.body.dataset.clubTargetView = targetView;
+    enforceStableClubControls();
+
+    const progression = document.querySelector("#progressionPage");
+    if (progression) {
+      controlObserver = new MutationObserver(() => enforceStableClubControls());
+      if (runtimeState) runtimeState.controlObserver = controlObserver;
+      controlObserver.observe(progression, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ["class", "hidden"],
+      });
+    }
+
+    waitForStableClubTransition(targetView);
+  }
+
+  function installStableClubHeader() {
+    nativeBuildHeader = buildHeader;
+    buildHeaderWrapper = function buildHeaderWithStableSelectionColumn() {
+      const preserveSelection = document.body.classList.contains("clubViewRouteChanging")
+        && Boolean(routeFromLocation());
+      const existingInput = preserveSelection
+        ? document.querySelector("#selectVisiblePlayersInput")
+        : null;
+      const inputState = existingInput instanceof HTMLInputElement
+        ? {
+            checked: existingInput.checked,
+            indeterminate: existingInput.indeterminate,
+            disabled: existingInput.disabled,
+          }
+        : null;
+
+      if (existingInput) existingInput.remove();
+      const result = nativeBuildHeader.apply(this, arguments);
+
+      if (existingInput && inputState) {
+        const replacement = document.querySelector("#selectVisiblePlayersInput");
+        if (replacement) replacement.replaceWith(existingInput);
+        existingInput.checked = inputState.checked;
+        existingInput.indeterminate = inputState.indeterminate;
+        existingInput.disabled = inputState.disabled;
+      }
+      return result;
+    };
+    buildHeader = buildHeaderWrapper;
+  }
+
   function handleClubViewNavigation(event) {
     const button = clubViewButton(event);
     if (!button) return false;
@@ -127,6 +321,7 @@
     const nextView = String(button.dataset.view || "");
     if (!nextView || nextView === route.view) return true;
 
+    beginStableClubTransition(nextView);
     if (typeof window.mflOpenClubPage === "function") {
       window.mflOpenClubPage(route.clubId, nextView);
       return true;
@@ -293,9 +488,17 @@
 
   function install() {
     if (installed) return true;
-    if (typeof state === "undefined" || typeof compareRows !== "function" || typeof applyFilters !== "function") {
+    if (
+      typeof state === "undefined"
+      || typeof compareRows !== "function"
+      || typeof applyFilters !== "function"
+      || typeof buildHeader !== "function"
+    ) {
       return false;
     }
+
+    installStableClubStyles();
+    installStableClubHeader();
 
     const nativeCompareRows = compareRows;
     compareRows = function compareRowsWithClubPositionOrder(a, b) {
@@ -347,11 +550,16 @@
     clickHandler = handleWindowClick;
     window.addEventListener("click", clickHandler, true);
     document.documentElement.dataset.clubViewCacheVersion = VERSION;
-    window.__mflClubViewRuntimeState = {
+    runtimeState = {
       clickHandler,
       shareClickHandler,
+      controlObserver,
+      settleTimer,
       installTimer: 0,
+      nativeBuildHeader,
+      buildHeaderWrapper,
     };
+    window.__mflClubViewRuntimeState = runtimeState;
     installed = true;
     if (installTimer) window.clearInterval(installTimer);
     return true;
