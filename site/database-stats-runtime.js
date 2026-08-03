@@ -1,10 +1,10 @@
 (() => {
-  const VERSION = "1.120.0";
+  const VERSION = "1.120.1";
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const FILTERS = [
     { id: "all", label: "All", min: null, max: null },
-    { id: "ultimate", label: "Ultimate (95+)", min: 95, max: null },
+    { id: "ultimate", label: "Ultimate", min: 95, max: null },
     { id: "legendary", label: "Legendary", min: 85, max: 94 },
     { id: "rare", label: "Rare", min: 75, max: 84 },
     { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
@@ -13,15 +13,11 @@
     { id: "custom", label: "Custom", min: null, max: null },
   ];
 
-  const previous = window.__mflDatabaseStatsRuntime;
-  previous?.destroy?.();
+  window.__mflDatabaseStatsRuntime?.destroy?.();
 
   const originalPushState = history.pushState.bind(history);
   const originalReplaceState = history.replaceState.bind(history);
-  let protectStatsRoute = DATABASE_STATS_PATH.test(location.pathname);
-  let observer = null;
-  let frame = 0;
-  let installed = false;
+  let routeGuardActive = DATABASE_STATS_PATH.test(location.pathname);
   let page = null;
   let data = null;
   let dataPromise = null;
@@ -29,14 +25,19 @@
   let customMin = 0;
   let customMax = 99;
   let distributionMode = "overall";
-  let originalSetPage = null;
-  let originalPageTargetFromPath = null;
-  let originalPagePath = null;
-  let originalUpdateViewButtons = null;
-  let originalPreferredViewForPage = null;
+  let scheduledFrame = 0;
+  let observer = null;
+  let observedRoot = null;
+  let boundDocument = null;
+  let interval = 0;
+  let destroyed = false;
 
-  function isDatabaseStatsPath(pathname = location.pathname) {
+  function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
+  }
+
+  function isDatabaseTablePath(pathname = location.pathname) {
+    return DATABASE_PATH.test(String(pathname || "")) && !isStatsPath(pathname);
   }
 
   function asUrl(value) {
@@ -47,92 +48,24 @@
     }
   }
 
-  function setHistory(method, stateValue, title, value) {
+  function guardedHistory(method, stateValue, title, value) {
     const next = asUrl(value);
-    if (protectStatsRoute && DATABASE_PATH.test(next.pathname) && !isDatabaseStatsPath(next.pathname)) {
+    if (routeGuardActive && DATABASE_PATH.test(next.pathname) && !isStatsPath(next.pathname)) {
       const result = originalReplaceState(stateValue, title, "/database/stats");
       schedule();
       return result;
     }
     const result = method(stateValue, title, value);
-    if (!isDatabaseStatsPath(next.pathname)) protectStatsRoute = false;
+    routeGuardActive = isStatsPath(next.pathname);
     schedule();
     return result;
   }
 
-  history.pushState = (stateValue, title, value) => setHistory(originalPushState, stateValue, title, value);
-  history.replaceState = (stateValue, title, value) => setHistory(originalReplaceState, stateValue, title, value);
+  history.pushState = (stateValue, title, value) => guardedHistory(originalPushState, stateValue, title, value);
+  history.replaceState = (stateValue, title, value) => guardedHistory(originalReplaceState, stateValue, title, value);
 
   function formatCount(value) {
     return new Intl.NumberFormat("en-US").format(Number(value || 0));
-  }
-
-  function createPage() {
-    if (page?.isConnected) return page;
-    const main = document.querySelector("main");
-    if (!main) return null;
-
-    page = document.createElement("section");
-    page.id = "databaseStatsPage";
-    page.className = "pageView mflStatsPage databaseStatsPage";
-    page.hidden = true;
-    page.innerHTML = `
-      <h2 class="tablePageTitle">Database</h2>
-      <section class="views mflStatsViews" aria-label="Database views">
-        <button class="viewButton" type="button" data-view="attributes">Attributes</button>
-        <button class="viewButton active" type="button" data-view="stats">Stats</button>
-        <button class="viewButton" type="button" data-view="contracts">Contracts</button>
-      </section>
-
-      <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
-        <span>Overall Filters</span>
-        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
-        <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
-          <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
-          <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
-          <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
-        </div>
-      </section>
-
-      <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
-        <article><span>Total players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
-        <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
-        <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
-        <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
-        <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
-      </section>
-
-      <section class="mflStatsDistribution" aria-label="Active players distribution">
-        <div class="mflStatsDistributionHeader">
-          <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
-          <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
-            <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
-            <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
-          </div>
-        </div>
-        <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
-      </section>
-    `;
-    main.appendChild(page);
-
-    page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
-    page.querySelector('[data-view="stats"]')?.addEventListener("click", () => showDatabaseStatsPage(true));
-    page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
-    page.querySelectorAll("[data-distribution]").forEach((button) => {
-      button.addEventListener("click", () => {
-        distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
-        renderDistribution();
-      });
-    });
-    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
-    page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") applyCustomFilter();
-      });
-    });
-
-    renderFilterButtons();
-    return page;
   }
 
   function installStyles() {
@@ -187,10 +120,72 @@
     document.head.appendChild(style);
   }
 
-  function hideOtherPages() {
-    document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      candidate.hidden = candidate !== page;
+  function createPage() {
+    if (page?.isConnected) return page;
+    const main = document.querySelector("main");
+    if (!main) return null;
+
+    page = document.createElement("section");
+    page.id = "databaseStatsPage";
+    page.className = "pageView mflStatsPage databaseStatsPage";
+    page.hidden = true;
+    page.innerHTML = `
+      <h2 class="tablePageTitle">Database</h2>
+      <section class="views mflStatsViews" aria-label="Database views">
+        <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+        <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+        <button class="viewButton active" type="button" data-view="stats">Stats</button>
+      </section>
+
+      <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
+        <span>Overall Filters</span>
+        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
+        <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
+          <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
+          <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
+          <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
+        </div>
+      </section>
+
+      <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
+        <article><span>Total players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
+        <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
+        <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
+        <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
+        <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
+      </section>
+
+      <section class="mflStatsDistribution" aria-label="Active players distribution">
+        <div class="mflStatsDistributionHeader">
+          <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
+          <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+            <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+            <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+          </div>
+        </div>
+        <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
+      </section>
+    `;
+    main.appendChild(page);
+
+    page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
+    page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
+    page.querySelector('[data-view="stats"]')?.addEventListener("click", () => showStatsPage(true));
+    page.querySelectorAll("[data-distribution]").forEach((button) => {
+      button.addEventListener("click", () => {
+        distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
+        renderDistribution();
+      });
     });
+    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
+    page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") applyCustomFilter();
+      });
+    });
+
+    renderFilterButtons();
+    return page;
   }
 
   function setNavigationActive() {
@@ -199,33 +194,28 @@
     });
   }
 
-  function showPageShell() {
+  function showStatsShell() {
     const target = createPage();
     if (!target) return false;
     installStyles();
-    hideOtherPages();
-    target.hidden = false;
-    document.body.dataset.page = "databasestats";
-    setNavigationActive();
-    try {
-      if (typeof state === "object" && state) {
-        state.currentPage = "databasestats";
-        state.view = "stats";
-      }
-    } catch {
-      // The loading shell can render before the application state exists.
+    document.querySelectorAll("main > .pageView").forEach((candidate) => {
+      const shouldHide = candidate !== target;
+      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
+    });
+    if (target.hidden) target.hidden = false;
+    if (document.body.dataset.page !== "databasestats") {
+      document.body.dataset.page = "databasestats";
     }
+    setNavigationActive();
     return true;
   }
 
-  function hidePage() {
-    if (page) page.hidden = true;
+  function hideStatsPage() {
+    if (page && !page.hidden) page.hidden = true;
   }
 
   function currentFilter() {
-    if (activeFilter === "custom") {
-      return { min: customMin, max: customMax };
-    }
+    if (activeFilter === "custom") return { min: customMin, max: customMax };
     return FILTERS.find((filter) => filter.id === activeFilter) || FILTERS[0];
   }
 
@@ -241,7 +231,8 @@
       button.textContent = filter.label;
       button.addEventListener("click", () => {
         activeFilter = filter.id;
-        page.querySelector("#databaseStatsCustomFilter").hidden = filter.id !== "custom";
+        const custom = page?.querySelector("#databaseStatsCustomFilter");
+        if (custom) custom.hidden = filter.id !== "custom";
         renderFilterButtons();
         renderStats();
       });
@@ -317,8 +308,7 @@
     const counts = new Map();
     let totalActive = 0;
     filteredGroups().forEach((group) => {
-      const retirementYears = group[2];
-      if (retirementYears === 0) return;
+      if (group[2] === 0) return;
       const value = distributionMode === "age" ? group[1] : group[0];
       if (value === null || value === undefined || value === "") return;
       const numericValue = Number(value);
@@ -381,18 +371,19 @@
     return dataPromise;
   }
 
-  async function showDatabaseStatsPage(updateUrl = false) {
-    protectStatsRoute = true;
-    if (updateUrl && !isDatabaseStatsPath()) {
+  async function showStatsPage(updateUrl = false) {
+    routeGuardActive = true;
+    if (updateUrl && !isStatsPath()) {
       originalPushState({}, "", "/database/stats");
-    } else if (!isDatabaseStatsPath()) {
+    } else if (!isStatsPath()) {
       originalReplaceState(history.state, "", "/database/stats");
     }
-    showPageShell();
+    showStatsShell();
     const distribution = page?.querySelector("#databaseStatsDistribution");
     if (!data && distribution) {
       distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
     }
+
     let busy = false;
     try {
       if (!data && typeof beginInteractionBusy === "function") {
@@ -410,193 +401,160 @@
       }
     } finally {
       if (busy && typeof endInteractionBusy === "function") endInteractionBusy();
-      showPageShell();
+      if (isStatsPath()) showStatsShell();
     }
   }
 
   function openDatabaseView(view) {
-    protectStatsRoute = false;
-    hidePage();
-    if (typeof originalSetPage === "function") {
-      void originalSetPage("database", true, {
-        view,
-        skipNavigationLoading: true,
-      });
+    routeGuardActive = false;
+    hideStatsPage();
+    if (typeof setPage === "function") {
+      void setPage("database", true, { view, skipNavigationLoading: true });
       return;
     }
     originalPushState({}, "", `/database/${view}`);
     location.reload();
   }
 
-  function installHooks() {
-    if (installed) return true;
-    try {
-      if (typeof state !== "object"
-          || typeof setPage !== "function"
-          || typeof pageTargetFromPath !== "function"
-          || typeof pagePath !== "function"
-          || typeof updateViewButtons !== "function"
-          || typeof preferredViewForPage !== "function"
-          || typeof pageViewOptions !== "object") {
-        return false;
+  function sharedStatsButton() {
+    return document.querySelector('#progressionPage .views .viewButton[data-view="stats"]');
+  }
+
+  function syncDatabaseViewOrder() {
+    const views = document.querySelector("#progressionPage .views");
+    const statsButton = sharedStatsButton();
+    if (!views || !statsButton) return;
+
+    if (isDatabaseTablePath()) {
+      const contractsButton = views.querySelector('.viewButton[data-view="contracts"]');
+      if (contractsButton && contractsButton.nextElementSibling !== statsButton) {
+        contractsButton.after(statsButton);
       }
+      if (statsButton.hidden) statsButton.hidden = false;
+      statsButton.classList.remove("active");
+      return;
+    }
 
-      const databaseViews = Array.isArray(pageViewOptions.database) ? pageViewOptions.database : [];
-      if (!databaseViews.includes("stats")) {
-        const contractIndex = databaseViews.indexOf("contracts");
-        databaseViews.splice(contractIndex >= 0 ? contractIndex : databaseViews.length, 0, "stats");
-      }
-
-      originalSetPage = setPage;
-      setPage = async function setPageWithDatabaseStats(pageName, updateHash = true, options = {}) {
-        const requestedView = String(options?.view || "");
-        if (pageName === "databasestats" || (pageName === "database" && requestedView === "stats")) {
-          await showDatabaseStatsPage(updateHash !== false);
-          return;
-        }
-        if (protectStatsRoute && pageName === "database" && requestedView !== "stats") {
-          await showDatabaseStatsPage(false);
-          return;
-        }
-        hidePage();
-        return originalSetPage.apply(this, arguments);
-      };
-
-      originalPageTargetFromPath = pageTargetFromPath;
-      pageTargetFromPath = function pageTargetWithDatabaseStats(pathValue) {
-        const target = asUrl(pathValue);
-        if (isDatabaseStatsPath(target.pathname)) {
-          return { pageName: "databasestats", options: {} };
-        }
-        return originalPageTargetFromPath.apply(this, arguments);
-      };
-
-      originalPagePath = pagePath;
-      pagePath = function pagePathWithDatabaseStats(pageName, options = {}) {
-        if (pageName === "databasestats" || (pageName === "database" && options?.view === "stats")) {
-          return "/database/stats";
-        }
-        return originalPagePath.apply(this, arguments);
-      };
-
-      originalPreferredViewForPage = preferredViewForPage;
-      preferredViewForPage = function preferredViewWithDatabaseStats(pageName) {
-        if (pageName === "database" && (isDatabaseStatsPath() || state.currentPage === "databasestats")) {
-          return "stats";
-        }
-        return originalPreferredViewForPage.apply(this, arguments);
-      };
-
-      originalUpdateViewButtons = updateViewButtons;
-      updateViewButtons = function updateViewsWithDatabaseStats() {
-        const result = originalUpdateViewButtons.apply(this, arguments);
-        document.querySelectorAll('#progressionPage .viewButton[data-view="stats"]').forEach((button) => {
-          if (state.currentPage === "database") button.hidden = false;
-        });
-        return result;
-      };
-
-      installed = true;
-      updateViewButtons();
-      if (isDatabaseStatsPath() || protectStatsRoute) void showDatabaseStatsPage(false);
-      return true;
-    } catch {
-      return false;
+    const attributesButton = views.querySelector('.viewButton[data-view="attributes"]');
+    if (attributesButton && attributesButton.nextElementSibling !== statsButton) {
+      attributesButton.after(statsButton);
     }
   }
 
   function shouldOpenStats(target) {
-    if (!(target instanceof Element)) return false;
-    const button = target.closest('#progressionPage .viewButton[data-view="stats"]');
-    if (!button) return false;
-    try {
-      return state?.currentPage === "database" || DATABASE_PATH.test(location.pathname);
-    } catch {
-      return DATABASE_PATH.test(location.pathname);
-    }
+    if (!(target instanceof Element) || !isDatabaseTablePath()) return false;
+    return Boolean(target.closest('#progressionPage .viewButton[data-view="stats"]'));
   }
 
   function releaseForNavigation(target) {
     if (!(target instanceof Element)) return;
-    const databaseStatsButton = target.closest('#progressionPage .viewButton[data-view="stats"]');
-    if (databaseStatsButton) return;
+    if (target.closest("#databaseStatsPage")) return;
+    if (shouldOpenStats(target)) return;
+
     const link = target.closest("a[href]");
-    if (link) {
-      const next = asUrl(link.href);
-      if (!isDatabaseStatsPath(next.pathname)) protectStatsRoute = false;
+    const pageButton = target.closest("[data-page]");
+    const viewButton = target.closest('#progressionPage .viewButton[data-view]');
+    if (!link && !pageButton && !viewButton) return;
+
+    const next = link ? asUrl(link.href) : null;
+    if (!next || !isStatsPath(next.pathname)) {
+      routeGuardActive = false;
+      hideStatsPage();
     }
   }
 
-  function onClick(event) {
+  function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     if (shouldOpenStats(target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      void showDatabaseStatsPage(true);
+      void showStatsPage(true);
       return;
     }
     releaseForNavigation(target);
   }
 
+  function onDocumentPointerDown(event) {
+    releaseForNavigation(event.target);
+  }
+
+  function bindCurrentDocument() {
+    if (boundDocument === document) return;
+    if (boundDocument) {
+      boundDocument.removeEventListener("click", onDocumentClick, true);
+      boundDocument.removeEventListener("pointerdown", onDocumentPointerDown, true);
+    }
+    boundDocument = document;
+    boundDocument.addEventListener("click", onDocumentClick, true);
+    boundDocument.addEventListener("pointerdown", onDocumentPointerDown, true);
+  }
+
+  function bindObserver() {
+    const root = document.documentElement;
+    if (!root || observedRoot === root) return;
+    observer?.disconnect();
+    observedRoot = root;
+    observer = new MutationObserver(schedule);
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden", "data-page"],
+    });
+  }
+
   function sync() {
-    frame = 0;
-    installHooks();
-    if (isDatabaseStatsPath() || protectStatsRoute) {
-      showPageShell();
-      if (installed && !data && !dataPromise) void showDatabaseStatsPage(false);
+    scheduledFrame = 0;
+    if (destroyed) return;
+    bindCurrentDocument();
+    bindObserver();
+    syncDatabaseViewOrder();
+    if (isStatsPath() || routeGuardActive) {
+      showStatsShell();
+      if (!data && !dataPromise) void showStatsPage(false);
     } else {
-      hidePage();
+      hideStatsPage();
     }
   }
 
   function schedule() {
-    if (!frame) frame = requestAnimationFrame(sync);
+    if (!scheduledFrame) scheduledFrame = requestAnimationFrame(sync);
   }
 
-  document.addEventListener("click", onClick, true);
-  document.addEventListener("pointerdown", (event) => releaseForNavigation(event.target), true);
-  window.addEventListener("popstate", () => {
-    protectStatsRoute = isDatabaseStatsPath();
+  function onPopState() {
+    routeGuardActive = isStatsPath();
     schedule();
-  });
+  }
 
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "class", "data-page"],
-  });
+  window.addEventListener("popstate", onPopState);
+  interval = window.setInterval(schedule, 750);
+  schedule();
 
   function destroy() {
-    if (frame) cancelAnimationFrame(frame);
+    destroyed = true;
+    if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
+    if (interval) window.clearInterval(interval);
     observer?.disconnect();
-    document.removeEventListener("click", onClick, true);
+    window.removeEventListener("popstate", onPopState);
+    if (boundDocument) {
+      boundDocument.removeEventListener("click", onDocumentClick, true);
+      boundDocument.removeEventListener("pointerdown", onDocumentPointerDown, true);
+    }
     history.pushState = originalPushState;
     history.replaceState = originalReplaceState;
-    if (installed) {
-      if (originalSetPage) setPage = originalSetPage;
-      if (originalPageTargetFromPath) pageTargetFromPath = originalPageTargetFromPath;
-      if (originalPagePath) pagePath = originalPagePath;
-      if (originalUpdateViewButtons) updateViewButtons = originalUpdateViewButtons;
-      if (originalPreferredViewForPage) preferredViewForPage = originalPreferredViewForPage;
-    }
     page?.remove();
     document.getElementById("databaseStatsRuntimeStyles")?.remove();
   }
 
-  window.renderDatabaseStatsPage = showDatabaseStatsPage;
+  window.renderDatabaseStatsPage = showStatsPage;
   window.setDatabaseStatsPageVisibility = (visible) => {
-    if (visible) showPageShell();
-    else hidePage();
+    if (visible) showStatsShell();
+    else hideStatsPage();
   };
   window.__mflDatabaseStatsRuntime = {
     version: VERSION,
     sync,
     destroy,
   };
-
-  sync();
-  [0, 25, 75, 150, 400, 1000, 2500, 5000].forEach((delay) => setTimeout(schedule, delay));
 })();
