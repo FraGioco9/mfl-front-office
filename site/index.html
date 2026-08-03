@@ -73,17 +73,18 @@
         timeout = window.setTimeout(release, 15000);
       })();
     </script>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.24"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.24"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.24"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.24"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.25"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.25"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.25"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.25"></script>
     <script>
       (() => {
-        const VERSION = "1.120.24";
+        const VERSION = "1.120.25";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.25", "Keep selection available until watchlist actions complete and show their toast"],
           ["v1.120.24", "Preserve the selected My Players view directly in application routing"],
           ["v1.120.22", "Keep the selected My Players view URL unchanged while refreshing"],
           ["v1.120.21", "Preserve the selected My Players view when refreshing"],
