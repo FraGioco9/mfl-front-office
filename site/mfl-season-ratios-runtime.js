@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.6";
+  const VERSION = "1.119.7";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/mfl-season-ratios-runtime.js`;
 
@@ -20,8 +20,8 @@
     }
     source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
     source = source.replace(tooltipMarker, tooltipReplacement);
-    source = source.replaceAll("mflRelease133RuntimeStyles", "mflRelease1196RuntimeStyles");
-    source = source.replaceAll("mflRelease133Ready", "mflRelease1196Ready");
+    source = source.replaceAll("mflRelease133RuntimeStyles", "mflRelease1197RuntimeStyles");
+    source = source.replaceAll("mflRelease133Ready", "mflRelease1197Ready");
     source += `\n//# sourceURL=mfl-release-runtime-v${VERSION}.js`;
 
     const script = document.createElement("script");
