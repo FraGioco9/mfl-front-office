@@ -4,17 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.15"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.15"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.15"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.15"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.16"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.16"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.16"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.16"></script>
     <script>
       (() => {
-        const VERSION = "1.120.15";
+        const VERSION = "1.120.16";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.16", "Place toasts above the selection bar and dismiss selection actions before loading"],
           ["v1.120.15", "Keep the Database Stats button persistent and limit route protection to reload"],
           ["v1.120.14", "Release all Database Stats route guards before switching view or page"],
           ["v1.120.13", "Release the Database Stats reload guard before explicit navigation"],
@@ -110,7 +111,7 @@
 ${statsSeedMarker}`,
           );
 
-          const finalRuntimeExpression = String.raw`'<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+          const finalRuntimeExpression = String.raw`'<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-feedback-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
