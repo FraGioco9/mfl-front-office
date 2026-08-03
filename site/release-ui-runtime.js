@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.6";
+  const VERSION = "1.120.7";
   const DEFAULT_TOAST_BOTTOM = 88;
   const TOAST_GAP = 12;
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
@@ -69,7 +69,6 @@
 
   function selectionBarIsVisible(bar) {
     if (!(bar instanceof HTMLElement) || bar.hidden) return false;
-    if (!bar.classList.contains("visible") && !bar.classList.contains("is-visible")) return false;
     const style = getComputedStyle(bar);
     if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
     const rect = bar.getBoundingClientRect();
@@ -84,8 +83,7 @@
   }
 
   function syncToastPosition() {
-    const bottom = toastBottom();
-    const value = `${bottom}px`;
+    const value = `${toastBottom()}px`;
     if (document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== value) {
       document.documentElement.style.setProperty("--mfl-toast-bottom", value);
     }
@@ -101,22 +99,31 @@
     if (!/^\/database\/stats\/?$/i.test(location.pathname)) return;
     window.__mflDatabaseStatsRuntime?.sync?.();
 
+    document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      const allowed = ["attributes", "contracts", "stats"].includes(button.dataset.view);
+      const active = button.dataset.view === "stats";
+      button.hidden = !allowed;
+      button.removeAttribute("aria-hidden");
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+
     const page = document.querySelector("#databaseStatsPage");
     if (!(page instanceof HTMLElement)) return;
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
       if (!(candidate instanceof HTMLElement)) return;
-      const shouldHide = candidate !== page;
-      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
+      candidate.hidden = candidate !== page;
     });
-    if (page.hidden) page.hidden = false;
-    if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
-    page.querySelectorAll('.viewButton[data-view]').forEach((button) => {
+    page.hidden = false;
+    page.removeAttribute("aria-hidden");
+    document.body.dataset.page = "databasestats";
+    page.querySelectorAll(".viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       const active = button.dataset.view === "stats";
-      if (button.hidden) button.hidden = false;
-      if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
-      const pressed = String(active);
-      if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
+      button.hidden = false;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
     });
   }
 
@@ -144,7 +151,7 @@
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
   window.addEventListener("popstate", schedule);
-  interval = window.setInterval(schedule, 500);
+  interval = window.setInterval(schedule, 250);
   sync();
 
   function destroy() {
