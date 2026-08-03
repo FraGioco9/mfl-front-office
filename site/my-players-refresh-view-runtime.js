@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.21";
+  const VERSION = "1.120.22";
   const VIEW_BY_SLUG = {
     attributes: "attributes",
     "next-overall": "next",
@@ -66,9 +66,18 @@
     return String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
   }
 
+  function releaseRouteGuard() {
+    try {
+      window.__mflReleaseMyPlayersRouteGuard?.();
+    } catch {
+      // The view restoration remains valid even if the guard already ended.
+    }
+  }
+
   function finish() {
     if (interval) clearInterval(interval);
     interval = 0;
+    releaseRouteGuard();
     window.__mflInitialMyPlayersPath = "";
   }
 
@@ -126,6 +135,7 @@
     destroyed = true;
     if (interval) clearInterval(interval);
     interval = 0;
+    releaseRouteGuard();
   }
 
   window.__mflMyPlayersRefreshViewRuntime = {
