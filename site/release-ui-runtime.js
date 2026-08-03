@@ -1,24 +1,7 @@
 (() => {
-  const VERSION = "1.120.7";
-  const DEFAULT_TOAST_BOTTOM = 88;
-  const TOAST_GAP = 12;
+  const VERSION = "1.120.8";
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
-  const STYLE_TEXT = `
-    .siteFooter,
-    .siteFooter a[href="/changelog"],
-    .siteFooter a[data-page="changelog"] {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    .siteFooter a::before {
-      content: none !important;
-      display: none !important;
-    }
-    ${TOAST_SELECTOR} {
-      position: fixed !important;
-      z-index: 2147483635 !important;
-    }
-  `;
+  const STATS_PATH = /^\/database\/stats\/?$/i;
 
   window.__mflReleaseUiRuntime?.destroy?.();
 
@@ -26,79 +9,86 @@
   let observer = null;
   let interval = 0;
 
-  function ensureStyles() {
-    let style = document.getElementById("mflReleaseUiStyles");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "mflReleaseUiStyles";
-      document.head.appendChild(style);
-    }
-    if (style.textContent !== STYLE_TEXT) style.textContent = STYLE_TEXT;
-  }
-
-  function setImportantStyle(element, property, value) {
+  function setImportant(element, property, value) {
+    if (!(element instanceof HTMLElement)) return;
     if (element.style.getPropertyValue(property) === value
         && element.style.getPropertyPriority(property) === "important") return;
     element.style.setProperty(property, value, "important");
+  }
+
+  function visible(element) {
+    if (!(element instanceof HTMLElement) || element.hidden) return false;
+    const style = getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
   }
 
   function syncFooter() {
     const footer = document.querySelector(".siteFooter");
     if (!(footer instanceof HTMLElement)) return;
 
-    let target = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
-    if (!(target instanceof HTMLAnchorElement)) {
-      target = document.createElement("a");
-      footer.prepend(target);
+    let link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
+    if (!(link instanceof HTMLAnchorElement)) {
+      link = document.createElement("a");
+      footer.prepend(link);
     }
 
     const text = `MFL Front Office v${VERSION}`;
-    target.hidden = false;
-    target.removeAttribute("aria-hidden");
-    setImportantStyle(target, "display", "inline-block");
-    setImportantStyle(target, "visibility", "visible");
-    setImportantStyle(target, "opacity", "1");
-    if (target.textContent !== text) target.textContent = text;
-    if (target.getAttribute("href") !== "/changelog") target.setAttribute("href", "/changelog");
-    if (target.dataset.page !== "changelog") target.dataset.page = "changelog";
-    if (target.dataset.releaseLabel !== text) target.dataset.releaseLabel = text;
-    const ariaLabel = `${text}, open Changelog`;
-    if (target.getAttribute("aria-label") !== ariaLabel) target.setAttribute("aria-label", ariaLabel);
-    if (footer.dataset.releaseVersion !== VERSION) footer.dataset.releaseVersion = VERSION;
+    link.hidden = false;
+    link.removeAttribute("aria-hidden");
+    link.setAttribute("href", "/changelog");
+    link.dataset.page = "changelog";
+    link.dataset.releaseLabel = text;
+    link.textContent = text;
+    link.setAttribute("aria-label", `${text}, open Changelog`);
+    footer.dataset.releaseVersion = VERSION;
+    setImportant(link, "display", "inline-block");
+    setImportant(link, "visibility", "visible");
+    setImportant(link, "opacity", "1");
   }
 
-  function selectionBarIsVisible(bar) {
-    if (!(bar instanceof HTMLElement) || bar.hidden) return false;
-    const style = getComputedStyle(bar);
-    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
-    const rect = bar.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+  function selectionBottom() {
+    const footer = document.querySelector(".siteFooter");
+    if (!visible(footer)) return 12;
+    return Math.max(12, Math.ceil(innerHeight - footer.getBoundingClientRect().top + 12));
   }
 
-  function toastBottom() {
+  function syncSelectionBar() {
     const bar = document.querySelector("#selectionBar");
-    if (!selectionBarIsVisible(bar)) return DEFAULT_TOAST_BOTTOM;
-    const rect = bar.getBoundingClientRect();
-    return Math.max(DEFAULT_TOAST_BOTTOM, Math.ceil(innerHeight - rect.top + TOAST_GAP));
+    const main = document.querySelector("#appShell main, main");
+    if (!(bar instanceof HTMLElement) || !(main instanceof HTMLElement)) return;
+
+    if (bar.parentElement !== main) main.appendChild(bar);
+    const mainRect = main.getBoundingClientRect();
+    const bottom = selectionBottom();
+    setImportant(bar, "position", "fixed");
+    setImportant(bar, "left", `${Math.round(mainRect.left + mainRect.width / 2)}px`);
+    setImportant(bar, "right", "auto");
+    setImportant(bar, "bottom", `${bottom}px`);
+    setImportant(bar, "transform", "translateX(-50%)");
+    setImportant(bar, "z-index", "2147483500");
+    document.documentElement.style.setProperty("--mfl-selection-bar-bottom", `${bottom}px`);
   }
 
-  function syncToastPosition() {
-    const value = `${toastBottom()}px`;
-    if (document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== value) {
-      document.documentElement.style.setProperty("--mfl-toast-bottom", value);
-    }
+  function syncToasts() {
+    const bar = document.querySelector("#selectionBar");
+    const bottom = visible(bar)
+      ? Math.max(12, Math.ceil(innerHeight - bar.getBoundingClientRect().top + 12))
+      : 88;
+    const value = `${bottom}px`;
+    document.documentElement.style.setProperty("--mfl-toast-bottom", value);
     document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
       if (!(toast instanceof HTMLElement)) return;
-      setImportantStyle(toast, "position", "fixed");
-      setImportantStyle(toast, "bottom", value);
-      setImportantStyle(toast, "z-index", "2147483635");
+      setImportant(toast, "position", "fixed");
+      setImportant(toast, "bottom", value);
+      setImportant(toast, "z-index", "2147483635");
     });
   }
 
-  function syncDatabaseStatsRoute() {
-    if (!/^\/database\/stats\/?$/i.test(location.pathname)) return;
-    window.__mflDatabaseStatsRuntime?.sync?.();
-
+  function syncStatsChrome() {
+    if (!STATS_PATH.test(location.pathname)) return;
+    document.body.dataset.page = "databasestats";
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       const allowed = ["attributes", "contracts", "stats"].includes(button.dataset.view);
@@ -109,30 +99,22 @@
       button.setAttribute("aria-pressed", String(active));
     });
 
+    window.__mflDatabaseStatsRuntime?.sync?.();
     const page = document.querySelector("#databaseStatsPage");
     if (!(page instanceof HTMLElement)) return;
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (!(candidate instanceof HTMLElement)) return;
-      candidate.hidden = candidate !== page;
+      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
     });
     page.hidden = false;
     page.removeAttribute("aria-hidden");
-    document.body.dataset.page = "databasestats";
-    page.querySelectorAll(".viewButton[data-view]").forEach((button) => {
-      if (!(button instanceof HTMLElement)) return;
-      const active = button.dataset.view === "stats";
-      button.hidden = false;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    });
   }
 
   function sync() {
     frame = 0;
-    ensureStyles();
     syncFooter();
-    syncToastPosition();
-    syncDatabaseStatsRoute();
+    syncSelectionBar();
+    syncToasts();
+    syncStatsChrome();
   }
 
   function schedule() {
@@ -161,9 +143,9 @@
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     window.removeEventListener("popstate", schedule);
-    document.getElementById("mflReleaseUiStyles")?.remove();
+    document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
     document.documentElement.style.removeProperty("--mfl-toast-bottom");
   }
 
-  window.__mflReleaseUiRuntime = { version: VERSION, sync, destroy };
+  window.__mflReleaseUiRuntime = { version: VERSION, sync: schedule, destroy };
 })();
