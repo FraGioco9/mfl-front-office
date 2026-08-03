@@ -1,7 +1,6 @@
 (() => {
-  const VERSION = "1.120.16";
+  const VERSION = "1.120.18";
   const EXIT_MS = 220;
-  const FAILSAFE_MS = 15000;
   const TOAST_ANCHOR_MS = 15000;
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage, .toast";
 
@@ -17,10 +16,9 @@
   let observer = null;
   let observedRoot = null;
   let exitTimer = 0;
-  let failsafeTimer = 0;
   let destroyed = false;
-  let suppressionActive = false;
-  let suppressionStartedAt = 0;
+  let fallbackClearing = false;
+  let actionSequence = 0;
   let lastSelectionTop = null;
   let toastAnchorUntil = 0;
 
@@ -34,14 +32,6 @@
   function selectionBar() {
     const bar = document.getElementById("selectionBar");
     return bar instanceof HTMLElement ? bar : null;
-  }
-
-  function selectionCount() {
-    const text = String(document.getElementById("selectionCount")?.textContent || "").trim();
-    const match = text.match(/\d[\d,.]*/);
-    if (!match) return null;
-    const value = Number(match[0].replace(/[,.]/g, ""));
-    return Number.isFinite(value) ? value : null;
   }
 
   function barIsVisible(bar) {
@@ -103,38 +93,23 @@
     return action;
   }
 
-  function rememberBarTop(bar) {
+  function rememberBarTop(bar = selectionBar()) {
     const rect = bar?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return;
     lastSelectionTop = rect.top;
   }
 
-  function releaseSuppression() {
-    suppressionActive = false;
-    suppressionStartedAt = 0;
-    if (exitTimer) clearTimeout(exitTimer);
-    if (failsafeTimer) clearTimeout(failsafeTimer);
-    exitTimer = 0;
-    failsafeTimer = 0;
-
-    const bar = selectionBar();
-    if (bar) {
-      bar.hidden = false;
-      bar.classList.remove("mflSelectionActionDismissed");
-    }
+  function prepareToastAnchor() {
+    rememberBarTop();
+    toastAnchorUntil = Date.now() + TOAST_ANCHOR_MS;
     schedule();
   }
 
   function dismissSelectionBar() {
-    if (suppressionActive) return;
     const bar = selectionBar();
     if (!bar) return;
 
-    rememberBarTop(bar);
-    toastAnchorUntil = Date.now() + TOAST_ANCHOR_MS;
-    suppressionActive = true;
-    suppressionStartedAt = Date.now();
-
+    if (exitTimer) clearTimeout(exitTimer);
     bar.hidden = false;
     void bar.offsetWidth;
     bar.classList.add("mflSelectionActionDismissed");
@@ -142,41 +117,58 @@
 
     exitTimer = window.setTimeout(() => {
       exitTimer = 0;
-      if (!suppressionActive) return;
       const current = selectionBar();
       if (current) current.hidden = true;
       schedule();
     }, EXIT_MS);
+  }
 
-    failsafeTimer = window.setTimeout(releaseSuppression, FAILSAFE_MS);
+  function clearApplicationSelection(action) {
+    try {
+      if (typeof clearSelection === "function") {
+        clearSelection();
+        return;
+      }
+    } catch {
+      // Fall back to the application's own clear-selection control.
+    }
+
+    const clearButton = document.getElementById("clearSelectionButton");
+    if (!(clearButton instanceof HTMLButtonElement)
+        || clearButton === action
+        || fallbackClearing) return;
+
+    fallbackClearing = true;
+    try {
+      clearButton.click();
+    } finally {
+      fallbackClearing = false;
+    }
+  }
+
+  function completeActionClick(action, sequence) {
+    if (destroyed || sequence !== actionSequence) return;
+    clearApplicationSelection(action);
+    dismissSelectionBar();
     schedule();
   }
 
   function syncSelectionState() {
     const bar = selectionBar();
-    if (!bar) return;
-
-    if (!suppressionActive) {
-      if (barIsVisible(bar)) rememberBarTop(bar);
-      return;
+    if (!(bar instanceof HTMLElement)) return;
+    if (barIsVisible(bar) && !bar.classList.contains("mflSelectionActionDismissed")) {
+      rememberBarTop(bar);
     }
-
-    bar.classList.add("mflSelectionActionDismissed");
-    const elapsed = Date.now() - suppressionStartedAt;
-    if (elapsed >= EXIT_MS) bar.hidden = true;
-
-    const count = selectionCount();
-    if (count === 0 && elapsed >= EXIT_MS) releaseSuppression();
   }
 
   function desiredToastBottom() {
     const bar = selectionBar();
-    if (!suppressionActive && barIsVisible(bar)) {
+    if (barIsVisible(bar) && !bar.classList.contains("mflSelectionActionDismissed")) {
       rememberBarTop(bar);
       return Math.max(12, Math.ceil(innerHeight - bar.getBoundingClientRect().top + 12));
     }
 
-    if (lastSelectionTop !== null && (suppressionActive || Date.now() < toastAnchorUntil)) {
+    if (lastSelectionTop !== null && Date.now() < toastAnchorUntil) {
       return Math.max(12, Math.ceil(innerHeight - lastSelectionTop + 12));
     }
 
@@ -224,9 +216,19 @@
     if (!frame) frame = requestAnimationFrame(sync);
   }
 
-  function onActionStart(event) {
+  function onPointerDown(event) {
     if (!actionTarget(event.target)) return;
-    dismissSelectionBar();
+    prepareToastAnchor();
+  }
+
+  function onClick(event) {
+    if (fallbackClearing) return;
+    const action = actionTarget(event.target);
+    if (!action) return;
+
+    prepareToastAnchor();
+    const sequence = ++actionSequence;
+    queueMicrotask(() => completeActionClick(action, sequence));
   }
 
   function onResizeOrScroll() {
@@ -240,8 +242,8 @@
     schedule();
   }
 
-  window.addEventListener("pointerdown", onActionStart, true);
-  window.addEventListener("click", onActionStart, true);
+  window.addEventListener("pointerdown", onPointerDown, true);
+  window.addEventListener("click", onClick, true);
   window.addEventListener("resize", onResizeOrScroll);
   window.addEventListener("scroll", onResizeOrScroll, true);
   interval = window.setInterval(schedule, 100);
@@ -252,10 +254,9 @@
     if (frame) cancelAnimationFrame(frame);
     if (interval) clearInterval(interval);
     if (exitTimer) clearTimeout(exitTimer);
-    if (failsafeTimer) clearTimeout(failsafeTimer);
     observer?.disconnect();
-    window.removeEventListener("pointerdown", onActionStart, true);
-    window.removeEventListener("click", onActionStart, true);
+    window.removeEventListener("pointerdown", onPointerDown, true);
+    window.removeEventListener("click", onClick, true);
     window.removeEventListener("resize", onResizeOrScroll);
     window.removeEventListener("scroll", onResizeOrScroll, true);
     document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
