@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.48";
+  const VERSION = "1.120.24";
   const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;
 
@@ -26,14 +26,70 @@
   loadEvaluationMflPerUsd();`;
     const duplicatePermissionReplacement = `  loadSavedTableState();
   loadEvaluationMflPerUsd();`;
+    const nestedPatchAnchor = `    patchedSource = patchedSource.replace(
+      /const currentVersion = "\\d+\\.\\d+\\.\\d+";/g,`;
 
-    if (!source.includes(routeSetupMarker) || !source.includes(duplicatePermissionMarker)) {
+    const lockedMyPlayersRouteMarker = `  if (!hasWalletOptIn()) {
+    if (/^\\/my-players(?:\\/[^/]+)?$/.test(cleanPath)) {
+      return {
+        pageName: "myplayers",
+        options: cleanPath === "/my-players" ? {} : { replaceUrl: "/my-players" },
+      };
+    }`;
+    const lockedMyPlayersRouteReplacement = `  if (!hasWalletOptIn()) {
+    if (/^\\/my-players(?:\\/[^/]+)?$/.test(cleanPath)) {
+      const myPlayersTarget = tablePageTarget("myplayers", cleanPath, "/my-players");
+      if (myPlayersTarget) return myPlayersTarget;
+      return { pageName: "myplayers", options: {} };
+    }`;
+
+    const lockedMyPlayersUpgradeMarker = `      const lockedPage = state.currentPage;
+      await setPage(lockedPage, false, { view: "attributes" });
+      if (lockedPage === "myplayers") {
+        window.history.replaceState({}, "", "/my-players/attributes");
+      } else if (lockedPage === "watchlist") {`;
+    const lockedMyPlayersUpgradeReplacement = `      const lockedPage = state.currentPage;
+      const lockedMyPlayersTarget = lockedPage === "myplayers"
+        ? tablePageTarget("myplayers", window.location.pathname, "/my-players")
+        : null;
+      const lockedView = lockedMyPlayersTarget?.options?.view || "attributes";
+      await setPage(lockedPage, false, { view: lockedView });
+      if (lockedPage === "myplayers") {
+        const targetPath = "/my-players/" + viewSlug(lockedView);
+        if (window.location.pathname !== targetPath) {
+          window.history.replaceState({}, "", targetPath);
+        }
+      } else if (lockedPage === "watchlist") {`;
+
+    if (!source.includes(routeSetupMarker)
+        || !source.includes(duplicatePermissionMarker)
+        || !source.includes(nestedPatchAnchor)) {
       throw new Error("Could not locate the initial route permission markers.");
     }
 
-    return source
+    let patched = source
       .replace(routeSetupMarker, routeSetupReplacement)
       .replace(duplicatePermissionMarker, duplicatePermissionReplacement);
+
+    const nestedPatch = `    const lockedMyPlayersRouteMarker = ${JSON.stringify(lockedMyPlayersRouteMarker)};
+    const lockedMyPlayersUpgradeMarker = ${JSON.stringify(lockedMyPlayersUpgradeMarker)};
+    if (!patchedSource.includes(lockedMyPlayersRouteMarker)
+        || !patchedSource.includes(lockedMyPlayersUpgradeMarker)) {
+      fail("Could not locate the My Players refresh route markers.");
+      return;
+    }
+    patchedSource = patchedSource
+      .replace(
+        lockedMyPlayersRouteMarker,
+        ${JSON.stringify(lockedMyPlayersRouteReplacement)},
+      )
+      .replace(
+        lockedMyPlayersUpgradeMarker,
+        ${JSON.stringify(lockedMyPlayersUpgradeReplacement)},
+      );
+${nestedPatchAnchor}`;
+
+    return patched.replace(nestedPatchAnchor, nestedPatch);
   }
 
   function patchGlobalSearchLoading(source) {
