@@ -4,17 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.17"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.17"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.17"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.17"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.18"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.18"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.18"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.18"></script>
     <script>
       (() => {
-        const VERSION = "1.120.17";
+        const VERSION = "1.120.18";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.18", "Clear selection after selection bar actions and keep their toast anchored above it"],
           ["v1.120.17", "Keep the Stats view button limited to Database and MFL"],
           ["v1.120.16", "Place toasts above the selection bar and dismiss selection actions before loading"],
           ["v1.120.15", "Keep the Database Stats button persistent and limit route protection to reload"],
