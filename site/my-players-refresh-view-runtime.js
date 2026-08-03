@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.22";
+  const VERSION = "1.120.24";
   const VIEW_BY_SLUG = {
     attributes: "attributes",
     "next-overall": "next",
