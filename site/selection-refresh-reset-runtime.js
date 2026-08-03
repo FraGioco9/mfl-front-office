@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.19";
+  const VERSION = "1.120.25";
   const RESET_WINDOW_MS = 1000;
 
   const existing = window.__mflSelectionRefreshResetRuntime;
