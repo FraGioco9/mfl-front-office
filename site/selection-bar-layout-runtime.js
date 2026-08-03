@@ -1,18 +1,22 @@
 (() => {
-  const VERSION = "1.119.47";
+  const VERSION = "1.120.5";
   const previousRuntime = window.__mflSelectionBarLayoutRuntime;
 
   previousRuntime?.destroy?.();
 
   const selectionBar = document.querySelector("#selectionBar");
-  const appShell = document.querySelector("#appShell");
   const originalParent = selectionBar?.parentNode || null;
   const originalNextSibling = selectionBar?.nextSibling || null;
   let bodyObserver = null;
 
+  function pageContent() {
+    return document.querySelector("#appShell main, main");
+  }
+
   function attachToPageContent() {
-    if (!(selectionBar instanceof HTMLElement) || !(appShell instanceof HTMLElement)) return;
-    if (selectionBar.parentElement !== appShell) appShell.appendChild(selectionBar);
+    const main = pageContent();
+    if (!(selectionBar instanceof HTMLElement) || !(main instanceof HTMLElement)) return;
+    if (selectionBar.parentElement !== main) main.appendChild(selectionBar);
     selectionBar.dataset.contentLayoutVersion = VERSION;
   }
 
@@ -23,13 +27,18 @@
     document.head.appendChild(style);
   }
   style.textContent = `
-    body > #appShell {
+    #appShell main,
+    body > main {
       position: relative !important;
     }
 
-    body > #appShell > #selectionBar.selectionBar {
+    #appShell main > #selectionBar.selectionBar,
+    body > main > #selectionBar.selectionBar {
       position: absolute !important;
+      left: 50% !important;
+      right: auto !important;
       bottom: 22px !important;
+      transform: translateX(-50%) !important;
     }
   `;
 
