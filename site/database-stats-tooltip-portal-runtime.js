@@ -1,9 +1,10 @@
 (() => {
-  const VERSION = "1.120.5";
+  const VERSION = "1.120.6";
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
   let frame = 0;
+  let observer = null;
 
   function label(value) {
     return String(value || "").trim().toLowerCase();
@@ -15,9 +16,12 @@
   }
 
   function ensureStyles() {
-    if (document.getElementById("databaseStatsTooltipPortalStyles")) return;
-    const style = document.createElement("style");
-    style.id = "databaseStatsTooltipPortalStyles";
+    let style = document.getElementById("databaseStatsTooltipPortalStyles");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "databaseStatsTooltipPortalStyles";
+      document.head.appendChild(style);
+    }
     style.textContent = `
       #databaseStatsPage #databaseStatsCustomFilter { display: none !important; }
       #databaseStatsCustomTooltipPortal {
@@ -71,11 +75,11 @@
         font: inherit;
       }
     `;
-    document.head.appendChild(style);
   }
 
   function ensureTooltip() {
     if (tooltip?.isConnected) return tooltip;
+    if (!document.body) return null;
     tooltip = document.createElement("div");
     tooltip.id = "databaseStatsCustomTooltipPortal";
     tooltip.hidden = true;
@@ -93,7 +97,7 @@
   function position() {
     const button = customButton();
     const panel = ensureTooltip();
-    if (!button || panel.hidden) return;
+    if (!button || !panel || panel.hidden) return;
     const buttonRect = button.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const padding = 12;
@@ -112,6 +116,7 @@
   function open() {
     ensureStyles();
     const panel = ensureTooltip();
+    if (!panel) return;
     panel.querySelector('[data-role="min"]').value = document.querySelector("#databaseStatsCustomMin")?.value || "0";
     panel.querySelector('[data-role="max"]').value = document.querySelector("#databaseStatsCustomMax")?.value || "99";
     panel.hidden = false;
@@ -122,15 +127,15 @@
 
   function close(restoreFocus = false) {
     const panel = ensureTooltip();
-    panel.hidden = true;
+    if (panel) panel.hidden = true;
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     if (restoreFocus) customButton()?.focus({ preventScroll: true });
   }
 
   function normalizedRange() {
     const panel = ensureTooltip();
-    let min = Number(panel.querySelector('[data-role="min"]')?.value);
-    let max = Number(panel.querySelector('[data-role="max"]')?.value);
+    let min = Number(panel?.querySelector('[data-role="min"]')?.value);
+    let max = Number(panel?.querySelector('[data-role="max"]')?.value);
     if (!Number.isFinite(min)) min = 0;
     if (!Number.isFinite(max)) max = 99;
     min = Math.max(0, Math.min(99, Math.trunc(min)));
@@ -143,11 +148,11 @@
     const range = normalizedRange();
     const min = document.querySelector("#databaseStatsCustomMin");
     const max = document.querySelector("#databaseStatsCustomMax");
-    if (min) min.value = String(range.min);
-    if (max) max.value = String(range.max);
-
     const applyButton = document.querySelector("#databaseStatsCustomApply");
     if (!(applyButton instanceof HTMLElement)) return;
+
+    if (min) min.value = String(range.min);
+    if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
 
@@ -156,9 +161,19 @@
     close();
   }
 
+  function portalContains(target) {
+    const panel = ensureTooltip();
+    return Boolean(panel && !panel.hidden && target instanceof Element && panel.contains(target));
+  }
+
+  function stopPortalEvent(event) {
+    if (portalContains(event.target)) event.stopImmediatePropagation();
+  }
+
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
     const filter = target.closest("#databaseStatsOverallFilters .mflStatsFilterButton");
     if (filter && label(filter.textContent) === "custom") {
       event.preventDefault();
@@ -166,38 +181,39 @@
       open();
       return;
     }
+
     if (target.closest('#databaseStatsCustomTooltipPortal [data-role="apply"]')) {
       event.preventDefault();
       event.stopImmediatePropagation();
       apply();
       return;
     }
-    const panel = ensureTooltip();
-    if (!panel.hidden && !panel.contains(target)) close();
-  }
 
-  function onDraftValueEvent(event) {
-    const panel = ensureTooltip();
-    const target = event.target;
-    if (!panel.hidden && target instanceof Element && panel.contains(target)) {
+    if (portalContains(target)) {
       event.stopImmediatePropagation();
+      return;
     }
+
+    const panel = ensureTooltip();
+    if (panel && !panel.hidden) close();
   }
 
   function onKeyDown(event) {
     const panel = ensureTooltip();
-    if (panel.hidden) return;
-    if (event.key === "Enter" && event.target instanceof Element && panel.contains(event.target)) {
+    if (!panel || panel.hidden || !(event.target instanceof Element) || !panel.contains(event.target)) return;
+    if (event.key === "Enter") {
       event.preventDefault();
       event.stopImmediatePropagation();
       apply();
-    } else if (event.key === "Escape") {
+      return;
+    }
+    if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
       close(true);
-    } else if (event.target instanceof Element && panel.contains(event.target)) {
-      event.stopImmediatePropagation();
+      return;
     }
+    event.stopImmediatePropagation();
   }
 
   function schedule() {
@@ -211,23 +227,39 @@
     });
   }
 
+  const stoppedEvents = [
+    "pointerdown",
+    "pointerup",
+    "mousedown",
+    "mouseup",
+    "beforeinput",
+    "input",
+    "change",
+    "wheel",
+  ];
+
   document.addEventListener("click", onClick, true);
-  document.addEventListener("input", onDraftValueEvent, true);
-  document.addEventListener("change", onDraftValueEvent, true);
+  stoppedEvents.forEach((type) => document.addEventListener(type, stopPortalEvent, true));
   document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener("keyup", stopPortalEvent, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
-  const observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  observer = new MutationObserver(schedule);
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["hidden", "class"],
+  });
   schedule();
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
-    observer.disconnect();
+    observer?.disconnect();
     document.removeEventListener("click", onClick, true);
-    document.removeEventListener("input", onDraftValueEvent, true);
-    document.removeEventListener("change", onDraftValueEvent, true);
+    stoppedEvents.forEach((type) => document.removeEventListener(type, stopPortalEvent, true));
     document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("keyup", stopPortalEvent, true);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     tooltip?.remove();
