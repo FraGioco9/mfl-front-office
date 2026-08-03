@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.18";
+  const VERSION = "1.120.25";
   const EXIT_MS = 220;
   const TOAST_ANCHOR_MS = 15000;
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage, .toast";
@@ -91,6 +91,10 @@
     if (!(action instanceof HTMLElement) || !bar.contains(action)) return null;
     if (action.matches(":disabled") || action.getAttribute("aria-disabled") === "true") return null;
     return action;
+  }
+
+  function applicationOwnsSelectionLifecycle(action) {
+    return action?.id === "addToWatchlistButton" || action?.id === "moveToWatchlistButton";
   }
 
   function rememberBarTop(bar = selectionBar()) {
@@ -227,6 +231,12 @@
     if (!action) return;
 
     prepareToastAnchor();
+    if (applicationOwnsSelectionLifecycle(action)) {
+      actionSequence += 1;
+      schedule();
+      return;
+    }
+
     const sequence = ++actionSequence;
     queueMicrotask(() => completeActionClick(action, sequence));
   }
