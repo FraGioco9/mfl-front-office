@@ -4,20 +4,87 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.21"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.21"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.21"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.21"></script>
     <script>
       (() => {
-        const VERSION = "1.120.21";
-        window.__mflInitialMyPlayersPath = /^\/my-players\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/i.test(window.location.pathname)
-          ? window.location.pathname.replace(/\/+$/, "")
-          : "";
+        const desiredPath = String(window.location.pathname || "").replace(/\/+$/, "");
+        if (!/^\/my-players\/(?:attributes|next-overall|contracts|current-season|all-time)$/i.test(desiredPath)) return;
+
+        window.__mflInitialMyPlayersPath = desiredPath;
+
+        const originalReplaceState = window.history.replaceState;
+        const originalPushState = window.history.pushState;
+        let active = true;
+        let timeout = 0;
+
+        function normalizedTarget(url) {
+          if (url == null) return "";
+          try {
+            const target = new URL(String(url), window.location.href);
+            if (target.origin !== window.location.origin) return "";
+            return target.pathname.replace(/\/+$/, "") || "/";
+          } catch {
+            return "";
+          }
+        }
+
+        function shouldBlock(url) {
+          if (!active) return false;
+          const targetPath = normalizedTarget(url);
+          if (!targetPath || targetPath.toLowerCase() === desiredPath.toLowerCase()) return false;
+          return /^\/my-players(?:\/attributes)?$/i.test(targetPath);
+        }
+
+        function guardedReplaceState(state, title, url) {
+          if (shouldBlock(url)) return;
+          return originalReplaceState.apply(this, arguments);
+        }
+
+        function guardedPushState(state, title, url) {
+          if (shouldBlock(url)) return;
+          return originalPushState.apply(this, arguments);
+        }
+
+        function release() {
+          if (!active) return;
+          active = false;
+          if (timeout) window.clearTimeout(timeout);
+          if (window.history.replaceState === guardedReplaceState) {
+            window.history.replaceState = originalReplaceState;
+          }
+          if (window.history.pushState === guardedPushState) {
+            window.history.pushState = originalPushState;
+          }
+          window.removeEventListener("pointerdown", release, true);
+          window.removeEventListener("keydown", release, true);
+          window.removeEventListener("touchstart", release, true);
+          window.removeEventListener("popstate", release);
+          if (window.__mflReleaseMyPlayersRouteGuard === release) {
+            delete window.__mflReleaseMyPlayersRouteGuard;
+          }
+        }
+
+        window.history.replaceState = guardedReplaceState;
+        window.history.pushState = guardedPushState;
+        window.__mflReleaseMyPlayersRouteGuard = release;
+        window.addEventListener("pointerdown", release, true);
+        window.addEventListener("keydown", release, true);
+        window.addEventListener("touchstart", release, true);
+        window.addEventListener("popstate", release);
+        timeout = window.setTimeout(release, 15000);
+      })();
+    </script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.22"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.22"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.22"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.22"></script>
+    <script>
+      (() => {
+        const VERSION = "1.120.22";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.22", "Keep the selected My Players view URL unchanged while refreshing"],
           ["v1.120.21", "Preserve the selected My Players view when refreshing"],
           ["v1.120.19", "Start refreshed pages with no selected players"],
           ["v1.120.18", "Clear selection after selection bar actions and keep their toast anchored above it"],
