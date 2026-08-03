@@ -10,6 +10,27 @@
   let observer = null;
   let destroyed = false;
 
+  function syncFooter() {
+    const footer = document.querySelector(".siteFooter");
+    if (!(footer instanceof HTMLElement)) return;
+
+    let link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
+    if (!(link instanceof HTMLAnchorElement)) {
+      link = document.createElement("a");
+      footer.prepend(link);
+    }
+
+    const text = `MFL Front Office v${VERSION}`;
+    link.hidden = false;
+    link.removeAttribute("aria-hidden");
+    link.href = "/changelog";
+    link.dataset.page = "changelog";
+    link.dataset.releaseLabel = text;
+    link.textContent = text;
+    link.setAttribute("aria-label", `${text}, open Changelog`);
+    footer.dataset.releaseVersion = VERSION;
+  }
+
   function statsIsActive() {
     const statsPage = document.getElementById("databaseStatsPage");
     return STATS_PATH.test(location.pathname)
@@ -65,6 +86,7 @@
   function sync() {
     frame = 0;
     if (destroyed) return;
+    syncFooter();
     ensureStatsButton();
   }
 
