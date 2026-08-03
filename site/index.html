@@ -4,16 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.12"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.12"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.12"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.13"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.13"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.13"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.13"></script>
     <script>
       (() => {
-        const VERSION = "1.120.12";
+        const VERSION = "1.120.13";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.13", "Release the Database Stats reload guard before explicit navigation"],
           ["v1.120.12", "Preserve the Stats route and view button throughout Database Stats reload"],
           ["v1.120.11", "Restore the Stats view button after reloading Database Stats"],
           ["v1.120.10", "Finish Changelog loading cleanly and make Stats reload, selection dismissal, and toast spacing deterministic"],
@@ -106,7 +108,7 @@
 ${statsSeedMarker}`,
           );
 
-          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
