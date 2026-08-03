@@ -12,7 +12,8 @@ import run_flow_rebuild_paged as paged
 
 
 PLAYER_REQUESTS_PER_MINUTE = 80
-PROGRESSION_REQUESTS_PER_MINUTE = 40
+PROGRESSION_REQUESTS_PER_MINUTE = 80
+PROGRESSION_MAX_URL_LENGTH = 5000
 
 
 def print_failure(stage: str, error: BaseException) -> None:
@@ -50,12 +51,76 @@ def install_thread_error_logging() -> None:
     threading.excepthook = report_thread_failure
 
 
+def progression_url(player_ids: list[int], interval: str) -> str:
+    query = pipeline.urlencode(
+        {
+            "playersIds": ",".join(str(player_id) for player_id in player_ids),
+            "interval": interval,
+        }
+    )
+    return f"{pipeline.PROGRESSIONS_URL}?{query}"
+
+
+def prepare_progression_batches(
+    active_players: list[dict[str, Any]],
+) -> tuple[tuple[int, ...], ...]:
+    """Build batches whose longest progression URL is at most 5,000 characters."""
+    excluded_wallets = {
+        pipeline.MFL_WALLET_ADDRESS.lower(),
+        pipeline.MFL_TRADE_WALLET_ADDRESS.lower(),
+    }
+    eligible_ids = sorted(
+        {
+            pipeline.player_id(player)
+            for player in active_players
+            if paged._owner_wallet_address(player) not in excluded_wallets
+        }
+    )
+
+    batches: list[tuple[int, ...]] = []
+    current: list[int] = []
+    for player_id in eligible_ids:
+        candidate = [*current, player_id]
+        candidate_url_length = len(progression_url(candidate, "CURRENT_SEASON"))
+        if current and (
+            len(candidate) > pipeline.PROGRESSION_BATCH_SIZE
+            or candidate_url_length > PROGRESSION_MAX_URL_LENGTH
+        ):
+            batches.append(tuple(current))
+            current = [player_id]
+        else:
+            current = candidate
+
+        if len(progression_url(current, "CURRENT_SEASON")) > PROGRESSION_MAX_URL_LENGTH:
+            raise RuntimeError(
+                f"Progression URL exceeds {PROGRESSION_MAX_URL_LENGTH} characters "
+                f"for player {player_id}"
+            )
+
+    if current:
+        batches.append(tuple(current))
+
+    excluded_count = len(active_players) - len(eligible_ids)
+    longest_url = max(
+        (len(progression_url(list(batch), "CURRENT_SEASON")) for batch in batches),
+        default=0,
+    )
+    pipeline.log(
+        f"Progression batches ready: {len(batches)} batches from "
+        f"{len(eligible_ids)} active players; longest URL {longest_url}/"
+        f"{PROGRESSION_MAX_URL_LENGTH} characters; excluded {excluded_count} "
+        "MFL/MFL Trade players and all retired players"
+    )
+    return tuple(batches)
+
+
 def configure_rebuild() -> None:
     """Install permanent and independent PlayMFL request limits."""
     pipeline.MFL_REQUESTS_PER_MINUTE = PLAYER_REQUESTS_PER_MINUTE
     pipeline.MFL_WORKERS = 320
     pipeline.RateLimiter = paged.RollingRateLimiter
     pipeline.refresh_wallets = paged.refresh_wallets_without_playmfl_limiter
+    paged.prepare_progression_batches = prepare_progression_batches
 
     configured_player_fetcher = rebuild.fetch_active_and_retired_player_sources
 
