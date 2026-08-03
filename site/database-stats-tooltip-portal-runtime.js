@@ -1,9 +1,8 @@
 (() => {
-  const VERSION = "1.120.3";
+  const VERSION = "1.120.5";
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
-  let allowOriginalCustomClick = false;
   let frame = 0;
 
   function label(value) {
@@ -116,6 +115,7 @@
     panel.querySelector('[data-role="min"]').value = document.querySelector("#databaseStatsCustomMin")?.value || "0";
     panel.querySelector('[data-role="max"]').value = document.querySelector("#databaseStatsCustomMax")?.value || "99";
     panel.hidden = false;
+    document.documentElement.dataset.databaseStatsCustomDraft = "true";
     position();
     panel.querySelector('[data-role="min"]')?.focus({ preventScroll: true });
   }
@@ -123,6 +123,7 @@
   function close(restoreFocus = false) {
     const panel = ensureTooltip();
     panel.hidden = true;
+    delete document.documentElement.dataset.databaseStatsCustomDraft;
     if (restoreFocus) customButton()?.focus({ preventScroll: true });
   }
 
@@ -140,15 +141,16 @@
 
   function apply() {
     const range = normalizedRange();
-    const button = customButton();
-    if (!button) return;
-    allowOriginalCustomClick = true;
-    try { button.click(); } finally { allowOriginalCustomClick = false; }
     const min = document.querySelector("#databaseStatsCustomMin");
     const max = document.querySelector("#databaseStatsCustomMax");
     if (min) min.value = String(range.min);
     if (max) max.value = String(range.max);
-    document.querySelector("#databaseStatsCustomApply")?.click();
+
+    const applyButton = document.querySelector("#databaseStatsCustomApply");
+    if (!(applyButton instanceof HTMLElement)) return;
+    delete document.documentElement.dataset.databaseStatsCustomDraft;
+    applyButton.click();
+
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
     close();
@@ -159,7 +161,6 @@
     if (!target) return;
     const filter = target.closest("#databaseStatsOverallFilters .mflStatsFilterButton");
     if (filter && label(filter.textContent) === "custom") {
-      if (allowOriginalCustomClick) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       open();
@@ -175,15 +176,27 @@
     if (!panel.hidden && !panel.contains(target)) close();
   }
 
+  function onDraftValueEvent(event) {
+    const panel = ensureTooltip();
+    const target = event.target;
+    if (!panel.hidden && target instanceof Element && panel.contains(target)) {
+      event.stopImmediatePropagation();
+    }
+  }
+
   function onKeyDown(event) {
     const panel = ensureTooltip();
     if (panel.hidden) return;
     if (event.key === "Enter" && event.target instanceof Element && panel.contains(event.target)) {
       event.preventDefault();
+      event.stopImmediatePropagation();
       apply();
     } else if (event.key === "Escape") {
       event.preventDefault();
+      event.stopImmediatePropagation();
       close(true);
+    } else if (event.target instanceof Element && panel.contains(event.target)) {
+      event.stopImmediatePropagation();
     }
   }
 
@@ -199,6 +212,8 @@
   }
 
   document.addEventListener("click", onClick, true);
+  document.addEventListener("input", onDraftValueEvent, true);
+  document.addEventListener("change", onDraftValueEvent, true);
   document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
@@ -210,10 +225,13 @@
     if (frame) cancelAnimationFrame(frame);
     observer.disconnect();
     document.removeEventListener("click", onClick, true);
+    document.removeEventListener("input", onDraftValueEvent, true);
+    document.removeEventListener("change", onDraftValueEvent, true);
     document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     tooltip?.remove();
+    delete document.documentElement.dataset.databaseStatsCustomDraft;
     document.getElementById("databaseStatsTooltipPortalStyles")?.remove();
   }
 
