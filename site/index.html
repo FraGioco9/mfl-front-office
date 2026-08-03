@@ -7,7 +7,6 @@
     <script src="/watchlist-route-ui-runtime.js?v=1.120.3"></script>
     <script src="/database-stats-runtime.js?v=1.120.3"></script>
     <script src="/database-stats-refinement-runtime.js?v=1.120.3"></script>
-    <script src="/database-stats-tooltip-portal-runtime.js?v=1.120.3"></script>
     <script>
       (() => {
         const VERSION = "1.120.3";
@@ -82,11 +81,12 @@
           const tableLoadingRuntimeTag = `<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const evaluationDiscountRuntimeTag = `<script src="/evaluation-discount-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const evaluationShareRuntimeTag = `<script src="/evaluation-share-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const databaseStatsTooltipRuntimeTag = `<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const changelogHistoryRuntimeTag = `<script src="/changelog-history-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const publicRouteSummaryRuntimeTag = `<script src="/public-route-summary-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           source = source.replace(
             bodyMarker,
-            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${evaluationShareRuntimeTag}\n${changelogHistoryRuntimeTag}\n${publicRouteSummaryRuntimeTag}\n${bodyMarker}`,
+            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${evaluationShareRuntimeTag}\n${databaseStatsTooltipRuntimeTag}\n${changelogHistoryRuntimeTag}\n${publicRouteSummaryRuntimeTag}\n${bodyMarker}`,
           );
 
           document.open();
