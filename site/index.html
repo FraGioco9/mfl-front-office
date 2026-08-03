@@ -4,16 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.4"></script>
-    <script src="/database-stats-runtime.js?v=1.120.4"></script>
-    <script src="/database-stats-refinement-runtime.js?v=1.120.4"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.5"></script>
+    <script src="/database-stats-runtime.js?v=1.120.5"></script>
+    <script src="/database-stats-refinement-runtime.js?v=1.120.5"></script>
     <script>
       (() => {
-        const VERSION = "1.120.4";
+        const VERSION = "1.120.5";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.5", "Apply Custom filters once and align selection, toasts, loading headers, and footer version"],
           ["v1.120.4", "Defer Custom filters until Apply and keep toasts and footer above current UI"],
           ["v1.120.3", "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"],
           ["v1.120.2", "Use a custom Overall tooltip and exclude MFL wallets from Database Stats"],
@@ -83,7 +84,7 @@
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
-          const finalRuntimeExpression = String.raw`'<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
