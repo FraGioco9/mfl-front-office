@@ -4,17 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.14"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.14"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.14"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.14"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.15"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.15"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.15"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.15"></script>
     <script>
       (() => {
-        const VERSION = "1.120.14";
+        const VERSION = "1.120.15";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.15", "Keep the Database Stats button persistent and limit route protection to reload"],
           ["v1.120.14", "Release all Database Stats route guards before switching view or page"],
           ["v1.120.13", "Release the Database Stats reload guard before explicit navigation"],
           ["v1.120.12", "Preserve the Stats route and view button throughout Database Stats reload"],
