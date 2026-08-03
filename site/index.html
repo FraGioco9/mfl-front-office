@@ -4,16 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.3"></script>
-    <script src="/database-stats-runtime.js?v=1.120.3"></script>
-    <script src="/database-stats-refinement-runtime.js?v=1.120.3"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.4"></script>
+    <script src="/database-stats-runtime.js?v=1.120.4"></script>
+    <script src="/database-stats-refinement-runtime.js?v=1.120.4"></script>
     <script>
       (() => {
-        const VERSION = "1.120.3";
+        const VERSION = "1.120.4";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.4", "Defer Custom filters until Apply and keep toasts and footer above current UI"],
           ["v1.120.3", "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"],
           ["v1.120.2", "Use a custom Overall tooltip and exclude MFL wallets from Database Stats"],
           ["v1.120.1", "Keep Database Stats isolated from table rendering and refine view controls"],
@@ -58,12 +59,12 @@
           const releaseEntryMarker = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label)) entries.set(label, description);';
           const releaseEntryReplacement = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label) && !/^v1\\./.test(label)) entries.set(label, description);';
           const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.33';
-          const bodyMarker = '</body>';
+          const nestedPatchEndMarker = '\n`;\n          if (!source.includes(patchMarker)) {';
           if (!source.includes(versionMarker)
               || !currentReleasesPattern.test(source)
               || !source.includes(releaseEntryMarker)
               || !source.includes(runtimeMarker)
-              || !source.includes(bodyMarker)) {
+              || !source.includes(nestedPatchEndMarker)) {
             fail("Could not locate the release shell markers.");
             return;
           }
@@ -76,17 +77,18 @@
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
-          const stabilityRuntimeTag = `<script src="/club-view-stability-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const selectionLayoutRuntimeTag = `<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const tableLoadingRuntimeTag = `<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const evaluationDiscountRuntimeTag = `<script src="/evaluation-discount-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const evaluationShareRuntimeTag = `<script src="/evaluation-share-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const databaseStatsTooltipRuntimeTag = `<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const changelogHistoryRuntimeTag = `<script src="/changelog-history-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const publicRouteSummaryRuntimeTag = `<script src="/public-route-summary-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const tooltipRuntimeTag = `<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const releaseUiRuntimeTag = `<script src="/release-ui-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const finalRuntimeMarkup = `${tooltipRuntimeTag}\n${releaseUiRuntimeTag}`;
+          const nestedFinalInjection = `
+        source = source.replace(
+          '</body>',
+          ${JSON.stringify(`${finalRuntimeMarkup}\n</body>`)},
+        );
+`;
           source = source.replace(
-            bodyMarker,
-            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${evaluationShareRuntimeTag}\n${databaseStatsTooltipRuntimeTag}\n${changelogHistoryRuntimeTag}\n${publicRouteSummaryRuntimeTag}\n${bodyMarker}`,
+            nestedPatchEndMarker,
+            `${nestedFinalInjection}${nestedPatchEndMarker}`,
           );
 
           document.open();
