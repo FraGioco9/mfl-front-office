@@ -7,6 +7,10 @@ import runpy
 from typing import Any
 from urllib.parse import urlparse
 
+# rebuild_database installs the in-memory update_database compatibility module
+# before importing run_flow_rebuild. Import it first so the authenticated
+# entrypoint follows the same initialization order as the normal rebuild.
+import rebuild_database  # noqa: F401
 import run_flow_rebuild as pipeline
 
 
