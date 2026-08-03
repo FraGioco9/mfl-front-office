@@ -80,10 +80,14 @@
           const tooltipRuntimeTag = `<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const releaseUiRuntimeTag = `<script src="/release-ui-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const finalRuntimeMarkup = `${tooltipRuntimeTag}\n${releaseUiRuntimeTag}`;
+          const scriptCloseMarker = `</scr${"ipt"}>`;
+          const finalRuntimeExpression = JSON.stringify(`${finalRuntimeMarkup}\n</body>`)
+            .split(scriptCloseMarker)
+            .join('</scr" + "ipt>');
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
-          ${JSON.stringify(`${finalRuntimeMarkup}\n</body>`)},
+          ${finalRuntimeExpression},
         );
 `;
           source = source.replace(
