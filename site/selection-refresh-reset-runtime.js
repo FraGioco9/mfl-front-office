@@ -45,22 +45,35 @@
 
   function clearSelectionFromPageStates(appState) {
     const pageStates = appState?.tablePageStates;
-    if (!pageStates || typeof pageStates !== "object" || Array.isArray(pageStates)) return;
+    if (!pageStates || typeof pageStates !== "object" || Array.isArray(pageStates)) return false;
 
+    let changed = false;
     Object.values(pageStates).forEach((pageState) => {
       if (!pageState || typeof pageState !== "object" || Array.isArray(pageState)) return;
+      if (Array.isArray(pageState.selectedPlayerIds) && pageState.selectedPlayerIds.length) changed = true;
+      if (pageState.selectionAnchorPlayerId != null) changed = true;
       pageState.selectedPlayerIds = [];
       pageState.selectionAnchorPlayerId = null;
     });
+    return changed;
   }
 
   function clearCurrentSelection() {
     const appState = applicationState();
     if (!appState || !(appState.selectedPlayerIds instanceof Set)) return false;
 
+    let changed = appState.selectedPlayerIds.size > 0 || appState.selectionAnchorPlayerId != null;
     appState.selectedPlayerIds.clear();
     appState.selectionAnchorPlayerId = null;
-    clearSelectionFromPageStates(appState);
+    changed = clearSelectionFromPageStates(appState) || changed;
+
+    const bar = document.getElementById("selectionBar");
+    if (bar instanceof HTMLElement) {
+      bar.classList.remove("visible", "mflSelectionActionDismissed");
+      bar.hidden = true;
+    }
+
+    if (!changed) return true;
 
     try {
       if (typeof updateSelectionBar === "function") updateSelectionBar();
@@ -78,12 +91,6 @@
       if (typeof saveTableState === "function") saveTableState();
     } catch {
       // Refresh behavior remains correct for this page load.
-    }
-
-    const bar = document.getElementById("selectionBar");
-    if (bar instanceof HTMLElement) {
-      bar.classList.remove("visible", "mflSelectionActionDismissed");
-      bar.hidden = true;
     }
 
     return true;
