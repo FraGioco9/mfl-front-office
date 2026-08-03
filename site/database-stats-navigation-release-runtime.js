@@ -1,41 +1,51 @@
 (() => {
-  const VERSION = "1.120.14";
+  const VERSION = "1.120.15";
+  const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const STATS_PATH = /^\/database\/stats\/?$/i;
+  const RUNTIME_KEY = "__mflDatabaseStatsReloadBootstrap";
   const INTENT_KEY = "mfl-database-stats-reload-intent";
-  const BASE_HISTORY_KEY = "__mflDatabaseStatsBaseHistory";
 
-  const existing = window.__mflDatabaseStatsNavigationReleaseRuntime;
+  const existing = window[RUNTIME_KEY];
   if (existing?.version === VERSION) {
-    existing.rebind?.();
+    existing.finalize?.();
     return;
   }
   existing?.destroy?.();
 
-  const baseHistory = window[BASE_HISTORY_KEY] || {
-    pushState: history.pushState.bind(history),
-    replaceState: history.replaceState.bind(history),
-  };
-  window[BASE_HISTORY_KEY] = baseHistory;
+  const basePushState = history.pushState.bind(history);
+  const baseReplaceState = history.replaceState.bind(history);
+  let active = STATS_PATH.test(location.pathname);
+  let timeout = 0;
 
-  let interval = 0;
-  let destroyed = false;
-
-  function statsIsOpen() {
-    const page = document.getElementById("databaseStatsPage");
-    return STATS_PATH.test(location.pathname)
-      || document.body?.dataset.page === "databasestats"
-      || Boolean(page && !page.hidden);
+  function asUrl(value) {
+    try {
+      return new URL(value == null ? location.href : value, location.origin);
+    } catch {
+      return new URL(location.href);
+    }
   }
 
-  function explicitNavigationTarget(target) {
-    if (!(target instanceof Element)) return null;
-    const candidate = target.closest('a[href], [data-page], .viewButton[data-view]');
-    if (!(candidate instanceof Element)) return null;
-    if (candidate.matches('.viewButton[data-view="stats"]')) return null;
-    return candidate;
+  function shouldPreserveStats(value) {
+    if (!active) return false;
+    const next = asUrl(value);
+    return DATABASE_PATH.test(next.pathname) && !STATS_PATH.test(next.pathname);
   }
 
-  function clearReloadIntent() {
+  function guardedPushState(stateValue, title, value) {
+    if (shouldPreserveStats(value)) {
+      return baseReplaceState(stateValue, title, "/database/stats");
+    }
+    return basePushState(stateValue, title, value);
+  }
+
+  function guardedReplaceState(stateValue, title, value) {
+    if (shouldPreserveStats(value)) {
+      return baseReplaceState(stateValue, title, "/database/stats");
+    }
+    return baseReplaceState(stateValue, title, value);
+  }
+
+  function clearIntent() {
     try {
       sessionStorage.removeItem(INTENT_KEY);
     } catch {
@@ -43,71 +53,38 @@
     }
   }
 
-  function restoreBaseHistory() {
-    history.pushState = baseHistory.pushState;
-    history.replaceState = baseHistory.replaceState;
+  function restoreHistory() {
+    if (history.pushState === guardedPushState) history.pushState = basePushState;
+    if (history.replaceState === guardedReplaceState) history.replaceState = baseReplaceState;
+    active = false;
+    clearIntent();
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = 0;
+    }
   }
 
-  function releaseStatsRuntimes() {
-    clearReloadIntent();
-
-    const buttonRuntime = window.__mflDatabaseStatsButtonRuntime;
-    const statsRuntime = window.__mflDatabaseStatsRuntime;
-
-    buttonRuntime?.destroy?.();
-    statsRuntime?.destroy?.();
-
-    // Both runtimes restore the History API from different points in their
-    // wrapper chain. Reapply the pre-Stats functions after both have exited.
-    restoreBaseHistory();
+  function finalize() {
+    restoreHistory();
+    queueMicrotask(() => {
+      window.__mflDatabaseStatsRuntime?.sync?.();
+      window.__mflDatabaseStatsButtonRuntime?.rebind?.();
+    });
   }
-
-  function onNavigationClick(event) {
-    if (!statsIsOpen()) return;
-    if (!explicitNavigationTarget(event.target)) return;
-
-    // The click event already has a fixed propagation path. Removing the
-    // Stats runtimes here releases their route guards while allowing the
-    // application's existing target/document handlers to finish navigation.
-    releaseStatsRuntimes();
-  }
-
-  function syncFooter() {
-    const footer = document.querySelector(".siteFooter");
-    if (!(footer instanceof HTMLElement)) return;
-    const link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
-    if (!(link instanceof HTMLElement)) return;
-
-    const text = `MFL Front Office v${VERSION}`;
-    link.textContent = text;
-    link.dataset.releaseLabel = text;
-    link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = VERSION;
-  }
-
-  function sync() {
-    if (destroyed) return;
-    syncFooter();
-  }
-
-  function rebind() {
-    if (destroyed) return;
-    syncFooter();
-  }
-
-  window.addEventListener("click", onNavigationClick, true);
-  interval = window.setInterval(sync, 250);
-  rebind();
 
   function destroy() {
-    destroyed = true;
-    if (interval) clearInterval(interval);
-    window.removeEventListener("click", onNavigationClick, true);
+    restoreHistory();
   }
 
-  window.__mflDatabaseStatsNavigationReleaseRuntime = {
+  if (active) {
+    history.pushState = guardedPushState;
+    history.replaceState = guardedReplaceState;
+    timeout = window.setTimeout(restoreHistory, 15000);
+  }
+
+  window[RUNTIME_KEY] = {
     version: VERSION,
-    rebind,
+    finalize,
     destroy,
   };
 })();
