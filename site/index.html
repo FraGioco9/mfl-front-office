@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
+    <script src="/watchlist-route-ui-runtime.js?v=1.119.8"></script>
     <script>
       (() => {
         const VERSION = "1.119.8";
@@ -65,12 +66,6 @@
           );
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
-
-          const watchlistRouteUiRuntimeTag = `<script src="/watchlist-route-ui-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          source = source.replace(
-            '</head>',
-            `${watchlistRouteUiRuntimeTag}\n</head>`,
-          );
 
           const stabilityRuntimeTag = `<script src="/club-view-stability-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const selectionLayoutRuntimeTag = `<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
