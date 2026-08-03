@@ -73,17 +73,18 @@
         timeout = window.setTimeout(release, 15000);
       })();
     </script>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.25"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.25"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.25"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.25"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.26"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.26"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.26"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.26"></script>
     <script>
       (() => {
-        const VERSION = "1.120.25";
+        const VERSION = "1.120.26";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.26", "Keep the selection bar and toast 12px apart and dismiss watchlist actions immediately"],
           ["v1.120.25", "Keep selection available until watchlist actions complete and show their toast"],
           ["v1.120.24", "Preserve the selected My Players view directly in application routing"],
           ["v1.120.22", "Keep the selected My Players view URL unchanged while refreshing"],
@@ -187,7 +188,7 @@
 ${statsSeedMarker}`,
           );
 
-          const finalRuntimeExpression = String.raw`'<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-feedback-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-refresh-reset-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/my-players-refresh-view-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+          const finalRuntimeExpression = String.raw`'<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-refresh-reset-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/my-players-refresh-view-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-stack-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
