@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.7";
+  const VERSION = "1.120.8";
   const TABLE_PAGES = new Set([
     "database",
     "mfl",
@@ -57,20 +57,16 @@
     };
   }
 
+  function rowsReady(tableBody) {
+    if (!(tableBody instanceof HTMLElement) || tableBody.children.length === 0) return false;
+    return Boolean(tableBody.querySelector("tr > td, tr > th"));
+  }
+
   function loadingStateActive(tableBody) {
     if (!tablePageActive()) return false;
+    if (rowsReady(tableBody)) return false;
+
     const body = document.body;
-    const hasRenderedRows = tableBody instanceof HTMLElement && tableBody.children.length > 0;
-
-    if (hasRenderedRows && !hardLoadingStateActive()) {
-      body.classList.remove(
-        "tableRowsLoading",
-        "mflTableDataLoading",
-        "clubViewStableLoading",
-      );
-      return false;
-    }
-
     return hardLoadingStateActive()
       || body.classList.contains("tableRowsLoading")
       || body.classList.contains("mflTableDataLoading")
@@ -103,7 +99,16 @@
   }
 
   function finishLoadingPresentation(tableBody, emptyState) {
+    const hasRows = rowsReady(tableBody);
     document.body.classList.remove("mflPlayersLoadingOnly");
+    if (hasRows) {
+      document.body.classList.remove(
+        "tableRowsLoading",
+        "mflTableDataLoading",
+        "clubViewStableLoading",
+      );
+    }
+
     if (tableBody instanceof HTMLElement) {
       tableBody.removeAttribute("aria-hidden");
       tableBody.style.removeProperty("visibility");
@@ -111,11 +116,10 @@
       tableBody.style.removeProperty("pointer-events");
     }
 
-    if (emptyState instanceof HTMLElement && String(emptyState.textContent || "").trim() === "Loading players...") {
-      const hasRows = Boolean(tableBody?.children?.length);
+    if (emptyState instanceof HTMLElement) {
       if (hasRows) {
         emptyState.hidden = true;
-      } else {
+      } else if (String(emptyState.textContent || "").trim() === "Loading players...") {
         emptyState.hidden = false;
         emptyState.textContent = loadingSnapshot?.text || "No players found.";
       }
@@ -160,7 +164,7 @@
       display: table-header-group !important;
     }
 
-    body.mflPlayersLoadingOnly #progressionPage #tableBody {
+    body.mflPlayersLoadingOnly #progressionPage #tableBody:empty {
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
