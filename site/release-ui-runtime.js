@@ -1,12 +1,20 @@
 (() => {
-  const VERSION = "1.120.4";
+  const VERSION = "1.120.5";
   const STYLE_TEXT = `
+      .siteFooter,
+      .siteFooter a[href="/changelog"],
+      .siteFooter a[data-page="changelog"] {
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
       .siteFooter a::before {
         content: none !important;
         display: none !important;
       }
       .toastMessage {
+        position: fixed !important;
         bottom: var(--mfl-toast-bottom, 88px) !important;
+        z-index: 2147483635 !important;
       }
     `;
   window.__mflReleaseUiRuntime?.destroy?.();
@@ -30,7 +38,7 @@
   function footerLink() {
     const footer = document.querySelector(".siteFooter");
     if (!footer) return null;
-    return footer.querySelector('a[href="/changelog"], a[data-page="changelog"], [data-page="changelog"], a') || null;
+    return footer.querySelector('a[href="/changelog"], a[data-page="changelog"]') || null;
   }
 
   function syncFooter() {
@@ -40,11 +48,13 @@
     let target = footerLink();
     if (!target) {
       target = document.createElement("a");
-      footer.appendChild(target);
+      footer.replaceChildren(target);
     }
 
     const text = `MFL Front Office v${VERSION}`;
     const ariaLabel = `${text}, open Changelog`;
+    target.hidden = false;
+    target.removeAttribute("aria-hidden");
     if (target.textContent !== text) target.textContent = text;
     if (target instanceof HTMLAnchorElement && target.getAttribute("href") !== "/changelog") {
       target.setAttribute("href", "/changelog");
@@ -56,7 +66,7 @@
   }
 
   function selectionBarIsVisible(bar) {
-    if (!(bar instanceof HTMLElement) || bar.hidden || !bar.classList.contains("visible")) return false;
+    if (!(bar instanceof HTMLElement) || bar.hidden) return false;
     const style = getComputedStyle(bar);
     if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
     const rect = bar.getBoundingClientRect();
@@ -87,9 +97,8 @@
     if (event.type === "click" && target instanceof Element && target.closest('[data-role="apply"]')) {
       return;
     }
-    if (event.type === "keydown" && event.key === "Escape") return;
+    if (event.type === "keydown" && (event.key === "Enter" || event.key === "Escape")) return;
 
-    if (event.type === "keydown" && event.key === "Enter") event.preventDefault();
     event.stopImmediatePropagation();
   }
 
