@@ -88,7 +88,7 @@
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
           source = source.replace(
             statsSeedMarker,
-            `          if (/^\/database\/stats\/?$/i.test(window.location.pathname)) {
+            `          if (/^\\/database\\/stats\\/?$/i.test(window.location.pathname)) {
             root.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
               const active = button.dataset.view === "stats";
               button.hidden = !["attributes", "contracts", "stats"].includes(button.dataset.view);
