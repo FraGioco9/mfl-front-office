@@ -1,7 +1,8 @@
 (() => {
-  const VERSION = "1.120.15";
+  const VERSION = "1.120.17";
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const STATS_PATH = /^\/database\/stats\/?$/i;
+  const WITHOUT_DATABASE_STATS_PATH = /^\/(?:watchlists?|my-players|myplayers|progression)(?:\/|$)/i;
 
   const existing = window.__mflDatabaseStatsButtonRuntime;
   if (existing?.version === VERSION) {
@@ -49,10 +50,7 @@
   }
 
   function isDatabaseContext() {
-    return DATABASE_PATH.test(currentPath())
-      || document.body?.dataset.page === "database"
-      || document.body?.dataset.page === "databasestats"
-      || Boolean(document.querySelector("#progressionPage:not([hidden]), #databaseStatsPage:not([hidden])"));
+    return DATABASE_PATH.test(currentPath());
   }
 
   function openStats(event) {
@@ -108,7 +106,14 @@
     return button;
   }
 
-  function ensureStatsButtons() {
+  function removeStatsFromExcludedViews() {
+    if (!WITHOUT_DATABASE_STATS_PATH.test(currentPath())) return;
+    document.querySelectorAll('#progressionPage .views .viewButton[data-view="stats"]')
+      .forEach((button) => button.remove());
+  }
+
+  function syncStatsButtons() {
+    removeStatsFromExcludedViews();
     if (!isDatabaseContext()) return;
     document.querySelectorAll("#progressionPage .views, #databaseStatsPage .views")
       .forEach(ensureButtonInViews);
@@ -134,7 +139,7 @@
     if (destroyed) return;
     bindObserver();
     syncFooter();
-    ensureStatsButtons();
+    syncStatsButtons();
   }
 
   function schedule() {
