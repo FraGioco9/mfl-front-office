@@ -1,5 +1,14 @@
 (() => {
   const VERSION = "1.120.4";
+  const STYLE_TEXT = `
+      .siteFooter a::before {
+        content: none !important;
+        display: none !important;
+      }
+      .toastMessage {
+        bottom: var(--mfl-toast-bottom, 88px) !important;
+      }
+    `;
   window.__mflReleaseUiRuntime?.destroy?.();
 
   let frame = 0;
@@ -11,17 +20,11 @@
     if (!style) {
       style = document.createElement("style");
       style.id = "mflReleaseUiStyles";
+      style.textContent = STYLE_TEXT;
       document.head.appendChild(style);
+    } else if (style.textContent !== STYLE_TEXT) {
+      style.textContent = STYLE_TEXT;
     }
-    style.textContent = `
-      .siteFooter a::before {
-        content: none !important;
-        display: none !important;
-      }
-      .toastMessage {
-        bottom: var(--mfl-toast-bottom, 88px) !important;
-      }
-    `;
   }
 
   function footerLink() {
@@ -41,12 +44,15 @@
     }
 
     const text = `MFL Front Office v${VERSION}`;
+    const ariaLabel = `${text}, open Changelog`;
     if (target.textContent !== text) target.textContent = text;
-    if (target instanceof HTMLAnchorElement) target.href = "/changelog";
-    target.dataset.page = "changelog";
-    target.dataset.releaseLabel = text;
-    target.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = VERSION;
+    if (target instanceof HTMLAnchorElement && target.getAttribute("href") !== "/changelog") {
+      target.setAttribute("href", "/changelog");
+    }
+    if (target.dataset.page !== "changelog") target.dataset.page = "changelog";
+    if (target.dataset.releaseLabel !== text) target.dataset.releaseLabel = text;
+    if (target.getAttribute("aria-label") !== ariaLabel) target.setAttribute("aria-label", ariaLabel);
+    if (footer.dataset.releaseVersion !== VERSION) footer.dataset.releaseVersion = VERSION;
   }
 
   function selectionBarIsVisible(bar) {
@@ -64,7 +70,10 @@
       const rect = bar.getBoundingClientRect();
       bottom = Math.max(bottom, Math.ceil(innerHeight - rect.top + 12));
     }
-    document.documentElement.style.setProperty("--mfl-toast-bottom", `${bottom}px`);
+    const value = `${bottom}px`;
+    if (document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== value) {
+      document.documentElement.style.setProperty("--mfl-toast-bottom", value);
+    }
   }
 
   function customTooltipContains(target) {
