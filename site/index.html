@@ -66,6 +66,12 @@
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
+          const watchlistRouteUiRuntimeTag = `<script src="/watchlist-route-ui-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          source = source.replace(
+            '</head>',
+            `${watchlistRouteUiRuntimeTag}\n</head>`,
+          );
+
           const stabilityRuntimeTag = `<script src="/club-view-stability-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const selectionLayoutRuntimeTag = `<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const tableLoadingRuntimeTag = `<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
