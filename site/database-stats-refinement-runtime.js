@@ -196,11 +196,11 @@
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     const panel = customPanel();
-    const button = customButton();
-    if (button && (target === button || button.contains(target))) {
+    const clickedFilter = target.closest("#databaseStatsOverallFilters .mflStatsFilterButton");
+    if (clickedFilter && normalizeLabel(clickedFilter.textContent) === "custom") {
       requestAnimationFrame(() => {
         positionCustomPanel();
-        panel?.querySelector("input")?.focus({ preventScroll: true });
+        customPanel()?.querySelector("input")?.focus({ preventScroll: true });
       });
       return;
     }
