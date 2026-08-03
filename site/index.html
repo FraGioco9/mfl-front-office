@@ -4,15 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.0"></script>
-    <script src="/database-stats-runtime.js?v=1.120.0"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.1"></script>
+    <script src="/database-stats-runtime.js?v=1.120.1"></script>
     <script>
       (() => {
-        const VERSION = "1.120.0";
+        const VERSION = "1.120.1";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.1", "Keep Database Stats isolated from table rendering and refine view controls"],
           ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"],
         ];
 
