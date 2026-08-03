@@ -49,8 +49,8 @@
     releaseStatsGuard();
   }
 
-  function bindDocument() {
-    if (boundDocument === document) return;
+  function bindDocument(force = false) {
+    if (!force && boundDocument === document) return;
     if (boundDocument) {
       boundDocument.removeEventListener("pointerdown", onNavigationStart, true);
       boundDocument.removeEventListener("click", onNavigationStart, true);
@@ -72,13 +72,19 @@
     footer.dataset.releaseVersion = VERSION;
   }
 
-  function rebind() {
+  function sync() {
     if (destroyed) return;
-    bindDocument();
+    bindDocument(false);
     syncFooter();
   }
 
-  interval = window.setInterval(rebind, 250);
+  function rebind() {
+    if (destroyed) return;
+    bindDocument(true);
+    syncFooter();
+  }
+
+  interval = window.setInterval(sync, 250);
   rebind();
 
   function destroy() {
