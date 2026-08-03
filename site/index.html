@@ -4,14 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.8"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.9"></script>
+    <script src="/v1-120-9-runtime.js?v=1.120.9"></script>
     <script>
       (() => {
-        const VERSION = "1.120.8";
+        const VERSION = "1.120.9";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.9", "Show Changelog loading state, refresh Database Stats, and preserve selection dismissal text"],
           ["v1.120.8", "Load Changelog summary data and stabilize loaded rows, Stats reload, and selection spacing"],
           ["v1.120.7", "Reveal loaded rows and persist the latest footer, Stats route, and toast position"],
           ["v1.120.6", "Commit Custom filters only on Apply and restore Stats reload, toast, and footer state"],
@@ -100,7 +102,7 @@
 ${statsSeedMarker}`,
           );
 
-          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-9-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
