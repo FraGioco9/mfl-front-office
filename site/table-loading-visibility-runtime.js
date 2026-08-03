@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.5";
+  const VERSION = "1.120.7";
   const TABLE_PAGES = new Set([
     "database",
     "mfl",
@@ -14,6 +14,7 @@
   previousRuntime?.destroy?.();
 
   let frame = 0;
+  let interval = 0;
   let bodyObserver = null;
   let htmlObserver = null;
   let tableObserver = null;
@@ -31,7 +32,7 @@
     return TABLE_PAGES.has(bodyPage) || TABLE_PAGES.has(statePage);
   }
 
-  function loadingStateActive() {
+  function hardLoadingStateActive() {
     if (!tablePageActive()) return false;
     const body = document.body;
     const root = document.documentElement;
@@ -44,10 +45,7 @@
       || root.classList.contains("table-layout-pending")
       || body.classList.contains("appBusy")
       || body.classList.contains("tableLayoutPending")
-      || body.classList.contains("tableRowsLoading")
-      || body.classList.contains("mflTableDataLoading")
-      || body.classList.contains("clubViewSwitching")
-      || body.classList.contains("clubViewStableLoading");
+      || body.classList.contains("clubViewSwitching");
   }
 
   function tableElements() {
@@ -57,6 +55,26 @@
       tableBody: document.querySelector("#progressionPage #tableBody"),
       emptyState: document.querySelector("#progressionPage #emptyState"),
     };
+  }
+
+  function loadingStateActive(tableBody) {
+    if (!tablePageActive()) return false;
+    const body = document.body;
+    const hasRenderedRows = tableBody instanceof HTMLElement && tableBody.children.length > 0;
+
+    if (hasRenderedRows && !hardLoadingStateActive()) {
+      body.classList.remove(
+        "tableRowsLoading",
+        "mflTableDataLoading",
+        "clubViewStableLoading",
+      );
+      return false;
+    }
+
+    return hardLoadingStateActive()
+      || body.classList.contains("tableRowsLoading")
+      || body.classList.contains("mflTableDataLoading")
+      || body.classList.contains("clubViewStableLoading");
   }
 
   function beginLoadingPresentation(table, tableHead, tableBody, emptyState) {
@@ -86,8 +104,11 @@
 
   function finishLoadingPresentation(tableBody, emptyState) {
     document.body.classList.remove("mflPlayersLoadingOnly");
-    if (tableBody instanceof HTMLElement && tableBody.hasAttribute("aria-hidden")) {
+    if (tableBody instanceof HTMLElement) {
       tableBody.removeAttribute("aria-hidden");
+      tableBody.style.removeProperty("visibility");
+      tableBody.style.removeProperty("opacity");
+      tableBody.style.removeProperty("pointer-events");
     }
 
     if (emptyState instanceof HTMLElement && String(emptyState.textContent || "").trim() === "Loading players...") {
@@ -108,7 +129,7 @@
     const { table, tableHead, tableBody, emptyState } = tableElements();
     if (!(tableBody instanceof HTMLElement) || !(emptyState instanceof HTMLElement)) return;
 
-    if (loadingStateActive()) {
+    if (loadingStateActive(tableBody)) {
       beginLoadingPresentation(table, tableHead, tableBody, emptyState);
     } else {
       finishLoadingPresentation(tableBody, emptyState);
@@ -197,8 +218,11 @@
     });
   }
 
+  interval = window.setInterval(scheduleLoadingVisibility, 250);
+
   function destroy() {
     if (frame) window.cancelAnimationFrame(frame);
+    if (interval) window.clearInterval(interval);
     bodyObserver?.disconnect();
     htmlObserver?.disconnect();
     tableObserver?.disconnect();
