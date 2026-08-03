@@ -4,16 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.5"></script>
-    <script src="/database-stats-runtime.js?v=1.120.5"></script>
-    <script src="/database-stats-refinement-runtime.js?v=1.120.5"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.6"></script>
+    <script src="/database-stats-runtime.js?v=1.120.6"></script>
+    <script src="/database-stats-refinement-runtime.js?v=1.120.6"></script>
     <script>
       (() => {
-        const VERSION = "1.120.5";
+        const VERSION = "1.120.6";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.6", "Commit Custom filters only on Apply and restore Stats reload, toast, and footer state"],
           ["v1.120.5", "Apply Custom filters once and align selection, toasts, loading headers, and footer version"],
           ["v1.120.4", "Defer Custom filters until Apply and keep toasts and footer above current UI"],
           ["v1.120.3", "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"],
@@ -66,11 +67,13 @@
           const releaseEntryMarker = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label)) entries.set(label, description);';
           const releaseEntryReplacement = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label) && !/^v1\\./.test(label)) entries.set(label, description);';
           const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.33';
+          const statsSeedMarker = '          // The consolidated application runtime permanently keeps the sidebar';
           const nestedPatchEndMarker = '\n`;\n          if (!source.includes(patchMarker)) {';
           if (!source.includes(versionMarker)
               || !currentReleasesPattern.test(source)
               || !source.includes(releaseEntryMarker)
               || !source.includes(runtimeMarker)
+              || !source.includes(statsSeedMarker)
               || !source.includes(nestedPatchEndMarker)) {
             fail("Could not locate the release shell markers.");
             return;
@@ -83,8 +86,21 @@
           );
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
+          source = source.replace(
+            statsSeedMarker,
+            `          if (/^\/database\/stats\/?$/i.test(window.location.pathname)) {
+            root.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
+              const active = button.dataset.view === "stats";
+              button.hidden = !["attributes", "contracts", "stats"].includes(button.dataset.view);
+              button.classList.toggle("active", active);
+              button.setAttribute("aria-pressed", String(active));
+            });
+          }
 
-          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
+${statsSeedMarker}`,
+          );
+
+          const finalRuntimeExpression = String.raw`'<script src="/selection-bar-layout-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
