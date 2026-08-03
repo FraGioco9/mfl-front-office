@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.47";
+  const VERSION = "1.120.5";
   const TABLE_PAGES = new Set([
     "database",
     "mfl",
@@ -52,12 +52,14 @@
 
   function tableElements() {
     return {
+      table: document.querySelector("#progressionPage table"),
+      tableHead: document.querySelector("#progressionPage #tableHead"),
       tableBody: document.querySelector("#progressionPage #tableBody"),
       emptyState: document.querySelector("#progressionPage #emptyState"),
     };
   }
 
-  function beginLoadingPresentation(tableBody, emptyState) {
+  function beginLoadingPresentation(table, tableHead, tableBody, emptyState) {
     if (!loadingSnapshot) {
       loadingSnapshot = {
         text: String(emptyState?.textContent || ""),
@@ -66,6 +68,11 @@
     }
 
     document.body.classList.add("mflPlayersLoadingOnly");
+    if (table instanceof HTMLElement && table.hidden) table.hidden = false;
+    if (tableHead instanceof HTMLElement) {
+      if (tableHead.hidden) tableHead.hidden = false;
+      tableHead.removeAttribute("aria-hidden");
+    }
     if (tableBody instanceof HTMLElement && tableBody.getAttribute("aria-hidden") !== "true") {
       tableBody.setAttribute("aria-hidden", "true");
     }
@@ -98,11 +105,11 @@
 
   function applyLoadingVisibility() {
     frame = 0;
-    const { tableBody, emptyState } = tableElements();
+    const { table, tableHead, tableBody, emptyState } = tableElements();
     if (!(tableBody instanceof HTMLElement) || !(emptyState instanceof HTMLElement)) return;
 
     if (loadingStateActive()) {
-      beginLoadingPresentation(tableBody, emptyState);
+      beginLoadingPresentation(table, tableHead, tableBody, emptyState);
     } else {
       finishLoadingPresentation(tableBody, emptyState);
     }
@@ -120,6 +127,18 @@
     document.head.appendChild(style);
   }
   style.textContent = `
+    body.mflPlayersLoadingOnly #progressionPage .tableFrame,
+    body.mflPlayersLoadingOnly #progressionPage .tableScroll,
+    body.mflPlayersLoadingOnly #progressionPage table,
+    body.mflPlayersLoadingOnly #progressionPage #tableHead {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    body.mflPlayersLoadingOnly #progressionPage #tableHead {
+      display: table-header-group !important;
+    }
+
     body.mflPlayersLoadingOnly #progressionPage #tableBody {
       visibility: hidden !important;
       opacity: 0 !important;
