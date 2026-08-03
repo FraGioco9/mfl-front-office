@@ -24,7 +24,13 @@
         function fail(message) {
           console.error(message);
           document.documentElement.classList.remove("bootPending");
-          document.body.innerHTML = '<main><p class="emptyState">Could not load MFL Front Office.</p></main>';
+          const renderFailure = () => {
+            if (document.body) {
+              document.body.innerHTML = '<main><p class="emptyState">Could not load MFL Front Office.</p></main>';
+            }
+          };
+          if (document.body) renderFailure();
+          else window.addEventListener("DOMContentLoaded", renderFailure, { once: true });
         }
 
         function loadRewrittenReleases() {
@@ -77,13 +83,7 @@
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
           source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
 
-          const tooltipRuntimeTag = `<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const releaseUiRuntimeTag = `<script src="/release-ui-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
-          const finalRuntimeMarkup = `${tooltipRuntimeTag}\n${releaseUiRuntimeTag}`;
-          const scriptCloseMarker = `</scr${"ipt"}>`;
-          const finalRuntimeExpression = JSON.stringify(`${finalRuntimeMarkup}\n</body>`)
-            .split(scriptCloseMarker)
-            .join('</scr" + "ipt>');
+          const finalRuntimeExpression = String.raw`'<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
           const nestedFinalInjection = `
         source = source.replace(
           '</body>',
