@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.7";
+  const VERSION = "1.119.8";
   const RELEASES_URL = `/releases.json?v=${VERSION}`;
   const previous = window.__mflChangelogHistoryRuntime;
   const expandedMinors = new Set();

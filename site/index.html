@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.119.7";
+        const VERSION = "1.119.8";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
@@ -72,9 +72,10 @@
           const evaluationDiscountRuntimeTag = `<script src="/evaluation-discount-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const evaluationShareRuntimeTag = `<script src="/evaluation-share-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           const changelogHistoryRuntimeTag = `<script src="/changelog-history-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
+          const publicRouteSummaryRuntimeTag = `<script src="/public-route-summary-runtime.js?v=${VERSION}"></scr${"ipt"}>`;
           source = source.replace(
             bodyMarker,
-            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${evaluationShareRuntimeTag}\n${changelogHistoryRuntimeTag}\n${bodyMarker}`,
+            `${stabilityRuntimeTag}\n${selectionLayoutRuntimeTag}\n${tableLoadingRuntimeTag}\n${evaluationDiscountRuntimeTag}\n${evaluationShareRuntimeTag}\n${changelogHistoryRuntimeTag}\n${publicRouteSummaryRuntimeTag}\n${bodyMarker}`,
           );
 
           document.open();
