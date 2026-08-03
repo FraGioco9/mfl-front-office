@@ -1,105 +1,123 @@
 (() => {
-  const VERSION = "1.120.5";
+  const VERSION = "1.120.6";
+  const DEFAULT_TOAST_BOTTOM = 88;
+  const TOAST_GAP = 12;
+  const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
   const STYLE_TEXT = `
-      .siteFooter,
-      .siteFooter a[href="/changelog"],
-      .siteFooter a[data-page="changelog"] {
-        visibility: visible !important;
-        opacity: 1 !important;
-      }
-      .siteFooter a::before {
-        content: none !important;
-        display: none !important;
-      }
-      .toastMessage {
-        position: fixed !important;
-        bottom: var(--mfl-toast-bottom, 88px) !important;
-        z-index: 2147483635 !important;
-      }
-    `;
+    .siteFooter,
+    .siteFooter a[href="/changelog"],
+    .siteFooter a[data-page="changelog"] {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .siteFooter a::before {
+      content: none !important;
+      display: none !important;
+    }
+    ${TOAST_SELECTOR} {
+      position: fixed !important;
+      z-index: 2147483635 !important;
+    }
+  `;
+
   window.__mflReleaseUiRuntime?.destroy?.();
 
   let frame = 0;
   let observer = null;
-  const timers = new Set();
+  let interval = 0;
 
   function ensureStyles() {
     let style = document.getElementById("mflReleaseUiStyles");
     if (!style) {
       style = document.createElement("style");
       style.id = "mflReleaseUiStyles";
-      style.textContent = STYLE_TEXT;
       document.head.appendChild(style);
-    } else if (style.textContent !== STYLE_TEXT) {
-      style.textContent = STYLE_TEXT;
     }
+    if (style.textContent !== STYLE_TEXT) style.textContent = STYLE_TEXT;
   }
 
-  function footerLink() {
-    const footer = document.querySelector(".siteFooter");
-    if (!footer) return null;
-    return footer.querySelector('a[href="/changelog"], a[data-page="changelog"]') || null;
+  function setImportantStyle(element, property, value) {
+    if (element.style.getPropertyValue(property) === value
+        && element.style.getPropertyPriority(property) === "important") return;
+    element.style.setProperty(property, value, "important");
   }
 
   function syncFooter() {
     const footer = document.querySelector(".siteFooter");
-    if (!footer) return;
+    if (!(footer instanceof HTMLElement)) return;
 
-    let target = footerLink();
-    if (!target) {
+    let target = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
+    if (!(target instanceof HTMLAnchorElement)) {
       target = document.createElement("a");
-      footer.replaceChildren(target);
+      footer.prepend(target);
     }
 
     const text = `MFL Front Office v${VERSION}`;
-    const ariaLabel = `${text}, open Changelog`;
     target.hidden = false;
     target.removeAttribute("aria-hidden");
+    setImportantStyle(target, "display", "inline-block");
+    setImportantStyle(target, "visibility", "visible");
+    setImportantStyle(target, "opacity", "1");
     if (target.textContent !== text) target.textContent = text;
-    if (target instanceof HTMLAnchorElement && target.getAttribute("href") !== "/changelog") {
-      target.setAttribute("href", "/changelog");
-    }
+    if (target.getAttribute("href") !== "/changelog") target.setAttribute("href", "/changelog");
     if (target.dataset.page !== "changelog") target.dataset.page = "changelog";
     if (target.dataset.releaseLabel !== text) target.dataset.releaseLabel = text;
+    const ariaLabel = `${text}, open Changelog`;
     if (target.getAttribute("aria-label") !== ariaLabel) target.setAttribute("aria-label", ariaLabel);
     if (footer.dataset.releaseVersion !== VERSION) footer.dataset.releaseVersion = VERSION;
   }
 
   function selectionBarIsVisible(bar) {
     if (!(bar instanceof HTMLElement) || bar.hidden) return false;
+    if (!bar.classList.contains("visible") && !bar.classList.contains("is-visible")) return false;
     const style = getComputedStyle(bar);
     if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
     const rect = bar.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
   }
 
-  function syncToastPosition() {
+  function toastBottom() {
     const bar = document.querySelector("#selectionBar");
-    let bottom = 88;
-    if (selectionBarIsVisible(bar)) {
-      const rect = bar.getBoundingClientRect();
-      bottom = Math.max(bottom, Math.ceil(innerHeight - rect.top + 12));
-    }
+    if (!selectionBarIsVisible(bar)) return DEFAULT_TOAST_BOTTOM;
+    const rect = bar.getBoundingClientRect();
+    return Math.max(DEFAULT_TOAST_BOTTOM, Math.ceil(innerHeight - rect.top + TOAST_GAP));
+  }
+
+  function syncToastPosition() {
+    const bottom = toastBottom();
     const value = `${bottom}px`;
     if (document.documentElement.style.getPropertyValue("--mfl-toast-bottom") !== value) {
       document.documentElement.style.setProperty("--mfl-toast-bottom", value);
     }
+    document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
+      if (!(toast instanceof HTMLElement)) return;
+      setImportantStyle(toast, "position", "fixed");
+      setImportantStyle(toast, "bottom", value);
+      setImportantStyle(toast, "z-index", "2147483635");
+    });
   }
 
-  function customTooltipContains(target) {
-    return target instanceof Element && Boolean(target.closest("#databaseStatsCustomTooltipPortal"));
-  }
+  function syncDatabaseStatsRoute() {
+    if (!/^\/database\/stats\/?$/i.test(location.pathname)) return;
+    window.__mflDatabaseStatsRuntime?.sync?.();
 
-  function guardCustomTooltipEvent(event) {
-    const target = event.target;
-    if (!customTooltipContains(target)) return;
-
-    if (event.type === "click" && target instanceof Element && target.closest('[data-role="apply"]')) {
-      return;
-    }
-    if (event.type === "keydown" && (event.key === "Enter" || event.key === "Escape")) return;
-
-    event.stopImmediatePropagation();
+    const page = document.querySelector("#databaseStatsPage");
+    if (!(page instanceof HTMLElement)) return;
+    document.querySelectorAll("main > .pageView").forEach((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return;
+      const shouldHide = candidate !== page;
+      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
+    });
+    if (page.hidden) page.hidden = false;
+    if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
+    page.querySelectorAll('.viewButton[data-view]').forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      const active = button.dataset.view === "stats";
+      if (button.hidden) button.hidden = false;
+      if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
+      const pressed = String(active);
+      if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
+    });
   }
 
   function sync() {
@@ -107,19 +125,12 @@
     ensureStyles();
     syncFooter();
     syncToastPosition();
+    syncDatabaseStatsRoute();
   }
 
   function schedule() {
     if (frame) cancelAnimationFrame(frame);
     frame = requestAnimationFrame(sync);
-  }
-
-  function scheduleDelayed(delay) {
-    const timer = window.setTimeout(() => {
-      timers.delete(timer);
-      schedule();
-    }, delay);
-    timers.add(timer);
   }
 
   observer = new MutationObserver(schedule);
@@ -128,38 +139,24 @@
     subtree: true,
     attributes: true,
     characterData: true,
-    attributeFilter: ["class", "hidden", "style", "data-page"],
+    attributeFilter: ["class", "hidden", "style", "data-page", "aria-hidden"],
   });
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
   window.addEventListener("popstate", schedule);
-  window.addEventListener("click", guardCustomTooltipEvent, true);
-  window.addEventListener("input", guardCustomTooltipEvent, true);
-  window.addEventListener("change", guardCustomTooltipEvent, true);
-  window.addEventListener("keydown", guardCustomTooltipEvent, true);
-
+  interval = window.setInterval(schedule, 500);
   sync();
-  [0, 50, 150, 400, 1000, 2000, 5000, 10000].forEach(scheduleDelayed);
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
-    timers.forEach((timer) => clearTimeout(timer));
-    timers.clear();
+    if (interval) clearInterval(interval);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     window.removeEventListener("popstate", schedule);
-    window.removeEventListener("click", guardCustomTooltipEvent, true);
-    window.removeEventListener("input", guardCustomTooltipEvent, true);
-    window.removeEventListener("change", guardCustomTooltipEvent, true);
-    window.removeEventListener("keydown", guardCustomTooltipEvent, true);
     document.getElementById("mflReleaseUiStyles")?.remove();
     document.documentElement.style.removeProperty("--mfl-toast-bottom");
   }
 
-  window.__mflReleaseUiRuntime = {
-    version: VERSION,
-    sync,
-    destroy,
-  };
+  window.__mflReleaseUiRuntime = { version: VERSION, sync, destroy };
 })();
