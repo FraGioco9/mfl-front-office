@@ -4,13 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MFL Front Office</title>
-    <script src="/watchlist-route-ui-runtime.js?v=1.119.8"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.0"></script>
+    <script src="/database-stats-runtime.js?v=1.120.0"></script>
     <script>
       (() => {
-        const VERSION = "1.119.8";
+        const VERSION = "1.120.0";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
+        const CURRENT_RELEASES = [
+          ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"],
+        ];
 
         function fail(message) {
           console.error(message);
@@ -30,7 +34,8 @@
               || releases.some((entry) => !Array.isArray(entry) || entry.length !== 2)) {
             throw new Error("Release history is invalid.");
           }
-          return releases;
+          const currentLabels = new Set(CURRENT_RELEASES.map(([label]) => label));
+          return [...CURRENT_RELEASES, ...releases.filter(([label]) => !currentLabels.has(label))];
         }
 
         try {
