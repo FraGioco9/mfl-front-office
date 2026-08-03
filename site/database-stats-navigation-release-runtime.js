@@ -1,7 +1,8 @@
 (() => {
-  const VERSION = "1.120.13";
+  const VERSION = "1.120.14";
   const STATS_PATH = /^\/database\/stats\/?$/i;
   const INTENT_KEY = "mfl-database-stats-reload-intent";
+  const BASE_HISTORY_KEY = "__mflDatabaseStatsBaseHistory";
 
   const existing = window.__mflDatabaseStatsNavigationReleaseRuntime;
   if (existing?.version === VERSION) {
@@ -10,7 +11,12 @@
   }
   existing?.destroy?.();
 
-  let boundDocument = null;
+  const baseHistory = window[BASE_HISTORY_KEY] || {
+    pushState: history.pushState.bind(history),
+    replaceState: history.replaceState.bind(history),
+  };
+  window[BASE_HISTORY_KEY] = baseHistory;
+
   let interval = 0;
   let destroyed = false;
 
@@ -21,20 +27,6 @@
       || Boolean(page && !page.hidden);
   }
 
-  function clearReloadIntent() {
-    try {
-      sessionStorage.removeItem(INTENT_KEY);
-    } catch {
-      // Storage may be unavailable in private contexts.
-    }
-  }
-
-  function releaseStatsGuard() {
-    clearReloadIntent();
-    const runtime = window.__mflDatabaseStatsButtonRuntime;
-    if (runtime?.version === "1.120.12") runtime.destroy?.();
-  }
-
   function explicitNavigationTarget(target) {
     if (!(target instanceof Element)) return null;
     const candidate = target.closest('a[href], [data-page], .viewButton[data-view]');
@@ -43,21 +35,41 @@
     return candidate;
   }
 
-  function onNavigationStart(event) {
-    if (!statsIsOpen()) return;
-    if (!explicitNavigationTarget(event.target)) return;
-    releaseStatsGuard();
+  function clearReloadIntent() {
+    try {
+      sessionStorage.removeItem(INTENT_KEY);
+    } catch {
+      // Storage may be unavailable in private contexts.
+    }
   }
 
-  function bindDocument(force = false) {
-    if (!force && boundDocument === document) return;
-    if (boundDocument) {
-      boundDocument.removeEventListener("pointerdown", onNavigationStart, true);
-      boundDocument.removeEventListener("click", onNavigationStart, true);
-    }
-    boundDocument = document;
-    boundDocument.addEventListener("pointerdown", onNavigationStart, true);
-    boundDocument.addEventListener("click", onNavigationStart, true);
+  function restoreBaseHistory() {
+    history.pushState = baseHistory.pushState;
+    history.replaceState = baseHistory.replaceState;
+  }
+
+  function releaseStatsRuntimes() {
+    clearReloadIntent();
+
+    const buttonRuntime = window.__mflDatabaseStatsButtonRuntime;
+    const statsRuntime = window.__mflDatabaseStatsRuntime;
+
+    buttonRuntime?.destroy?.();
+    statsRuntime?.destroy?.();
+
+    // Both runtimes restore the History API from different points in their
+    // wrapper chain. Reapply the pre-Stats functions after both have exited.
+    restoreBaseHistory();
+  }
+
+  function onNavigationClick(event) {
+    if (!statsIsOpen()) return;
+    if (!explicitNavigationTarget(event.target)) return;
+
+    // The click event already has a fixed propagation path. Removing the
+    // Stats runtimes here releases their route guards while allowing the
+    // application's existing target/document handlers to finish navigation.
+    releaseStatsRuntimes();
   }
 
   function syncFooter() {
@@ -65,6 +77,7 @@
     if (!(footer instanceof HTMLElement)) return;
     const link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
     if (!(link instanceof HTMLElement)) return;
+
     const text = `MFL Front Office v${VERSION}`;
     link.textContent = text;
     link.dataset.releaseLabel = text;
@@ -74,26 +87,22 @@
 
   function sync() {
     if (destroyed) return;
-    bindDocument(false);
     syncFooter();
   }
 
   function rebind() {
     if (destroyed) return;
-    bindDocument(true);
     syncFooter();
   }
 
+  window.addEventListener("click", onNavigationClick, true);
   interval = window.setInterval(sync, 250);
   rebind();
 
   function destroy() {
     destroyed = true;
     if (interval) clearInterval(interval);
-    if (boundDocument) {
-      boundDocument.removeEventListener("pointerdown", onNavigationStart, true);
-      boundDocument.removeEventListener("click", onNavigationStart, true);
-    }
+    window.removeEventListener("click", onNavigationClick, true);
   }
 
   window.__mflDatabaseStatsNavigationReleaseRuntime = {
