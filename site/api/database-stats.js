@@ -2,6 +2,8 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MFL_WALLET_ADDRESS = "0xff8d2bbed8164db0";
+const EXCLUDED_WALLET_NAMES = new Set(["mfl", "mfl wallet", "mfl trade"]);
 let cachedPayload = null;
 let cachedAt = 0;
 let payloadPromise = null;
@@ -53,6 +55,25 @@ function nullableInteger(value) {
   return Number.isFinite(number) ? Math.trunc(number) : null;
 }
 
+function normalizeWalletAddress(value) {
+  const address = String(value || "").trim().toLowerCase();
+  if (!address) return "";
+  return address.startsWith("0x") ? address : `0x${address}`;
+}
+
+function normalizeWalletName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
+}
+
+function isExcludedWallet(row, indexes) {
+  const walletAddress = normalizeWalletAddress(row[indexes.walletAddress]);
+  const walletName = normalizeWalletName(row[indexes.walletName]);
+  return walletAddress === MFL_WALLET_ADDRESS || EXCLUDED_WALLET_NAMES.has(walletName);
+}
+
 async function buildPayload() {
   const manifest = await readDataJson("manifest.json");
   const publicFile = manifest?.files?.public?.file
@@ -67,6 +88,8 @@ async function buildPayload() {
     goalkeeping: columns.indexOf("goalkeeping"),
     age: columns.indexOf("age"),
     retirementYears: columns.indexOf("retirement_years"),
+    walletAddress: columns.indexOf("wallet_address"),
+    walletName: columns.indexOf("wallet_name"),
   };
 
   if (Object.values(indexes).some((index) => index < 0)) {
@@ -75,8 +98,9 @@ async function buildPayload() {
 
   const groups = new Map();
   let totalPlayers = 0;
+  let totalActivePlayers = 0;
   for (const row of rows) {
-    if (!Array.isArray(row)) continue;
+    if (!Array.isArray(row) || isExcludedWallet(row, indexes)) continue;
     const overall = displayedOverall(row, indexes);
     if (overall === null) continue;
     const age = nullableInteger(row[indexes.age]);
@@ -89,11 +113,14 @@ async function buildPayload() {
       groups.set(key, [overall, age, retirementYears, 1]);
     }
     totalPlayers += 1;
+    if (retirementYears !== 0) totalActivePlayers += 1;
   }
 
   return {
     generatedAt: data.generated_at || data.generatedAt || manifest.generated_at || manifest.generatedAt || null,
     totalPlayers,
+    totalActivePlayers,
+    excludedWallets: ["MFL", "MFL Trade"],
     columns: ["overall", "age", "retirement_years", "count"],
     rows: Array.from(groups.values()).sort((left, right) => (
       left[0] - right[0]
