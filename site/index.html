@@ -73,17 +73,18 @@
         timeout = window.setTimeout(release, 15000);
       })();
     </script>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.26"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.26"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.26"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.26"></script>
+    <script src="/watchlist-route-ui-runtime.js?v=1.120.27"></script>
+    <script src="/database-stats-navigation-release-runtime.js?v=1.120.27"></script>
+    <script src="/database-stats-view-button-runtime.js?v=1.120.27"></script>
+    <script src="/v1-120-10-runtime.js?v=1.120.27"></script>
     <script>
       (() => {
-        const VERSION = "1.120.26";
+        const VERSION = "1.120.27";
         const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
         const RELEASES_URL = `/releases.json?v=${VERSION}`;
         const CURRENT_RELEASES = [
+          ["v1.120.27", "Use Supabase as the only Discount Rate and tooltip source"],
           ["v1.120.26", "Keep the selection bar and toast 12px apart and dismiss watchlist actions immediately"],
           ["v1.120.25", "Keep selection available until watchlist actions complete and show their toast"],
           ["v1.120.24", "Preserve the selected My Players view directly in application routing"],
@@ -155,12 +156,14 @@
           const releaseEntryMarker = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label)) entries.set(label, description);';
           const releaseEntryReplacement = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label) && !/^v1\\./.test(label)) entries.set(label, description);';
           const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.33';
+          const ratioApiMarker = '/api/mfl-season-ratios?format=script';
           const statsSeedMarker = '          // The consolidated application runtime permanently keeps the sidebar';
           const nestedPatchEndMarker = '\n`;\n          if (!source.includes(patchMarker)) {';
           if (!source.includes(versionMarker)
               || !currentReleasesPattern.test(source)
               || !source.includes(releaseEntryMarker)
               || !source.includes(runtimeMarker)
+              || !source.includes(ratioApiMarker)
               || !source.includes(statsSeedMarker)
               || !source.includes(nestedPatchEndMarker)) {
             fail("Could not locate the release shell markers.");
@@ -173,7 +176,8 @@
             `const CURRENT_RELEASES = ${JSON.stringify(rewrittenReleases)};`,
           );
           source = source.replace(releaseEntryMarker, releaseEntryReplacement);
-          source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime.js?v=${VERSION}`);
+          source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime-v2.js?v=${VERSION}`);
+          source = source.replaceAll(ratioApiMarker, '/api/mfl-season-ratios-v2?format=script');
           source = source.replace(
             statsSeedMarker,
             `          if (/^\\/database\\/stats\\/?$/i.test(window.location.pathname)) {
