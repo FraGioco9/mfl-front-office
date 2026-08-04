@@ -12,6 +12,24 @@
   },
   "headers": [
     {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
       "source": "/app.js",
       "headers": [
         {
@@ -22,6 +40,15 @@
     },
     {
       "source": "/mfl-season-ratios-runtime.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/mfl-season-ratios-runtime-v2.js",
       "headers": [
         {
           "key": "Cache-Control",
