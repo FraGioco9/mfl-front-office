@@ -1,4 +1,4 @@
-const VERSION = "1.120.27";
+const VERSION = "1.120.28";
 const REQUIRED_RATIO_ROWS = 6;
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -14,10 +14,7 @@ function supabaseConfig() {
 
 function normalizeRows(value) {
   return (Array.isArray(value) ? value : [])
-    .map((row) => ({
-      season: Number(row?.season),
-      ratio: Number(row?.ratio),
-    }))
+    .map((row) => ({ season: Number(row?.season), ratio: Number(row?.ratio) }))
     .filter((row) => Number.isInteger(row.season) && row.season > 0
       && Number.isFinite(row.ratio) && row.ratio > 0)
     .sort((a, b) => b.season - a.season)
@@ -36,9 +33,7 @@ async function fetchWithTimeout(url, options = {}) {
 
 async function loadRatiosFromSupabase() {
   const config = supabaseConfig();
-  if (!config) {
-    throw new Error("Supabase is not configured for MFL season ratios.");
-  }
+  if (!config) throw new Error("Supabase is not configured for MFL season ratios.");
 
   const response = await fetchWithTimeout(
     `${config.url}/rest/v1/mfl_season_ratios?select=season,ratio&order=season.desc&limit=${REQUIRED_RATIO_ROWS}`,
@@ -66,11 +61,16 @@ function loaderScript() {
   return `(() => {
   const VERSION = ${JSON.stringify(VERSION)};
   const REQUIRED_RATIO_ROWS = ${REQUIRED_RATIO_ROWS};
-  const RATE_SELECTOR = ".evaluationMetric.evaluationDiscountRate";
+  const METRIC_SELECTOR = ".evaluationMetric.evaluationDiscountRate";
   let resolved = null;
   let requestPromise = null;
   let lastAttemptAt = 0;
   let frame = 0;
+  let interval = 0;
+  let observer = null;
+  let authoritativeRateFunction = null;
+
+  window.__mflDiscountRateAuthority?.destroy?.();
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\\/+$/, "") || "/";
@@ -78,16 +78,6 @@ function loaderScript() {
 
   function evaluationActive() {
     return cleanPath() === "/evaluation" || document.body?.dataset.page === "evaluation";
-  }
-
-  function assignRate(rate) {
-    try {
-      if (typeof evaluationDiscountRateValue === "function") {
-        evaluationDiscountRateValue = () => Number.isFinite(rate) ? rate : 0;
-      }
-    } catch {
-      // The DOM remains authoritative when the application function is unavailable.
-    }
   }
 
   function canonicalTooltip(currentSeason) {
@@ -108,13 +98,9 @@ function loaderScript() {
       if (ordered[index].season !== ordered[index - 1].season + 1) return null;
     }
 
-    const growthFactors = ordered.slice(1).map((row, index) => (
-      row.ratio / ordered[index].ratio
-    ));
+    const growthFactors = ordered.slice(1).map((row, index) => row.ratio / ordered[index].ratio);
     if (growthFactors.length !== 5
-        || growthFactors.some((factor) => !Number.isFinite(factor) || factor <= 0)) {
-      return null;
-    }
+        || growthFactors.some((factor) => !Number.isFinite(factor) || factor <= 0)) return null;
 
     const rate = Math.pow(
       growthFactors.reduce((product, factor) => product * factor, 1),
@@ -127,38 +113,87 @@ function loaderScript() {
       rate,
       ordered,
       currentSeason,
+      label: (rate * 100).toFixed(2) + "%",
       tooltip: canonicalTooltip(currentSeason),
     };
+  }
+
+  function installAuthoritativeFunction(rate) {
+    if (!Number.isFinite(rate)) return;
+    if (!authoritativeRateFunction || authoritativeRateFunction.__mflRate !== rate) {
+      authoritativeRateFunction = function evaluationDiscountRateFromSupabase() {
+        return rate;
+      };
+      authoritativeRateFunction.__mflRate = rate;
+      authoritativeRateFunction.__mflSupabaseAuthority = VERSION;
+    }
+
+    try {
+      Object.defineProperty(window, "evaluationDiscountRateValue", {
+        configurable: true,
+        enumerable: true,
+        get: () => authoritativeRateFunction,
+        set: () => {},
+      });
+      return;
+    } catch {
+      // Fall through to repeated assignment when the global property cannot be redefined.
+    }
+
+    try {
+      evaluationDiscountRateValue = authoritativeRateFunction;
+    } catch {
+      // DOM enforcement still keeps the displayed value authoritative.
+    }
+  }
+
+  function clearLegacyValue() {
+    const value = document.getElementById("evaluationDiscountRate");
+    const advanced = document.getElementById("advancedDiscountRateValue");
+    const metric = document.querySelector(METRIC_SELECTOR);
+    document.documentElement.classList.remove("mflEvaluationRateResolved");
+    if (value && value.textContent !== "-") value.textContent = "-";
+    if (advanced && advanced.textContent !== "-") advanced.textContent = "-";
+    if (metric) {
+      metric.removeAttribute("data-tooltip");
+      metric.removeAttribute("aria-describedby");
+      delete metric.dataset.mflSupabaseTooltipVersion;
+    }
   }
 
   function enforce() {
     frame = 0;
     if (!evaluationActive()) return;
-
-    const value = document.getElementById("evaluationDiscountRate");
-    const advanced = document.getElementById("advancedDiscountRateValue");
-    const metric = document.querySelector(RATE_SELECTOR);
-
     if (!resolved) {
-      document.documentElement.classList.remove("mflEvaluationRateResolved");
-      assignRate(0);
-      if (value && value.textContent !== "-") value.textContent = "-";
-      if (advanced && advanced.textContent !== "-") advanced.textContent = "-";
-      if (metric) {
-        metric.removeAttribute("data-tooltip");
-        metric.removeAttribute("aria-describedby");
-      }
+      clearLegacyValue();
       return;
     }
 
+    installAuthoritativeFunction(resolved.rate);
     document.documentElement.classList.add("mflEvaluationRateResolved");
-    assignRate(resolved.rate);
+
+    const value = document.getElementById("evaluationDiscountRate");
+    const advanced = document.getElementById("advancedDiscountRateValue");
+    const metric = document.querySelector(METRIC_SELECTOR);
     if (value && value.textContent !== resolved.label) value.textContent = resolved.label;
     if (advanced && advanced.textContent !== resolved.label) advanced.textContent = resolved.label;
     if (metric) {
       if (metric.dataset.tooltip !== resolved.tooltip) metric.dataset.tooltip = resolved.tooltip;
       metric.dataset.mflSupabaseTooltipVersion = VERSION;
     }
+
+    window.mflSeasonRatios = Object.freeze(
+      resolved.ordered.map((row) => Object.freeze({ ...row })),
+    );
+    window.__mflSeasonRatioResult = Object.freeze({
+      rows: window.mflSeasonRatios,
+      currentSeason: resolved.currentSeason,
+      rate: resolved.rate,
+      label: resolved.label,
+      tooltip: resolved.tooltip,
+      source: "supabase",
+      version: VERSION,
+    });
   }
 
   function schedule() {
@@ -170,9 +205,9 @@ function loaderScript() {
     const now = Date.now();
     if (now - lastAttemptAt < 1000) return;
     lastAttemptAt = now;
-    enforce();
+    clearLegacyValue();
 
-    requestPromise = fetch("/api/mfl-season-ratios-v2?v=" + encodeURIComponent(VERSION), {
+    requestPromise = fetch("/api/mfl-season-ratios-v2?v=" + encodeURIComponent(VERSION) + "&t=" + now, {
       cache: "no-store",
       headers: { Accept: "application/json" },
     })
@@ -180,23 +215,9 @@ function loaderScript() {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not load MFL season ratios from Supabase.");
         const calculated = calculate(data.ratios);
-        if (!calculated) {
-          throw new Error("Supabase did not return six consecutive valid season ratios.");
-        }
+        if (!calculated) throw new Error("Supabase did not return six consecutive valid season ratios.");
 
-        resolved = {
-          ...calculated,
-          label: (calculated.rate * 100).toFixed(2) + "%",
-        };
-        window.mflSeasonRatios = Object.freeze(
-          calculated.ordered.map((row) => Object.freeze({ ...row })),
-        );
-        window.__mflSeasonRatioResult = Object.freeze({
-          rows: window.mflSeasonRatios,
-          currentSeason: calculated.currentSeason,
-          tooltip: calculated.tooltip,
-          source: "supabase",
-        });
+        resolved = calculated;
         enforce();
         try {
           if (typeof renderEvaluationPage === "function") renderEvaluationPage();
@@ -212,7 +233,7 @@ function loaderScript() {
       .catch((error) => {
         console.error("Could not load the Evaluation Discount Rate from Supabase.", error);
         resolved = null;
-        enforce();
+        clearLegacyValue();
         window.setTimeout(() => {
           requestPromise = null;
           requestRatios();
@@ -228,7 +249,7 @@ function loaderScript() {
     requestRatios();
   }
 
-  const observer = new MutationObserver(() => {
+  observer = new MutationObserver(() => {
     schedule();
     requestRatios();
   });
@@ -239,10 +260,23 @@ function loaderScript() {
     characterData: true,
     subtree: true,
   });
-  ["popstate", "pageshow", "focus"].forEach((name) => window.addEventListener(name, maintain));
 
+  ["popstate", "pageshow", "focus", "mfl:season-ratios-ready"].forEach((name) => {
+    window.addEventListener(name, maintain);
+  });
+  interval = window.setInterval(maintain, 100);
+
+  function destroy() {
+    observer?.disconnect();
+    if (frame) cancelAnimationFrame(frame);
+    if (interval) clearInterval(interval);
+    ["popstate", "pageshow", "focus", "mfl:season-ratios-ready"].forEach((name) => {
+      window.removeEventListener(name, maintain);
+    });
+  }
+
+  window.__mflDiscountRateAuthority = { version: VERSION, enforce: maintain, destroy };
   maintain();
-  [0, 50, 150, 400, 1000, 2000].forEach((delay) => window.setTimeout(maintain, delay));
 })();\n`;
 }
 
@@ -267,7 +301,7 @@ module.exports = async function handler(request, response) {
 
   try {
     const ratios = await loadRatiosFromSupabase();
-    response.status(200).json({ ratios, source: "supabase" });
+    response.status(200).json({ ratios, source: "supabase", version: VERSION });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load MFL season ratios from Supabase.";
     console.error(message);
