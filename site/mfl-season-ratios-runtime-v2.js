@@ -1,10 +1,13 @@
 (() => {
-  const VERSION = "1.120.29";
+  const VERSION = "1.120.30";
+  const RELEASE_DESCRIPTION = "Calculate the Discount Rate from the current MFL/USD value and the last four completed seasons";
   const LEGACY_RUNTIME_URL = `/mfl-season-ratios-runtime.js?v=${encodeURIComponent(VERSION)}&source=legacy`;
   const RATIO_API_URL = "/api/mfl-season-ratios-v2";
-  const REQUIRED_ROWS = 6;
+  const REQUIRED_ROWS = 4;
   const ENFORCE_INTERVAL_MS = 50;
   const RETRY_INTERVAL_MS = 3000;
+
+  window.__mflDiscountRateRuntimeVersion = VERSION;
 
   function loadStableUiRuntime() {
     try {
@@ -63,6 +66,7 @@
   function installDiscountRateAuthority() {
     window.__mflDiscountRateAuthority?.destroy?.();
 
+    let historicalRows = null;
     let resolved = null;
     let requestPromise = null;
     let retryTimer = 0;
@@ -71,6 +75,8 @@
     let frame = 0;
     let authoritativeFunction = null;
     let wrappedEvaluationRenderer = null;
+    let wrappedSaveMflPerUsd = null;
+    let rendering = false;
 
     function cleanPath() {
       return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -80,12 +86,25 @@
       return cleanPath() === "/evaluation" || document.body?.dataset.page === "evaluation";
     }
 
-    function canonicalTooltip(currentSeason) {
-      return "Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is "
-        + currentSeason + ", so it uses seasons " + (currentSeason - 5) + "–" + (currentSeason - 1) + ".";
+    function currentMflPerUsd() {
+      try {
+        if (typeof state === "object" && state) {
+          const value = Number(state.evaluationMflPerUsd);
+          if (Number.isFinite(value) && value > 0) return value;
+        }
+      } catch {
+        // Application state is not available yet.
+      }
+      return null;
     }
 
-    function calculate(rows) {
+    function canonicalTooltip(currentSeason) {
+      return "Discount Rate is the geometric mean of four MFL/USD conversion growth rates. Current season is "
+        + currentSeason + ", so it uses seasons " + (currentSeason - 4) + "–" + currentSeason
+        + ", with the current season based on the MFL/USD value currently set.";
+    }
+
+    function normalizeRows(rows) {
       const ordered = (Array.isArray(rows) ? rows : [])
         .map((row) => ({ season: Number(row?.season), ratio: Number(row?.ratio) }))
         .filter((row) => Number.isInteger(row.season) && row.season > 0
@@ -97,10 +116,22 @@
       for (let index = 1; index < ordered.length; index += 1) {
         if (ordered[index].season !== ordered[index - 1].season + 1) return null;
       }
+      return ordered;
+    }
 
-      const factors = ordered.slice(1).map((row, index) => row.ratio / ordered[index].ratio);
-      if (factors.length !== 5
-          || factors.some((factor) => !Number.isFinite(factor) || factor <= 0)) return null;
+    function calculate(rows, currentValue) {
+      const ordered = normalizeRows(rows);
+      if (!ordered || !Number.isFinite(currentValue) || currentValue <= 0) return null;
+
+      const factors = ordered.slice(1).map((row, index) => (
+        row.ratio / ordered[index].ratio
+      ));
+      factors.push(currentValue / ordered[ordered.length - 1].ratio);
+
+      if (factors.length !== 4
+          || factors.some((factor) => !Number.isFinite(factor) || factor <= 0)) {
+        return null;
+      }
 
       const rate = Math.pow(
         factors.reduce((product, factor) => product * factor, 1),
@@ -111,6 +142,8 @@
       const currentSeason = ordered[ordered.length - 1].season + 1;
       return Object.freeze({
         rows: Object.freeze(ordered.map((row) => Object.freeze({ ...row }))),
+        factors: Object.freeze([...factors]),
+        currentMflPerUsd: currentValue,
         rate,
         label: `${(rate * 100).toFixed(2)}%`,
         currentSeason,
@@ -118,13 +151,20 @@
       });
     }
 
+    function sameResult(left, right) {
+      return Boolean(left && right
+        && left.currentSeason === right.currentSeason
+        && left.currentMflPerUsd === right.currentMflPerUsd
+        && Math.abs(left.rate - right.rate) < 1e-12);
+    }
+
     function installRateFunction() {
       if (!resolved) return;
-      if (!authoritativeFunction || authoritativeFunction.__mflRate !== resolved.rate) {
-        authoritativeFunction = function evaluationDiscountRateFromSupabase() {
-          return resolved.rate;
+
+      if (!authoritativeFunction) {
+        authoritativeFunction = function evaluationDiscountRateFromSupabaseAndCurrentValue() {
+          return resolved?.rate ?? null;
         };
-        authoritativeFunction.__mflRate = resolved.rate;
         authoritativeFunction.__mflSupabaseAuthority = VERSION;
       }
 
@@ -147,14 +187,16 @@
           set: () => {},
         });
       } catch {
-        // Repeated assignment above covers non-configurable global bindings.
+        // Repeated assignment covers non-configurable global bindings.
       }
     }
 
     function clearLegacyDisplay() {
       const value = document.getElementById("evaluationDiscountRate");
       const advanced = document.getElementById("advancedDiscountRateValue");
-      const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate, .evaluationDiscountRate[data-tooltip]");
+      const metric = document.querySelector(
+        ".evaluationMetric.evaluationDiscountRate, .evaluationDiscountRate[data-tooltip]",
+      );
       document.documentElement.classList.remove("mflEvaluationRateResolved");
       if (value && value.textContent !== "-") value.textContent = "-";
       if (advanced && advanced.textContent !== "-") advanced.textContent = "-";
@@ -168,6 +210,7 @@
     function enforce() {
       frame = 0;
       if (!evaluationActive()) return;
+
       if (!resolved) {
         clearLegacyDisplay();
         return;
@@ -176,12 +219,14 @@
       installRateFunction();
       document.documentElement.classList.add("mflEvaluationRateResolved");
       document.documentElement.dataset.mflDiscountRate = resolved.label;
-      document.documentElement.dataset.mflDiscountRateSource = "supabase";
+      document.documentElement.dataset.mflDiscountRateSource = "supabase-current-setting";
       document.documentElement.dataset.mflCurrentSeason = String(resolved.currentSeason);
 
       const value = document.getElementById("evaluationDiscountRate");
       const advanced = document.getElementById("advancedDiscountRateValue");
-      const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate, .evaluationDiscountRate[data-tooltip]");
+      const metric = document.querySelector(
+        ".evaluationMetric.evaluationDiscountRate, .evaluationDiscountRate[data-tooltip]",
+      );
       if (value && value.textContent !== resolved.label) value.textContent = resolved.label;
       if (advanced && advanced.textContent !== resolved.label) advanced.textContent = resolved.label;
       if (metric) {
@@ -189,12 +234,69 @@
         metric.dataset.mflSupabaseTooltipVersion = VERSION;
         metric.dataset.mflDiscountRate = resolved.label;
         metric.dataset.mflCurrentSeason = String(resolved.currentSeason);
-        metric.dataset.mflRatioSeasons = resolved.rows.map((row) => row.season).join(",");
+        metric.dataset.mflCurrentValue = String(resolved.currentMflPerUsd);
+        metric.dataset.mflRatioSeasons = [
+          ...resolved.rows.map((row) => row.season),
+          resolved.currentSeason,
+        ].join(",");
       }
     }
 
     function scheduleEnforce() {
       if (!frame) frame = requestAnimationFrame(enforce);
+    }
+
+    function publishResult() {
+      if (!resolved) return;
+      window.mflSeasonRatios = resolved.rows;
+      window.__mflSeasonRatioResult = Object.freeze({
+        rows: resolved.rows,
+        factors: resolved.factors,
+        currentMflPerUsd: resolved.currentMflPerUsd,
+        currentSeason: resolved.currentSeason,
+        rate: resolved.rate,
+        label: resolved.label,
+        tooltip: resolved.tooltip,
+        source: "supabase-current-setting",
+      });
+      window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", {
+        detail: window.__mflSeasonRatioResult,
+      }));
+    }
+
+    function renderWithCurrentRate() {
+      if (rendering || typeof window.renderEvaluationPage !== "function") return;
+      rendering = true;
+      try {
+        window.renderEvaluationPage();
+      } catch {
+        // An empty Evaluation page may have no player panel to render.
+      } finally {
+        queueMicrotask(() => {
+          rendering = false;
+          enforce();
+        });
+      }
+    }
+
+    function refreshResolved({ render = false } = {}) {
+      const next = calculate(historicalRows, currentMflPerUsd());
+      if (!next) {
+        resolved = null;
+        clearLegacyDisplay();
+        return false;
+      }
+
+      const changed = !sameResult(resolved, next);
+      resolved = next;
+      installRateFunction();
+      enforce();
+
+      if (changed) {
+        publishResult();
+        if (render) queueMicrotask(renderWithCurrentRate);
+      }
+      return changed;
     }
 
     function wrapEvaluationRenderer() {
@@ -204,7 +306,9 @@
           || renderer.__mflDiscountAuthority === VERSION) return;
 
       const original = renderer;
-      wrappedEvaluationRenderer = function renderEvaluationPageWithSupabaseRate() {
+      wrappedEvaluationRenderer = function renderEvaluationPageWithCurrentDiscountRate() {
+        refreshResolved({ render: false });
+        installRateFunction();
         const result = original.apply(this, arguments);
         queueMicrotask(enforce);
         requestAnimationFrame(enforce);
@@ -218,42 +322,112 @@
       }
     }
 
-    function publishResult() {
-      if (!resolved) return;
-      window.mflSeasonRatios = resolved.rows;
-      window.__mflSeasonRatioResult = Object.freeze({
-        rows: resolved.rows,
-        currentSeason: resolved.currentSeason,
-        rate: resolved.rate,
-        label: resolved.label,
-        tooltip: resolved.tooltip,
-        source: "supabase",
-      });
-      window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", {
-        detail: window.__mflSeasonRatioResult,
-      }));
+    function wrapMflPerUsdSave() {
+      let saveFunction = null;
+      try {
+        saveFunction = typeof saveEvaluationMflPerUsd === "function"
+          ? saveEvaluationMflPerUsd
+          : window.saveEvaluationMflPerUsd;
+      } catch {
+        saveFunction = window.saveEvaluationMflPerUsd;
+      }
+
+      if (typeof saveFunction !== "function"
+          || saveFunction === wrappedSaveMflPerUsd
+          || saveFunction.__mflDiscountAuthority === VERSION) return;
+
+      const original = saveFunction;
+      wrappedSaveMflPerUsd = function saveEvaluationMflPerUsdWithDiscountRefresh(value) {
+        const result = original.apply(this, arguments);
+        refreshResolved({ render: false });
+        installRateFunction();
+        return result;
+      };
+      wrappedSaveMflPerUsd.__mflDiscountAuthority = VERSION;
+      window.__mflSaveEvaluationMflPerUsd = wrappedSaveMflPerUsd;
+
+      try {
+        window.saveEvaluationMflPerUsd = wrappedSaveMflPerUsd;
+      } catch {
+        // Try the global binding below.
+      }
+      try {
+        window.eval("saveEvaluationMflPerUsd = window.__mflSaveEvaluationMflPerUsd");
+      } catch {
+        // The renderer and interval still detect state changes.
+      }
+    }
+
+    function syncReleaseUi() {
+      const label = `MFL Front Office v${VERSION}`;
+      const footer = document.querySelector(
+        '.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]',
+      );
+      if (footer) {
+        if (footer.textContent !== label) footer.textContent = label;
+        footer.dataset.releaseLabel = label;
+        footer.setAttribute("aria-label", `${label}, open Changelog`);
+      }
+
+      const sections = Array.from(document.querySelectorAll(".changelogMinorSection"));
+      const section = sections.find((item) => (
+        String(item.querySelector(".changelogMinorVersion")?.textContent || "").trim() === "v1.120"
+      ));
+      const patchList = section?.querySelector(".changelogPatchList");
+      if (!patchList) return;
+
+      let releaseItem = Array.from(patchList.children).find((item) => (
+        String(item.querySelector(":scope > span")?.textContent || "").trim() === `v${VERSION}`
+      ));
+      if (!releaseItem) {
+        releaseItem = document.createElement("li");
+        const versionLabel = document.createElement("span");
+        versionLabel.textContent = `v${VERSION}`;
+        const description = document.createElement("p");
+        description.textContent = RELEASE_DESCRIPTION;
+        releaseItem.append(versionLabel, description);
+        patchList.prepend(releaseItem);
+      } else {
+        const description = releaseItem.querySelector(":scope > p");
+        if (description && description.textContent !== RELEASE_DESCRIPTION) {
+          description.textContent = RELEASE_DESCRIPTION;
+        }
+      }
+
+      const meta = section.querySelector(".changelogMinorMeta");
+      if (meta) {
+        const count = patchList.children.length;
+        meta.textContent = `${count} ${count === 1 ? "patch" : "patches"}`;
+      }
     }
 
     function requestRatios() {
-      if (requestPromise || resolved) return;
+      if (requestPromise || historicalRows) return;
+
       requestPromise = fetch(`${RATIO_API_URL}?v=${encodeURIComponent(VERSION)}&t=${Date.now()}`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
       })
         .then(async (response) => {
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.error || "Could not load MFL season ratios from Supabase.");
-          const calculated = calculate(data.ratios);
-          if (!calculated) throw new Error("Supabase did not return six consecutive valid season ratios.");
-          resolved = calculated;
-          publishResult();
-          wrapEvaluationRenderer();
-          enforce();
+          if (!response.ok) {
+            throw new Error(data.error || "Could not load MFL season ratios from Supabase.");
+          }
+
+          const ordered = normalizeRows(data.ratios);
+          if (!ordered) {
+            throw new Error("Supabase did not return four consecutive valid season ratios.");
+          }
+
+          historicalRows = ordered;
+          refreshResolved({ render: true });
         })
         .catch((error) => {
           console.error("Could not load the Evaluation Discount Rate from Supabase.", error);
+          historicalRows = null;
           resolved = null;
           clearLegacyDisplay();
+
           if (!retryTimer) {
             retryTimer = window.setTimeout(() => {
               retryTimer = 0;
@@ -263,17 +437,23 @@
           }
         })
         .finally(() => {
-          if (resolved) requestPromise = null;
+          if (historicalRows) requestPromise = null;
         });
     }
 
     function maintain() {
       wrapEvaluationRenderer();
+      wrapMflPerUsdSave();
+      syncReleaseUi();
+      if (historicalRows) refreshResolved({ render: true });
       enforce();
       requestRatios();
     }
 
-    observer = new MutationObserver(scheduleEnforce);
+    observer = new MutationObserver(() => {
+      scheduleEnforce();
+      syncReleaseUi();
+    });
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class", "data-page", "data-tooltip", "hidden"],
@@ -281,6 +461,7 @@
       characterData: true,
       subtree: true,
     });
+
     interval = window.setInterval(maintain, ENFORCE_INTERVAL_MS);
     ["popstate", "pageshow", "focus"].forEach((name) => window.addEventListener(name, maintain));
 
@@ -294,7 +475,7 @@
 
     window.__mflDiscountRateAuthority = {
       version: VERSION,
-      source: "supabase",
+      source: "supabase-current-setting",
       get result() { return resolved; },
       sync: maintain,
       destroy,
