@@ -1,4 +1,4 @@
-const VERSION = "1.120.32";
+const VERSION = "1.120.33";
 const REQUIRED_RATIO_ROWS = 4;
 const REQUEST_TIMEOUT_MS = 5000;
 
