@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.35");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.36");
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
   const STATS_PATH = /^\/database\/stats\/?$/i;
 
