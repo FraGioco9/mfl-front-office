@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.35";
+        const VERSION = "1.120.36";
         const SOURCE_URL = "/index-source.html";
         const RUNTIME_FILES = [
           "/watchlist-route-ui-runtime.js",
@@ -24,8 +24,49 @@
           "/mfl-season-ratios-runtime-v2.js",
           "/changelog-history-runtime.js",
         ];
+        const CURRENT_CHANGELOG_MARKUP = `
+          <li class="changelogMinorSection is-expanded" data-initial-release-version="${VERSION}">
+            <button class="changelogMinorToggle" type="button" aria-expanded="true">
+              <span class="changelogMinorVersion">v1.120</span>
+              <span class="changelogMinorMeta">7 patches</span>
+              <span class="changelogMinorChevron" aria-hidden="true">&gt;</span>
+            </button>
+            <div class="changelogMinorPanel">
+              <div class="changelogMinorPanelInner">
+                <ol class="changelogPatchList">
+                  <li><span>v1.120.36</span><p>Remove remaining first-paint version conflicts and restore Evaluation loading</p></li>
+                  <li><span>v1.120.35</span><p>Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip</p></li>
+                  <li><span>v1.120.34</span><p>Centralize release versioning and prevent legacy footer overrides</p></li>
+                  <li><span>v1.120.33</span><p>Clarify the Evaluation Discount Rate tooltip</p></li>
+                  <li><span>v1.120.32</span><p>Recalculate the Evaluation Discount Rate from a fresh request on every load</p></li>
+                  <li><span>v1.120.31</span><p>Refresh the Evaluation Discount Rate from live season ratios</p></li>
+                  <li><span>v1.120.30</span><p>Restore stable site loading after Discount Rate changes</p></li>
+                </ol>
+              </div>
+            </div>
+          </li>`;
 
         window.__mflReleaseVersion = VERSION;
+
+        let supplementalRuntimePromise = null;
+        window.__mflLoadSupplementalRuntimes = () => {
+          if (supplementalRuntimePromise) return supplementalRuntimePromise;
+          const releaseToken = `${VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          supplementalRuntimePromise = RUNTIME_FILES.reduce((chain, path) => (
+            chain.then(() => new Promise((resolve) => {
+              const script = document.createElement("script");
+              script.src = `${path}?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}`;
+              script.async = false;
+              script.addEventListener("load", resolve, { once: true });
+              script.addEventListener("error", () => {
+                console.error(`Could not load supplemental runtime: ${path}`);
+                resolve();
+              }, { once: true });
+              document.head.appendChild(script);
+            }))
+          ), Promise.resolve());
+          return supplementalRuntimePromise;
+        };
 
         function fail(message) {
           console.error(message);
@@ -57,10 +98,40 @@
           const stylePattern = /\/styles\.css\?v=\d+\.\d+\.\d+/;
           const shellMarker = 'const response = await fetch(`/index-shell.html?v=${VERSION}`, { cache: "default" });';
           const shellReplacement = 'const response = await fetch(`/index-shell.html?v=${VERSION}&release=${Date.now()}`, { cache: "no-store" });';
+          const initialShellMarker = `        function prepareInitialShell(doc) {
+          const route = routeInfo();`;
+          const initialShellReplacement = `        function prepareInitialShell(doc) {
+          const route = routeInfo();
+          const releaseLabel = "MFL Front Office v${VERSION}";
+          const footerLink = doc.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+          if (footerLink) {
+            footerLink.textContent = releaseLabel;
+            footerLink.setAttribute("aria-label", releaseLabel + ", open Changelog");
+            footerLink.dataset.releaseLabel = releaseLabel;
+            footerLink.closest(".siteFooter")?.setAttribute("data-release-version", "${VERSION}");
+          }
+          const changelogList = doc.querySelector(".changelogList");
+          if (changelogList) {
+            changelogList.innerHTML = ${JSON.stringify(CURRENT_CHANGELOG_MARKUP)};
+            changelogList.dataset.initialReleaseVersion = "${VERSION}";
+          }`;
+          const applicationSrcMarker = '          applicationScript.src = `/app.js?v=${VERSION}`;';
+          const applicationSrcReplacement = '          applicationScript.src = `/app.js?v=${VERSION}&release=${Date.now()}`;';
+          const applicationLoadMarker = `          applicationScript.addEventListener("load", () => {
+            installRuntimeFixes();
+            if (window.location.pathname !== "/changelog") finalizeRouteChrome();
+          });`;
+          const applicationLoadReplacement = `          applicationScript.addEventListener("load", () => {
+            installRuntimeFixes();
+            if (window.location.pathname !== "/changelog") finalizeRouteChrome();
+            window.__mflLoadSupplementalRuntimes?.();
+          });`;
           if (!versionPattern.test(request.responseText)
               || !stylePattern.test(request.responseText)
               || !request.responseText.includes(shellMarker)
-              || !request.responseText.includes("</body>")) {
+              || !request.responseText.includes(initialShellMarker)
+              || !request.responseText.includes(applicationSrcMarker)
+              || !request.responseText.includes(applicationLoadMarker)) {
             throw new Error("Could not locate the application source release markers.");
           }
 
@@ -72,12 +143,11 @@
             stylePattern,
             `/styles.css?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
           );
-          source = source.replace(shellMarker, shellReplacement);
-
-          const runtimeMarkup = RUNTIME_FILES.map((path) => (
-            `<script src="${path}?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}"></scr` + "ipt>"
-          )).join("\n");
-          source = source.replace("</body>", `${runtimeMarkup}\n</body>`);
+          source = source
+            .replace(shellMarker, shellReplacement)
+            .replace(initialShellMarker, initialShellReplacement)
+            .replace(applicationSrcMarker, applicationSrcReplacement)
+            .replace(applicationLoadMarker, applicationLoadReplacement);
 
           document.open();
           document.write(source);

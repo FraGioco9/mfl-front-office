@@ -1,9 +1,10 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.35");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.36");
   const SOURCE_VERSION = "1.120.3";
-  const SOURCE_COMMIT = "ada70b3e15aeb51c702dfbba1da51b1f17eed74d";
-  const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/changelog-history-runtime.js`;
+  const SOURCE_URL = "/changelog-history-source-v1.120.3.js";
+  const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.120.36", "Remove remaining first-paint version conflicts and restore Evaluation loading"],
     ["v1.120.35", "Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip"],
     ["v1.120.34", "Centralize release versioning and prevent legacy footer overrides"],
     ["v1.120.33", "Clarify the Evaluation Discount Rate tooltip"],
@@ -14,10 +15,17 @@
 
   window.__mflReleaseVersion = RELEASE_VERSION;
 
-  fetch(`${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}`, {
-    cache: "force-cache",
-    headers: { Accept: "application/javascript" },
-  })
+  fetch(
+    `${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}&release=${encodeURIComponent(releaseToken)}`,
+    {
+      cache: "no-store",
+      headers: {
+        Accept: "application/javascript",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        Pragma: "no-cache",
+      },
+    },
+  )
     .then((response) => {
       if (!response.ok) {
         throw new Error(`Could not load the Changelog history runtime (${response.status}).`);
@@ -26,16 +34,33 @@
     })
     .then((originalSource) => {
       const versionMarker = `const VERSION = "${SOURCE_VERSION}";`;
+      const releasesUrlMarker = "  const RELEASES_URL = `/releases.json?v=${VERSION}`;";
       const releasesMarker = "  const CURRENT_RELEASES = [";
+      const expandedStateMarker = `  const previous = window.__mflChangelogHistoryRuntime;
+  const expandedMinors = new Set();
+
+  document.querySelectorAll(".changelogMinorSection.is-expanded .changelogMinorVersion").forEach((label) => {
+    const minor = String(label.textContent || "").trim().replace(/^v/, "");
+    if (minor) expandedMinors.add(minor);
+  });`;
+      const expandedStateReplacement = `  const previous = window.__mflChangelogHistoryRuntime;
+  const expandedMinors = new Set();`;
       if (!originalSource.includes(versionMarker)
-          || !originalSource.includes(releasesMarker)) {
-        throw new Error("Could not locate the Changelog history version markers.");
+          || !originalSource.includes(releasesUrlMarker)
+          || !originalSource.includes(releasesMarker)
+          || !originalSource.includes(expandedStateMarker)) {
+        throw new Error("Could not locate the Changelog history release markers.");
       }
 
       let source = originalSource.replace(
         versionMarker,
         `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
       );
+      source = source.replace(
+        releasesUrlMarker,
+        "  const RELEASES_URL = `/releases.json?v=${VERSION}&release=${Date.now()}`;",
+      );
+      source = source.replace(expandedStateMarker, expandedStateReplacement);
       source = source.replace(
         releasesMarker,
         `  const CURRENT_RELEASES = ${JSON.stringify(CURRENT_RELEASES)}.concat([`,
