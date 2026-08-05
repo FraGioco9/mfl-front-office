@@ -2,13 +2,6 @@ name: Vercel site update
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "site/**"
-      - "export_for_website.py"
-      - ".github/workflows/vercel-site-update.yml"
 
 permissions:
   contents: read
