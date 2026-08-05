@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = "1.120.32";
-  const RELEASE_DESCRIPTION = "Recalculate the Evaluation Discount Rate from a fresh Supabase request on every load";
+  const VERSION = "1.120.33";
+  const RELEASE_DESCRIPTION = "Clarify the Evaluation Discount Rate tooltip";
   const STABLE_COMMIT = "dbb5755d036b00e7a4570ddc3cada5584a2cebca";
   const STABLE_RUNTIME_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${STABLE_COMMIT}/site/mfl-season-ratios-runtime-v2.js?v=1.120.30`;
   const RATIO_API_URL = "/api/mfl-season-ratios-v2";
@@ -92,7 +92,7 @@
       currentSeason,
       rate,
       label: `${(rate * 100).toFixed(2)}%`,
-      tooltip: "Discount Rate is recalculated from a fresh Supabase request using the latest four completed season ratios and the current MFL/USD value.",
+      tooltip: "Discount Rate is the geometric mean of four MFL/USD growth rates, calculated from the latest four completed season ratios and the current MFL/USD value.",
       requestedAt,
       source: "supabase-live-request",
     });
@@ -363,7 +363,7 @@
 
     const patched = source.replace(
       authorityMarker,
-      "  // v1.120.32 installs a fresh-request-only Discount Rate authority separately.",
+      "  // v1.120.33 installs a fresh-request-only Discount Rate authority separately.",
     );
     const script = document.createElement("script");
     script.textContent = `${patched}\n//# sourceURL=mfl-season-ratios-stable-ui-v1.120.30.js`;
