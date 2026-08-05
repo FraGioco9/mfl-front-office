@@ -7,7 +7,6 @@
     <script>
       (() => {
         const VERSION = "1.120.35";
-        const SOURCE_VERSION = "1.119.29";
         const SOURCE_URL = "/index-source.html";
         const RUNTIME_FILES = [
           "/watchlist-route-ui-runtime.js",
@@ -44,7 +43,7 @@
           const request = new XMLHttpRequest();
           request.open(
             "GET",
-            `${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}&release=${encodeURIComponent(releaseToken)}`,
+            `${SOURCE_URL}?release=${encodeURIComponent(releaseToken)}`,
             false,
           );
           request.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
@@ -54,23 +53,23 @@
             throw new Error(`Could not load the application source (${request.status}).`);
           }
 
-          const versionMarker = `const VERSION = "${SOURCE_VERSION}";`;
-          const styleMarker = `/styles.css?v=${SOURCE_VERSION}`;
+          const versionPattern = /const VERSION = "\d+\.\d+\.\d+";/;
+          const stylePattern = /\/styles\.css\?v=\d+\.\d+\.\d+/;
           const shellMarker = 'const response = await fetch(`/index-shell.html?v=${VERSION}`, { cache: "default" });';
           const shellReplacement = 'const response = await fetch(`/index-shell.html?v=${VERSION}&release=${Date.now()}`, { cache: "no-store" });';
-          if (!request.responseText.includes(versionMarker)
-              || !request.responseText.includes(styleMarker)
+          if (!versionPattern.test(request.responseText)
+              || !stylePattern.test(request.responseText)
               || !request.responseText.includes(shellMarker)
               || !request.responseText.includes("</body>")) {
             throw new Error("Could not locate the application source release markers.");
           }
 
           let source = request.responseText.replace(
-            versionMarker,
+            versionPattern,
             `const VERSION = "${VERSION}";\n        window.__mflReleaseVersion = VERSION;`,
           );
           source = source.replace(
-            styleMarker,
+            stylePattern,
             `/styles.css?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
           );
           source = source.replace(shellMarker, shellReplacement);
