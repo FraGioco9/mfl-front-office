@@ -3,206 +3,65 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const desiredPath = String(window.location.pathname || "").replace(/\/+$/, "");
-        if (!/^\/my-players\/(?:attributes|next-overall|contracts|current-season|all-time)$/i.test(desiredPath)) return;
-
-        window.__mflInitialMyPlayersPath = desiredPath;
-
-        const originalReplaceState = window.history.replaceState;
-        const originalPushState = window.history.pushState;
-        let active = true;
-        let timeout = 0;
-
-        function normalizedTarget(url) {
-          if (url == null) return "";
-          try {
-            const target = new URL(String(url), window.location.href);
-            if (target.origin !== window.location.origin) return "";
-            return target.pathname.replace(/\/+$/, "") || "/";
-          } catch {
-            return "";
-          }
-        }
-
-        function shouldBlock(url) {
-          if (!active) return false;
-          const targetPath = normalizedTarget(url);
-          if (!targetPath || targetPath.toLowerCase() === desiredPath.toLowerCase()) return false;
-          return /^\/my-players(?:\/attributes)?$/i.test(targetPath);
-        }
-
-        function guardedReplaceState(state, title, url) {
-          if (shouldBlock(url)) return;
-          return originalReplaceState.apply(this, arguments);
-        }
-
-        function guardedPushState(state, title, url) {
-          if (shouldBlock(url)) return;
-          return originalPushState.apply(this, arguments);
-        }
-
-        function release() {
-          if (!active) return;
-          active = false;
-          if (timeout) window.clearTimeout(timeout);
-          if (window.history.replaceState === guardedReplaceState) {
-            window.history.replaceState = originalReplaceState;
-          }
-          if (window.history.pushState === guardedPushState) {
-            window.history.pushState = originalPushState;
-          }
-          window.removeEventListener("pointerdown", release, true);
-          window.removeEventListener("keydown", release, true);
-          window.removeEventListener("touchstart", release, true);
-          window.removeEventListener("popstate", release);
-          if (window.__mflReleaseMyPlayersRouteGuard === release) {
-            delete window.__mflReleaseMyPlayersRouteGuard;
-          }
-        }
-
-        window.history.replaceState = guardedReplaceState;
-        window.history.pushState = guardedPushState;
-        window.__mflReleaseMyPlayersRouteGuard = release;
-        window.addEventListener("pointerdown", release, true);
-        window.addEventListener("keydown", release, true);
-        window.addEventListener("touchstart", release, true);
-        window.addEventListener("popstate", release);
-        timeout = window.setTimeout(release, 15000);
-      })();
-    </script>
-    <script src="/watchlist-route-ui-runtime.js?v=1.120.27"></script>
-    <script src="/database-stats-navigation-release-runtime.js?v=1.120.27"></script>
-    <script src="/database-stats-view-button-runtime.js?v=1.120.27"></script>
-    <script src="/v1-120-10-runtime.js?v=1.120.27"></script>
-    <script>
-      (() => {
-        const VERSION = "1.120.27";
-        const SOURCE_COMMIT = "4cac1ca5b5f48034cdab2b0e2b5e0c1756d37b75";
+        const VERSION = "1.120.31";
+        const SOURCE_COMMIT = "6d0d3e7a9835b63ae6934254d182ac9a159bac7a";
         const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
-        const RELEASES_URL = `/releases.json?v=${VERSION}`;
-        const CURRENT_RELEASES = [
-          ["v1.120.27", "Use Supabase as the only Discount Rate and tooltip source"],
-          ["v1.120.26", "Keep the selection bar and toast 12px apart and dismiss watchlist actions immediately"],
-          ["v1.120.25", "Keep selection available until watchlist actions complete and show their toast"],
-          ["v1.120.24", "Preserve the selected My Players view directly in application routing"],
-          ["v1.120.22", "Keep the selected My Players view URL unchanged while refreshing"],
-          ["v1.120.21", "Preserve the selected My Players view when refreshing"],
-          ["v1.120.19", "Start refreshed pages with no selected players"],
-          ["v1.120.18", "Clear selection after selection bar actions and keep their toast anchored above it"],
-          ["v1.120.17", "Keep the Stats view button limited to Database and MFL"],
-          ["v1.120.16", "Place toasts above the selection bar and dismiss selection actions before loading"],
-          ["v1.120.15", "Keep the Database Stats button persistent and limit route protection to reload"],
-          ["v1.120.14", "Release all Database Stats route guards before switching view or page"],
-          ["v1.120.13", "Release the Database Stats reload guard before explicit navigation"],
-          ["v1.120.12", "Preserve the Stats route and view button throughout Database Stats reload"],
-          ["v1.120.11", "Restore the Stats view button after reloading Database Stats"],
-          ["v1.120.10", "Finish Changelog loading cleanly and make Stats reload, selection dismissal, and toast spacing deterministic"],
-          ["v1.120.9", "Show Changelog loading state, refresh Database Stats, and preserve selection dismissal text"],
-          ["v1.120.8", "Load Changelog summary data and stabilize loaded rows, Stats reload, and selection spacing"],
-          ["v1.120.7", "Reveal loaded rows and persist the latest footer, Stats route, and toast position"],
-          ["v1.120.6", "Commit Custom filters only on Apply and restore Stats reload, toast, and footer version"],
-          ["v1.120.5", "Apply Custom filters once and align selection, toasts, loading headers, and footer version"],
-          ["v1.120.4", "Defer Custom filters until Apply and keep toasts and footer above current UI"],
-          ["v1.120.3", "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"],
-          ["v1.120.2", "Use a custom Overall tooltip and exclude MFL wallets from Database Stats"],
-          ["v1.120.1", "Keep Database Stats isolated from table rendering and refine view controls"],
-          ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"],
+        const RELEASES = [
+          ["v1.120.31", "Always recalculate the Evaluation Discount Rate from fresh Supabase data while loading"],
+          ["v1.120.30", "Calculate the Discount Rate from the current MFL/USD value and the last four completed seasons"],
         ];
 
         function fail(message) {
           console.error(message);
-          document.documentElement.classList.remove("bootPending");
-          const renderFailure = () => {
+          const render = () => {
             if (document.body) {
               document.body.innerHTML = '<main><p class="emptyState">Could not load MFL Front Office.</p></main>';
             }
           };
-          if (document.body) renderFailure();
-          else window.addEventListener("DOMContentLoaded", renderFailure, { once: true });
-        }
-
-        function loadRewrittenReleases() {
-          const request = new XMLHttpRequest();
-          request.open("GET", RELEASES_URL, false);
-          request.send(null);
-          if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-            throw new Error(`Could not load release history (${request.status}).`);
-          }
-          const releases = JSON.parse(request.responseText);
-          if (!Array.isArray(releases) || !releases.length
-              || releases.some((entry) => !Array.isArray(entry) || entry.length !== 2)) {
-            throw new Error("Release history is invalid.");
-          }
-          const currentLabels = new Set(CURRENT_RELEASES.map(([label]) => label));
-          return [...CURRENT_RELEASES, ...releases.filter(([label]) => !currentLabels.has(label))];
+          if (document.body) render();
+          else window.addEventListener("DOMContentLoaded", render, { once: true });
         }
 
         try {
-          const rewrittenReleases = loadRewrittenReleases();
           const request = new XMLHttpRequest();
           request.open("GET", SOURCE_URL, false);
           request.send(null);
           if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-            fail(`Could not load the release shell (${request.status}).`);
-            return;
+            throw new Error(`Could not load the v1.120.30 application shell (${request.status}).`);
           }
 
           let source = request.responseText;
-          const versionMarker = 'const VERSION = "1.119.33";';
-          const currentReleasesPattern = /const CURRENT_RELEASES = \[[\s\S]*?\n        \];/;
-          const releaseEntryMarker = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label)) entries.set(label, description);';
-          const releaseEntryReplacement = '            if (/^v\\d+\\.\\d+\\.\\d+$/.test(label) && !/^v1\\./.test(label)) entries.set(label, description);';
-          const runtimeMarker = '/mfl-season-ratios-runtime.js?v=1.119.33';
-          const statsSeedMarker = '          // The consolidated application runtime permanently keeps the sidebar';
-          const nestedPatchEndMarker = '\n`;\n          if (!source.includes(patchMarker)) {';
+          const versionMarker = 'const VERSION = "1.120.27";';
+          const releasesMarker = "        const CURRENT_RELEASES = [";
+          const runtimeMarker = '/mfl-season-ratios-runtime-v2.js?v=${VERSION}';
+          const apiScriptMarker = "'/api/mfl-season-ratios-v2?format=script'";
+
           if (!source.includes(versionMarker)
-              || !currentReleasesPattern.test(source)
-              || !source.includes(releaseEntryMarker)
+              || !source.includes(releasesMarker)
               || !source.includes(runtimeMarker)
-              || !source.includes(statsSeedMarker)
-              || !source.includes(nestedPatchEndMarker)) {
-            fail("Could not locate the release shell markers.");
-            return;
+              || !source.includes(apiScriptMarker)) {
+            throw new Error("Could not locate the release shell markers.");
           }
 
           source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
+          source = source.replace(/(\.js\?v=)1\.120\.27/g, `$1${VERSION}`);
           source = source.replace(
-            currentReleasesPattern,
-            `const CURRENT_RELEASES = ${JSON.stringify(rewrittenReleases)};`,
+            releasesMarker,
+            `${releasesMarker}\n${RELEASES.map((entry) => `          ${JSON.stringify(entry)},`).join("\n")}`,
           );
-          source = source.replace(releaseEntryMarker, releaseEntryReplacement);
-          source = source.replace(runtimeMarker, `/mfl-season-ratios-runtime-v2.js?v=${VERSION}`);
           source = source.replace(
-            statsSeedMarker,
-            `          if (/^\\/database\\/stats\\/?$/i.test(window.location.pathname)) {
-            root.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
-              const active = button.dataset.view === "stats";
-              button.hidden = !["attributes", "contracts", "stats"].includes(button.dataset.view);
-              button.classList.toggle("active", active);
-              button.setAttribute("aria-pressed", String(active));
-            });
-          }
-
-${statsSeedMarker}`,
+            runtimeMarker,
+            '/mfl-season-ratios-runtime-v2.js?v=${VERSION}&fresh=${Date.now()}',
           );
-
-          const finalRuntimeExpression = String.raw`'<script src="/database-stats-navigation-release-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/table-loading-visibility-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-refinement-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-tooltip-portal-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/release-ui-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/v1-120-10-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/database-stats-view-button-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-refresh-reset-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/my-players-refresh-view-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n<script src="/selection-stack-runtime.js?v=${VERSION}"></scr' + 'ipt>\\n</body>'`;
-          const nestedFinalInjection = `
-        source = source.replaceAll(
-          '/api/mfl-season-ratios?format=script',
-          '/api/mfl-season-ratios-v2?format=script',
-        );
-        source = source.replace(
-          '</body>',
-          ${finalRuntimeExpression},
-        );
-`;
           source = source.replace(
-            nestedPatchEndMarker,
-            `${nestedFinalInjection}${nestedPatchEndMarker}`,
+            apiScriptMarker,
+            JSON.stringify(`/api/mfl-season-ratios-v2?format=script&v=${VERSION}&fresh=${Date.now()}`),
           );
 
           document.open();
