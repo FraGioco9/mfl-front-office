@@ -39,7 +39,7 @@
           const releaseToken = `${VERSION}-${Date.now()}`;
           let source = request.responseText.replace(
             versionMarker,
-            `const VERSION = "${VERSION}";`,
+            `const VERSION = "${VERSION}";\n        window.__mflReleaseVersion = VERSION;`,
           );
           source = source.replaceAll(
             `?v=${STABLE_VERSION}`,
