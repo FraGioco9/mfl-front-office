@@ -6,33 +6,37 @@
 
   window.__mflReleaseVersion = RELEASE_VERSION;
 
-  try {
-    const request = new XMLHttpRequest();
-    request.open("GET", `${SOURCE_URL}?feature=${encodeURIComponent(FEATURE_VERSION)}`, false);
-    request.send(null);
-    if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-      throw new Error(`Could not load the v${FEATURE_VERSION} compatibility runtime (${request.status}).`);
-    }
+  fetch(`${SOURCE_URL}?feature=${encodeURIComponent(FEATURE_VERSION)}`, {
+    cache: "force-cache",
+    headers: { Accept: "application/javascript" },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Could not load the v${FEATURE_VERSION} compatibility runtime (${response.status}).`);
+      }
+      return response.text();
+    })
+    .then((originalSource) => {
+      const versionMarker = `const VERSION = "${FEATURE_VERSION}";`;
+      if (!originalSource.includes(versionMarker)) {
+        throw new Error("Could not locate the legacy runtime version marker.");
+      }
 
-    const versionMarker = `const VERSION = "${FEATURE_VERSION}";`;
-    if (!request.responseText.includes(versionMarker)) {
-      throw new Error("Could not locate the legacy runtime version marker.");
-    }
+      let source = originalSource.replace(
+        versionMarker,
+        `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
+      );
+      source = source.replace(
+        "  safelyDestroy(window.__mflReleaseUiRuntime);\n",
+        "",
+      );
+      source += `\n//# sourceURL=mfl-v1-120-10-compat-v${RELEASE_VERSION}.js`;
 
-    let source = request.responseText.replace(
-      versionMarker,
-      `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
-    );
-    source = source.replace(
-      "  safelyDestroy(window.__mflReleaseUiRuntime);\n",
-      "",
-    );
-    source += `\n//# sourceURL=mfl-v1-120-10-compat-v${RELEASE_VERSION}.js`;
-
-    const script = document.createElement("script");
-    script.textContent = source;
-    document.head.appendChild(script);
-  } catch (error) {
-    console.error(error?.message || "Could not initialize the v1.120.10 compatibility runtime.");
-  }
+      const script = document.createElement("script");
+      script.textContent = source;
+      document.head.appendChild(script);
+    })
+    .catch((error) => {
+      console.error(error?.message || "Could not initialize the v1.120.10 compatibility runtime.");
+    });
 })();
