@@ -1,4 +1,4 @@
-const VERSION = "1.120.31";
+const VERSION = "1.120.32";
 const REQUIRED_RATIO_ROWS = 4;
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -47,6 +47,7 @@ async function loadRatiosFromSupabase() {
       headers: {
         apikey: config.key,
         Authorization: `Bearer ${config.key}`,
+        Accept: "application/json",
         "Cache-Control": "no-cache, no-store, max-age=0",
         Pragma: "no-cache",
       },
@@ -67,15 +68,14 @@ async function loadRatiosFromSupabase() {
 function loaderScript() {
   return `(() => {
   const VERSION = ${JSON.stringify(VERSION)};
-  const runtimeId = "mflSeasonRatiosRuntimeV2";
-  const existing = document.getElementById(runtimeId);
-  if (existing?.dataset.version === VERSION
-      && window.__mflDiscountRateRuntimeVersion === VERSION) {
-    window.__mflDiscountRateAuthority?.sync?.();
+  if (window.__mflDiscountRateRuntimeVersion === VERSION
+      && window.__mflDiscountRateAuthority?.version === VERSION) {
+    window.__mflDiscountRateAuthority.sync?.();
     return;
   }
-  existing?.remove();
 
+  const runtimeId = "mflSeasonRatiosRuntimeV2";
+  document.getElementById(runtimeId)?.remove();
   const runtime = document.createElement("script");
   runtime.id = runtimeId;
   runtime.dataset.version = VERSION;
@@ -83,7 +83,7 @@ function loaderScript() {
     + encodeURIComponent(VERSION)
     + "&fresh="
     + Date.now();
-  runtime.async = false;
+  runtime.async = true;
   document.head.appendChild(runtime);
 })();\n`;
 }
@@ -95,6 +95,7 @@ module.exports = async function handler(request, response) {
   response.setHeader("Surrogate-Control", "no-store");
   response.setHeader("Pragma", "no-cache");
   response.setHeader("Expires", "0");
+  response.setHeader("X-MFL-Season-Ratios-Version", VERSION);
 
   if (request.method !== "GET") {
     response.setHeader("Allow", "GET");
@@ -111,7 +112,12 @@ module.exports = async function handler(request, response) {
   try {
     const requestedAt = new Date().toISOString();
     const ratios = await loadRatiosFromSupabase();
-    response.status(200).json({ ratios, source: "supabase-live-request", requestedAt });
+    response.status(200).json({
+      ratios,
+      source: "supabase-live-request",
+      requestedAt,
+      requestNonce: String(request.query?.fresh || ""),
+    });
   } catch (error) {
     const message = error instanceof Error
       ? error.message
