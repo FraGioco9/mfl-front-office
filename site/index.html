@@ -6,9 +6,11 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.33";
+        const VERSION = "1.120.34";
+        const STABLE_VERSION = "1.120.27";
         const SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@6d0d3e7a9835b63ae6934254d182ac9a159bac7a/site/index.html";
-        const RUNTIME_MARKER = '/mfl-season-ratios-runtime-v2.js?v=${VERSION}';
+
+        window.__mflReleaseVersion = VERSION;
 
         function fail(message) {
           console.error(message);
@@ -29,12 +31,20 @@
             throw new Error(`Could not load the stable application shell (${request.status}).`);
           }
 
-          if (!request.responseText.includes(RUNTIME_MARKER)) {
-            throw new Error("Could not locate the Evaluation runtime URL in the stable application shell.");
+          const versionMarker = `const VERSION = "${STABLE_VERSION}";`;
+          if (!request.responseText.includes(versionMarker)) {
+            throw new Error("Could not locate the stable application version marker.");
           }
 
-          const runtimeUrl = `/mfl-season-ratios-runtime-v2.js?v=${VERSION}&fresh=${Date.now()}`;
-          const source = request.responseText.replace(RUNTIME_MARKER, runtimeUrl);
+          const releaseToken = `${VERSION}-${Date.now()}`;
+          let source = request.responseText.replace(
+            versionMarker,
+            `const VERSION = "${VERSION}";`,
+          );
+          source = source.replaceAll(
+            `?v=${STABLE_VERSION}`,
+            `?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
+          );
 
           document.open();
           document.write(source);
