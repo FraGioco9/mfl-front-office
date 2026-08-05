@@ -27,8 +27,14 @@
             throw new Error(`Could not load the stable application shell (${request.status}).`);
           }
 
+          const authorityTag = '<script src="/discount-rate-authority-v1-120-31.js?v=1.120.31"></scr' + 'ipt>';
+          const source = request.responseText.replace(
+            "</body>",
+            `${authorityTag}\n</body>`,
+          );
+
           document.open();
-          document.write(request.responseText);
+          document.write(source);
           document.close();
         } catch (error) {
           fail(error?.message || "Could not initialize MFL Front Office.");
