@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.34");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.35");
   const SOURCE_VERSION = "1.120.24";
   const SOURCE_COMMIT = "ada70b3e15aeb51c702dfbba1da51b1f17eed74d";
   const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;

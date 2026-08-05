@@ -1,5 +1,6 @@
 (() => {
-  const VERSION = "1.120.25";
+  const FEATURE_VERSION = "1.120.25";
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.35");
   const VIEW_BY_SLUG = {
     attributes: "attributes",
     "next-overall": "next",
@@ -16,8 +17,10 @@
   };
   const MAX_WAIT_MS = 15000;
 
+  window.__mflReleaseVersion = RELEASE_VERSION;
+
   const existing = window.__mflMyPlayersRefreshViewRuntime;
-  if (existing?.version === VERSION) {
+  if (existing?.version === FEATURE_VERSION) {
     existing.rebind?.();
     return;
   }
@@ -43,7 +46,7 @@
       footer.prepend(link);
     }
 
-    const text = `MFL Front Office v${VERSION}`;
+    const text = `MFL Front Office v${RELEASE_VERSION}`;
     link.hidden = false;
     link.removeAttribute("aria-hidden");
     link.href = "/changelog";
@@ -51,7 +54,7 @@
     link.dataset.releaseLabel = text;
     link.textContent = text;
     link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = VERSION;
+    footer.dataset.releaseVersion = RELEASE_VERSION;
   }
 
   function currentAppState() {
@@ -139,7 +142,8 @@
   }
 
   window.__mflMyPlayersRefreshViewRuntime = {
-    version: VERSION,
+    version: FEATURE_VERSION,
+    releaseVersion: RELEASE_VERSION,
     rebind,
     destroy,
   };
