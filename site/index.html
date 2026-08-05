@@ -3,19 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.31";
-        const SOURCE_COMMIT = "6d0d3e7a9835b63ae6934254d182ac9a159bac7a";
-        const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/index.html`;
-        const RELEASES = [
-          ["v1.120.31", "Always recalculate the Evaluation Discount Rate from fresh Supabase data while loading"],
-          ["v1.120.30", "Calculate the Discount Rate from the current MFL/USD value and the last four completed seasons"],
-        ];
+        const SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@6d0d3e7a9835b63ae6934254d182ac9a159bac7a/site/index.html";
 
         function fail(message) {
           console.error(message);
@@ -33,39 +24,11 @@
           request.open("GET", SOURCE_URL, false);
           request.send(null);
           if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-            throw new Error(`Could not load the v1.120.30 application shell (${request.status}).`);
+            throw new Error(`Could not load the stable application shell (${request.status}).`);
           }
-
-          let source = request.responseText;
-          const versionMarker = 'const VERSION = "1.120.27";';
-          const releasesMarker = "        const CURRENT_RELEASES = [";
-          const runtimeMarker = '/mfl-season-ratios-runtime-v2.js?v=${VERSION}';
-          const apiScriptMarker = "'/api/mfl-season-ratios-v2?format=script'";
-
-          if (!source.includes(versionMarker)
-              || !source.includes(releasesMarker)
-              || !source.includes(runtimeMarker)
-              || !source.includes(apiScriptMarker)) {
-            throw new Error("Could not locate the release shell markers.");
-          }
-
-          source = source.replace(versionMarker, `const VERSION = "${VERSION}";`);
-          source = source.replace(/(\.js\?v=)1\.120\.27/g, `$1${VERSION}`);
-          source = source.replace(
-            releasesMarker,
-            `${releasesMarker}\n${RELEASES.map((entry) => `          ${JSON.stringify(entry)},`).join("\n")}`,
-          );
-          source = source.replace(
-            runtimeMarker,
-            '/mfl-season-ratios-runtime-v2.js?v=${VERSION}&fresh=${Date.now()}',
-          );
-          source = source.replace(
-            apiScriptMarker,
-            JSON.stringify(`/api/mfl-season-ratios-v2?format=script&v=${VERSION}&fresh=${Date.now()}`),
-          );
 
           document.open();
-          document.write(source);
+          document.write(request.responseText);
           document.close();
         } catch (error) {
           fail(error?.message || "Could not initialize MFL Front Office.");
