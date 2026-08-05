@@ -13,39 +13,43 @@
 
   window.__mflReleaseVersion = RELEASE_VERSION;
 
-  try {
-    const request = new XMLHttpRequest();
-    request.open("GET", `${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}`, false);
-    request.send(null);
-    if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-      throw new Error(`Could not load the Changelog history runtime (${request.status}).`);
-    }
+  fetch(`${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}`, {
+    cache: "force-cache",
+    headers: { Accept: "application/javascript" },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Could not load the Changelog history runtime (${response.status}).`);
+      }
+      return response.text();
+    })
+    .then((originalSource) => {
+      const versionMarker = `const VERSION = "${SOURCE_VERSION}";`;
+      const releasesMarker = "  const CURRENT_RELEASES = [";
+      if (!originalSource.includes(versionMarker)
+          || !originalSource.includes(releasesMarker)) {
+        throw new Error("Could not locate the Changelog history version markers.");
+      }
 
-    const versionMarker = `const VERSION = "${SOURCE_VERSION}";`;
-    const releasesMarker = "  const CURRENT_RELEASES = [";
-    if (!request.responseText.includes(versionMarker)
-        || !request.responseText.includes(releasesMarker)) {
-      throw new Error("Could not locate the Changelog history version markers.");
-    }
+      let source = originalSource.replace(
+        versionMarker,
+        `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
+      );
+      source = source.replace(
+        releasesMarker,
+        `  const CURRENT_RELEASES = ${JSON.stringify(CURRENT_RELEASES)}.concat([`,
+      );
+      source = source.replace(
+        "  ];\n\n  const previous = window.__mflChangelogHistoryRuntime;",
+        "  ]);\n\n  const previous = window.__mflChangelogHistoryRuntime;",
+      );
+      source += `\n//# sourceURL=mfl-changelog-history-v${RELEASE_VERSION}.js`;
 
-    let source = request.responseText.replace(
-      versionMarker,
-      `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
-    );
-    source = source.replace(
-      releasesMarker,
-      `  const CURRENT_RELEASES = ${JSON.stringify(CURRENT_RELEASES)}.concat([`,
-    );
-    source = source.replace(
-      "  ];\n\n  const previous = window.__mflChangelogHistoryRuntime;",
-      "  ]);\n\n  const previous = window.__mflChangelogHistoryRuntime;",
-    );
-    source += `\n//# sourceURL=mfl-changelog-history-v${RELEASE_VERSION}.js`;
-
-    const script = document.createElement("script");
-    script.textContent = source;
-    document.head.appendChild(script);
-  } catch (error) {
-    console.error(error?.message || "Could not initialize Changelog history.");
-  }
+      const script = document.createElement("script");
+      script.textContent = source;
+      document.head.appendChild(script);
+    })
+    .catch((error) => {
+      console.error(error?.message || "Could not initialize Changelog history.");
+    });
 })();
