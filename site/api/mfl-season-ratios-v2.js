@@ -1,4 +1,4 @@
-const VERSION = "1.120.34";
+const VERSION = "1.120.35";
 const REQUIRED_RATIO_ROWS = 4;
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -68,6 +68,7 @@ async function loadRatiosFromSupabase() {
 function loaderScript() {
   return `(() => {
   const VERSION = ${JSON.stringify(VERSION)};
+  window.__mflReleaseVersion = String(window.__mflReleaseVersion || VERSION);
   if (window.__mflDiscountRateRuntimeVersion === VERSION
       && window.__mflDiscountRateAuthority?.version === VERSION) {
     window.__mflDiscountRateAuthority.sync?.();
