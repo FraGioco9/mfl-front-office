@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.31";
+  const VERSION = "1.120.32";
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
   const STATS_PATH = /^\/database\/stats\/?$/i;
 
