@@ -1,4 +1,4 @@
-const VERSION = "1.120.30";
+const VERSION = "1.120.31";
 const REQUIRED_RATIO_ROWS = 4;
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -47,6 +47,8 @@ async function loadRatiosFromSupabase() {
       headers: {
         apikey: config.key,
         Authorization: `Bearer ${config.key}`,
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        Pragma: "no-cache",
       },
     },
   );
@@ -65,25 +67,31 @@ async function loadRatiosFromSupabase() {
 function loaderScript() {
   return `(() => {
   const VERSION = ${JSON.stringify(VERSION)};
-  if (window.__mflDiscountRateRuntimeVersion === VERSION) return;
-
   const runtimeId = "mflSeasonRatiosRuntimeV2";
   const existing = document.getElementById(runtimeId);
-  if (existing?.dataset.version === VERSION) return;
+  if (existing?.dataset.version === VERSION
+      && window.__mflDiscountRateRuntimeVersion === VERSION) {
+    window.__mflDiscountRateAuthority?.sync?.();
+    return;
+  }
   existing?.remove();
 
   const runtime = document.createElement("script");
   runtime.id = runtimeId;
   runtime.dataset.version = VERSION;
-  runtime.src = "/mfl-season-ratios-runtime-v2.js?v=" + encodeURIComponent(VERSION);
+  runtime.src = "/mfl-season-ratios-runtime-v2.js?v="
+    + encodeURIComponent(VERSION)
+    + "&fresh="
+    + Date.now();
   runtime.async = false;
   document.head.appendChild(runtime);
 })();\n`;
 }
 
 module.exports = async function handler(request, response) {
-  response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  response.setHeader("CDN-Cache-Control", "no-store");
+  response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  response.setHeader("CDN-Cache-Control", "no-store, max-age=0");
+  response.setHeader("Vercel-CDN-Cache-Control", "no-store, max-age=0");
   response.setHeader("Surrogate-Control", "no-store");
   response.setHeader("Pragma", "no-cache");
   response.setHeader("Expires", "0");
@@ -101,8 +109,9 @@ module.exports = async function handler(request, response) {
   }
 
   try {
+    const requestedAt = new Date().toISOString();
     const ratios = await loadRatiosFromSupabase();
-    response.status(200).json({ ratios, source: "supabase" });
+    response.status(200).json({ ratios, source: "supabase-live-request", requestedAt });
   } catch (error) {
     const message = error instanceof Error
       ? error.message
