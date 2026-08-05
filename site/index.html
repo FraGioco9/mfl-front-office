@@ -6,7 +6,9 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
+        const VERSION = "1.120.32";
         const SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@6d0d3e7a9835b63ae6934254d182ac9a159bac7a/site/index.html";
+        const RUNTIME_MARKER = '/mfl-season-ratios-runtime-v2.js?v=${VERSION}';
 
         function fail(message) {
           console.error(message);
@@ -27,8 +29,15 @@
             throw new Error(`Could not load the stable application shell (${request.status}).`);
           }
 
+          if (!request.responseText.includes(RUNTIME_MARKER)) {
+            throw new Error("Could not locate the Evaluation runtime URL in the stable application shell.");
+          }
+
+          const runtimeUrl = `/mfl-season-ratios-runtime-v2.js?v=${VERSION}&fresh=${Date.now()}`;
+          const source = request.responseText.replace(RUNTIME_MARKER, runtimeUrl);
+
           document.open();
-          document.write(request.responseText);
+          document.write(source);
           document.close();
         } catch (error) {
           fail(error?.message || "Could not initialize MFL Front Office.");
