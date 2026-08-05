@@ -6,9 +6,25 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.34";
-        const STABLE_VERSION = "1.120.27";
-        const SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@6d0d3e7a9835b63ae6934254d182ac9a159bac7a/site/index.html";
+        const VERSION = "1.120.35";
+        const SOURCE_VERSION = "1.119.29";
+        const SOURCE_URL = "/index-source.html";
+        const RUNTIME_FILES = [
+          "/watchlist-route-ui-runtime.js",
+          "/database-stats-navigation-release-runtime.js",
+          "/table-loading-visibility-runtime.js",
+          "/database-stats-runtime.js",
+          "/database-stats-refinement-runtime.js",
+          "/database-stats-tooltip-portal-runtime.js",
+          "/release-ui-runtime.js",
+          "/v1-120-10-runtime.js",
+          "/database-stats-view-button-runtime.js",
+          "/selection-refresh-reset-runtime.js",
+          "/my-players-refresh-view-runtime.js",
+          "/selection-stack-runtime.js",
+          "/mfl-season-ratios-runtime-v2.js",
+          "/changelog-history-runtime.js",
+        ];
 
         window.__mflReleaseVersion = VERSION;
 
@@ -24,27 +40,45 @@
         }
 
         try {
+          const releaseToken = `${VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
           const request = new XMLHttpRequest();
-          request.open("GET", SOURCE_URL, false);
+          request.open(
+            "GET",
+            `${SOURCE_URL}?source=${encodeURIComponent(SOURCE_VERSION)}&release=${encodeURIComponent(releaseToken)}`,
+            false,
+          );
+          request.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
+          request.setRequestHeader("Pragma", "no-cache");
           request.send(null);
           if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
-            throw new Error(`Could not load the stable application shell (${request.status}).`);
+            throw new Error(`Could not load the application source (${request.status}).`);
           }
 
-          const versionMarker = `const VERSION = "${STABLE_VERSION}";`;
-          if (!request.responseText.includes(versionMarker)) {
-            throw new Error("Could not locate the stable application version marker.");
+          const versionMarker = `const VERSION = "${SOURCE_VERSION}";`;
+          const styleMarker = `/styles.css?v=${SOURCE_VERSION}`;
+          const shellMarker = 'const response = await fetch(`/index-shell.html?v=${VERSION}`, { cache: "default" });';
+          const shellReplacement = 'const response = await fetch(`/index-shell.html?v=${VERSION}&release=${Date.now()}`, { cache: "no-store" });';
+          if (!request.responseText.includes(versionMarker)
+              || !request.responseText.includes(styleMarker)
+              || !request.responseText.includes(shellMarker)
+              || !request.responseText.includes("</body>")) {
+            throw new Error("Could not locate the application source release markers.");
           }
 
-          const releaseToken = `${VERSION}-${Date.now()}`;
           let source = request.responseText.replace(
             versionMarker,
             `const VERSION = "${VERSION}";\n        window.__mflReleaseVersion = VERSION;`,
           );
-          source = source.replaceAll(
-            `?v=${STABLE_VERSION}`,
-            `?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
+          source = source.replace(
+            styleMarker,
+            `/styles.css?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
           );
+          source = source.replace(shellMarker, shellReplacement);
+
+          const runtimeMarkup = RUNTIME_FILES.map((path) => (
+            `<script src="${path}?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}"></scr` + "ipt>"
+          )).join("\n");
+          source = source.replace("</body>", `${runtimeMarkup}\n</body>`);
 
           document.open();
           document.write(source);
