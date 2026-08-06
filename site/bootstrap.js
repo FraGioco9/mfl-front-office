@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.42";
+  const VERSION = "1.120.43";
   const ownUrl = document.currentScript?.src || new URL("bootstrap.js", location.href).href;
   const baseUrl = new URL(".", ownUrl);
   const assetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), baseUrl).href;
@@ -100,14 +100,9 @@
           });`,
       );
 
-    const discountVisibility = `<style id="mflDiscountRateVisibilityFix">
-      html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
-      body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
-        visibility: visible !important;
-      }
-    <\/style>`;
+    const evaluationStaticChrome = `<script src="${assetUrl("evaluation-static-chrome-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
     const integrity = `<script src="${assetUrl("startup-integrity-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
-    source = source.replace("</head>", `${discountVisibility}${integrity}</head>`);
+    source = source.replace("</head>", `${evaluationStaticChrome}${integrity}</head>`);
     document.open();
     document.write(source);
     document.close();
