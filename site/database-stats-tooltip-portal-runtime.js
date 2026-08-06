@@ -1,10 +1,11 @@
 (() => {
-  const VERSION = "1.120.6";
+  const VERSION = String(window.__mflReleaseVersion || "1.120.38");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
   let frame = 0;
   let observer = null;
+  let applyAnimationTimer = 0;
 
   function label(value) {
     return String(value || "").trim().toLowerCase();
@@ -24,6 +25,12 @@
     }
     style.textContent = `
       #databaseStatsPage #databaseStatsCustomFilter { display: none !important; }
+      #databaseStatsPage .mflStatsHistogramBar::after {
+        animation: none !important;
+      }
+      html.databaseStatsApplyAnimating body[data-page="databasestats"] #databaseStatsPage .mflStatsHistogramBar::after {
+        animation: mflStatsBarRise 220ms ease-out !important;
+      }
       #databaseStatsCustomTooltipPortal {
         position: fixed;
         z-index: 2147483640;
@@ -144,6 +151,15 @@
     return { min, max };
   }
 
+  function beginApplyAnimation() {
+    window.clearTimeout(applyAnimationTimer);
+    document.documentElement.classList.add("databaseStatsApplyAnimating");
+    applyAnimationTimer = window.setTimeout(() => {
+      document.documentElement.classList.remove("databaseStatsApplyAnimating");
+      applyAnimationTimer = 0;
+    }, 260);
+  }
+
   function apply() {
     const range = normalizedRange();
     const min = document.querySelector("#databaseStatsCustomMin");
@@ -154,6 +170,7 @@
     if (min) min.value = String(range.min);
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
+    beginApplyAnimation();
     applyButton.click();
 
     const original = document.querySelector("#databaseStatsCustomFilter");
@@ -255,6 +272,7 @@
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
+    if (applyAnimationTimer) window.clearTimeout(applyAnimationTimer);
     observer?.disconnect();
     document.removeEventListener("click", onClick, true);
     stoppedEvents.forEach((type) => document.removeEventListener(type, stopPortalEvent, true));
@@ -264,6 +282,7 @@
     window.removeEventListener("scroll", schedule, true);
     tooltip?.remove();
     delete document.documentElement.dataset.databaseStatsCustomDraft;
+    document.documentElement.classList.remove("databaseStatsApplyAnimating");
     document.getElementById("databaseStatsTooltipPortalStyles")?.remove();
   }
 
