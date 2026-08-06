@@ -57,24 +57,6 @@
       ]
     },
     {
-      "source": "/mfl-season-ratios-runtime.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    },
-    {
-      "source": "/mfl-season-ratios-runtime-v2.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    },
-    {
       "source": "/release-ui-runtime.js",
       "headers": [
         {

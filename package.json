@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "@onflow/fcl": "latest"
-  }
-}
