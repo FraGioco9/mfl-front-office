@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = "1.120.40";
+  const RELEASE_VERSION = "1.120.41";
   const SOURCE_VERSION = "1.120.24";
   const scriptUrl = document.currentScript?.src || new URL("app.js", window.location.href).href;
   const assetBaseUrl = new URL(".", scriptUrl);
@@ -76,6 +76,33 @@
     return source.includes(marker) ? source.replace(marker, replacement) : source;
   }
 
+  function patchBoundedStartupWaits(source) {
+    const fontMarker = `      await document.fonts?.ready?.catch(() => undefined);`;
+    const fontReplacement = `      await Promise.race([
+        document.fonts?.ready?.catch(() => undefined),
+        new Promise((resolve) => window.setTimeout(resolve, 1500)),
+      ]);`;
+    const preferencesMarker = `    await loadWalletPreferences();`;
+    const preferencesReplacement = `    await Promise.race([
+      loadWalletPreferences(),
+      new Promise((resolve) => window.setTimeout(resolve, 5000)),
+    ]);`;
+
+    let patched = replaceRequired(
+      source,
+      fontMarker,
+      fontReplacement,
+      "the initial font wait",
+    );
+    patched = replaceRequired(
+      patched,
+      preferencesMarker,
+      preferencesReplacement,
+      "the initial wallet preference wait",
+    );
+    return patched;
+  }
+
   async function start() {
     const [
       originalLoaderSource,
@@ -125,6 +152,7 @@
       loaderBaseRequestReplacement,
       "the base loader source request",
     );
+    loaderBaseSource = patchBoundedStartupWaits(loaderBaseSource);
     loaderBaseSource = exposeLoaderError(loaderBaseSource);
 
     let loaderSource = replaceRequired(
