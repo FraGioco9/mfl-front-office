@@ -1,9 +1,13 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.38");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.39");
   const SOURCE_VERSION = "1.120.3";
-  const SOURCE_URL = "/changelog-history-source-v1.120.3.js";
+  const assetUrl = typeof window.__mflAssetUrl === "function"
+    ? window.__mflAssetUrl
+    : (path) => new URL(String(path || "").replace(/^\/+/, ""), window.location.origin + "/").href;
+  const SOURCE_URL = assetUrl("changelog-history-source-v1.120.3.js");
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.120.39", "Use one stable asynchronous startup chain locally and on Vercel"],
     ["v1.120.38", "Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations"],
     ["v1.120.37", "Restore static startup content, full MFL Stats, and the live Discount Rate"],
     ["v1.120.36", "Remove remaining first-paint version conflicts and restore Evaluation loading"],
@@ -60,7 +64,7 @@
       );
       source = source.replace(
         releasesUrlMarker,
-        "  const RELEASES_URL = `/releases.json?v=${VERSION}&release=${Date.now()}`;",
+        `  const RELEASES_URL = ${JSON.stringify(assetUrl("releases.json"))} + \`?v=\${VERSION}&release=\${Date.now()}\`;`,
       );
       source = source.replace(expandedStateMarker, expandedStateReplacement);
       source = source.replace(
