@@ -1,9 +1,10 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.37");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.38");
   const SOURCE_VERSION = "1.120.3";
   const SOURCE_URL = "/changelog-history-source-v1.120.3.js";
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.120.38", "Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations"],
     ["v1.120.37", "Restore static startup content, full MFL Stats, and the live Discount Rate"],
     ["v1.120.36", "Remove remaining first-paint version conflicts and restore Evaluation loading"],
     ["v1.120.35", "Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip"],
