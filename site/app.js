@@ -1,7 +1,7 @@
 (() => {
   const RELEASE_VERSION = "1.120.38";
   const SOURCE_VERSION = "1.120.24";
-  const SOURCE_URL = "/app-loader-v1.120.24.js";
+  const SOURCE_URL = "/app-loader.js";
   const POST_APP_RUNTIME_URL = "/evaluation-route-stability-runtime.js";
   const NESTED_SOURCE_MARKER = "  const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;";
   const FINAL_SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc3265ceb18ee501e6107f3a31869c6500738e92/site/app.js";
@@ -49,7 +49,7 @@
     const originalUrl = String(url || "");
     const normalizedUrl = originalUrl.split("?")[0];
     const forwardedUrl = normalizedUrl === FINAL_SOURCE_URL
-      ? `/app-base-v1.119.29.js?v=${encodeURIComponent(RELEASE_VERSION)}&release=${encodeURIComponent(releaseToken)}`
+      ? `/app-base.js?v=${encodeURIComponent(RELEASE_VERSION)}&release=${encodeURIComponent(releaseToken)}`
       : originalUrl;
     return nativeOpen.call(this, method, forwardedUrl, ...Array.prototype.slice.call(arguments, 2));
   };
@@ -80,7 +80,7 @@
     );
     source = source.replace(
       NESTED_SOURCE_MARKER,
-      `  const SOURCE_URL = "/app-loader-v1.119.29.js?v=${encodeURIComponent(RELEASE_VERSION)}&release=${encodeURIComponent(releaseToken)}";`,
+      `  const SOURCE_URL = "/app-loader-base.js?v=${encodeURIComponent(RELEASE_VERSION)}&release=${encodeURIComponent(releaseToken)}";`,
     );
     source += `\n//# sourceURL=mfl-front-office-app-v${RELEASE_VERSION}.js`;
 
