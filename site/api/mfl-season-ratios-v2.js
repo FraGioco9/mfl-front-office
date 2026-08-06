@@ -1,5 +1,5 @@
-const VERSION = "1.120.37";
-const REQUIRED_RATIO_ROWS = 4;
+const VERSION = "1.120.42";
+const REQUIRED_RATIO_ROWS = 5;
 const REQUEST_TIMEOUT_MS = 8000;
 
 function supabaseConfig() {
