@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.37";
+        const VERSION = "1.120.38";
         const SOURCE_URL = "/index-source.html";
         const RUNTIME_FILES = [
           "/watchlist-route-ui-runtime.js",
@@ -27,12 +27,13 @@
           <li class="changelogMinorSection is-expanded" data-initial-release-version="${VERSION}">
             <button class="changelogMinorToggle" type="button" aria-expanded="true">
               <span class="changelogMinorVersion">v1.120</span>
-              <span class="changelogMinorMeta">8 patches</span>
+              <span class="changelogMinorMeta">9 patches</span>
               <span class="changelogMinorChevron" aria-hidden="true">&gt;</span>
             </button>
             <div class="changelogMinorPanel">
               <div class="changelogMinorPanelInner">
                 <ol class="changelogPatchList">
+                  <li><span>v1.120.38</span><p>Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations</p></li>
                   <li><span>v1.120.37</span><p>Restore static startup content, full MFL Stats, and the live Discount Rate</p></li>
                   <li><span>v1.120.36</span><p>Remove remaining first-paint version conflicts and restore Evaluation loading</p></li>
                   <li><span>v1.120.35</span><p>Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip</p></li>
@@ -114,6 +115,19 @@
           if (changelogList) {
             changelogList.innerHTML = ${JSON.stringify(CURRENT_CHANGELOG_MARKUP)};
             changelogList.dataset.initialReleaseVersion = "${VERSION}";
+          }
+          if (route.page === "mfl") {
+            const views = doc.querySelector("#progressionPage .views");
+            const attributesButton = views?.querySelector('.viewButton[data-view="attributes"]');
+            const statsButton = views?.querySelector('.viewButton[data-view="stats"]');
+            if (attributesButton && statsButton && attributesButton.nextElementSibling !== statsButton) {
+              attributesButton.after(statsButton);
+            }
+            views?.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+              const allowed = button.dataset.view === "attributes" || button.dataset.view === "stats";
+              button.hidden = !allowed;
+              button.classList.toggle("active", allowed && button.dataset.view === "attributes");
+            });
           }`;
           const applicationSrcMarker = '          applicationScript.src = `/app.js?v=${VERSION}`;';
           const applicationSrcReplacement = '          applicationScript.src = `/app.js?v=${VERSION}&release=${Date.now()}`;';
@@ -145,9 +159,19 @@
             stylePattern,
             `/styles.css?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
           );
+          const stabilityStyleTag = `<style id="mflReleaseStabilityStyles">
+            html.bootPending body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+            html.mflInitialChromePreparing body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+            body[data-page="evaluation"].appBusy #evaluationPage .evaluationSearchGroup,
+            body[data-page="evaluation"].evaluationRouteLoading #evaluationPage .evaluationSearchGroup {
+              visibility: hidden !important;
+              opacity: 0 !important;
+              pointer-events: none !important;
+            }
+          <\/style>`;
           const integrityRuntimeTag = `<script src="/startup-integrity-runtime.js?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}"><\/script>`;
           source = source
-            .replace(headMarker, `${integrityRuntimeTag}${headMarker}`)
+            .replace(headMarker, `${stabilityStyleTag}${integrityRuntimeTag}${headMarker}`)
             .replace(shellMarker, shellReplacement)
             .replace(initialShellMarker, initialShellReplacement)
             .replace(applicationSrcMarker, applicationSrcReplacement)
