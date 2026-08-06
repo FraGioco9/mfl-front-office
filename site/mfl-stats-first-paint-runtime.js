@@ -1,6 +1,23 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.47");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.48");
   const MFL_STATS_PATH = /^\/mfl\/stats\/?$/i;
+  const FILTERS = [
+    ["all", "All"],
+    ["90-94", "90-94"],
+    ["legendary", "Legendary"],
+    ["85-89", "85-89"],
+    ["80-84", "80-84"],
+    ["rare", "Rare"],
+    ["75-79", "75-79"],
+    ["70-74", "70-74"],
+    ["uncommon", "Uncommon"],
+    ["65-69", "65-69"],
+    ["60-64", "60-64"],
+    ["limited", "Limited"],
+    ["55-59", "55-59"],
+    ["50-54", "50-54"],
+    ["common", "Common"],
+  ];
 
   window.__mflStatsFirstPaintRuntime?.destroy?.();
 
@@ -20,12 +37,9 @@
   }
 
   function installStyles() {
-    let style = document.getElementById("mflStatsFirstPaintStyles");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "mflStatsFirstPaintStyles";
-      document.head.appendChild(style);
-    }
+    if (document.getElementById("mflStatsFirstPaintStyles")) return;
+    const style = document.createElement("style");
+    style.id = "mflStatsFirstPaintStyles";
     style.textContent = `
       html[data-initial-page="mfl/stats"] body[data-page="home"] .navButton[data-page="mfl"],
       body[data-page="mflstats"] .navButton[data-page="mfl"] {
@@ -35,7 +49,9 @@
       }
 
       #mflStatsPage .mflStatsHistogramBar,
-      #mflStatsPage .mflStatsHistogramBar::after {
+      #mflStatsPage .mflStatsHistogramBar::after,
+      #databaseStatsPage .mflStatsHistogramBar,
+      #databaseStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
         transition: none !important;
       }
@@ -44,6 +60,27 @@
         animation: mflStatsBarRise 220ms ease-out !important;
       }
     `;
+    document.head.appendChild(style);
+  }
+
+  function ensureStaticFilters() {
+    if (!isMflStats()) return;
+    const container = document.getElementById("mflStatsOverallFilters");
+    if (!(container instanceof HTMLElement) || container.children.length) return;
+
+    const fragment = document.createDocumentFragment();
+    FILTERS.forEach(([id, label], index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mflStatsFilterButton";
+      button.classList.toggle("active", index === 0);
+      button.dataset.filter = id;
+      button.dataset.mflStatsStatic = "true";
+      button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      button.textContent = label;
+      fragment.appendChild(button);
+    });
+    container.replaceChildren(fragment);
   }
 
   function syncNavigation() {
@@ -121,6 +158,7 @@
     frame = 0;
     if (destroyed) return;
     installStyles();
+    ensureStaticFilters();
     syncNavigation();
     wrapRenderer();
     requestCompleteStats();

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.47");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.48");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
@@ -36,12 +36,9 @@
   }
 
   function ensureStyles() {
-    let style = document.getElementById("databaseStatsTooltipPortalStyles");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "databaseStatsTooltipPortalStyles";
-      document.head.appendChild(style);
-    }
+    if (document.getElementById("databaseStatsTooltipPortalStyles")) return;
+    const style = document.createElement("style");
+    style.id = "databaseStatsTooltipPortalStyles";
     style.textContent = `
       #databaseStatsPage #databaseStatsCustomFilter { display: none !important; }
       #databaseStatsPage .mflStatsHistogramBar,
@@ -103,6 +100,7 @@
         font: inherit;
       }
     `;
+    document.head.appendChild(style);
   }
 
   function ensureTooltip() {
@@ -207,7 +205,6 @@
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
-    resolveApplyAnimation();
 
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
@@ -222,10 +219,8 @@
 
   function stopPortalEvent(event) {
     if (!portalContains(event.target)) return;
-    if (["beforeinput", "input", "change"].includes(event.type)) {
-      clearApplyAnimation();
-      document.documentElement.dataset.databaseStatsCustomDraft = "true";
-    }
+    clearApplyAnimation();
+    document.documentElement.dataset.databaseStatsCustomDraft = "true";
     event.stopImmediatePropagation();
   }
 
@@ -266,14 +261,22 @@
       apply();
       return;
     }
+    clearApplyAnimation();
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
-      clearApplyAnimation();
       close(true);
       return;
     }
     event.stopImmediatePropagation();
+  }
+
+  function onGlobalPointerDown(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || portalContains(target)) return;
+    if (target.closest("a[href], .navButton, [data-page], [data-view]")) {
+      clearApplyAnimation();
+    }
   }
 
   function schedule() {
@@ -300,7 +303,9 @@
     "wheel",
   ];
 
+  ensureStyles();
   document.addEventListener("click", onClick, true);
+  document.addEventListener("pointerdown", onGlobalPointerDown, true);
   stoppedEvents.forEach((type) => document.addEventListener(type, stopPortalEvent, true));
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("keyup", stopPortalEvent, true);
@@ -320,6 +325,7 @@
     clearApplyAnimation();
     observer?.disconnect();
     document.removeEventListener("click", onClick, true);
+    document.removeEventListener("pointerdown", onGlobalPointerDown, true);
     stoppedEvents.forEach((type) => document.removeEventListener(type, stopPortalEvent, true));
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("keyup", stopPortalEvent, true);

@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = "1.120.47";
+  const RELEASE_VERSION = "1.120.48";
   const SOURCE_VERSION = "1.120.24";
   const scriptUrl = document.currentScript?.src || new URL("app.js", window.location.href).href;
   const assetBaseUrl = new URL(".", scriptUrl);
