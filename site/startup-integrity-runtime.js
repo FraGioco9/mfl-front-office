@@ -1,16 +1,5 @@
 (() => {
   const VERSION = String(window.__mflReleaseVersion || "1.120.37");
-  const CURRENT_RELEASES = [
-    ["v1.120.37", "Restore static startup content, full MFL Stats, and the live Discount Rate"],
-    ["v1.120.36", "Remove remaining first-paint version conflicts and restore Evaluation loading"],
-    ["v1.120.35", "Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip"],
-    ["v1.120.34", "Centralize release versioning and prevent legacy footer overrides"],
-    ["v1.120.33", "Clarify the Evaluation Discount Rate tooltip"],
-    ["v1.120.32", "Recalculate the Evaluation Discount Rate from a fresh request on every load"],
-    ["v1.120.31", "Refresh the Evaluation Discount Rate from live season ratios"],
-    ["v1.120.30", "Restore stable site loading after Discount Rate changes"],
-  ];
-  const WATCHLIST_VIEWS = ["attributes", "next", "contracts", "current", "all"];
   const BOOT_COLUMNS = [
     "player_id", "wallet_address", "wallet_name", "name", "positions", "age", "nationality",
     "preferred_foot", "height", "retirement_years", "owned_since", "active_contract_revenue_share",
@@ -24,285 +13,170 @@
     "goalkeeping_prog_current_season", "overall_prog_all", "pace_prog_all", "shooting_prog_all",
     "passing_prog_all", "dribbling_prog_all", "defense_prog_all", "physical_prog_all", "goalkeeping_prog_all",
   ];
-  const DISCOUNT_API_URL = "/api/mfl-season-ratios-v2";
-  const FULL_STATS_API_URL = "/api/mfl-stats-all";
+  const VIEW_FROM_SLUG = {
+    attributes: "attributes",
+    "next-overall": "next",
+    contracts: "contracts",
+    "current-season": "current",
+    "all-time": "all",
+  };
+  const WATCHLIST_VIEWS = new Set(Object.values(VIEW_FROM_SLUG));
   const DEFAULT_MFL_PER_USD = 400;
-  const MFL_PER_USD_STORAGE_KEY = "mfl-evaluation-mfl-per-usd";
 
   window.__mflStartupIntegrityRuntime?.destroy?.();
   window.__mflReleaseVersion = VERSION;
 
+  let destroyed = false;
   let frame = 0;
   let interval = 0;
   let observer = null;
-  let destroyed = false;
-  let fullStatsPromise = null;
-  let fullStatsPayload = null;
-  let fullStatsAppliedRows = null;
-  let discountRequest = null;
+  let preparedWatchlistView = "";
+  let statsPromise = null;
+  let statsPayload = null;
+  let appliedStatsRows = null;
+  let discountPromise = null;
   let discountResult = null;
-  let discountRequestedValue = null;
+  let discountMflPerUsd = null;
   let discountRetryAt = 0;
-  let lastDiscountRenderKey = "";
+  let discountFunction = null;
 
-  function cleanPath() {
-    return String(location.pathname || "/").replace(/\/+$/, "") || "/";
+  const path = () => String(location.pathname || "/").replace(/\/+$/, "") || "/";
+  const isEvaluation = () => path() === "/evaluation" || document.body?.dataset.page === "evaluation";
+  const isMflStats = () => path() === "/mfl/stats" || document.body?.dataset.page === "mflstats";
+  const isWatchlist = () => /^\/watchlist(?:\/|$)/i.test(path());
+
+  function setText(element, value) {
+    if (element && element.textContent !== value) element.textContent = value;
   }
 
-  function onHomeRoute() {
-    return cleanPath() === "/";
+  function setData(element, key, value) {
+    if (!(element instanceof HTMLElement)) return;
+    const text = String(value);
+    if (element.dataset[key] !== text) element.dataset[key] = text;
   }
 
-  function onChangelogRoute() {
-    return cleanPath() === "/changelog";
+  function showPage(id, pageName) {
+    const target = document.getElementById(id);
+    if (!(target instanceof HTMLElement)) return false;
+    document.querySelectorAll("main > .pageView").forEach((page) => {
+      if (!(page instanceof HTMLElement)) return;
+      const hidden = page !== target;
+      if (page.hidden !== hidden) page.hidden = hidden;
+    });
+    if (target.hidden) target.hidden = false;
+    if (document.body.dataset.page !== pageName) document.body.dataset.page = pageName;
+    return true;
   }
 
-  function onEvaluationRoute() {
-    return cleanPath() === "/evaluation" || document.body?.dataset.page === "evaluation";
+  function revealShell() {
+    document.documentElement.classList.remove("bootPending", "mflInitialChromePreparing");
+    document.body?.classList.remove("booting");
+    const loading = document.getElementById("loadingScreen");
+    if (loading instanceof HTMLElement && !loading.hidden) loading.hidden = true;
   }
 
-  function onMflStatsRoute() {
-    return cleanPath() === "/mfl/stats" || document.body?.dataset.page === "mflstats";
+  function syncFooter() {
+    const label = `MFL Front Office v${VERSION}`;
+    document.querySelectorAll('.siteFooter a[href="/changelog"],.siteFooter a[data-page="changelog"]')
+      .forEach((link) => {
+        setText(link, label);
+        setData(link, "releaseLabel", label);
+        const aria = `${label}, open Changelog`;
+        if (link.getAttribute("aria-label") !== aria) link.setAttribute("aria-label", aria);
+        const footer = link.closest(".siteFooter");
+        if (footer?.getAttribute("data-release-version") !== VERSION) {
+          footer?.setAttribute("data-release-version", VERSION);
+        }
+      });
+    document.querySelectorAll("[data-app-version],.footerVersion,#footerVersion")
+      .forEach((element) => setText(element, `v${VERSION}`));
   }
 
-  function onWatchlistRoute() {
-    return /^\/watchlist(?:\/|$)/i.test(cleanPath());
-  }
-
-  function storedWalletOptIn() {
+  function storedOptIn() {
     try {
       const address = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim();
       const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
       return Boolean(address && proof?.address && proof?.message
-        && Array.isArray(proof?.signatures) && proof.signatures.length);
+        && Array.isArray(proof.signatures) && proof.signatures.length);
     } catch {
       return false;
     }
   }
 
-  function setVisiblePage(targetId, pageName) {
-    const target = document.getElementById(targetId);
-    if (!(target instanceof HTMLElement)) return false;
-    document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page !== target;
-    });
-    target.hidden = false;
-    document.body.dataset.page = pageName;
-    return true;
+  function watchlistView() {
+    const slug = path().split("/").filter(Boolean).at(-1)?.toLowerCase();
+    return VIEW_FROM_SLUG[slug] || "attributes";
   }
 
-  function revealStaticShell() {
-    document.documentElement.classList.remove("bootPending", "mflInitialChromePreparing");
-    document.body?.classList.remove("booting");
-    const loadingScreen = document.getElementById("loadingScreen");
-    if (loadingScreen instanceof HTMLElement) {
-      loadingScreen.hidden = true;
-      loadingScreen.setAttribute("aria-hidden", "true");
-    }
-  }
-
-  function syncReleaseLabels() {
-    const label = `MFL Front Office v${VERSION}`;
-    document.querySelectorAll(
-      '.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]',
-    ).forEach((link) => {
-      if (!(link instanceof HTMLElement)) return;
-      if (link.textContent !== label) link.textContent = label;
-      link.dataset.releaseLabel = label;
-      link.setAttribute("aria-label", `${label}, open Changelog`);
-      link.closest(".siteFooter")?.setAttribute("data-release-version", VERSION);
-    });
-    document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
-      if (!(element instanceof HTMLElement)) return;
-      const value = `v${VERSION}`;
-      if (element.textContent !== value) element.textContent = value;
-    });
-  }
-
-  function versionParts(value) {
-    const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
-    return match ? match.slice(1).map(Number) : null;
-  }
-
-  function compareVersionsDescending(left, right) {
-    const a = versionParts(left) || [0, 0, 0];
-    const b = versionParts(right) || [0, 0, 0];
-    return b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
-  }
-
-  function collectChangelogEntries(list) {
-    const entries = new Map(CURRENT_RELEASES);
-    list.querySelectorAll("li").forEach((item) => {
-      if (item.classList.contains("changelogMinorSection")) return;
-      const version = String(item.querySelector(":scope > span")?.textContent || "").trim();
-      const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
-      if (versionParts(version) && description && !entries.has(version)) entries.set(version, description);
-    });
-    list.querySelectorAll(".changelogPatchList > li").forEach((item) => {
-      const version = String(item.querySelector(":scope > span")?.textContent || "").trim();
-      const description = String(item.querySelector(":scope > p")?.textContent || "").trim();
-      if (versionParts(version) && description && !entries.has(version)) entries.set(version, description);
-    });
-    return entries;
-  }
-
-  function makeChangelogSection(minor, patches, expanded) {
-    const section = document.createElement("li");
-    section.className = "changelogMinorSection";
-    section.classList.toggle("is-expanded", expanded);
-
-    const toggle = document.createElement("button");
-    toggle.className = "changelogMinorToggle";
-    toggle.type = "button";
-    toggle.setAttribute("aria-expanded", String(expanded));
-
-    const version = document.createElement("span");
-    version.className = "changelogMinorVersion";
-    version.textContent = `v${minor}`;
-    const meta = document.createElement("span");
-    meta.className = "changelogMinorMeta";
-    meta.textContent = `${patches.length} ${patches.length === 1 ? "patch" : "patches"}`;
-    const chevron = document.createElement("span");
-    chevron.className = "changelogMinorChevron";
-    chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = ">";
-    toggle.append(version, meta, chevron);
-
-    const panel = document.createElement("div");
-    panel.className = "changelogMinorPanel";
-    const inner = document.createElement("div");
-    inner.className = "changelogMinorPanelInner";
-    const patchList = document.createElement("ol");
-    patchList.className = "changelogPatchList";
-    patches.forEach(([patchVersion, description]) => {
-      const item = document.createElement("li");
-      const label = document.createElement("span");
-      label.textContent = patchVersion;
-      const text = document.createElement("p");
-      text.textContent = description;
-      item.append(label, text);
-      patchList.appendChild(item);
-    });
-    inner.appendChild(patchList);
-    panel.appendChild(inner);
-    section.append(toggle, panel);
-    toggle.addEventListener("click", () => {
-      const next = section.classList.toggle("is-expanded");
-      toggle.setAttribute("aria-expanded", String(next));
-    });
-    return section;
-  }
-
-  function syncChangelog() {
-    const list = document.querySelector(".changelogList");
-    if (!(list instanceof HTMLOListElement)) return;
-    const currentLabel = `v${VERSION}`;
-    const existingCurrent = Array.from(list.querySelectorAll("li > span"))
-      .some((label) => String(label.textContent || "").trim() === currentLabel);
-    const alreadyGrouped = Boolean(list.querySelector(":scope > .changelogMinorSection"));
-    if (alreadyGrouped && existingCurrent) return;
-
-    const entries = collectChangelogEntries(list);
-    const groups = new Map();
-    Array.from(entries.entries())
-      .sort(([left], [right]) => compareVersionsDescending(left, right))
-      .forEach(([version, description]) => {
-        const parts = versionParts(version);
-        const minor = `${parts[0]}.${parts[1]}`;
-        if (!groups.has(minor)) groups.set(minor, []);
-        groups.get(minor).push([version.startsWith("v") ? version : `v${version}`, description]);
+  function syncStaticRoutes() {
+    if (path() === "/" && showPage("homePage", "home")) {
+      document.querySelectorAll(".navButton").forEach((button) => {
+        const active = button.dataset.page === "home";
+        if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
       });
+      revealShell();
+      return;
+    }
 
-    list.replaceChildren();
-    Array.from(groups.entries()).forEach(([minor, patches], index) => {
-      list.appendChild(makeChangelogSection(minor, patches, index === 0));
-    });
-    list.dataset.sectioned = "true";
-    list.dataset.releaseVersion = VERSION;
-  }
+    if (path() === "/changelog" && showPage("changelogPage", "changelog")) {
+      revealShell();
+      return;
+    }
 
-  function syncHome() {
-    if (!onHomeRoute() || !setVisiblePage("homePage", "home")) return;
-    document.querySelectorAll(".navButton").forEach((button) => {
-      if (button instanceof HTMLElement) button.classList.toggle("active", button.dataset.page === "home");
-    });
-    revealStaticShell();
-  }
-
-  function syncChangelogPage() {
-    if (!onChangelogRoute() || !setVisiblePage("changelogPage", "changelog")) return;
-    syncChangelog();
-    revealStaticShell();
-  }
-
-  function watchlistViewFromPath() {
-    const match = cleanPath().match(/^\/watchlist(?:\/[^/]+)?\/(attributes|next-overall|contracts|current-season|all-time)$/i);
-    return {
-      attributes: "attributes",
-      "next-overall": "next",
-      contracts: "contracts",
-      "current-season": "current",
-      "all-time": "all",
-    }[String(match?.[1] || "").toLowerCase()] || "attributes";
-  }
-
-  function syncWatchlistStatic() {
-    if (!onWatchlistRoute() || !storedWalletOptIn()) return;
-    if (!setVisiblePage("progressionPage", "watchlist")) return;
-
-    const view = watchlistViewFromPath();
-    const title = document.getElementById("tablePageTitle");
-    if (title) title.textContent = "Watchlist";
-
+    if (!isWatchlist() || !storedOptIn() || !showPage("progressionPage", "watchlist")) return;
+    const view = watchlistView();
+    setText(document.getElementById("tablePageTitle"), "Watchlist");
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
-      if (!(button instanceof HTMLElement)) return;
-      const allowed = WATCHLIST_VIEWS.includes(String(button.dataset.view || ""));
-      button.hidden = !allowed;
-      button.classList.toggle("active", allowed && button.dataset.view === view);
+      const allowed = WATCHLIST_VIEWS.has(button.dataset.view);
+      const active = allowed && button.dataset.view === view;
+      if (button.hidden === allowed) button.hidden = !allowed;
+      if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
     });
 
-    const hasRows = Boolean(document.querySelector("#tableBody tr"));
+    const body = document.getElementById("tableBody");
+    const head = document.getElementById("tableHead");
+    const hasRows = Boolean(body?.querySelector("tr"));
+    const needsHeader = !hasRows && (!head?.children.length || preparedWatchlistView !== view);
     try {
       if (typeof state === "object" && state) {
         state.currentPage = "watchlist";
         state.view = view;
-        if (!hasRows && (!Array.isArray(state.columns) || state.columns.length === 0)) {
+        if (needsHeader && (!Array.isArray(state.columns) || !state.columns.length)) {
           state.columns = [...BOOT_COLUMNS];
           if (typeof rebuildColumnIndexMap === "function") rebuildColumnIndexMap();
           if (typeof clearRowSortCache === "function") clearRowSortCache();
         }
       }
-      if (typeof updateViewButtons === "function") updateViewButtons();
-      if (!hasRows) {
+      if (needsHeader) {
+        if (typeof updateViewButtons === "function") updateViewButtons();
         if (typeof buildTableColGroup === "function") buildTableColGroup();
         if (typeof buildHeader === "function") buildHeader();
+        if (typeof renderWatchlistSwitcher === "function") renderWatchlistSwitcher();
+        preparedWatchlistView = view;
       }
-      if (typeof renderWatchlistSwitcher === "function") renderWatchlistSwitcher();
     } catch (error) {
-      console.warn("Could not prepare the static Watchlist header.", error);
+      console.warn("Could not prepare static Watchlist content.", error);
     }
 
     const switcher = document.getElementById("watchlistSwitcher");
     if (switcher instanceof HTMLElement) {
-      switcher.hidden = false;
+      if (switcher.hidden) switcher.hidden = false;
       switcher.removeAttribute("aria-hidden");
-      switcher.style.removeProperty("display");
     }
     const table = document.querySelector("#progressionPage .tableScroller table");
-    const head = document.getElementById("tableHead");
-    if (table instanceof HTMLElement) table.hidden = false;
+    if (table instanceof HTMLElement && table.hidden) table.hidden = false;
     if (head instanceof HTMLElement) {
-      head.hidden = false;
+      if (head.hidden) head.hidden = false;
       head.removeAttribute("aria-hidden");
     }
     document.body.classList.add("mflStaticWatchlistLoading");
     document.body.classList.toggle("tableRowsLoading", !hasRows);
     const empty = document.getElementById("emptyState");
-    if (empty instanceof HTMLElement && !hasRows) {
-      empty.hidden = false;
-      empty.textContent = "Loading players...";
+    if (!hasRows && empty instanceof HTMLElement) {
+      if (empty.hidden) empty.hidden = false;
+      setText(empty, "Loading players...");
     }
-    revealStaticShell();
+    revealShell();
   }
 
   function currentMflPerUsd() {
@@ -311,321 +185,263 @@
         const value = Number(state.evaluationMflPerUsd);
         if (Number.isFinite(value) && value > 0) return value;
       }
-    } catch {
-      // The application state is not defined yet.
-    }
+    } catch {}
     try {
-      const stored = Number(String(localStorage.getItem(MFL_PER_USD_STORAGE_KEY) || "").replace(",", "."));
-      if (Number.isFinite(stored) && stored > 0) return stored;
-    } catch {
-      // Use the visible/default value.
-    }
-    const visible = Number(String(document.getElementById("evaluationMflUsd")?.textContent || "").replace(",", "."));
-    return Number.isFinite(visible) && visible > 0 ? visible : DEFAULT_MFL_PER_USD;
+      const value = Number(String(localStorage.getItem("mfl-evaluation-mfl-per-usd") || "").replace(",", "."));
+      if (Number.isFinite(value) && value > 0) return value;
+    } catch {}
+    return DEFAULT_MFL_PER_USD;
   }
 
-  function normalizeRatioRows(value) {
+  function normalizedRatios(value) {
     const rows = (Array.isArray(value) ? value : [])
       .map((row) => ({ season: Number(row?.season), ratio: Number(row?.ratio) }))
       .filter((row) => Number.isInteger(row.season) && row.season > 0
         && Number.isFinite(row.ratio) && row.ratio > 0)
-      .sort((left, right) => left.season - right.season)
+      .sort((a, b) => a.season - b.season)
       .slice(-4);
     if (rows.length !== 4) return null;
-    for (let index = 1; index < rows.length; index += 1) {
-      if (rows[index].season !== rows[index - 1].season + 1) return null;
-    }
-    return rows;
+    return rows.every((row, index) => !index || row.season === rows[index - 1].season + 1) ? rows : null;
   }
 
-  function calculateDiscountRate(rows, currentValue, requestedAt = "") {
-    const ordered = normalizeRatioRows(rows);
-    if (!ordered || !Number.isFinite(currentValue) || currentValue <= 0) return null;
+  function calculateRate(rows, currentValue, requestedAt) {
+    const ordered = normalizedRatios(rows);
+    if (!ordered) return null;
     const factors = ordered.slice(1).map((row, index) => row.ratio / ordered[index].ratio);
-    factors.push(currentValue / ordered[ordered.length - 1].ratio);
-    if (factors.length !== 4 || factors.some((factor) => !Number.isFinite(factor) || factor <= 0)) return null;
-    const rate = Math.pow(factors.reduce((product, factor) => product * factor, 1), 1 / factors.length) - 1;
+    factors.push(currentValue / ordered.at(-1).ratio);
+    if (factors.some((factor) => !Number.isFinite(factor) || factor <= 0)) return null;
+    const rate = Math.pow(factors.reduce((product, factor) => product * factor, 1), 1 / 4) - 1;
     if (!Number.isFinite(rate)) return null;
-    const currentSeason = ordered[ordered.length - 1].season + 1;
+    const currentSeason = ordered.at(-1).season + 1;
     return Object.freeze({
       rows: Object.freeze(ordered.map((row) => Object.freeze({ ...row }))),
-      factors: Object.freeze([...factors]),
+      factors: Object.freeze(factors),
       currentMflPerUsd: currentValue,
       currentSeason,
       rate,
       label: `${(rate * 100).toFixed(2)}%`,
-      tooltip: "Discount Rate is the geometric mean of four MFL/USD conversion growth rates. Current season is "
-        + currentSeason + ", so it uses seasons " + (currentSeason - 4) + "–" + currentSeason
-        + ", with the current season based on the MFL/USD value currently set.",
       requestedAt,
       source: "supabase-live-request",
+      tooltip: `Discount Rate is the geometric mean of four MFL/USD conversion growth rates. Current season is ${currentSeason}, so it uses seasons ${currentSeason - 4}–${currentSeason}, with the current season based on the MFL/USD value currently set.`,
     });
   }
 
-  function installDiscountFunction() {
-    const authority = function liveSupabaseDiscountRate() {
-      return discountResult?.rate ?? null;
-    };
-    authority.__mflSupabaseAuthority = VERSION;
-    window.__mflSupabaseDiscountRateFunction = authority;
-    try { window.evaluationDiscountRateValue = authority; } catch {}
+  function installRateFunction() {
+    if (!discountFunction) {
+      discountFunction = function liveSupabaseDiscountRate() {
+        return discountResult?.rate ?? null;
+      };
+      discountFunction.__mflSupabaseAuthority = VERSION;
+    }
+    window.__mflSupabaseDiscountRateFunction = discountFunction;
+    try { window.evaluationDiscountRateValue = discountFunction; } catch {}
     try { window.eval("evaluationDiscountRateValue = window.__mflSupabaseDiscountRateFunction"); } catch {}
   }
 
-  function setDiscountLoading() {
-    if (!onEvaluationRoute() || discountResult) return;
+  function paintRate() {
+    if (!isEvaluation()) return;
     const value = document.getElementById("evaluationDiscountRate");
     const advanced = document.getElementById("advancedDiscountRateValue");
-    if (value) value.textContent = "-";
-    if (advanced) advanced.textContent = "-";
-    document.documentElement.classList.remove("mflEvaluationRateResolved");
-    document.documentElement.dataset.mflDiscountRate = "-";
-    document.documentElement.dataset.mflDiscountRateSource = "supabase-loading";
-  }
-
-  function syncDiscountDisplay() {
-    if (!onEvaluationRoute()) return;
     if (!discountResult) {
-      setDiscountLoading();
+      setText(value, "-");
+      setText(advanced, "-");
+      setData(document.documentElement, "mflDiscountRate", "-");
+      setData(document.documentElement, "mflDiscountRateSource", "supabase-loading");
       return;
     }
-    installDiscountFunction();
-    const value = document.getElementById("evaluationDiscountRate");
-    const advanced = document.getElementById("advancedDiscountRateValue");
+    installRateFunction();
+    setText(value, discountResult.label);
+    setText(advanced, discountResult.label);
     const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
-    if (value && value.textContent !== discountResult.label) value.textContent = discountResult.label;
-    if (advanced && advanced.textContent !== discountResult.label) advanced.textContent = discountResult.label;
-    if (metric instanceof HTMLElement) {
-      metric.dataset.tooltip = discountResult.tooltip;
-      metric.dataset.mflDiscountRate = discountResult.label;
-      metric.dataset.mflDiscountRateSource = discountResult.source;
-      metric.dataset.mflSupabaseTooltipVersion = VERSION;
-      metric.dataset.mflCurrentSeason = String(discountResult.currentSeason);
-      metric.dataset.mflCurrentValue = String(discountResult.currentMflPerUsd);
-      metric.dataset.mflRatioSeasons = [
-        ...discountResult.rows.map((row) => row.season),
-        discountResult.currentSeason,
-      ].join(",");
-    }
-    document.documentElement.classList.add("mflEvaluationRateResolved");
-    document.documentElement.dataset.mflDiscountRate = discountResult.label;
-    document.documentElement.dataset.mflDiscountRateSource = discountResult.source;
-    document.documentElement.dataset.mflCurrentSeason = String(discountResult.currentSeason);
+    setData(metric, "tooltip", discountResult.tooltip);
+    setData(metric, "mflDiscountRate", discountResult.label);
+    setData(metric, "mflDiscountRateSource", discountResult.source);
+    setData(metric, "mflSupabaseTooltipVersion", VERSION);
+    setData(metric, "mflCurrentSeason", discountResult.currentSeason);
+    setData(metric, "mflCurrentValue", discountResult.currentMflPerUsd);
+    setData(metric, "mflRatioSeasons", [
+      ...discountResult.rows.map((row) => row.season),
+      discountResult.currentSeason,
+    ].join(","));
+    setData(document.documentElement, "mflDiscountRate", discountResult.label);
+    setData(document.documentElement, "mflDiscountRateSource", discountResult.source);
   }
 
-  function publishDiscountResult(next) {
-    discountResult = next;
-    installDiscountFunction();
-    window.mflSeasonRatios = next.rows;
-    window.__mflSeasonRatioResult = next;
-    window.__mflDynamicDiscountResult = next;
-    window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", { detail: next }));
-    syncDiscountDisplay();
-    const renderKey = `${next.label}:${next.currentMflPerUsd}:${next.requestedAt}`;
-    if (renderKey !== lastDiscountRenderKey && typeof window.renderEvaluationPage === "function") {
-      lastDiscountRenderKey = renderKey;
+  function publishRate(result) {
+    discountResult = result;
+    installRateFunction();
+    window.mflSeasonRatios = result.rows;
+    window.__mflSeasonRatioResult = result;
+    window.__mflDynamicDiscountResult = result;
+    window.dispatchEvent(new CustomEvent("mfl:season-ratios-ready", { detail: result }));
+    paintRate();
+    if (typeof window.renderEvaluationPage === "function") {
       queueMicrotask(() => {
         try { window.renderEvaluationPage(); } catch {}
-        requestAnimationFrame(syncDiscountDisplay);
+        requestAnimationFrame(paintRate);
       });
     }
   }
 
-  function requestDiscountRate(force = false) {
-    if (!onEvaluationRoute()) return Promise.resolve(null);
-    const currentValue = currentMflPerUsd();
-    if (!force && discountRequest) return discountRequest;
-    if (!force && discountResult && discountRequestedValue === currentValue) return Promise.resolve(discountResult);
-
-    discountRequestedValue = currentValue;
+  function requestRate(force = false) {
+    if (!isEvaluation()) return Promise.resolve(null);
+    const mflPerUsd = currentMflPerUsd();
+    if (!force && discountPromise) return discountPromise;
+    if (!force && discountResult && discountMflPerUsd === mflPerUsd) return Promise.resolve(discountResult);
+    discountMflPerUsd = mflPerUsd;
     discountResult = null;
-    setDiscountLoading();
+    paintRate();
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    discountRequest = fetch(`${DISCOUNT_API_URL}?fresh=${encodeURIComponent(nonce)}&v=${encodeURIComponent(VERSION)}`, {
+    discountPromise = fetch(`/api/mfl-season-ratios-v2?fresh=${encodeURIComponent(nonce)}&v=${VERSION}`, {
       cache: "no-store",
       credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "Cache-Control": "no-cache, no-store, max-age=0",
-        Pragma: "no-cache",
-      },
+      headers: { Accept: "application/json", "Cache-Control": "no-cache, no-store, max-age=0", Pragma: "no-cache" },
     })
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not load MFL season ratios.");
-        const next = calculateDiscountRate(data.ratios, currentValue, String(data.requestedAt || ""));
-        if (!next) throw new Error("The live MFL season ratios are incomplete.");
-        publishDiscountResult(next);
+        const result = calculateRate(data.ratios, mflPerUsd, String(data.requestedAt || ""));
+        if (!result) throw new Error("The live MFL season ratios are incomplete.");
+        publishRate(result);
         discountRetryAt = 0;
-        return next;
+        return result;
       })
       .catch((error) => {
         console.error("Could not calculate the Evaluation Discount Rate.", error);
         discountRetryAt = Date.now() + 4000;
-        setDiscountLoading();
         return null;
       })
-      .finally(() => {
-        discountRequest = null;
-      });
-    return discountRequest;
+      .finally(() => { discountPromise = null; });
+    return discountPromise;
   }
 
-  async function fetchStatsPage(page, pageSize) {
-    const response = await fetch(
-      `${FULL_STATS_API_URL}?page=${page}&pageSize=${pageSize}&v=${encodeURIComponent(VERSION)}`,
-      { cache: "no-store", headers: { Accept: "application/json" } },
-    );
+  async function statsPage(page, pageSize) {
+    const response = await fetch(`/api/mfl-stats-all?page=${page}&pageSize=${pageSize}&v=${VERSION}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load the complete MFL Stats dataset.");
+    if (!response.ok) throw new Error(data.error || "Could not load complete MFL Stats.");
     return data;
   }
 
-  function loadFullMflStats() {
-    if (fullStatsPromise) return fullStatsPromise;
+  function loadStats() {
+    if (statsPromise) return statsPromise;
     const pageSize = 2000;
-    fullStatsPromise = fetchStatsPage(1, pageSize)
+    statsPromise = statsPage(1, pageSize)
       .then(async (first) => {
         const totalPages = Math.max(1, Number(first.totalPages) || 1);
-        const remaining = [];
-        for (let page = 2; page <= totalPages; page += 1) remaining.push(fetchStatsPage(page, pageSize));
-        const pages = [first, ...(remaining.length ? await Promise.all(remaining) : [])];
+        const remaining = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, index) => statsPage(index + 2, pageSize)),
+        );
         const columns = Array.isArray(first.columns) ? first.columns : [];
         const idIndex = columns.indexOf("player_id");
-        const rows = [];
         const seen = new Set();
-        pages.forEach((payload) => {
+        const rows = [];
+        [first, ...remaining].forEach((payload) => {
           (Array.isArray(payload.rows) ? payload.rows : []).forEach((row) => {
-            const key = idIndex >= 0 ? String(row?.[idIndex] ?? "") : "";
-            if (key && seen.has(key)) return;
-            if (key) seen.add(key);
+            const id = idIndex >= 0 ? String(row?.[idIndex] ?? "") : "";
+            if (id && seen.has(id)) return;
+            if (id) seen.add(id);
             rows.push(row);
           });
         });
-        fullStatsPayload = Object.freeze({
-          columns: Object.freeze([...columns]),
-          rows: Object.freeze(rows),
+        statsPayload = {
+          columns,
+          rows,
           totalRows: Number(first.totalRows) || rows.length,
           sourceRows: Number(first.sourceRows) || rows.length,
-          generatedAt: first.generatedAt || null,
-        });
-        return fullStatsPayload;
+        };
+        return statsPayload;
       })
       .catch((error) => {
-        fullStatsPromise = null;
+        statsPromise = null;
         console.error("Could not load all MFL Stats players.", error);
         return null;
       });
-    return fullStatsPromise;
+    return statsPromise;
   }
 
-  function applyFullMflStats() {
-    if (!onMflStatsRoute()) return;
-    if (!fullStatsPayload) {
-      void loadFullMflStats();
+  function applyStats() {
+    if (!isMflStats()) return;
+    if (!statsPayload) {
+      void loadStats();
       return;
     }
     try {
       if (typeof state !== "object" || !state || typeof renderMflStatsPage !== "function") return;
-      const needsApply = state.rows !== fullStatsAppliedRows
-        || state.rows.length !== fullStatsPayload.rows.length
-        || state.columns.length !== fullStatsPayload.columns.length;
-      if (!needsApply) return;
-
+      if (state.rows === appliedStatsRows && state.rows.length === statsPayload.rows.length) return;
       state.currentPage = "mflstats";
-      state.columns = [...fullStatsPayload.columns];
-      state.rows = [...fullStatsPayload.rows];
-      fullStatsAppliedRows = state.rows;
+      state.columns = [...statsPayload.columns];
+      state.rows = [...statsPayload.rows];
+      appliedStatsRows = state.rows;
       state.filteredRows = [...state.rows];
-      state.tableSourceRowsCount = fullStatsPayload.totalRows;
-      state.incrementalTotalRows = fullStatsPayload.totalRows;
-      state.incrementalSourceRows = fullStatsPayload.sourceRows;
+      state.tableSourceRowsCount = statsPayload.totalRows;
+      state.incrementalTotalRows = statsPayload.totalRows;
+      state.incrementalSourceRows = statsPayload.sourceRows;
       state.dataLoaded = true;
       state.dataAccess = "mfl";
       if (typeof rebuildColumnIndexMap === "function") rebuildColumnIndexMap();
       if (typeof clearRowSortCache === "function") clearRowSortCache();
       renderMflStatsPage();
-      document.body.classList.remove("loading", "appBusy");
-      document.documentElement.classList.remove("loading", "appBusy");
     } catch (error) {
-      console.error("Could not render the complete MFL Stats dataset.", error);
+      console.error("Could not render complete MFL Stats.", error);
     }
   }
 
-  function syncDynamicFeatures() {
-    if (onEvaluationRoute()) {
-      const currentValue = currentMflPerUsd();
-      if (!discountRequest && (!discountResult || discountRequestedValue !== currentValue)) {
-        void requestDiscountRate(Boolean(discountResult));
-      } else if (!discountResult && discountRetryAt && Date.now() >= discountRetryAt) {
-        void requestDiscountRate(true);
-      }
-      syncDiscountDisplay();
+  function syncDynamic() {
+    if (isEvaluation()) {
+      const value = currentMflPerUsd();
+      if (!discountPromise && (!discountResult || discountMflPerUsd !== value)) void requestRate(Boolean(discountResult));
+      else if (!discountResult && discountRetryAt && Date.now() >= discountRetryAt) void requestRate(true);
+      paintRate();
     }
-    if (onMflStatsRoute()) applyFullMflStats();
+    applyStats();
   }
 
   function sync() {
     frame = 0;
     if (destroyed) return;
-    syncReleaseLabels();
-    syncHome();
-    syncChangelogPage();
-    syncWatchlistStatic();
-    syncDynamicFeatures();
+    syncFooter();
+    syncStaticRoutes();
+    syncDynamic();
   }
 
   function schedule() {
-    if (destroyed || frame) return;
-    frame = requestAnimationFrame(sync);
+    if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
   const style = document.createElement("style");
   style.id = "mflStartupIntegrityStyles";
   style.textContent = `
     body[data-page="watchlist"].mflStaticWatchlistLoading #watchlistSwitcher,
-    body[data-page="watchlist"].mflStaticWatchlistLoading #watchlistSwitcher[hidden] {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    body[data-page="watchlist"].mflStaticWatchlistLoading #tableHead {
-      display: table-header-group !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
+    body[data-page="watchlist"].mflStaticWatchlistLoading #watchlistSwitcher[hidden]{display:flex!important;visibility:visible!important;opacity:1!important}
+    body[data-page="watchlist"].mflStaticWatchlistLoading #tableHead{display:table-header-group!important;visibility:visible!important;opacity:1!important}
   `;
   document.head.appendChild(style);
 
   observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    characterData: true,
-    attributeFilter: ["class", "hidden", "data-page", "style"],
-  });
-  window.addEventListener("popstate", schedule);
-  window.addEventListener("mfl:season-ratios-ready", schedule);
-  window.addEventListener("storage", schedule);
-  interval = window.setInterval(schedule, 150);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  interval = setInterval(schedule, 150);
+  addEventListener("popstate", schedule);
+  addEventListener("storage", schedule);
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
     if (interval) clearInterval(interval);
     observer?.disconnect();
-    window.removeEventListener("popstate", schedule);
-    window.removeEventListener("mfl:season-ratios-ready", schedule);
-    window.removeEventListener("storage", schedule);
+    removeEventListener("popstate", schedule);
+    removeEventListener("storage", schedule);
     style.remove();
   }
 
+  installRateFunction();
   window.__mflDiscountRateAuthority = {
     version: VERSION,
     source: "supabase-live-request",
     get result() { return discountResult; },
-    refresh: () => requestDiscountRate(true),
+    refresh: () => requestRate(true),
     sync: schedule,
     destroy: () => {},
   };
@@ -633,12 +449,11 @@
     version: VERSION,
     sync: schedule,
     destroy,
-    refreshDiscountRate: () => requestDiscountRate(true),
-    loadFullMflStats,
+    refreshDiscountRate: () => requestRate(true),
+    loadFullMflStats: loadStats,
   };
 
-  installDiscountFunction();
-  if (onEvaluationRoute()) void requestDiscountRate(true);
-  if (onMflStatsRoute()) void loadFullMflStats();
+  if (isEvaluation()) void requestRate(true);
+  if (isMflStats()) void loadStats();
   sync();
 })();
