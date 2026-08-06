@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = "1.120.39";
+  const RELEASE_VERSION = "1.120.40";
   const SOURCE_VERSION = "1.120.24";
   const scriptUrl = document.currentScript?.src || new URL("app.js", window.location.href).href;
   const assetBaseUrl = new URL(".", scriptUrl);
@@ -51,7 +51,7 @@
     if (!response.ok) throw new Error(`Could not load ${label} (${response.status}).`);
     const text = await response.text();
     if (!text) throw new Error(`Could not load ${label} (empty response).`);
-    return text;
+    return text.replace(/\r\n?/g, "\n");
   }
 
   function replaceRequired(source, marker, replacement, label) {

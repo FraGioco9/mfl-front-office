@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.39";
+  const VERSION = "1.120.40";
   const ownUrl = document.currentScript?.src || new URL("bootstrap.js", location.href).href;
   const baseUrl = new URL(".", ownUrl);
   const assetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), baseUrl).href;
@@ -55,6 +55,7 @@
     if (!response.ok) throw new Error(`Could not load index-source.html (${response.status}).`);
     let source = await response.text();
     if (!source) throw new Error("Could not load index-source.html (empty response).");
+    source = source.replace(/\r\n?/g, "\n");
 
     const versionPattern = /const VERSION = "\d+\.\d+\.\d+";/;
     const stylePattern = /\/styles\.css\?v=\d+\.\d+\.\d+/;

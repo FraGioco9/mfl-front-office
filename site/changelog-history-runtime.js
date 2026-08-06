@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.39");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.40");
   const SOURCE_VERSION = "1.120.3";
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
@@ -7,6 +7,7 @@
   const SOURCE_URL = assetUrl("changelog-history-source-v1.120.3.js");
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.120.40", "Support Windows line endings in the local startup chain"],
     ["v1.120.39", "Use one stable asynchronous startup chain locally and on Vercel"],
     ["v1.120.38", "Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations"],
     ["v1.120.37", "Restore static startup content, full MFL Stats, and the live Discount Rate"],
@@ -51,14 +52,15 @@
   });`;
       const expandedStateReplacement = `  const previous = window.__mflChangelogHistoryRuntime;
   const expandedMinors = new Set();`;
-      if (!originalSource.includes(versionMarker)
-          || !originalSource.includes(releasesUrlMarker)
-          || !originalSource.includes(releasesMarker)
-          || !originalSource.includes(expandedStateMarker)) {
+      const normalizedSource = originalSource.replace(/\r\n?/g, "\n");
+      if (!normalizedSource.includes(versionMarker)
+          || !normalizedSource.includes(releasesUrlMarker)
+          || !normalizedSource.includes(releasesMarker)
+          || !normalizedSource.includes(expandedStateMarker)) {
         throw new Error("Could not locate the Changelog history release markers.");
       }
 
-      let source = originalSource.replace(
+      let source = normalizedSource.replace(
         versionMarker,
         `const VERSION = ${JSON.stringify(RELEASE_VERSION)};`,
       );
