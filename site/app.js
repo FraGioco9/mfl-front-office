@@ -1,7 +1,8 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.37");
+  const RELEASE_VERSION = "1.120.38";
   const SOURCE_VERSION = "1.120.24";
   const SOURCE_URL = "/app-loader-v1.120.24.js";
+  const POST_APP_RUNTIME_URL = "/evaluation-route-stability-runtime.js";
   const NESTED_SOURCE_MARKER = "  const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;";
   const FINAL_SOURCE_URL = "https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@dc3265ceb18ee501e6107f3a31869c6500738e92/site/app.js";
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -22,6 +23,25 @@
     if (loadingScreen) loadingScreen.hidden = true;
     const main = document.querySelector("main");
     if (main) main.innerHTML = '<p class="emptyState">Could not load MFL Front Office.</p>';
+  }
+
+  function loadPostApplicationRuntime() {
+    const request = new XMLHttpRequest();
+    request.open(
+      "GET",
+      `${POST_APP_RUNTIME_URL}?v=${encodeURIComponent(RELEASE_VERSION)}&release=${encodeURIComponent(releaseToken)}`,
+      false,
+    );
+    request.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
+    request.setRequestHeader("Pragma", "no-cache");
+    request.send(null);
+    if (!(request.status >= 200 && request.status < 300) || !request.responseText) {
+      throw new Error(`Could not load the Evaluation stability runtime (${request.status}).`);
+    }
+
+    const runtime = document.createElement("script");
+    runtime.textContent = `${request.responseText}\n//# sourceURL=mfl-evaluation-route-stability-v${RELEASE_VERSION}.js`;
+    document.head.appendChild(runtime);
   }
 
   const nativeOpen = XMLHttpRequest.prototype.open;
@@ -67,6 +87,7 @@
     const script = document.createElement("script");
     script.textContent = source;
     document.head.appendChild(script);
+    loadPostApplicationRuntime();
   } catch (error) {
     fail(error?.message || "Could not initialize the application runtime.");
   } finally {
