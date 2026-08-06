@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.38");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.46");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
@@ -16,6 +16,14 @@
       .find((button) => label(button.textContent) === "custom") || null;
   }
 
+  function clearApplyAnimation() {
+    window.clearTimeout(applyAnimationTimer);
+    applyAnimationTimer = 0;
+    document.querySelectorAll("#databaseStatsPage .mflStatsHistogram.databaseStatsAppliedTransition")
+      .forEach((histogram) => histogram.classList.remove("databaseStatsAppliedTransition"));
+    document.documentElement.classList.remove("databaseStatsApplyAnimating");
+  }
+
   function ensureStyles() {
     let style = document.getElementById("databaseStatsTooltipPortalStyles");
     if (!style) {
@@ -25,10 +33,15 @@
     }
     style.textContent = `
       #databaseStatsPage #databaseStatsCustomFilter { display: none !important; }
+      #databaseStatsPage .mflStatsHistogramBar,
       #databaseStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
+        transition: none !important;
       }
       html.databaseStatsApplyAnimating body[data-page="databasestats"] #databaseStatsPage .mflStatsHistogramBar::after {
+        animation: none !important;
+      }
+      #databaseStatsPage .mflStatsHistogram.databaseStatsAppliedTransition .mflStatsHistogramBar::after {
         animation: mflStatsBarRise 220ms ease-out !important;
       }
       #databaseStatsCustomTooltipPortal {
@@ -152,10 +165,13 @@
   }
 
   function beginApplyAnimation() {
-    window.clearTimeout(applyAnimationTimer);
-    document.documentElement.classList.add("databaseStatsApplyAnimating");
+    clearApplyAnimation();
+    const histogram = document.querySelector("#databaseStatsDistribution .mflStatsHistogram");
+    if (!(histogram instanceof HTMLElement)) return;
+    void histogram.offsetWidth;
+    histogram.classList.add("databaseStatsAppliedTransition");
     applyAnimationTimer = window.setTimeout(() => {
-      document.documentElement.classList.remove("databaseStatsApplyAnimating");
+      histogram.classList.remove("databaseStatsAppliedTransition");
       applyAnimationTimer = 0;
     }, 260);
   }
@@ -170,8 +186,8 @@
     if (min) min.value = String(range.min);
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
-    beginApplyAnimation();
     applyButton.click();
+    beginApplyAnimation();
 
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
@@ -240,6 +256,7 @@
       ensureStyles();
       const original = document.querySelector("#databaseStatsCustomFilter");
       if (original && !original.hidden) original.hidden = true;
+      if (document.body?.dataset.page !== "databasestats") clearApplyAnimation();
       position();
     });
   }
@@ -266,13 +283,13 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["hidden", "class"],
+    attributeFilter: ["hidden", "class", "data-page"],
   });
   schedule();
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
-    if (applyAnimationTimer) window.clearTimeout(applyAnimationTimer);
+    clearApplyAnimation();
     observer?.disconnect();
     document.removeEventListener("click", onClick, true);
     stoppedEvents.forEach((type) => document.removeEventListener(type, stopPortalEvent, true));
@@ -282,7 +299,6 @@
     window.removeEventListener("scroll", schedule, true);
     tooltip?.remove();
     delete document.documentElement.dataset.databaseStatsCustomDraft;
-    document.documentElement.classList.remove("databaseStatsApplyAnimating");
     document.getElementById("databaseStatsTooltipPortalStyles")?.remove();
   }
 

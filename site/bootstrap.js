@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.45";
+  const VERSION = "1.120.46";
   const ownUrl = document.currentScript?.src || new URL("bootstrap.js", location.href).href;
   const baseUrl = new URL(".", ownUrl);
   const assetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), baseUrl).href;
