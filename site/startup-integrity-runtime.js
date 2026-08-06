@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.42");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.45");
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
     : (path) => new URL(String(path || "").replace(/^\/+/, ""), window.location.origin + "/").href;
@@ -31,153 +31,29 @@
 
     source = replaceRegexRequired(
       source,
-      /  function normalizedRatios\(value\) \{[\s\S]*?\n  \}\n\n  function calculateRate/,
-      `  function normalizedRatios(value) {
-    const rows = (Array.isArray(value) ? value : [])
-      .map((row) => ({ season: Number(row?.season), ratio: Number(row?.ratio) }))
-      .filter((row) => Number.isInteger(row.season) && row.season > 0
-        && Number.isFinite(row.ratio) && row.ratio > 0)
-      .sort((a, b) => a.season - b.season)
-      .slice(-5);
-    if (rows.length !== 5) return null;
-    return rows.every((row, index) => !index || row.season === rows[index - 1].season + 1) ? rows : null;
-  }
-
-  function calculateRate`,
-      "the completed-season ratio normalizer",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  function calculateRate\(rows, currentValue, requestedAt\) \{[\s\S]*?\n  \}\n\n  function installRateFunction/,
-      `  function calculateRate(rows, _currentValue, requestedAt) {
-    const ordered = normalizedRatios(rows);
-    if (!ordered) return null;
-    const factors = ordered.slice(1).map((row, index) => row.ratio / ordered[index].ratio);
-    if (factors.length !== 4
-        || factors.some((factor) => !Number.isFinite(factor) || factor <= 0)) return null;
-    const rate = Math.pow(factors.reduce((product, factor) => product * factor, 1), 1 / factors.length) - 1;
-    if (!Number.isFinite(rate)) return null;
-    const firstSeason = ordered[0].season;
-    const lastCompletedSeason = ordered.at(-1).season;
-    const currentSeason = lastCompletedSeason + 1;
-    return Object.freeze({
-      rows: Object.freeze(ordered.map((row) => Object.freeze({ ...row }))),
-      factors: Object.freeze(factors),
-      currentSeason,
-      rate,
-      label: (rate * 100).toFixed(2) + "%",
-      requestedAt,
-      source: "supabase-completed-seasons",
-      tooltip: "Discount Rate is the geometric mean of four MFL/USD conversion growth rates. Current season is "
-        + currentSeason + ", so it uses seasons " + firstSeason + "–" + lastCompletedSeason + ".",
-    });
-  }
-
-  function installRateFunction`,
-      "the completed-season Discount Rate calculation",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  function paintRate\(\) \{[\s\S]*?\n  \}\n\n  function publishRate/,
-      `  function paintRate() {
-    if (!isEvaluation()) return;
-    const value = document.getElementById("evaluationDiscountRate");
-    const advanced = document.getElementById("advancedDiscountRateValue");
-    const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
-    if (!discountResult) {
-      document.body?.classList.remove("evaluationDiscountRateReady");
-      document.documentElement.classList.remove("mflEvaluationRateResolved");
-      setText(value, "-");
-      setText(advanced, "-");
-      metric?.removeAttribute("data-tooltip");
-      metric?.removeAttribute("aria-describedby");
-      setData(document.documentElement, "mflDiscountRate", "-");
-      setData(document.documentElement, "mflDiscountRateSource", "supabase-loading");
-      window.__mflDiscountTooltipController?.hide?.(true);
-      return;
-    }
-    installRateFunction();
-    document.body?.classList.add("evaluationDiscountRateReady");
-    document.documentElement.classList.add("mflEvaluationRateResolved");
-    setText(value, discountResult.label);
-    setText(advanced, discountResult.label);
-    setData(metric, "tooltip", discountResult.tooltip);
-    metric?.setAttribute("aria-label", "Discount Rate. " + discountResult.tooltip);
-    setData(metric, "mflDiscountRate", discountResult.label);
-    setData(metric, "mflDiscountRateSource", discountResult.source);
-    setData(metric, "mflSupabaseTooltipVersion", VERSION);
-    setData(metric, "mflCurrentSeason", discountResult.currentSeason);
-    setData(metric, "mflRatioSeasons", discountResult.rows.map((row) => row.season).join(","));
-    setData(document.documentElement, "mflDiscountRate", discountResult.label);
-    setData(document.documentElement, "mflDiscountRateSource", discountResult.source);
-    setData(document.documentElement, "mflCurrentSeason", discountResult.currentSeason);
-  }
-
-  function publishRate`,
-      "the Discount Rate display state",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  function requestRate\(force = false\) \{[\s\S]*?\n  \}\n\n  async function statsPage/,
-      `  function requestRate(force = false) {
-    if (!isEvaluation()) return Promise.resolve(null);
-    if (discountPromise) return discountPromise;
-    if (!force && discountResult) return Promise.resolve(discountResult);
-    discountResult = null;
-    discountMflPerUsd = null;
-    paintRate();
-    const nonce = String(Date.now()) + "-" + Math.random().toString(36).slice(2);
-    discountPromise = fetch("/api/mfl-season-ratios-v2?fresh=" + encodeURIComponent(nonce) + "&v=" + encodeURIComponent(VERSION), {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { Accept: "application/json", "Cache-Control": "no-cache, no-store, max-age=0", Pragma: "no-cache" },
-    })
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Could not load MFL season ratios.");
-        if (!isEvaluation()) return null;
-        const result = calculateRate(data.ratios, null, String(data.requestedAt || ""));
-        if (!result) throw new Error("The live MFL season ratios are incomplete.");
-        publishRate(result);
-        discountRetryAt = 0;
-        return result;
-      })
-      .catch((error) => {
-        console.error("Could not calculate the Evaluation Discount Rate.", error);
-        discountRetryAt = Date.now() + 4000;
-        return null;
-      })
-      .finally(() => { discountPromise = null; });
-    return discountPromise;
-  }
-
-  async function statsPage`,
-      "the fresh completed-season request",
-    );
-
-    source = replaceRegexRequired(
-      source,
       /  function syncDynamic\(\) \{[\s\S]*?\n  \}\n\n  function sync\(\)/,
       `  function syncDynamic() {
     const evaluationActive = isEvaluation();
     if (evaluationActive && !discountWasEvaluation) {
       discountWasEvaluation = true;
       discountResult = null;
+      discountMflPerUsd = null;
       discountRetryAt = 0;
       void requestRate(true);
     } else if (!evaluationActive && discountWasEvaluation) {
       discountWasEvaluation = false;
       discountResult = null;
+      discountMflPerUsd = null;
       discountRetryAt = 0;
       document.body?.classList.remove("evaluationDiscountRateReady");
       document.documentElement.classList.remove("mflEvaluationRateResolved");
       window.__mflDiscountTooltipController?.hide?.(true);
     }
     if (evaluationActive) {
-      if (!discountPromise && !discountResult
+      const currentValue = currentMflPerUsd();
+      if (!discountPromise && discountResult && discountMflPerUsd !== currentValue) {
+        void requestRate(true);
+      } else if (!discountPromise && !discountResult
           && (!discountRetryAt || Date.now() >= discountRetryAt)) {
         void requestRate(Boolean(discountRetryAt));
       }
@@ -190,12 +66,81 @@
       "the Evaluation Discount Rate route synchronization",
     );
 
-    source = source.replace(
-      '    source: "supabase-live-request",\n    get result() { return discountResult; },',
-      '    source: "supabase-completed-seasons",\n    get result() { return discountResult; },',
-    );
-
     return `${source}\n//# sourceURL=mfl-startup-integrity-core-v${VERSION}.js`;
+  }
+
+  function installStaticStyles() {
+    document.getElementById("mflEvaluationReleaseStyles")?.remove();
+    const style = document.createElement("style");
+    style.id = "mflEvaluationReleaseStyles";
+    style.textContent = `
+      #evaluationPage .evaluationTitleRow {
+        align-items: flex-start !important;
+      }
+
+      #evaluationPage .evaluationTitleRow > .tablePageTitle {
+        margin-top: 0 !important;
+        line-height: 1.2 !important;
+      }
+
+      html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
+      body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
+        visibility: visible !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function installRateChrome() {
+    window.__mflDiscountRateChrome?.destroy?.();
+
+    let frame = 0;
+    let interval = 0;
+    let observer = null;
+
+    function sync() {
+      frame = 0;
+      const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
+      const value = document.getElementById("evaluationDiscountRate");
+      const ready = Boolean(
+        metric instanceof HTMLElement
+        && value instanceof HTMLElement
+        && String(value.textContent || "").trim()
+        && String(value.textContent || "").trim() !== "-"
+        && String(metric.dataset.tooltip || "").trim(),
+      );
+
+      document.body?.classList.toggle("evaluationDiscountRateReady", ready);
+      document.documentElement.classList.toggle("mflEvaluationRateResolved", ready);
+      if (ready && metric instanceof HTMLElement) {
+        metric.setAttribute("aria-label", `Discount Rate. ${metric.dataset.tooltip}`);
+      } else if (metric instanceof HTMLElement) {
+        metric.removeAttribute("aria-describedby");
+      }
+    }
+
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(sync);
+    }
+
+    observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["class", "data-page", "data-tooltip"],
+    });
+    interval = window.setInterval(schedule, 100);
+
+    function destroy() {
+      if (frame) cancelAnimationFrame(frame);
+      if (interval) clearInterval(interval);
+      observer?.disconnect();
+    }
+
+    window.__mflDiscountRateChrome = { version: VERSION, sync: schedule, destroy };
+    sync();
   }
 
   function installTooltipController() {
@@ -261,13 +206,12 @@
     }
 
     function hide(immediate = false) {
-      if (activeMetric) activeMetric.removeAttribute("aria-describedby");
+      activeMetric?.removeAttribute("aria-describedby");
       activeMetric = null;
       if (!portal) return;
       if (hideTimer) clearTimeout(hideTimer);
       portal.classList.remove("visible");
       if (immediate) {
-        portal.classList.remove("tooltipHiding");
         portal.remove();
         portal = null;
         hideTimer = 0;
@@ -348,9 +292,11 @@
     const script = document.createElement("script");
     script.textContent = patchCore(originalSource);
     document.head.appendChild(script);
+    installRateChrome();
     installTooltipController();
   }
 
+  installStaticStyles();
   start().catch((error) => {
     console.error(error?.message || "Could not initialize startup integrity.");
   });
