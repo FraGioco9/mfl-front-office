@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.43");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.44");
   const SOURCE_VERSION = "1.120.3";
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
@@ -7,6 +7,7 @@
   const SOURCE_URL = assetUrl("changelog-history-source-v1.120.3.js");
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.120.44", "Show Load immediately for opted-in users on Evaluation"],
     ["v1.120.43", "Show Evaluation static controls immediately with the page"],
     ["v1.120.42", "Restore the Evaluation Discount Rate and its tooltip"],
     ["v1.120.41", "Bound optional startup waits to prevent infinite local loading"],

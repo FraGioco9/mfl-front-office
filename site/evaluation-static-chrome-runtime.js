@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.43");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.44");
 
   window.__mflEvaluationStaticChrome?.destroy?.();
   window.__mflReleaseVersion = VERSION;
@@ -34,6 +34,65 @@
       // The static default remains available when storage cannot be read.
     }
     return 400;
+  }
+
+  function hasStoredWalletOptIn() {
+    try {
+      const address = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim();
+      const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+      return Boolean(
+        address
+        && proof?.address === address
+        && proof?.message
+        && Array.isArray(proof?.signatures)
+        && proof.signatures.length,
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function hasSelectedEvaluation() {
+    const params = new URLSearchParams(location.search);
+    if (params.get("player") || params.get("saved") || params.get("share")) return true;
+    try {
+      if (typeof state === "object" && state?.evaluationPlayerId) return true;
+    } catch {
+      // The static shell is installed before application state exists.
+    }
+    const panel = document.getElementById("evaluationPanel");
+    return panel instanceof HTMLElement && !panel.hidden;
+  }
+
+  function syncLoadButton() {
+    const buttons = document.getElementById("evaluationButtons");
+    const loadButton = document.getElementById("evaluationLoadButton");
+    if (!(buttons instanceof HTMLElement) || !(loadButton instanceof HTMLElement)) return;
+
+    const selectedEvaluation = hasSelectedEvaluation();
+    const visible = hasStoredWalletOptIn() && !selectedEvaluation;
+    document.documentElement.classList.toggle("mflEvaluationInitialLoadVisible", visible);
+
+    if (visible) {
+      buttons.hidden = false;
+      loadButton.hidden = false;
+      loadButton.removeAttribute("aria-hidden");
+      setImportant(buttons, "visibility", "visible");
+      setImportant(buttons, "opacity", "1");
+      setImportant(loadButton, "visibility", "visible");
+      setImportant(loadButton, "opacity", "1");
+      return;
+    }
+
+    loadButton.hidden = true;
+    loadButton.setAttribute("aria-hidden", "true");
+    loadButton.style.removeProperty("visibility");
+    loadButton.style.removeProperty("opacity");
+    if (!selectedEvaluation) {
+      buttons.hidden = true;
+      buttons.style.removeProperty("visibility");
+      buttons.style.removeProperty("opacity");
+    }
   }
 
   function showEvaluationPage() {
@@ -97,6 +156,8 @@
       setImportant(discountRate, "visibility", "visible");
     }
 
+    syncLoadButton();
+
     document.documentElement.classList.remove(
       "bootPending",
       "mflInitialChromePreparing",
@@ -113,6 +174,7 @@
   }
 
   function clearRouteState() {
+    document.documentElement.classList.remove("mflEvaluationInitialLoadVisible");
     document.body?.classList.remove("evaluationStaticChromeReady");
   }
 
@@ -148,6 +210,20 @@
     body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
       visibility: visible !important;
     }
+
+    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationButtons,
+    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationButtons[hidden] {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton,
+    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
+      display: inline-flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
   `;
   document.head.appendChild(style);
 
@@ -160,6 +236,7 @@
   });
   interval = window.setInterval(schedule, 100);
   window.addEventListener("popstate", schedule);
+  window.addEventListener("storage", schedule);
 
   function destroy() {
     destroyed = true;
@@ -167,6 +244,7 @@
     if (interval) clearInterval(interval);
     observer?.disconnect();
     window.removeEventListener("popstate", schedule);
+    window.removeEventListener("storage", schedule);
     style.remove();
     clearRouteState();
   }
