@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  export-and-deploy:
+  deploy-site:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -48,12 +48,11 @@ jobs:
               break
             fi
           done < <(
-            {
-              gh run list --workflow full-database-and-site-update.yml --status success --limit 50 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-              gh run list --workflow full-database-refresh.yml --status success --limit 50 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-              gh run list --workflow players-database-refresh.yml --status success --limit 50 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-              gh run list --workflow seasons-database-refresh.yml --status success --limit 50 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            } | sort -r
+            gh run list \
+              --status success \
+              --limit 100 \
+              --json databaseId,createdAt \
+              --jq '.[] | [.createdAt, .databaseId] | @tsv'
           )
 
           if [ -z "$LATEST_RUN_ID" ]; then
@@ -81,6 +80,13 @@ jobs:
           mv site/data/*.json site/api/data-files/
           rmdir site/data
           test -f site/api/data-files/manifest.json
+
+      - name: Show released site commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Deploying site source from commit ${GITHUB_SHA}."
+          grep -m 1 -E 'RELEASE_VERSION|const VERSION' site/app.js site/bootstrap.js || true
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest

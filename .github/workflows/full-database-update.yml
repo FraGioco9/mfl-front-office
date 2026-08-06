@@ -1,4 +1,4 @@
-name: Full database refresh
+name: Full database update
 
 on:
   workflow_dispatch:
@@ -7,8 +7,12 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: database-and-vercel-site
+  cancel-in-progress: false
+
 jobs:
-  refresh:
+  update-database:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -26,21 +30,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p previous-database
-          {
-            gh run list --workflow players-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow seasons-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow full-database-refresh.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-            gh run list --workflow full-database-and-site-update.yml --status success --limit 30 --json databaseId,createdAt --jq '.[] | [.createdAt, .databaseId] | @tsv' || true
-          } | sort -r | while IFS=$'\t' read -r CREATED_AT RUN_ID; do
+
+          PREVIOUS_RUN_ID=""
+          while IFS=$'\t' read -r CREATED_AT RUN_ID; do
             [ -n "$RUN_ID" ] || continue
-            HAS_DATABASE_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' | head -n 1)"
-            if [ -n "$HAS_DATABASE_ARTIFACT" ]; then echo "$RUN_ID" > previous_database_run_id.txt; break; fi
-          done
-          if [ -f previous_database_run_id.txt ]; then
-            gh run download "$(cat previous_database_run_id.txt)" --name mfl_database --dir previous-database
+
+            ARTIFACT_NAME="$(
+              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
+                --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | .name' \
+                | head -n 1
+            )"
+
+            if [ "$ARTIFACT_NAME" = "mfl_database" ]; then
+              PREVIOUS_RUN_ID="$RUN_ID"
+              echo "Using previous database from run $RUN_ID ($CREATED_AT)."
+              break
+            fi
+          done < <(
+            gh run list \
+              --status success \
+              --limit 100 \
+              --json databaseId,createdAt \
+              --jq '.[] | [.createdAt, .databaseId] | @tsv'
+          )
+
+          if [ -n "$PREVIOUS_RUN_ID" ]; then
+            gh run download "$PREVIOUS_RUN_ID" --name mfl_database --dir previous-database
           else
-            echo "No previous mfl_database artifact found."
+            echo "No previous mfl_database artifact found; progression emails will be skipped."
           fi
 
       - name: Rebuild database
