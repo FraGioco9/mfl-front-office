@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.36");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.37");
   const SOURCE_VERSION = "1.120.24";
   const SOURCE_URL = "/app-loader-v1.120.24.js";
   const NESTED_SOURCE_MARKER = "  const SOURCE_URL = `https://cdn.jsdelivr.net/gh/FraGioco9/mfl-front-office@${SOURCE_COMMIT}/site/app.js`;";

@@ -6,7 +6,7 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
-        const VERSION = "1.120.36";
+        const VERSION = "1.120.37";
         const SOURCE_URL = "/index-source.html";
         const RUNTIME_FILES = [
           "/watchlist-route-ui-runtime.js",
@@ -21,19 +21,19 @@
           "/selection-refresh-reset-runtime.js",
           "/my-players-refresh-view-runtime.js",
           "/selection-stack-runtime.js",
-          "/mfl-season-ratios-runtime-v2.js",
           "/changelog-history-runtime.js",
         ];
         const CURRENT_CHANGELOG_MARKUP = `
           <li class="changelogMinorSection is-expanded" data-initial-release-version="${VERSION}">
             <button class="changelogMinorToggle" type="button" aria-expanded="true">
               <span class="changelogMinorVersion">v1.120</span>
-              <span class="changelogMinorMeta">7 patches</span>
+              <span class="changelogMinorMeta">8 patches</span>
               <span class="changelogMinorChevron" aria-hidden="true">&gt;</span>
             </button>
             <div class="changelogMinorPanel">
               <div class="changelogMinorPanelInner">
                 <ol class="changelogPatchList">
+                  <li><span>v1.120.37</span><p>Restore static startup content, full MFL Stats, and the live Discount Rate</p></li>
                   <li><span>v1.120.36</span><p>Remove remaining first-paint version conflicts and restore Evaluation loading</p></li>
                   <li><span>v1.120.35</span><p>Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip</p></li>
                   <li><span>v1.120.34</span><p>Centralize release versioning and prevent legacy footer overrides</p></li>
@@ -126,12 +126,14 @@
             if (window.location.pathname !== "/changelog") finalizeRouteChrome();
             window.__mflLoadSupplementalRuntimes?.();
           });`;
+          const headMarker = "</head>";
           if (!versionPattern.test(request.responseText)
               || !stylePattern.test(request.responseText)
               || !request.responseText.includes(shellMarker)
               || !request.responseText.includes(initialShellMarker)
               || !request.responseText.includes(applicationSrcMarker)
-              || !request.responseText.includes(applicationLoadMarker)) {
+              || !request.responseText.includes(applicationLoadMarker)
+              || !request.responseText.includes(headMarker)) {
             throw new Error("Could not locate the application source release markers.");
           }
 
@@ -143,7 +145,9 @@
             stylePattern,
             `/styles.css?v=${VERSION}&release=${encodeURIComponent(releaseToken)}`,
           );
+          const integrityRuntimeTag = `<script src="/startup-integrity-runtime.js?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}"><\/script>`;
           source = source
+            .replace(headMarker, `${integrityRuntimeTag}${headMarker}`)
             .replace(shellMarker, shellReplacement)
             .replace(initialShellMarker, initialShellReplacement)
             .replace(applicationSrcMarker, applicationSrcReplacement)

@@ -1,6 +1,6 @@
-const VERSION = "1.120.36";
+const VERSION = "1.120.37";
 const REQUIRED_RATIO_ROWS = 4;
-const REQUEST_TIMEOUT_MS = 5000;
+const REQUEST_TIMEOUT_MS = 8000;
 
 function supabaseConfig() {
   const url = String(
@@ -8,7 +8,12 @@ function supabaseConfig() {
       || process.env.NEXT_PUBLIC_SUPABASE_URL
       || "",
   ).replace(/\/+$/, "");
-  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
+  const key = String(
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_ANON_KEY
+      || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      || "",
+  );
   return url && key ? { url, key } : null;
 }
 
@@ -62,31 +67,12 @@ async function loadRatiosFromSupabase() {
   if (rows.length !== REQUIRED_RATIO_ROWS) {
     throw new Error(`Expected ${REQUIRED_RATIO_ROWS} MFL season ratios, received ${rows.length}.`);
   }
-  return rows;
-}
-
-function loaderScript() {
-  return `(() => {
-  const VERSION = ${JSON.stringify(VERSION)};
-  window.__mflReleaseVersion = String(window.__mflReleaseVersion || VERSION);
-  if (window.__mflDiscountRateRuntimeVersion === VERSION
-      && window.__mflDiscountRateAuthority?.version === VERSION) {
-    window.__mflDiscountRateAuthority.sync?.();
-    return;
+  for (let index = 1; index < rows.length; index += 1) {
+    if (rows[index - 1].season !== rows[index].season + 1) {
+      throw new Error("MFL season ratios are not consecutive.");
+    }
   }
-
-  const runtimeId = "mflSeasonRatiosRuntimeV2";
-  document.getElementById(runtimeId)?.remove();
-  const runtime = document.createElement("script");
-  runtime.id = runtimeId;
-  runtime.dataset.version = VERSION;
-  runtime.src = "/mfl-season-ratios-runtime-v2.js?v="
-    + encodeURIComponent(VERSION)
-    + "&fresh="
-    + Date.now();
-  runtime.async = true;
-  document.head.appendChild(runtime);
-})();\n`;
+  return rows;
 }
 
 module.exports = async function handler(request, response) {
@@ -101,12 +87,6 @@ module.exports = async function handler(request, response) {
   if (request.method !== "GET") {
     response.setHeader("Allow", "GET");
     response.status(405).json({ error: "Method not allowed." });
-    return;
-  }
-
-  if (String(request.query?.format || "").toLowerCase() === "script") {
-    response.setHeader("Content-Type", "application/javascript; charset=utf-8");
-    response.status(200).send(loaderScript());
     return;
   }
 
