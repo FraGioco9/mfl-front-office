@@ -1,11 +1,13 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.46");
+  const VERSION = String(window.__mflReleaseVersion || "1.120.47");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
   let frame = 0;
   let observer = null;
   let applyAnimationTimer = 0;
+  let pendingApplyAnimation = false;
+  let previousHistogram = null;
 
   function label(value) {
     return String(value || "").trim().toLowerCase();
@@ -16,12 +18,21 @@
       .find((button) => label(button.textContent) === "custom") || null;
   }
 
-  function clearApplyAnimation() {
-    window.clearTimeout(applyAnimationTimer);
-    applyAnimationTimer = 0;
-    document.querySelectorAll("#databaseStatsPage .mflStatsHistogram.databaseStatsAppliedTransition")
-      .forEach((histogram) => histogram.classList.remove("databaseStatsAppliedTransition"));
-    document.documentElement.classList.remove("databaseStatsApplyAnimating");
+  function currentHistogram() {
+    return document.querySelector("#databaseStatsDistribution .mflStatsHistogram");
+  }
+
+  function clearApplyAnimation(cancelPending = true) {
+    if (applyAnimationTimer) {
+      window.clearTimeout(applyAnimationTimer);
+      applyAnimationTimer = 0;
+    }
+    document.querySelectorAll("#databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition]")
+      .forEach((histogram) => histogram.removeAttribute("data-database-stats-apply-transition"));
+    if (cancelPending) {
+      pendingApplyAnimation = false;
+      previousHistogram = null;
+    }
   }
 
   function ensureStyles() {
@@ -38,10 +49,7 @@
         animation: none !important;
         transition: none !important;
       }
-      html.databaseStatsApplyAnimating body[data-page="databasestats"] #databaseStatsPage .mflStatsHistogramBar::after {
-        animation: none !important;
-      }
-      #databaseStatsPage .mflStatsHistogram.databaseStatsAppliedTransition .mflStatsHistogramBar::after {
+      #databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition="true"] .mflStatsHistogramBar::after {
         animation: mflStatsBarRise 220ms ease-out !important;
       }
       #databaseStatsCustomTooltipPortal {
@@ -134,6 +142,7 @@
   }
 
   function open() {
+    clearApplyAnimation();
     ensureStyles();
     const panel = ensureTooltip();
     if (!panel) return;
@@ -164,14 +173,22 @@
     return { min, max };
   }
 
-  function beginApplyAnimation() {
-    clearApplyAnimation();
-    const histogram = document.querySelector("#databaseStatsDistribution .mflStatsHistogram");
-    if (!(histogram instanceof HTMLElement)) return;
+  function resolveApplyAnimation() {
+    if (!pendingApplyAnimation) return;
+    if (document.body?.dataset.page !== "databasestats") {
+      clearApplyAnimation();
+      return;
+    }
+    const histogram = currentHistogram();
+    if (!(histogram instanceof HTMLElement) || histogram === previousHistogram) return;
+
+    pendingApplyAnimation = false;
+    previousHistogram = null;
+    clearApplyAnimation(false);
     void histogram.offsetWidth;
-    histogram.classList.add("databaseStatsAppliedTransition");
+    histogram.setAttribute("data-database-stats-apply-transition", "true");
     applyAnimationTimer = window.setTimeout(() => {
-      histogram.classList.remove("databaseStatsAppliedTransition");
+      histogram.removeAttribute("data-database-stats-apply-transition");
       applyAnimationTimer = 0;
     }, 260);
   }
@@ -183,15 +200,19 @@
     const applyButton = document.querySelector("#databaseStatsCustomApply");
     if (!(applyButton instanceof HTMLElement)) return;
 
+    clearApplyAnimation();
+    previousHistogram = currentHistogram();
+    pendingApplyAnimation = true;
     if (min) min.value = String(range.min);
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
-    beginApplyAnimation();
+    resolveApplyAnimation();
 
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
     close();
+    schedule();
   }
 
   function portalContains(target) {
@@ -200,7 +221,12 @@
   }
 
   function stopPortalEvent(event) {
-    if (portalContains(event.target)) event.stopImmediatePropagation();
+    if (!portalContains(event.target)) return;
+    if (["beforeinput", "input", "change"].includes(event.type)) {
+      clearApplyAnimation();
+      document.documentElement.dataset.databaseStatsCustomDraft = "true";
+    }
+    event.stopImmediatePropagation();
   }
 
   function onClick(event) {
@@ -243,6 +269,7 @@
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
+      clearApplyAnimation();
       close(true);
       return;
     }
@@ -257,6 +284,7 @@
       const original = document.querySelector("#databaseStatsCustomFilter");
       if (original && !original.hidden) original.hidden = true;
       if (document.body?.dataset.page !== "databasestats") clearApplyAnimation();
+      else resolveApplyAnimation();
       position();
     });
   }
