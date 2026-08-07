@@ -4,13 +4,13 @@ async function waitForArchitecture(page) {
   await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
-test("boots from the static shell with the prepared classic application core", async ({ page }) => {
+test("boots from the static shell with the direct classic application core", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
   await expect(page.locator("#appShell")).toBeAttached();
   await expect(page.locator("#loadingScreen")).toHaveCount(0);
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.0");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.1");
 
   const architecture = await page.evaluate(() => ({
     loadedUrls: globalThis.performance.getEntriesByType("resource").map((entry) => entry.name),
@@ -20,9 +20,8 @@ test("boots from the static shell with the prepared classic application core", a
   }));
   expect(architecture.loadedUrls.some((url) => url.includes("/bootstrap.js"))).toBe(false);
   expect(architecture.loadedUrls.some((url) => url.includes("/index-shell.html"))).toBe(false);
-  expect(architecture.runtimes).not.toContain("/modules/legacy-core.js");
-  expect(architecture.runtimes).toContain("core");
-  expect(architecture.runtimes.some((name) => name.startsWith("core-") && name !== "core")).toBe(false);
+  expect(architecture.runtimes).toContain("/modules/legacy-core.js");
+  expect(architecture.runtimes).not.toContain("core");
 });
 
 test("keeps Evaluation directly addressable after modular startup", async ({ page }) => {
@@ -48,7 +47,7 @@ test("serves the centralized release as the newest Changelog row", async ({ requ
   const history = await request.get("/releases.json");
   const rows = await history.json();
 
-  expect(metadata.version).toBe("1.123.0");
-  expect(rows[0][0]).toBe("v1.123.0");
+  expect(metadata.version).toBe("1.123.1");
+  expect(rows[0][0]).toBe("v1.123.1");
   expect(rows[0][1]).toBe(metadata.description);
 });
