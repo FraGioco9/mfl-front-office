@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.3";
+  const runtimeWindow = /** @type {any} */ (window);
+  const STATIC_RELEASE_VERSION = "1.123.4";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -137,13 +138,194 @@
     return footerVersionLink;
   }
 
+  function createInteractionBusyController() {
+    const BUSY_CLASS = "mflInteractionBusy";
+    const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
+    const activeTokens = new Map();
+    const namedTokens = new Map();
+    const wrappedFunctions = Object.create(null);
+    const originalFetch = window.fetch.bind(window);
+    let tokenSequence = 0;
+
+    const style = document.createElement("style");
+    style.id = "mflInteractionBusyStyles";
+    style.textContent = `
+      html.${BUSY_CLASS},
+      html.${BUSY_CLASS} body,
+      html.${BUSY_CLASS} body *,
+      html.${BUSY_CLASS} body *::before,
+      html.${BUSY_CLASS} body *::after {
+        cursor: wait !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    function applyState() {
+      const busy = activeTokens.size > 0;
+      document.documentElement.classList.toggle(BUSY_CLASS, busy);
+      document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
+      if (document.body) document.body.setAttribute("aria-busy", busy ? "true" : "false");
+    }
+
+    function begin(reason = "loading") {
+      const token = `busy-${++tokenSequence}`;
+      activeTokens.set(token, String(reason || "loading"));
+      applyState();
+      return token;
+    }
+
+    function end(token) {
+      if (!token || !activeTokens.delete(token)) return;
+      applyState();
+    }
+
+    async function run(callback, reason = "loading") {
+      const token = begin(reason);
+      try {
+        return await callback();
+      } finally {
+        end(token);
+      }
+    }
+
+    function setNamed(reason, active) {
+      const key = String(reason || "loading");
+      const existing = namedTokens.get(key);
+      if (active) {
+        if (!existing) namedTokens.set(key, begin(key));
+      } else if (existing) {
+        namedTokens.delete(key);
+        end(existing);
+      }
+    }
+
+    function blockInteraction(event) {
+      if (!activeTokens.size) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+
+    blockedEvents.forEach((eventName) => {
+      document.addEventListener(eventName, blockInteraction, true);
+    });
+
+    function syncKnownLoadingStates() {
+      const body = document.body;
+      setNamed("wallet-opt-in", Boolean(body?.classList.contains("walletOptingIn")));
+      setNamed("evaluation-route", Boolean(body?.classList.contains("evaluationRouteLoading")));
+      setNamed("table-data", Boolean(body?.classList.contains("mflTableDataLoading")));
+      const changelog = document.querySelector(".changelogList");
+      setNamed("changelog-history", Boolean(changelog instanceof HTMLElement && changelog.dataset.historyLoading === "true"));
+    }
+
+    const bodyObserver = new MutationObserver(syncKnownLoadingStates);
+    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    const changelogList = document.querySelector(".changelogList");
+    if (changelogList instanceof HTMLElement) {
+      bodyObserver.observe(changelogList, { attributes: true, attributeFilter: ["data-history-loading"] });
+    }
+
+    window.fetch = function trackedFetch(input, init) {
+      const token = begin("network");
+      try {
+        return Promise.resolve(originalFetch(input, init)).finally(() => end(token));
+      } catch (error) {
+        end(token);
+        throw error;
+      }
+    };
+
+    function wrapGlobalAsyncFunction(name) {
+      let original = null;
+      try {
+        original = runtimeWindow[name];
+      } catch {
+        original = null;
+      }
+      if (typeof original !== "function" || original.__mflInteractionBusyWrapped) return false;
+
+      const wrapped = (...args) => run(() => original.apply(runtimeWindow, args), name);
+      Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+      wrappedFunctions[name] = wrapped;
+      try {
+        runtimeWindow[name] = wrapped;
+      } catch {
+        return false;
+      }
+      try {
+        window.eval(`${name} = window.__mflInteractionBusyWrappedFunctions[${JSON.stringify(name)}]`);
+      } catch {
+        // Assigning the window property is sufficient for normal global function bindings.
+      }
+      return true;
+    }
+
+    function installLegacyBridge() {
+      const interactionWrapper = function interactionBusyWrapper(callback) {
+        return run(callback, "interaction-loading");
+      };
+      Object.defineProperty(interactionWrapper, "__mflInteractionBusyWrapped", { value: true });
+      runtimeWindow.__mflWithInteractionBusy = interactionWrapper;
+      try {
+        runtimeWindow.withInteractionBusy = interactionWrapper;
+      } catch {
+        // The eval assignment below also covers global lexical bindings.
+      }
+      try {
+        window.eval("withInteractionBusy = window.__mflWithInteractionBusy");
+      } catch {
+        // Keep the property bridge if direct reassignment is unavailable.
+      }
+
+      [
+        "loadSharedEvaluation",
+        "loadSavedEvaluation",
+        "createSharedEvaluationFromPayload",
+        "createSharedEvaluation",
+        "createSavedEvaluation",
+      ].forEach(wrapGlobalAsyncFunction);
+    }
+
+    runtimeWindow.__mflInteractionBusyWrappedFunctions = wrappedFunctions;
+    syncKnownLoadingStates();
+
+    return Object.freeze({
+      begin,
+      end,
+      run,
+      setNamed,
+      isBusy: () => activeTokens.size > 0,
+      installLegacyBridge,
+      sync: syncKnownLoadingStates,
+    });
+  }
+
   const footerVersionLink = primeStaticShell();
+  const interactionBusy = createInteractionBusyController();
+  runtimeWindow.__mflInteractionBusy = interactionBusy;
+  const startupBusyToken = interactionBusy.begin("startup");
+
+  function finishStartupBusy() {
+    interactionBusy.end(startupBusyToken);
+    interactionBusy.sync();
+  }
+
+  window.addEventListener("mfl:ready", finishStartupBusy, { once: true });
+  const readinessObserver = new MutationObserver(() => {
+    const readiness = document.documentElement.dataset.mflReady;
+    if (readiness === "true" || readiness === "error") {
+      readinessObserver.disconnect();
+      finishStartupBusy();
+    }
+  });
+  readinessObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });
 
   const changelogList = document.querySelector(".changelogList");
   if (changelogList instanceof HTMLElement) {
     changelogList.replaceChildren();
     changelogList.hidden = true;
     changelogList.dataset.historyLoading = "true";
+    interactionBusy.sync();
   }
 
   void (async () => {
@@ -170,6 +352,7 @@
     try {
       await import(entryUrl.href);
     } catch (error) {
+      document.documentElement.dataset.mflReady = "error";
       console.error("Could not import the MFL Front Office entry module.", error);
     }
   })();
