@@ -191,7 +191,14 @@ STYLES.write_text(styles, encoding="utf-8")
 # it in memory so the cleaned club transition does not reintroduce the removed
 # delayed-toast helper, and strengthen the final invariant list.
 source = CORE.read_text(encoding="utf-8")
-source = source.replace("          flushPostLoadingToast();\\n", "", 1)
+source = source.replace(
+    '''          setClubSwitching(false);
+          flushPostLoadingToast();
+          resolve();''',
+    '''          setClubSwitching(false);
+          resolve();''',
+    1,
+)
 source = source.replace(
     '    "applyPercentageTableColumnWidths",\n]',
     '''    "applyPercentageTableColumnWidths",
