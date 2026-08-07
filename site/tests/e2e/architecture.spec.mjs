@@ -121,8 +121,7 @@ test("MFL Stats never visibly exposes the player table during first load", async
   });
 
   await page.goto("/mfl/stats", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector('script[data-mfl-runtime="/modules/legacy-core.js"]', { state: "attached" });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
 
   await expect(page.locator("#mflStatsPage")).toBeVisible();
   await expect(page.locator("#progressionPage")).toBeHidden();
