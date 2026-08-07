@@ -1,16 +1,33 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
+async function runtimeSourceFiles(directory = root) {
+  const files = [];
+  const entries = await readdir(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.name === "node_modules" || entry.name === ".vercel" || entry.name === "tests") continue;
+    const absolutePath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await runtimeSourceFiles(absolutePath));
+      continue;
+    }
+    if ([".js", ".mjs"].includes(extname(entry.name))) files.push(absolutePath);
+  }
+
+  return files;
+}
+
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.0");
+  assert.equal(release.version, "1.123.1");
   assert.ok(release.description.length > 20);
 });
 
@@ -22,6 +39,24 @@ test("retired bootstrap architecture is absent from the active entry", async () 
   assert.doesNotMatch(entry, /index-shell\.html|bootstrap\.js/);
 });
 
+test("classic application core is partitioned deterministically", async () => {
+  const [{ CORE_RUNTIME_PARTITIONS }, { splitClassicSource }] = await Promise.all([
+    import(pathToFileURL(resolve(root, "modules/core-runtime.js"))),
+    import(pathToFileURL(resolve(root, "modules/runtime-loader.js"))),
+  ]);
+  const source = await read("modules/legacy-core.js");
+  const sections = splitClassicSource(source, CORE_RUNTIME_PARTITIONS);
+
+  assert.equal(sections.length, CORE_RUNTIME_PARTITIONS.length);
+  assert.equal(sections.map((section) => section.source).join(""), source);
+  assert.ok(sections.every((section) => section.source.length > 0));
+  assert.ok(sections.every((section) => Buffer.byteLength(section.source, "utf8") < 120_000));
+
+  const entry = await read("modules/app-entry.js");
+  assert.match(entry, /loadPartitionedClassicScript\("\/modules\/legacy-core\.js"/);
+  assert.doesNotMatch(entry, /loadClassicScript\("\/modules\/legacy-core\.js"/);
+});
+
 test("season-ratio endpoint preserves the completed-row query", async () => {
   const source = await read("api/mfl-season-ratios-v2.js");
   assert.match(source, /require\("\.\.\/release\.json"\)/);
@@ -29,8 +64,9 @@ test("season-ratio endpoint preserves the completed-row query", async () => {
   assert.doesNotMatch(source, /completed|status=|season\.lte/);
 });
 
-test("new application modules do not contain the retired interaction facade", async () => {
-  for (const path of ["app.js", "modules/app-entry.js", "modules/http.js", "modules/release.js", "modules/runtime-loader.js"]) {
-    assert.doesNotMatch(await read(path), /withInteractionBusy/);
+test("the retired interaction-busy facade is absent from all runtime sources", async () => {
+  const retiredFacade = ["with", "Interaction", "Busy"].join("");
+  for (const path of await runtimeSourceFiles()) {
+    assert.doesNotMatch(await readFile(path, "utf8"), new RegExp(retiredFacade), path);
   }
 });
