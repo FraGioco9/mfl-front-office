@@ -1,13 +1,14 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.11");
   const STATS_PATH = /^\/database\/stats\/?$/i;
   const RUNTIME_KEY = "__mflDatabaseStatsStateRuntime";
 
   window[RUNTIME_KEY]?.destroy?.();
 
   let originalSetPage = null;
+  let originalApplyWalletTableState = null;
   let lastPersistedStatsRoute = false;
   let pendingRouteSync = 0;
 
@@ -34,11 +35,9 @@
 
   function ensureStatsAllowedInSavedDatabaseView() {
     try {
-      if (typeof pageViewOptions === "object"
-          && Array.isArray(pageViewOptions.database)
-          && !pageViewOptions.database.includes("stats")) {
-        pageViewOptions.database.push("stats");
-      }
+      if (typeof pageViewOptions !== "object" || !Array.isArray(pageViewOptions.database)) return;
+      if (!pageViewOptions.database.includes("stats")) pageViewOptions.database.push("stats");
+      if (typeof updateViewButtons === "function" && state?.currentPage === "database") updateViewButtons();
     } catch {
       // The legacy table runtime may change its internal storage in a later build.
     }
@@ -61,16 +60,18 @@
     return savedDatabaseView();
   }
 
-  function rememberStatsView() {
+  function rememberStatsView(forceSave = false) {
     if (!isStatsPath()) {
       lastPersistedStatsRoute = false;
       return;
     }
-    if (lastPersistedStatsRoute) return;
 
     try {
       ensureStatsAllowedInSavedDatabaseView();
       if (typeof state !== "object") return;
+      const alreadyStats = state.currentPage === "database"
+        && state.view === "stats"
+        && state.tablePageStates?.database?.view === "stats";
       state.currentPage = "database";
       state.view = "stats";
       const existing = state.tablePageStates?.database && typeof state.tablePageStates.database === "object"
@@ -78,11 +79,45 @@
         : {};
       state.tablePageStates = state.tablePageStates || {};
       state.tablePageStates.database = { ...existing, view: "stats" };
-      if (typeof saveTableState === "function") saveTableState();
+      if ((forceSave || !lastPersistedStatsRoute || !alreadyStats) && typeof saveTableState === "function") {
+        saveTableState();
+      }
       lastPersistedStatsRoute = true;
     } catch {
       // Stats still works for guests even when preferences cannot be persisted.
     }
+  }
+
+  function cloudDatabaseView(savedState) {
+    try {
+      return String(savedState?.pages?.database?.view || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function installWalletTableStateBridge() {
+    ensureStatsAllowedInSavedDatabaseView();
+    if (originalApplyWalletTableState || typeof applyWalletTableState !== "function") return;
+    originalApplyWalletTableState = applyWalletTableState;
+
+    applyWalletTableState = function applyWalletTableStateWithDatabaseStats(savedState) {
+      ensureStatsAllowedInSavedDatabaseView();
+      const savedStatsView = cloudDatabaseView(savedState) === "stats";
+      const result = originalApplyWalletTableState.call(this, savedState);
+      ensureStatsAllowedInSavedDatabaseView();
+
+      if (savedStatsView && typeof state === "object") {
+        const existing = state.tablePageStates?.database && typeof state.tablePageStates.database === "object"
+          ? state.tablePageStates.database
+          : {};
+        state.tablePageStates = state.tablePageStates || {};
+        state.tablePageStates.database = { ...existing, view: "stats" };
+      }
+
+      if (isStatsPath()) rememberStatsView(true);
+      return result;
+    };
   }
 
   function installSetPageBridge() {
@@ -97,7 +132,7 @@
         const targetView = explicitView || currentDatabaseView() || "attributes";
         if (targetView === "stats" && typeof window.renderDatabaseStatsPage === "function") {
           await window.renderDatabaseStatsPage(Boolean(updateHash));
-          rememberStatsView();
+          rememberStatsView(true);
           return;
         }
       }
@@ -116,6 +151,7 @@
   function syncRouteState() {
     pendingRouteSync = 0;
     installStyles();
+    installWalletTableStateBridge();
     installSetPageBridge();
     if (isStatsPath()) {
       rememberStatsView();
@@ -146,9 +182,11 @@
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#databaseStatsCustomTooltipPortal input")) return;
     clearBarTransition();
+    window.setDatabaseStatsPageVisibility?.(true);
   }
 
   installStyles();
+  installWalletTableStateBridge();
   installSetPageBridge();
   document.addEventListener("pointerdown", onNavigationPointerDown, true);
   document.addEventListener("input", onDraftInput, true);
@@ -163,11 +201,15 @@
     clearBarTransition();
     document.getElementById("databaseStatsStateStyles")?.remove();
     if (originalSetPage && typeof setPage === "function") setPage = originalSetPage;
+    if (originalApplyWalletTableState && typeof applyWalletTableState === "function") {
+      applyWalletTableState = originalApplyWalletTableState;
+    }
   }
 
   window[RUNTIME_KEY] = {
     version: VERSION,
     sync: syncRouteState,
+    persist: () => rememberStatsView(true),
     destroy,
   };
 })();
