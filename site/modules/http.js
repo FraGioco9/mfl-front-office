@@ -50,30 +50,3 @@ export function installApiFetchPolicy({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     }
   };
 }
-
-/**
- * Fetch JSON and turn non-2xx responses into consistent errors.
- * @template T
- * @param {RequestInfo | URL} input
- * @param {RequestInit} [init]
- * @returns {Promise<T>}
- */
-export async function requestJson(input, init = {}) {
-  const response = await window.fetch(input, init);
-  /** @type {any} */
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    const message = payload && typeof payload.error === "string"
-      ? payload.error
-      : `Request failed (${response.status}).`;
-    throw new Error(message);
-  }
-
-  return /** @type {T} */ (payload);
-}
