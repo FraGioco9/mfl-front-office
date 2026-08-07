@@ -1,9 +1,9 @@
 // @ts-check
 
-import { CORE_RUNTIME_PARTITIONS, prepareCoreRuntimeSource } from "./core-runtime.js";
+import { prepareCoreRuntimeSource } from "./core-runtime.js";
 import { installApiFetchPolicy } from "./http.js";
 import { loadRelease } from "./release.js";
-import { loadPartitionedClassicScript, loadScriptGroup } from "./runtime-loader.js";
+import { loadPreparedClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
@@ -48,10 +48,9 @@ async function start() {
 
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
-  await loadPartitionedClassicScript(
+  await loadPreparedClassicScript(
     "/modules/legacy-core.js",
     release.version,
-    CORE_RUNTIME_PARTITIONS,
     prepareCoreRuntimeSource,
   );
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
