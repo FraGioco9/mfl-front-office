@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.2");
+  assert.equal(release.version, "1.123.3");
   assert.ok(release.description.length > 20);
 });
 
@@ -26,6 +26,21 @@ test("application core uses the known-good direct classic-script startup path", 
   const entry = await read("modules/app-entry.js");
   assert.match(entry, /loadClassicScript\("\/modules\/legacy-core\.js", release\.version\)/);
   assert.doesNotMatch(entry, /prepareCoreRuntimeSource|loadPreparedClassicScript|loadPartitionedClassicScript/);
+});
+
+test("static shell is resolved before release metadata or runtime loading", async () => {
+  const bridge = await read("app.js");
+  const release = JSON.parse(await read("release.json"));
+
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.3"/);
+  assert.match(bridge, /function primeStaticShell\(\)/);
+  assert.match(bridge, /menuRail\.hidden = false/);
+  assert.match(bridge, /sidebar\.hidden = false/);
+  assert.match(bridge, /document\.body\.classList\.add\("pinnedSidebarVisible"\)/);
+  assert.match(bridge, /page\.hidden = page\.id !== route\.pageId/);
+  assert.match(bridge, /document\.documentElement\.classList\.add\("mflStaticShellReady"\)/);
+  assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
+  assert.equal(release.version, "1.123.3");
 });
 
 test("changelog first paint is cleared before routing and built from canonical releases", async () => {
@@ -46,7 +61,7 @@ test("changelog first paint is cleared before routing and built from canonical r
   assert.doesNotMatch(changelog, /changelog-history-source-v1\.120\.3|sourceVersion|CURRENT_RELEASES/);
   assert.match(releasesApi, /\.\.\/releases-recent\.json/);
   assert.match(testServer, /releases-recent\.json/);
-  assert.deepEqual(recent.map((entry) => entry[0]), ["v1.123.1", "v1.123.0"]);
+  assert.deepEqual(recent.map((entry) => entry[0]), ["v1.123.2", "v1.123.1", "v1.123.0"]);
 });
 
 test("season-ratio endpoint preserves the completed-row query", async () => {
