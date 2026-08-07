@@ -3,7 +3,19 @@
   "engines": {
     "node": "22.x"
   },
-  "dependencies": {
-    "@onflow/fcl": "latest"
+  "scripts": {
+    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js release-ui-runtime.js changelog-history-runtime.js tests playwright.config.mjs",
+    "typecheck": "tsc -p jsconfig.json --noEmit",
+    "test:architecture": "node --test tests/architecture.test.mjs",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm run test:architecture"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0",
+    "typescript": "^5.0.0"
   }
 }

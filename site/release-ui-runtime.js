@@ -1,9 +1,8 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.36");
+  const VERSION = String(window.__mflRelease?.version || window.__mflReleaseVersion || "dev");
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
   const STATS_PATH = /^\/database\/stats\/?$/i;
 
-  window.__mflReleaseVersion = VERSION;
   window.__mflReleaseUiRuntime?.destroy?.();
 
   let frame = 0;
