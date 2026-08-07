@@ -4,16 +4,57 @@ async function waitForArchitecture(page) {
   await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
-test("boots the static shell and releases startup busy state", async ({ page }) => {
-  await page.goto("/");
-  await waitForArchitecture(page);
+test("boots with header, sidebar, footer and current version", async ({ page }) => {
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
 
-  await expect(page.locator("#appShell")).toBeAttached();
-  await expect(page.locator("#loadingScreen")).toHaveCount(0);
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.8");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".topbar")).toBeVisible();
+  await expect(page.locator("#menuRail")).toBeVisible();
+  await expect(page.locator("#sidebar")).toBeVisible();
+  await expect(page.locator(".siteFooter")).toBeVisible();
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.9");
+  releaseMetadata();
+  await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
+});
+
+test("an already opted-in user never sees the home Opt In button on refresh", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wallet = "0x1234";
+    globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
+    globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      address: wallet,
+      message: "proof",
+      signatures: ["signature"],
+    }));
+    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({ allowed: true }));
+    globalThis.__mflOptInVisibleDuringRefresh = false;
+    const inspect = () => {
+      const button = globalThis.document.getElementById("homeOptInButton");
+      if (button && globalThis.getComputedStyle(button).display !== "none") {
+        globalThis.__mflOptInVisibleDuringRefresh = true;
+      }
+    };
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden", "class"],
+    });
+    globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
+  });
+
+  await page.goto("/");
+  await waitForArchitecture(page);
+  await expect(page.locator("#homeOptInButton")).toBeHidden();
+  expect(await page.evaluate(() => globalThis.__mflOptInVisibleDuringRefresh)).toBe(false);
 });
 
 test("does not flash Progression for an opted-out user on refresh", async ({ page }) => {
@@ -70,6 +111,40 @@ test("scoped loading finishes without leaving the site interaction-locked", asyn
   expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
 });
 
+test("Database Stats refresh shows boxes and never visibly exposes the player table", async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.__databaseStatsSawPlayerTable = false;
+    const inspect = () => {
+      if (!/^\/database\/stats\/?$/i.test(globalThis.location.pathname)) return;
+      const tablePage = globalThis.document.getElementById("progressionPage");
+      if (tablePage && globalThis.getComputedStyle(tablePage).display !== "none") {
+        globalThis.__databaseStatsSawPlayerTable = true;
+      }
+    };
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden", "class", "data-page"],
+    });
+    globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
+  });
+
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/database/stats", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#databaseStatsPage")).toBeVisible();
+  await expect(page.locator("#databaseStatsPage .databaseStatsCards")).toBeVisible();
+  await expect(page.locator("#progressionPage")).toBeHidden();
+  expect(await page.evaluate(() => globalThis.__databaseStatsSawPlayerTable)).toBe(false);
+  releaseMetadata();
+});
+
 test("Total active players excludes retired rows even when retirement years are strings", async ({ page }) => {
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
@@ -101,6 +176,53 @@ test("Total active players excludes retired rows even when retirement years are 
   await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=..").locator("span")).toHaveText("Total active players");
 });
 
+test("Database Stats custom bars animate only when Apply is clicked", async ({ page }) => {
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "database-stats") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        rows: [
+          [70, 21, 1, 4],
+          [80, 22, 2, 6],
+          [90, 23, 3, 8],
+        ],
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await waitForArchitecture(page);
+  await page.evaluate(() => {
+    globalThis.history.pushState({}, "", "/database/stats");
+    globalThis.__mflDatabaseStatsRuntime?.sync?.();
+  });
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).toBeVisible();
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  await page.locator("#databaseStatsCustomMin").fill("75");
+  await page.locator("#databaseStatsCustomMax").fill("90");
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+
+  await page.locator("#databaseStatsCustomApply").click();
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).toHaveClass(/databaseStatsAnimate/);
+
+  await page.waitForTimeout(350);
+  await page.evaluate(() => {
+    globalThis.history.pushState({}, "", "/database/attributes");
+    globalThis.__mflDatabaseStatsRuntime?.sync?.();
+    globalThis.history.pushState({}, "", "/database/stats");
+    globalThis.__mflDatabaseStatsRuntime?.sync?.();
+  });
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+});
+
 test("MFL Stats never visibly exposes the player table during first load", async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.__mflStatsSawPlayerTable = false;
@@ -129,13 +251,25 @@ test("MFL Stats never visibly exposes the player table during first load", async
   expect(await page.evaluate(() => globalThis.__mflStatsSawPlayerTable)).toBe(false);
 });
 
-test("reveals the complete Changelog atomically", async ({ page }) => {
+test("Changelog has no stale 1.119.29 first paint", async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.__sawStaleChangelogVersion = false;
+    const inspect = () => {
+      if (!/^\/changelog\/?$/i.test(globalThis.location.pathname)) return;
+      const text = globalThis.document.body?.innerText || "";
+      if (text.includes("1.119.29")) globalThis.__sawStaleChangelogVersion = true;
+    };
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, { childList: true, subtree: true, characterData: true });
+    globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
+  });
+
   await page.goto("/changelog");
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.8");
-  await expect(list).toContainText("v1.123.6");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.9");
+  await expect(list).toContainText("v1.123.8");
+  expect(await page.evaluate(() => globalThis.__sawStaleChangelogVersion)).toBe(false);
 });
 
 test("serves the centralized release as the newest Changelog row", async ({ request }) => {
@@ -144,10 +278,11 @@ test("serves the centralized release as the newest Changelog row", async ({ requ
   const history = await request.get("/releases.json");
   const rows = await history.json();
 
-  expect(metadata.version).toBe("1.123.8");
-  expect(rows[0][0]).toBe("v1.123.8");
+  expect(metadata.version).toBe("1.123.9");
+  expect(rows[0][0]).toBe("v1.123.9");
   expect(rows[0][1]).toBe(metadata.description);
-  expect(rows.slice(0, 7).map((row) => row[0])).toEqual([
+  expect(rows.slice(0, 8).map((row) => row[0])).toEqual([
+    "v1.123.9",
     "v1.123.8",
     "v1.123.6",
     "v1.123.5",
