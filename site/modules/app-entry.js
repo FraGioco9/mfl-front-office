@@ -1,6 +1,6 @@
 // @ts-check
 
-import { CORE_RUNTIME_PARTITIONS } from "./core-runtime.js";
+import { CORE_RUNTIME_PARTITIONS, prepareCoreRuntimeSource } from "./core-runtime.js";
 import { installApiFetchPolicy } from "./http.js";
 import { loadRelease } from "./release.js";
 import { loadPartitionedClassicScript, loadScriptGroup } from "./runtime-loader.js";
@@ -48,7 +48,12 @@ async function start() {
 
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
-  await loadPartitionedClassicScript("/modules/legacy-core.js", release.version, CORE_RUNTIME_PARTITIONS);
+  await loadPartitionedClassicScript(
+    "/modules/legacy-core.js",
+    release.version,
+    CORE_RUNTIME_PARTITIONS,
+    prepareCoreRuntimeSource,
+  );
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
 
   document.documentElement.dataset.mflReady = "true";
