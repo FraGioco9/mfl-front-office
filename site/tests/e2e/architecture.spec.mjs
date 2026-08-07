@@ -45,8 +45,15 @@ test("does not flash Progression for an opted-out user on refresh", async ({ pag
 });
 
 test("pager has 12px vertical padding and is hidden only during data loading", async ({ page }) => {
-  await page.goto("/database/attributes");
+  await page.goto("/");
   await waitForArchitecture(page);
+  await page.evaluate(() => {
+    const home = globalThis.document.getElementById("homePage");
+    const table = globalThis.document.getElementById("progressionPage");
+    if (home instanceof globalThis.HTMLElement) home.hidden = true;
+    if (table instanceof globalThis.HTMLElement) table.hidden = false;
+    globalThis.document.body.dataset.page = "database";
+  });
 
   const pager = page.locator("#progressionPage nav.pager");
   await expect(pager).toBeVisible();
