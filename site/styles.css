@@ -48,13 +48,6 @@ html {
   scrollbar-gutter: stable;
 }
 
-html.loading,
-body.loading,
-body.booting {
-  height: 100%;
-  overflow: hidden;
-}
-
 body {
   display: flex;
   flex-direction: column;
@@ -65,21 +58,6 @@ body {
   color: var(--text);
 }
 
-body.loading .topbar,
-body.loading main,
-body.loading .menuRail,
-body.loading .sidebar,
-body.loading .modalBackdrop,
-body.loading .siteFooter,
-body.booting .topbar,
-body.booting main,
-body.booting .menuRail,
-body.booting .sidebar,
-body.booting .modalBackdrop,
-body.booting .siteFooter {
-  visibility: hidden;
-}
-
 body.walletOptingIn::before {
   content: "";
   position: fixed;
@@ -88,65 +66,8 @@ body.walletOptingIn::before {
   background: transparent;
   cursor: wait;
 }
-.loadingScreen {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 0;
-  padding: 24px;
-  background: var(--page-bg);
-  opacity: 1;
-  transition: opacity 220ms ease;
-}
-
-.loadingScreen[hidden] {
-  display: none;
-}
-
-.loadingBox {
-  width: min(420px, 100%);
-  transition: opacity 220ms ease;
-}
-
-.loadingScreen.leaving {
-  opacity: 0;
-}
-.loadingText {
-  margin-bottom: 12px;
-  color: var(--text-muted);
-  font-size: 18px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.loadingBar {
-  height: 10px;
-  overflow: hidden;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface);
-}
-
-.loadingBarFill {
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--primary);
-  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), background 160ms ease;
-  will-change: width;
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .loadingBarFill {
-    transition: none;
-  }
-}
-
-.loadingScreen.failed .loadingBarFill {
-  background: #b42318;
 }
 
 button,
@@ -5618,22 +5539,6 @@ body.clubViewSwitching #progressionPage {
   pointer-events: none !important;
 }
 
-html.table-layout-pending #loadingScreen,
-body.tableLayoutPending #loadingScreen,
-body.clubViewLoading #loadingScreen {
-  display: grid !important;
-  visibility: visible !important;
-  align-content: center !important;
-  justify-items: center !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-body.clubViewSwitching:not(.clubViewLoading) #loadingScreen {
-  display: none !important;
-  pointer-events: none !important;
-}
-
 body.clubViewSwitching .navButton.active {
   border-color: var(--border-strong) !important;
   background: var(--surface) !important;
@@ -5698,12 +5603,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
 }
 
 @media (min-width: 901px) {
-  body:not(.loading):not(.booting).pinnedSidebarVisible.tableLayoutPending #loadingScreen,
-  body:not(.loading):not(.booting).pinnedSidebarVisible.clubViewLoading #loadingScreen {
-    inset: var(--pinned-topbar-height) 0 0 var(--pinned-sidebar-width) !important;
-    width: auto !important;
-    height: auto !important;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5737,13 +5636,6 @@ body[data-page="club"] #progressionPage,
 body[data-page="club"] #progressionPage * {
   transition: none !important;
   animation: none !important;
-}
-
-body[data-page="club"].clubViewSwitching:not(.clubViewLoading) #progressionPage {
-  visibility: visible !important;
-  opacity: 1 !important;
-  transform: none !important;
-  pointer-events: auto !important;
 }
 
 body[data-page="mfl"] #progressionPage .viewButton[data-view="attributes"],
@@ -6042,18 +5934,6 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
   display: none !important;
 }
 
-/* v1.151.0 - Interaction-only loading and incremental data routes */
-#loadingScreen,
-html.table-layout-pending #loadingScreen,
-body.tableLayoutPending #loadingScreen,
-body.clubViewLoading #loadingScreen,
-body.clubViewSwitching #loadingScreen {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
 html.appBusy,
 html.appBusy *,
 body.appBusy,
@@ -6281,43 +6161,6 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
   z-index: 2147483647 !important;
 }
 
-html.bootPending table thead,
-html.bootPending table thead tr,
-html.bootPending table thead th,
-html.appBusy table thead,
-html.appBusy table thead tr,
-html.appBusy table thead th,
-html.mflStatsLoading table thead,
-html.mflStatsLoading table thead tr,
-html.mflStatsLoading table thead th,
-body.booting table thead,
-body.booting table thead tr,
-body.booting table thead th,
-body.loading table thead,
-body.loading table thead tr,
-body.loading table thead th,
-body.appBusy table thead,
-body.appBusy table thead tr,
-body.appBusy table thead th,
-body.tableRowsLoading table thead,
-body.tableRowsLoading table thead tr,
-body.tableRowsLoading table thead th,
-body.tableLayoutPending table thead,
-body.tableLayoutPending table thead tr,
-body.tableLayoutPending table thead th,
-body.clubViewLoading table thead,
-body.clubViewLoading table thead tr,
-body.clubViewLoading table thead th,
-body.clubViewSwitching table thead,
-body.clubViewSwitching table thead tr,
-body.clubViewSwitching table thead th,
-body.mflStatsLoading table thead,
-body.mflStatsLoading table thead tr,
-body.mflStatsLoading table thead th {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
 .evaluationDiscountTooltipPortal {
   position: fixed;
   z-index: 2147483647;
@@ -6392,98 +6235,12 @@ html body .siteFooter.siteFooter a[href="/changelog"] {
   cursor: pointer !important;
 }
 
-html.bootPending table thead,
-html.bootPending table thead tr,
-html.bootPending table thead th,
-html.appBusy table thead,
-html.appBusy table thead tr,
-html.appBusy table thead th,
-html.mflStatsLoading table thead,
-html.mflStatsLoading table thead tr,
-html.mflStatsLoading table thead th,
-html.mflStatsStableLoading table thead,
-html.mflStatsStableLoading table thead tr,
-html.mflStatsStableLoading table thead th,
-body.booting table thead,
-body.booting table thead tr,
-body.booting table thead th,
-body.loading table thead,
-body.loading table thead tr,
-body.loading table thead th,
-body.appBusy table thead,
-body.appBusy table thead tr,
-body.appBusy table thead th,
-body.tableRowsLoading table thead,
-body.tableRowsLoading table thead tr,
-body.tableRowsLoading table thead th,
-body.tableLayoutPending table thead,
-body.tableLayoutPending table thead tr,
-body.tableLayoutPending table thead th,
-body.clubViewLoading table thead,
-body.clubViewLoading table thead tr,
-body.clubViewLoading table thead th,
-body.clubViewSwitching table thead,
-body.clubViewSwitching table thead tr,
-body.clubViewSwitching table thead th,
-body.mflStatsLoading table thead,
-body.mflStatsLoading table thead tr,
-body.mflStatsLoading table thead th,
-body.mflStatsStableLoading table thead,
-body.mflStatsStableLoading table thead tr,
-body.mflStatsStableLoading table thead th {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
 /* v1.119.4 - Stabilize loading tables, footer version, and Changelog navigation. */
 html body .siteFooter.siteFooter a[data-page="changelog"],
 html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
-}
-
-html.bootPending table thead,
-html.bootPending table thead tr,
-html.bootPending table thead th,
-html.appBusy table thead,
-html.appBusy table thead tr,
-html.appBusy table thead th,
-html.mflStatsLoading table thead,
-html.mflStatsLoading table thead tr,
-html.mflStatsLoading table thead th,
-html.mflStatsStableLoading table thead,
-html.mflStatsStableLoading table thead tr,
-html.mflStatsStableLoading table thead th,
-body.booting table thead,
-body.booting table thead tr,
-body.booting table thead th,
-body.loading table thead,
-body.loading table thead tr,
-body.loading table thead th,
-body.appBusy table thead,
-body.appBusy table thead tr,
-body.appBusy table thead th,
-body.tableRowsLoading table thead,
-body.tableRowsLoading table thead tr,
-body.tableRowsLoading table thead th,
-body.tableLayoutPending table thead,
-body.tableLayoutPending table thead tr,
-body.tableLayoutPending table thead th,
-body.clubViewLoading table thead,
-body.clubViewLoading table thead tr,
-body.clubViewLoading table thead th,
-body.clubViewSwitching table thead,
-body.clubViewSwitching table thead tr,
-body.clubViewSwitching table thead th,
-body.mflStatsLoading table thead,
-body.mflStatsLoading table thead tr,
-body.mflStatsLoading table thead th,
-body.mflStatsStableLoading table thead,
-body.mflStatsStableLoading table thead tr,
-body.mflStatsStableLoading table thead th {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
 }
 
 body.mflDatabaseRoutePending #tableBody {
@@ -6504,12 +6261,6 @@ html body .siteFooter.siteFooter a[href="/changelog"] {
   cursor: pointer !important;
 }
 
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading) :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
 body.mflTableDataLoading #tableBody {
   visibility: hidden !important;
   pointer-events: none !important;
@@ -6525,16 +6276,6 @@ html body .siteFooter.siteFooter a[href="/changelog"] {
   font-size: 0 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending,
-  .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading,
-  .mflTableDataLoading)
-  :is(.tableShell, .tableScroller, table, table thead, table thead tr, table thead th) {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
 }
 
 body.mflTableDataLoading #tableBody {
@@ -6566,51 +6307,6 @@ html[data-initial-page="changelog"] body .siteFooter a[href="/changelog"] {
   cursor: default !important;
 }
 
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  :is(
-    .tableShell,
-    .tableScroller,
-    .tableHeader,
-    .tableHeaderRow,
-    #tableHead,
-    #tableHeader,
-    table,
-    table thead,
-    table thead tr,
-    table thead th,
-    table thead th:first-child,
-    table thead th:last-child
-  ),
-body:is(
-    .booting,
-    .loading,
-    .appBusy,
-    .tableRowsLoading,
-    .tableLayoutPending,
-    .clubViewLoading,
-    .clubViewSwitching,
-    .mflStatsLoading,
-    .mflStatsStableLoading,
-    .mflTableDataLoading
-  )
-  :is(
-    .tableShell,
-    .tableScroller,
-    .tableHeader,
-    .tableHeaderRow,
-    #tableHead,
-    #tableHeader,
-    table,
-    table thead,
-    table thead tr,
-    table thead th,
-    table thead th:first-child,
-    table thead th:last-child
-  ) {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
 body.mflTableDataLoading #tableBody {
   visibility: hidden !important;
   pointer-events: none !important;
@@ -6629,22 +6325,6 @@ body.mflTableDataLoading:has(#tableBody > tr) #emptyState {
   display: none !important;
 }
 
-/* v1.119.8 - Preserve rounded bottom corners on the last rendered row while loading. */
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  #tableBody > tr:last-child > :first-child,
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  #tableBody > tr:last-child > :first-child {
-  border-bottom-left-radius: 10px !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  #tableBody > tr:last-child > :last-child,
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  #tableBody > tr:last-child > :last-child {
-  border-bottom-right-radius: 10px !important;
-}
-
 /* v1.119.9 - Round the rendered loading table bottom and show Changelog immediately on refresh. */
 
 html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"]
@@ -6658,71 +6338,6 @@ html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  :is(.tableShell, .tableScroller, table):has(#tableBody > tr),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  :is(.tableShell, .tableScroller, table):has(#tableBody > tr) {
-  border-bottom-left-radius: 10px !important;
-  border-bottom-right-radius: 10px !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  .tableShell:has(#tableBody > tr),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  .tableShell:has(#tableBody > tr) {
-  overflow: hidden !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  table:has(#tableBody > tr),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  table:has(#tableBody > tr) {
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  #tableBody > tr:last-child > :first-child,
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  #tableBody > tr:last-child > :first-child {
-  border-bottom-left-radius: 10px !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  #tableBody > tr:last-child > :is(:last-child, :has(+ :is(.col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler))) {
-  border-bottom-right-radius: 10px !important;
-}
-
-/* v1.119.10 - Finish the data-free Changelog boot and round the loading placeholder row. */
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  .tableShell:has(> #emptyState:not([hidden])),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  .tableShell:has(> #emptyState:not([hidden])) {
-  border-bottom-left-radius: 10px !important;
-  border-bottom-right-radius: 10px !important;
-  overflow: hidden !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  .tableShell:has(> #emptyState:not([hidden])) > .tableScroller,
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  .tableShell:has(> #emptyState:not([hidden])) > .tableScroller {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-html:is(.bootPending, .appBusy, .mflStatsLoading, .mflStatsStableLoading)
-  .tableShell > #emptyState:not([hidden]),
-body:is(.booting, .loading, .appBusy, .tableRowsLoading, .tableLayoutPending, .clubViewLoading, .clubViewSwitching, .mflStatsLoading, .mflStatsStableLoading, .mflTableDataLoading)
-  .tableShell > #emptyState:not([hidden]) {
-  border-bottom-left-radius: 10px !important;
-  border-bottom-right-radius: 10px !important;
-  overflow: hidden !important;
 }
 
 /* v1.119.11 - Render Changelog before summary and account startup. */
