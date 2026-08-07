@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.48");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.8");
   const MFL_STATS_PATH = /^\/mfl\/stats\/?$/i;
   const FILTERS = [
     ["all", "All"],
@@ -34,6 +34,30 @@
 
   function isMflStats() {
     return MFL_STATS_PATH.test(String(location.pathname || ""));
+  }
+
+  function enforceStatsShell() {
+    if (!isMflStats()) return false;
+    const target = document.getElementById("mflStatsPage");
+    if (!(target instanceof HTMLElement)) return false;
+
+    document.querySelectorAll("main > .pageView").forEach((page) => {
+      if (!(page instanceof HTMLElement)) return;
+      const shouldHide = page !== target;
+      if (page.hidden !== shouldHide) page.hidden = shouldHide;
+    });
+    if (target.hidden) target.hidden = false;
+    if (document.body?.dataset.page !== "mflstats") document.body.dataset.page = "mflstats";
+
+    try {
+      if (typeof state === "object" && state) {
+        state.currentPage = "mflstats";
+        state.view = "stats";
+      }
+    } catch {
+      // The legacy state is not available until the classic core has loaded.
+    }
+    return true;
   }
 
   function installStyles() {
@@ -124,6 +148,7 @@
     originalRenderer = current;
     wrappedRenderer = function mflStatsFirstPaintRenderer(...args) {
       const result = originalRenderer.apply(this, args);
+      enforceStatsShell();
       if (fullStatsReady && isMflStats() && !animationShown) {
         requestAnimationFrame(animateFinalHistogram);
       }
@@ -147,6 +172,7 @@
           return;
         }
         runtime.sync?.();
+        enforceStatsShell();
         requestAnimationFrame(() => requestAnimationFrame(animateFinalHistogram));
       })
       .catch(() => {
@@ -158,6 +184,7 @@
     frame = 0;
     if (destroyed) return;
     installStyles();
+    enforceStatsShell();
     ensureStaticFilters();
     syncNavigation();
     wrapRenderer();
@@ -170,7 +197,11 @@
   }
 
   installStyles();
-  observer = new MutationObserver(schedule);
+  enforceStatsShell();
+  observer = new MutationObserver(() => {
+    enforceStatsShell();
+    schedule();
+  });
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
