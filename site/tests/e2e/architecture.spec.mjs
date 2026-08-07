@@ -10,7 +10,7 @@ test("boots from the static shell with a partitioned application core", async ({
 
   await expect(page.locator("#appShell")).toBeAttached();
   await expect(page.locator("#loadingScreen")).toHaveCount(0);
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.1");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.0");
 
   const architecture = await page.evaluate(() => ({
     loadedUrls: globalThis.performance.getEntriesByType("resource").map((entry) => entry.name),
@@ -49,7 +49,7 @@ test("serves the centralized release as the newest Changelog row", async ({ requ
   const history = await request.get("/releases.json");
   const rows = await history.json();
 
-  expect(metadata.version).toBe("1.123.1");
-  expect(rows[0][0]).toBe("v1.123.1");
+  expect(metadata.version).toBe("1.123.0");
+  expect(rows[0][0]).toBe("v1.123.0");
   expect(rows[0][1]).toBe(metadata.description);
 });
