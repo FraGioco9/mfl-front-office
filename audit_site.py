@@ -215,6 +215,11 @@ source = source.replace(
     1,
 )
 source = source.replace(
+    '(ROOT / ".github" / "workflows" / "full-database-update.yml").write_text(workflow, encoding="utf-8")',
+    '# Database workflow restoration is applied after the cleanup push.',
+    1,
+)
+source = source.replace(
     'Path(__file__).unlink()',
     '(ROOT / "audit_site.py").unlink(missing_ok=True)\n(ROOT / "final_cleanup_core.py").unlink(missing_ok=True)',
     1,
