@@ -1,8 +1,7 @@
 (() => {
   "use strict";
 
-  const runtimeWindow = /** @type {any} */ (window);
-  const STATIC_RELEASE_VERSION = "1.123.4";
+  const STATIC_RELEASE_VERSION = "1.123.5";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -21,6 +20,19 @@
     myplayers: ["attributes", "next", "contracts", "current", "all"],
     club: ["attributes", "next", "contracts", "current", "all"],
   });
+
+  /** @type {Window & {
+   * __mflInteractionBusy?: {
+   *   begin: (reason?: string) => string,
+   *   end: (token: string) => void,
+   *   run: <T>(callback: () => T | Promise<T>, reason?: string) => Promise<T>,
+   *   isBusy: () => boolean,
+   *   installLegacyBridge: () => void,
+   * },
+   * __mflWithInteractionBusy?: (callback: () => unknown) => Promise<unknown>,
+   * __mflWrapInteractionBusyFunction?: (callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>,
+   * }} */
+  const runtimeWindow = window;
 
   function initialRoute(pathname) {
     const cleanPath = String(pathname || "/").replace(/\/+$/, "") || "/";
@@ -141,10 +153,7 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
-    const activeTokens = new Map();
-    const namedTokens = new Map();
-    const wrappedFunctions = Object.create(null);
-    const originalFetch = window.fetch.bind(window);
+    const activeTokens = new Set();
     let tokenSequence = 0;
 
     const style = document.createElement("style");
@@ -164,12 +173,12 @@
       const busy = activeTokens.size > 0;
       document.documentElement.classList.toggle(BUSY_CLASS, busy);
       document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
-      if (document.body) document.body.setAttribute("aria-busy", busy ? "true" : "false");
+      document.body.setAttribute("aria-busy", busy ? "true" : "false");
     }
 
     function begin(reason = "loading") {
-      const token = `busy-${++tokenSequence}`;
-      activeTokens.set(token, String(reason || "loading"));
+      const token = `${String(reason || "loading")}-${++tokenSequence}`;
+      activeTokens.add(token);
       applyState();
       return token;
     }
@@ -188,17 +197,6 @@
       }
     }
 
-    function setNamed(reason, active) {
-      const key = String(reason || "loading");
-      const existing = namedTokens.get(key);
-      if (active) {
-        if (!existing) namedTokens.set(key, begin(key));
-      } else if (existing) {
-        namedTokens.delete(key);
-        end(existing);
-      }
-    }
-
     function blockInteraction(event) {
       if (!activeTokens.size) return;
       event.preventDefault();
@@ -209,94 +207,50 @@
       document.addEventListener(eventName, blockInteraction, true);
     });
 
-    function syncKnownLoadingStates() {
-      const body = document.body;
-      setNamed("wallet-opt-in", Boolean(body?.classList.contains("walletOptingIn")));
-      setNamed("evaluation-route", Boolean(body?.classList.contains("evaluationRouteLoading")));
-      setNamed("table-data", Boolean(body?.classList.contains("mflTableDataLoading")));
-      const changelog = document.querySelector(".changelogList");
-      setNamed("changelog-history", Boolean(changelog instanceof HTMLElement && changelog.dataset.historyLoading === "true"));
-    }
-
-    const bodyObserver = new MutationObserver(syncKnownLoadingStates);
-    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    const changelogList = document.querySelector(".changelogList");
-    if (changelogList instanceof HTMLElement) {
-      bodyObserver.observe(changelogList, { attributes: true, attributeFilter: ["data-history-loading"] });
-    }
-
-    window.fetch = function trackedFetch(input, init) {
-      const token = begin("network");
-      try {
-        return Promise.resolve(originalFetch(input, init)).finally(() => end(token));
-      } catch (error) {
-        end(token);
-        throw error;
-      }
-    };
-
-    function wrapGlobalAsyncFunction(name) {
-      let original = null;
-      try {
-        original = runtimeWindow[name];
-      } catch {
-        original = null;
-      }
-      if (typeof original !== "function" || original.__mflInteractionBusyWrapped) return false;
-
-      const wrapped = (...args) => run(() => original.apply(runtimeWindow, args), name);
-      Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
-      wrappedFunctions[name] = wrapped;
-      try {
-        runtimeWindow[name] = wrapped;
-      } catch {
-        return false;
-      }
-      try {
-        window.eval(`${name} = window.__mflInteractionBusyWrappedFunctions[${JSON.stringify(name)}]`);
-      } catch {
-        // Assigning the window property is sufficient for normal global function bindings.
-      }
-      return true;
-    }
+    /** @type {(callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>} */
+    const wrapBusyFunction = (callback, reason) => (...args) => run(() => callback(...args), reason);
 
     function installLegacyBridge() {
-      const interactionWrapper = function interactionBusyWrapper(callback) {
-        return run(callback, "interaction-loading");
-      };
-      Object.defineProperty(interactionWrapper, "__mflInteractionBusyWrapped", { value: true });
-      runtimeWindow.__mflWithInteractionBusy = interactionWrapper;
-      try {
-        runtimeWindow.withInteractionBusy = interactionWrapper;
-      } catch {
-        // The eval assignment below also covers global lexical bindings.
-      }
+      runtimeWindow.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
+      runtimeWindow.__mflWrapInteractionBusyFunction = wrapBusyFunction;
+
       try {
         window.eval("withInteractionBusy = window.__mflWithInteractionBusy");
       } catch {
-        // Keep the property bridge if direct reassignment is unavailable.
+        // The app still works if a future core stops exposing this global binding.
       }
 
       [
+        "ensureProgressionData",
+        "requestIncrementalRoute",
         "loadSharedEvaluation",
         "loadSavedEvaluation",
+        "openSavedEvaluationsModal",
         "createSharedEvaluationFromPayload",
         "createSharedEvaluation",
         "createSavedEvaluation",
-      ].forEach(wrapGlobalAsyncFunction);
+        "linkWallet",
+      ].forEach((name) => {
+        try {
+          window.eval(`(() => {
+            if (typeof ${name} !== "function" || ${name}.__mflInteractionBusyWrapped) return;
+            const original = ${name};
+            const wrapped = window.__mflWrapInteractionBusyFunction(original, ${JSON.stringify(name)});
+            Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+            ${name} = wrapped;
+          })()`);
+        } catch {
+          // Some optional functions are not present on every route/build.
+        }
+      });
     }
-
-    runtimeWindow.__mflInteractionBusyWrappedFunctions = wrappedFunctions;
-    syncKnownLoadingStates();
 
     return Object.freeze({
       begin,
       end,
       run,
-      setNamed,
       isBusy: () => activeTokens.size > 0,
       installLegacyBridge,
-      sync: syncKnownLoadingStates,
     });
   }
 
@@ -307,7 +261,6 @@
 
   function finishStartupBusy() {
     interactionBusy.end(startupBusyToken);
-    interactionBusy.sync();
   }
 
   window.addEventListener("mfl:ready", finishStartupBusy, { once: true });
@@ -325,7 +278,6 @@
     changelogList.replaceChildren();
     changelogList.hidden = true;
     changelogList.dataset.historyLoading = "true";
-    interactionBusy.sync();
   }
 
   void (async () => {
