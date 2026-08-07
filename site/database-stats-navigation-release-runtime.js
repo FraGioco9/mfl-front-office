@@ -1,89 +1,61 @@
 (() => {
-  const VERSION = "1.120.15";
-  const DATABASE_PATH = /^\/database(?:\/|$)/i;
+  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
   const STATS_PATH = /^\/database\/stats\/?$/i;
   const RUNTIME_KEY = "__mflDatabaseStatsReloadBootstrap";
-  const INTENT_KEY = "mfl-database-stats-reload-intent";
 
-  const existing = window[RUNTIME_KEY];
-  if (existing?.version === VERSION) {
-    existing.finalize?.();
-    return;
-  }
-  existing?.destroy?.();
+  window[RUNTIME_KEY]?.destroy?.();
 
-  const basePushState = history.pushState.bind(history);
-  const baseReplaceState = history.replaceState.bind(history);
-  let active = STATS_PATH.test(location.pathname);
-  let timeout = 0;
+  const active = STATS_PATH.test(location.pathname)
+    || document.documentElement.dataset.staticPage === "databasestats";
+  let style = null;
+  let finalized = false;
 
-  function asUrl(value) {
-    try {
-      return new URL(value == null ? location.href : value, location.origin);
-    } catch {
-      return new URL(location.href);
-    }
-  }
-
-  function shouldPreserveStats(value) {
-    if (!active) return false;
-    const next = asUrl(value);
-    return DATABASE_PATH.test(next.pathname) && !STATS_PATH.test(next.pathname);
+  function installGuard() {
+    if (!active || document.getElementById("databaseStatsReloadBootstrapStyles")) return;
+    style = document.createElement("style");
+    style.id = "databaseStatsReloadBootstrapStyles";
+    style.textContent = `
+      html.mflDatabaseStatsReloadBootstrap #progressionPage {
+        display: none !important;
+      }
+      html.mflDatabaseStatsReloadBootstrap #databaseStatsPage {
+        display: block !important;
+      }
+    `;
+    document.head.appendChild(style);
+    document.documentElement.classList.add("mflDatabaseStatsReloadBootstrap");
   }
 
-  function guardedPushState(stateValue, title, value) {
-    if (shouldPreserveStats(value)) {
-      return baseReplaceState(stateValue, title, "/database/stats");
-    }
-    return basePushState(stateValue, title, value);
-  }
-
-  function guardedReplaceState(stateValue, title, value) {
-    if (shouldPreserveStats(value)) {
-      return baseReplaceState(stateValue, title, "/database/stats");
-    }
-    return baseReplaceState(stateValue, title, value);
-  }
-
-  function clearIntent() {
-    try {
-      sessionStorage.removeItem(INTENT_KEY);
-    } catch {
-      // Storage may be unavailable in private contexts.
-    }
-  }
-
-  function restoreHistory() {
-    if (history.pushState === guardedPushState) history.pushState = basePushState;
-    if (history.replaceState === guardedReplaceState) history.replaceState = baseReplaceState;
-    active = false;
-    clearIntent();
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = 0;
-    }
+  function restoreRoute() {
+    if (!active || STATS_PATH.test(location.pathname)) return;
+    history.replaceState(history.state, "", "/database/stats");
   }
 
   function finalize() {
-    restoreHistory();
-    queueMicrotask(() => {
-      window.__mflDatabaseStatsRuntime?.sync?.();
-      window.__mflDatabaseStatsButtonRuntime?.rebind?.();
+    if (finalized) return;
+    finalized = true;
+    restoreRoute();
+    window.__mflDatabaseStatsRuntime?.sync?.();
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove("mflDatabaseStatsReloadBootstrap");
+      style?.remove();
+      style = null;
     });
   }
 
   function destroy() {
-    restoreHistory();
+    finalized = true;
+    document.documentElement.classList.remove("mflDatabaseStatsReloadBootstrap");
+    style?.remove();
+    style = null;
   }
 
-  if (active) {
-    history.pushState = guardedPushState;
-    history.replaceState = guardedReplaceState;
-    timeout = window.setTimeout(restoreHistory, 15000);
-  }
+  installGuard();
 
   window[RUNTIME_KEY] = {
     version: VERSION,
+    active,
+    restoreRoute,
     finalize,
     destroy,
   };
