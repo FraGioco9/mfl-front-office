@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.48");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.9");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
@@ -29,6 +29,8 @@
     }
     document.querySelectorAll("#databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition]")
       .forEach((histogram) => histogram.removeAttribute("data-database-stats-apply-transition"));
+    document.querySelectorAll("#databaseStatsPage .mflStatsHistogram.databaseStatsAnimate")
+      .forEach((histogram) => histogram.classList.remove("databaseStatsAnimate"));
     if (cancelPending) {
       pendingApplyAnimation = false;
       previousHistogram = null;
@@ -187,11 +189,12 @@
     histogram.setAttribute("data-database-stats-apply-transition", "true");
     applyAnimationTimer = window.setTimeout(() => {
       histogram.removeAttribute("data-database-stats-apply-transition");
+      histogram.classList.remove("databaseStatsAnimate");
       applyAnimationTimer = 0;
     }, 260);
   }
 
-  function apply() {
+  function apply(animate = true) {
     const range = normalizedRange();
     const min = document.querySelector("#databaseStatsCustomMin");
     const max = document.querySelector("#databaseStatsCustomMax");
@@ -199,12 +202,13 @@
     if (!(applyButton instanceof HTMLElement)) return;
 
     clearApplyAnimation();
-    previousHistogram = currentHistogram();
-    pendingApplyAnimation = true;
+    previousHistogram = animate ? currentHistogram() : null;
+    pendingApplyAnimation = animate;
     if (min) min.value = String(range.min);
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
+    if (!animate) clearApplyAnimation();
 
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
@@ -239,7 +243,7 @@
     if (target.closest('#databaseStatsCustomTooltipPortal [data-role="apply"]')) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      apply();
+      apply(true);
       return;
     }
 
@@ -258,7 +262,7 @@
     if (event.key === "Enter") {
       event.preventDefault();
       event.stopImmediatePropagation();
-      apply();
+      apply(false);
       return;
     }
     clearApplyAnimation();
