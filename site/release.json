@@ -1,4 +1,4 @@
 {
-  "version": "1.123.2",
-  "description": "Render the complete Changelog atomically and remove stale first-paint version conflicts"
+  "version": "1.123.3",
+  "description": "Render header, sidebar, footer, and destination page chrome together on refresh"
 }
