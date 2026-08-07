@@ -1,7 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 async function waitForArchitecture(page) {
-  await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
+  await page.waitForFunction(() => {
+    const readiness = globalThis.document.documentElement.dataset.mflReady;
+    return readiness === "true" || readiness === "error";
+  });
+  const readiness = await page.locator("html").getAttribute("data-mfl-ready");
+  if (readiness !== "true") {
+    const startupError = await page.locator("#mflStartupError").textContent().catch(() => "");
+    throw new Error(`MFL startup ended in ${readiness}: ${startupError || "no startup message"}`);
+  }
 }
 
 function databaseStatsPayload(overrides = {}) {
