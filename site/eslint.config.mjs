@@ -9,6 +9,7 @@ export default [
     files: [
       "app.js",
       "modules/app-entry.js",
+      "modules/core-runtime.js",
       "modules/http.js",
       "modules/release.js",
       "modules/runtime-loader.js",

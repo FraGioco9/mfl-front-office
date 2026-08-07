@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run check
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Architecture tests
+        run: npm run test:architecture
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
