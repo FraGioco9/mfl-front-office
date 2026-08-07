@@ -45,18 +45,27 @@ test("pager and showing-player count stay hidden while data is loading", async (
   assert.match(bridge, /html\.\$\{DATA_LOADING_CLASS\} #progressionPage nav\.pager,\s*html\.\$\{DATA_LOADING_CLASS\} #progressionPage #watchlistPlayerCount \{\s*display: none !important;/);
 });
 
-test("database Total active players normalizes retirement years before excluding retired rows", async () => {
+test("database Total active players excludes numeric and string retired rows without an observer loop", async () => {
   const refinement = await read("database-stats-refinement-runtime.js");
+  const entry = await read("modules/app-entry.js");
+  assert.match(refinement, /url\.pathname === DATA_ENDPOINT && url\.searchParams\.get\("mode"\) === "database-stats"/);
   assert.match(refinement, /const retirementYears = Number\(group\?\.\[2\]\)/);
   assert.match(refinement, /retirementYears === 0/);
+  assert.doesNotMatch(refinement, /new MutationObserver/);
+  assert.ok(
+    entry.indexOf('"/database-stats-refinement-runtime.js"')
+      < entry.indexOf('"/database-stats-runtime.js"'),
+  );
 });
 
-test("MFL stats first paint synchronously enforces the stats shell", async () => {
+test("MFL stats first paint uses a CSS guard instead of rewriting page visibility", async () => {
   const runtime = await read("mfl-stats-first-paint-runtime.js");
-  assert.match(runtime, /function enforceStatsShell\(\)/);
-  assert.match(runtime, /page\.hidden = shouldHide/);
-  assert.match(runtime, /document\.body\.dataset\.page = "mflstats"/);
-  assert.match(runtime, /observer = new MutationObserver\(\(\) => \{\s*enforceStatsShell\(\);\s*schedule\(\);/);
+  assert.match(runtime, /const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard"/);
+  assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #progressionPage \{\s*display: none !important;/);
+  assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #mflStatsPage \{\s*display: block !important;/);
+  assert.match(runtime, /function syncFirstPaintGuard\(\)/);
+  assert.doesNotMatch(runtime, /function enforceStatsShell/);
+  assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
 test("changelog is built from canonical releases", async () => {
