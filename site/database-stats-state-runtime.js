@@ -7,8 +7,6 @@
 
   window[RUNTIME_KEY]?.destroy?.();
 
-  let observer = null;
-  let frame = 0;
   let originalSetPage = null;
   let lastPersistedStatsRoute = false;
 
@@ -96,12 +94,10 @@
         ensureStatsAllowedInSavedDatabaseView();
         const explicitView = String(options?.view || "");
         const targetView = explicitView || currentDatabaseView() || "attributes";
-        if (targetView === "stats") {
-          if (typeof window.renderDatabaseStatsPage === "function") {
-            await window.renderDatabaseStatsPage(Boolean(updateHash));
-            rememberStatsView();
-            return;
-          }
+        if (targetView === "stats" && typeof window.renderDatabaseStatsPage === "function") {
+          await window.renderDatabaseStatsPage(Boolean(updateHash));
+          rememberStatsView();
+          return;
         }
       }
       return originalSetPage.call(this, pageName, updateHash, options);
@@ -116,8 +112,7 @@
     });
   }
 
-  function sync() {
-    frame = 0;
+  function syncRouteState() {
     installStyles();
     installSetPageBridge();
     if (isStatsPath()) {
@@ -126,11 +121,6 @@
       lastPersistedStatsRoute = false;
       clearBarTransition();
     }
-  }
-
-  function schedule() {
-    if (frame) cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(sync);
   }
 
   function onNavigationPointerDown(event) {
@@ -148,24 +138,21 @@
     clearBarTransition();
   }
 
+  function onStatsShown() {
+    rememberStatsView();
+  }
+
   installStyles();
   installSetPageBridge();
   document.addEventListener("pointerdown", onNavigationPointerDown, true);
   document.addEventListener("input", onDraftInput, true);
-  window.addEventListener("popstate", schedule);
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "data-page", "data-database-stats-apply-transition"],
-  });
-  sync();
+  window.addEventListener("popstate", syncRouteState);
+  window.addEventListener("mfl:database-stats-shown", onStatsShown);
+  syncRouteState();
 
   function destroy() {
-    if (frame) cancelAnimationFrame(frame);
-    observer?.disconnect();
-    window.removeEventListener("popstate", schedule);
+    window.removeEventListener("popstate", syncRouteState);
+    window.removeEventListener("mfl:database-stats-shown", onStatsShown);
     document.removeEventListener("pointerdown", onNavigationPointerDown, true);
     document.removeEventListener("input", onDraftInput, true);
     clearBarTransition();
@@ -175,7 +162,7 @@
 
   window[RUNTIME_KEY] = {
     version: VERSION,
-    sync: schedule,
+    sync: syncRouteState,
     destroy,
   };
 })();
