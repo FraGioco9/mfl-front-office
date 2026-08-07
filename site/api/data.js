@@ -9,9 +9,9 @@ const {
   bootstrapData,
   searchData,
   summaryData,
-  databaseStatsData,
   mflStatsData,
 } = require("./_data-views");
+const { databaseStatsData } = require("./_database-stats");
 
 module.exports = async function handler(request, response) {
   const startedAt = performance.now();
