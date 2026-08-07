@@ -41,7 +41,9 @@ test("an already opted-in user never sees the home Opt In button on refresh", as
     globalThis.__mflOptInVisibleDuringRefresh = false;
     const inspect = () => {
       const button = globalThis.document.getElementById("homeOptInButton");
-      if (button && globalThis.getComputedStyle(button).display !== "none") {
+      if (!button) return;
+      const style = globalThis.getComputedStyle(button);
+      if (style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0) {
         globalThis.__mflOptInVisibleDuringRefresh = true;
       }
     };
