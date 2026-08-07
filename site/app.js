@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.9";
+  const STATIC_RELEASE_VERSION = "1.123.10";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -82,7 +82,16 @@
       </section>
       <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
         <span>Overall Filters</span>
-        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
+        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">
+          <button class="mflStatsFilterButton active" type="button">All</button>
+          <button class="mflStatsFilterButton" type="button">Ultimate</button>
+          <button class="mflStatsFilterButton" type="button">Legendary</button>
+          <button class="mflStatsFilterButton" type="button">Rare</button>
+          <button class="mflStatsFilterButton" type="button">Uncommon</button>
+          <button class="mflStatsFilterButton" type="button">Limited</button>
+          <button class="mflStatsFilterButton" type="button">Common</button>
+          <button class="mflStatsFilterButton" type="button">Custom</button>
+        </div>
         <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
           <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
           <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
@@ -243,7 +252,7 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
-    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute"]);
+    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData"]);
     const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
     const activeTokens = new Map();
     let tokenSequence = 0;
