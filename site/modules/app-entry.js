@@ -5,7 +5,6 @@ import { loadRelease } from "./release.js";
 import { loadClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-navigation-release-runtime.js",
   "/database-stats-runtime.js",
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
