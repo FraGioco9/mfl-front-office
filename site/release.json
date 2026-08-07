@@ -1,4 +1,4 @@
 {
-  "version": "1.123.3",
-  "description": "Render header, sidebar, footer, and destination page chrome together on refresh"
+  "version": "1.123.4",
+  "description": "Lock all clicks and show the wait cursor consistently while loading is active"
 }
