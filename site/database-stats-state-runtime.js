@@ -9,7 +9,6 @@
 
   let observer = null;
   let frame = 0;
-  let busyToken = "";
   let originalSetPage = null;
   let lastPersistedStatsRoute = false;
 
@@ -23,8 +22,7 @@
     style.id = "databaseStatsStateStyles";
     style.textContent = `
       #databaseStatsPage .mflStatsHistogramBar,
-      #databaseStatsPage .mflStatsHistogramBar::after,
-      #databaseStatsPage .mflStatsHistogram.databaseStatsAnimate:not([data-database-stats-apply-transition="true"]) .mflStatsHistogramBar::after {
+      #databaseStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
         transition: none !important;
       }
@@ -99,7 +97,6 @@
         const explicitView = String(options?.view || "");
         const targetView = explicitView || currentDatabaseView() || "attributes";
         if (targetView === "stats") {
-          rememberStatsView();
           if (typeof window.renderDatabaseStatsPage === "function") {
             await window.renderDatabaseStatsPage(Boolean(updateHash));
             rememberStatsView();
@@ -119,32 +116,6 @@
     });
   }
 
-  function statsStillLoading() {
-    if (!isStatsPath()) return false;
-    const page = document.getElementById("databaseStatsPage");
-    if (!(page instanceof HTMLElement) || page.hidden) return false;
-    if (page.querySelector("#databaseStatsDistribution .mflStatsHistogram")) return false;
-    const distributionText = String(page.querySelector("#databaseStatsDistribution")?.textContent || "").trim();
-    if (/could not load/i.test(distributionText)) return false;
-    const totalText = String(page.querySelector("#databaseStatsTotalPlayers")?.textContent || "").trim();
-    return totalText === "-" || /loading players/i.test(distributionText);
-  }
-
-  function syncBusyState() {
-    const controller = window.__mflInteractionBusy;
-    const loading = statsStillLoading();
-    if (loading && !busyToken && typeof controller?.begin === "function") {
-      busyToken = controller.begin("databaseStatsData");
-      document.documentElement.dataset.databaseStatsLoading = "true";
-      return;
-    }
-    if (!loading && busyToken) {
-      controller?.end?.(busyToken);
-      busyToken = "";
-      delete document.documentElement.dataset.databaseStatsLoading;
-    }
-  }
-
   function sync() {
     frame = 0;
     installStyles();
@@ -155,7 +126,6 @@
       lastPersistedStatsRoute = false;
       clearBarTransition();
     }
-    syncBusyState();
   }
 
   function schedule() {
@@ -188,7 +158,7 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["hidden", "class", "data-page", "data-database-stats-apply-transition"],
+    attributeFilter: ["hidden", "data-page", "data-database-stats-apply-transition"],
   });
   sync();
 
@@ -199,11 +169,6 @@
     document.removeEventListener("pointerdown", onNavigationPointerDown, true);
     document.removeEventListener("input", onDraftInput, true);
     clearBarTransition();
-    if (busyToken) {
-      window.__mflInteractionBusy?.end?.(busyToken);
-      busyToken = "";
-    }
-    delete document.documentElement.dataset.databaseStatsLoading;
     document.getElementById("databaseStatsStateStyles")?.remove();
     if (originalSetPage && typeof setPage === "function") setPage = originalSetPage;
   }
