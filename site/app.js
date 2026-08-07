@@ -1,13 +1,26 @@
 (() => {
   "use strict";
 
-  const currentScript = document.currentScript;
-  const scriptUrl = currentScript?.src ? new URL(currentScript.src, window.location.href) : null;
-  const version = scriptUrl?.searchParams.get("v") || String(Date.now());
-  const entryUrl = new URL("./modules/app-entry.js", window.location.href);
-  entryUrl.searchParams.set("v", version);
+  void (async () => {
+    let version = String(Date.now());
 
-  import(entryUrl.href).catch((error) => {
-    console.error("Could not import the MFL Front Office entry module.", error);
-  });
+    try {
+      const response = await fetch("/release.json", { cache: "no-store" });
+      if (response.ok) {
+        const release = await response.json();
+        if (release?.version) version = String(release.version);
+      }
+    } catch {
+      // The timestamp fallback still guarantees a fresh entry-module request.
+    }
+
+    const entryUrl = new URL("./modules/app-entry.js", window.location.href);
+    entryUrl.searchParams.set("v", version);
+
+    try {
+      await import(entryUrl.href);
+    } catch (error) {
+      console.error("Could not import the MFL Front Office entry module.", error);
+    }
+  })();
 })();
