@@ -1,5 +1,5 @@
 const release = require("../release.json");
-const recentHistory = require("./_data/releases-recent.json");
+const recentHistory = require("../releases-recent.json");
 const history = require("./_data/releases-history.json");
 
 module.exports = function handler(request, response) {
