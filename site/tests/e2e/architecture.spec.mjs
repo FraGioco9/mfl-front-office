@@ -4,7 +4,7 @@ async function waitForArchitecture(page) {
   await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
-test("boots from the static shell with a partitioned application core", async ({ page }) => {
+test("boots from the static shell with the prepared classic application core", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
@@ -21,9 +21,8 @@ test("boots from the static shell with a partitioned application core", async ({
   expect(architecture.loadedUrls.some((url) => url.includes("/bootstrap.js"))).toBe(false);
   expect(architecture.loadedUrls.some((url) => url.includes("/index-shell.html"))).toBe(false);
   expect(architecture.runtimes).not.toContain("/modules/legacy-core.js");
-  expect(architecture.runtimes).toContain("core-foundation");
-  expect(architecture.runtimes).toContain("core-compatibility");
-  expect(architecture.runtimes.filter((name) => name.startsWith("core-")).length).toBeGreaterThan(10);
+  expect(architecture.runtimes).toContain("core");
+  expect(architecture.runtimes.some((name) => name.startsWith("core-") && name !== "core")).toBe(false);
 });
 
 test("keeps Evaluation directly addressable after modular startup", async ({ page }) => {
