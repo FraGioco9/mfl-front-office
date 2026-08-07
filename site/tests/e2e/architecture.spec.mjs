@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 async function waitForArchitecture(page) {
-  await page.waitForFunction(() => document.documentElement.dataset.mflReady === "true");
+  await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
 test("boots from the static shell without the retired bootstrap loader", async ({ page }) => {
@@ -12,7 +12,7 @@ test("boots from the static shell without the retired bootstrap loader", async (
   await expect(page.locator("#loadingScreen")).toHaveCount(0);
   await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.0");
 
-  const loadedUrls = await page.evaluate(() => performance.getEntriesByType("resource").map((entry) => entry.name));
+  const loadedUrls = await page.evaluate(() => globalThis.performance.getEntriesByType("resource").map((entry) => entry.name));
   expect(loadedUrls.some((url) => url.includes("/bootstrap.js"))).toBe(false);
   expect(loadedUrls.some((url) => url.includes("/index-shell.html"))).toBe(false);
 });
@@ -28,7 +28,7 @@ test("applies the shared API request policy", async ({ page }) => {
   await waitForArchitecture(page);
 
   const accept = await page.evaluate(async () => {
-    const response = await fetch("/api/test");
+    const response = await globalThis.fetch("/api/test");
     return (await response.json()).accept;
   });
   expect(accept).toContain("application/json");
