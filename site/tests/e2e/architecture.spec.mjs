@@ -34,19 +34,19 @@ test("reveals the complete Changelog atomically on refresh", async ({ page }) =>
   await page.addInitScript(() => {
     globalThis.__mflSawVisibleStaleChangelog = false;
     const inspect = () => {
-      document.querySelectorAll(".changelogList span").forEach((node) => {
+      globalThis.document.querySelectorAll(".changelogList span").forEach((node) => {
         if (String(node.textContent || "").trim() !== "v1.119.29") return;
         const hiddenAncestor = node.closest("[hidden]");
-        const style = getComputedStyle(node);
+        const style = globalThis.getComputedStyle(node);
         const rect = node.getBoundingClientRect();
         if (!hiddenAncestor && style.display !== "none" && style.visibility !== "hidden"
             && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0) {
           globalThis.__mflSawVisibleStaleChangelog = true;
         }
       });
-      requestAnimationFrame(inspect);
+      globalThis.requestAnimationFrame(inspect);
     };
-    requestAnimationFrame(inspect);
+    globalThis.requestAnimationFrame(inspect);
   });
 
   await page.goto("/changelog");
