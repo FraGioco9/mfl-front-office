@@ -1,6 +1,7 @@
 (() => {
   const VERSION = String(window.__mflReleaseVersion || "1.123.8");
   const MFL_STATS_PATH = /^\/mfl\/stats\/?$/i;
+  const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard";
   const FILTERS = [
     ["all", "All"],
     ["90-94", "90-94"],
@@ -23,7 +24,6 @@
 
   let frame = 0;
   let interval = 0;
-  let observer = null;
   let destroyed = false;
   let loadRequested = false;
   let fullStatsReady = false;
@@ -36,28 +36,8 @@
     return MFL_STATS_PATH.test(String(location.pathname || ""));
   }
 
-  function enforceStatsShell() {
-    if (!isMflStats()) return false;
-    const target = document.getElementById("mflStatsPage");
-    if (!(target instanceof HTMLElement)) return false;
-
-    document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (!(page instanceof HTMLElement)) return;
-      const shouldHide = page !== target;
-      if (page.hidden !== shouldHide) page.hidden = shouldHide;
-    });
-    if (target.hidden) target.hidden = false;
-    if (document.body?.dataset.page !== "mflstats") document.body.dataset.page = "mflstats";
-
-    try {
-      if (typeof state === "object" && state) {
-        state.currentPage = "mflstats";
-        state.view = "stats";
-      }
-    } catch {
-      // The legacy state is not available until the classic core has loaded.
-    }
-    return true;
+  function syncFirstPaintGuard() {
+    document.documentElement.classList.toggle(FIRST_PAINT_GUARD_CLASS, isMflStats());
   }
 
   function installStyles() {
@@ -65,6 +45,14 @@
     const style = document.createElement("style");
     style.id = "mflStatsFirstPaintStyles";
     style.textContent = `
+      html.${FIRST_PAINT_GUARD_CLASS} #progressionPage {
+        display: none !important;
+      }
+
+      html.${FIRST_PAINT_GUARD_CLASS} #mflStatsPage {
+        display: block !important;
+      }
+
       html[data-initial-page="mfl/stats"] body[data-page="home"] .navButton[data-page="mfl"],
       body[data-page="mflstats"] .navButton[data-page="mfl"] {
         border-color: var(--primary) !important;
@@ -148,7 +136,7 @@
     originalRenderer = current;
     wrappedRenderer = function mflStatsFirstPaintRenderer(...args) {
       const result = originalRenderer.apply(this, args);
-      enforceStatsShell();
+      syncFirstPaintGuard();
       if (fullStatsReady && isMflStats() && !animationShown) {
         requestAnimationFrame(animateFinalHistogram);
       }
@@ -172,7 +160,7 @@
           return;
         }
         runtime.sync?.();
-        enforceStatsShell();
+        syncFirstPaintGuard();
         requestAnimationFrame(() => requestAnimationFrame(animateFinalHistogram));
       })
       .catch(() => {
@@ -183,8 +171,8 @@
   function sync() {
     frame = 0;
     if (destroyed) return;
+    syncFirstPaintGuard();
     installStyles();
-    enforceStatsShell();
     ensureStaticFilters();
     syncNavigation();
     wrapRenderer();
@@ -196,18 +184,8 @@
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
+  syncFirstPaintGuard();
   installStyles();
-  enforceStatsShell();
-  observer = new MutationObserver(() => {
-    enforceStatsShell();
-    schedule();
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "data-page", "hidden"],
-  });
   interval = window.setInterval(schedule, 50);
   window.addEventListener("popstate", schedule);
   schedule();
@@ -217,8 +195,8 @@
     if (frame) cancelAnimationFrame(frame);
     if (interval) clearInterval(interval);
     if (animationTimer) clearTimeout(animationTimer);
-    observer?.disconnect();
     window.removeEventListener("popstate", schedule);
+    document.documentElement.classList.remove(FIRST_PAINT_GUARD_CLASS);
     clearAnimationClass();
     if (wrappedRenderer && window.renderMflStatsPage === wrappedRenderer && originalRenderer) {
       window.renderMflStatsPage = originalRenderer;
