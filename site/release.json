@@ -1,4 +1,4 @@
 {
-  "version": "1.123.0",
-  "description": "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"
+  "version": "1.123.1",
+  "description": "Restore the known-good direct application startup path after the client-core refactor"
 }
