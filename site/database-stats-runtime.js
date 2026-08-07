@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.11");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const FILTERS = [
@@ -286,11 +286,15 @@
     const totalActivePlayers = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
       ? Number(data.totalActivePlayers)
       : filteredActivePlayers;
+    const filteredRetiredPlayers = sumGroups(groups, (group) => Number(group[2]) === 0);
+    const totalRetiredPlayers = activeFilter === "all" && Number.isFinite(Number(data.totalRetiredPlayers))
+      ? Number(data.totalRetiredPlayers)
+      : filteredRetiredPlayers;
     setCard("databaseStatsTotalPlayers", totalActivePlayers);
     setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => Number(group[2]) === 3));
     setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => Number(group[2]) === 2));
     setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => Number(group[2]) === 1));
-    setCard("databaseStatsRetired", sumGroups(groups, (group) => Number(group[2]) === 0));
+    setCard("databaseStatsRetired", totalRetiredPlayers);
     renderDistribution();
   }
 

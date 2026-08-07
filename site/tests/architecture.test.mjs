@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.10");
+  assert.equal(release.version, "1.123.11");
   assert.ok(release.description.length > 20);
 });
 
@@ -32,7 +32,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell and its content resolve before runtime loading", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.10"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.11"/);
   assert.match(bridge, /function primeStaticShell\(\)/);
   assert.match(bridge, /const storedAccess = hasStoredProgressionAccess\(\)/);
   assert.match(bridge, /homeOptInButton\.hidden = storedAccess/);
@@ -46,7 +46,7 @@ test("static shell and its content resolve before runtime loading", async () => 
   assert.match(index, />Evaluation<\/span>/);
 });
 
-test("Database Stats owns first paint but does not alter legacy startup ordering", async () => {
+test("Database Stats owns first paint while preserving legacy startup ordering", async () => {
   const bridge = await read("app.js");
   const runtime = await read("database-stats-runtime.js");
   const bootstrap = await read("database-stats-navigation-release-runtime.js");
@@ -63,10 +63,12 @@ test("Database Stats owns first paint but does not alter legacy startup ordering
   assert.match(bridge, /<article><span>Total active players<\/span><strong id="databaseStatsTotalPlayers">-<\/strong><\/article>/);
   assert.match(runtime, /const existing = document\.getElementById\("databaseStatsPage"\)/);
 
-  assert.doesNotMatch(earlyScripts, /database-stats/);
-  assert.match(lateScripts, /database-stats-navigation-release-runtime\.js/);
+  assert.match(earlyScripts, /database-stats-navigation-release-runtime\.js/);
+  assert.doesNotMatch(lateScripts, /database-stats-navigation-release-runtime\.js/);
   assert.match(lateScripts, /database-stats-runtime\.js/);
-  assert.match(lateScripts, /database-stats-state-runtime\.js/);
+  assert.doesNotMatch(lateScripts, /database-stats-state-runtime\.js/);
+  assert.match(entry, /__mflDatabaseStatsReloadBootstrap\?\.restoreRoute\?\.\(\)/);
+  assert.match(entry, /loadClassicScript\("\/database-stats-state-runtime\.js", release\.version\)/);
   assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
   assert.match(bootstrap, /restoreRoute\(\);/);
   assert.match(entry, /runtimeWindow\.__mflDatabaseStatsReloadBootstrap\?\.finalize\?\.\(\)/);
@@ -109,7 +111,7 @@ test("Database Stats excludes exact MFL ownership and counts every non-retired p
   assert.match(stats, /lower\(coalesce\(wallet_address, ''\)\) NOT IN \(\?, \?\)/);
   assert.doesNotMatch(stats, /wallet_name/);
   assert.match(stats, /sum\(CASE WHEN \$\{activeSql\} THEN 1 ELSE 0 END\) AS totalActivePlayers/);
-  const totalsSection = stats.slice(stats.indexOf("const totals = queryOne"), stats.indexOf("return {"));
+  const totalsSection = stats.slice(stats.indexOf("const totals = queryOne"), stats.indexOf("const retiredTotals"));
   assert.doesNotMatch(totalsSection, /overallSql/);
   assert.match(dataHandler, /require\("\.\/_database-stats"\)/);
   assert.match(runtime, /data\.totalActivePlayers/);
@@ -133,7 +135,7 @@ test("Database Stats participates in the existing saved Database view state", as
   assert.match(legacy, /tableState: stripPersistentSortState\(currentTableState\(\)\)/);
   assert.match(stateRuntime, /pageViewOptions\.database\.push\("stats"\)/);
   assert.match(stateRuntime, /state\.tablePageStates\.database = \{ \.\.\.existing, view: "stats" \}/);
-  assert.match(stateRuntime, /typeof saveTableState === "function"\) saveTableState\(\)/);
+  assert.match(stateRuntime, /typeof saveTableState === "function"/);
   assert.match(stateRuntime, /setPage = async function setPageWithDatabaseStats/);
   assert.match(stateRuntime, /targetView === "stats"/);
 });
@@ -154,7 +156,7 @@ test("Changelog canonical data restores the accepted 1.121 and 1.120 history", a
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);

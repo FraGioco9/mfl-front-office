@@ -1,11 +1,13 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.11");
   const STATS_PATH = /^\/database\/stats\/?$/i;
   const RUNTIME_KEY = "__mflDatabaseStatsReloadBootstrap";
 
   window[RUNTIME_KEY]?.destroy?.();
 
+  const initialPage = String(document.documentElement.dataset.initialPage || "").replace(/^\//, "");
   const active = STATS_PATH.test(location.pathname)
+    || initialPage === "database/stats"
     || document.documentElement.dataset.staticPage === "databasestats";
   let style = null;
   let finalized = false;

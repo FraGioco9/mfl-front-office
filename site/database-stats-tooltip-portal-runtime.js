@@ -1,10 +1,10 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.11");
+  const STATS_PATH = /^\/database\/stats\/?$/i;
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
   let frame = 0;
-  let observer = null;
   let applyAnimationTimer = 0;
   let pendingApplyAnimation = false;
   let previousHistogram = null;
@@ -22,9 +22,10 @@
     return document.querySelector("#databaseStatsDistribution .mflStatsHistogram");
   }
 
-  function restoreStatsShell() {
-    if (!/^\/database\/stats\/?$/i.test(location.pathname)) return;
+  function keepStatsPageVisible() {
+    if (!STATS_PATH.test(location.pathname)) return;
     window.setDatabaseStatsPageVisibility?.(true);
+    if (document.body?.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
   }
 
   function clearApplyAnimation(cancelPending = true) {
@@ -148,6 +149,7 @@
 
   function open() {
     clearApplyAnimation();
+    keepStatsPageVisible();
     ensureStyles();
     const panel = ensureTooltip();
     if (!panel) return;
@@ -219,6 +221,7 @@
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
+    keepStatsPageVisible();
 
     const renderedHistogram = currentHistogram();
     if (animate && renderedHistogram instanceof HTMLElement && renderedHistogram !== previousHistogram) {
@@ -230,7 +233,6 @@
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
     close();
-    restoreStatsShell();
     schedule();
   }
 
@@ -243,6 +245,7 @@
     if (!portalContains(event.target)) return;
     clearApplyAnimation();
     document.documentElement.dataset.databaseStatsCustomDraft = "true";
+    keepStatsPageVisible();
     event.stopImmediatePropagation();
   }
 
@@ -284,6 +287,7 @@
       return;
     }
     clearApplyAnimation();
+    keepStatsPageVisible();
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -306,6 +310,7 @@
     frame = requestAnimationFrame(() => {
       frame = 0;
       ensureStyles();
+      keepStatsPageVisible();
       const original = document.querySelector("#databaseStatsCustomFilter");
       if (original && !original.hidden) original.hidden = true;
       if (document.body?.dataset.page !== "databasestats") clearApplyAnimation();
@@ -333,19 +338,11 @@
   document.addEventListener("keyup", stopPortalEvent, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "class", "data-page"],
-  });
   schedule();
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
     clearApplyAnimation();
-    observer?.disconnect();
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("pointerdown", onGlobalPointerDown, true);
     stoppedEvents.forEach((type) => document.removeEventListener(type, stopPortalEvent, true));

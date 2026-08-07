@@ -16,6 +16,7 @@ function databaseStatsPayload(overrides = {}) {
   return {
     totalPlayers: 15,
     totalActivePlayers: 10,
+    totalRetiredPlayers: 5,
     rows: [
       [80, 25, 0, 5],
       [80, 25, 1, 7],
@@ -41,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.10");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.11");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -236,6 +237,7 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
       body: JSON.stringify({
         totalPlayers: 18,
         totalActivePlayers: 18,
+        totalRetiredPlayers: 0,
         rows: [
           [70, 21, 1, 4],
           [80, 22, 2, 6],
@@ -344,7 +346,8 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.10");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.11");
+  await expect(list).toContainText("v1.123.10");
   await expect(list).toContainText("v1.123.9");
   await expect(list).toContainText("v1.121.0");
   await expect(list).toContainText("v1.120.48");
@@ -360,10 +363,10 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.10");
-  expect(rows[0][0]).toBe("v1.123.10");
+  expect(metadata.version).toBe("1.123.11");
+  expect(rows[0][0]).toBe("v1.123.11");
   expect(rows[0][1]).toBe(metadata.description);
-  for (const version of ["v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
+  for (const version of ["v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
   }
 });

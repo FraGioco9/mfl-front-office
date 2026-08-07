@@ -1,4 +1,4 @@
 {
-  "version": "1.123.10",
-  "description": "Restore Database Stats loading, counts, saved view state, and complete Changelog history"
+  "version": "1.123.11",
+  "description": "Keep static chrome fixed on first paint and make Database Stats route, retired totals, custom filters, and saved view state reliable"
 }
