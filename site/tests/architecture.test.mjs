@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.1");
+  assert.equal(release.version, "1.123.2");
   assert.ok(release.description.length > 20);
 });
 
@@ -26,6 +26,25 @@ test("application core uses the known-good direct classic-script startup path", 
   const entry = await read("modules/app-entry.js");
   assert.match(entry, /loadClassicScript\("\/modules\/legacy-core\.js", release\.version\)/);
   assert.doesNotMatch(entry, /prepareCoreRuntimeSource|loadPreparedClassicScript|loadPartitionedClassicScript/);
+});
+
+test("changelog first paint is cleared before routing and built from canonical releases", async () => {
+  const bridge = await read("app.js");
+  const entry = await read("modules/app-entry.js");
+  const changelog = await read("changelog-history-runtime.js");
+  const releasesApi = await read("api/releases.js");
+  const recent = JSON.parse(await read("api/_data/releases-recent.json"));
+
+  assert.match(bridge, /changelogList\.replaceChildren\(\)/);
+  assert.match(bridge, /changelogList\.hidden = true/);
+  assert.match(entry, /"\/changelog-history-runtime\.js"/);
+  assert.match(entry, /__mflChangelogHistoryReady/);
+  assert.match(changelog, /fetch\(RELEASES_URL/);
+  assert.match(changelog, /list\.replaceChildren\(fragment\)/);
+  assert.match(changelog, /list\.hidden = false/);
+  assert.doesNotMatch(changelog, /changelog-history-source-v1\.120\.3|sourceVersion|CURRENT_RELEASES/);
+  assert.match(releasesApi, /releases-recent\.json/);
+  assert.deepEqual(recent.map((entry) => entry[0]), ["v1.123.1", "v1.123.0"]);
 });
 
 test("season-ratio endpoint preserves the completed-row query", async () => {
