@@ -368,6 +368,9 @@
     });
 
     distribution.replaceChildren(histogram);
+    if (animate) {
+      window.setTimeout(() => histogram.classList.remove("databaseStatsAnimate"), 280);
+    }
   }
 
   async function loadData() {
