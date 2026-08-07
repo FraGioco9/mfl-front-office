@@ -34,12 +34,26 @@ jobs:
           node-version: "22"
 
       - name: Materialize and clean application source
-        run: python cleanup_app_once.py
+        shell: bash
+        run: |
+          set +e
+          python cleanup_app_once.py > cleanup.log 2>&1
+          STATUS=$?
+          cat cleanup.log
+          if [ "$STATUS" -ne 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add cleanup.log
+            git commit -m "chore: capture site cleanup failure"
+            git push
+            exit "$STATUS"
+          fi
 
       - name: Commit cleaned application source
         shell: bash
         run: |
           set -euo pipefail
+          rm -f cleanup.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
