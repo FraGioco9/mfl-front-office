@@ -40,11 +40,14 @@ test("static shell and its content resolve before runtime loading", async () => 
   assert.match(index, />Evaluation<\/span>/);
 });
 
-test("Database Stats owns first paint with Overall buttons already present", async () => {
+test("Database Stats owns first paint but does not alter legacy startup ordering", async () => {
   const bridge = await read("app.js");
   const runtime = await read("database-stats-runtime.js");
+  const bootstrap = await read("database-stats-navigation-release-runtime.js");
   const entry = await read("modules/app-entry.js");
-  const legacyLoad = entry.indexOf('loadClassicScript("/modules/legacy-core.js"');
+  const earlyScripts = entry.slice(entry.indexOf("const EARLY_RUNTIME_SCRIPTS"), entry.indexOf("const LATE_RUNTIME_SCRIPTS"));
+  const lateScripts = entry.slice(entry.indexOf("const LATE_RUNTIME_SCRIPTS"), entry.indexOf("/** @type"));
+
   assert.match(bridge, /function ensureDatabaseStatsStaticPage\(\)/);
   assert.match(bridge, /pageName: "databasestats", pageId: "databaseStatsPage"/);
   assert.ok(bridge.indexOf("ensureDatabaseStatsStaticPage();") < bridge.indexOf("const route = initialRoute"));
@@ -53,19 +56,25 @@ test("Database Stats owns first paint with Overall buttons already present", asy
   }
   assert.match(bridge, /<article><span>Total active players<\/span><strong id="databaseStatsTotalPlayers">-<\/strong><\/article>/);
   assert.match(runtime, /const existing = document\.getElementById\("databaseStatsPage"\)/);
-  assert.ok(entry.indexOf('"/database-stats-navigation-release-runtime.js"') < legacyLoad);
-  assert.ok(entry.indexOf('"/database-stats-runtime.js"') < legacyLoad, "script list declaration must stay before startup code");
+
+  assert.doesNotMatch(earlyScripts, /database-stats/);
+  assert.match(lateScripts, /database-stats-navigation-release-runtime\.js/);
+  assert.match(lateScripts, /database-stats-runtime\.js/);
+  assert.match(lateScripts, /database-stats-state-runtime\.js/);
+  assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
+  assert.match(bootstrap, /restoreRoute\(\);/);
   assert.match(entry, /runtimeWindow\.__mflDatabaseStatsReloadBootstrap\?\.finalize\?\.\(\)/);
-  assert.ok(entry.indexOf("await loadScriptGroup(LATE_RUNTIME_SCRIPTS") > legacyLoad);
 });
 
 test("loading lock remains scoped to explicit data operations including Database Stats", async () => {
   const bridge = await read("app.js");
   const runtime = await read("database-stats-runtime.js");
+  const stateRuntime = await read("database-stats-state-runtime.js");
   assert.match(bridge, /"databaseStatsData"/);
   assert.match(bridge, /runtimeWindow\.__mflWithInteractionBusy = \(callback\) => run\(callback, "interaction-loading"\)/);
   assert.match(runtime, /window\.__mflInteractionBusy\.begin\("databaseStatsData"\)/);
   assert.match(runtime, /window\.__mflInteractionBusy\?\.end\?\.\(dataBusyToken\)/);
+  assert.doesNotMatch(stateRuntime, /busyToken|syncBusyState|statsStillLoading/);
   assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|syncKnownLoadingStates|namedTokens/);
 });
 
