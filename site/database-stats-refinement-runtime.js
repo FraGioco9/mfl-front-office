@@ -156,7 +156,7 @@
     const range = activeRange();
     return payload.rows.reduce((total, group) => {
       const overall = Number(group?.[0]);
-      const retirementYears = group?.[2];
+      const retirementYears = Number(group?.[2]);
       const count = Number(group?.[3] || 0);
       if (!Number.isFinite(overall) || retirementYears === 0 || count <= 0) return total;
       if (range.min !== null && overall < range.min) return total;
