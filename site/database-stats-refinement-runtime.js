@@ -16,7 +16,6 @@
 
   const originalFetch = window.fetch.bind(window);
   let payload = null;
-  let observer = null;
   let frame = 0;
   let destroyed = false;
 
@@ -198,7 +197,7 @@
   }
 
   function schedule() {
-    if (!frame) frame = requestAnimationFrame(sync);
+    if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
   function onDocumentClick(event) {
@@ -211,6 +210,7 @@
         positionCustomPanel();
         customPanel()?.querySelector("input")?.focus({ preventScroll: true });
       });
+      schedule();
       return;
     }
     if (target.closest("#databaseStatsCustomApply")) {
@@ -224,7 +224,7 @@
     if (panel && !panel.hidden && !panel.contains(target)) {
       panel.hidden = true;
     }
-    schedule();
+    if (clickedFilter) schedule();
   }
 
   function onKeyDown(event) {
@@ -242,24 +242,16 @@
     customButton()?.focus({ preventScroll: true });
   }
 
+  installStyles();
   document.addEventListener("click", onDocumentClick);
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    characterData: true,
-    attributeFilter: ["hidden", "class", "data-page"],
-  });
   schedule();
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
-    observer?.disconnect();
     document.removeEventListener("click", onDocumentClick);
     document.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("resize", schedule);
@@ -270,7 +262,7 @@
 
   window.__mflDatabaseStatsRefinementRuntime = {
     version: VERSION,
-    sync,
+    sync: schedule,
     destroy,
   };
 })();
