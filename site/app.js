@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.8";
+  const STATIC_RELEASE_VERSION = "1.123.9";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -61,6 +61,56 @@
     }
   }
 
+  function ensureDatabaseStatsStaticPage() {
+    if (!/^\/database\/stats\/?$/i.test(window.location.pathname)) return null;
+    const existing = document.getElementById("databaseStatsPage");
+    if (existing instanceof HTMLElement) return existing;
+    const main = document.querySelector("main");
+    if (!(main instanceof HTMLElement)) return null;
+
+    const page = document.createElement("section");
+    page.id = "databaseStatsPage";
+    page.className = "pageView mflStatsPage databaseStatsPage";
+    page.dataset.staticDatabaseStats = "true";
+    page.hidden = true;
+    page.innerHTML = `
+      <h2 class="tablePageTitle">Database</h2>
+      <section class="views mflStatsViews" aria-label="Database views">
+        <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+        <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+        <button class="viewButton active" type="button" data-view="stats">Stats</button>
+      </section>
+      <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
+        <span>Overall Filters</span>
+        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
+        <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
+          <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
+          <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
+          <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
+        </div>
+      </section>
+      <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
+        <article><span>Total active players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
+        <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
+        <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
+        <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
+        <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
+      </section>
+      <section class="mflStatsDistribution" aria-label="Active players distribution">
+        <div class="mflStatsDistributionHeader">
+          <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
+          <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+            <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+            <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+          </div>
+        </div>
+        <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
+      </section>
+    `;
+    main.appendChild(page);
+    return page;
+  }
+
   function initialRoute(pathname) {
     const cleanPath = String(pathname || "/").replace(/\/+$/, "") || "/";
     const parts = cleanPath.split("/").filter(Boolean);
@@ -82,8 +132,11 @@
     if (first === "players") {
       return { pageName: "player", pageId: "playerPage", title: "", view: "" };
     }
+    if (first === "database" && last === "stats") {
+      return { pageName: "databasestats", pageId: "databaseStatsPage", title: "Database", view: "stats", navPage: "database" };
+    }
     if (first === "mfl" && last === "stats") {
-      return { pageName: "mflstats", pageId: "mflStatsPage", title: "MFL Wallet", view: "stats" };
+      return { pageName: "mflstats", pageId: "mflStatsPage", title: "MFL Wallet", view: "stats", navPage: "mfl" };
     }
 
     let pageName = "home";
@@ -118,26 +171,34 @@
         pageId: "progressionPage",
         title,
         view: VIEW_BY_SLUG[last] || fallbackView,
+        navPage: pageName,
       };
     }
 
-    return { pageName: "home", pageId: "homePage", title: "", view: "" };
+    return { pageName: "home", pageId: "homePage", title: "", view: "", navPage: "home" };
   }
 
   function primeStaticShell() {
+    ensureDatabaseStatsStaticPage();
     const route = initialRoute(window.location.pathname);
+    const storedAccess = hasStoredProgressionAccess();
     const appShell = document.querySelector("#appShell");
     const menuRail = document.querySelector("#menuRail");
     const menuButton = document.querySelector("#menuButton");
     const sidebar = document.querySelector("#sidebar");
     const footer = document.querySelector(".siteFooter");
     const footerVersionLink = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+    const homeOptInButton = document.querySelector("#homeOptInButton");
+    const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
 
     document.body.dataset.page = route.pageName;
-    document.body.classList.toggle("guest", !hasStoredProgressionAccess());
+    document.body.classList.toggle("guest", !storedAccess);
     document.body.classList.add("pinnedSidebarVisible");
     document.documentElement.dataset.staticPage = route.pageName;
+    document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
 
+    if (homeOptInButton instanceof HTMLButtonElement) homeOptInButton.hidden = storedAccess;
+    if (myPlayersOptInButton instanceof HTMLButtonElement) myPlayersOptInButton.hidden = storedAccess;
     if (appShell instanceof HTMLElement) appShell.classList.remove("menuClosed", "menuAnimating");
     if (menuRail instanceof HTMLElement) menuRail.hidden = false;
     if (menuButton instanceof HTMLButtonElement) {
@@ -155,9 +216,10 @@
       if (page instanceof HTMLElement) page.hidden = page.id !== route.pageId;
     });
 
+    const navPage = route.navPage || route.pageName;
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
-      button.classList.toggle("active", button.dataset.page === route.pageName);
+      button.classList.toggle("active", button.dataset.page === navPage);
     });
 
     if (route.pageId === "progressionPage") {

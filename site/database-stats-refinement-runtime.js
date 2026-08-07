@@ -1,69 +1,14 @@
 (() => {
-  const VERSION = "1.120.2";
-  const STATS_ENDPOINT = "/api/database-stats";
-  const DATA_ENDPOINT = "/api/data";
-  const FILTER_RANGES = new Map([
-    ["all", { min: null, max: null }],
-    ["ultimate", { min: 95, max: null }],
-    ["legendary", { min: 85, max: 94 }],
-    ["rare", { min: 75, max: 84 }],
-    ["uncommon", { min: 65, max: 74 }],
-    ["limited", { min: 55, max: 64 }],
-    ["common", { min: null, max: 54 }],
-  ]);
+  const VERSION = String(window.__mflReleaseVersion || "1.123.9");
 
   window.__mflDatabaseStatsRefinementRuntime?.destroy?.();
 
-  const originalFetch = window.fetch.bind(window);
-  let payload = null;
   let frame = 0;
   let destroyed = false;
 
   function normalizeLabel(value) {
     return String(value || "").trim().toLowerCase();
   }
-
-  function requestUrl(input) {
-    try {
-      const value = input instanceof Request ? input.url : String(input || "");
-      return new URL(value, location.href);
-    } catch {
-      return null;
-    }
-  }
-
-  function isStatsRequest(url) {
-    return Boolean(url && (
-      url.pathname === STATS_ENDPOINT
-      || (url.pathname === DATA_ENDPOINT && url.searchParams.get("mode") === "database-stats")
-    ));
-  }
-
-  window.fetch = (input, init) => {
-    const url = requestUrl(input);
-    const statsRequest = isStatsRequest(url);
-    let forwardedInput = input;
-    if (url?.pathname === STATS_ENDPOINT) {
-      url.searchParams.set("v", VERSION);
-      forwardedInput = input instanceof Request
-        ? new Request(url.toString(), input)
-        : url.toString();
-    }
-
-    const responsePromise = originalFetch(forwardedInput, init);
-    if (statsRequest) {
-      void responsePromise
-        .then((response) => response.clone().json())
-        .then((data) => {
-          if (Array.isArray(data?.rows)) {
-            payload = data;
-            schedule();
-          }
-        })
-        .catch(() => false);
-    }
-    return responsePromise;
-  };
 
   function installStyles() {
     if (document.getElementById("databaseStatsRefinementStyles")) return;
@@ -143,56 +88,10 @@
     panel.style.setProperty("--database-stats-arrow-left", `${Math.round(arrowLeft)}px`);
   }
 
-  function activeRange() {
-    const activeButton = document.querySelector("#databaseStatsOverallFilters .mflStatsFilterButton.active");
-    const label = normalizeLabel(activeButton?.textContent);
-    if (label === "custom") {
-      let min = Number(document.querySelector("#databaseStatsCustomMin")?.value);
-      let max = Number(document.querySelector("#databaseStatsCustomMax")?.value);
-      if (!Number.isFinite(min)) min = 0;
-      if (!Number.isFinite(max)) max = 99;
-      min = Math.max(0, Math.min(99, Math.trunc(min)));
-      max = Math.max(0, Math.min(99, Math.trunc(max)));
-      if (min > max) [min, max] = [max, min];
-      return { min, max };
-    }
-    return FILTER_RANGES.get(label) || FILTER_RANGES.get("all");
-  }
-
-  function filteredActiveCount() {
-    if (!Array.isArray(payload?.rows)) return null;
-    const range = activeRange();
-    return payload.rows.reduce((total, group) => {
-      const overall = Number(group?.[0]);
-      const retirementYears = Number(group?.[2]);
-      const count = Number(group?.[3] || 0);
-      if (!Number.isFinite(overall) || retirementYears === 0 || count <= 0) return total;
-      if (range.min !== null && overall < range.min) return total;
-      if (range.max !== null && overall > range.max) return total;
-      return total + count;
-    }, 0);
-  }
-
-  function syncTotalActivePlayers() {
-    const card = document.querySelector("#databaseStatsTotalPlayers")?.closest("article");
-    const label = card?.querySelector("span");
-    if (label && label.textContent !== "Total active players") {
-      label.textContent = "Total active players";
-    }
-
-    const count = filteredActiveCount();
-    const value = card?.querySelector("strong");
-    if (value && count !== null) {
-      const formatted = new Intl.NumberFormat("en-US").format(count);
-      if (value.textContent !== formatted) value.textContent = formatted;
-    }
-  }
-
   function sync() {
     frame = 0;
     if (destroyed) return;
     installStyles();
-    syncTotalActivePlayers();
     positionCustomPanel();
   }
 
@@ -200,15 +99,23 @@
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
+  function clickCameFromDatabaseFilters(event) {
+    return event.composedPath().some((node) => node instanceof Element && node.id === "databaseStatsOverallFilters");
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     const panel = customPanel();
-    const clickedFilter = target.closest("#databaseStatsOverallFilters .mflStatsFilterButton");
-    if (clickedFilter && normalizeLabel(clickedFilter.textContent) === "custom") {
+    const clickedFilter = target.closest(".mflStatsFilterButton");
+    if (clickedFilter
+        && clickCameFromDatabaseFilters(event)
+        && normalizeLabel(clickedFilter.textContent) === "custom") {
       requestAnimationFrame(() => {
+        const currentPanel = customPanel();
+        if (currentPanel) currentPanel.hidden = false;
         positionCustomPanel();
-        customPanel()?.querySelector("input")?.focus({ preventScroll: true });
+        currentPanel?.querySelector("input")?.focus({ preventScroll: true });
       });
       schedule();
       return;
@@ -224,7 +131,6 @@
     if (panel && !panel.hidden && !panel.contains(target)) {
       panel.hidden = true;
     }
-    if (clickedFilter) schedule();
   }
 
   function onKeyDown(event) {
@@ -256,7 +162,6 @@
     document.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
-    window.fetch = originalFetch;
     document.getElementById("databaseStatsRefinementStyles")?.remove();
   }
 

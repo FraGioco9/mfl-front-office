@@ -1,4 +1,4 @@
 {
-  "version": "1.123.8",
-  "description": "Restore stable loading completion, hide player totals while loading, and fix stats first paint and active counts"
+  "version": "1.123.9",
+  "description": "Stabilize opted-in and stats first paint, correct active-player ownership, and remove stale Changelog source"
 }

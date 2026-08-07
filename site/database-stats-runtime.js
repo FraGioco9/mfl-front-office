@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.1";
+  const VERSION = String(window.__mflReleaseVersion || "1.123.9");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const FILTERS = [
@@ -19,6 +19,7 @@
   const originalReplaceState = history.replaceState.bind(history);
   let routeGuardActive = DATABASE_STATS_PATH.test(location.pathname);
   let page = null;
+  let pageCreatedByRuntime = false;
   let data = null;
   let dataPromise = null;
   let activeFilter = "all";
@@ -106,6 +107,12 @@
         color: var(--text);
         font: inherit;
       }
+      #databaseStatsPage .mflStatsHistogramBar::after {
+        animation: none !important;
+      }
+      #databaseStatsPage .mflStatsHistogram.databaseStatsAnimate .mflStatsHistogramBar::after {
+        animation: mflStatsBarRise 220ms ease-out !important;
+      }
       @media (max-width: 1100px) {
         #databaseStatsPage .databaseStatsCards {
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -120,53 +127,9 @@
     document.head.appendChild(style);
   }
 
-  function createPage() {
-    if (page?.isConnected) return page;
-    const main = document.querySelector("main");
-    if (!main) return null;
-
-    page = document.createElement("section");
-    page.id = "databaseStatsPage";
-    page.className = "pageView mflStatsPage databaseStatsPage";
-    page.hidden = true;
-    page.innerHTML = `
-      <h2 class="tablePageTitle">Database</h2>
-      <section class="views mflStatsViews" aria-label="Database views">
-        <button class="viewButton" type="button" data-view="attributes">Attributes</button>
-        <button class="viewButton" type="button" data-view="contracts">Contracts</button>
-        <button class="viewButton active" type="button" data-view="stats">Stats</button>
-      </section>
-
-      <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
-        <span>Overall Filters</span>
-        <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
-        <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
-          <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
-          <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
-          <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
-        </div>
-      </section>
-
-      <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
-        <article><span>Total players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
-        <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
-        <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
-        <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
-        <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
-      </section>
-
-      <section class="mflStatsDistribution" aria-label="Active players distribution">
-        <div class="mflStatsDistributionHeader">
-          <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
-          <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
-            <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
-            <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
-          </div>
-        </div>
-        <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
-      </section>
-    `;
-    main.appendChild(page);
+  function bindPage() {
+    if (!page || page.dataset.databaseStatsRuntimeBound === VERSION) return;
+    page.dataset.databaseStatsRuntimeBound = VERSION;
 
     page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
     page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
@@ -174,16 +137,72 @@
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
         distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
-        renderDistribution();
+        renderDistribution(false);
       });
     });
-    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
+    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", () => applyCustomFilter(true));
     page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
       input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") applyCustomFilter();
+        if (event.key === "Enter") applyCustomFilter(false);
       });
     });
+  }
 
+  function createPage() {
+    if (page?.isConnected) return page;
+    const main = document.querySelector("main");
+    if (!main) return null;
+
+    const existing = document.getElementById("databaseStatsPage");
+    if (existing instanceof HTMLElement) {
+      page = existing;
+    } else {
+      page = document.createElement("section");
+      pageCreatedByRuntime = true;
+      page.id = "databaseStatsPage";
+      page.className = "pageView mflStatsPage databaseStatsPage";
+      page.hidden = true;
+      page.innerHTML = `
+        <h2 class="tablePageTitle">Database</h2>
+        <section class="views mflStatsViews" aria-label="Database views">
+          <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+          <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+          <button class="viewButton active" type="button" data-view="stats">Stats</button>
+        </section>
+
+        <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
+          <span>Overall Filters</span>
+          <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
+          <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
+            <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
+            <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
+            <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
+          </div>
+        </section>
+
+        <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
+          <article><span>Total active players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
+          <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
+          <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
+          <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
+          <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
+        </section>
+
+        <section class="mflStatsDistribution" aria-label="Active players distribution">
+          <div class="mflStatsDistributionHeader">
+            <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
+            <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+              <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+              <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+            </div>
+          </div>
+          <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
+        </section>
+      `;
+      main.appendChild(page);
+    }
+
+    bindPage();
     renderFilterButtons();
     return page;
   }
@@ -234,7 +253,7 @@
         const custom = page?.querySelector("#databaseStatsCustomFilter");
         if (custom) custom.hidden = filter.id !== "custom";
         renderFilterButtons();
-        renderStats();
+        renderStats(false);
       });
       fragment.appendChild(button);
     });
@@ -243,7 +262,7 @@
     if (custom) custom.hidden = activeFilter !== "custom";
   }
 
-  function applyCustomFilter() {
+  function applyCustomFilter(animate = false) {
     const minInput = page?.querySelector("#databaseStatsCustomMin");
     const maxInput = page?.querySelector("#databaseStatsCustomMax");
     let minimum = Math.max(0, Math.min(99, Math.trunc(Number(minInput?.value))));
@@ -257,7 +276,7 @@
     if (maxInput) maxInput.value = String(maximum);
     activeFilter = "custom";
     renderFilterButtons();
-    renderStats();
+    renderStats(animate);
   }
 
   function filteredGroups() {
@@ -282,18 +301,18 @@
     if (element) element.textContent = formatCount(value);
   }
 
-  function renderStats() {
+  function renderStats(animateDistribution = false) {
     if (!page || !data) return;
     const groups = filteredGroups();
-    setCard("databaseStatsTotalPlayers", sumGroups(groups));
-    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => group[2] === 3));
-    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => group[2] === 2));
-    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => group[2] === 1));
-    setCard("databaseStatsRetired", sumGroups(groups, (group) => group[2] === 0));
-    renderDistribution();
+    setCard("databaseStatsTotalPlayers", sumGroups(groups, (group) => Number(group[2]) !== 0));
+    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => Number(group[2]) === 3));
+    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => Number(group[2]) === 2));
+    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => Number(group[2]) === 1));
+    setCard("databaseStatsRetired", sumGroups(groups, (group) => Number(group[2]) === 0));
+    renderDistribution(animateDistribution);
   }
 
-  function renderDistribution() {
+  function renderDistribution(animate = false) {
     if (!page || !data) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.classList.toggle("active", button.dataset.distribution === distributionMode);
@@ -308,7 +327,7 @@
     const counts = new Map();
     let totalActive = 0;
     filteredGroups().forEach((group) => {
-      if (group[2] === 0) return;
+      if (Number(group[2]) === 0) return;
       const value = distributionMode === "age" ? group[1] : group[0];
       if (value === null || value === undefined || value === "") return;
       const numericValue = Number(value);
@@ -328,7 +347,7 @@
     const rows = Array.from(counts.entries()).sort((left, right) => left[0] - right[0]);
     const maxCount = Math.max(...rows.map((entry) => entry[1]));
     const histogram = document.createElement("div");
-    histogram.className = "mflStatsHistogram";
+    histogram.className = `mflStatsHistogram${animate ? " databaseStatsAnimate" : ""}`;
     histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
     const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
     histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
@@ -349,6 +368,9 @@
     });
 
     distribution.replaceChildren(histogram);
+    if (animate) {
+      window.setTimeout(() => histogram.classList.remove("databaseStatsAnimate"), 280);
+    }
   }
 
   async function loadData() {
@@ -391,7 +413,7 @@
         busy = true;
       }
       await loadData();
-      renderStats();
+      renderStats(false);
     } catch (error) {
       if (distribution) {
         const message = document.createElement("p");
@@ -543,7 +565,7 @@
     }
     history.pushState = originalPushState;
     history.replaceState = originalReplaceState;
-    page?.remove();
+    if (pageCreatedByRuntime) page?.remove();
     document.getElementById("databaseStatsRuntimeStyles")?.remove();
   }
 

@@ -285,39 +285,23 @@ function summaryData() {
 }
 
 function databaseStatsData() {
-  if (tableExists("runtime_database_stats") && tableExists("runtime_metadata")) {
-    const rows = queryRows(
-      `SELECT overall, age, retirement_years, player_count
-       FROM runtime_database_stats
-       ORDER BY overall, age, retirement_years`,
-    );
-    const metadataRows = queryRows(
-      `SELECT key, value
-       FROM runtime_metadata
-       WHERE key IN ('database_stats_total_players', 'database_stats_total_active_players')`,
-    );
-    const metadata = Object.fromEntries(
-      metadataRows.map((row) => [String(row.key), String(row.value)]),
-    );
-    return {
-      generatedAt: getGeneratedAt(),
-      totalPlayers: Number(metadata.database_stats_total_players || 0),
-      totalActivePlayers: Number(metadata.database_stats_total_active_players || 0),
-      excludedWallets: ["MFL", "MFL Trade"],
-      columns: ["overall", "age", "retirement_years", "count"],
-      rows: rows.map((row) => [
-        row.overall,
-        row.age,
-        row.retirement_years,
-        Number(row.player_count),
-      ]),
-      source: "sqlite-runtime",
-    };
-  }
-
   const excludedWalletNames = ["mfl", "mfl wallet", "mfl trade"];
-  const excludedSql = `wallet_address <> ? AND normalize_wallet_name(wallet_name) NOT IN (${placeholders(excludedWalletNames)})`;
-  const parameters = [MFL_WALLET_ADDRESS, ...excludedWalletNames];
+  const excludedWalletNamePlaceholders = placeholders(excludedWalletNames);
+  const excludedSql = `
+    lower(coalesce(wallet_address, '')) <> lower(?)
+    AND lower(coalesce(wallet_address, '')) NOT IN (
+      SELECT lower(wallet_address)
+      FROM wallets
+      WHERE coalesce(wallet_address, '') <> ''
+        AND normalize_wallet_name(name) IN (${excludedWalletNamePlaceholders})
+    )
+    AND normalize_wallet_name(wallet_name) NOT IN (${excludedWalletNamePlaceholders})
+  `;
+  const parameters = [
+    MFL_WALLET_ADDRESS,
+    ...excludedWalletNames,
+    ...excludedWalletNames,
+  ];
   const overallSql = `CASE
     WHEN upper(trim(CASE WHEN instr(positions, ',') > 0 THEN substr(positions, 1, instr(positions, ',') - 1) ELSE positions END)) = 'GK'
       THEN CAST(goalkeeping AS INTEGER)
@@ -338,7 +322,7 @@ function databaseStatsData() {
   const totals = queryOne(
     `SELECT
        count(*) AS totalPlayers,
-       sum(CASE WHEN coalesce(retirement_years, -1) <> 0 THEN 1 ELSE 0 END) AS totalActivePlayers
+       sum(CASE WHEN coalesce(CAST(retirement_years AS INTEGER), -1) <> 0 THEN 1 ELSE 0 END) AS totalActivePlayers
      FROM players
      WHERE ${excludedSql} AND ${overallSql} IS NOT NULL`,
     parameters,
@@ -356,7 +340,7 @@ function databaseStatsData() {
       row.retirement_years,
       Number(row.count),
     ]),
-    source: "sqlite-runtime",
+    source: "sqlite-runtime-live-stats",
   };
 }
 

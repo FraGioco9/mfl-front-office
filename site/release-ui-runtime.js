@@ -9,6 +9,19 @@
   let observer = null;
   let interval = 0;
 
+  function installFirstPaintGuards() {
+    if (document.getElementById("mflReleaseFirstPaintGuards")) return;
+    const style = document.createElement("style");
+    style.id = "mflReleaseFirstPaintGuards";
+    style.textContent = `
+      html[data-stored-progression-access="true"] #homeOptInButton,
+      html[data-stored-progression-access="true"] #myPlayersOptInButton {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function setImportant(element, property, value) {
     if (!(element instanceof HTMLElement)) return;
     if (element.style.getPropertyValue(property) === value
@@ -111,6 +124,7 @@
 
   function sync() {
     frame = 0;
+    installFirstPaintGuards();
     syncFooter();
     syncSelectionBar();
     syncToasts();
@@ -122,6 +136,7 @@
     frame = requestAnimationFrame(sync);
   }
 
+  installFirstPaintGuards();
   observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
     childList: true,
@@ -145,6 +160,7 @@
     window.removeEventListener("popstate", schedule);
     document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
     document.documentElement.style.removeProperty("--mfl-toast-bottom");
+    document.getElementById("mflReleaseFirstPaintGuards")?.remove();
   }
 
   window.__mflReleaseUiRuntime = { version: VERSION, sync: schedule, destroy };
