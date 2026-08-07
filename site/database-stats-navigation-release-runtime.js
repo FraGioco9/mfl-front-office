@@ -51,6 +51,7 @@
   }
 
   installGuard();
+  restoreRoute();
 
   window[RUNTIME_KEY] = {
     version: VERSION,
