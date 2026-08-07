@@ -30,8 +30,11 @@ test("an already opted-in user never sees the home Opt In button on refresh", as
     const wallet = "0x1234";
     globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
     globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      type: "user-signature",
       address: wallet,
-      message: "proof",
+      signingAddress: wallet,
+      message: "MFL Front Office Dapper Opt-In",
+      appIdentifier: "MFL Front Office Dapper Opt-In",
       signatures: ["signature"],
     }));
     globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({ allowed: true }));
@@ -206,6 +209,7 @@ test("Database Stats custom bars animate only when Apply is clicked", async ({ p
   await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
 
   await page.getByRole("button", { name: "Custom", exact: true }).click();
+  await expect(page.locator("#databaseStatsCustomFilter")).toBeVisible();
   await page.locator("#databaseStatsCustomMin").fill("75");
   await page.locator("#databaseStatsCustomMax").fill("90");
   await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
