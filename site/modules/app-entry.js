@@ -1,9 +1,8 @@
 // @ts-check
 
-import { prepareCoreRuntimeSource } from "./core-runtime.js";
 import { installApiFetchPolicy } from "./http.js";
 import { loadRelease } from "./release.js";
-import { loadPreparedClassicScript, loadScriptGroup } from "./runtime-loader.js";
+import { loadClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
@@ -48,11 +47,7 @@ async function start() {
 
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
-  await loadPreparedClassicScript(
-    "/modules/legacy-core.js",
-    release.version,
-    prepareCoreRuntimeSource,
-  );
+  await loadClassicScript("/modules/legacy-core.js", release.version);
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
 
   document.documentElement.dataset.mflReady = "true";
