@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "/home/runner/work/mfl-front-office/mfl-front-office/audit_site.py", line 215, in <module>
-    exec(compile(source, str(CORE), "exec"), globals(), globals())
-  File "/home/runner/work/mfl-front-office/mfl-front-office/final_cleanup_core.py", line 223, in <module>
-    shell,
-        ^^^
-RuntimeError: Legacy app token remains after cleanup: flushPostLoadingToast

@@ -67,9 +67,6 @@ body.walletOptingIn::before {
   cursor: wait;
 }
 
-@media (prefers-reduced-motion: reduce) {
-}
-
 button,
 input,
 select {
@@ -5932,27 +5929,6 @@ body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) t
 
 .playerSearchClearButton[hidden] {
   display: none !important;
-}
-
-html.appBusy,
-html.appBusy *,
-body.appBusy,
-body.appBusy * {
-  cursor: wait !important;
-}
-
-body.appBusy::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2147483646;
-  background: transparent;
-  cursor: wait;
-  pointer-events: auto;
-}
-
-body.appBusy .toastMessage {
-  visibility: hidden !important;
 }
 
 /* v1.117.3 - Layer Evaluation search results above page content without changing overflow */

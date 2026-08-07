@@ -7,7 +7,7 @@
   const SOURCE_URL = assetUrl("changelog-history-source-v1.120.3.js");
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
-    ["v1.122.0", "Remove the legacy loading and JSON compatibility systems"],
+    ["v1.122.0", "Remove legacy loading, JSON compatibility, and dead runtime code"],
     ["v1.121.0", "Query the runtime SQLite database for every site data request"],
     ["v1.120.48", "Preload MFL Stats filters and restrict Database Stats transitions to Apply"],
     ["v1.120.47", "Select MFL immediately and limit Stats bar transitions to final or applied renders"],

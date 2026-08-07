@@ -28,7 +28,6 @@ const state = {
   pendingWatchlistChoiceAction: "",
   pendingWatchlistChoicePlayerIds: [],
   pendingAddWatchlistContext: "",
-  pendingPostLoadingToast: "",
   playerNotes: {},
   settingsReceiveEmailsFor: [],
   settingsEmailAddress: "",
@@ -54,7 +53,6 @@ const state = {
   incrementalLastLoadedAt: 0,
   incrementalPayloadCache: new Map(),
   incrementalRequestPromises: new Map(),
-  interactionBusyDepth: 0,
   recentSearchItems: [],
   recentSearchPlayerIds: [],
   recentSearchAgentWallets: [],
@@ -589,43 +587,6 @@ function loadTheme() {
   applyTheme(savedTheme || "dark");
 }
 
-function syncInteractionBusyState() {
-  const busy = state.interactionBusyDepth > 0;
-  document.documentElement.classList.toggle("appBusy", busy);
-  document.body.classList.toggle("appBusy", busy);
-  document.body.setAttribute("aria-busy", String(busy));
-  Array.from(document.body.children).forEach((element) => {
-    if (element instanceof HTMLElement) element.inert = busy;
-  });
-}
-
-function beginInteractionBusy() {
-  state.interactionBusyDepth += 1;
-  hideToast();
-  syncInteractionBusyState();
-}
-
-function endInteractionBusy(options = {}) {
-  state.interactionBusyDepth = options.reset
-    ? 0
-    : Math.max(0, state.interactionBusyDepth - 1);
-  syncInteractionBusyState();
-  if (state.interactionBusyDepth === 0) {
-    flushPostLoadingToast();
-  }
-}
-
-function blockInteractionWhileBusy(event) {
-  if (state.interactionBusyDepth <= 0) {
-    return;
-  }
-  event.preventDefault();
-  event.stopImmediatePropagation();
-}
-
-["pointerdown", "mousedown", "click", "auxclick", "dblclick", "contextmenu"].forEach((eventName) => {
-  document.addEventListener(eventName, blockInteractionWhileBusy, true);
-});
 
 async function showUnauthorizedProgressionRedirect() {
   showToast("Not authorised.");
@@ -633,9 +594,6 @@ async function showUnauthorizedProgressionRedirect() {
   return setPage("home", false);
 }
 
-function revealAppShell() {
-  document.body.classList.remove("booting");
-}
 
 function hasWalletProof() {
   const proof = state.linkedWalletProof;
@@ -676,11 +634,6 @@ function updateMenuVisibility() {
   menuButton.setAttribute("aria-expanded", String(showMenu && state.menuOpen));
 }
 
-function hideHomeLoginButton() {
-  if (homeOptInButton) {
-    homeOptInButton.hidden = true;
-  }
-}
 
 function syncHomeLoginButton() {
   const walletLinked = Boolean(state.linkedWalletAddress && hasWalletProof());
@@ -726,7 +679,6 @@ async function showHomeShell(pageName = "home", updateUrl = true, options = {}) 
   const result = await setPage(pageName, updateUrl, options);
   syncHomeLoginButton();
   updateMenuVisibility();
-  revealAppShell();
   return result;
 }
 
@@ -901,10 +853,6 @@ async function loadWalletPermissions(options = {}) {
   };
 }
 function currentDataAccess(pageName = state.currentPage) {
-  if (arguments.length === 0 && state.dataAccessOverride) {
-    return state.dataAccessOverride;
-  }
-
   if (pageName === "mfl" || pageName === "mflstats") {
     return "mfl";
   }
@@ -2335,8 +2283,6 @@ async function openSavedEvaluationsModal() {
 
   showModal(evaluationLoadModal);
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
-  beginInteractionBusy();
-
   try {
     const response = await fetch("/api/evaluation-save", {
       cache: "no-store",
@@ -2371,8 +2317,6 @@ async function openSavedEvaluationsModal() {
     message.className = "evaluationLoadEmpty";
     message.textContent = error?.message || "Could not load saved evaluations.";
     evaluationLoadList.appendChild(message);
-  } finally {
-    endInteractionBusy();
   }
 }
 
@@ -2714,37 +2658,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
-  const targetDataAccess = currentDataAccess(pageName);
-  const needsPageData = pageRequiresData(pageName);
-  const shouldShowNavigationLoading = needsPageData
-    && shouldResetScroll
-    && !options.skipNavigationLoading
-    && (tablePage || mflStatsActive || playerPageActive || evaluationPageActive)
-    && (tablePage || mflStatsActive || !state.dataLoaded || state.dataAccess !== targetDataAccess);
-
-  if (shouldShowNavigationLoading || (needsPageData && (!state.dataLoaded || state.dataAccess !== targetDataAccess))) {
-    showLoading();
-    await paintLoadingProgress();
-  }
-
   const previousTablePage = tablePageKey();
   if (previousTablePage) {
     state.tablePageStates[previousTablePage] = currentTablePageState();
     saveTableState();
   }
 
-  if (state.dataLoaded && state.dataAccess && state.dataAccess !== targetDataAccess && needsPageData) {
-    captureCurrentDataSnapshot();
-    state.dataLoaded = restoreDataSnapshot(targetDataAccess);
-    if (!state.dataLoaded) {
-      state.dataLoadPromise = null;
-    }
-  }
-
-  if (pageRequiresFullData(pageName) && state.dataAccess !== targetDataAccess) {
-    captureCurrentDataSnapshot();
-    state.dataLoaded = restoreDataSnapshot(targetDataAccess);
-  }
 
   if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
@@ -2764,7 +2683,6 @@ async function setPage(pageName, updateHash = true, options = {}) {
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === pageName);
     });
-    revealAppShell();
 
     const loaded = await ensureProgressionData();
 
@@ -3079,13 +2997,6 @@ function hideToast() {
 }
 
 function showToast(message, options = {}) {
-  if (document.body.classList.contains("loading") || !loadingScreen.hidden) {
-    state.pendingPostLoadingToast = message instanceof Node
-      ? String(message.textContent || "").trim()
-      : String(message || "").trim();
-    return;
-  }
-
   let toast = document.querySelector("#toastMessage");
 
   if (!toast) {
@@ -4033,22 +3944,6 @@ function showGenericToast(message) {
   showToast(message);
 }
 
-function flushPostLoadingToast() {
-  const message = state.pendingPostLoadingToast;
-  state.pendingPostLoadingToast = "";
-  if (message) {
-    showGenericToast(message);
-  }
-}
-
-function showToastAfterLoading(message) {
-  if (document.body.classList.contains("appBusy") || document.body.classList.contains("loading") || !loadingScreen.hidden) {
-    state.pendingPostLoadingToast = message;
-    return;
-  }
-
-  showGenericToast(message);
-}
 
 function updateWatchlistUrl(replace = false, force = false) {
   if ((!force && state.currentPage !== "watchlist") || !state.currentWatchlistId) {
@@ -4079,7 +3974,7 @@ async function ensureWatchlistRoute(options = {}) {
     state.currentWatchlistId = firstWatchlist?.id || "";
     setActiveWatchlistIds(firstWatchlist?.playerIds || []);
     renderWatchlistSwitcher();
-    showToastAfterLoading("Watchlist not found.");
+    showToast("Watchlist not found.");
     updateWatchlistUrl(true, true);
     return;
   }
@@ -6787,7 +6682,7 @@ function renderEvaluationSearchResults() {
           await withInteractionBusy(loadAndRender);
         }
       } catch (error) {
-        showToastAfterLoading(error?.message || "Could not load this player.");
+        showToast(error?.message || "Could not load this player.");
       }
     });
     evaluationSearchResults.appendChild(button);
@@ -9777,7 +9672,6 @@ function applyIncrementalPayload(route, payload) {
   state.tableSourceRowsCount = state.incrementalSourceRows;
   state.dataAccess = route.access;
   state.dataLoaded = true;
-  state.dataLoadPromise = null;
   clearRowSortCache();
   if (payload.generatedAt) {
     updateStatusDate(payload.generatedAt);
@@ -9870,7 +9764,7 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
       }
       return true;
     } catch (error) {
-      showToastAfterLoading(error?.message || "Could not load this page.");
+      showToast(error?.message || "Could not load this page.");
       return false;
     }
   };
@@ -10511,7 +10405,6 @@ async function startApp() {
   renderEvaluationMflPerUsdControl(false);
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
-  revealAppShell();
   showAppShell();
   void ensureFlowWallet();
   await Promise.allSettled([loadSummary(), loadWalletPreferences()]);
@@ -10526,91 +10419,12 @@ async function startApp() {
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
 
-  const recoveredChangelog = [];
-
-  function normalizePatchText(entry, label, description) {
-    const version = entry.querySelector("span");
-    const text = entry.querySelector("p");
-    if (version && text) {
-      version.textContent = label;
-      text.textContent = description;
-    } else {
-      entry.innerHTML = `<span>${label}</span><p>${description}</p>`;
-    }
-  }
-
-  function updatePatchCount(section, count) {
-    if (!section) return;
-    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (/\d+\s+patch(?:es)?/i.test(node.nodeValue || "")) {
-        node.nodeValue = node.nodeValue.replace(/\d+\s+patch(?:es)?/i, `${count} patches`);
-        return;
-      }
-    }
-  }
-
-  function syncChangelog() {
-    if (!recoveredChangelog.length) return true;
-    const changelog = document.querySelector(".changelogList");
-    if (!changelog) return false;
-
-    const looseRecentEntries = Array.from(changelog.children).filter((entry) => {
-      const version = entry.querySelector(":scope > span")?.textContent?.trim();
-      return recoveredChangelog.some(([number]) => version === `v${number}`);
-    });
-    looseRecentEntries.forEach((entry) => entry.remove());
-
-    const referenceVersion = Array.from(changelog.querySelectorAll("li span"))
-      .find((item) => item.textContent.trim() === "v1.149.67");
-    const referenceEntry = referenceVersion?.closest("li");
-    if (!referenceEntry) return false;
-
-    const patchList = referenceEntry.parentElement;
-    if (!patchList) return false;
-
-    recoveredChangelog.slice().reverse().forEach(([version, description]) => {
-      const label = `v${version}`;
-      let entry = Array.from(patchList.children).find(
-        (item) => item.querySelector("span")?.textContent?.trim() === label
-      );
-      if (!entry) {
-        entry = referenceEntry.cloneNode(true);
-        patchList.insertBefore(entry, patchList.firstElementChild || referenceEntry);
-      }
-      normalizePatchText(entry, label, description);
-    });
-
-    Array.from(patchList.querySelectorAll(":scope > li")).forEach((entry) => {
-      const version = entry.querySelector("span");
-      const description = entry.querySelector("p");
-      if (!version || !description) return;
-      version.textContent = version.textContent.trim();
-      description.textContent = description.textContent.trim().replace(/\s+/g, " ");
-    });
-
-    const section = patchList.closest("details, .changelogVersion, .changelogGroup, li, section, div");
-    updatePatchCount(section, patchList.querySelectorAll(":scope > li").length);
-    return true;
-  }
-
-  function scheduleChangelogSync() {
-    if (syncChangelog()) return;
-    let attempts = 0;
-    const timer = window.setInterval(() => {
-      attempts += 1;
-      if (syncChangelog() || attempts >= 20) window.clearInterval(timer);
-    }, 50);
-  }
-
   function syncVisibleVersion() {
     const footerLink = document.querySelector('.siteFooter a[href="/changelog"]');
     if (footerLink) footerLink.textContent = `MFL Front Office v${currentVersion}`;
     document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
       element.textContent = `v${currentVersion}`;
     });
-    scheduleChangelogSync();
   }
 
   const style = document.createElement("style");
@@ -10642,55 +10456,15 @@ async function startApp() {
 
   if (typeof renderPlayerPage === "function") {
     const originalRenderPlayerPage = renderPlayerPage;
-    renderPlayerPage = function fixedRenderPlayerPage(playerId) {
-      const id = String(playerId || "");
-      const row = typeof rowByPlayerId === "function" ? rowByPlayerId(id) : null;
-      const dataIsChanging = Boolean(state.dataLoadPromise) || !state.dataLoaded || !state.rows.length;
-
-      if (!row && dataIsChanging) {
-        if (playerDetail) playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
-        Promise.resolve(state.dataLoadPromise).finally(() => {
-          if (state.currentPage !== "player") return;
-          originalRenderPlayerPage(id);
-          const input = playerDetail?.querySelector("#playerNotesInput");
-          if (input) {
-            input.maxLength = maxNoteLength;
-            input.value = input.value.slice(0, maxNoteLength);
-            updatePlayerNoteCount(input);
-          }
-        });
-        return;
-      }
-
-      originalRenderPlayerPage(id);
+    renderPlayerPage = function renderPlayerPageWithNoteLimit(playerId) {
+      const result = originalRenderPlayerPage.apply(this, arguments);
       const input = playerDetail?.querySelector("#playerNotesInput");
       if (input) {
         input.maxLength = maxNoteLength;
         input.value = input.value.slice(0, maxNoteLength);
         updatePlayerNoteCount(input);
       }
-    };
-  }
-
-  if (typeof currentDataAccess === "function") {
-    const originalCurrentDataAccess = currentDataAccess;
-    currentDataAccess = function fixedCurrentDataAccess(pageName = state.currentPage) {
-      if (pageName === "player") {
-        return typeof hasProgressionAccess === "function" && hasProgressionAccess() ? "full" : "public";
-      }
-      return originalCurrentDataAccess.apply(this, arguments);
-    };
-  }
-
-  if (typeof setPage === "function") {
-    const originalSetPage = setPage;
-    setPage = async function fixedSetPage(pageName, updateHash = true, options = {}) {
-      if (pageName === "player" && state.dataAccess === "owned" && !(typeof hasProgressionAccess === "function" && hasProgressionAccess())) {
-        if (typeof captureCurrentDataSnapshot === "function") captureCurrentDataSnapshot();
-        state.dataLoaded = false;
-        state.dataLoadPromise = null;
-      }
-      return originalSetPage.call(this, pageName, updateHash, options);
+      return result;
     };
   }
 
@@ -10951,8 +10725,6 @@ async function startApp() {
     };
   }
 
-  function applyPercentageTableColumnWidths() {}
-
   function routeViewFromPath() {
     const match = window.location.pathname.match(/^\/watchlist\/[^/]+\/(attributes|next-overall|contracts|current-season|all-time)\/?$/i);
     if (!match) return "";
@@ -11014,7 +10786,6 @@ async function startApp() {
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
       if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);
-      applyPercentageTableColumnWidths();
       return result;
     };
   }
@@ -11060,12 +10831,10 @@ async function startApp() {
 
   keepSidebarExpanded();
   renamePatch();
-  requestAnimationFrame(applyPercentageTableColumnWidths);
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
     renamePatch();
-    requestAnimationFrame(applyPercentageTableColumnWidths);
-  }, { once: true });
+    }, { once: true });
 })();
 
 /* Consolidated from v14974-agent-views-fix.js */
@@ -11413,21 +11182,8 @@ async function startApp() {
     return String(getValue(a, "name") || "").localeCompare(String(getValue(b, "name") || ""));
   }
 
-  function setClubSwitching(active, options = {}) {
-    const showLoadingScreen = active && options.showLoading !== false;
+  function setClubSwitching(active) {
     document.body.classList.toggle("clubViewSwitching", active);
-    document.body.classList.toggle("clubViewLoading", showLoadingScreen);
-
-    if (showLoadingScreen && typeof loadingScreen !== "undefined" && loadingScreen) {
-      hideToast();
-      loadingScreen.hidden = false;
-      loadingScreen.classList.remove("failed", "complete", "leaving");
-    }
-
-    if (!active) {
-      
-    }
-
     if (active) {
       document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
     }
@@ -11444,21 +11200,7 @@ async function startApp() {
           if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
           applyClubPresentation();
           document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
-
-          const shouldHideLoading = Boolean(
-            typeof loadingScreen !== "undefined"
-            && loadingScreen
-            && !loadingScreen.hidden
-            && document.body.classList.contains("clubViewLoading")
-          );
-          setClubSwitching(false, { showLoading: false });
-
-          if (shouldHideLoading && loadingScreen) {
-            loadingScreen.hidden = true;
-            loadingScreen.classList.remove("complete", "leaving");
-            flushPostLoadingToast();
-          }
-
+          setClubSwitching(false);
           resolve();
         });
       });
@@ -11729,7 +11471,7 @@ async function startApp() {
     state.sortKey = "positions";
     state.sortDirection = "asc";
     if (restoreCachedClubView(nextView)) return;
-    setClubSwitching(true, { showLoading: false });
+    setClubSwitching(true);
     if (typeof updateViewButtons === "function") updateViewButtons();
     void (async () => {
       try {
@@ -12498,7 +12240,6 @@ async function startApp() {
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === pageName);
     });
-    revealAppShell();
     syncHomeLoginButton();
   }
 
@@ -12552,7 +12293,6 @@ async function startApp() {
       evaluationSearchResults.hidden = true;
     }
 
-    revealAppShell();
     syncHomeLoginButton();
   }
 
@@ -12616,7 +12356,7 @@ async function startApp() {
           state.incrementalApplying = false;
         }
       } catch (error) {
-        showToastAfterLoading(error?.message || "Could not load this view.");
+        showToast(error?.message || "Could not load this view.");
       }
     };
 
@@ -12668,7 +12408,7 @@ async function startApp() {
         }
         return result;
       } catch (error) {
-        showToastAfterLoading(error?.message || "Could not load this page.");
+        showToast(error?.message || "Could not load this page.");
         return;
       }
     };
@@ -12861,7 +12601,7 @@ startApp();
   });
 })();
 ;(() => {
-  const RELEASE_VERSION = "1.121.0";
+  const RELEASE_VERSION = "1.122.0";
 
   function contractClubId(playerId, teamName) {
     try {
@@ -12952,10 +12692,10 @@ startApp();
     void Promise.resolve(setPage("home", true));
   }, true);
 })();
-//# sourceURL=mfl-front-office-app-v1.121.0.js
+//# sourceURL=mfl-front-office-app-v1.122.0.js
 
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.38");
+  const VERSION = String(window.__mflReleaseVersion || "1.122.0");
 
   window.__mflEvaluationRouteStability?.destroy?.();
 
@@ -12995,15 +12735,10 @@ startApp();
   function routeBusy() {
     try {
       return Boolean(
-        document.documentElement.classList.contains("appBusy")
-        || document.body?.classList.contains("appBusy")
-        || Number(state?.interactionBusyDepth || 0) > 0
-        || state?.incrementalApplying
-        || state?.dataLoadPromise,
+        state?.incrementalApplying
       );
     } catch {
-      return document.documentElement.classList.contains("appBusy")
-        || Boolean(document.body?.classList.contains("appBusy"));
+      return false;
     }
   }
 
@@ -13143,7 +12878,6 @@ startApp();
   style.textContent = `
     html.bootPending body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
     html.mflInitialChromePreparing body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"].appBusy #evaluationPage .evaluationSearchGroup,
     body[data-page="evaluation"].evaluationRouteLoading #evaluationPage .evaluationSearchGroup {
       visibility: hidden !important;
       opacity: 0 !important;
@@ -13181,231 +12915,4 @@ startApp();
   sync();
 })();
 
-//# sourceURL=mfl-evaluation-route-stability-v1.121.0.js
-
-(() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.38");
-
-  window.__mflEvaluationRouteStability?.destroy?.();
-
-  let destroyed = false;
-  let frame = 0;
-  let interval = 0;
-  let observer = null;
-  let originalRender = null;
-  let guardedRender = null;
-  let recoveryPromise = null;
-  let renderedPlayerId = "";
-
-  function evaluationRouteActive() {
-    return String(location.pathname || "").replace(/\/+$/, "") === "/evaluation";
-  }
-
-  function selectedPlayerId() {
-    if (!evaluationRouteActive()) return "";
-    const urlId = String(new URLSearchParams(location.search).get("player") || "").trim();
-    if (urlId) return urlId;
-    try {
-      return String(state?.evaluationPlayerId || "").trim();
-    } catch {
-      return "";
-    }
-  }
-
-  function selectedRow(playerId = selectedPlayerId()) {
-    if (!playerId) return null;
-    try {
-      return typeof rowByPlayerId === "function" ? rowByPlayerId(playerId) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function routeBusy() {
-    try {
-      return Boolean(
-        document.documentElement.classList.contains("appBusy")
-        || document.body?.classList.contains("appBusy")
-        || Number(state?.interactionBusyDepth || 0) > 0
-        || state?.incrementalApplying
-        || state?.dataLoadPromise,
-      );
-    } catch {
-      return document.documentElement.classList.contains("appBusy")
-        || Boolean(document.body?.classList.contains("appBusy"));
-    }
-  }
-
-  function showEvaluationPage() {
-    const page = document.getElementById("evaluationPage");
-    if (!(page instanceof HTMLElement)) return;
-    document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
-    });
-    page.hidden = false;
-    document.body.dataset.page = "evaluation";
-    document.querySelectorAll(".navButton[data-page]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === "evaluation");
-    });
-  }
-
-  function preserveLoadingSelection(playerId) {
-    if (!playerId) return;
-    try {
-      state.evaluationPlayerId = playerId;
-    } catch {}
-    showEvaluationPage();
-    const panel = document.getElementById("evaluationPanel");
-    if (panel instanceof HTMLElement) panel.hidden = true;
-    const results = document.getElementById("evaluationSearchResults");
-    if (results instanceof HTMLElement) results.hidden = true;
-    document.body.classList.add("evaluationRouteLoading");
-  }
-
-  function finishLoadingSelection() {
-    document.body?.classList.remove("evaluationRouteLoading");
-  }
-
-  function installRenderGuard() {
-    let candidate = null;
-    try {
-      candidate = renderEvaluationPage;
-    } catch {}
-
-    if (candidate === guardedRender && guardedRender) return true;
-    if (typeof candidate !== "function") return false;
-
-    originalRender = candidate;
-    guardedRender = async function renderStableEvaluationPage() {
-      const playerId = selectedPlayerId();
-      if (evaluationRouteActive() && playerId && !selectedRow(playerId)) {
-        preserveLoadingSelection(playerId);
-        schedule();
-        return false;
-      }
-
-      const result = await originalRender.apply(this, arguments);
-      if (evaluationRouteActive()) {
-        const currentId = selectedPlayerId();
-        if (!currentId || selectedRow(currentId)) {
-          renderedPlayerId = currentId;
-          finishLoadingSelection();
-        }
-      }
-      return result;
-    };
-
-    window.__mflStableEvaluationRender = guardedRender;
-    try { window.renderEvaluationPage = guardedRender; } catch {}
-    try { window.eval("renderEvaluationPage = window.__mflStableEvaluationRender"); } catch {}
-    return true;
-  }
-
-  function recoverSelectedPlayer(playerId) {
-    if (!playerId || recoveryPromise || routeBusy()) return recoveryPromise;
-    if (selectedRow(playerId)) return Promise.resolve(true);
-
-    let route = null;
-    try {
-      route = typeof incrementalRouteTarget === "function"
-        ? incrementalRouteTarget("evaluation", { playerId })
-        : null;
-    } catch {}
-    if (!route || route.scope === "empty" || typeof requestIncrementalRoute !== "function") {
-      return Promise.resolve(false);
-    }
-
-    preserveLoadingSelection(playerId);
-    recoveryPromise = Promise.resolve(requestIncrementalRoute(route, 1, { force: true }))
-      .then(async () => {
-        try { state.evaluationPlayerId = playerId; } catch {}
-        if (!evaluationRouteActive() || !selectedRow(playerId)) return false;
-        if (guardedRender) await guardedRender();
-        return true;
-      })
-      .catch((error) => {
-        console.error("Could not recover the Evaluation player.", error);
-        return false;
-      })
-      .finally(() => {
-        recoveryPromise = null;
-        schedule();
-      });
-    return recoveryPromise;
-  }
-
-  function sync() {
-    frame = 0;
-    if (destroyed) return;
-    installRenderGuard();
-    if (!evaluationRouteActive()) {
-      renderedPlayerId = "";
-      finishLoadingSelection();
-      return;
-    }
-
-    showEvaluationPage();
-    const playerId = selectedPlayerId();
-    if (!playerId) {
-      finishLoadingSelection();
-      return;
-    }
-
-    if (!selectedRow(playerId)) {
-      preserveLoadingSelection(playerId);
-      if (!routeBusy()) void recoverSelectedPlayer(playerId);
-      return;
-    }
-
-    finishLoadingSelection();
-    if (!routeBusy() && guardedRender && renderedPlayerId !== playerId) {
-      void guardedRender();
-    }
-  }
-
-  function schedule() {
-    if (!destroyed && !frame) frame = requestAnimationFrame(sync);
-  }
-
-  const style = document.createElement("style");
-  style.id = "evaluationRouteStabilityStyles";
-  style.textContent = `
-    html.bootPending body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    html.mflInitialChromePreparing body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"].appBusy #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"].evaluationRouteLoading #evaluationPage .evaluationSearchGroup {
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "data-page", "hidden"],
-  });
-  interval = window.setInterval(schedule, 200);
-  window.addEventListener("popstate", schedule);
-
-  function destroy() {
-    destroyed = true;
-    if (frame) cancelAnimationFrame(frame);
-    if (interval) clearInterval(interval);
-    observer?.disconnect();
-    window.removeEventListener("popstate", schedule);
-    finishLoadingSelection();
-    style.remove();
-  }
-
-  window.__mflEvaluationRouteStability = {
-    version: VERSION,
-    sync: schedule,
-    destroy,
-  };
-
-  sync();
-})();
+//# sourceURL=mfl-evaluation-route-stability-v1.122.0.js
