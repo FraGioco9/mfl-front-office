@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.6";
+  const STATIC_RELEASE_VERSION = "1.123.7";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -181,7 +181,14 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
-    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute"]);
+    const DATA_LOADING_FUNCTIONS = new Set([
+      "ensureProgressionData",
+      "requestIncrementalRoute",
+      "reloadIncrementalPage",
+      "setView",
+      "setPage",
+    ]);
+    const DATA_LOADING_REASONS = new Set(["startup", "data-loading", ...DATA_LOADING_FUNCTIONS]);
     const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
     const activeTokens = new Map();
     let tokenSequence = 0;
@@ -251,19 +258,32 @@
     /** @type {(callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>} */
     const wrapBusyFunction = (callback, reason) => (...args) => run(() => callback(...args), reason);
 
+    function wrapGlobalFunction(name) {
+      try {
+        window.eval(`(() => {
+          if (typeof ${name} !== "function" || ${name}.__mflInteractionBusyWrapped) return;
+          const original = ${name};
+          const wrapped = window.__mflWrapInteractionBusyFunction(original, ${JSON.stringify(name)});
+          Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+          ${name} = wrapped;
+        })()`);
+      } catch {
+        // Some optional functions are not present on every route/build.
+      }
+    }
+
     function installLegacyBridge() {
-      runtimeWindow.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
+      runtimeWindow.__mflWithInteractionBusy = (callback) => run(callback, "data-loading");
       runtimeWindow.__mflWrapInteractionBusyFunction = wrapBusyFunction;
 
       try {
         window.eval("withInteractionBusy = window.__mflWithInteractionBusy");
       } catch {
-        // The app still works if a future core stops exposing this global binding.
+        // Direct data entry points below still enforce the lock if this binding cannot be reassigned.
       }
 
+      DATA_LOADING_FUNCTIONS.forEach(wrapGlobalFunction);
       [
-        "ensureProgressionData",
-        "requestIncrementalRoute",
         "loadSharedEvaluation",
         "loadSavedEvaluation",
         "openSavedEvaluationsModal",
@@ -271,19 +291,7 @@
         "createSharedEvaluation",
         "createSavedEvaluation",
         "linkWallet",
-      ].forEach((name) => {
-        try {
-          window.eval(`(() => {
-            if (typeof ${name} !== "function" || ${name}.__mflInteractionBusyWrapped) return;
-            const original = ${name};
-            const wrapped = window.__mflWrapInteractionBusyFunction(original, ${JSON.stringify(name)});
-            Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
-            ${name} = wrapped;
-          })()`);
-        } catch {
-          // Some optional functions are not present on every route/build.
-        }
-      });
+      ].forEach(wrapGlobalFunction);
     }
 
     return Object.freeze({
