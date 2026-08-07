@@ -15,9 +15,6 @@
 
   window.__mflDatabaseStatsRuntime?.destroy?.();
 
-  const originalPushState = history.pushState.bind(history);
-  const originalReplaceState = history.replaceState.bind(history);
-  let routeGuardActive = DATABASE_STATS_PATH.test(location.pathname);
   let page = null;
   let pageCreatedByRuntime = false;
   let data = null;
@@ -26,13 +23,8 @@
   let customMin = 0;
   let customMax = 99;
   let distributionMode = "overall";
-  let scheduledFrame = 0;
-  let observer = null;
-  let observedRoot = null;
-  let boundDocument = null;
-  let interval = 0;
-  let destroyed = false;
   let dataBusyToken = "";
+  let destroyed = false;
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
@@ -41,30 +33,6 @@
   function isDatabaseTablePath(pathname = location.pathname) {
     return DATABASE_PATH.test(String(pathname || "")) && !isStatsPath(pathname);
   }
-
-  function asUrl(value) {
-    try {
-      return new URL(value == null ? location.href : value, location.origin);
-    } catch {
-      return new URL(location.href);
-    }
-  }
-
-  function guardedHistory(method, stateValue, title, value) {
-    const next = asUrl(value);
-    if (routeGuardActive && DATABASE_PATH.test(next.pathname) && !isStatsPath(next.pathname)) {
-      const result = originalReplaceState(stateValue, title, "/database/stats");
-      schedule();
-      return result;
-    }
-    const result = method(stateValue, title, value);
-    routeGuardActive = isStatsPath(next.pathname);
-    schedule();
-    return result;
-  }
-
-  history.pushState = (stateValue, title, value) => guardedHistory(originalPushState, stateValue, title, value);
-  history.replaceState = (stateValue, title, value) => guardedHistory(originalReplaceState, stateValue, title, value);
 
   function formatCount(value) {
     return new Intl.NumberFormat("en-US").format(Number(value || 0));
@@ -136,14 +104,14 @@
 
     page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
     page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
-    page.querySelector('[data-view="stats"]')?.addEventListener("click", () => showStatsPage(true));
+    page.querySelector('[data-view="stats"]')?.addEventListener("click", () => void showStatsPage(true));
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
         distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
         renderDistribution();
       });
     });
-    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", () => applyCustomFilter());
+    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", applyCustomFilter);
     page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") applyCustomFilter();
@@ -172,7 +140,6 @@
           <button class="viewButton" type="button" data-view="contracts">Contracts</button>
           <button class="viewButton active" type="button" data-view="stats">Stats</button>
         </section>
-
         <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
           <span>Overall Filters</span>
           <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">
@@ -191,7 +158,6 @@
             <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
           </div>
         </section>
-
         <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
           <article><span>Total active players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
           <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
@@ -199,7 +165,6 @@
           <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
           <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
         </section>
-
         <section class="mflStatsDistribution" aria-label="Active players distribution">
           <div class="mflStatsDistributionHeader">
             <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
@@ -220,7 +185,7 @@
   }
 
   function setNavigationActive() {
-    document.querySelectorAll(".navButton[data-page]").forEach((button) => {
+    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       button.classList.toggle("active", button.dataset.page === "database");
     });
   }
@@ -230,13 +195,10 @@
     if (!target) return false;
     installStyles();
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      const shouldHide = candidate !== target;
-      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
+      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== target;
     });
-    if (target.hidden) target.hidden = false;
-    if (document.body.dataset.page !== "databasestats") {
-      document.body.dataset.page = "databasestats";
-    }
+    target.hidden = false;
+    document.body.dataset.page = "databasestats";
     setNavigationActive();
     return true;
   }
@@ -277,10 +239,12 @@
   function applyCustomFilter() {
     const minInput = page?.querySelector("#databaseStatsCustomMin");
     const maxInput = page?.querySelector("#databaseStatsCustomMax");
-    let minimum = Math.max(0, Math.min(99, Math.trunc(Number(minInput?.value))));
-    let maximum = Math.max(0, Math.min(99, Math.trunc(Number(maxInput?.value))));
+    let minimum = Number(minInput?.value);
+    let maximum = Number(maxInput?.value);
     if (!Number.isFinite(minimum)) minimum = 0;
     if (!Number.isFinite(maximum)) maximum = 99;
+    minimum = Math.max(0, Math.min(99, Math.trunc(minimum)));
+    maximum = Math.max(0, Math.min(99, Math.trunc(maximum)));
     if (minimum > maximum) [minimum, maximum] = [maximum, minimum];
     customMin = minimum;
     customMax = maximum;
@@ -421,24 +385,21 @@
   }
 
   async function showStatsPage(updateUrl = false) {
-    routeGuardActive = true;
-    if (updateUrl && !isStatsPath()) {
-      originalPushState({}, "", "/database/stats");
-    } else if (!isStatsPath()) {
-      originalReplaceState(history.state, "", "/database/stats");
-    }
+    if (destroyed) return;
+    if (updateUrl && !isStatsPath()) history.pushState({}, "", "/database/stats");
+    else if (!isStatsPath()) history.replaceState(history.state, "", "/database/stats");
+
     showStatsShell();
     const distribution = page?.querySelector("#databaseStatsDistribution");
-    if (!data && distribution) {
-      distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
-    }
+    if (!data && distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
 
     try {
       if (!data) beginDataBusy();
       await loadData();
+      if (destroyed || !isStatsPath()) return;
       renderStats();
     } catch (error) {
-      if (distribution) {
+      if (distribution && isStatsPath()) {
         const message = document.createElement("p");
         message.className = "mflStatsEmpty";
         message.textContent = String(error?.message || "Could not load Database Stats.");
@@ -446,67 +407,37 @@
       }
     } finally {
       endDataBusy();
-      if (isStatsPath()) showStatsShell();
+      if (!destroyed && isStatsPath()) showStatsShell();
     }
   }
 
   function openDatabaseView(view) {
-    routeGuardActive = false;
     hideStatsPage();
+    endDataBusy();
     if (typeof setPage === "function") {
       void setPage("database", true, { view, skipNavigationLoading: true });
       return;
     }
-    originalPushState({}, "", `/database/${view}`);
+    history.pushState({}, "", `/database/${view}`);
     location.reload();
-  }
-
-  function sharedStatsButton() {
-    return document.querySelector('#progressionPage .views .viewButton[data-view="stats"]');
   }
 
   function syncDatabaseViewOrder() {
     const views = document.querySelector("#progressionPage .views");
-    const statsButton = sharedStatsButton();
+    const statsButton = views?.querySelector('.viewButton[data-view="stats"]');
     if (!views || !statsButton) return;
-
     if (isDatabaseTablePath()) {
       const contractsButton = views.querySelector('.viewButton[data-view="contracts"]');
-      if (contractsButton && contractsButton.nextElementSibling !== statsButton) {
-        contractsButton.after(statsButton);
-      }
-      if (statsButton.hidden) statsButton.hidden = false;
+      if (contractsButton && contractsButton.nextElementSibling !== statsButton) contractsButton.after(statsButton);
+      statsButton.hidden = false;
       statsButton.classList.remove("active");
-      return;
-    }
-
-    const attributesButton = views.querySelector('.viewButton[data-view="attributes"]');
-    if (attributesButton && attributesButton.nextElementSibling !== statsButton) {
-      attributesButton.after(statsButton);
     }
   }
 
   function shouldOpenStats(target) {
-    if (!(target instanceof Element) || !isDatabaseTablePath()) return false;
-    return Boolean(target.closest('#progressionPage .viewButton[data-view="stats"]'));
-  }
-
-  function releaseForNavigation(target) {
-    if (!(target instanceof Element)) return;
-    if (target.closest("#databaseStatsPage")) return;
-    if (shouldOpenStats(target)) return;
-
-    const link = target.closest("a[href]");
-    const pageButton = target.closest("[data-page]");
-    const viewButton = target.closest('#progressionPage .viewButton[data-view]');
-    if (!link && !pageButton && !viewButton) return;
-
-    const next = link ? asUrl(link.href) : null;
-    if (!next || !isStatsPath(next.pathname)) {
-      routeGuardActive = false;
-      hideStatsPage();
-      endDataBusy();
-    }
+    return target instanceof Element
+      && isDatabaseTablePath()
+      && Boolean(target.closest('#progressionPage .viewButton[data-view="stats"]'));
   }
 
   function onDocumentClick(event) {
@@ -518,79 +449,56 @@
       void showStatsPage(true);
       return;
     }
-    releaseForNavigation(target);
+    if (!target.closest("#databaseStatsPage") && target.closest("a[href], .navButton, [data-page], #progressionPage .viewButton[data-view]")) {
+      hideStatsPage();
+      endDataBusy();
+    }
   }
 
   function onDocumentPointerDown(event) {
-    releaseForNavigation(event.target);
-  }
-
-  function bindCurrentDocument() {
-    if (boundDocument === document) return;
-    if (boundDocument) {
-      boundDocument.removeEventListener("click", onDocumentClick, true);
-      boundDocument.removeEventListener("pointerdown", onDocumentPointerDown, true);
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || target.closest("#databaseStatsPage") || shouldOpenStats(target)) return;
+    if (target.closest("a[href], .navButton, [data-page], #progressionPage .viewButton[data-view]")) {
+      hideStatsPage();
+      endDataBusy();
     }
-    boundDocument = document;
-    boundDocument.addEventListener("click", onDocumentClick, true);
-    boundDocument.addEventListener("pointerdown", onDocumentPointerDown, true);
   }
 
-  function bindObserver() {
-    const root = document.documentElement;
-    if (!root || observedRoot === root) return;
-    observer?.disconnect();
-    observedRoot = root;
-    observer = new MutationObserver(schedule);
-    observer.observe(root, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden", "data-page"],
-    });
+  function onPopState() {
+    if (isStatsPath()) void showStatsPage(false);
+    else {
+      hideStatsPage();
+      endDataBusy();
+      syncDatabaseViewOrder();
+    }
   }
 
   function sync() {
-    scheduledFrame = 0;
     if (destroyed) return;
-    bindCurrentDocument();
-    bindObserver();
+    installStyles();
     syncDatabaseViewOrder();
-    if (isStatsPath() || routeGuardActive) {
+    if (isStatsPath()) {
       showStatsShell();
       if (!data && !dataPromise) void showStatsPage(false);
+      else if (data) renderStats();
     } else {
       hideStatsPage();
       endDataBusy();
     }
   }
 
-  function schedule() {
-    if (!scheduledFrame) scheduledFrame = requestAnimationFrame(sync);
-  }
-
-  function onPopState() {
-    routeGuardActive = isStatsPath();
-    schedule();
-  }
-
+  installStyles();
+  document.addEventListener("click", onDocumentClick, true);
+  document.addEventListener("pointerdown", onDocumentPointerDown, true);
   window.addEventListener("popstate", onPopState);
-  interval = window.setInterval(schedule, 750);
-  schedule();
+  sync();
 
   function destroy() {
     destroyed = true;
-    if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
-    if (interval) window.clearInterval(interval);
-    observer?.disconnect();
+    document.removeEventListener("click", onDocumentClick, true);
+    document.removeEventListener("pointerdown", onDocumentPointerDown, true);
     window.removeEventListener("popstate", onPopState);
-    if (boundDocument) {
-      boundDocument.removeEventListener("click", onDocumentClick, true);
-      boundDocument.removeEventListener("pointerdown", onDocumentPointerDown, true);
-    }
     endDataBusy();
-    history.pushState = originalPushState;
-    history.replaceState = originalReplaceState;
     if (pageCreatedByRuntime) page?.remove();
     document.getElementById("databaseStatsRuntimeStyles")?.remove();
   }
