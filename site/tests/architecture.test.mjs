@@ -66,6 +66,16 @@ test("Database Stats owns first paint but does not alter legacy startup ordering
   assert.match(entry, /runtimeWindow\.__mflDatabaseStatsReloadBootstrap\?\.finalize\?\.\(\)/);
 });
 
+test("Database Stats runtime is event-driven and cannot starve startup", async () => {
+  const runtime = await read("database-stats-runtime.js");
+  const stateRuntime = await read("database-stats-state-runtime.js");
+  assert.doesNotMatch(runtime, /new MutationObserver|setInterval|history\.pushState\s*=|history\.replaceState\s*=/);
+  assert.doesNotMatch(stateRuntime, /new MutationObserver|setInterval/);
+  assert.match(runtime, /document\.addEventListener\("click", onDocumentClick, true\)/);
+  assert.match(runtime, /window\.addEventListener\("popstate", onPopState\)/);
+  assert.match(runtime, /if \(!data && !dataPromise\) void showStatsPage\(false\)/);
+});
+
 test("loading lock remains scoped to explicit data operations including Database Stats", async () => {
   const bridge = await read("app.js");
   const runtime = await read("database-stats-runtime.js");
