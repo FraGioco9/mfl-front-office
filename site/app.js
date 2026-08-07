@@ -411,7 +411,7 @@
       // The static release keeps first paint stable even if metadata is unavailable.
     }
 
-    const entryUrl = new URL("./modules/app-entry.js", window.location.href);
+    const entryUrl = new URL("/modules/app-entry.js", window.location.origin);
     entryUrl.searchParams.set("v", version);
 
     try {
