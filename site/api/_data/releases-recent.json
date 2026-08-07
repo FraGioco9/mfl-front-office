@@ -1,0 +1,4 @@
+[
+  ["v1.123.1", "Restore the known-good direct application startup path after the client-core refactor"],
+  ["v1.123.0", "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"]
+]
