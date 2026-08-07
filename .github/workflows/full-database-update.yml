@@ -4,60 +4,39 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: write
-  actions: write
-
-concurrency:
-  group: site-source-cleanup
-  cancel-in-progress: false
 
 jobs:
-  cleanup-site-source:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[site-cleanup]')
+  audit-cleaned-site:
+    if: contains(github.event.head_commit.message, '[site-audit]')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
-      - name: Download repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Materialize and clean application source
+      - name: Run site audit
         shell: bash
         run: |
           set +e
-          python cleanup_app_once.py > cleanup.log 2>&1
+          python audit_site.py > audit.log 2>&1
           STATUS=$?
-          cat cleanup.log
+          cat audit.log
           if [ "$STATUS" -ne 0 ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git add -f cleanup.log
-            git commit -m "chore: capture final site audit failure"
+            git add -f audit.log
+            git commit -m "chore: capture site audit output"
             git push
             exit "$STATUS"
           fi
-
-      - name: Commit cleaned application source
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f cleanup.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "refactor: remove legacy loading source"
-          git push
