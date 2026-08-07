@@ -173,6 +173,22 @@
     return { min, max };
   }
 
+  function startApplyAnimation(histogram) {
+    if (!(histogram instanceof HTMLElement) || document.body?.dataset.page !== "databasestats") return false;
+    pendingApplyAnimation = false;
+    previousHistogram = null;
+    clearApplyAnimation(false);
+    histogram.classList.remove("databaseStatsAnimate");
+    void histogram.offsetWidth;
+    histogram.setAttribute("data-database-stats-apply-transition", "true");
+    applyAnimationTimer = window.setTimeout(() => {
+      histogram.removeAttribute("data-database-stats-apply-transition");
+      histogram.classList.remove("databaseStatsAnimate");
+      applyAnimationTimer = 0;
+    }, 260);
+    return true;
+  }
+
   function resolveApplyAnimation() {
     if (!pendingApplyAnimation) return;
     if (document.body?.dataset.page !== "databasestats") {
@@ -181,17 +197,7 @@
     }
     const histogram = currentHistogram();
     if (!(histogram instanceof HTMLElement) || histogram === previousHistogram) return;
-
-    pendingApplyAnimation = false;
-    previousHistogram = null;
-    clearApplyAnimation(false);
-    void histogram.offsetWidth;
-    histogram.setAttribute("data-database-stats-apply-transition", "true");
-    applyAnimationTimer = window.setTimeout(() => {
-      histogram.removeAttribute("data-database-stats-apply-transition");
-      histogram.classList.remove("databaseStatsAnimate");
-      applyAnimationTimer = 0;
-    }, 260);
+    startApplyAnimation(histogram);
   }
 
   function apply(animate = true) {
@@ -208,7 +214,13 @@
     if (max) max.value = String(range.max);
     delete document.documentElement.dataset.databaseStatsCustomDraft;
     applyButton.click();
-    if (!animate) clearApplyAnimation();
+
+    const renderedHistogram = currentHistogram();
+    if (animate && renderedHistogram instanceof HTMLElement && renderedHistogram !== previousHistogram) {
+      startApplyAnimation(renderedHistogram);
+    } else if (!animate) {
+      clearApplyAnimation();
+    }
 
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
