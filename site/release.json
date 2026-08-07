@@ -1,4 +1,4 @@
 {
-  "version": "1.123.5",
-  "description": "Retry loading interaction lock from the stable v1.123.3 baseline without global fetch tracking"
+  "version": "1.123.6",
+  "description": "Hide unauthorized Progression before first paint and hide pagination while player data loads"
 }

@@ -1,4 +1,5 @@
 [
+  ["v1.123.5", "Retry loading interaction lock from the stable v1.123.3 baseline without global fetch tracking"],
   ["v1.123.3", "Render header, sidebar, footer, and destination page chrome together on refresh"],
   ["v1.123.2", "Render the complete Changelog atomically and remove stale first-paint version conflicts"],
   ["v1.123.1", "Restore the known-good direct application startup path after the client-core refactor"],

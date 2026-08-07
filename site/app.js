@@ -1,7 +1,10 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.5";
+  const STATIC_RELEASE_VERSION = "1.123.6";
+  const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
+  const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
+  const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -33,6 +36,30 @@
    * __mflWrapInteractionBusyFunction?: (callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>,
    * }} */
   const runtimeWindow = window;
+
+  function normalizeStoredWalletAddress(value) {
+    const address = String(value || "").trim().toLowerCase();
+    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+  }
+
+  function hasStoredProgressionAccess() {
+    try {
+      const linkedWallet = normalizeStoredWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
+      if (!linkedWallet) return false;
+
+      const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
+      const proofWallet = normalizeStoredWalletAddress(proof?.address);
+      if (proofWallet !== linkedWallet || !proof?.message || !Array.isArray(proof?.signatures) || !proof.signatures.length) {
+        return false;
+      }
+
+      const permissionKey = `${WALLET_PERMISSION_CACHE_STORAGE_KEY}:${linkedWallet}`;
+      const permission = JSON.parse(localStorage.getItem(permissionKey) || "null");
+      return permission?.allowed === true;
+    } catch {
+      return false;
+    }
+  }
 
   function initialRoute(pathname) {
     const cleanPath = String(pathname || "/").replace(/\/+$/, "") || "/";
@@ -107,6 +134,7 @@
     const footerVersionLink = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
 
     document.body.dataset.page = route.pageName;
+    document.body.classList.toggle("guest", !hasStoredProgressionAccess());
     document.body.classList.add("pinnedSidebarVisible");
     document.documentElement.dataset.staticPage = route.pageName;
 
@@ -152,8 +180,10 @@
 
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
+    const DATA_LOADING_CLASS = "mflDataLoading";
+    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute"]);
     const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
-    const activeTokens = new Set();
+    const activeTokens = new Map();
     let tokenSequence = 0;
 
     const style = document.createElement("style");
@@ -166,19 +196,30 @@
       html.${BUSY_CLASS} body *::after {
         cursor: wait !important;
       }
+
+      #progressionPage nav.pager {
+        padding-block: 12px !important;
+      }
+
+      html.${DATA_LOADING_CLASS} #progressionPage nav.pager {
+        display: none !important;
+      }
     `;
     document.head.appendChild(style);
 
     function applyState() {
       const busy = activeTokens.size > 0;
+      const dataLoading = Array.from(activeTokens.values()).some((reason) => DATA_LOADING_REASONS.has(reason));
       document.documentElement.classList.toggle(BUSY_CLASS, busy);
+      document.documentElement.classList.toggle(DATA_LOADING_CLASS, dataLoading);
       document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
       document.body.setAttribute("aria-busy", busy ? "true" : "false");
     }
 
     function begin(reason = "loading") {
-      const token = `${String(reason || "loading")}-${++tokenSequence}`;
-      activeTokens.add(token);
+      const normalizedReason = String(reason || "loading");
+      const token = `${normalizedReason}-${++tokenSequence}`;
+      activeTokens.set(token, normalizedReason);
       applyState();
       return token;
     }
