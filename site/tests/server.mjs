@@ -21,9 +21,18 @@ function sendJson(response, payload, status = 200) {
 
 async function releaseHistory() {
   const release = JSON.parse(await readFile(resolve(root, "release.json"), "utf8"));
+  const recentHistory = JSON.parse(await readFile(resolve(root, "releases-recent.json"), "utf8"));
   const history = JSON.parse(await readFile(resolve(root, "api/_data/releases-history.json"), "utf8"));
   const label = `v${release.version}`;
-  return [[label, release.description], ...history.filter((entry) => Array.isArray(entry) && entry[0] !== label)];
+  const merged = new Map([[label, release.description]]);
+
+  [...recentHistory, ...history].forEach((entry) => {
+    if (!Array.isArray(entry) || entry.length !== 2) return;
+    if (merged.has(entry[0])) return;
+    merged.set(entry[0], entry[1]);
+  });
+
+  return Array.from(merged.entries());
 }
 
 async function serveFile(response, pathname) {
