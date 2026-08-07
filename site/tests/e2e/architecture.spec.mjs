@@ -96,19 +96,21 @@ test("Total active players excludes retired rows even when retirement years are 
   await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=..").locator("span")).toHaveText("Total active players");
 });
 
-test("MFL Stats never exposes the player table during first load", async ({ page }) => {
+test("MFL Stats never visibly exposes the player table during first load", async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.__mflStatsSawPlayerTable = false;
     const inspect = () => {
       if (!/^\/mfl\/stats\/?$/i.test(globalThis.location.pathname)) return;
       const tablePage = globalThis.document.getElementById("progressionPage");
-      if (tablePage && !tablePage.hidden) globalThis.__mflStatsSawPlayerTable = true;
+      if (tablePage && globalThis.getComputedStyle(tablePage).display !== "none") {
+        globalThis.__mflStatsSawPlayerTable = true;
+      }
     };
     new globalThis.MutationObserver(inspect).observe(globalThis.document, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["hidden", "data-page"],
+      attributeFilter: ["hidden", "class", "data-page"],
     });
     globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
   });
