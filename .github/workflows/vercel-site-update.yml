@@ -61,25 +61,27 @@ jobs:
           fi
 
           gh run download "$LATEST_RUN_ID" --name mfl_database --dir .
-          test -f mfl_database.db
+          test -s mfl_database.db
           ls -lh mfl_database.db
 
-      - name: Export website data
+      - name: Install runtime SQLite database
         shell: bash
         run: |
           set -euo pipefail
-          ln -sf mfl_database.db mfl_progression.db
-          python export_for_website.py
 
-      - name: Move data behind protected API
-        shell: bash
-        run: |
-          set -euo pipefail
           rm -rf site/api/data-files
           mkdir -p site/api/data-files
-          mv site/data/*.json site/api/data-files/
-          rmdir site/data
-          test -f site/api/data-files/manifest.json
+          mv mfl_database.db site/api/data-files/mfl_database.db
+          python prepare_runtime_database.py site/api/data-files/mfl_database.db
+
+          test -s site/api/data-files/mfl_database.db
+          test -f site/api/_database.js
+          test -f site/api/data.js
+          if find site/api/data-files -maxdepth 1 -type f -name '*.json' | grep -q .; then
+            echo "Generated JSON data files are not allowed." >&2
+            exit 1
+          fi
+          ls -lh site/api/data-files/mfl_database.db
 
       - name: Show released site commit
         shell: bash

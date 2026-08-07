@@ -81,6 +81,9 @@ jobs:
           EMAIL_BASE_URL: https://mfl-front-office.vercel.app
         run: python send_progression_emails.py --previous-db previous-database/mfl_database.db --current-db mfl_database.db
 
+      - name: Prepare runtime SQLite database
+        run: python prepare_runtime_database.py mfl_database.db
+
       - name: Upload database
         uses: actions/upload-artifact@v4
         with:

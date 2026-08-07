@@ -1,5 +1,5 @@
 (() => {
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.48");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.121.0");
   const SOURCE_VERSION = "1.120.3";
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
@@ -7,6 +7,7 @@
   const SOURCE_URL = assetUrl("changelog-history-source-v1.120.3.js");
   const releaseToken = `${RELEASE_VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const CURRENT_RELEASES = [
+    ["v1.121.0", "Query the runtime SQLite database for every site data request"],
     ["v1.120.48", "Preload MFL Stats filters and restrict Database Stats transitions to Apply"],
     ["v1.120.47", "Select MFL immediately and limit Stats bar transitions to final or applied renders"],
     ["v1.120.46", "Animate Database Stats bars only after applying Custom filters"],

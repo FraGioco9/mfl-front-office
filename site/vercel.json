@@ -1,13 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/data.js": {
-      "includeFiles": "api/data-files/**"
-    },
-    "api/mfl-stats.js": {
-      "includeFiles": "api/data-files/**"
-    },
-    "api/summary.js": {
-      "includeFiles": "api/data-files/manifest.json"
+      "includeFiles": "api/data-files/mfl_database.db",
+      "maxDuration": 60
     }
   },
   "headers": [
@@ -94,6 +90,15 @@
     },
     {
       "source": "/styles.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/sql-data-runtime.js",
       "headers": [
         {
           "key": "Cache-Control",

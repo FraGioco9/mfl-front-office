@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.120.48";
+  const VERSION = "1.121.0";
   const ownUrl = document.currentScript?.src || new URL("bootstrap.js", location.href).href;
   const baseUrl = new URL(".", ownUrl);
   const assetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), baseUrl).href;
@@ -100,10 +100,11 @@
           });`,
       );
 
+    const sqlDataRuntime = `<script src="${assetUrl("sql-data-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
     const evaluationStaticChrome = `<script src="${assetUrl("evaluation-static-chrome-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
     const mflStatsFirstPaint = `<script src="${assetUrl("mfl-stats-first-paint-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
     const integrity = `<script src="${assetUrl("startup-integrity-runtime.js")}?v=${VERSION}&release=${token}"><\/script>`;
-    source = source.replace("</head>", `${evaluationStaticChrome}${mflStatsFirstPaint}${integrity}</head>`);
+    source = source.replace("</head>", `${sqlDataRuntime}${evaluationStaticChrome}${mflStatsFirstPaint}${integrity}</head>`);
     document.open();
     document.write(source);
     document.close();
