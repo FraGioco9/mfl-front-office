@@ -99,15 +99,23 @@
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
+  function clickCameFromDatabaseFilters(event) {
+    return event.composedPath().some((node) => node instanceof Element && node.id === "databaseStatsOverallFilters");
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     const panel = customPanel();
-    const clickedFilter = target.closest("#databaseStatsOverallFilters .mflStatsFilterButton");
-    if (clickedFilter && normalizeLabel(clickedFilter.textContent) === "custom") {
+    const clickedFilter = target.closest(".mflStatsFilterButton");
+    if (clickedFilter
+        && clickCameFromDatabaseFilters(event)
+        && normalizeLabel(clickedFilter.textContent) === "custom") {
       requestAnimationFrame(() => {
+        const currentPanel = customPanel();
+        if (currentPanel) currentPanel.hidden = false;
         positionCustomPanel();
-        customPanel()?.querySelector("input")?.focus({ preventScroll: true });
+        currentPanel?.querySelector("input")?.focus({ preventScroll: true });
       });
       schedule();
       return;
