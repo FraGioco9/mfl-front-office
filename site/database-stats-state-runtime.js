@@ -9,6 +9,7 @@
 
   let originalSetPage = null;
   let lastPersistedStatsRoute = false;
+  let pendingRouteSync = 0;
 
   function isStatsPath() {
     return STATS_PATH.test(location.pathname);
@@ -113,6 +114,7 @@
   }
 
   function syncRouteState() {
+    pendingRouteSync = 0;
     installStyles();
     installSetPageBridge();
     if (isStatsPath()) {
@@ -123,12 +125,20 @@
     }
   }
 
+  function scheduleRouteSync() {
+    if (pendingRouteSync) return;
+    pendingRouteSync = window.setTimeout(syncRouteState, 0);
+  }
+
   function onNavigationPointerDown(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     if (target.closest("#databaseStatsCustomTooltipPortal")) return;
-    if (target.closest("a[href], .navButton, [data-page], [data-view]")) {
-      clearBarTransition();
+    if (!target.closest("a[href], .navButton, [data-page], [data-view]")) return;
+
+    clearBarTransition();
+    if (target.closest('#progressionPage .viewButton[data-view="stats"]')) {
+      scheduleRouteSync();
     }
   }
 
@@ -138,21 +148,16 @@
     clearBarTransition();
   }
 
-  function onStatsShown() {
-    rememberStatsView();
-  }
-
   installStyles();
   installSetPageBridge();
   document.addEventListener("pointerdown", onNavigationPointerDown, true);
   document.addEventListener("input", onDraftInput, true);
   window.addEventListener("popstate", syncRouteState);
-  window.addEventListener("mfl:database-stats-shown", onStatsShown);
   syncRouteState();
 
   function destroy() {
+    if (pendingRouteSync) window.clearTimeout(pendingRouteSync);
     window.removeEventListener("popstate", syncRouteState);
-    window.removeEventListener("mfl:database-stats-shown", onStatsShown);
     document.removeEventListener("pointerdown", onNavigationPointerDown, true);
     document.removeEventListener("input", onDraftInput, true);
     clearBarTransition();
