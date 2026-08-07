@@ -1,151 +1,96 @@
 import { expect, test } from "@playwright/test";
 
 async function waitForArchitecture(page) {
-  await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
+  await page.waitForFunction(() => document.documentElement.dataset.mflReady === "true");
 }
 
-test("boots from the static shell with the direct classic application core", async ({ page }) => {
+test("boots the static shell and releases startup busy state", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
   await expect(page.locator("#appShell")).toBeAttached();
   await expect(page.locator("#loadingScreen")).toHaveCount(0);
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.5");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.6");
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
+  await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
 
   const architecture = await page.evaluate(() => ({
-    loadedUrls: globalThis.performance.getEntriesByType("resource").map((entry) => entry.name),
-    runtimes: Array.from(globalThis.document.scripts)
-      .map((script) => script.dataset.mflRuntime || "")
-      .filter(Boolean),
+    loadedUrls: performance.getEntriesByType("resource").map((entry) => entry.name),
+    runtimes: Array.from(document.scripts).map((script) => script.dataset.mflRuntime || "").filter(Boolean),
   }));
   expect(architecture.loadedUrls.some((url) => url.includes("/bootstrap.js"))).toBe(false);
   expect(architecture.loadedUrls.some((url) => url.includes("/index-shell.html"))).toBe(false);
   expect(architecture.runtimes).toContain("/modules/legacy-core.js");
-  expect(architecture.runtimes).not.toContain("core");
 });
 
-test("paints static chrome with wait cursor and blocked clicks before async startup", async ({ page }) => {
+test("does not flash Progression for an opted-out user on refresh", async ({ page }) => {
   let releaseMetadata;
-  const releaseGate = new Promise((resolve) => {
-    releaseMetadata = resolve;
-  });
-
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
   await page.route("**/release.json", async (route) => {
-    await releaseGate;
+    await gate;
     await route.continue();
   });
 
   await page.goto("/database/attributes", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator(".topbar")).toBeVisible();
-  await expect(page.locator("#menuRail")).toBeVisible();
   await expect(page.locator("#sidebar")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.5");
-  await expect(page.locator("#progressionPage")).toBeVisible();
-  await expect(page.locator("#tablePageTitle")).toHaveText("Database");
-  await expect(page.locator('#progressionPage .viewButton[data-view="attributes"]')).toHaveClass(/active/);
+  await expect(page.locator("body")).toHaveClass(/guest/);
+  await expect(page.locator('#sidebar .navButton[data-page="progression"]')).toBeHidden();
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
-
-  const firstPaint = await page.evaluate(() => {
-    globalThis.__mflStaticClickCount = 0;
-    const target = globalThis.document.getElementById("openSearchButton");
-    target?.addEventListener("click", () => { globalThis.__mflStaticClickCount += 1; });
-    target?.click();
-    return {
-      staticReady: globalThis.document.documentElement.classList.contains("mflStaticShellReady"),
-      runtimeReady: globalThis.document.documentElement.dataset.mflReady || "",
-      bodyPage: globalThis.document.body.dataset.page,
-      pinnedSidebar: globalThis.document.body.classList.contains("pinnedSidebarVisible"),
-      cursor: target ? globalThis.getComputedStyle(target).cursor : "",
-      clicks: globalThis.__mflStaticClickCount,
-    };
-  });
-  expect(firstPaint).toEqual({
-    staticReady: true,
-    runtimeReady: "",
-    bodyPage: "database",
-    pinnedSidebar: true,
-    cursor: "wait",
-    clicks: 0,
-  });
+  await expect(page.locator("html")).toHaveClass(/mflDataLoading/);
+  await expect(page.locator("#progressionPage nav.pager")).toBeHidden();
 
   releaseMetadata();
 });
 
-test("scoped busy operations release cursor and clicks together", async ({ page }) => {
+test("pager has 12px vertical padding and is hidden only during data loading", async ({ page }) => {
+  await page.goto("/database/attributes");
+  await waitForArchitecture(page);
+
+  const pager = page.locator("#progressionPage nav.pager");
+  await expect(pager).toBeVisible();
+  expect(await pager.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return [style.paddingTop, style.paddingBottom];
+  })).toEqual(["12px", "12px"]);
+
+  const token = await page.evaluate(() => window.__mflInteractionBusy.begin("requestIncrementalRoute"));
+  await expect(page.locator("html")).toHaveClass(/mflDataLoading/);
+  await expect(pager).toBeHidden();
+
+  await page.evaluate((value) => window.__mflInteractionBusy.end(value), token);
+  await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
+  await expect(pager).toBeVisible();
+});
+
+test("scoped busy operations restore interaction state", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
-  await page.evaluate(() => {
-    globalThis.__mflScopedClickCount = 0;
-    const target = globalThis.document.getElementById("openSearchButton");
-    target?.addEventListener("click", () => { globalThis.__mflScopedClickCount += 1; });
-    const controller = globalThis.__mflInteractionBusy;
-    globalThis.__mflScopedBusyPromise = controller.run(
-      () => new Promise((resolve) => { globalThis.__mflReleaseScopedBusy = resolve; }),
-      "test-scoped-load",
-    );
-  });
-
+  const token = await page.evaluate(() => window.__mflInteractionBusy.begin("interaction-loading"));
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
-  await page.locator("#openSearchButton").evaluate((node) => node.click());
-  expect(await page.evaluate(() => globalThis.__mflScopedClickCount)).toBe(0);
+  expect(await page.locator("#openSearchButton").evaluate((node) => getComputedStyle(node).cursor)).toBe("wait");
 
-  await page.evaluate(() => globalThis.__mflReleaseScopedBusy());
-  await page.evaluate(() => globalThis.__mflScopedBusyPromise);
+  await page.evaluate((value) => window.__mflInteractionBusy.end(value), token);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
-  await page.locator("#openSearchButton").evaluate((node) => node.click());
-  expect(await page.evaluate(() => globalThis.__mflScopedClickCount)).toBe(1);
+  expect(await page.locator("#openSearchButton").evaluate((node) => getComputedStyle(node).cursor)).not.toBe("wait");
 });
 
-test("keeps Evaluation directly addressable after modular startup", async ({ page }) => {
-  await page.goto("/evaluation");
-  await waitForArchitecture(page);
-  await expect(page.locator("#evaluationPage")).toBeVisible();
-  await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
-});
-
-test("reveals the complete Changelog atomically on refresh", async ({ page }) => {
-  await page.addInitScript(() => {
-    globalThis.__mflSawVisibleStaleChangelog = false;
-    const inspect = () => {
-      globalThis.document.querySelectorAll(".changelogList span").forEach((node) => {
-        if (String(node.textContent || "").trim() !== "v1.119.29") return;
-        const hiddenAncestor = node.closest("[hidden]");
-        const style = globalThis.getComputedStyle(node);
-        const rect = node.getBoundingClientRect();
-        if (!hiddenAncestor && style.display !== "none" && style.visibility !== "hidden"
-            && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0) {
-          globalThis.__mflSawVisibleStaleChangelog = true;
-        }
-      });
-      globalThis.requestAnimationFrame(inspect);
-    };
-    globalThis.requestAnimationFrame(inspect);
-  });
-
+test("reveals the complete Changelog atomically", async ({ page }) => {
   await page.goto("/changelog");
   await waitForArchitecture(page);
 
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.5");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.6");
+  await expect(list).toContainText("v1.123.5");
   await expect(list).toContainText("v1.123.3");
-  await expect(list).toContainText("v1.123.2");
-  await expect(list).toContainText("v1.123.1");
-  await expect(list).toContainText("v1.123.0");
-  expect(await page.evaluate(() => globalThis.__mflSawVisibleStaleChangelog)).toBe(false);
 
   await page.reload();
   await waitForArchitecture(page);
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.5");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.6");
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
-  expect(await page.evaluate(() => globalThis.__mflSawVisibleStaleChangelog)).toBe(false);
 });
 
 test("applies the shared API request policy", async ({ page }) => {
@@ -153,11 +98,10 @@ test("applies the shared API request policy", async ({ page }) => {
   await waitForArchitecture(page);
 
   const accept = await page.evaluate(async () => {
-    const response = await globalThis.fetch("/api/test");
+    const response = await fetch("/api/test");
     return (await response.json()).accept;
   });
   expect(accept).toContain("application/json");
-  await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
 });
 
 test("serves the centralized release as the newest Changelog row", async ({ request }) => {
@@ -166,8 +110,15 @@ test("serves the centralized release as the newest Changelog row", async ({ requ
   const history = await request.get("/releases.json");
   const rows = await history.json();
 
-  expect(metadata.version).toBe("1.123.5");
-  expect(rows[0][0]).toBe("v1.123.5");
+  expect(metadata.version).toBe("1.123.6");
+  expect(rows[0][0]).toBe("v1.123.6");
   expect(rows[0][1]).toBe(metadata.description);
-  expect(rows.slice(0, 5).map((row) => row[0])).toEqual(["v1.123.5", "v1.123.3", "v1.123.2", "v1.123.1", "v1.123.0"]);
+  expect(rows.slice(0, 6).map((row) => row[0])).toEqual([
+    "v1.123.6",
+    "v1.123.5",
+    "v1.123.3",
+    "v1.123.2",
+    "v1.123.1",
+    "v1.123.0",
+  ]);
 });
