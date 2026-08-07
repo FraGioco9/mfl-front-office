@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 async function waitForArchitecture(page) {
-  await page.waitForFunction(() => document.documentElement.dataset.mflReady === "true");
+  await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
 test("boots the static shell and releases startup busy state", async ({ page }) => {
@@ -16,8 +16,8 @@ test("boots the static shell and releases startup busy state", async ({ page }) 
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
 
   const architecture = await page.evaluate(() => ({
-    loadedUrls: performance.getEntriesByType("resource").map((entry) => entry.name),
-    runtimes: Array.from(document.scripts).map((script) => script.dataset.mflRuntime || "").filter(Boolean),
+    loadedUrls: globalThis.performance.getEntriesByType("resource").map((entry) => entry.name),
+    runtimes: Array.from(globalThis.document.scripts).map((script) => script.dataset.mflRuntime || "").filter(Boolean),
   }));
   expect(architecture.loadedUrls.some((url) => url.includes("/bootstrap.js"))).toBe(false);
   expect(architecture.loadedUrls.some((url) => url.includes("/index-shell.html"))).toBe(false);
@@ -51,15 +51,15 @@ test("pager has 12px vertical padding and is hidden only during data loading", a
   const pager = page.locator("#progressionPage nav.pager");
   await expect(pager).toBeVisible();
   expect(await pager.evaluate((node) => {
-    const style = getComputedStyle(node);
+    const style = globalThis.getComputedStyle(node);
     return [style.paddingTop, style.paddingBottom];
   })).toEqual(["12px", "12px"]);
 
-  const token = await page.evaluate(() => window.__mflInteractionBusy.begin("requestIncrementalRoute"));
+  const token = await page.evaluate(() => globalThis.__mflInteractionBusy.begin("requestIncrementalRoute"));
   await expect(page.locator("html")).toHaveClass(/mflDataLoading/);
   await expect(pager).toBeHidden();
 
-  await page.evaluate((value) => window.__mflInteractionBusy.end(value), token);
+  await page.evaluate((value) => globalThis.__mflInteractionBusy.end(value), token);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   await expect(pager).toBeVisible();
 });
@@ -68,13 +68,13 @@ test("scoped busy operations restore interaction state", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
-  const token = await page.evaluate(() => window.__mflInteractionBusy.begin("interaction-loading"));
+  const token = await page.evaluate(() => globalThis.__mflInteractionBusy.begin("interaction-loading"));
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#openSearchButton").evaluate((node) => getComputedStyle(node).cursor)).toBe("wait");
+  expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
 
-  await page.evaluate((value) => window.__mflInteractionBusy.end(value), token);
+  await page.evaluate((value) => globalThis.__mflInteractionBusy.end(value), token);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#openSearchButton").evaluate((node) => getComputedStyle(node).cursor)).not.toBe("wait");
+  expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
 });
 
 test("reveals the complete Changelog atomically", async ({ page }) => {
@@ -98,7 +98,7 @@ test("applies the shared API request policy", async ({ page }) => {
   await waitForArchitecture(page);
 
   const accept = await page.evaluate(async () => {
-    const response = await fetch("/api/test");
+    const response = await globalThis.fetch("/api/test");
     return (await response.json()).accept;
   });
   expect(accept).toContain("application/json");
