@@ -5,6 +5,8 @@ import { loadRelease } from "./release.js";
 import { loadClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
+  "/release-ui-runtime.js",
+  "/changelog-history-runtime.js",
   "/evaluation-static-chrome-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/startup-integrity-runtime.js",
@@ -16,13 +18,11 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-runtime.js",
   "/database-stats-refinement-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
-  "/release-ui-runtime.js",
   "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
   "/selection-refresh-reset-runtime.js",
   "/my-players-refresh-view-runtime.js",
   "/selection-stack-runtime.js",
-  "/changelog-history-runtime.js",
 ]);
 
 function showStartupError(error) {
@@ -47,6 +47,12 @@ async function start() {
 
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
+
+  if (/^\/changelog\/?$/i.test(window.location.pathname)) {
+    const changelogWindow = /** @type {Window & { __mflChangelogHistoryReady?: Promise<boolean> }} */ (window);
+    if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
+  }
+
   await loadClassicScript("/modules/legacy-core.js", release.version);
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
 

@@ -1,4 +1,4 @@
 {
-  "version": "1.123.1",
-  "description": "Restore the known-good direct application startup path after the client-core refactor"
+  "version": "1.123.2",
+  "description": "Render the complete Changelog atomically and remove stale first-paint version conflicts"
 }
