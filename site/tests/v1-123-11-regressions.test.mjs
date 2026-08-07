@@ -21,7 +21,7 @@ test("v1.123.11 static HTML owns footer position and current assets before runti
   assert.match(bridge, /classList\.add\("mflStaticShellReady", "mflInitialRouteResolved"\)/);
 });
 
-test("Database Stats route is restored immediately after legacy startup", async () => {
+test("Database Stats route and saved view are reasserted before startup becomes ready", async () => {
   const entry = await read("modules/app-entry.js");
   const bootstrap = await read("database-stats-navigation-release-runtime.js");
   const early = entry.slice(entry.indexOf("const EARLY_RUNTIME_SCRIPTS"), entry.indexOf("const LATE_RUNTIME_SCRIPTS"));
@@ -32,7 +32,12 @@ test("Database Stats route is restored immediately after legacy startup", async 
   const legacyLoad = entry.indexOf('loadClassicScript("/modules/legacy-core.js"');
   const restoreRoute = entry.indexOf("__mflDatabaseStatsReloadBootstrap?.restoreRoute?.()");
   const stateBridge = entry.indexOf('loadClassicScript("/database-stats-state-runtime.js"');
+  const lateLoad = entry.indexOf("await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version)");
+  const finalize = entry.indexOf("__mflDatabaseStatsReloadBootstrap?.finalize?.()");
+  const finalStateSync = entry.indexOf("__mflDatabaseStatsStateRuntime?.sync?.()");
+  const ready = entry.indexOf('dataset.mflReady = "true"');
   assert.ok(legacyLoad >= 0 && restoreRoute > legacyLoad && stateBridge > restoreRoute);
+  assert.ok(lateLoad > stateBridge && finalize > lateLoad && finalStateSync > finalize && ready > finalStateSync);
   assert.match(bootstrap, /initialPage === "database\/stats"/);
   assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
 });
