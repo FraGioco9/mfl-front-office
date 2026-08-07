@@ -179,7 +179,7 @@ test("Total active players excludes retired rows even when retirement years are 
   await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=..").locator("span")).toHaveText("Total active players");
 });
 
-test("Database Stats custom bars animate only when Apply is clicked", async ({ page }) => {
+test("Database Stats custom bars animate only when the portal Apply button is clicked", async ({ page }) => {
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("mode") !== "database-stats") {
@@ -205,26 +205,30 @@ test("Database Stats custom bars animate only when Apply is clicked", async ({ p
     globalThis.history.pushState({}, "", "/database/stats");
     globalThis.__mflDatabaseStatsRuntime?.sync?.();
   });
-  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).toBeVisible();
-  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+  const histogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
+  await expect(histogram).toBeVisible();
+  await expect(histogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
+  await expect(histogram).not.toHaveClass(/databaseStatsAnimate/);
 
   await page.getByRole("button", { name: "Custom", exact: true }).click();
-  await expect(page.locator("#databaseStatsCustomFilter")).toBeVisible();
-  await page.locator("#databaseStatsCustomMin").fill("75");
-  await page.locator("#databaseStatsCustomMax").fill("90");
-  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+  const portal = page.locator("#databaseStatsCustomTooltipPortal");
+  await expect(portal).toBeVisible();
+  await portal.locator('[data-role="min"]').fill("75");
+  await portal.locator('[data-role="max"]').fill("90");
+  await expect(histogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
+  await expect(histogram).not.toHaveClass(/databaseStatsAnimate/);
 
-  await page.locator("#databaseStatsCustomApply").click();
-  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).toHaveClass(/databaseStatsAnimate/);
+  await portal.locator('[data-role="apply"]').click();
+  const appliedHistogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
+  await expect(appliedHistogram).toHaveAttribute("data-database-stats-apply-transition", "true");
 
-  await page.waitForTimeout(350);
-  await page.evaluate(() => {
-    globalThis.history.pushState({}, "", "/database/attributes");
-    globalThis.__mflDatabaseStatsRuntime?.sync?.();
-    globalThis.history.pushState({}, "", "/database/stats");
-    globalThis.__mflDatabaseStatsRuntime?.sync?.();
-  });
-  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
+  await page.locator('#databaseStatsPage .viewButton[data-view="attributes"]').click();
+  await expect(page.locator("#progressionPage")).toBeVisible();
+  await page.locator('#progressionPage .viewButton[data-view="stats"]').click();
+  await expect(page.locator("#databaseStatsPage")).toBeVisible();
+  const returnedHistogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
+  await expect(returnedHistogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
+  await expect(returnedHistogram).not.toHaveClass(/databaseStatsAnimate/);
 });
 
 test("MFL Stats never visibly exposes the player table during first load", async ({ page }) => {
