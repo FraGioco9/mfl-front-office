@@ -14,8 +14,8 @@
     const style = document.createElement("style");
     style.id = "mflReleaseFirstPaintGuards";
     style.textContent = `
-      html[data-stored-progression-access="true"]:not([data-mfl-ready="true"]) #homeOptInButton,
-      html[data-stored-progression-access="true"]:not([data-mfl-ready="true"]) #myPlayersOptInButton {
+      html[data-stored-progression-access="true"] #homeOptInButton,
+      html[data-stored-progression-access="true"] #myPlayersOptInButton {
         display: none !important;
       }
     `;
