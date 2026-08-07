@@ -43,8 +43,7 @@ export async function loadScriptGroup(paths, version) {
  */
 
 /**
- * Split one classic-script source at ordered top-level markers. The returned
- * sections concatenate back to the original source byte-for-byte.
+ * Split one classic-script source at ordered top-level markers.
  * @param {string} source
  * @param {readonly ClassicSourcePartition[]} partitions
  * @returns {Array<{ name: string, source: string }>}
@@ -89,7 +88,9 @@ export function splitClassicSource(source, partitions) {
  */
 export function executeClassicSource(source, runtimeName) {
   const sourceUrl = `mfl-runtime-${String(runtimeName || "core").replace(/[^a-z0-9_-]+/gi, "-")}.js`;
+  /** @type {Error | null} */
   let executionError = null;
+  /** @param {ErrorEvent} event */
   const onError = (event) => {
     const filename = String(event.filename || "");
     if (!filename || filename.endsWith(sourceUrl)) {
@@ -111,15 +112,14 @@ export function executeClassicSource(source, runtimeName) {
 }
 
 /**
- * Fetch the retained classic source once, then execute named top-level
- * partitions in the original order. This keeps the exact runtime semantics
- * while preventing the application core from being parsed/executed as one
- * 454 KB script.
+ * Fetch the retained classic source once, prepare it, then execute named
+ * top-level partitions in the original order.
  * @param {string} path
  * @param {string} version
  * @param {readonly ClassicSourcePartition[]} partitions
+ * @param {(source: string) => string} [prepareSource]
  */
-export async function loadPartitionedClassicScript(path, version, partitions) {
+export async function loadPartitionedClassicScript(path, version, partitions, prepareSource = (source) => source) {
   const response = await fetch(versionedAssetUrl(path, version), {
     headers: { Accept: "application/javascript" },
   });
@@ -127,7 +127,7 @@ export async function loadPartitionedClassicScript(path, version, partitions) {
     throw new Error(`Could not load ${path} (${response.status}).`);
   }
 
-  const source = await response.text();
+  const source = prepareSource(await response.text());
   const sections = splitClassicSource(source, partitions);
   for (const section of sections) {
     executeClassicSource(section.source, `core-${section.name}`);
