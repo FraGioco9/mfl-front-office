@@ -6,6 +6,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
+const retainedCoreSourcePath = resolve(root, "modules/legacy-core.js");
+const corePreparationModulePath = resolve(root, "modules/core-runtime.js");
 
 async function runtimeSourceFiles(directory = root) {
   const files = [];
@@ -18,7 +20,7 @@ async function runtimeSourceFiles(directory = root) {
       files.push(...await runtimeSourceFiles(absolutePath));
       continue;
     }
-    if (absolutePath === resolve(root, "modules/legacy-core.js")) continue;
+    if (absolutePath === retainedCoreSourcePath || absolutePath === corePreparationModulePath) continue;
     if ([".js", ".mjs"].includes(extname(entry.name))) files.push(absolutePath);
   }
 
@@ -42,7 +44,7 @@ test("retired bootstrap architecture is absent from the active entry", async () 
 
 test("classic application core is prepared and partitioned deterministically", async () => {
   const [{ CORE_RUNTIME_PARTITIONS, prepareCoreRuntimeSource }, { splitClassicSource }] = await Promise.all([
-    import(pathToFileURL(resolve(root, "modules/core-runtime.js"))),
+    import(pathToFileURL(corePreparationModulePath)),
     import(pathToFileURL(resolve(root, "modules/runtime-loader.js"))),
   ]);
   const source = await read("modules/legacy-core.js");
