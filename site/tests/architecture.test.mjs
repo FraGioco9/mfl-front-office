@@ -33,7 +33,8 @@ test("changelog first paint is cleared before routing and built from canonical r
   const entry = await read("modules/app-entry.js");
   const changelog = await read("changelog-history-runtime.js");
   const releasesApi = await read("api/releases.js");
-  const recent = JSON.parse(await read("api/_data/releases-recent.json"));
+  const testServer = await read("tests/server.mjs");
+  const recent = JSON.parse(await read("releases-recent.json"));
 
   assert.match(bridge, /changelogList\.replaceChildren\(\)/);
   assert.match(bridge, /changelogList\.hidden = true/);
@@ -43,7 +44,8 @@ test("changelog first paint is cleared before routing and built from canonical r
   assert.match(changelog, /list\.replaceChildren\(fragment\)/);
   assert.match(changelog, /list\.hidden = false/);
   assert.doesNotMatch(changelog, /changelog-history-source-v1\.120\.3|sourceVersion|CURRENT_RELEASES/);
-  assert.match(releasesApi, /releases-recent\.json/);
+  assert.match(releasesApi, /\.\.\/releases-recent\.json/);
+  assert.match(testServer, /releases-recent\.json/);
   assert.deepEqual(recent.map((entry) => entry[0]), ["v1.123.1", "v1.123.0"]);
 });
 
