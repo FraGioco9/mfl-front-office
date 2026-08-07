@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.9");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
   window.__mflDatabaseStatsTooltipPortal?.destroy?.();
 
   let tooltip = null;
@@ -20,6 +20,11 @@
 
   function currentHistogram() {
     return document.querySelector("#databaseStatsDistribution .mflStatsHistogram");
+  }
+
+  function restoreStatsShell() {
+    if (!/^\/database\/stats\/?$/i.test(location.pathname)) return;
+    window.setDatabaseStatsPageVisibility?.(true);
   }
 
   function clearApplyAnimation(cancelPending = true) {
@@ -225,6 +230,7 @@
     const original = document.querySelector("#databaseStatsCustomFilter");
     if (original) original.hidden = true;
     close();
+    restoreStatsShell();
     schedule();
   }
 

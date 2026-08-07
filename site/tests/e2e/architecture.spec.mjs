@@ -1,10 +1,31 @@
 import { expect, test } from "@playwright/test";
 
 async function waitForArchitecture(page) {
-  await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
+  await page.waitForFunction(() => {
+    const readiness = globalThis.document.documentElement.dataset.mflReady;
+    return readiness === "true" || readiness === "error";
+  });
+  const readiness = await page.locator("html").getAttribute("data-mfl-ready");
+  if (readiness !== "true") {
+    const startupError = await page.locator("#mflStartupError").textContent().catch(() => "");
+    throw new Error(`MFL startup ended in ${readiness}: ${startupError || "no startup message"}`);
+  }
 }
 
-test("boots with header, sidebar, footer and current version", async ({ page }) => {
+function databaseStatsPayload(overrides = {}) {
+  return {
+    totalPlayers: 15,
+    totalActivePlayers: 10,
+    rows: [
+      [80, 25, 0, 5],
+      [80, 25, 1, 7],
+      [90, 26, 2, 3],
+    ],
+    ...overrides,
+  };
+}
+
+test("boots with header, sidebar, footer and their content before release loading", async ({ page }) => {
   let releaseMetadata;
   const gate = new Promise((resolve) => { releaseMetadata = resolve; });
   await page.route("**/release.json", async (route) => {
@@ -14,10 +35,13 @@ test("boots with header, sidebar, footer and current version", async ({ page }) 
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".topbar")).toBeVisible();
+  await expect(page.locator(".brandLink")).toHaveText("MFL Front Office");
   await expect(page.locator("#menuRail")).toBeVisible();
   await expect(page.locator("#sidebar")).toBeVisible();
+  await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
+  await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.9");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.10");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -77,7 +101,7 @@ test("does not flash Progression for an opted-out user on refresh", async ({ pag
   releaseMetadata();
 });
 
-test("pager and Showing x/y players stay hidden for the full data-loading state", async ({ page }) => {
+test("pager and Showing x/y players stay hidden for the full table data-loading state", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
@@ -116,7 +140,7 @@ test("scoped loading finishes without leaving the site interaction-locked", asyn
   expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
 });
 
-test("Database Stats refresh shows boxes and never visibly exposes the player table", async ({ page }) => {
+test("Database Stats refresh shows boxes and Overall filters immediately, then holds wait cursor until data finishes", async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.__databaseStatsSawPlayerTable = false;
     const inspect = () => {
@@ -136,21 +160,49 @@ test("Database Stats refresh shows boxes and never visibly exposes the player ta
   });
 
   let releaseMetadata;
-  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  const releaseGate = new Promise((resolve) => { releaseMetadata = resolve; });
   await page.route("**/release.json", async (route) => {
-    await gate;
+    await releaseGate;
     await route.continue();
+  });
+
+  let statsData;
+  const statsGate = new Promise((resolve) => { statsData = resolve; });
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "database-stats") {
+      await route.continue();
+      return;
+    }
+    await statsGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(databaseStatsPayload()),
+    });
   });
 
   await page.goto("/database/stats", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#databaseStatsPage")).toBeVisible();
   await expect(page.locator("#databaseStatsPage .databaseStatsCards")).toBeVisible();
   await expect(page.locator("#progressionPage")).toBeHidden();
+  const labels = await page.locator("#databaseStatsOverallFilters .mflStatsFilterButton").allTextContents();
+  expect(labels).toEqual(["All", "Ultimate", "Legendary", "Rare", "Uncommon", "Limited", "Common", "Custom"]);
   expect(await page.evaluate(() => globalThis.__databaseStatsSawPlayerTable)).toBe(false);
+
   releaseMetadata();
+  await waitForArchitecture(page);
+  await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
+  await expect(page.locator("html")).toHaveClass(/mflDataLoading/);
+  expect(await page.locator("#databaseStatsPage").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
+
+  statsData();
+  await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("10");
+  await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
+  await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
 });
 
-test("Total active players excludes retired rows even when retirement years are strings", async ({ page }) => {
+test("Total active players uses the API total for all non-MFL, non-retired players", async ({ page }) => {
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("mode") !== "database-stats") {
@@ -160,25 +212,15 @@ test("Total active players excludes retired rows even when retirement years are 
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        rows: [
-          [80, 25, "0", 5],
-          [80, 25, "1", 7],
-          [90, 26, "2", 3],
-        ],
-      }),
+      body: JSON.stringify(databaseStatsPayload({ totalActivePlayers: 42 })),
     });
   });
 
-  await page.goto("/");
+  await page.goto("/database/stats");
   await waitForArchitecture(page);
-  await page.evaluate(() => {
-    globalThis.history.pushState({}, "", "/database/stats");
-    globalThis.__mflDatabaseStatsRuntime?.sync?.();
-  });
-
-  await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("10");
-  await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=..").locator("span")).toHaveText("Total active players");
+  await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("42");
+  await page.getByRole("button", { name: "Rare", exact: true }).click();
+  await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("7");
 });
 
 test("Database Stats custom bars animate only when the portal Apply button is clicked", async ({ page }) => {
@@ -192,6 +234,8 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
+        totalPlayers: 18,
+        totalActivePlayers: 18,
         rows: [
           [70, 21, 1, 4],
           [80, 22, 2, 6],
@@ -201,12 +245,8 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
     });
   });
 
-  await page.goto("/");
+  await page.goto("/database/stats");
   await waitForArchitecture(page);
-  await page.evaluate(() => {
-    globalThis.history.pushState({}, "", "/database/stats");
-    globalThis.__mflDatabaseStatsRuntime?.sync?.();
-  });
   const histogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
   await expect(histogram).toBeVisible();
   await expect(histogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
@@ -217,8 +257,8 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
   await expect(portal).toBeVisible();
   await portal.locator('[data-role="min"]').fill("75");
   await portal.locator('[data-role="max"]').fill("90");
-  await expect(histogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
-  await expect(histogram).not.toHaveClass(/databaseStatsAnimate/);
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveAttribute("data-database-stats-apply-transition", "true");
+  await expect(page.locator("#databaseStatsDistribution .mflStatsHistogram")).not.toHaveClass(/databaseStatsAnimate/);
 
   await portal.locator('[data-role="apply"]').click();
   const appliedHistogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
@@ -231,6 +271,33 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
   const returnedHistogram = page.locator("#databaseStatsDistribution .mflStatsHistogram");
   await expect(returnedHistogram).not.toHaveAttribute("data-database-stats-apply-transition", "true");
   await expect(returnedHistogram).not.toHaveClass(/databaseStatsAnimate/);
+});
+
+test("Database Stats is saved and restored as the Database view", async ({ page }) => {
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") === "database-stats") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(databaseStatsPayload()),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/database/stats");
+  await waitForArchitecture(page);
+  await expect(page.locator("#databaseStatsPage")).toBeVisible();
+  expect(await page.evaluate(() => globalThis.eval("state.tablePageStates.database.view"))).toBe("stats");
+
+  await page.evaluate(async () => {
+    await globalThis.eval('setPage("home", true)');
+    await globalThis.eval('setPage("database", true)');
+  });
+  await expect(page).toHaveURL(/\/database\/stats$/);
+  await expect(page.locator("#databaseStatsPage")).toBeVisible();
 });
 
 test("MFL Stats never visibly exposes the player table during first load", async ({ page }) => {
@@ -261,7 +328,7 @@ test("MFL Stats never visibly exposes the player table during first load", async
   expect(await page.evaluate(() => globalThis.__mflStatsSawPlayerTable)).toBe(false);
 });
 
-test("Changelog has no stale 1.119.29 first paint", async ({ page }) => {
+test("Changelog restores complete accepted history without stale first paint", async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.__sawStaleChangelogVersion = false;
     const inspect = () => {
@@ -277,28 +344,26 @@ test("Changelog has no stale 1.119.29 first paint", async ({ page }) => {
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.9");
-  await expect(list).toContainText("v1.123.8");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.10");
+  await expect(list).toContainText("v1.123.9");
+  await expect(list).toContainText("v1.121.0");
+  await expect(list).toContainText("v1.120.48");
+  await expect(list).toContainText("v1.120.3");
+  await expect(list).toContainText("v1.120.0");
   expect(await page.evaluate(() => globalThis.__sawStaleChangelogVersion)).toBe(false);
 });
 
-test("serves the centralized release as the newest Changelog row", async ({ request }) => {
+test("serves the centralized release and complete recent Changelog bridge", async ({ request }) => {
   const release = await request.get("/release.json");
   const metadata = await release.json();
   const history = await request.get("/releases.json");
   const rows = await history.json();
+  const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.9");
-  expect(rows[0][0]).toBe("v1.123.9");
+  expect(metadata.version).toBe("1.123.10");
+  expect(rows[0][0]).toBe("v1.123.10");
   expect(rows[0][1]).toBe(metadata.description);
-  expect(rows.slice(0, 8).map((row) => row[0])).toEqual([
-    "v1.123.9",
-    "v1.123.8",
-    "v1.123.6",
-    "v1.123.5",
-    "v1.123.3",
-    "v1.123.2",
-    "v1.123.1",
-    "v1.123.0",
-  ]);
+  for (const version of ["v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
+    expect(versions).toContain(version);
+  }
 });
