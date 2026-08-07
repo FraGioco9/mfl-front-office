@@ -1,6 +1,7 @@
 (() => {
   const VERSION = "1.120.2";
   const STATS_ENDPOINT = "/api/database-stats";
+  const DATA_ENDPOINT = "/api/data";
   const FILTER_RANGES = new Map([
     ["all", { min: null, max: null }],
     ["ultimate", { min: 95, max: null }],
@@ -32,8 +33,16 @@
     }
   }
 
+  function isStatsRequest(url) {
+    return Boolean(url && (
+      url.pathname === STATS_ENDPOINT
+      || (url.pathname === DATA_ENDPOINT && url.searchParams.get("mode") === "database-stats")
+    ));
+  }
+
   window.fetch = (input, init) => {
     const url = requestUrl(input);
+    const statsRequest = isStatsRequest(url);
     let forwardedInput = input;
     if (url?.pathname === STATS_ENDPOINT) {
       url.searchParams.set("v", VERSION);
@@ -43,7 +52,7 @@
     }
 
     const responsePromise = originalFetch(forwardedInput, init);
-    if (url?.pathname === STATS_ENDPOINT) {
+    if (statsRequest) {
       void responsePromise
         .then((response) => response.clone().json())
         .then((data) => {
