@@ -195,10 +195,12 @@
     if (!target) return false;
     installStyles();
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== target;
+      if (!(candidate instanceof HTMLElement)) return;
+      const shouldHide = candidate !== target;
+      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
     });
-    target.hidden = false;
-    document.body.dataset.page = "databasestats";
+    if (target.hidden) target.hidden = false;
+    if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
     setNavigationActive();
     return true;
   }
