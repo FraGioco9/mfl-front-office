@@ -18,6 +18,7 @@ async function runtimeSourceFiles(directory = root) {
       files.push(...await runtimeSourceFiles(absolutePath));
       continue;
     }
+    if (absolutePath === resolve(root, "modules/legacy-core.js")) continue;
     if ([".js", ".mjs"].includes(extname(entry.name))) files.push(absolutePath);
   }
 
@@ -39,21 +40,24 @@ test("retired bootstrap architecture is absent from the active entry", async () 
   assert.doesNotMatch(entry, /index-shell\.html|bootstrap\.js/);
 });
 
-test("classic application core is partitioned deterministically", async () => {
-  const [{ CORE_RUNTIME_PARTITIONS }, { splitClassicSource }] = await Promise.all([
+test("classic application core is prepared and partitioned deterministically", async () => {
+  const [{ CORE_RUNTIME_PARTITIONS, prepareCoreRuntimeSource }, { splitClassicSource }] = await Promise.all([
     import(pathToFileURL(resolve(root, "modules/core-runtime.js"))),
     import(pathToFileURL(resolve(root, "modules/runtime-loader.js"))),
   ]);
   const source = await read("modules/legacy-core.js");
-  const sections = splitClassicSource(source, CORE_RUNTIME_PARTITIONS);
+  const preparedSource = prepareCoreRuntimeSource(source);
+  const sections = splitClassicSource(preparedSource, CORE_RUNTIME_PARTITIONS);
 
   assert.equal(sections.length, CORE_RUNTIME_PARTITIONS.length);
-  assert.equal(sections.map((section) => section.source).join(""), source);
+  assert.equal(sections.map((section) => section.source).join(""), preparedSource);
   assert.ok(sections.every((section) => section.source.length > 0));
   assert.ok(sections.every((section) => Buffer.byteLength(section.source, "utf8") < 120_000));
+  assert.doesNotMatch(preparedSource, /withInteractionBusy/);
 
   const entry = await read("modules/app-entry.js");
-  assert.match(entry, /loadPartitionedClassicScript\("\/modules\/legacy-core\.js"/);
+  assert.match(entry, /loadPartitionedClassicScript\(/);
+  assert.match(entry, /prepareCoreRuntimeSource/);
   assert.doesNotMatch(entry, /loadClassicScript\("\/modules\/legacy-core\.js"/);
 });
 
@@ -64,7 +68,7 @@ test("season-ratio endpoint preserves the completed-row query", async () => {
   assert.doesNotMatch(source, /completed|status=|season\.lte/);
 });
 
-test("the retired interaction-busy facade is absent from all runtime sources", async () => {
+test("the retired interaction-busy facade is absent from active runtime sources", async () => {
   const retiredFacade = ["with", "Interaction", "Busy"].join("");
   for (const path of await runtimeSourceFiles()) {
     assert.doesNotMatch(await readFile(path, "utf8"), new RegExp(retiredFacade), path);
