@@ -18,7 +18,7 @@ const {
   mflCondition,
   hiddenMflJoinedDateCondition,
   manifestPayload,
-} = require("./_data-files");
+} = require("./_data-query");
 const { integerIds } = require("./_data-page");
 
 function bootstrapData() {

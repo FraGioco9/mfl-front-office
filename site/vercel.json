@@ -219,6 +219,5 @@
       "source": "/clubs/:id/:view",
       "destination": "/"
     }
-  ],
-  "ignoreCommand": "node vercel-ignore-git-deploy.js"
+  ]
 }

@@ -41,7 +41,6 @@ const state = {
   menuOpen: true,
   playerAttributeView: "attributes",
   trainingAdjustments: {},
-  searchRenderTimer: null,
   searchIndex: [],
   agentSearchIndex: [],
   clubSearchIndex: [],

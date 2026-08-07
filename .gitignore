@@ -6,3 +6,7 @@ __pycache__/
 node_modules/
 site/api/data-files/*
 !site/api/data-files/.gitignore
+.env
+.env.*
+!.env.example
+.vercel/

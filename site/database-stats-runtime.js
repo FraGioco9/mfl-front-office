@@ -354,7 +354,7 @@
   async function loadData() {
     if (data) return data;
     if (!dataPromise) {
-      dataPromise = fetch(`/api/database-stats?v=${encodeURIComponent(VERSION)}`, { cache: "default" })
+      dataPromise = fetch(`/api/data?mode=database-stats&v=${encodeURIComponent(VERSION)}`, { cache: "no-store" })
         .then(async (response) => {
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !Array.isArray(payload.rows)) {

@@ -1,36 +1,23 @@
 # MFL Front Office
 
-Management, scouting, progression, and evaluation tools for MFL. Player and wallet data are stored in `mfl_database.db` and queried directly with SQLite while the site is running.
+Management, scouting, progression, and evaluation tools for MFL.
 
-## Data architecture
+## Runtime architecture
 
-The website does not generate or load player JSON data exports.
+Player and wallet data are stored only in `mfl_database.db`. Every page, filter,
+sort, search, summary, and Stats request executes a parameterized SQLite query
+through `site/api/data.js` while the site is running.
 
-- `players` and `wallets` remain the authoritative database tables.
-- `site/api/data.js` executes parameterized `SELECT` statements for page rows, filters, sorting, searches, summaries, MFL Stats, and Database Stats.
-- `prepare_runtime_database.py` adds query indexes and compact lookup/aggregation tables inside the same SQLite database.
-- `site/api/_database.js` opens the bundled database in read-only mode.
-- Supabase continues to store wallet permissions, preferences, watchlists, notes, and saved/shared evaluations because those records are not part of `mfl_database.db`.
+The application no longer contains the historical full-dataset JSON loader,
+browser data snapshots, download progress bar, or page-navigation loading
+overlay. Completed page queries are cached in memory for the current browser
+session, so returning to an already loaded view does not repeat the query.
 
-The API returns JSON over HTTP, but there are no generated `.json` player datasets on disk.
+Supabase remains responsible for wallet permissions, preferences, watchlists,
+notes, and saved/shared evaluations because those records are not part of the
+MFL SQLite database.
 
-## Rebuild the database
-
-The authenticated rebuild entrypoint is:
-
-```powershell
-python run_authenticated_database_rebuild.py
-```
-
-Prepare the completed database for website queries:
-
-```powershell
-python prepare_runtime_database.py mfl_database.db
-```
-
-Both database workflows run the preparation step automatically before uploading the `mfl_database` artifact.
-
-## Run the website locally
+## Local development
 
 Place the database at:
 
@@ -38,40 +25,23 @@ Place the database at:
 site/api/data-files/mfl_database.db
 ```
 
-Then run from the repository root:
+Prepare it and start Vercel development mode:
 
 ```powershell
+python prepare_runtime_database.py site\api\data-files\mfl_database.db
+python audit_site.py
 vercel.cmd dev --listen 4000
 ```
 
-The project requires Node.js 22 because the API uses `node:sqlite`.
+Node.js 22 is required for `node:sqlite`.
 
 ## GitHub Actions
 
-- **Full database update** rebuilds and prepares `mfl_database.db`, then uploads the artifact. It does not deploy the website.
-- **Vercel site update** downloads the latest database artifact, places the prepared SQLite file behind the API, and deploys the selected site commit.
-- **Full database and site update** rebuilds the database and deploys it with the source commit from the latest successful Vercel site update, so a data refresh does not silently change the released site version.
+The repository intentionally contains exactly three workflows:
 
-No workflow runs `export_for_website.py`, and no workflow creates or moves player JSON files.
+- **Full database update** rebuilds and uploads the SQLite artifact without deploying.
+- **Vercel site update** deploys the newest approved site source and latest database.
+- **Full database and site update** refreshes SQLite while retaining the source
+  commit and displayed version from the latest successful Vercel site update.
 
-## Vercel project
-
-Use these project settings:
-
-```text
-Framework Preset: Other
-Root Directory: site
-Build Command: leave empty
-Output Directory: leave empty
-Install Command: leave empty
-```
-
-The deployment workflow uses these GitHub Actions secrets:
-
-```text
-VERCEL_TOKEN
-VERCEL_ORG_ID
-VERCEL_PROJECT_ID
-```
-
-The application also uses the configured Supabase variables for personal and permission-controlled data. Do not commit environment files or credentials.
+All three workflows run `audit_site.py` before rebuilding or deploying.

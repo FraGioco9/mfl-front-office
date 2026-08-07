@@ -316,7 +316,7 @@
   }
 
   async function statsPage(page, pageSize) {
-    const response = await fetch(`/api/mfl-stats-all?page=${page}&pageSize=${pageSize}&v=${VERSION}`, {
+    const response = await fetch(`/api/data?mode=mfl-stats-all&page=${page}&pageSize=${pageSize}&v=${VERSION}`, {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });

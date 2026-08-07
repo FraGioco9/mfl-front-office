@@ -21,7 +21,7 @@ const {
   appendCondition,
   mflCondition,
   hiddenMflJoinedDateCondition,
-} = require("./_data-files");
+} = require("./_data-query");
 
 function safeRules(value) {
   try {
