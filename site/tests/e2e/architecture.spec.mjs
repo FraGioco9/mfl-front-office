@@ -60,7 +60,6 @@ test("paints header sidebar footer and destination chrome before async startup",
   });
 
   releaseMetadata();
-  await waitForArchitecture(page);
 });
 
 test("keeps Evaluation directly addressable after modular startup", async ({ page }) => {
