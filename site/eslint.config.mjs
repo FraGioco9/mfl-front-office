@@ -3,10 +3,18 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["modules/legacy-core.js", "node_modules/**", ".vercel/**"],
+    ignores: ["node_modules/**", ".vercel/**"],
   },
   {
-    files: ["app.js", "modules/**/*.js", "release-ui-runtime.js", "changelog-history-runtime.js"],
+    files: [
+      "app.js",
+      "modules/app-entry.js",
+      "modules/http.js",
+      "modules/release.js",
+      "modules/runtime-loader.js",
+      "release-ui-runtime.js",
+      "changelog-history-runtime.js",
+    ],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -16,6 +24,15 @@ export default [
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
+  },
+  {
+    files: ["modules/legacy-core.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+      globals: globals.browser,
+    },
+    rules: {},
   },
   {
     files: ["api/releases.js", "api/mfl-season-ratios-v2.js"],
