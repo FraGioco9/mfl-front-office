@@ -68,13 +68,6 @@
     return true;
   }
 
-  function revealShell() {
-    document.documentElement.classList.remove("bootPending", "mflInitialChromePreparing");
-    document.body?.classList.remove("booting");
-    const loading = document.getElementById("loadingScreen");
-    if (loading instanceof HTMLElement && !loading.hidden) loading.hidden = true;
-  }
-
   function syncFooter() {
     const label = `MFL Front Office v${VERSION}`;
     document.querySelectorAll('.siteFooter a[href="/changelog"],.siteFooter a[data-page="changelog"]')
@@ -114,12 +107,10 @@
         const active = button.dataset.page === "home";
         if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
       });
-      revealShell();
       return;
     }
 
     if (path() === "/changelog" && showPage("changelogPage", "changelog")) {
-      revealShell();
       return;
     }
 
@@ -176,7 +167,6 @@
       if (empty.hidden) empty.hidden = false;
       setText(empty, "Loading players...");
     }
-    revealShell();
   }
 
   function currentMflPerUsd() {

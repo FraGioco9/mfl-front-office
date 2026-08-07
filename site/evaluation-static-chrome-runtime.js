@@ -157,19 +157,6 @@
     }
 
     syncLoadButton();
-
-    document.documentElement.classList.remove(
-      "bootPending",
-      "mflInitialChromePreparing",
-    );
-    document.body.classList.remove("booting");
-
-    const loadingScreen = document.getElementById("loadingScreen");
-    if (loadingScreen instanceof HTMLElement) {
-      loadingScreen.hidden = true;
-      loadingScreen.setAttribute("aria-hidden", "true");
-    }
-
     return true;
   }
 
@@ -217,7 +204,6 @@
       visibility: visible !important;
       opacity: 1 !important;
     }
-
     html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton,
     html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
       display: inline-flex !important;
