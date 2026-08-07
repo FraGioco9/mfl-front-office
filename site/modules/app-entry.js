@@ -25,6 +25,11 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/selection-stack-runtime.js",
 ]);
 
+/** @type {Window & {
+ * __mflInteractionBusy?: { installLegacyBridge?: () => void },
+ * }} */
+const runtimeWindow = window;
+
 function showStartupError(error) {
   console.error(error);
   document.documentElement.dataset.mflReady = "error";
@@ -54,8 +59,7 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
-  const busyWindow = /** @type {Window & { __mflInteractionBusy?: { installLegacyBridge?: () => void } }} */ (window);
-  busyWindow.__mflInteractionBusy?.installLegacyBridge?.();
+  runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
 
   document.documentElement.dataset.mflReady = "true";

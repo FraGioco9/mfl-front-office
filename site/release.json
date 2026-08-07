@@ -1,4 +1,4 @@
 {
-  "version": "1.123.4",
-  "description": "Lock all clicks and show the wait cursor consistently while loading is active"
+  "version": "1.123.5",
+  "description": "Retry loading interaction lock from the stable v1.123.3 baseline without global fetch tracking"
 }

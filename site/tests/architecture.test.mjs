@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.4");
+  assert.equal(release.version, "1.123.5");
   assert.ok(release.description.length > 20);
 });
 
@@ -32,7 +32,7 @@ test("static shell is resolved before release metadata or runtime loading", asyn
   const bridge = await read("app.js");
   const release = JSON.parse(await read("release.json"));
 
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.4"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.5"/);
   assert.match(bridge, /function primeStaticShell\(\)/);
   assert.match(bridge, /menuRail\.hidden = false/);
   assert.match(bridge, /sidebar\.hidden = false/);
@@ -40,26 +40,23 @@ test("static shell is resolved before release metadata or runtime loading", asyn
   assert.match(bridge, /page\.hidden = page\.id !== route\.pageId/);
   assert.match(bridge, /document\.documentElement\.classList\.add\("mflStaticShellReady"\)/);
   assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
-  assert.equal(release.version, "1.123.4");
+  assert.equal(release.version, "1.123.5");
 });
 
-test("loading uses one global wait cursor and click lock", async () => {
+test("loading interaction lock is scoped and cannot retain fetch requests", async () => {
   const bridge = await read("app.js");
   const entry = await read("modules/app-entry.js");
 
   assert.match(bridge, /function createInteractionBusyController\(\)/);
-  assert.match(bridge, /const BUSY_CLASS = "mflInteractionBusy"/);
-  assert.match(bridge, /"pointerdown".*"click".*"contextmenu"/s);
-  assert.match(bridge, /document\.addEventListener\(eventName, blockInteraction, true\)/);
-  assert.match(bridge, /window\.fetch = function trackedFetch/);
+  assert.match(bridge, /const activeTokens = new Set\(\)/);
   assert.match(bridge, /async function run\(callback, reason = "loading"\)/);
-  assert.match(bridge, /function installLegacyBridge\(\)/);
-  assert.match(bridge, /withInteractionBusy = window\.__mflWithInteractionBusy/);
-  assert.match(bridge, /classList\.contains\("walletOptingIn"\)/);
-  assert.match(bridge, /classList\.contains\("evaluationRouteLoading"\)/);
-  assert.match(bridge, /classList\.contains\("mflTableDataLoading"\)/);
+  assert.match(bridge, /finally \{\s*end\(token\);\s*\}/);
+  assert.match(bridge, /window\.eval\("withInteractionBusy = window\.__mflWithInteractionBusy"\)/);
+  assert.match(bridge, /"requestIncrementalRoute"/);
+  assert.match(bridge, /"ensureProgressionData"/);
+  assert.match(bridge, /"linkWallet"/);
+  assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|originalFetch|syncKnownLoadingStates|namedTokens/);
   assert.match(entry, /__mflInteractionBusy\?\.installLegacyBridge\?\.\(\)/);
-  assert.ok(entry.indexOf("loadClassicScript(\"/modules/legacy-core.js\"") < entry.indexOf("installLegacyBridge"));
 });
 
 test("changelog first paint is cleared before routing and built from canonical releases", async () => {
