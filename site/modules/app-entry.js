@@ -15,8 +15,8 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-route-ui-runtime.js",
   "/database-stats-navigation-release-runtime.js",
-  "/database-stats-runtime.js",
   "/database-stats-refinement-runtime.js",
+  "/database-stats-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
   "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",

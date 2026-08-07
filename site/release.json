@@ -1,4 +1,4 @@
 {
-  "version": "1.123.7",
-  "description": "Keep wait cursor and click blocking active for the full player data-loading lifecycle"
+  "version": "1.123.8",
+  "description": "Restore stable loading completion, hide player totals while loading, and fix stats first paint and active counts"
 }

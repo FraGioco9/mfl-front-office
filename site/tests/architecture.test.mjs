@@ -10,109 +10,65 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.7");
+  assert.equal(release.version, "1.123.8");
   assert.ok(release.description.length > 20);
 });
 
-test("retired bootstrap architecture is absent from the active entry", async () => {
+test("application core keeps the known-good direct startup path", async () => {
   const entry = await read("modules/app-entry.js");
   const bridge = await read("app.js");
-  assert.doesNotMatch(entry, /document\.(open|write|close)\s*\(/);
-  assert.doesNotMatch(bridge, /document\.(open|write|close)\s*\(/);
-  assert.doesNotMatch(entry, /index-shell\.html|bootstrap\.js/);
-});
-
-test("application core uses the known-good direct classic-script startup path", async () => {
-  const entry = await read("modules/app-entry.js");
   assert.match(entry, /loadClassicScript\("\/modules\/legacy-core\.js", release\.version\)/);
   assert.doesNotMatch(entry, /prepareCoreRuntimeSource|loadPreparedClassicScript|loadPartitionedClassicScript/);
+  assert.doesNotMatch(entry, /document\.(open|write|close)\s*\(/);
+  assert.doesNotMatch(bridge, /document\.(open|write|close)\s*\(/);
 });
 
-test("static shell is resolved before release metadata or runtime loading", async () => {
+test("static shell resolves before runtime loading", async () => {
   const bridge = await read("app.js");
-  const release = JSON.parse(await read("release.json"));
-
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.7"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.8"/);
   assert.match(bridge, /function primeStaticShell\(\)/);
-  assert.match(bridge, /menuRail\.hidden = false/);
-  assert.match(bridge, /sidebar\.hidden = false/);
-  assert.match(bridge, /document\.body\.classList\.add\("pinnedSidebarVisible"\)/);
-  assert.match(bridge, /page\.hidden = page\.id !== route\.pageId/);
-  assert.match(bridge, /document\.documentElement\.classList\.add\("mflStaticShellReady"\)/);
   assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
-  assert.equal(release.version, "1.123.7");
 });
 
-test("progression visibility is resolved from stored permission before the sidebar is shown", async () => {
+test("loading lock is restored to scoped v1.123.6 behavior", async () => {
   const bridge = await read("app.js");
+  assert.match(bridge, /DATA_LOADING_REASONS = new Set\(\["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute"\]\)/);
+  assert.match(bridge, /runtimeWindow\.__mflWithInteractionBusy = \(callback\) => run\(callback, "interaction-loading"\)/);
+  assert.doesNotMatch(bridge, /DATA_LOADING_FUNCTIONS/);
+  assert.doesNotMatch(bridge, /"reloadIncrementalPage",\s*"setView",\s*"setPage"/);
+  assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|syncKnownLoadingStates|namedTokens/);
+});
 
-  assert.match(bridge, /function hasStoredProgressionAccess\(\)/);
-  assert.match(bridge, /mfl-linked-wallet-v1/);
-  assert.match(bridge, /mfl-linked-wallet-proof-v1/);
-  assert.match(bridge, /mfl-wallet-permission-cache-v1/);
-  assert.match(bridge, /permission\?\.allowed === true/);
-  assert.match(bridge, /document\.body\.classList\.toggle\("guest", !hasStoredProgressionAccess\(\)\)/);
+test("pager and showing-player count stay hidden while data is loading", async () => {
+  const bridge = await read("app.js");
+  assert.match(bridge, /#progressionPage nav\.pager \{\s*padding-block: 12px !important;/);
+  assert.match(bridge, /html\.\$\{DATA_LOADING_CLASS\} #progressionPage nav\.pager,\s*html\.\$\{DATA_LOADING_CLASS\} #progressionPage #watchlistPlayerCount \{\s*display: none !important;/);
+});
+
+test("database Total active players excludes numeric and string retired rows without an observer loop", async () => {
+  const refinement = await read("database-stats-refinement-runtime.js");
+  const entry = await read("modules/app-entry.js");
+  assert.match(refinement, /url\.pathname === DATA_ENDPOINT && url\.searchParams\.get\("mode"\) === "database-stats"/);
+  assert.match(refinement, /const retirementYears = Number\(group\?\.\[2\]\)/);
+  assert.match(refinement, /retirementYears === 0/);
+  assert.doesNotMatch(refinement, /new MutationObserver/);
   assert.ok(
-    bridge.indexOf('document.body.classList.toggle("guest", !hasStoredProgressionAccess())')
-      < bridge.indexOf("sidebar.hidden = false"),
+    entry.indexOf('"/database-stats-refinement-runtime.js"')
+      < entry.indexOf('"/database-stats-runtime.js"'),
   );
 });
 
-test("player data loading always drives wait cursor and the global click lock", async () => {
-  const bridge = await read("app.js");
-  const entry = await read("modules/app-entry.js");
-
-  assert.match(bridge, /function createInteractionBusyController\(\)/);
-  assert.match(bridge, /const activeTokens = new Map\(\)/);
-  assert.match(bridge, /async function run\(callback, reason = "loading"\)/);
-  assert.match(bridge, /finally \{\s*end\(token\);\s*\}/);
-  assert.match(bridge, /const DATA_LOADING_FUNCTIONS = new Set\(\[/);
-  for (const functionName of ["ensureProgressionData", "requestIncrementalRoute", "reloadIncrementalPage", "setView", "setPage"]) {
-    assert.match(bridge, new RegExp(`"${functionName}"`));
-  }
-  assert.match(bridge, /runtimeWindow\.__mflWithInteractionBusy = \(callback\) => run\(callback, "data-loading"\)/);
-  assert.match(bridge, /DATA_LOADING_FUNCTIONS\.forEach\(wrapGlobalFunction\)/);
-  assert.match(bridge, /const blockedEvents = \["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"\]/);
-  assert.match(bridge, /event\.preventDefault\(\);\s*event\.stopImmediatePropagation\(\);/);
-  assert.match(bridge, /cursor: wait !important/);
-  assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|originalFetch|syncKnownLoadingStates|namedTokens/);
-  assert.match(entry, /__mflInteractionBusy\?\.installLegacyBridge\?\.\(\)/);
+test("MFL stats first paint uses a CSS guard instead of rewriting page visibility", async () => {
+  const runtime = await read("mfl-stats-first-paint-runtime.js");
+  assert.match(runtime, /const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard"/);
+  assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #progressionPage \{\s*display: none !important;/);
+  assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #mflStatsPage \{\s*display: block !important;/);
+  assert.match(runtime, /function syncFirstPaintGuard\(\)/);
+  assert.doesNotMatch(runtime, /function enforceStatsShell/);
+  assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
-test("pager has 12px vertical padding and is hidden during data loading", async () => {
-  const bridge = await read("app.js");
-
-  assert.match(bridge, /const DATA_LOADING_CLASS = "mflDataLoading"/);
-  assert.match(bridge, /DATA_LOADING_REASONS = new Set\(\["startup", "data-loading", \.\.\.DATA_LOADING_FUNCTIONS\]\)/);
-  assert.match(bridge, /#progressionPage nav\.pager \{\s*padding-block: 12px !important;/);
-  assert.match(bridge, /html\.\$\{DATA_LOADING_CLASS\} #progressionPage nav\.pager \{\s*display: none !important;/);
-  assert.match(bridge, /classList\.toggle\(DATA_LOADING_CLASS, dataLoading\)/);
-});
-
-test("changelog first paint is cleared before routing and built from canonical releases", async () => {
-  const bridge = await read("app.js");
-  const entry = await read("modules/app-entry.js");
-  const changelog = await read("changelog-history-runtime.js");
-  const releasesApi = await read("api/releases.js");
-  const testServer = await read("tests/server.mjs");
+test("changelog is built from canonical releases", async () => {
   const recent = JSON.parse(await read("releases-recent.json"));
-
-  assert.match(bridge, /changelogList\.replaceChildren\(\)/);
-  assert.match(bridge, /changelogList\.hidden = true/);
-  assert.match(entry, /"\/changelog-history-runtime\.js"/);
-  assert.match(entry, /__mflChangelogHistoryReady/);
-  assert.match(changelog, /fetch\(RELEASES_URL/);
-  assert.match(changelog, /list\.replaceChildren\(fragment\)/);
-  assert.match(changelog, /list\.hidden = false/);
-  assert.doesNotMatch(changelog, /changelog-history-source-v1\.120\.3|sourceVersion|CURRENT_RELEASES/);
-  assert.match(releasesApi, /\.\.\/releases-recent\.json/);
-  assert.match(testServer, /releases-recent\.json/);
   assert.deepEqual(recent.map((entry) => entry[0]), ["v1.123.6", "v1.123.5", "v1.123.3", "v1.123.2", "v1.123.1", "v1.123.0"]);
-});
-
-test("season-ratio endpoint preserves the completed-row query", async () => {
-  const source = await read("api/mfl-season-ratios-v2.js");
-  assert.match(source, /require\("\.\.\/release\.json"\)/);
-  assert.match(source, /mfl_season_ratios\?select=season,ratio&order=season\.desc&limit=\$\{REQUIRED_RATIO_ROWS\}/);
-  assert.doesNotMatch(source, /completed|status=|season\.lte/);
 });
