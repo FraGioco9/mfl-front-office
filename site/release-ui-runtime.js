@@ -122,7 +122,6 @@
       setAttributeIfChanged(button, "aria-pressed", String(active));
     });
 
-    window.__mflDatabaseStatsRuntime?.sync?.();
     const page = document.querySelector("#databaseStatsPage");
     if (!(page instanceof HTMLElement)) return;
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
