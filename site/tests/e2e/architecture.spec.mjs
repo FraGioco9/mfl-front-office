@@ -93,7 +93,7 @@ test("Total active players excludes retired rows even when retirement years are 
   await page.goto("/database/stats");
   await waitForArchitecture(page);
   await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("10");
-  await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=.." ).locator("span")).toHaveText("Total active players");
+  await expect(page.locator("#databaseStatsTotalPlayers").locator("xpath=..").locator("span")).toHaveText("Total active players");
 });
 
 test("MFL Stats never exposes the player table during first load", async ({ page }) => {
@@ -104,7 +104,7 @@ test("MFL Stats never exposes the player table during first load", async ({ page
       const tablePage = globalThis.document.getElementById("progressionPage");
       if (tablePage && !tablePage.hidden) globalThis.__mflStatsSawPlayerTable = true;
     };
-    new MutationObserver(inspect).observe(globalThis.document, {
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, {
       childList: true,
       subtree: true,
       attributes: true,
