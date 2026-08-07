@@ -23,6 +23,12 @@ test("application core keeps the known-good direct startup path", async () => {
   assert.doesNotMatch(bridge, /document\.(open|write|close)\s*\(/);
 });
 
+test("nested routes load the module entry from the site root", async () => {
+  const bridge = await read("app.js");
+  assert.match(bridge, /new URL\("\/modules\/app-entry\.js", window\.location\.origin\)/);
+  assert.doesNotMatch(bridge, /new URL\("\.\/modules\/app-entry\.js", window\.location\.href\)/);
+});
+
 test("static shell and its content resolve before runtime loading", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
