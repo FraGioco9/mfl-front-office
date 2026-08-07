@@ -173,10 +173,19 @@ def prepare_runtime_database(database_path: Path) -> None:
         """
         placeholders = ", ".join("?" for _ in EXCLUDED_WALLET_NAMES)
         excluded_sql = (
-            "wallet_address <> ? "
+            "lower(coalesce(wallet_address, '')) <> lower(?) "
+            "AND lower(coalesce(wallet_address, '')) NOT IN ("
+            "SELECT lower(wallet_address) FROM wallets "
+            "WHERE coalesce(wallet_address, '') <> '' "
+            f"AND normalize_wallet_name(name) IN ({placeholders})"
+            ") "
             f"AND normalize_wallet_name(wallet_name) NOT IN ({placeholders})"
         )
-        parameters = (MFL_WALLET_ADDRESS, *EXCLUDED_WALLET_NAMES)
+        parameters = (
+            MFL_WALLET_ADDRESS,
+            *EXCLUDED_WALLET_NAMES,
+            *EXCLUDED_WALLET_NAMES,
+        )
 
         connection.execute(
             f"""
@@ -214,7 +223,7 @@ def prepare_runtime_database(database_path: Path) -> None:
             f"""
             SELECT
               count(*),
-              sum(CASE WHEN coalesce(retirement_years, -1) <> 0 THEN 1 ELSE 0 END)
+              sum(CASE WHEN coalesce(CAST(retirement_years AS INTEGER), -1) <> 0 THEN 1 ELSE 0 END)
             FROM players
             WHERE {excluded_sql}
               AND {overall_sql} IS NOT NULL
