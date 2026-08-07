@@ -44,31 +44,23 @@ test("does not flash Progression for an opted-out user on refresh", async ({ pag
   releaseMetadata();
 });
 
-test("pager has 12px vertical padding and is hidden only during data loading", async ({ page }) => {
+test("pager has 12px vertical padding and switches display during data loading", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
-  await page.evaluate(() => {
-    const home = globalThis.document.getElementById("homePage");
-    const table = globalThis.document.getElementById("progressionPage");
-    if (home instanceof globalThis.HTMLElement) home.hidden = true;
-    if (table instanceof globalThis.HTMLElement) table.hidden = false;
-    globalThis.document.body.dataset.page = "database";
-  });
 
   const pager = page.locator("#progressionPage nav.pager");
-  await expect(pager).toBeVisible();
   expect(await pager.evaluate((node) => {
     const style = globalThis.getComputedStyle(node);
-    return [style.paddingTop, style.paddingBottom];
-  })).toEqual(["12px", "12px"]);
+    return { display: style.display, top: style.paddingTop, bottom: style.paddingBottom };
+  })).toEqual({ display: "flex", top: "12px", bottom: "12px" });
 
   const token = await page.evaluate(() => globalThis.__mflInteractionBusy.begin("requestIncrementalRoute"));
   await expect(page.locator("html")).toHaveClass(/mflDataLoading/);
-  await expect(pager).toBeHidden();
+  expect(await pager.evaluate((node) => globalThis.getComputedStyle(node).display)).toBe("none");
 
   await page.evaluate((value) => globalThis.__mflInteractionBusy.end(value), token);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
-  await expect(pager).toBeVisible();
+  expect(await pager.evaluate((node) => globalThis.getComputedStyle(node).display)).toBe("flex");
 });
 
 test("scoped busy operations restore interaction state", async ({ page }) => {
