@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.9");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.10");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const FILTERS = [
@@ -32,6 +32,7 @@
   let boundDocument = null;
   let interval = 0;
   let destroyed = false;
+  let dataBusyToken = "";
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
@@ -107,10 +108,12 @@
         color: var(--text);
         font: inherit;
       }
+      #databaseStatsPage .mflStatsHistogramBar,
       #databaseStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
+        transition: none !important;
       }
-      #databaseStatsPage .mflStatsHistogram.databaseStatsAnimate .mflStatsHistogramBar::after {
+      #databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition="true"] .mflStatsHistogramBar::after {
         animation: mflStatsBarRise 220ms ease-out !important;
       }
       @media (max-width: 1100px) {
@@ -137,13 +140,13 @@
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
         distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
-        renderDistribution(false);
+        renderDistribution();
       });
     });
-    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", () => applyCustomFilter(true));
+    page.querySelector("#databaseStatsCustomApply")?.addEventListener("click", () => applyCustomFilter());
     page.querySelectorAll("#databaseStatsCustomMin, #databaseStatsCustomMax").forEach((input) => {
       input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") applyCustomFilter(false);
+        if (event.key === "Enter") applyCustomFilter();
       });
     });
   }
@@ -172,7 +175,16 @@
 
         <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
           <span>Overall Filters</span>
-          <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons"></div>
+          <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">
+            <button class="mflStatsFilterButton active" type="button">All</button>
+            <button class="mflStatsFilterButton" type="button">Ultimate</button>
+            <button class="mflStatsFilterButton" type="button">Legendary</button>
+            <button class="mflStatsFilterButton" type="button">Rare</button>
+            <button class="mflStatsFilterButton" type="button">Uncommon</button>
+            <button class="mflStatsFilterButton" type="button">Limited</button>
+            <button class="mflStatsFilterButton" type="button">Common</button>
+            <button class="mflStatsFilterButton" type="button">Custom</button>
+          </div>
           <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
             <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
             <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
@@ -253,7 +265,7 @@
         const custom = page?.querySelector("#databaseStatsCustomFilter");
         if (custom) custom.hidden = filter.id !== "custom";
         renderFilterButtons();
-        renderStats(false);
+        renderStats();
       });
       fragment.appendChild(button);
     });
@@ -262,7 +274,7 @@
     if (custom) custom.hidden = activeFilter !== "custom";
   }
 
-  function applyCustomFilter(animate = false) {
+  function applyCustomFilter() {
     const minInput = page?.querySelector("#databaseStatsCustomMin");
     const maxInput = page?.querySelector("#databaseStatsCustomMax");
     let minimum = Math.max(0, Math.min(99, Math.trunc(Number(minInput?.value))));
@@ -276,7 +288,7 @@
     if (maxInput) maxInput.value = String(maximum);
     activeFilter = "custom";
     renderFilterButtons();
-    renderStats(animate);
+    renderStats();
   }
 
   function filteredGroups() {
@@ -301,18 +313,22 @@
     if (element) element.textContent = formatCount(value);
   }
 
-  function renderStats(animateDistribution = false) {
+  function renderStats() {
     if (!page || !data) return;
     const groups = filteredGroups();
-    setCard("databaseStatsTotalPlayers", sumGroups(groups, (group) => Number(group[2]) !== 0));
+    const filteredActivePlayers = sumGroups(groups, (group) => Number(group[2]) !== 0);
+    const totalActivePlayers = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
+      ? Number(data.totalActivePlayers)
+      : filteredActivePlayers;
+    setCard("databaseStatsTotalPlayers", totalActivePlayers);
     setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => Number(group[2]) === 3));
     setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => Number(group[2]) === 2));
     setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => Number(group[2]) === 1));
     setCard("databaseStatsRetired", sumGroups(groups, (group) => Number(group[2]) === 0));
-    renderDistribution(animateDistribution);
+    renderDistribution();
   }
 
-  function renderDistribution(animate = false) {
+  function renderDistribution() {
     if (!page || !data) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.classList.toggle("active", button.dataset.distribution === distributionMode);
@@ -347,7 +363,7 @@
     const rows = Array.from(counts.entries()).sort((left, right) => left[0] - right[0]);
     const maxCount = Math.max(...rows.map((entry) => entry[1]));
     const histogram = document.createElement("div");
-    histogram.className = `mflStatsHistogram${animate ? " databaseStatsAnimate" : ""}`;
+    histogram.className = "mflStatsHistogram";
     histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
     const barWidth = rows.length <= 4 ? 260 : rows.length <= 6 ? 210 : rows.length <= 8 ? 170 : rows.length <= 12 ? 125 : rows.length <= 18 ? 86 : rows.length <= 28 ? 56 : 34;
     histogram.style.setProperty("--mfl-stats-bar-width", `${barWidth}px`);
@@ -368,9 +384,6 @@
     });
 
     distribution.replaceChildren(histogram);
-    if (animate) {
-      window.setTimeout(() => histogram.classList.remove("databaseStatsAnimate"), 280);
-    }
   }
 
   async function loadData() {
@@ -393,6 +406,20 @@
     return dataPromise;
   }
 
+  function beginDataBusy() {
+    if (data || dataBusyToken || typeof window.__mflInteractionBusy?.begin !== "function") return;
+    dataBusyToken = window.__mflInteractionBusy.begin("databaseStatsData");
+    document.documentElement.dataset.databaseStatsLoading = "true";
+  }
+
+  function endDataBusy() {
+    if (dataBusyToken) {
+      window.__mflInteractionBusy?.end?.(dataBusyToken);
+      dataBusyToken = "";
+    }
+    delete document.documentElement.dataset.databaseStatsLoading;
+  }
+
   async function showStatsPage(updateUrl = false) {
     routeGuardActive = true;
     if (updateUrl && !isStatsPath()) {
@@ -406,14 +433,10 @@
       distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
     }
 
-    let busy = false;
     try {
-      if (!data && typeof beginInteractionBusy === "function") {
-        beginInteractionBusy();
-        busy = true;
-      }
+      if (!data) beginDataBusy();
       await loadData();
-      renderStats(false);
+      renderStats();
     } catch (error) {
       if (distribution) {
         const message = document.createElement("p");
@@ -422,7 +445,7 @@
         distribution.replaceChildren(message);
       }
     } finally {
-      if (busy && typeof endInteractionBusy === "function") endInteractionBusy();
+      endDataBusy();
       if (isStatsPath()) showStatsShell();
     }
   }
@@ -482,6 +505,7 @@
     if (!next || !isStatsPath(next.pathname)) {
       routeGuardActive = false;
       hideStatsPage();
+      endDataBusy();
     }
   }
 
@@ -537,6 +561,7 @@
       if (!data && !dataPromise) void showStatsPage(false);
     } else {
       hideStatsPage();
+      endDataBusy();
     }
   }
 
@@ -563,6 +588,7 @@
       boundDocument.removeEventListener("click", onDocumentClick, true);
       boundDocument.removeEventListener("pointerdown", onDocumentPointerDown, true);
     }
+    endDataBusy();
     history.pushState = originalPushState;
     history.replaceState = originalReplaceState;
     if (pageCreatedByRuntime) page?.remove();
