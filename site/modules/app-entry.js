@@ -54,6 +54,8 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
+  const busyWindow = /** @type {Window & { __mflInteractionBusy?: { installLegacyBridge?: () => void } }} */ (window);
+  busyWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
 
   document.documentElement.dataset.mflReady = "true";
