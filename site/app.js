@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const runtimeWindow = /** @type {any} */ (window);
   const STATIC_RELEASE_VERSION = "1.123.4";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const VIEW_BY_SLUG = Object.freeze({
@@ -237,19 +238,17 @@
     function wrapGlobalAsyncFunction(name) {
       let original = null;
       try {
-        original = window[name];
+        original = runtimeWindow[name];
       } catch {
         original = null;
       }
       if (typeof original !== "function" || original.__mflInteractionBusyWrapped) return false;
 
-      const wrapped = function busyWrappedGlobalFunction(...args) {
-        return run(() => original.apply(this, args), name);
-      };
+      const wrapped = (...args) => run(() => original.apply(runtimeWindow, args), name);
       Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
       wrappedFunctions[name] = wrapped;
       try {
-        window[name] = wrapped;
+        runtimeWindow[name] = wrapped;
       } catch {
         return false;
       }
@@ -266,9 +265,9 @@
         return run(callback, "interaction-loading");
       };
       Object.defineProperty(interactionWrapper, "__mflInteractionBusyWrapped", { value: true });
-      window.__mflWithInteractionBusy = interactionWrapper;
+      runtimeWindow.__mflWithInteractionBusy = interactionWrapper;
       try {
-        window.withInteractionBusy = interactionWrapper;
+        runtimeWindow.withInteractionBusy = interactionWrapper;
       } catch {
         // The eval assignment below also covers global lexical bindings.
       }
@@ -287,7 +286,7 @@
       ].forEach(wrapGlobalAsyncFunction);
     }
 
-    window.__mflInteractionBusyWrappedFunctions = wrappedFunctions;
+    runtimeWindow.__mflInteractionBusyWrappedFunctions = wrappedFunctions;
     syncKnownLoadingStates();
 
     return Object.freeze({
@@ -303,7 +302,7 @@
 
   const footerVersionLink = primeStaticShell();
   const interactionBusy = createInteractionBusyController();
-  window.__mflInteractionBusy = interactionBusy;
+  runtimeWindow.__mflInteractionBusy = interactionBusy;
   const startupBusyToken = interactionBusy.begin("startup");
 
   function finishStartupBusy() {
