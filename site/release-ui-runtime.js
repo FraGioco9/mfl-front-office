@@ -29,6 +29,16 @@
     element.style.setProperty(property, value, "important");
   }
 
+  function setDocumentVariable(name, value) {
+    if (document.documentElement.style.getPropertyValue(name) === value) return;
+    document.documentElement.style.setProperty(name, value);
+  }
+
+  function setAttributeIfChanged(element, name, value) {
+    if (!(element instanceof Element) || element.getAttribute(name) === value) return;
+    element.setAttribute(name, value);
+  }
+
   function visible(element) {
     if (!(element instanceof HTMLElement) || element.hidden) return false;
     const style = getComputedStyle(element);
@@ -48,14 +58,14 @@
     }
 
     const text = `MFL Front Office v${VERSION}`;
-    link.hidden = false;
-    link.removeAttribute("aria-hidden");
-    link.setAttribute("href", "/changelog");
-    link.dataset.page = "changelog";
-    link.dataset.releaseLabel = text;
-    link.textContent = text;
-    link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = VERSION;
+    if (link.hidden) link.hidden = false;
+    if (link.hasAttribute("aria-hidden")) link.removeAttribute("aria-hidden");
+    setAttributeIfChanged(link, "href", "/changelog");
+    if (link.dataset.page !== "changelog") link.dataset.page = "changelog";
+    if (link.dataset.releaseLabel !== text) link.dataset.releaseLabel = text;
+    if (link.textContent !== text) link.textContent = text;
+    setAttributeIfChanged(link, "aria-label", `${text}, open Changelog`);
+    if (footer.dataset.releaseVersion !== VERSION) footer.dataset.releaseVersion = VERSION;
     setImportant(link, "display", "inline-block");
     setImportant(link, "visibility", "visible");
     setImportant(link, "opacity", "1");
@@ -81,7 +91,7 @@
     setImportant(bar, "bottom", `${bottom}px`);
     setImportant(bar, "transform", "translateX(-50%)");
     setImportant(bar, "z-index", "2147483500");
-    document.documentElement.style.setProperty("--mfl-selection-bar-bottom", `${bottom}px`);
+    setDocumentVariable("--mfl-selection-bar-bottom", `${bottom}px`);
   }
 
   function syncToasts() {
@@ -90,7 +100,7 @@
       ? Math.max(12, Math.ceil(innerHeight - bar.getBoundingClientRect().top + 12))
       : 88;
     const value = `${bottom}px`;
-    document.documentElement.style.setProperty("--mfl-toast-bottom", value);
+    setDocumentVariable("--mfl-toast-bottom", value);
     document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
       if (!(toast instanceof HTMLElement)) return;
       setImportant(toast, "position", "fixed");
@@ -101,25 +111,27 @@
 
   function syncStatsChrome() {
     if (!STATS_PATH.test(location.pathname)) return;
-    document.body.dataset.page = "databasestats";
+    if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       const allowed = ["attributes", "contracts", "stats"].includes(button.dataset.view);
       const active = button.dataset.view === "stats";
-      button.hidden = !allowed;
-      button.removeAttribute("aria-hidden");
+      if (button.hidden === allowed) button.hidden = !allowed;
+      if (button.hasAttribute("aria-hidden")) button.removeAttribute("aria-hidden");
       button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
+      setAttributeIfChanged(button, "aria-pressed", String(active));
     });
 
     window.__mflDatabaseStatsRuntime?.sync?.();
     const page = document.querySelector("#databaseStatsPage");
     if (!(page instanceof HTMLElement)) return;
     document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
+      if (!(candidate instanceof HTMLElement)) return;
+      const shouldHide = candidate !== page;
+      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
     });
-    page.hidden = false;
-    page.removeAttribute("aria-hidden");
+    if (page.hidden) page.hidden = false;
+    if (page.hasAttribute("aria-hidden")) page.removeAttribute("aria-hidden");
   }
 
   function sync() {
