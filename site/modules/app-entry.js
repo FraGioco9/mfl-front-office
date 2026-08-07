@@ -28,6 +28,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
 /** @type {Window & {
  * __mflInteractionBusy?: { installLegacyBridge?: () => void },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
+ * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * }} */
 const runtimeWindow = window;
 
@@ -65,6 +66,7 @@ async function start() {
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
+  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
