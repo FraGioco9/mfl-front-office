@@ -1,4 +1,5 @@
 [
+  ["v1.123.11", "Keep static chrome fixed and stabilize Database Stats routing, retired totals, Custom filters, and saved view state"],
   ["v1.123.10", "Restore Database Stats loading, counts, saved view state, and complete Changelog history"],
   ["v1.123.9", "Stabilize opted-in and stats first paint, correct active-player ownership, and remove stale Changelog source"],
   ["v1.123.8", "Restore stable loading completion, hide player totals while loading, and fix stats first paint and active counts"],
