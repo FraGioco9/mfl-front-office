@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.13");
+  assert.equal(release.version, "1.123.14");
   assert.ok(release.description.length > 20);
 });
 
@@ -29,10 +29,10 @@ test("nested routes load the module entry from the site root", async () => {
   assert.doesNotMatch(bridge, /new URL\("\.\/modules\/app-entry\.js", window\.location\.href\)/);
 });
 
-test("static shell separates wallet opt-in from Progression permission before runtime loading", async () => {
+test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.13"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.14"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /const storedOptIn = Boolean\(storedWalletOptInAddress\(\)\)/);
   assert.match(bridge, /const storedAccess = hasStoredProgressionAccess\(\)/);
@@ -40,6 +40,9 @@ test("static shell separates wallet opt-in from Progression permission before ru
   assert.match(bridge, /myPlayersOptInButton\.hidden = storedOptIn/);
   assert.match(bridge, /classList\.toggle\("guest", !storedAccess\)/);
   assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
+  assert.match(index, /root\.dataset\.storedWalletOptIn = optedIn \? "true" : "false"/);
+  assert.match(index, /html\[data-stored-wallet-opt-in="true"\] :is\(#homeOptInButton, #myPlayersOptInButton\)/);
+  assert.match(index, /<button id="homeOptInButton" class="homeOptInButton" type="button">/);
   assert.match(index, /<header class="topbar">/);
   assert.match(index, /<div id="menuRail" class="menuRail">/);
   assert.match(index, /<aside id="sidebar" class="sidebar">/);
@@ -49,20 +52,24 @@ test("static shell separates wallet opt-in from Progression permission before ru
   assert.match(index, />Evaluation<\/span>/);
 });
 
-test("Database Stats owns first paint and its interaction portal binds before legacy handlers", async () => {
+test("Database Stats view controls and five-card geometry are static HTML", async () => {
   const bridge = await read("app.js");
+  const index = await read("index.html");
   const runtime = await read("database-stats-runtime.js");
   const bootstrap = await read("database-stats-navigation-release-runtime.js");
   const entry = await read("modules/app-entry.js");
   const earlyScripts = entry.slice(entry.indexOf("const EARLY_RUNTIME_SCRIPTS"), entry.indexOf("const LATE_RUNTIME_SCRIPTS"));
   const lateScripts = entry.slice(entry.indexOf("const LATE_RUNTIME_SCRIPTS"), entry.indexOf("/** @type"));
 
-  assert.match(bridge, /function ensureDatabaseStatsStaticPage\(\)/);
-  assert.match(bridge, /pageName: "databasestats", pageId: "databaseStatsPage"/);
-  assert.ok(bridge.indexOf("ensureDatabaseStatsStaticPage();") < bridge.indexOf("const route = initialRoute"));
+  assert.match(index, /<section id="databaseStatsPage"[^>]*data-static-database-stats="true"[^>]*hidden>/);
+  assert.match(index, /aria-label="Database views"[\s\S]*data-view="attributes">Attributes<[\s\S]*data-view="contracts">Contracts<[\s\S]*data-view="stats">Stats</);
+  assert.match(index, /#databaseStatsPage \.databaseStatsCards \{\s*grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/);
   for (const label of ["All", "Ultimate", "Legendary", "Rare", "Uncommon", "Limited", "Common", "Custom"]) {
-    assert.match(bridge, new RegExp(`mflStatsFilterButton[^>]*>${label}<\\/button>`));
+    assert.match(index, new RegExp(`mflStatsFilterButton[^>]*>${label}<\\/button>`));
   }
+  assert.match(bridge, /function ensureDatabaseStatsStaticPage\(\)[\s\S]*return page instanceof HTMLElement \? page : null;/);
+  assert.doesNotMatch(bridge, /page\.innerHTML = `\s*<h2 class="tablePageTitle">Database/);
+  assert.match(bridge, /pageName: "databasestats", pageId: "databaseStatsPage"/);
   assert.match(runtime, /const existing = document\.getElementById\("databaseStatsPage"\)/);
 
   for (const script of [
@@ -145,8 +152,9 @@ test("Database Stats participates in the existing saved Database view state", as
   assert.match(stateRuntime, /showHomeShell = async function showHomeShellWithDatabaseStats/);
 });
 
-test("MFL Stats uses one compact grouped request with no polling or full-row startup load", async () => {
+test("MFL Stats uses one compact grouped request and releases its shell for navigation", async () => {
   const runtime = await read("mfl-stats-first-paint-runtime.js");
+  const index = await read("index.html");
   const handler = await read("api/data.js");
   const summary = await read("api/_mfl-stats-summary.js");
   const startup = await read("startup-integrity-runtime.js");
@@ -155,7 +163,11 @@ test("MFL Stats uses one compact grouped request with no polling or full-row sta
   assert.match(runtime, /mode=mfl-stats-summary/);
   assert.match(runtime, /function renderSummary\(\)/);
   assert.match(runtime, /function installLegacyBridge\(\)/);
-  assert.doesNotMatch(runtime, /setInterval|loadFullMflStats|mfl-stats-all/);
+  assert.match(runtime, /function releaseStatsShellForNavigation\(target\)/);
+  assert.match(runtime, /document\.documentElement\.classList\.remove\(FIRST_PAINT_GUARD_CLASS\)/);
+  assert.doesNotMatch(runtime, /setInterval|loadFullMflStats|mfl-stats-all|scheduleRouteSync/);
+  assert.match(runtime, /#mflStatsPage \.mflStatsHistogram \{\s*animation: none !important;\s*opacity: 1 !important;\s*transform: none !important;/);
+  assert.match(index, /#mflStatsPage \.mflStatsHistogram \{\s*animation: none !important;\s*opacity: 1 !important;/);
   assert.match(handler, /mode === "mfl-stats-summary"/);
   assert.match(summary, /GROUP BY overall, age, category/);
   assert.match(summary, /THEN 'packable'/);
@@ -168,10 +180,12 @@ test("MFL Stats uses one compact grouped request with no polling or full-row sta
 
 test("MFL stats first paint keeps the player table hidden", async () => {
   const runtime = await read("mfl-stats-first-paint-runtime.js");
+  const index = await read("index.html");
   assert.match(runtime, /const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard"/);
   assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #progressionPage \{\s*display: none !important;/);
   assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #mflStatsPage \{\s*display: block !important;/);
   assert.match(runtime, /function syncFirstPaintGuard\(\)/);
+  assert.match(index, /html\[data-initial-page="mfl\/stats"\]:not\(\.mflInitialRouteResolved\) #mflStatsPage/);
   assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
@@ -181,7 +195,7 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
