@@ -186,7 +186,7 @@
       }
 
       if (explicitStatsRoute) {
-        rememberStatsView(false);
+        rememberStatsView(true);
         queueStatsCloudPersist();
       }
       return result;
