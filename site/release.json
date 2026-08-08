@@ -1,4 +1,4 @@
 {
-  "version": "1.123.13",
-  "description": "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"
+  "version": "1.123.14",
+  "description": "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"
 }

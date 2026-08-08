@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.13");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.14");
   const MFL_STATS_PATH = /^\/mfl\/stats\/?$/i;
   const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard";
   const FILTERS = [
@@ -32,7 +32,7 @@
   let distributionMode = "overall";
   let animationShown = false;
   let animationTimer = 0;
-  let routeSyncTimer = 0;
+  let routeSyncFrame = 0;
   let originalLegacyRenderer = null;
   let summaryLegacyRenderer = null;
 
@@ -66,6 +66,12 @@
         border-color: var(--primary) !important;
         background: var(--primary) !important;
         color: #ffffff !important;
+      }
+
+      #mflStatsPage .mflStatsHistogram {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
       }
 
       #mflStatsPage .mflStatsHistogramBar,
@@ -336,12 +342,22 @@
     void requestSummary();
   }
 
-  function scheduleRouteSync() {
-    if (routeSyncTimer) window.clearTimeout(routeSyncTimer);
-    routeSyncTimer = window.setTimeout(() => {
-      routeSyncTimer = 0;
+  function scheduleStatsEntrySync() {
+    if (routeSyncFrame) cancelAnimationFrame(routeSyncFrame);
+    routeSyncFrame = requestAnimationFrame(() => {
+      routeSyncFrame = 0;
       sync();
-    }, 0);
+    });
+  }
+
+  function releaseStatsShellForNavigation(target) {
+    if (!isMflStats() || !(target instanceof Element)) return false;
+    const leavesThroughView = Boolean(target.closest('#mflStatsPage .viewButton[data-view="attributes"]'));
+    const leavesThroughNavigation = Boolean(target.closest("#sidebar .navButton[data-page], a[data-page]"));
+    if (!leavesThroughView && !leavesThroughNavigation) return false;
+    document.documentElement.classList.remove(FIRST_PAINT_GUARD_CLASS);
+    clearAnimationClass();
+    return true;
   }
 
   function onDocumentClick(event) {
@@ -370,8 +386,10 @@
       return;
     }
 
-    if (target.closest('#progressionPage .viewButton[data-view="stats"], #mflStatsPage .viewButton[data-view], .navButton[data-page="mfl"]')) {
-      scheduleRouteSync();
+    if (releaseStatsShellForNavigation(target)) return;
+
+    if (target.closest('#progressionPage .viewButton[data-view="stats"]')) {
+      scheduleStatsEntrySync();
     }
   }
 
@@ -387,7 +405,7 @@
 
   function destroy() {
     destroyed = true;
-    if (routeSyncTimer) window.clearTimeout(routeSyncTimer);
+    if (routeSyncFrame) cancelAnimationFrame(routeSyncFrame);
     if (animationTimer) window.clearTimeout(animationTimer);
     endDataBusy();
     document.removeEventListener("click", onDocumentClick, true);
