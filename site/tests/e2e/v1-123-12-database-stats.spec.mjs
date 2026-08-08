@@ -64,6 +64,8 @@ test("slow legacy startup cannot replace Database Stats or hide content while Cu
   await expect(page.locator("#databaseStatsPage")).toBeVisible();
   await expect(page.locator("#progressionPage")).toBeHidden();
 
+  // app-entry can be ready while legacy startApp is still awaiting its own bootstrap request.
+  await waitForArchitecture(page);
   await page.getByRole("button", { name: "Custom", exact: true }).click();
   const portal = page.locator("#databaseStatsCustomTooltipPortal");
   await expect(portal).toBeVisible();
@@ -75,7 +77,6 @@ test("slow legacy startup cannot replace Database Stats or hide content while Cu
   await expect(page.locator("#databaseStatsDistribution")).toBeVisible();
 
   releaseBootstrap();
-  await waitForArchitecture(page);
   await page.waitForTimeout(300);
 
   await expect(page).toHaveURL(/\/database\/stats$/);
