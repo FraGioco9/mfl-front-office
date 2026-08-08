@@ -41,7 +41,7 @@ async function mockStats(page, overrides = {}) {
   });
 }
 
-test("footer starts in the pinned content column with v1.123.11", async ({ page }) => {
+test("footer starts in the pinned content column with the current release", async ({ page }) => {
   let releaseMetadata;
   const gate = new Promise((resolve) => { releaseMetadata = resolve; });
   await page.route("**/release.json", async (route) => {
@@ -52,7 +52,7 @@ test("footer starts in the pinned content column with v1.123.11", async ({ page 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const footer = page.locator(".siteFooter");
   await expect(footer).toBeVisible();
-  await expect(footer).toContainText("MFL Front Office v1.123.11");
+  await expect(footer).toContainText("MFL Front Office v1.123.12");
   await expect(page.locator("body")).toHaveClass(/pinnedSidebarVisible/);
   const layout = await page.evaluate(() => {
     const footer = globalThis.document.querySelector(".siteFooter");
