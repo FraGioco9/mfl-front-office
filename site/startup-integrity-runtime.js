@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.45");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.13");
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
     : (path) => new URL(String(path || "").replace(/^\/+/, ""), window.location.origin + "/").href;
@@ -64,6 +64,24 @@
 
   function sync()`,
       "the Evaluation Discount Rate route synchronization",
+    );
+
+    source = replaceRegexRequired(
+      source,
+      /  function applyStats\(\) \{[\s\S]*?\n  \}\n\n  function syncDynamic\(\)/,
+      `  function applyStats() {
+    if (isMflStats()) window.__mflStatsFirstPaintRuntime?.sync?.();
+  }
+
+  function syncDynamic()`,
+      "the MFL Stats full-row loading path",
+    );
+
+    source = replaceRegexRequired(
+      source,
+      /  if \(isMflStats\(\)\) void loadStats\(\);/,
+      `  if (isMflStats()) window.__mflStatsFirstPaintRuntime?.sync?.();`,
+      "the direct MFL Stats full-row request",
     );
 
     return `${source}\n//# sourceURL=mfl-startup-integrity-core-v${VERSION}.js`;
