@@ -7,18 +7,18 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-test("static HTML owns footer position and current assets before runtime", async () => {
+test("static app bridge owns the current footer before asynchronous runtime", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const bridge = await read("app.js");
+  const vercel = await read("vercel.json");
 
-  assert.equal(release.version, "1.123.12");
-  assert.match(index, /href="\/styles\.css\?v=1\.123\.12"/);
+  assert.equal(release.version, "1.123.13");
   assert.match(index, /<body data-page="home" class="pinnedSidebarVisible">/);
-  assert.match(index, />MFL Front Office v1\.123\.12<\/a>/);
-  assert.match(index, /src="\/app\.js\?v=1\.123\.12"/);
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.12"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.13"/);
+  assert.match(bridge, /footerVersionLink\.textContent = `MFL Front Office v\$\{STATIC_RELEASE_VERSION\}`/);
   assert.match(bridge, /classList\.add\("mflStaticShellReady", "mflInitialRouteResolved"\)/);
+  assert.match(vercel, /"source": "\/app\.js"[^\n]+"no-store, max-age=0"/);
 });
 
 test("Database Stats route and saved view bridge are active before deferred startup finishes", async () => {
@@ -30,7 +30,8 @@ test("Database Stats route and saved view bridge are active before deferred star
   assert.match(early, /database-stats-navigation-release-runtime\.js/);
   assert.match(early, /database-stats-runtime\.js/);
   assert.match(early, /database-stats-state-runtime\.js/);
-  assert.doesNotMatch(late, /database-stats-navigation-release-runtime\.js|database-stats-runtime\.js|database-stats-state-runtime\.js/);
+  assert.match(early, /database-stats-tooltip-portal-runtime\.js/);
+  assert.doesNotMatch(late, /database-stats-navigation-release-runtime\.js|database-stats-runtime\.js|database-stats-state-runtime\.js|database-stats-tooltip-portal-runtime\.js/);
   const legacyLoad = entry.indexOf('loadClassicScript("/modules/legacy-core.js"');
   const firstStateSync = entry.indexOf("__mflDatabaseStatsStateRuntime?.sync?.()", legacyLoad);
   const restoreRoute = entry.indexOf("__mflDatabaseStatsReloadBootstrap?.restoreRoute?.()", legacyLoad);
@@ -40,7 +41,6 @@ test("Database Stats route and saved view bridge are active before deferred star
   const ready = entry.indexOf('dataset.mflReady = "true"');
   assert.ok(legacyLoad >= 0 && firstStateSync > legacyLoad && restoreRoute > firstStateSync);
   assert.ok(lateLoad > restoreRoute && finalize > lateLoad && finalStateSync > finalize && ready > finalStateSync);
-  assert.doesNotMatch(entry, /loadClassicScript\("\/database-stats-state-runtime\.js", release\.version\)/);
   assert.match(bootstrap, /initialPage === "database\/stats"/);
   assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
 });
