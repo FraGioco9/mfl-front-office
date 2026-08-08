@@ -1,4 +1,6 @@
 [
+  ["v1.123.14", "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"],
+  ["v1.123.13", "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"],
   ["v1.123.12", "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"],
   ["v1.123.11", "Keep static chrome fixed and stabilize Database Stats routing, retired totals, Custom filters, and saved view state"],
   ["v1.123.10", "Restore Database Stats loading, counts, saved view state, and complete Changelog history"],
