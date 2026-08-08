@@ -47,6 +47,77 @@ async function gateAppScript(page) {
   return () => releaseApp();
 }
 
+async function homeLayout(page) {
+  return page.evaluate(() => {
+    const rect = (selector) => {
+      const node = globalThis.document.querySelector(selector);
+      if (!node) return null;
+      const box = node.getBoundingClientRect();
+      return { top: box.top, left: box.left, width: box.width, height: box.height, bottom: box.bottom };
+    };
+    const css = (selector) => {
+      const node = globalThis.document.querySelector(selector);
+      if (!node) return null;
+      const style = globalThis.getComputedStyle(node);
+      return {
+        display: style.display,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        marginTop: style.marginTop,
+        marginBottom: style.marginBottom,
+        paddingTop: style.paddingTop,
+        paddingBottom: style.paddingBottom,
+      };
+    };
+    return {
+      fonts: globalThis.document.fonts?.status || "unsupported",
+      htmlClass: globalThis.document.documentElement.className,
+      bodyClass: globalThis.document.body.className,
+      bodyPage: globalThis.document.body.dataset.page,
+      topbar: rect(".topbar"),
+      appShell: rect("#appShell"),
+      main: rect("main"),
+      home: rect("#homePage"),
+      intro: rect("#homePage .homeIntro"),
+      introParagraph: rect("#homePage .homeIntro p"),
+      stats: rect("#homePage .homeStats"),
+      footer: rect(".siteFooter"),
+      introCss: css("#homePage .homeIntro p"),
+      statNumberCss: css("#homePage .homeStats span"),
+      statLabelCss: css("#homePage .homeStats label"),
+    };
+  });
+}
+
+async function databaseLayout(page) {
+  return page.evaluate(() => {
+    const rect = (selector) => {
+      const node = globalThis.document.querySelector(selector);
+      if (!node) return null;
+      const box = node.getBoundingClientRect();
+      return { top: box.top, left: box.left, width: box.width, height: box.height, bottom: box.bottom };
+    };
+    const css = (selector) => {
+      const node = globalThis.document.querySelector(selector);
+      if (!node) return null;
+      const style = globalThis.getComputedStyle(node);
+      return { fontFamily: style.fontFamily, fontSize: style.fontSize, lineHeight: style.lineHeight, display: style.display };
+    };
+    return {
+      fonts: globalThis.document.fonts?.status || "unsupported",
+      title: rect("#databaseStatsPage .tablePageTitle"),
+      views: rect("#databaseStatsPage .views"),
+      filters: rect("#databaseStatsPage .databaseStatsFilters"),
+      filterLabel: rect("#databaseStatsPage .databaseStatsFilters > span"),
+      cards: rect("#databaseStatsPage .databaseStatsCards"),
+      card: rect("#databaseStatsPage .databaseStatsCards article"),
+      titleCss: css("#databaseStatsPage .tablePageTitle"),
+      filterLabelCss: css("#databaseStatsPage .databaseStatsFilters > span"),
+    };
+  });
+}
+
 test("Home content has its final position before app.js for an opted-in wallet", async ({ page }) => {
   await page.addInitScript(() => {
     const wallet = "0x1234";
@@ -66,22 +137,16 @@ test("Home content has its final position before app.js for an opted-in wallet",
   await page.goto("/", { waitUntil: "commit" });
   await expect(page.locator("#homePage")).toBeVisible();
   await expect(page.locator("#homeOptInButton")).toBeHidden();
-
-  const before = await page.locator("#homePage .homeIntro").evaluate((node) => {
-    const rect = node.getBoundingClientRect();
-    return { top: rect.top, left: rect.left, width: rect.width };
-  });
+  const before = await homeLayout(page);
 
   releaseApp();
   await waitForArchitecture(page);
-  const after = await page.locator("#homePage .homeIntro").evaluate((node) => {
-    const rect = node.getBoundingClientRect();
-    return { top: rect.top, left: rect.left, width: rect.width };
-  });
+  const after = await homeLayout(page);
+  const detail = JSON.stringify({ before, after });
 
-  expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(1);
-  expect(Math.abs(after.left - before.left)).toBeLessThanOrEqual(1);
-  expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.intro.top - before.intro.top) <= 1, detail).toBe(true);
+  expect(Math.abs(after.intro.left - before.intro.left) <= 1, detail).toBe(true);
+  expect(Math.abs(after.intro.width - before.intro.width) <= 1, detail).toBe(true);
 });
 
 test("Database Stats view buttons and card widths are final before app.js", async ({ page }) => {
@@ -108,25 +173,28 @@ test("Database Stats view buttons and card widths are final before app.js", asyn
   await expect(statsPage.locator('.viewButton[data-view="stats"]')).toBeVisible();
   await expect(statsPage.locator('.viewButton[data-view="stats"]')).toHaveClass(/active/);
 
-  const before = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
+  const beforeCards = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
     const rect = node.getBoundingClientRect();
     return { top: rect.top, width: rect.width };
   }));
-  expect(before).toHaveLength(5);
-  expect(new Set(before.map((card) => Math.round(card.top))).size).toBe(1);
+  const beforeLayout = await databaseLayout(page);
+  expect(beforeCards).toHaveLength(5);
+  expect(new Set(beforeCards.map((card) => Math.round(card.top))).size).toBe(1);
 
   releaseApp();
   await waitForArchitecture(page);
   await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("10");
-  const after = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
+  const afterCards = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
     const rect = node.getBoundingClientRect();
     return { top: rect.top, width: rect.width };
   }));
+  const afterLayout = await databaseLayout(page);
+  const detail = JSON.stringify({ beforeLayout, afterLayout, beforeCards, afterCards });
 
-  expect(after).toHaveLength(5);
-  after.forEach((card, index) => {
-    expect(Math.abs(card.width - before[index].width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(card.top - before[index].top)).toBeLessThanOrEqual(1);
+  expect(afterCards).toHaveLength(5);
+  afterCards.forEach((card, index) => {
+    expect(Math.abs(card.width - beforeCards[index].width) <= 1, detail).toBe(true);
+    expect(Math.abs(card.top - beforeCards[index].top) <= 1, detail).toBe(true);
   });
 });
 
@@ -147,13 +215,13 @@ test("MFL Stats histogram is opaque and navigation can leave and re-enter Stats"
   await page.goto("/mfl/stats");
   await waitForArchitecture(page);
   await expect(page.locator("#mflStatsTotalPlayers")).toHaveText("10");
-
-  const histogram = page.locator("#mflStatsPage .mflStatsHistogram");
-  await expect(histogram).toBeVisible();
-  expect(await histogram.evaluate((node) => {
-    const style = globalThis.getComputedStyle(node);
-    return { opacity: style.opacity, animationName: style.animationName, transform: style.transform };
-  })).toEqual({ opacity: "1", animationName: "none", transform: "none" });
+  await expect(page.locator("#mflStatsPage .mflStatsHistogram")).toBeVisible();
+  await page.waitForFunction(() => {
+    const histogram = globalThis.document.querySelector("#mflStatsPage .mflStatsHistogram");
+    if (!histogram?.isConnected) return false;
+    const style = globalThis.getComputedStyle(histogram);
+    return style.opacity === "1" && style.animationName === "none" && style.transform === "none";
+  });
 
   await page.locator('#mflStatsPage .viewButton[data-view="attributes"]').click();
   await expect(page).toHaveURL(/\/mfl\/attributes$/);
