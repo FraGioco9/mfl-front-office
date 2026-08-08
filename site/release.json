@@ -1,4 +1,4 @@
 {
-  "version": "1.123.12",
-  "description": "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"
+  "version": "1.123.13",
+  "description": "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"
 }

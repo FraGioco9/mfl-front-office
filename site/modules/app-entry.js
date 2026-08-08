@@ -5,6 +5,7 @@ import { loadRelease } from "./release.js";
 import { loadClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
+  "/database-stats-tooltip-portal-runtime.js",
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
   "/evaluation-static-chrome-runtime.js",
@@ -18,7 +19,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-route-ui-runtime.js",
   "/database-stats-refinement-runtime.js",
-  "/database-stats-tooltip-portal-runtime.js",
   "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
   "/selection-refresh-reset-runtime.js",
@@ -30,6 +30,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflInteractionBusy?: { installLegacyBridge?: () => void },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
+ * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
  * }} */
 const runtimeWindow = window;
 
@@ -62,12 +63,15 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
+  runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
+  runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+  runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));

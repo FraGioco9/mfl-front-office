@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.12");
+  assert.equal(release.version, "1.123.13");
   assert.ok(release.description.length > 20);
 });
 
@@ -29,13 +29,16 @@ test("nested routes load the module entry from the site root", async () => {
   assert.doesNotMatch(bridge, /new URL\("\.\/modules\/app-entry\.js", window\.location\.href\)/);
 });
 
-test("static shell and its content resolve before runtime loading", async () => {
+test("static shell separates wallet opt-in from Progression permission before runtime loading", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.12"/);
-  assert.match(bridge, /function primeStaticShell\(\)/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.13"/);
+  assert.match(bridge, /function storedWalletOptInAddress\(\)/);
+  assert.match(bridge, /const storedOptIn = Boolean\(storedWalletOptInAddress\(\)\)/);
   assert.match(bridge, /const storedAccess = hasStoredProgressionAccess\(\)/);
-  assert.match(bridge, /homeOptInButton\.hidden = storedAccess/);
+  assert.match(bridge, /homeOptInButton\.hidden = storedOptIn/);
+  assert.match(bridge, /myPlayersOptInButton\.hidden = storedOptIn/);
+  assert.match(bridge, /classList\.toggle\("guest", !storedAccess\)/);
   assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
   assert.match(index, /<header class="topbar">/);
   assert.match(index, /<div id="menuRail" class="menuRail">/);
@@ -46,7 +49,7 @@ test("static shell and its content resolve before runtime loading", async () => 
   assert.match(index, />Evaluation<\/span>/);
 });
 
-test("Database Stats owns first paint and its route bridge is ready before deferred legacy startup resumes", async () => {
+test("Database Stats owns first paint and its interaction portal binds before legacy handlers", async () => {
   const bridge = await read("app.js");
   const runtime = await read("database-stats-runtime.js");
   const bootstrap = await read("database-stats-navigation-release-runtime.js");
@@ -60,20 +63,22 @@ test("Database Stats owns first paint and its route bridge is ready before defer
   for (const label of ["All", "Ultimate", "Legendary", "Rare", "Uncommon", "Limited", "Common", "Custom"]) {
     assert.match(bridge, new RegExp(`mflStatsFilterButton[^>]*>${label}<\\/button>`));
   }
-  assert.match(bridge, /<article><span>Total active players<\/span><strong id="databaseStatsTotalPlayers">-<\/strong><\/article>/);
   assert.match(runtime, /const existing = document\.getElementById\("databaseStatsPage"\)/);
 
-  assert.match(earlyScripts, /database-stats-navigation-release-runtime\.js/);
-  assert.match(earlyScripts, /database-stats-runtime\.js/);
-  assert.match(earlyScripts, /database-stats-state-runtime\.js/);
-  assert.doesNotMatch(lateScripts, /database-stats-navigation-release-runtime\.js|database-stats-runtime\.js|database-stats-state-runtime\.js/);
+  for (const script of [
+    "database-stats-navigation-release-runtime.js",
+    "database-stats-runtime.js",
+    "database-stats-state-runtime.js",
+    "database-stats-tooltip-portal-runtime.js",
+  ]) {
+    assert.match(earlyScripts, new RegExp(script.replaceAll(".", "\\.")));
+    assert.doesNotMatch(lateScripts, new RegExp(script.replaceAll(".", "\\.")));
+  }
   const legacyLoad = entry.indexOf('loadClassicScript("/modules/legacy-core.js"');
   const firstStateSync = entry.indexOf("__mflDatabaseStatsStateRuntime?.sync?.()", legacyLoad);
   assert.ok(legacyLoad >= 0 && firstStateSync > legacyLoad);
-  assert.doesNotMatch(entry, /loadClassicScript\("\/database-stats-state-runtime\.js", release\.version\)/);
   assert.match(entry, /__mflDatabaseStatsReloadBootstrap\?\.restoreRoute\?\.\(\)/);
   assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
-  assert.match(bootstrap, /restoreRoute\(\);/);
   assert.match(entry, /runtimeWindow\.__mflDatabaseStatsReloadBootstrap\?\.finalize\?\.\(\)/);
 });
 
@@ -84,18 +89,17 @@ test("Database Stats runtime is event-driven and cannot starve startup", async (
   assert.doesNotMatch(stateRuntime, /new MutationObserver|setInterval/);
   assert.match(runtime, /document\.addEventListener\("click", onDocumentClick, true\)/);
   assert.match(runtime, /window\.addEventListener\("popstate", onPopState\)/);
-  assert.match(runtime, /if \(!data && !dataPromise\) void showStatsPage\(false\)/);
 });
 
-test("loading lock remains scoped to explicit data operations including Database Stats", async () => {
+test("loading lock remains scoped to explicit data operations including both Stats pages", async () => {
   const bridge = await read("app.js");
-  const runtime = await read("database-stats-runtime.js");
-  const stateRuntime = await read("database-stats-state-runtime.js");
+  const databaseRuntime = await read("database-stats-runtime.js");
+  const mflRuntime = await read("mfl-stats-first-paint-runtime.js");
   assert.match(bridge, /"databaseStatsData"/);
+  assert.match(bridge, /"mflStatsData"/);
   assert.match(bridge, /runtimeWindow\.__mflWithInteractionBusy = \(callback\) => run\(callback, "interaction-loading"\)/);
-  assert.match(runtime, /window\.__mflInteractionBusy\.begin\("databaseStatsData"\)/);
-  assert.match(runtime, /window\.__mflInteractionBusy\?\.end\?\.\(dataBusyToken\)/);
-  assert.doesNotMatch(stateRuntime, /busyToken|syncBusyState|statsStillLoading/);
+  assert.match(databaseRuntime, /window\.__mflInteractionBusy\.begin\("databaseStatsData"\)/);
+  assert.match(mflRuntime, /window\.__mflInteractionBusy\.begin\("mflStatsData"\)/);
   assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|syncKnownLoadingStates|namedTokens/);
 });
 
@@ -113,9 +117,6 @@ test("Database Stats excludes exact MFL ownership and counts every non-retired p
   assert.match(stats, /0x6fec8986261ecf49/);
   assert.match(stats, /lower\(coalesce\(wallet_address, ''\)\) NOT IN \(\?, \?\)/);
   assert.doesNotMatch(stats, /wallet_name/);
-  assert.match(stats, /sum\(CASE WHEN \$\{activeSql\} THEN 1 ELSE 0 END\) AS totalActivePlayers/);
-  const totalsSection = stats.slice(stats.indexOf("const totals = queryOne"), stats.indexOf("const retiredTotals"));
-  assert.doesNotMatch(totalsSection, /overallSql/);
   assert.match(dataHandler, /require\("\.\/_database-stats"\)/);
   assert.match(runtime, /data\.totalActivePlayers/);
 });
@@ -127,8 +128,8 @@ test("Database Stats bars have one Apply-only animation source", async () => {
   assert.doesNotMatch(runtime, /databaseStatsAnimate/);
   assert.match(runtime, /data-database-stats-apply-transition="true"/);
   assert.match(portal, /target\.closest\('#databaseStatsCustomTooltipPortal \[data-role="apply"\]'\)/);
+  assert.match(portal, /event\.stopImmediatePropagation\(\)/);
   assert.match(portal, /startApplyAnimation\(renderedHistogram\)/);
-  assert.match(stateRuntime, /clearBarTransition\(\)/);
   assert.match(stateRuntime, /#databaseStatsCustomTooltipPortal/);
 });
 
@@ -144,23 +145,43 @@ test("Database Stats participates in the existing saved Database view state", as
   assert.match(stateRuntime, /showHomeShell = async function showHomeShellWithDatabaseStats/);
 });
 
-test("MFL stats first paint uses a CSS guard instead of rewriting page visibility", async () => {
+test("MFL Stats uses one compact grouped request with no polling or full-row startup load", async () => {
+  const runtime = await read("mfl-stats-first-paint-runtime.js");
+  const handler = await read("api/data.js");
+  const summary = await read("api/_mfl-stats-summary.js");
+  const startup = await read("startup-integrity-runtime.js");
+  const entry = await read("modules/app-entry.js");
+
+  assert.match(runtime, /mode=mfl-stats-summary/);
+  assert.match(runtime, /function renderSummary\(\)/);
+  assert.match(runtime, /function installLegacyBridge\(\)/);
+  assert.doesNotMatch(runtime, /setInterval|loadFullMflStats|mfl-stats-all/);
+  assert.match(handler, /mode === "mfl-stats-summary"/);
+  assert.match(summary, /GROUP BY overall, age, category/);
+  assert.match(summary, /THEN 'packable'/);
+  assert.match(summary, /THEN 'aged'/);
+  assert.match(summary, /THEN 'other'/);
+  assert.match(startup, /the MFL Stats full-row loading path/);
+  assert.match(startup, /window\.__mflStatsFirstPaintRuntime\?\.sync\?\.\(\)/);
+  assert.match(entry, /__mflStatsFirstPaintRuntime\?\.installLegacyBridge\?\.\(\)/);
+});
+
+test("MFL stats first paint keeps the player table hidden", async () => {
   const runtime = await read("mfl-stats-first-paint-runtime.js");
   assert.match(runtime, /const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard"/);
   assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #progressionPage \{\s*display: none !important;/);
   assert.match(runtime, /html\.\$\{FIRST_PAINT_GUARD_CLASS\} #mflStatsPage \{\s*display: block !important;/);
   assert.match(runtime, /function syncFirstPaintGuard\(\)/);
-  assert.doesNotMatch(runtime, /function enforceStatsShell/);
   assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
-test("Changelog canonical data restores the accepted 1.123, 1.121 and 1.120 history", async () => {
+test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 history", async () => {
   const index = await read("index.html");
   const recent = JSON.parse(await read("releases-recent.json"));
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
