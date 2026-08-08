@@ -24,10 +24,6 @@
     return STATS_PATH.test(String(pathname || ""));
   }
 
-  function hasExplicitStatsIntent() {
-    return isStatsPath() || (initialStatsIntent && !initialStatsHandled);
-  }
-
   function installStyles() {
     if (document.getElementById("databaseStatsStateStyles")) return;
     const style = document.createElement("style");
@@ -52,6 +48,14 @@
       if (typeof updateViewButtons === "function" && state?.currentPage === "database") updateViewButtons();
     } catch {
       // The Database view still renders even if a future core changes its view registry.
+    }
+  }
+
+  function refreshDatabaseNavigation() {
+    try {
+      if (typeof updateNavigationLinks === "function") updateNavigationLinks();
+    } catch {
+      // The current route remains valid even if a future core changes sidebar navigation.
     }
   }
 
@@ -103,6 +107,7 @@
         : {};
       state.tablePageStates = state.tablePageStates || {};
       state.tablePageStates.database = { ...existing, view: "stats" };
+      refreshDatabaseNavigation();
       if ((forceSave || !lastPersistedStatsRoute || !alreadyStats) && typeof saveTableState === "function") {
         saveTableState();
       }
@@ -177,6 +182,7 @@
           : {};
         state.tablePageStates = state.tablePageStates || {};
         state.tablePageStates.database = { ...existing, view: "stats" };
+        refreshDatabaseNavigation();
       }
 
       if (explicitStatsRoute) {
