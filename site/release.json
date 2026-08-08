@@ -1,4 +1,4 @@
 {
-  "version": "1.123.11",
-  "description": "Keep static chrome fixed on first paint and make Database Stats route, retired totals, custom filters, and saved view state reliable"
+  "version": "1.123.12",
+  "description": "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"
 }

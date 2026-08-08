@@ -11,11 +11,12 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/mfl-stats-first-paint-runtime.js",
   "/startup-integrity-runtime.js",
   "/database-stats-navigation-release-runtime.js",
+  "/database-stats-runtime.js",
+  "/database-stats-state-runtime.js",
 ]);
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-route-ui-runtime.js",
-  "/database-stats-runtime.js",
   "/database-stats-refinement-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
   "/v1-120-10-runtime.js",
@@ -61,8 +62,8 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
+  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
-  await loadClassicScript("/database-stats-state-runtime.js", release.version);
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
