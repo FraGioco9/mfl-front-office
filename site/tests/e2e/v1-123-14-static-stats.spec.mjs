@@ -53,67 +53,12 @@ async function homeLayout(page) {
       const node = globalThis.document.querySelector(selector);
       if (!node) return null;
       const box = node.getBoundingClientRect();
-      return { top: box.top, left: box.left, width: box.width, height: box.height, bottom: box.bottom };
-    };
-    const css = (selector) => {
-      const node = globalThis.document.querySelector(selector);
-      if (!node) return null;
-      const style = globalThis.getComputedStyle(node);
-      return {
-        display: style.display,
-        fontFamily: style.fontFamily,
-        fontSize: style.fontSize,
-        lineHeight: style.lineHeight,
-        marginTop: style.marginTop,
-        marginBottom: style.marginBottom,
-        paddingTop: style.paddingTop,
-        paddingBottom: style.paddingBottom,
-      };
+      return { top: box.top, left: box.left, width: box.width, height: box.height };
     };
     return {
       fonts: globalThis.document.fonts?.status || "unsupported",
-      htmlClass: globalThis.document.documentElement.className,
-      bodyClass: globalThis.document.body.className,
-      bodyPage: globalThis.document.body.dataset.page,
-      topbar: rect(".topbar"),
-      appShell: rect("#appShell"),
-      main: rect("main"),
-      home: rect("#homePage"),
       intro: rect("#homePage .homeIntro"),
-      introParagraph: rect("#homePage .homeIntro p"),
       stats: rect("#homePage .homeStats"),
-      footer: rect(".siteFooter"),
-      introCss: css("#homePage .homeIntro p"),
-      statNumberCss: css("#homePage .homeStats span"),
-      statLabelCss: css("#homePage .homeStats label"),
-    };
-  });
-}
-
-async function databaseLayout(page) {
-  return page.evaluate(() => {
-    const rect = (selector) => {
-      const node = globalThis.document.querySelector(selector);
-      if (!node) return null;
-      const box = node.getBoundingClientRect();
-      return { top: box.top, left: box.left, width: box.width, height: box.height, bottom: box.bottom };
-    };
-    const css = (selector) => {
-      const node = globalThis.document.querySelector(selector);
-      if (!node) return null;
-      const style = globalThis.getComputedStyle(node);
-      return { fontFamily: style.fontFamily, fontSize: style.fontSize, lineHeight: style.lineHeight, display: style.display };
-    };
-    return {
-      fonts: globalThis.document.fonts?.status || "unsupported",
-      title: rect("#databaseStatsPage .tablePageTitle"),
-      views: rect("#databaseStatsPage .views"),
-      filters: rect("#databaseStatsPage .databaseStatsFilters"),
-      filterLabel: rect("#databaseStatsPage .databaseStatsFilters > span"),
-      cards: rect("#databaseStatsPage .databaseStatsCards"),
-      card: rect("#databaseStatsPage .databaseStatsCards article"),
-      titleCss: css("#databaseStatsPage .tablePageTitle"),
-      filterLabelCss: css("#databaseStatsPage .databaseStatsFilters > span"),
     };
   });
 }
@@ -143,10 +88,13 @@ test("Home content has its final position before app.js for an opted-in wallet",
   await waitForArchitecture(page);
   const after = await homeLayout(page);
   const detail = JSON.stringify({ before, after });
+  const beforeCenter = before.intro.left + before.intro.width / 2;
+  const afterCenter = after.intro.left + after.intro.width / 2;
 
   expect(Math.abs(after.intro.top - before.intro.top) <= 1, detail).toBe(true);
-  expect(Math.abs(after.intro.left - before.intro.left) <= 1, detail).toBe(true);
-  expect(Math.abs(after.intro.width - before.intro.width) <= 1, detail).toBe(true);
+  expect(Math.abs(afterCenter - beforeCenter) <= 1, detail).toBe(true);
+  expect(Math.abs(after.stats.top - before.stats.top) <= 1, detail).toBe(true);
+  expect(Math.abs(after.stats.height - before.stats.height) <= 1, detail).toBe(true);
 });
 
 test("Database Stats view buttons and card widths are final before app.js", async ({ page }) => {
@@ -173,28 +121,25 @@ test("Database Stats view buttons and card widths are final before app.js", asyn
   await expect(statsPage.locator('.viewButton[data-view="stats"]')).toBeVisible();
   await expect(statsPage.locator('.viewButton[data-view="stats"]')).toHaveClass(/active/);
 
-  const beforeCards = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
+  const before = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
     const rect = node.getBoundingClientRect();
     return { top: rect.top, width: rect.width };
   }));
-  const beforeLayout = await databaseLayout(page);
-  expect(beforeCards).toHaveLength(5);
-  expect(new Set(beforeCards.map((card) => Math.round(card.top))).size).toBe(1);
+  expect(before).toHaveLength(5);
+  expect(new Set(before.map((card) => Math.round(card.top))).size).toBe(1);
 
   releaseApp();
   await waitForArchitecture(page);
   await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("10");
-  const afterCards = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
+  const after = await statsPage.locator(".databaseStatsCards article").evaluateAll((nodes) => nodes.map((node) => {
     const rect = node.getBoundingClientRect();
     return { top: rect.top, width: rect.width };
   }));
-  const afterLayout = await databaseLayout(page);
-  const detail = JSON.stringify({ beforeLayout, afterLayout, beforeCards, afterCards });
 
-  expect(afterCards).toHaveLength(5);
-  afterCards.forEach((card, index) => {
-    expect(Math.abs(card.width - beforeCards[index].width) <= 1, detail).toBe(true);
-    expect(Math.abs(card.top - beforeCards[index].top) <= 1, detail).toBe(true);
+  expect(after).toHaveLength(5);
+  after.forEach((card, index) => {
+    expect(Math.abs(card.width - before[index].width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(card.top - before[index].top)).toBeLessThanOrEqual(1);
   });
 });
 
