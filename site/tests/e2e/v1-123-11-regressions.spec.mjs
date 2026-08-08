@@ -52,7 +52,7 @@ test("footer starts in the pinned content column with the current release", asyn
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const footer = page.locator(".siteFooter");
   await expect(footer).toBeVisible();
-  await expect(footer).toContainText("MFL Front Office v1.123.12");
+  await expect(footer).toContainText("MFL Front Office v1.123.13");
   await expect(page.locator("body")).toHaveClass(/pinnedSidebarVisible/);
   const layout = await page.evaluate(() => {
     const footer = globalThis.document.querySelector(".siteFooter");
