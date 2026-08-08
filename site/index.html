@@ -6,28 +6,71 @@
     <title>MFL Front Office</title>
     <script>
       (() => {
+        const root = document.documentElement;
+        root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
         try {
-          const theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-          document.documentElement.dataset.theme = theme;
-          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+          root.dataset.theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          const normalize = (value) => {
+            const address = String(value || "").trim().toLowerCase();
+            return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+          };
+          const linkedWallet = normalize(localStorage.getItem("mfl-linked-wallet-v1"));
+          const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+          const proofWallet = normalize(proof?.address);
+          const optedIn = Boolean(
+            linkedWallet
+            && proofWallet === linkedWallet
+            && proof?.message
+            && Array.isArray(proof?.signatures)
+            && proof.signatures.length
+          );
+          root.dataset.storedWalletOptIn = optedIn ? "true" : "false";
         } catch {
-          document.documentElement.dataset.theme = "light";
-          document.documentElement.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+          root.dataset.theme = "light";
+          root.dataset.storedWalletOptIn = "false";
         }
       })();
     </script>
     <style>
-      html[data-initial-page="database/stats"]:not([data-mfl-ready="true"]) #progressionPage {
+      html[data-stored-wallet-opt-in="true"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: none !important;
       }
-      html[data-initial-page="database/stats"]:not([data-mfl-ready="true"]) #databaseStatsPage {
+      html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
+        display: inline-flex;
+      }
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #homePage,
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #progressionPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #homePage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #progressionPage {
+        display: none !important;
+      }
+      html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #databaseStatsPage,
+      html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #mflStatsPage {
         display: block !important;
+      }
+      #databaseStatsPage .databaseStatsCards {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      #mflStatsPage .mflStatsHistogram {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      @media (max-width: 1100px) {
+        #databaseStatsPage .databaseStatsCards {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 720px) {
+        #databaseStatsPage .databaseStatsCards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.12">
+    <link rel="stylesheet" href="/styles.css?v=1.123.14">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -68,7 +111,7 @@
           <a class="navButton" href="/evaluation" data-page="evaluation"><svg class="navEmoji navEvaluationIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M17 7.5c-.8-1.4-2.4-2.2-5-2.2-3 0-5 1.3-5 3.4 0 2.4 2.4 3.1 5 3.4 3 .4 5 1.1 5 3.4 0 2.1-2 3.4-5 3.4-2.7 0-4.4-.9-5.3-2.5"></path></svg><span class="navText">Evaluation</span></a>
           <a class="navButton" href="/watchlist" data-page="watchlist"><span class="navEmoji" aria-hidden="true">&#9733;</span><span class="navText">Watchlist</span></a>
           <a class="navButton" href="/my-players/attributes" data-page="myplayers"><svg class="navEmoji navJerseyIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><span class="navText">My Players</span></a>
-          <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.08A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.08A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.08A1.7 1.7 0 0 0 19.4 15z"></path></svg><span class="navText">Settings</span></a>
+          <a class="navButton settingsNavButton" href="/settings" data-page="settings"><svg class="navEmoji navSettingsIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.08A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.08A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06-.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.08A1.7 1.7 0 0 0 19.4 15z"></path></svg><span class="navText">Settings</span></a>
         </aside>
       </div>
 
@@ -88,7 +131,7 @@
               <label>wallets tracked</label>
             </div>
           </section>
-          <button id="homeOptInButton" class="homeOptInButton" type="button" hidden><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
+          <button id="homeOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
 
         </section>
 
@@ -180,6 +223,49 @@
           </div>
         </section>
 
+        <section id="databaseStatsPage" class="pageView mflStatsPage databaseStatsPage" data-static-database-stats="true" hidden>
+          <h2 class="tablePageTitle">Database</h2>
+          <section class="views mflStatsViews" aria-label="Database views">
+            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="contracts">Contracts</button>
+            <button class="viewButton active" type="button" data-view="stats">Stats</button>
+          </section>
+          <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
+            <span>Overall Filters</span>
+            <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">
+              <button class="mflStatsFilterButton active" type="button">All</button>
+              <button class="mflStatsFilterButton" type="button">Ultimate</button>
+              <button class="mflStatsFilterButton" type="button">Legendary</button>
+              <button class="mflStatsFilterButton" type="button">Rare</button>
+              <button class="mflStatsFilterButton" type="button">Uncommon</button>
+              <button class="mflStatsFilterButton" type="button">Limited</button>
+              <button class="mflStatsFilterButton" type="button">Common</button>
+              <button class="mflStatsFilterButton" type="button">Custom</button>
+            </div>
+            <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
+              <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
+              <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
+              <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
+            </div>
+          </section>
+          <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
+            <article><span>Total active players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
+            <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
+            <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
+            <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
+            <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
+          </section>
+          <section class="mflStatsDistribution" aria-label="Active players distribution">
+            <div class="mflStatsDistributionHeader">
+              <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
+              <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
+                <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
+                <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
+              </div>
+            </div>
+            <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
+          </section>
+        </section>
 
         <section id="mflStatsPage" class="pageView mflStatsPage" hidden>
           <h2 class="tablePageTitle">MFL Wallet</h2>
@@ -226,12 +312,11 @@
           </section>
         </section>
 
-
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
           <div class="myPlayersLockedContent">
             <h2 id="optInLockedTitle">My Players</h2>
             <p id="optInLockedMessage">In order to see your players, you need to opt in.</p>
-            <button id="myPlayersOptInButton" class="homeOptInButton" type="button" hidden><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
+            <button id="myPlayersOptInButton" class="homeOptInButton" type="button"><svg class="homeOptInIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h8v16h-8"></path><path d="M4 12h10"></path><path d="M11 8l4 4-4 4"></path></svg><span>Opt In</span></button>
           </div>
         </section>
 
@@ -373,10 +458,9 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.12</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.14</a>
       <span id="statusText">Updated -</span>
     </footer>
-
 
     <div id="searchModal" class="modalBackdrop" hidden>
       <section class="searchDialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
@@ -418,7 +502,6 @@
       </section>
     </div>
 
-
     <div id="evaluationLoadModal" class="modalBackdrop" hidden>
       <section class="evaluationLoadDialog" role="dialog" aria-modal="true" aria-labelledby="evaluationLoadTitle">
         <header class="filtersHeader">
@@ -428,8 +511,6 @@
         <div id="evaluationLoadList" class="evaluationLoadList"></div>
       </section>
     </div>
-
-
 
     <div id="watchlistChoiceModal" class="modalBackdrop" hidden>
       <section class="watchlistChoiceDialog" role="dialog" aria-modal="true" aria-labelledby="watchlistChoiceTitle">
@@ -521,7 +602,7 @@
                 </div>
                 <div class="advancedLateSeasonRewardSetting">
                   <span class="advancedLateSeasonRewardLabel">Final season</span>
-                  <span class="advancedRewardRateControlGroup"><button id="advancedFinalRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final-season earnings rate"><span>%</span></span></span>
+                  <span class="advancedRewardRateControlGroup"><button id="advancedFinalRewardResetButton" class="advancedRewardRateResetButton" type="button">Reset</button><span class="advancedPercentControl"><span class="advancedRewardRateStepper" aria-label="Adjust final-season earnings"><button id="advancedFinalRewardIncreaseButton" type="button" aria-label="Increase final-season earnings rate">&#9650;</button><button id="advancedFinalRewardDecreaseButton" type="button" aria-label="Decrease final-season earnings rate">&#9660;</button></span><input id="advancedFinalRewardInput" class="advancedRewardRateInput" type="text" inputmode="decimal" autocomplete="off" aria-label="Final season earnings rate"><span>%</span></span></span>
                 </div>
               </div>
             </div>
@@ -545,6 +626,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.12"></script>
+    <script src="/app.js?v=1.123.14"></script>
   </body>
 </html>
