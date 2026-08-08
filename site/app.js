@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.12";
+  const STATIC_RELEASE_VERSION = "1.123.13";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -42,17 +42,26 @@
     return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
   }
 
-  function hasStoredProgressionAccess() {
+  function storedWalletOptInAddress() {
     try {
       const linkedWallet = normalizeStoredWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
-      if (!linkedWallet) return false;
+      if (!linkedWallet) return "";
 
       const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
       const proofWallet = normalizeStoredWalletAddress(proof?.address);
       if (proofWallet !== linkedWallet || !proof?.message || !Array.isArray(proof?.signatures) || !proof.signatures.length) {
-        return false;
+        return "";
       }
+      return linkedWallet;
+    } catch {
+      return "";
+    }
+  }
 
+  function hasStoredProgressionAccess() {
+    try {
+      const linkedWallet = storedWalletOptInAddress();
+      if (!linkedWallet) return false;
       const permissionKey = `${WALLET_PERMISSION_CACHE_STORAGE_KEY}:${linkedWallet}`;
       const permission = JSON.parse(localStorage.getItem(permissionKey) || "null");
       return permission?.allowed === true;
@@ -190,6 +199,7 @@
   function primeStaticShell() {
     ensureDatabaseStatsStaticPage();
     const route = initialRoute(window.location.pathname);
+    const storedOptIn = Boolean(storedWalletOptInAddress());
     const storedAccess = hasStoredProgressionAccess();
     const appShell = document.querySelector("#appShell");
     const menuRail = document.querySelector("#menuRail");
@@ -204,10 +214,11 @@
     document.body.classList.toggle("guest", !storedAccess);
     document.body.classList.add("pinnedSidebarVisible");
     document.documentElement.dataset.staticPage = route.pageName;
+    document.documentElement.dataset.storedWalletOptIn = storedOptIn ? "true" : "false";
     document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
 
-    if (homeOptInButton instanceof HTMLButtonElement) homeOptInButton.hidden = storedAccess;
-    if (myPlayersOptInButton instanceof HTMLButtonElement) myPlayersOptInButton.hidden = storedAccess;
+    if (homeOptInButton instanceof HTMLButtonElement) homeOptInButton.hidden = storedOptIn;
+    if (myPlayersOptInButton instanceof HTMLButtonElement) myPlayersOptInButton.hidden = storedOptIn;
     if (appShell instanceof HTMLElement) appShell.classList.remove("menuClosed", "menuAnimating");
     if (menuRail instanceof HTMLElement) menuRail.hidden = false;
     if (menuButton instanceof HTMLButtonElement) {
@@ -252,7 +263,7 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
-    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData"]);
+    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData"]);
     const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
     const activeTokens = new Map();
     let tokenSequence = 0;
