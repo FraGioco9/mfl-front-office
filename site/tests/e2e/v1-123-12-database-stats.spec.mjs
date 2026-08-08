@@ -106,7 +106,7 @@ test("Supabase table-state restoration keeps Stats as the remembered Database vi
           rules: []
         }
       }
-    }); updateNavigationLinks();`);
+    });`);
   });
 
   const databaseLink = page.locator('#sidebar .navButton[data-page="database"]');
