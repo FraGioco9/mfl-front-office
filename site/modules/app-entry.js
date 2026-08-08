@@ -12,6 +12,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/startup-integrity-runtime.js",
   "/database-stats-navigation-release-runtime.js",
   "/database-stats-runtime.js",
+  "/database-stats-state-runtime.js",
 ]);
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
@@ -61,7 +62,7 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
-  await loadClassicScript("/database-stats-state-runtime.js", release.version);
+  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
