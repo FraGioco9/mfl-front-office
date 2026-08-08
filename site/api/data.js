@@ -12,6 +12,7 @@ const {
   mflStatsData,
 } = require("./_data-views");
 const { databaseStatsData } = require("./_database-stats");
+const { mflStatsSummaryData } = require("./_mfl-stats-summary");
 
 module.exports = async function handler(request, response) {
   const startedAt = performance.now();
@@ -37,6 +38,7 @@ module.exports = async function handler(request, response) {
     else if (mode === "search") data = searchData(request);
     else if (mode === "summary") data = summaryData();
     else if (mode === "database-stats") data = databaseStatsData();
+    else if (mode === "mfl-stats-summary") data = mflStatsSummaryData();
     else if (mode === "mfl-stats") data = mflStatsData(request, false);
     else if (mode === "mfl-stats-all") data = mflStatsData(request, true);
     else {
