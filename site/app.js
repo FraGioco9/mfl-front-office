@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.23";
+  const STATIC_RELEASE_VERSION = "1.123.24";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -262,11 +262,25 @@
     return className ? STATIC_TABLE_COLUMN_PERCENTAGES[className] : null;
   }
 
+  let staticScrollbarWidth = null;
+
+  function staticBrowserScrollbarWidth() {
+    if (staticScrollbarWidth !== null) return staticScrollbarWidth;
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;top:-9999px;width:100px;height:100px;overflow:scroll;";
+    document.body.appendChild(probe);
+    staticScrollbarWidth = Math.max(0, probe.offsetWidth - probe.clientWidth);
+    probe.remove();
+    return staticScrollbarWidth;
+  }
+
   function staticTableContentWidth() {
     const main = document.querySelector("main");
     if (!(main instanceof HTMLElement)) return 0;
     const styles = getComputedStyle(main);
-    const viewportWidth = document.documentElement.clientWidth;
+    const clientWidth = document.documentElement.clientWidth;
+    const reservedViewportWidth = Math.max(0, window.innerWidth - staticBrowserScrollbarWidth());
+    const viewportWidth = Math.min(clientWidth, reservedViewportWidth);
     const menuRail = document.getElementById("menuRail");
     const sidebarWidth = menuRail instanceof HTMLElement && !menuRail.hidden ? 190 : 0;
     const paddingLeft = parseFloat(styles.paddingLeft) || 0;
@@ -377,6 +391,25 @@
     }
   }
 
+  function primeStaticTableLoadingBody(route) {
+    if (!route || route.pageId !== "progressionPage") return;
+    const tableHead = document.querySelector("#tableHead");
+    const tableBody = document.querySelector("#tableBody");
+    const emptyState = document.querySelector("#emptyState");
+    if (!(tableHead instanceof HTMLTableSectionElement) || !(tableBody instanceof HTMLTableSectionElement)) return;
+
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    row.className = "staticTableLoadingRow";
+    cell.className = "staticTableLoadingCell";
+    cell.colSpan = Math.max(1, tableHead.rows[0]?.cells.length || 1);
+    cell.textContent = "Loading players...";
+    row.appendChild(cell);
+    tableBody.replaceChildren(row);
+    tableBody.dataset.staticLoading = "true";
+    if (emptyState instanceof HTMLElement) emptyState.hidden = true;
+  }
+
   function primeStaticShell() {
     ensureDatabaseStatsStaticPage();
     if (/^\/database\/?$/i.test(window.location.pathname)) {
@@ -470,6 +503,7 @@
         });
       }
       primeStaticTableHeader(route);
+      primeStaticTableLoadingBody(route);
     }
 
     document.documentElement.classList.add("mflStaticShellReady", "mflInitialRouteResolved");
@@ -511,6 +545,13 @@
 
       #progressionPage nav.pager {
         padding-block: 12px !important;
+      }
+
+      #progressionPage #tableBody .staticTableLoadingCell {
+        height: 54px;
+        padding: 12px 16px;
+        text-align: center;
+        vertical-align: middle;
       }
 
       html.${DATA_LOADING_CLASS} #progressionPage nav.pager,

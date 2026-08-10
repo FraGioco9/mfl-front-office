@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.123.22";
+  const VERSION = String(window.__mflReleaseVersion || "1.123.24");
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
   const previous = window.__mflWatchlistRouteUiRuntime;
@@ -16,6 +16,8 @@
   let tooltipTimer = 0;
   let pointerX = -1;
   let pointerY = -1;
+  let stableWatchlistId = "";
+  let stableWatchlistName = "";
 
   const isWatchlistPath = (pathname = location.pathname) => WATCHLIST_PATH.test(String(pathname || ""));
   const viewSlugs = new Set(["attributes", "next-overall", "contracts", "current-season", "all-time"]);
@@ -23,6 +25,23 @@
   function routeWatchlistId(pathname = location.pathname) {
     const segment = decodeURIComponent(String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/)?.[1] || "");
     return viewSlugs.has(segment) ? "" : segment;
+  }
+
+  function stateWatchlistId() {
+    try {
+      return typeof state === "object" && state ? String(state.currentWatchlistId || "") : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function rememberVisibleWatchlistTitle() {
+    if (!isWatchlistPath()) return;
+    const visibleTitle = String(document.getElementById("tablePageTitle")?.textContent || "").trim();
+    const match = visibleTitle.match(/^Watchlist\s*-\s*(.+)$/i);
+    if (match?.[1]) stableWatchlistName = match[1].trim();
+    const id = routeWatchlistId() || stateWatchlistId();
+    if (id) stableWatchlistId = id;
   }
 
   function liveWatchlistName(watchlistId) {
@@ -58,11 +77,18 @@
     if (!isWatchlistPath()) return;
     const title = document.getElementById("tablePageTitle");
     if (!title) return;
-    const watchlistId = routeWatchlistId();
+
+    const routeId = routeWatchlistId();
+    const liveId = stateWatchlistId();
+    const watchlistId = routeId || liveId || stableWatchlistId;
+    if (routeId || liveId) stableWatchlistId = routeId || liveId;
+
     const name = liveWatchlistName(watchlistId)
       || cachedWatchlistName(watchlistId)
+      || stableWatchlistName
       || String(document.getElementById("watchlistButtonText")?.textContent || "").trim()
       || "Default";
+    stableWatchlistName = name;
     const nextTitle = `Watchlist - ${name}`;
     if (title.textContent !== nextTitle) title.textContent = nextTitle;
   }
@@ -222,6 +248,7 @@
   function beginNavigation(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    if (isWatchlistPath() && target.closest(".viewButton")) rememberVisibleWatchlistTitle();
     const route = routeFromEvent(event);
     if (route && !isWatchlistPath(route)) {
       protectedRoute = "";
@@ -333,6 +360,7 @@
   }
 
   window.__mflWatchlistRouteUiRuntime = { version: VERSION, sync, destroy };
+  rememberVisibleWatchlistTitle();
   sync();
   [0, 50, 150, 400, 1000, 2000, 5000].forEach((delay) => setTimeout(schedule, delay));
 })();
