@@ -26,6 +26,8 @@ test("application core keeps the known-good direct startup path", async () => {
 test("static shell resolves Watchlist names, table headers, and loading pagination before data", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
+  const runtime = await read("modules/legacy-core.js");
+  const styles = await read("styles.css");
   assert.match(bridge, /const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:"/);
   assert.match(bridge, /function storedWatchlistTitle\(pathname\)/);
   assert.match(bridge, /route\.title = storedWatchlistTitle\(window\.location\.pathname\)/);
@@ -33,6 +35,8 @@ test("static shell resolves Watchlist names, table headers, and loading paginati
   assert.match(bridge, /tableHead\.dataset\.staticHeader = "true"/);
   assert.match(bridge, /primeStaticTableHeader\(route\)/);
   assert.match(index, /html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager/);
+  assert.match(runtime, /restoreTablePageStates\(savedState\);\s*restoreLinkedWalletState\(savedState\);\s*restoreWatchlistState\(\);/);
+  assert.doesNotMatch(styles, /data-initial-page="evaluation"[^\n]+evaluationSearchGroup/);
 });
 
 test("nested routes load the module entry from the site root", async () => {
