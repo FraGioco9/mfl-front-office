@@ -35,8 +35,8 @@ test("generic wait hover suppression never owns an interaction shield or permane
   assert.match(runtime, /html\.\$\{WAIT_HOVER_CLASS\} body \*[\s\S]*transition: none !important;[\s\S]*animation: none !important/);
 
   const blocker = bridge.slice(bridge.indexOf("function interactionShouldBeBlocked"), bridge.indexOf("function blockInteraction"));
-  assert.match(blocker, /elementHasWaitCursor\(document\.body, "::before"\)/);
-  assert.doesNotMatch(blocker, /elementHasWaitCursor\(document\.body, "::after"\)/);
+  assert.match(blocker, /return activeTokens\.size > 0;/);
+  assert.doesNotMatch(blocker, /elementHasWaitCursor/);
 });
 
 test("MFL Stats controls explicitly lose hover motion during the real busy state", async () => {
