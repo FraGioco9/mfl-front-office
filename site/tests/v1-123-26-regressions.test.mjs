@@ -48,5 +48,5 @@ test("legacy loading is collapsed before paint without recreating the canonical 
   assert.match(runtime, /if \(legacyLoadingVisible\) show\(\)/);
   assert.doesNotMatch(runtime, /legacyLoadingVisible \|\| loadingRow/);
   assert.match(runtime, /new MutationObserver\(\(\) => \{[\s\S]*sync\(\);[\s\S]*\}\)/);
-  assert.match(runtime, /\n    sync,\n/);
+  assert.ok(runtime.includes("\n    sync,\n"));
 });
