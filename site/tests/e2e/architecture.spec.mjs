@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.16");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.17");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -420,7 +420,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.16");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.17");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -440,10 +440,109 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.16");
-  expect(rows[0][0]).toBe("v1.123.16");
+  expect(metadata.version).toBe("1.123.17");
+  expect(rows[0][0]).toBe("v1.123.17");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
   }
+});
+
+test("refresh shows the theme symbol that matches light or dark mode before runtime startup", async ({ page }) => {
+  const context = page.context();
+  for (const theme of ["light", "dark"]) {
+    const themedPage = await context.newPage();
+    await themedPage.addInitScript((value) => {
+      globalThis.localStorage.setItem("mfl-theme", value);
+    }, theme);
+
+    let releaseMetadata;
+    const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+    await themedPage.route("**/release.json", async (route) => {
+      await gate;
+      await route.continue();
+    });
+
+    await themedPage.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(themedPage.locator("html")).toHaveAttribute("data-theme", theme);
+    if (theme === "dark") {
+      await expect(themedPage.locator("#themeButton .themeSunSymbol")).toBeVisible();
+      await expect(themedPage.locator("#themeButton .themeMoonSymbol")).toBeHidden();
+    } else {
+      await expect(themedPage.locator("#themeButton .themeMoonSymbol")).toBeVisible();
+      await expect(themedPage.locator("#themeButton .themeSunSymbol")).toBeHidden();
+    }
+
+    const releaseResponse = themedPage.waitForResponse((response) => response.url().endsWith("/release.json"));
+    releaseMetadata();
+    await releaseResponse;
+    await themedPage.unroute("**/release.json");
+    await themedPage.close();
+  }
+});
+
+test("first bare Database visit opens Attributes with every Database view visible", async ({ page }) => {
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/database", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/database\/attributes$/);
+  for (const view of ["attributes", "contracts", "stats"]) {
+    await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeVisible();
+  }
+  await expect(page.locator('#progressionPage .viewButton[data-view="attributes"]')).toHaveClass(/active/);
+  for (const view of ["next", "current", "all"]) {
+    await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeHidden();
+  }
+
+  const releaseResponse = page.waitForResponse((response) => response.url().endsWith("/release.json"));
+  releaseMetadata();
+  await releaseResponse;
+  await page.unroute("**/release.json");
+});
+
+test("busy cursor blocks click handlers and hover motion across the site", async ({ page }) => {
+  await page.goto("/");
+  await waitForArchitecture(page);
+
+  const result = await page.evaluate(() => {
+    const button = globalThis.document.createElement("button");
+    button.style.transition = "background-color 1s ease";
+    button.style.animation = "pulse 1s infinite";
+    let clickCount = 0;
+    let hoverCount = 0;
+    button.addEventListener("click", () => { clickCount += 1; });
+    button.addEventListener("pointerover", () => { hoverCount += 1; });
+    globalThis.document.body.appendChild(button);
+
+    const token = globalThis.__mflInteractionBusy.begin("interaction-loading");
+    const busyStyle = globalThis.getComputedStyle(button);
+    const busyState = {
+      pointerEvents: busyStyle.pointerEvents,
+      transitionDuration: busyStyle.transitionDuration,
+      animationName: busyStyle.animationName,
+    };
+    button.dispatchEvent(new globalThis.PointerEvent("pointerover", { bubbles: true }));
+    button.click();
+    const blockedCounts = { clickCount, hoverCount };
+
+    globalThis.__mflInteractionBusy.end(token);
+    button.dispatchEvent(new globalThis.PointerEvent("pointerover", { bubbles: true }));
+    button.click();
+    button.remove();
+
+    return { busyState, blockedCounts, releasedCounts: { clickCount, hoverCount } };
+  });
+
+  expect(result.busyState).toEqual({
+    pointerEvents: "none",
+    transitionDuration: "0s",
+    animationName: "none",
+  });
+  expect(result.blockedCounts).toEqual({ clickCount: 0, hoverCount: 0 });
+  expect(result.releasedCounts).toEqual({ clickCount: 1, hoverCount: 1 });
 });

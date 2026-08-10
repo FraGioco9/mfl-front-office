@@ -37,6 +37,15 @@
       })();
     </script>
     <style>
+      #themeButton .themeSunSymbol {
+        display: none;
+      }
+      html[data-theme="dark"] #themeButton .themeMoonSymbol {
+        display: none;
+      }
+      html[data-theme="dark"] #themeButton .themeSunSymbol {
+        display: inline;
+      }
       html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
         display: none !important;
       }
@@ -100,7 +109,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.16">
+    <link rel="stylesheet" href="/styles.css?v=1.123.17">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -119,7 +128,7 @@
             <label>wallets</label>
           </div>
         </div>
-        <button id="themeButton" class="themeButton" type="button" aria-label="Switch to night mode" title="Night mode">&#127769;</button>
+        <button id="themeButton" class="themeButton" type="button" aria-label="Toggle color mode" title="Toggle color mode"><span class="themeMoonSymbol" aria-hidden="true">&#127769;</span><span class="themeSunSymbol" aria-hidden="true">&#9728;&#65039;</span></button>
         <div id="accountMenu" class="accountMenu">
           <button id="accountButton" class="compactButton" type="button" aria-haspopup="true" aria-expanded="false">&#128100; Account</button>
           <div id="accountDropdown" class="accountDropdown" hidden>
@@ -488,7 +497,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.16</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.17</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -656,6 +665,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.16"></script>
+    <script src="/app.js?v=1.123.17"></script>
   </body>
 </html>

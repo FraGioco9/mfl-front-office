@@ -1,4 +1,5 @@
 [
+  ["v1.123.17", "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"],
   ["v1.123.16", "Default to hiding MFL players, show locked pages immediately, and fix custom Database Stats totals"],
   ["v1.123.15", "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"],
   ["v1.123.14", "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"],

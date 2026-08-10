@@ -176,7 +176,7 @@ const mflWalletAddress = "0xff8d2bbed8164db0";
 
 const tablePages = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
 const pageViewOptions = {
-  database: ["attributes", "contracts"],
+  database: ["attributes", "contracts", "stats"],
   mfl: ["attributes", "stats"],
   agents: ["attributes", "next", "contracts", "current", "all"],
   progression: ["current", "all"],
@@ -584,7 +584,7 @@ function loadTheme() {
   } catch {
     savedTheme = null;
   }
-  applyTheme(savedTheme || "dark");
+  applyTheme(savedTheme || document.documentElement.dataset.theme || "dark");
 }
 
 
