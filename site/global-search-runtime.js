@@ -167,7 +167,8 @@
   document.addEventListener("input", onInput, true);
   observeResultBoxes();
   document.documentElement.dataset.globalSearchAuthoritative = "true";
-  window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
+  const globalSearchReady = Promise.resolve(true);
+  window.__mflGlobalSearchReadyPromise = globalSearchReady;
 
   function destroy() {
     destroyed = true;
