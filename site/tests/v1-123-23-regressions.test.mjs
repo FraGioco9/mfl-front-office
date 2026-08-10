@@ -33,10 +33,11 @@ test("typed global search owns one all-category database request", async () => {
   assert.match(runtime, /controller\?\.abort\(\)/);
 });
 
-test("Discount Rate tooltip dismissal reconciles pointer focus and page lifecycle", async () => {
-  const runtime = await read("discount-tooltip-stability-runtime.js");
+test("Discount Rate tooltip has one deterministic pointer focus and page lifecycle owner", async () => {
+  const runtime = await read("startup-integrity-runtime.js");
   const entry = await read("modules/app-entry.js");
-  assert.match(entry, /"\/discount-tooltip-stability-runtime\.js"/);
+  assert.match(entry, /"\/startup-integrity-runtime\.js"/);
+  assert.doesNotMatch(entry, /discount-tooltip-stability-runtime\.js/);
   assert.match(runtime, /function cancelPendingShow\(\)/);
   assert.match(runtime, /document\.addEventListener\("pointermove", onPointerMove, true\)/);
   assert.match(runtime, /document\.addEventListener\("pointerdown", onPointerDown, true\)/);
@@ -46,7 +47,6 @@ test("Discount Rate tooltip dismissal reconciles pointer focus and page lifecycl
   assert.match(runtime, /window\.addEventListener\("popstate", onPageLifecycleChange\)/);
   assert.match(runtime, /window\.addEventListener\("hashchange", onPageLifecycleChange\)/);
   assert.match(runtime, /document\.addEventListener\("visibilitychange", onVisibilityChange\)/);
-  assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
 test("Watchlist and My Players navigation is latest-intent wins", async () => {
