@@ -124,6 +124,10 @@
       return;
     }
 
+    // Preserve the existing real-time feel by filtering whatever index is
+    // already available immediately; the authoritative full-database payload
+    // replaces it as soon as the network request resolves.
+    renderCurrentResults();
     void searchDatabase(query);
   }
 
