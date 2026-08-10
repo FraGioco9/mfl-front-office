@@ -775,7 +775,7 @@ test("typed global and Evaluation search results update before their requests fi
         players: {
           columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
           rows: [
-            [201, "Fresh Roma Player", 90, "Italy", "ST", null],
+            [201, "Roma Fresh Player", 90, "Italy", "ST", null],
             [102, "Roma Player 2", 89, "Italy", "ST", null],
             [103, "Roma Player 3", 88, "Italy", "ST", null],
             [104, "Roma Player 4", 87, "Italy", "ST", null],
@@ -828,7 +828,7 @@ test("typed global and Evaluation search results update before their requests fi
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
   releaseGlobalSearch();
   await globalResponse;
-  await expect(page.locator("#playerSearchResults")).toContainText("Fresh Roma Player");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Fresh Player");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
 
