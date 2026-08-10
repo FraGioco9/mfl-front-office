@@ -6056,14 +6056,6 @@ body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscou
   visibility: hidden !important;
 }
 
-html[data-initial-page="evaluation"]:not(.mflEvaluationInitialStateReady) #evaluationPage .evaluationSearchGroup {
-  visibility: hidden !important;
-}
-
-html.mflEvaluationInitialStateReady #evaluationPage .evaluationSearchGroup {
-  visibility: visible !important;
-}
-
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
   display: inline-flex !important;

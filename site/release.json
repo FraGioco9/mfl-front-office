@@ -1,4 +1,4 @@
 {
-  "version": "1.123.21",
-  "description": "Stabilize Evaluation loading, close tooltips, reduce text, and search the full database"
+  "version": "1.123.22",
+  "description": "Show Watchlist and table chrome immediately, reveal Evaluation controls, and search the full database"
 }

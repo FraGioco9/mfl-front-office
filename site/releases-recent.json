@@ -1,4 +1,5 @@
 [
+  ["v1.123.22", "Show Watchlist and table chrome immediately, reveal Evaluation controls, and search the full database"],
   ["v1.123.21", "Stabilize Evaluation loading, close tooltips, reduce text, and search the full database"],
   ["v1.123.20", "Stabilize Stats and Evaluation, refine typography, and keep live search results available"],
   ["v1.123.19", "Preserve Database Stats, stabilize first paint, and show complete live search results"],

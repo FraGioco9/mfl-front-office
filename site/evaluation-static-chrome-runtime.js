@@ -134,10 +134,9 @@
       setImportant(element, "visibility", "visible");
       setImportant(element, "opacity", "1");
     });
-    const evaluationReady = document.documentElement.classList.contains("mflEvaluationReady");
     [titleRow, topBar, searchGroup, search, metrics].forEach((element) => {
-      setImportant(element, "visibility", evaluationReady ? "visible" : "hidden");
-      setImportant(element, "opacity", evaluationReady ? "1" : "0");
+      setImportant(element, "visibility", "visible");
+      setImportant(element, "opacity", "1");
     });
 
     document.documentElement.classList.add(
@@ -184,25 +183,18 @@
   const style = document.createElement("style");
   style.id = "mflEvaluationStaticChromeStyles";
   style.textContent = `
-    html.mflEvaluationReady[data-initial-page="evaluation"] body #evaluationPage .evaluationTitleRow,
-    html.mflEvaluationReady[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
-    html.mflEvaluationReady[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
-    html.mflEvaluationReady[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
-    html.mflEvaluationReady[data-initial-page="evaluation"] body #evaluationPage .evaluationMetrics,
-    html.mflEvaluationReady body[data-page="evaluation"] #evaluationPage .evaluationTitleRow,
-    html.mflEvaluationReady body[data-page="evaluation"] #evaluationPage .evaluationTopBar,
-    html.mflEvaluationReady body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    html.mflEvaluationReady body[data-page="evaluation"] #evaluationPage .evaluationSearch,
-    html.mflEvaluationReady body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTitleRow,
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationMetrics,
+    body[data-page="evaluation"] #evaluationPage .evaluationTitleRow,
+    body[data-page="evaluation"] #evaluationPage .evaluationTopBar,
+    body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
+    body[data-page="evaluation"] #evaluationPage .evaluationSearch,
+    body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
       visibility: visible !important;
       opacity: 1 !important;
-    }
-
-    html:not(.mflEvaluationReady)[data-initial-page="evaluation"] body #evaluationPage > *,
-    html:not(.mflEvaluationReady) body[data-page="evaluation"] #evaluationPage > * {
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
     }
 
     html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,

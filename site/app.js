@@ -1,10 +1,11 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.21";
+  const STATIC_RELEASE_VERSION = "1.123.22";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
+  const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
@@ -23,6 +24,62 @@
     watchlist: ["attributes", "next", "contracts", "current", "all"],
     myplayers: ["attributes", "next", "contracts", "current", "all"],
     club: ["attributes", "next", "contracts", "current", "all"],
+  });
+
+  const STATIC_TABLE_BASE_COLUMNS = Object.freeze([
+    "player_id",
+    "nationality_flag",
+    "name",
+    "nationality",
+    "age",
+    "positions",
+    "player_seasons",
+  ]);
+  const STATIC_TABLE_STAT_COLUMNS = Object.freeze([
+    "overall",
+    "pace",
+    "shooting",
+    "passing",
+    "dribbling",
+    "defense",
+    "physical",
+  ]);
+  const STATIC_TABLE_VIEW_COLUMNS = Object.freeze({
+    attributes: [...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"],
+    current: [...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"],
+    all: [...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"],
+    next: [...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"],
+    contracts: [
+      ...STATIC_TABLE_BASE_COLUMNS,
+      "overall",
+      "active_contract_revenue_share",
+      "active_contract_club_name",
+      "active_contract_club_division",
+      "wallet_name",
+      "player_link",
+    ],
+  });
+  const STATIC_TABLE_COLUMN_META = Object.freeze({
+    player_id: { label: "ID", className: "col-id", width: 68.13 },
+    nationality_flag: { label: "", className: "col-flag", width: 45.41 },
+    name: { label: "Name", className: "col-name", width: 212.89 },
+    nationality: { label: "Nationality", className: "col-nationality", width: 141.92 },
+    age: { label: "Age", className: "col-age", width: 65.28 },
+    positions: { label: "Positions", className: "col-positions", width: 119.22 },
+    player_seasons: { label: "Seasons", className: "col-seasons", width: 82.31 },
+    overall: { label: "Overall", className: "col-stat col-overall", width: 107.86 },
+    pace: { label: "Pace", className: "col-stat", width: 107.86 },
+    shooting: { label: "Shooting", className: "col-stat", width: 107.86 },
+    passing: { label: "Passing", className: "col-stat", width: 107.86 },
+    dribbling: { label: "Dribbling", className: "col-stat", width: 107.86 },
+    defense: { label: "Defense", className: "col-stat", width: 107.86 },
+    physical: { label: "Physical", className: "col-stat", width: 107.86 },
+    wallet_name: { label: "Agent", className: "col-agent", width: 187.34 },
+    owned_since: { label: "Joined Agency", className: "col-agent", width: 187.34 },
+    active_contract_revenue_share: { label: "Rev. Share", className: "col-contract-revenue", width: 140 },
+    active_contract_club_name: { label: "Club Name", className: "col-contract-club", width: 227.16 },
+    active_contract_club_division: { label: "Division", className: "col-contract-division", width: 280 },
+    player_link: { label: "", className: "col-link", width: 48.39 },
   });
 
   /** @type {Window & {
@@ -153,6 +210,90 @@
     return { pageName: "home", pageId: "homePage", title: "", view: "", navPage: "home" };
   }
 
+  function storedWatchlistTitle(pathname) {
+    const linkedWallet = storedWalletOptInAddress();
+    if (!linkedWallet) return "Watchlist";
+
+    try {
+      const match = String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/i);
+      const firstSegment = decodeURIComponent(match?.[1] || "");
+      const requestedId = VIEW_BY_SLUG[firstSegment] ? "" : firstSegment;
+      const saved = JSON.parse(
+        localStorage.getItem(`${WALLET_WATCHLIST_STORAGE_PREFIX}${linkedWallet}`) || "[]",
+      );
+      const watchlists = Array.isArray(saved)
+        ? saved.filter((item) => item && typeof item === "object" && !Array.isArray(item))
+        : [];
+      const selected = watchlists.find((watchlist) => String(watchlist.id || "") === requestedId)
+        || watchlists[0];
+      const name = String(selected?.name || "Default").trim().replace(/\s+/g, " ").slice(0, 20) || "Default";
+      return `Watchlist - ${name}`;
+    } catch {
+      return "Watchlist - Default";
+    }
+  }
+
+  function staticTableColumnKey(column, pageName) {
+    return column === "wallet_name" && ["myplayers", "agents", "mfl"].includes(pageName)
+      ? "owned_since"
+      : column;
+  }
+
+  function primeStaticTableHeader(route) {
+    if (!route || route.pageId !== "progressionPage") return;
+    const columns = STATIC_TABLE_VIEW_COLUMNS[route.view];
+    const tableHead = document.querySelector("#tableHead");
+    const tableColGroup = document.querySelector("#tableColGroup");
+    if (!columns || !(tableHead instanceof HTMLTableSectionElement) || !(tableColGroup instanceof HTMLTableColElement)) {
+      return;
+    }
+
+    const headerRow = document.createElement("tr");
+    const selectionHeader = document.createElement("th");
+    const selectionInput = document.createElement("input");
+    const selectionCol = document.createElement("col");
+    const colFragment = document.createDocumentFragment();
+    let totalWidth = 51.09;
+
+    selectionHeader.className = "selectionCell";
+    selectionInput.id = "selectVisiblePlayersInput";
+    selectionInput.type = "checkbox";
+    selectionInput.setAttribute("aria-label", "Select visible players");
+    selectionHeader.appendChild(selectionInput);
+    headerRow.appendChild(selectionHeader);
+    selectionCol.className = "col-select";
+    selectionCol.style.width = "51.09px";
+    colFragment.appendChild(selectionCol);
+
+    columns.forEach((column) => {
+      const key = staticTableColumnKey(column, route.pageName);
+      const meta = STATIC_TABLE_COLUMN_META[key];
+      if (!meta) return;
+      const cell = document.createElement("th");
+      const label = document.createElement("span");
+      const col = document.createElement("col");
+      if (meta.className) {
+        cell.classList.add(...meta.className.split(" "));
+        col.classList.add(...meta.className.split(" "));
+      }
+      label.textContent = meta.label;
+      cell.appendChild(label);
+      headerRow.appendChild(cell);
+      col.style.width = `${meta.width}px`;
+      colFragment.appendChild(col);
+      totalWidth += meta.width;
+    });
+
+    tableHead.replaceChildren(headerRow);
+    tableHead.dataset.staticHeader = "true";
+    tableColGroup.replaceChildren(colFragment);
+    const table = tableHead.closest("table");
+    if (table instanceof HTMLTableElement) {
+      table.style.width = `${totalWidth}px`;
+      table.style.minWidth = `${totalWidth}px`;
+    }
+  }
+
   function primeStaticShell() {
     ensureDatabaseStatsStaticPage();
     if (/^\/database\/?$/i.test(window.location.pathname)) {
@@ -160,6 +301,7 @@
       document.documentElement.dataset.initialPage = "database/attributes";
     }
     const route = initialRoute(window.location.pathname);
+    if (route.pageName === "watchlist") route.title = storedWatchlistTitle(window.location.pathname);
     const { storedOptIn, storedAccess } = syncStoredAccessFlags();
     const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS.has(route.pageName);
     const initialPageId = lockedRoute ? "myPlayersLockedPage" : route.pageId;
@@ -235,6 +377,7 @@
         button.classList.toggle("active", view === route.view);
         button.setAttribute("aria-pressed", String(view === route.view));
       });
+      primeStaticTableHeader(route);
     }
 
     document.documentElement.classList.add("mflStaticShellReady", "mflInitialRouteResolved");

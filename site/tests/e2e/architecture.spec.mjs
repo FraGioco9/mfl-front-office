@@ -42,12 +42,47 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.21");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.22");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
+});
+
+test("Watchlist title and table headers paint before data while pagination stays hidden", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wallet = "0x1234";
+    globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
+    globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      address: wallet,
+      message: "MFL Front Office Dapper Opt-In",
+      signatures: ["signature"],
+    }));
+    globalThis.localStorage.setItem(`mfl-wallet-watchlist-v1:${wallet}`, JSON.stringify([
+      { id: "scouts", name: "Scouts", playerIds: [] },
+    ]));
+  });
+
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/watchlist/scouts/attributes", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#tablePageTitle")).toHaveText("Watchlist - Scouts");
+  await expect(page.locator("#tableHead")).toContainText("ID");
+  await expect(page.locator("#tableHead")).toContainText("Name");
+  await expect(page.locator("#tableHead")).toContainText("Overall");
+  await expect(page.locator("#tableHead")).toContainText("Agent");
+  await expect(page.locator("#progressionPage nav.pager")).toBeHidden();
+
+  releaseMetadata();
+  await waitForArchitecture(page);
+  await expect(page.locator("#tablePageTitle")).toHaveText("Watchlist - Scouts");
+  await expect(page.locator("#progressionPage nav.pager")).toBeVisible();
 });
 
 test("Evaluation reserves its final position and keeps the wait cursor until the page is ready", async ({ page }) => {
@@ -62,7 +97,9 @@ test("Evaluation reserves its final position and keeps the wait cursor until the
   await expect(page.locator("#homePage")).toBeHidden();
   await expect(page.locator("#evaluationPage")).toBeVisible();
   const searchGroup = page.locator("#evaluationPage .evaluationSearchGroup");
-  await expect(searchGroup).toBeHidden();
+  await expect(page.locator("#evaluationPage .evaluationTitleRow")).toBeVisible();
+  await expect(searchGroup).toBeVisible();
+  await expect(page.locator("#evaluationPage .evaluationMetrics")).toBeVisible();
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
   expect(await page.locator("body").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
   const before = await searchGroup.boundingBox();
@@ -539,7 +576,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.21");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.22");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -559,8 +596,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.21");
-  expect(rows[0][0]).toBe("v1.123.21");
+  expect(metadata.version).toBe("1.123.22");
+  expect(rows[0][0]).toBe("v1.123.22");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -827,7 +864,8 @@ test("typed global and Evaluation search results update before their requests fi
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
   releaseGlobalSearch();
-  await globalResponse;
+  const completedGlobalResponse = await globalResponse;
+  expect(new URL(completedGlobalResponse.url()).searchParams.get("type")).toBe("all");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Fresh Player");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
