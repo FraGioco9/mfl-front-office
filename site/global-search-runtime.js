@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.26");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.31");
   const MAX_RESULT_BOXES = 5;
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
@@ -110,6 +110,7 @@
       v: VERSION,
     });
 
+    document.documentElement.dataset.globalSearchQueryPending = normalizedQuery;
     try {
       const response = await fetch(`/api/data?${parameters}`, {
         cache: "no-store",
@@ -132,6 +133,9 @@
       return false;
     } finally {
       if (controller === activeController) controller = null;
+      if (document.documentElement.dataset.globalSearchQueryPending === normalizedQuery) {
+        delete document.documentElement.dataset.globalSearchQueryPending;
+      }
     }
   }
 
@@ -149,19 +153,21 @@
       sequence += 1;
       controller?.abort();
       controller = null;
+      delete document.documentElement.dataset.globalSearchQueryPending;
       renderCurrentResults();
       return;
     }
 
-    // Preserve the existing real-time feel by filtering whatever index is
-    // already available immediately; the authoritative full-database payload
-    // replaces it as soon as the network request resolves.
+    // Keep already-known matches responsive while typing, but always replace
+    // them with the authoritative players + clubs + agents database response.
     renderCurrentResults();
     void searchDatabase(query);
   }
 
   document.addEventListener("input", onInput, true);
   observeResultBoxes();
+  document.documentElement.dataset.globalSearchAuthoritative = "true";
+  window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
 
   function destroy() {
     destroyed = true;
@@ -171,6 +177,7 @@
     resultsObserver?.disconnect();
     resultsObserver = null;
     observedResults = null;
+    delete document.documentElement.dataset.globalSearchQueryPending;
     document.removeEventListener("input", onInput, true);
   }
 
