@@ -46,6 +46,20 @@
       html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: inline-flex;
       }
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+        [data-initial-page^="my-players"],
+        [data-initial-page^="watchlist"],
+        [data-initial-page="settings"]
+      ) #homePage {
+        display: none !important;
+      }
+      html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
+        [data-initial-page^="my-players"],
+        [data-initial-page^="watchlist"],
+        [data-initial-page="settings"]
+      ) #myPlayersLockedPage {
+        display: block !important;
+      }
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #homePage,
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #progressionPage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #homePage,
@@ -86,7 +100,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.15">
+    <link rel="stylesheet" href="/styles.css?v=1.123.16">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -474,7 +488,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.15</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.16</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -642,6 +656,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.15"></script>
+    <script src="/app.js?v=1.123.16"></script>
   </body>
 </html>
