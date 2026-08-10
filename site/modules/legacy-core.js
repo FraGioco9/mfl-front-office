@@ -5966,12 +5966,13 @@ function applyDatabaseSearchPayload(payload, type = "all") {
   state.searchIndexesLoaded = true;
 }
 
-async function requestDatabaseSearch(rawQuery = "", type = "all") {
+async function requestDatabaseSearch(rawQuery = "", type = "all", options = {}) {
   const query = String(rawQuery || "").trim();
   const normalizedQuery = normalizeSearchText(query);
   const sequence = (databaseSearchSequences.get(type) || 0) + 1;
   databaseSearchSequences.set(type, sequence);
   const cacheKey = `${type}:${normalizedQuery}`;
+  if (options.force) databaseSearchResponseCache.delete(cacheKey);
   const cachedPayload = databaseSearchResponseCache.get(cacheKey);
   const activeInput = () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
 
@@ -8071,7 +8072,7 @@ function renderSearchResults() {
   renderSearchResultsNow();
   void (async () => {
     try {
-      if (await requestDatabaseSearch(query, "all")) renderSearchResultsNow();
+      if (await requestDatabaseSearch(query, "all", { force: Boolean(query) })) renderSearchResultsNow();
     } catch (error) {
       console.error(error?.message || "Could not search the database.");
       renderSearchResultsNow();
@@ -13028,9 +13029,7 @@ window.__mflAppStartPromise = startApp();
   const style = document.createElement("style");
   style.id = "evaluationRouteStabilityStyles";
   style.textContent = `
-    html.bootPending body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    html.mflInitialChromePreparing body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"].evaluationRouteLoading #evaluationPage .evaluationSearchGroup {
+    body[data-page="evaluation"].evaluationRouteLoading #evaluationPage #evaluationPanel {
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
