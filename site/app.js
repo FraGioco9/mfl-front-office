@@ -1,11 +1,12 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.26";
+  const STATIC_RELEASE_VERSION = "1.123.27";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
+  const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
@@ -255,6 +256,25 @@
     return `Watchlist - ${name}`;
   }
 
+  function storedQuickFilters(pageName) {
+    const defaults = {
+      hideRetired: true,
+      hideRetiring: false,
+      hideMflPlayers: pageName === "database",
+      mflPackable: pageName === "mfl",
+      newMints: false,
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+      const pageState = saved?.pages?.[pageName];
+      return pageState && typeof pageState === "object"
+        ? { ...defaults, ...pageState }
+        : defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
   function staticTableColumnKey(column, pageName) {
     return column === "wallet_name" && ["myplayers", "agents", "mfl"].includes(pageName)
       ? "owned_since"
@@ -437,7 +457,13 @@
     const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
     const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
     const watchlistButtonText = document.querySelector("#watchlistButtonText");
+    const hideRetiredInput = document.querySelector("#hideRetiredInput");
+    const hideRetiringInput = document.querySelector("#hideRetiringInput");
     const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
+    const hideMflPlayersInput = document.querySelector("#hideMflPlayersInput");
+    const packablePlayersFilter = document.querySelector("#packablePlayersFilter");
+    const packablePlayersInput = document.querySelector("#packablePlayersInput");
+    const newMintsInput = document.querySelector("#newMintsInput");
 
     document.body.dataset.page = route.pageName;
     document.body.classList.toggle("guest", !storedAccess);
@@ -467,8 +493,24 @@
         watchlistButtonText.textContent = storedWatchlistName(window.location.pathname) || "-";
       }
     }
+
+    const quickFilters = storedQuickFilters(route.pageName);
     if (hideMflPlayersFilter instanceof HTMLElement) {
       hideMflPlayersFilter.hidden = lockedRoute || route.pageName !== "database";
+    }
+    if (packablePlayersFilter instanceof HTMLElement) {
+      packablePlayersFilter.hidden = lockedRoute || route.pageName !== "mfl";
+    }
+    if (!lockedRoute && route.pageId === "progressionPage") {
+      if (hideRetiredInput instanceof HTMLInputElement) hideRetiredInput.checked = quickFilters.hideRetired !== false;
+      if (hideRetiringInput instanceof HTMLInputElement) hideRetiringInput.checked = Boolean(quickFilters.hideRetiring);
+      if (hideMflPlayersInput instanceof HTMLInputElement) {
+        hideMflPlayersInput.checked = route.pageName === "database" ? quickFilters.hideMflPlayers !== false : false;
+      }
+      if (packablePlayersInput instanceof HTMLInputElement) {
+        packablePlayersInput.checked = route.pageName === "mfl" ? quickFilters.mflPackable !== false : false;
+      }
+      if (newMintsInput instanceof HTMLInputElement) newMintsInput.checked = Boolean(quickFilters.newMints);
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
