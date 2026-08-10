@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.23");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.24");
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
 
@@ -46,6 +46,39 @@
     renderCurrentResults();
   }
 
+  async function searchThroughLegacyPipeline(query, normalizedQuery, requestSequence) {
+    const input = searchInput();
+    if (!input) return null;
+
+    window.__mflGlobalSearchQuery = query;
+    let result;
+    try {
+      result = window.eval(`
+        typeof requestDatabaseSearch === "function"
+          ? requestDatabaseSearch(window.__mflGlobalSearchQuery, "all", { force: true })
+          : null
+      `);
+    } catch {
+      return null;
+    } finally {
+      delete window.__mflGlobalSearchQuery;
+    }
+
+    if (!result || typeof result.then !== "function") return null;
+
+    try {
+      const loaded = await result;
+      if (destroyed || requestSequence !== sequence || normalize(input.value) !== normalizedQuery) return false;
+      if (loaded) renderCurrentResults();
+      return Boolean(loaded);
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error(error?.message || "Could not search the database.");
+      }
+      return false;
+    }
+  }
+
   async function searchDatabase(rawQuery) {
     const query = String(rawQuery || "").trim();
     const normalizedQuery = normalize(query);
@@ -53,6 +86,14 @@
     if (!input || !normalizedQuery) return false;
 
     const requestSequence = ++sequence;
+
+    // Use the legacy database-search pipeline when available. It owns the same
+    // abort controller/sequence as the startup recent-results request, so a
+    // typed query cancels that older request instead of letting it overwrite
+    // the complete players / clubs / agents results after they arrive.
+    const legacyResult = await searchThroughLegacyPipeline(query, normalizedQuery, requestSequence);
+    if (legacyResult !== null) return legacyResult;
+
     controller?.abort();
     controller = new AbortController();
     const activeController = controller;
@@ -93,8 +134,8 @@
     const input = searchInput();
     if (!input || event.target !== input) return;
 
-    // Own typed global-search requests so the legacy recent-result cache cannot
-    // answer a typed query before the complete players / clubs / agents search.
+    // Own typed global-search requests so the recent-result bootstrap cannot
+    // answer a typed query or race a complete players / clubs / agents search.
     event.stopImmediatePropagation();
     const query = String(input.value || "").trim();
     renderCurrentResults();
