@@ -1,4 +1,4 @@
 {
-  "version": "1.123.20",
-  "description": "Stabilize Stats and Evaluation, refine typography, and keep live search results available"
+  "version": "1.123.21",
+  "description": "Stabilize Evaluation loading, close tooltips, reduce text, and search the full database"
 }
