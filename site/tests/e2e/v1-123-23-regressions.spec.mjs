@@ -149,7 +149,7 @@ test("a newer My Players navigation wins when an older Watchlist navigation fini
   await page.goto("/");
   await waitForArchitecture(page);
 
-  const finalPage = await page.evaluate(async () => {
+  const finalRoute = await page.evaluate(async () => {
     globalThis.__mflWatchlistMyPlayersRouteRuntime?.destroy?.();
     let releaseWatchlist;
     const watchlistGate = new Promise((resolve) => { releaseWatchlist = resolve; });
@@ -174,9 +174,11 @@ test("a newer My Players navigation wins when an older Watchlist navigation fini
     globalThis.__releaseWatchlistRouteTest();
     await oldWatchlist;
     await Promise.resolve();
-    return globalThis.eval("state.currentPage");
+    return {
+      statePage: globalThis.eval("state.currentPage"),
+      bodyPage: globalThis.document.body.dataset.page,
+    };
   });
 
-  expect(finalPage).toBe("myplayers");
-  await expect(page.locator("body")).toHaveAttribute("data-page", "myplayers");
+  expect(finalRoute).toEqual({ statePage: "myplayers", bodyPage: "myplayers" });
 });
