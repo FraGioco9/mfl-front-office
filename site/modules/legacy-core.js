@@ -565,7 +565,7 @@ const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  themeButton.textContent = theme === "dark" ? "\u2600\uFE0F" : "\u{1F319}";
+  themeButton.dataset.activeTheme = theme;
   themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to night mode");
   themeButton.title = theme === "dark" ? "Light mode" : "Night mode";
 
@@ -5838,7 +5838,7 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
     nationalityDisplay,
     positionsDisplay,
     overall: Number(compactSearchValue(row, columns, "overall") || 0),
-    retired: false,
+    retired: Number(compactSearchValue(row, columns, "retirement_years")) === 0,
   };
 }
 
@@ -5885,6 +5885,17 @@ function buildSearchIndex(options = {}) {
 let databaseSearchSequence = 0;
 let databaseSearchTimer = 0;
 let evaluationDatabaseSearchTimer = 0;
+let databaseSearchAbortController = null;
+const databaseSearchResponseCache = new Map();
+const DATABASE_SEARCH_RESPONSE_CACHE_LIMIT = 80;
+
+function cacheDatabaseSearchResponse(key, payload) {
+  databaseSearchResponseCache.delete(key);
+  databaseSearchResponseCache.set(key, payload);
+  while (databaseSearchResponseCache.size > DATABASE_SEARCH_RESPONSE_CACHE_LIMIT) {
+    databaseSearchResponseCache.delete(databaseSearchResponseCache.keys().next().value);
+  }
+}
 
 function databaseSearchIdentifiers() {
   const playerIds = new Set();
@@ -5939,7 +5950,21 @@ function applyDatabaseSearchPayload(payload, type = "all") {
 
 async function requestDatabaseSearch(rawQuery = "", type = "all") {
   const query = String(rawQuery || "").trim();
+  const normalizedQuery = normalizeSearchText(query);
   const sequence = ++databaseSearchSequence;
+  const cacheKey = `${type}:${normalizedQuery}`;
+  const cachedPayload = databaseSearchResponseCache.get(cacheKey);
+  const activeInput = () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
+
+  databaseSearchAbortController?.abort();
+  if (cachedPayload) {
+    if (normalizeSearchText(activeInput()) !== normalizedQuery) return false;
+    applyDatabaseSearchPayload(cachedPayload, type);
+    return true;
+  }
+
+  const controller = new AbortController();
+  databaseSearchAbortController = controller;
   const parameters = new URLSearchParams({ mode: "search", type, limit: "20" });
   if (query) parameters.set("q", query);
   else {
@@ -5949,14 +5974,28 @@ async function requestDatabaseSearch(rawQuery = "", type = "all") {
     if (recent.walletAddresses.length) parameters.set("walletAddresses", recent.walletAddresses.join(","));
     if (recent.clubIds.length) parameters.set("clubIds", recent.clubIds.join(","));
   }
-  const response = await fetch(`/api/data?${parameters}`, { cache: "no-store", headers: { Accept: "application/json" } });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Could not search the database.");
-  if (sequence !== databaseSearchSequence) return false;
-  const active = type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
-  if (normalizeSearchText(active) !== normalizeSearchText(query)) return false;
-  applyDatabaseSearchPayload(!query && type === "players" ? (payload?.players || {}) : payload, type);
-  return true;
+
+  try {
+    const response = await fetch(`/api/data?${parameters}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Could not search the database.");
+    if (sequence !== databaseSearchSequence || normalizeSearchText(activeInput()) !== normalizedQuery) return false;
+    const searchPayload = !query && type === "players" ? (payload?.players || {}) : payload;
+    cacheDatabaseSearchResponse(cacheKey, searchPayload);
+    applyDatabaseSearchPayload(searchPayload, type);
+    return true;
+  } catch (error) {
+    if (error?.name === "AbortError") return false;
+    throw error;
+  } finally {
+    if (databaseSearchAbortController === controller) {
+      databaseSearchAbortController = null;
+    }
+  }
 }
 
 async function ensureSearchIndexes() {
@@ -6700,12 +6739,13 @@ function handleEvaluationSearchInput() {
   clearTimeout(evaluationDatabaseSearchTimer);
   const query = String(evaluationSearchInput.value || "").trim();
   evaluationDatabaseSearchTimer = setTimeout(async () => {
-    try { await requestDatabaseSearch(query, "players"); }
-    catch (error) {
+    try {
+      if (await requestDatabaseSearch(query, "players")) renderEvaluationSearchResults();
+    } catch (error) {
       console.error(error?.message || "Could not search players.");
       applyDatabaseSearchPayload({ columns: [], rows: [] }, "players");
+      renderEvaluationSearchResults();
     }
-    renderEvaluationSearchResults();
   }, 80);
 }
 
@@ -7922,12 +7962,13 @@ function renderSearchResults() {
   clearTimeout(databaseSearchTimer);
   const query = String(playerSearchInput.value || "").trim();
   databaseSearchTimer = setTimeout(async () => {
-    try { await requestDatabaseSearch(query, "all"); }
-    catch (error) {
+    try {
+      if (await requestDatabaseSearch(query, "all")) renderSearchResultsNow();
+    } catch (error) {
       console.error(error?.message || "Could not search the database.");
       applyDatabaseSearchPayload({ players: {}, agents: {}, clubs: [] }, "all");
+      renderSearchResultsNow();
     }
-    renderSearchResultsNow();
   }, 80);
 }
 
@@ -12221,7 +12262,7 @@ async function startApp() {
 
   const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);
 
-  function renderTableDestinationShell(pageName) {
+  function renderTableDestinationShell(pageName, route = null) {
     if (!shellFirstTablePages.has(pageName)) {
       return;
     }
@@ -12240,6 +12281,9 @@ async function startApp() {
     navButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.page === pageName);
     });
+    if (route && route.scope !== "empty" && !incrementalRouteIsCached(route, 1)) {
+      showTableBusyState();
+    }
     syncHomeLoginButton();
   }
 
@@ -12378,16 +12422,15 @@ async function startApp() {
       saveTableState();
     }
 
-    const shellFirst = shellFirstTablePages.has(pageName);
-    if (shellFirst) {
-      commitIncrementalLocation(pageName, updateHash, options);
-      renderTableDestinationShell(pageName);
-    }
-
     const route = prepareIncrementalRoute(pageName, {
       ...options,
       ignoreCurrentClubRoute: updateHash,
     });
+    const shellFirst = shellFirstTablePages.has(pageName);
+    if (shellFirst) {
+      commitIncrementalLocation(pageName, updateHash, options);
+      renderTableDestinationShell(pageName, route);
+    }
     if (!route) {
       state.incrementalMode = false;
       return originalSetPage.call(this, pageName, updateHash, options);
