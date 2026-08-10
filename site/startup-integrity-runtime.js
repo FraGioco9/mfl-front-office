@@ -445,10 +445,10 @@
     script.textContent = patchCore(originalSource);
     document.head.appendChild(script);
     installRateChrome();
-    installTooltipController();
   }
 
   installStaticStyles();
+  installTooltipController();
   start().catch((error) => {
     console.error(error?.message || "Could not initialize startup integrity.");
   });
