@@ -195,6 +195,7 @@
     let keyboardFocusMetric = null;
     let hideTimer = 0;
     let showFrame = 0;
+    let idleFrame = 0;
     let showEpoch = 0;
     let keyboardFocusMode = false;
 
@@ -270,10 +271,7 @@
 
     function show(metric) {
       if (!(metric instanceof HTMLElement)) return;
-      if (!evaluationActive() || interactionBusy()) {
-        hide(true);
-        return;
-      }
+      if (!evaluationActive() || interactionBusy()) return;
       const text = String(metric.dataset.tooltip || "").trim();
       if (!text) {
         hide(true);
@@ -301,11 +299,33 @@
       });
     }
 
+    function scheduleIdleSync() {
+      if (idleFrame) return;
+      const retry = () => {
+        idleFrame = 0;
+        if (!evaluationActive()) {
+          clearAll(true);
+          return;
+        }
+        if (interactionBusy()) {
+          idleFrame = requestAnimationFrame(retry);
+          return;
+        }
+        sync();
+      };
+      idleFrame = requestAnimationFrame(retry);
+    }
+
     function sync() {
-      if (!evaluationActive() || interactionBusy()) {
+      if (!evaluationActive()) {
         hoverMetric = null;
         keyboardFocusMetric = null;
         hide(true);
+        return;
+      }
+      if (interactionBusy()) {
+        hide(true);
+        scheduleIdleSync();
         return;
       }
       const next = keyboardFocusMetric || hoverMetric;
@@ -321,19 +341,25 @@
 
     function onPointerOver(event) {
       keyboardFocusMode = false;
-      if (interactionBusy()) return;
       const metric = metricFrom(event.target);
       if (!metric) return;
       hoverMetric = metric;
+      if (interactionBusy()) {
+        scheduleIdleSync();
+        return;
+      }
       sync();
     }
 
     function onPointerMove(event) {
       keyboardFocusMode = false;
-      if (interactionBusy()) return;
       const metric = metricFrom(event.target);
       if (metric === hoverMetric) return;
       hoverMetric = metric;
+      if (interactionBusy()) {
+        scheduleIdleSync();
+        return;
+      }
       sync();
     }
 
@@ -395,8 +421,6 @@
       clearAll(true);
     }
 
-    // Window capture observes the pointer before the document-level global interaction
-    // guard can stop propagation. show()/sync() still reject the real busy state.
     window.addEventListener("pointerover", onPointerOver, true);
     window.addEventListener("pointermove", onPointerMove, true);
     window.addEventListener("pointerout", onPointerOut, true);
@@ -418,6 +442,8 @@
 
     function destroy() {
       clearAll(true);
+      if (idleFrame) cancelAnimationFrame(idleFrame);
+      idleFrame = 0;
       window.removeEventListener("pointerover", onPointerOver, true);
       window.removeEventListener("pointermove", onPointerMove, true);
       window.removeEventListener("pointerout", onPointerOut, true);
