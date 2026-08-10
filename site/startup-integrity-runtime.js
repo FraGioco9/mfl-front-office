@@ -39,6 +39,7 @@
       discountResult = null;
       discountMflPerUsd = null;
       discountRetryAt = 0;
+      document.documentElement.dataset.mflEvaluationRateSettled = "false";
       void requestRate(true);
     } else if (!evaluationActive && discountWasEvaluation) {
       discountWasEvaluation = false;
@@ -47,6 +48,7 @@
       discountRetryAt = 0;
       document.body?.classList.remove("evaluationDiscountRateReady");
       document.documentElement.classList.remove("mflEvaluationRateResolved");
+      document.documentElement.dataset.mflEvaluationRateSettled = "false";
       window.__mflDiscountTooltipController?.hide?.(true);
     }
     if (evaluationActive) {
@@ -82,6 +84,29 @@
       /  if \(isMflStats\(\)\) void loadStats\(\);/,
       `  if (isMflStats()) window.__mflStatsFirstPaintRuntime?.sync?.();`,
       "the direct MFL Stats full-row request",
+    );
+
+    source = replaceRegexRequired(
+      source,
+      /    discountResult = null;\n    paintRate\(\);\n    const nonce =/,
+      `    discountResult = null;
+    document.documentElement.dataset.mflEvaluationRateSettled = "false";
+    paintRate();
+    const nonce =`,
+      "the Evaluation Discount Rate request start",
+    );
+
+    source = replaceRegexRequired(
+      source,
+      /      \.finally\(\(\) => \{ discountPromise = null; \}\);/,
+      `      .finally(() => {
+        discountPromise = null;
+        document.documentElement.dataset.mflEvaluationRateSettled = "true";
+        window.dispatchEvent(new CustomEvent("mfl:evaluation-rate-settled", {
+          detail: { ready: Boolean(discountResult) },
+        }));
+      });`,
+      "the Evaluation Discount Rate request settlement",
     );
 
     return `${source}\n//# sourceURL=mfl-startup-integrity-core-v${VERSION}.js`;
@@ -236,7 +261,8 @@
       }
       portal.classList.add("tooltipHiding");
       hideTimer = window.setTimeout(() => {
-        portal?.classList.remove("tooltipHiding");
+        portal?.remove();
+        portal = null;
         hideTimer = 0;
       }, 170);
     }
@@ -268,10 +294,20 @@
       if (activeMetric) position();
     }
 
+    function onPointerDown(event) {
+      if (!metricFrom(event.target)) hide(true);
+    }
+
+    function onKeyDown(event) {
+      if (event.key === "Escape") hide(true);
+    }
+
     document.addEventListener("pointerover", onPointerOver, true);
     document.addEventListener("pointerout", onPointerOut, true);
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("resize", onViewportChange);
     window.addEventListener("scroll", onViewportChange, true);
 
@@ -281,6 +317,8 @@
       document.removeEventListener("pointerout", onPointerOut, true);
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("resize", onViewportChange);
       window.removeEventListener("scroll", onViewportChange, true);
       activeMetric?.removeAttribute("aria-describedby");

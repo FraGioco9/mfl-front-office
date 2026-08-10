@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.20");
+  assert.equal(release.version, "1.123.21");
   assert.ok(release.description.length > 20);
 });
 
@@ -32,7 +32,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.20"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.21"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
@@ -207,7 +207,7 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.20", "v1.123.19", "v1.123.18", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.21", "v1.123.20", "v1.123.19", "v1.123.18", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
@@ -271,13 +271,14 @@ test("Database clears uncached previous-page rows before its first payload arriv
   assert.match(runtime, /setPage = async function setIncrementalPage[\s\S]*const route = prepareIncrementalRoute\(pageName[\s\S]*renderTableDestinationShell\(pageName, route\)/);
 });
 
-test("theme switching preserves loaded DOM and font metrics stay stable", async () => {
+test("theme switching preserves loaded DOM and the smaller font metrics stay stable", async () => {
   const index = await read("index.html");
   const runtime = await read("modules/legacy-core.js");
   const styles = await read("styles.css");
   assert.match(runtime, /themeButton\.dataset\.activeTheme = theme/);
   assert.doesNotMatch(runtime, /themeButton\.textContent = theme === "dark"/);
-  assert.match(styles, /font-size-adjust: 0\.520/);
+  assert.match(styles, /font-size-adjust: 0\.500/);
+  assert.match(styles, /#openFiltersButton,[\s\S]*#quickClearFiltersButton \{[\s\S]*font-size: 14px;/);
   assert.match(index, /Titillium\+Web[^"]+display=block/);
   assert.equal((index.match(/rel="preload"[^>]+fonts\.gstatic\.com[^>]+as="font"/g) || []).length, 3);
 });
@@ -298,7 +299,7 @@ test("typed search renders immediately, requests all categories, reuses results,
   const styles = await read("styles.css");
   const evaluationHandler = runtime.slice(
     runtime.indexOf("function handleEvaluationSearchInput()"),
-    runtime.indexOf("function evaluationOverallKey"),
+    runtime.indexOf("let evaluationRecentSearchPrimed"),
   );
   const globalHandler = runtime.slice(
     runtime.indexOf("function renderSearchResults()"),
@@ -306,6 +307,8 @@ test("typed search renders immediately, requests all categories, reuses results,
   );
   assert.match(runtime, /databaseSearchAbortControllers\.get\(type\)\?\.abort\(\)/);
   assert.match(runtime, /databaseSearchResponseCache/);
+  assert.match(runtime, /evaluationSearchIndex: \[\]/);
+  assert.match(runtime, /if \(type === "players"\) \{\s*state\.evaluationSearchIndex = playerEntries;\s*\} else \{\s*state\.searchIndex = playerEntries;/);
   assert.match(runtime, /signal: controller\.signal/);
   assert.match(evaluationHandler, /renderEvaluationSearchResults\(\);[\s\S]*requestDatabaseSearch\(query, "players"\)/);
   assert.match(globalHandler, /renderSearchResultsNow\(\);[\s\S]*requestDatabaseSearch\(query, "all"\)/);
@@ -319,30 +322,47 @@ test("typed search renders immediately, requests all categories, reuses results,
 });
 
 test("search pipelines stay independent and empty Evaluation primes recent results after readiness", async () => {
+  const entry = await read("modules/app-entry.js");
   const runtime = await read("modules/legacy-core.js");
   assert.match(runtime, /const databaseSearchSequences = new Map\(\)/);
   assert.match(runtime, /const databaseSearchAbortControllers = new Map\(\)/);
   assert.match(runtime, /databaseSearchResponseCache\.delete\("all:"\)/);
   assert.match(runtime, /function primeEmptyEvaluationSearch\(\)/);
+  assert.match(runtime, /function primeGlobalSearchIndexes\(\)/);
+  assert.match(runtime, /const earlyGlobalSearch = primeGlobalSearchIndexes\(\)/);
+  assert.match(runtime, /Promise\.allSettled\(\[earlyGlobalSearch, loadSummary\(\), loadWalletPreferences\(\)\]\)/);
+  assert.match(runtime, /window\.__mflAppStartPromise = startApp\(\)/);
+  assert.match(entry, /const evaluationStartup = \/\^\\\/evaluation/);
+  assert.match(entry, /if \(evaluationStartup && runtimeWindow\.__mflAppStartPromise\)/);
   assert.match(runtime, /databaseSearchResponseCache\.delete\("players:"\)/);
   assert.match(runtime, /window\.addEventListener\("mfl:ready", focusSearch, \{ once: true \}\)/);
   assert.match(runtime, /evaluationSearchInput\.focus\(\{ preventScroll: true \}\)/);
   assert.doesNotMatch(runtime, /applyDatabaseSearchPayload\(\{ players: \{\}, agents: \{\}, clubs: \[\] \}, "all"\);\s*renderSearchResultsNow\(\)/);
 });
 
-test("Evaluation first paint, global font scale, Stats animation, and discount tooltip are stable", async () => {
+test("Evaluation waits for stable layout, uses the smaller font scale, and closes its discount tooltip", async () => {
   const index = await read("index.html");
   const styles = await read("styles.css");
   const stats = await read("database-stats-runtime.js");
   const tooltip = await read("startup-integrity-runtime.js");
-  assert.match(index, /html \{\s*font-size-adjust: 0\.520;/);
-  assert.match(styles, /font-size-adjust: 0\.520/);
+  const evaluationChrome = await read("evaluation-static-chrome-runtime.js");
+  const runtime = await read("modules/legacy-core.js");
+  assert.match(index, /html \{\s*font-size-adjust: 0\.500;/);
+  assert.match(styles, /font-size-adjust: 0\.500/);
   assert.match(index, /data-initial-page="evaluation"[^\n]+#homePage[\s\S]*display: none !important;[\s\S]*data-initial-page="evaluation"[^\n]+#evaluationPage[\s\S]*display: block !important;/);
+  assert.match(index, /data-initial-page="evaluation"[^\n]+:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*[\s\S]*visibility: hidden !important;/);
+  assert.match(evaluationChrome, /html:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*/);
+  assert.match(runtime, /window\.__mflInteractionBusy\?\.begin\?\.\("evaluation-loading"\)/);
+  assert.match(runtime, /await finishEvaluationReadiness\(\)/);
+  assert.match(runtime, /document\.fonts\?\.ready/);
   assert.match(stats, /#databaseStatsPage \.mflStatsHistogram \{\s*animation: none !important;\s*opacity: 1 !important;\s*transform: none !important;/);
   assert.match(tooltip, /portal\.id = "evaluationDiscountTooltipPortal"/);
   assert.match(tooltip, /if \(!\(metric instanceof HTMLElement\)\) return;/);
   assert.doesNotMatch(tooltip, /if \(!\(metric instanceof HTMLElement\)[\s\S]{0,120}evaluationDiscountRateReady/);
   assert.match(tooltip, /document\.addEventListener\("pointerover", onPointerOver, true\)/);
+  assert.match(tooltip, /document\.addEventListener\("pointerdown", onPointerDown, true\)/);
+  assert.match(tooltip, /portal\?\.remove\(\);\s*portal = null;/);
+  assert.match(styles, /\.evaluationMetric\.evaluationDiscountRate\[data-tooltip\]::after \{\s*display: none !important;/);
 });
 
 test("Database Stats keeps all views bound to Database and preserves its shell after interaction", async () => {
@@ -356,6 +376,6 @@ test("Database Stats keeps all views bound to Database and preserves its shell a
 
 test("cached Progression permission is applied after wallet restoration and before menu paint", async () => {
   const runtime = await read("modules/legacy-core.js");
-  assert.match(runtime, /async function startApp\(\)[\s\S]*loadSavedTableState\(\);\s*applyStoredWalletPermission\(\);[\s\S]*updateMenuVisibility\(\)/);
+  assert.match(runtime, /async function startApp\(\)[\s\S]*loadSavedTableState\(\);[\s\S]*applyStoredWalletPermission\(\);[\s\S]*updateMenuVisibility\(\)/);
   assert.doesNotMatch(runtime, /setupChangelogSections\(\);\s*applyStoredWalletPermission\(\);\s*const initialTarget/);
 });

@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.20");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.21");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -50,7 +50,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
 });
 
-test("Evaluation content uses its final position before release metadata resolves", async ({ page }) => {
+test("Evaluation reserves its final position and keeps the wait cursor until the page is ready", async ({ page }) => {
   let releaseMetadata;
   const gate = new Promise((resolve) => { releaseMetadata = resolve; });
   await page.route("**/release.json", async (route) => {
@@ -61,12 +61,19 @@ test("Evaluation content uses its final position before release metadata resolve
   await page.goto("/evaluation", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#homePage")).toBeHidden();
   await expect(page.locator("#evaluationPage")).toBeVisible();
-  const before = await page.locator("#evaluationPage .evaluationSearchGroup").boundingBox();
+  const searchGroup = page.locator("#evaluationPage .evaluationSearchGroup");
+  await expect(searchGroup).toBeHidden();
+  await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
+  expect(await page.locator("body").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
+  const before = await searchGroup.boundingBox();
   expect(before).not.toBeNull();
 
   releaseMetadata();
   await waitForArchitecture(page);
-  const after = await page.locator("#evaluationPage .evaluationSearchGroup").boundingBox();
+  await expect(page.locator("html")).toHaveClass(/mflEvaluationReady/);
+  await expect(searchGroup).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
+  const after = await searchGroup.boundingBox();
   expect(after).not.toBeNull();
   expect(Math.abs(after.x - before.x)).toBeLessThan(1);
   expect(Math.abs(after.y - before.y)).toBeLessThan(1);
@@ -532,7 +539,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.20");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.21");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -552,8 +559,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.20");
-  expect(rows[0][0]).toBe("v1.123.20");
+  expect(metadata.version).toBe("1.123.21");
+  expect(rows[0][0]).toBe("v1.123.21");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -741,6 +748,8 @@ test("empty Evaluation focuses recent results, exposes its tooltip, and global s
   const tooltip = page.locator("#evaluationDiscountTooltipPortal");
   await expect(tooltip).toBeVisible();
   await expect(tooltip).toContainText("geometric mean");
+  await page.locator("#evaluationPage .tablePageTitle").hover();
+  await expect(tooltip).toBeHidden();
 
   await page.locator("#openSearchButton").click();
   await expect(page.locator("#playerSearchResults")).toContainText("Recent Active Player");
@@ -766,7 +775,7 @@ test("typed global and Evaluation search results update before their requests fi
         players: {
           columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
           rows: [
-            [101, "Roma Player 1", 90, "Italy", "ST", null],
+            [201, "Roma Fresh Player", 90, "Italy", "ST", null],
             [102, "Roma Player 2", 89, "Italy", "ST", null],
             [103, "Roma Player 3", 88, "Italy", "ST", null],
             [104, "Roma Player 4", 87, "Italy", "ST", null],
@@ -785,12 +794,8 @@ test("typed global and Evaluation search results update before their requests fi
 
   await page.goto("/");
   await waitForArchitecture(page);
-  const recentResponse = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return url.searchParams.get("mode") === "search" && url.searchParams.get("type") === "recent";
-  });
+  expect(await page.evaluate(() => Boolean(globalThis.__mflGlobalSearchReadyPromise))).toBe(true);
   await page.locator("#openSearchButton").click();
-  await recentResponse;
   await page.locator("#playerSearchInput").focus();
   await page.evaluate(() => {
     globalThis.eval(`applyDatabaseSearchPayload({
@@ -823,6 +828,9 @@ test("typed global and Evaluation search results update before their requests fi
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
   releaseGlobalSearch();
   await globalResponse;
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Fresh Player");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
 
   await page.locator("#closeSearchButton").click();
   await page.goto("/evaluation");
@@ -861,6 +869,7 @@ test("typed global and Evaluation search results update before their requests fi
   await expect(page.locator("#evaluationSearchResults")).toContainText("Active Player");
   releaseEvaluationSearch();
   await evaluationResponse;
+  await expect(page.locator("#evaluationSearchResults")).toContainText("Active Player");
 });
 
 test("empty recent-search copy is padded and fallback font size is stabilized", async ({ page }) => {
@@ -872,5 +881,6 @@ test("empty recent-search copy is padded and fallback font size is stabilized", 
   await expect.poll(() => hint.evaluate((node) => (
     node.isConnected ? globalThis.getComputedStyle(node).paddingLeft : ""
   ))).toBe("8px");
-  expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.52");
+  expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.5");
+  expect(await page.locator("#openFiltersButton").evaluate((node) => globalThis.getComputedStyle(node).fontSize)).toBe("14px");
 });

@@ -31,6 +31,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
+ * __mflAppStartPromise?: Promise<void>,
  * }} */
 const runtimeWindow = window;
 
@@ -63,6 +64,10 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
+  const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
+  if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
+    await runtimeWindow.__mflAppStartPromise;
+  }
   runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
