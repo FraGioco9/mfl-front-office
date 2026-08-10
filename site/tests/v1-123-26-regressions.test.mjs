@@ -16,8 +16,8 @@ test("Database Hide MFL players is part of first paint", async () => {
   assert.match(bridge, /const hideMflPlayersFilter = document\.querySelector\("#hideMflPlayersFilter"\)/);
   assert.match(bridge, /hideMflPlayersFilter\.hidden = lockedRoute \|\| route\.pageName !== "database"/);
   assert.ok(bridge.indexOf("hideMflPlayersFilter.hidden") < bridge.indexOf('fetch("/release.json"'));
-  assert.match(runtime, /function isDatabaseTableRoute\(pathname = window\.location\.pathname\)/);
-  assert.match(runtime, /filter\.hidden = !visible/);
+  assert.match(runtime, /function syncQuickFilterLabels\(pageName\)/);
+  assert.match(runtime, /hideMflPlayersFilter\.hidden = pageName !== "database"/);
   assert.match(early, /database-static-filter-runtime\.js/);
 });
 
