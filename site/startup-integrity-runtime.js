@@ -198,6 +198,10 @@
     let idleFrame = 0;
     let showEpoch = 0;
     let keyboardFocusMode = false;
+    let showScrollX = 0;
+    let showScrollY = 0;
+    let showMetricLeft = Number.NaN;
+    let showMetricTop = Number.NaN;
 
     const metricFrom = (target) => target instanceof Element
       ? target.closest(".evaluationMetric.evaluationDiscountRate")
@@ -243,10 +247,20 @@
       portal.style.top = `${Math.round(top)}px`;
     }
 
+    function rememberScrollAnchor(metric) {
+      const rect = metric.getBoundingClientRect();
+      showScrollX = window.scrollX;
+      showScrollY = window.scrollY;
+      showMetricLeft = rect.left;
+      showMetricTop = rect.top;
+    }
+
     function hide(immediate = false) {
       cancelPendingShow();
       activeMetric?.removeAttribute("aria-describedby");
       activeMetric = null;
+      showMetricLeft = Number.NaN;
+      showMetricTop = Number.NaN;
       if (hideTimer) {
         clearTimeout(hideTimer);
         hideTimer = 0;
@@ -286,6 +300,7 @@
       if (!tooltip) return;
       activeMetric?.removeAttribute("aria-describedby");
       activeMetric = metric;
+      rememberScrollAnchor(metric);
       tooltip.textContent = text;
       tooltip.classList.remove("tooltipHiding");
       metric.setAttribute("aria-describedby", tooltip.id);
@@ -402,7 +417,13 @@
     }
 
     function onScroll() {
-      clearAll(true);
+      if (!(activeMetric instanceof HTMLElement) || !activeMetric.isConnected) return;
+      const rect = activeMetric.getBoundingClientRect();
+      const viewportMoved = Math.abs(window.scrollX - showScrollX) > 0.5
+        || Math.abs(window.scrollY - showScrollY) > 0.5;
+      const metricMoved = Math.abs(rect.left - showMetricLeft) > 0.5
+        || Math.abs(rect.top - showMetricTop) > 0.5;
+      if (viewportMoved || metricMoved) clearAll(true);
     }
 
     function onResize() {
