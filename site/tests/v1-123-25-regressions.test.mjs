@@ -25,7 +25,7 @@ test("player table loading has one canonical tbody owner", async () => {
 
   assert.match(runtime, /const LOADING_TEXT = "Loading players\.\.\."/);
   assert.match(runtime, /body\.replaceChildren\(row\)/);
-  assert.match(runtime, /if \(empty\) empty\.hidden = true/);
+  assert.match(runtime, /if \(empty\) \{\s*empty\.hidden = true;\s*empty\.textContent = "";\s*\}/);
   assert.match(runtime, /showTableBusyState = wrapped/);
   assert.match(entry, /table-loading-runtime\.js/);
   assert.match(entry, /__mflTableLoadingRuntime\?\.installLegacyBridge\?\.\(\)/);
