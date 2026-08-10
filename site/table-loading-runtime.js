@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.24");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
   const LOADING_TEXT = "Loading players...";
   const previous = window.__mflTableLoadingRuntime;
   previous?.destroy?.();
