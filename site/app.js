@@ -1,12 +1,29 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.28";
+  const STATIC_RELEASE_VERSION = "1.123.29";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+  const STATIC_MFL_STATS_FILTERS = Object.freeze([
+    ["all", "All"],
+    ["90-94", "90-94"],
+    ["legendary", "Legendary"],
+    ["85-89", "85-89"],
+    ["80-84", "80-84"],
+    ["rare", "Rare"],
+    ["75-79", "75-79"],
+    ["70-74", "70-74"],
+    ["uncommon", "Uncommon"],
+    ["65-69", "65-69"],
+    ["60-64", "60-64"],
+    ["limited", "Limited"],
+    ["55-59", "55-59"],
+    ["50-54", "50-54"],
+    ["common", "Common"],
+  ]);
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
@@ -274,6 +291,46 @@
     }
   }
 
+  function primeStaticMflStatsOverallFilters(route) {
+    if (route?.pageName !== "mflstats") return;
+    const container = document.getElementById("mflStatsOverallFilters");
+    if (!(container instanceof HTMLElement)) return;
+
+    const expectedIds = STATIC_MFL_STATS_FILTERS.map(([id]) => id);
+    const currentButtons = Array.from(container.querySelectorAll(".mflStatsFilterButton"));
+    const valid = currentButtons.length === expectedIds.length
+      && currentButtons.every((button, index) => String(button.dataset.filter || "") === expectedIds[index]);
+    if (!valid) {
+      const fragment = document.createDocumentFragment();
+      STATIC_MFL_STATS_FILTERS.forEach(([id, label], index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `mflStatsFilterButton${index === 0 ? " active" : ""}`;
+        button.dataset.filter = id;
+        button.dataset.mflStatsStatic = "true";
+        button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+        button.textContent = label;
+        fragment.appendChild(button);
+      });
+      container.replaceChildren(fragment);
+    }
+
+    container.dataset.staticOverallFilters = "true";
+    container.style.setProperty("display", "flex", "important");
+    container.style.setProperty("flex-wrap", "nowrap", "important");
+    container.style.setProperty("gap", "6px", "important");
+    container.style.setProperty("width", "100%", "important");
+    container.querySelectorAll(".mflStatsFilterButton").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.style.setProperty("flex", "1 1 0", "important");
+      button.style.setProperty("width", "auto", "important");
+      button.style.setProperty("min-width", "0", "important");
+      button.style.setProperty("padding-left", "5px", "important");
+      button.style.setProperty("padding-right", "5px", "important");
+      button.style.setProperty("white-space", "nowrap", "important");
+    });
+  }
+
   function staticTableColumnKey(column, pageName) {
     return column === "wallet_name" && ["myplayers", "agents", "mfl"].includes(pageName)
       ? "owned_since"
@@ -442,6 +499,7 @@
       document.documentElement.dataset.initialPage = "database/attributes";
     }
     const route = initialRoute(window.location.pathname);
+    primeStaticMflStatsOverallFilters(route);
     if (route.pageName === "watchlist") route.title = storedWatchlistTitle(window.location.pathname);
     const { storedOptIn, storedAccess } = syncStoredAccessFlags();
     const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS.has(route.pageName);
@@ -603,6 +661,15 @@
         animation: none !important;
       }
 
+      html.${BUSY_CLASS} body[data-page="mflstats"] #mflStatsPage,
+      html.${BUSY_CLASS} body[data-page="mflstats"] #mflStatsPage *,
+      html.${BUSY_CLASS} body[data-page="mflstats"] #mflStatsPage *::before,
+      html.${BUSY_CLASS} body[data-page="mflstats"] #mflStatsPage *::after {
+        pointer-events: none !important;
+        transition: none !important;
+        animation: none !important;
+      }
+
       html.${BUSY_CLASS} body::after {
         content: "";
         position: fixed;
@@ -683,8 +750,7 @@
       return elementHasWaitCursor(target)
         || elementHasWaitCursor(document.documentElement)
         || elementHasWaitCursor(document.body)
-        || elementHasWaitCursor(document.body, "::before")
-        || elementHasWaitCursor(document.body, "::after");
+        || elementHasWaitCursor(document.body, "::before");
     }
 
     function blockInteraction(event) {
