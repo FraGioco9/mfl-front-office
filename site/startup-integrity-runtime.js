@@ -207,6 +207,8 @@
       || /^\/evaluation\/?$/i.test(window.location.pathname)
     );
 
+    const interactionBusy = () => document.documentElement.classList.contains("mflInteractionBusy");
+
     function cancelPendingShow() {
       showEpoch += 1;
       if (showFrame) cancelAnimationFrame(showFrame);
@@ -268,7 +270,7 @@
 
     function show(metric) {
       if (!(metric instanceof HTMLElement)) return;
-      if (!evaluationActive()) {
+      if (!evaluationActive() || interactionBusy()) {
         hide(true);
         return;
       }
@@ -293,14 +295,14 @@
       const epoch = showEpoch;
       showFrame = requestAnimationFrame(() => {
         showFrame = 0;
-        if (epoch !== showEpoch || portal !== tooltip || activeMetric !== metric || !evaluationActive()) return;
+        if (epoch !== showEpoch || portal !== tooltip || activeMetric !== metric || !evaluationActive() || interactionBusy()) return;
         tooltip.classList.add("visible");
         position();
       });
     }
 
     function sync() {
-      if (!evaluationActive()) {
+      if (!evaluationActive() || interactionBusy()) {
         hoverMetric = null;
         keyboardFocusMetric = null;
         hide(true);
@@ -319,6 +321,7 @@
 
     function onPointerOver(event) {
       keyboardFocusMode = false;
+      if (interactionBusy()) return;
       const metric = metricFrom(event.target);
       if (!metric) return;
       hoverMetric = metric;
@@ -327,6 +330,7 @@
 
     function onPointerMove(event) {
       keyboardFocusMode = false;
+      if (interactionBusy()) return;
       const metric = metricFrom(event.target);
       if (metric === hoverMetric) return;
       hoverMetric = metric;
@@ -391,6 +395,12 @@
       clearAll(true);
     }
 
+    // Window capture observes the pointer before the document-level global interaction
+    // guard can stop propagation. show()/sync() still reject the real busy state.
+    window.addEventListener("pointerover", onPointerOver, true);
+    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointerout", onPointerOut, true);
+    window.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("pointerover", onPointerOver, true);
     document.addEventListener("pointermove", onPointerMove, true);
     document.addEventListener("pointerout", onPointerOut, true);
@@ -408,6 +418,10 @@
 
     function destroy() {
       clearAll(true);
+      window.removeEventListener("pointerover", onPointerOver, true);
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerout", onPointerOut, true);
+      window.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("pointerover", onPointerOver, true);
       document.removeEventListener("pointermove", onPointerMove, true);
       document.removeEventListener("pointerout", onPointerOut, true);
