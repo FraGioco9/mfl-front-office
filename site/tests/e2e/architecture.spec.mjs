@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.14");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.15");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -102,6 +102,59 @@ test("does not flash Progression for an opted-out user on refresh", async ({ pag
   releaseMetadata();
 });
 
+test("does not flash Progression for an opted-in user without permission", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wallet = "0x1234";
+    globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
+    globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      type: "user-signature",
+      address: wallet,
+      signingAddress: wallet,
+      message: "MFL Front Office Dapper Opt-In",
+      appIdentifier: "MFL Front Office Dapper Opt-In",
+      signatures: ["signature"],
+    }));
+    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({ allowed: false }));
+  });
+
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/evaluation", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#sidebar")).toBeVisible();
+  await expect(page.locator('#sidebar .navButton[data-page="progression"]')).toBeHidden();
+  releaseMetadata();
+});
+
+test("opting out on a locked page restores its Opt In button", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wallet = "0x1234";
+    globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
+    globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      type: "user-signature",
+      address: wallet,
+      signingAddress: wallet,
+      message: "MFL Front Office Dapper Opt-In",
+      appIdentifier: "MFL Front Office Dapper Opt-In",
+      signatures: ["signature"],
+    }));
+    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({ allowed: true }));
+  });
+
+  await page.goto("/my-players/attributes");
+  await waitForArchitecture(page);
+  await page.locator("#accountButton").click();
+  await page.locator("#linkWalletButton").click();
+
+  await expect(page.locator("#myPlayersLockedPage")).toBeVisible();
+  await expect(page.locator("#myPlayersOptInButton")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-stored-wallet-opt-in", "false");
+});
+
 test("pager and Showing x/y players stay hidden for the full table data-loading state", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
@@ -139,6 +192,27 @@ test("scoped loading finishes without leaving the site interaction-locked", asyn
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
+});
+
+test("a wait cursor blocks clicks even without an explicit busy token", async ({ page }) => {
+  await page.goto("/");
+  await waitForArchitecture(page);
+
+  const counts = await page.evaluate(() => {
+    const button = globalThis.document.createElement("button");
+    let clickCount = 0;
+    button.addEventListener("click", () => { clickCount += 1; });
+    globalThis.document.body.appendChild(button);
+    button.style.cursor = "wait";
+    button.click();
+    const waitCount = clickCount;
+    button.style.cursor = "pointer";
+    button.click();
+    button.remove();
+    return { waitCount, pointerCount: clickCount };
+  });
+
+  expect(counts).toEqual({ waitCount: 0, pointerCount: 1 });
 });
 
 test("Database Stats refresh shows boxes and Overall filters immediately, then holds wait cursor until data finishes", async ({ page }) => {
@@ -346,7 +420,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.14");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.15");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -366,8 +440,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.14");
-  expect(rows[0][0]).toBe("v1.123.14");
+  expect(metadata.version).toBe("1.123.15");
+  expect(rows[0][0]).toBe("v1.123.15");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);

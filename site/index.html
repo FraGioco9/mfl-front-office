@@ -24,14 +24,22 @@
             && Array.isArray(proof?.signatures)
             && proof.signatures.length
           );
+          const permission = linkedWallet
+            ? JSON.parse(localStorage.getItem(`mfl-wallet-permission-cache-v1:${linkedWallet}`) || "null")
+            : null;
           root.dataset.storedWalletOptIn = optedIn ? "true" : "false";
+          root.dataset.storedProgressionAccess = optedIn && permission?.allowed === true ? "true" : "false";
         } catch {
           root.dataset.theme = "light";
           root.dataset.storedWalletOptIn = "false";
+          root.dataset.storedProgressionAccess = "false";
         }
       })();
     </script>
     <style>
+      html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
+        display: none !important;
+      }
       html[data-stored-wallet-opt-in="true"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: none !important;
       }
@@ -78,7 +86,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.14">
+    <link rel="stylesheet" href="/styles.css?v=1.123.15">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -466,7 +474,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.14</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.15</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -634,6 +642,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.14"></script>
+    <script src="/app.js?v=1.123.15"></script>
   </body>
 </html>

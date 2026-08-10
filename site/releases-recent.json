@@ -1,4 +1,5 @@
 [
+  ["v1.123.15", "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"],
   ["v1.123.14", "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"],
   ["v1.123.13", "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"],
   ["v1.123.12", "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"],

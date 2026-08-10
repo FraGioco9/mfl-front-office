@@ -1,4 +1,4 @@
 {
-  "version": "1.123.14",
-  "description": "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"
+  "version": "1.123.15",
+  "description": "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"
 }
