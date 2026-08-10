@@ -1,4 +1,4 @@
 {
-  "version": "1.123.23",
-  "description": "Fix Discount Rate dismissal, global search scope, Database first paint, and Watchlist/My Players routing"
+  "version": "1.123.24",
+  "description": "Fix full global search, stabilize table first paint, and preserve Watchlist titles"
 }
