@@ -5884,8 +5884,6 @@ function buildSearchIndex(options = {}) {
 }
 
 let databaseSearchSequence = 0;
-let databaseSearchTimer = 0;
-let evaluationDatabaseSearchTimer = 0;
 let databaseSearchAbortController = null;
 const databaseSearchResponseCache = new Map();
 const DATABASE_SEARCH_RESPONSE_CACHE_LIMIT = 80;
@@ -6737,9 +6735,9 @@ function clearEvaluationSearch() {
 }
 function handleEvaluationSearchInput() {
   if (!evaluationSearchInput.value.trim()) resetEvaluationSelection();
-  clearTimeout(evaluationDatabaseSearchTimer);
   const query = String(evaluationSearchInput.value || "").trim();
-  evaluationDatabaseSearchTimer = setTimeout(async () => {
+  renderEvaluationSearchResults();
+  void (async () => {
     try {
       if (await requestDatabaseSearch(query, "players")) renderEvaluationSearchResults();
     } catch (error) {
@@ -6747,7 +6745,7 @@ function handleEvaluationSearchInput() {
       applyDatabaseSearchPayload({ columns: [], rows: [] }, "players");
       renderEvaluationSearchResults();
     }
-  }, 80);
+  })();
 }
 
 function evaluationOverallKey(row) {
@@ -7838,9 +7836,9 @@ function bestSearchResults(query) {
       || String(a.label).localeCompare(String(b.label))
     ));
 
-  // Keep enough category-ranked candidates for the club-search enhancer to
-  // merge and trim them in the final players -> clubs -> agents order.
-  return [...playerResults, ...agentResults].slice(0, 10);
+  // Preserve each category so player matches cannot crowd agents out before
+  // the club-search enhancer merges players -> clubs -> agents.
+  return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];
 }
 
 function agentSearchResultByWallet(walletAddress) {
@@ -7919,7 +7917,7 @@ function renderSearchResultsNow() {
 
   if (!results.length) {
     playerSearchResults.classList.remove("filledSearchResults");
-    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players or agents found." : "Recent searches will appear here."}</div>`;
+    playerSearchResults.innerHTML = `<div class="searchHint">${query ? "No players, clubs, or agents found." : "Recent searches will appear here."}</div>`;
     return;
   }
 
@@ -7960,9 +7958,9 @@ function renderSearchResultsNow() {
 
 function renderSearchResults() {
   syncPlayerSearchClearButton();
-  clearTimeout(databaseSearchTimer);
   const query = String(playerSearchInput.value || "").trim();
-  databaseSearchTimer = setTimeout(async () => {
+  renderSearchResultsNow();
+  void (async () => {
     try {
       if (await requestDatabaseSearch(query, "all")) renderSearchResultsNow();
     } catch (error) {
@@ -7970,7 +7968,7 @@ function renderSearchResults() {
       applyDatabaseSearchPayload({ players: {}, agents: {}, clubs: [] }, "all");
       renderSearchResultsNow();
     }
-  }, 80);
+  })();
 }
 
 function tableNextOverallPreciseValue(row) {
@@ -10439,9 +10437,9 @@ function setupChangelogSections() {
 async function startApp() {
   loadTheme();
   setupChangelogSections();
-  applyStoredWalletPermission();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   loadSavedTableState();
+  applyStoredWalletPermission();
   loadEvaluationMflPerUsd();
   loadEvaluationLateSeasonRewardRates();
   renderEvaluationMflPerUsdControl(false);
@@ -11571,6 +11569,7 @@ async function startApp() {
 (() => {
   const VERSION = "1.122.0";
   const MAX_SEARCH_RESULTS = 5;
+  const MAX_TYPED_SEARCH_RESULTS = 15;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
   const CLUB_ID_COLUMNS = ["active_contract_club_id", "club_id", "current_club_id", "active_club_id"];
   let clubWidthUnlockTimer = null;
@@ -11736,7 +11735,7 @@ async function startApp() {
     const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
       .sort((a, b) => resultPriority(a) - resultPriority(b));
     results.forEach((result) => playerSearchResults.appendChild(result));
-    results.slice(MAX_SEARCH_RESULTS).forEach((result) => result.remove());
+    results.slice(MAX_TYPED_SEARCH_RESULTS).forEach((result) => result.remove());
     const visibleResults = playerSearchResults.querySelectorAll(":scope > .searchResult");
     playerSearchResults.querySelectorAll(":scope > .searchHint").forEach((hint) => {
       if (visibleResults.length) hint.remove();
@@ -12541,10 +12540,10 @@ async function startApp() {
     const playerResults = existingResults.filter((result) => !result.dataset.searchKey?.startsWith("agent:"));
     const agentResults = existingResults.filter((result) => result.dataset.searchKey?.startsWith("agent:"));
     const mergedResults = [
-      ...playerResults,
+      ...playerResults.slice(0, 5),
       ...clubResults,
-      ...agentResults,
-    ].slice(0, 5);
+      ...agentResults.slice(0, 5),
+    ];
 
     if (mergedResults.length) {
       playerSearchResults.replaceChildren(...mergedResults);
@@ -12569,7 +12568,7 @@ async function startApp() {
     };
     const results = Array.from(playerSearchResults.querySelectorAll(":scope > .searchResult"))
       .sort((a, b) => resultPriority(a) - resultPriority(b))
-      .slice(0, 5);
+      .slice(0, 15);
 
     if (!results.length) {
       return;
