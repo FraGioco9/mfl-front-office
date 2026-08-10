@@ -473,7 +473,9 @@ test("refresh shows the theme symbol that matches light or dark mode before runt
       await expect(themedPage.locator("#themeButton .themeSunSymbol")).toBeHidden();
     }
 
+    const releaseResponse = themedPage.waitForResponse((response) => response.url().endsWith("/release.json"));
     releaseMetadata();
+    await releaseResponse;
     await themedPage.unroute("**/release.json");
     await themedPage.close();
   }
@@ -497,7 +499,9 @@ test("first bare Database visit opens Attributes with every Database view visibl
     await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeHidden();
   }
 
+  const releaseResponse = page.waitForResponse((response) => response.url().endsWith("/release.json"));
   releaseMetadata();
+  await releaseResponse;
   await page.unroute("**/release.json");
 });
 
