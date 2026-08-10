@@ -1,4 +1,4 @@
 {
-  "version": "1.123.30",
-  "description": "Restore Database and Progression view-button clicks outside real busy states"
+  "version": "1.123.31",
+  "description": "Restore all view navigation and stabilize Watchlist, Evaluation, Database Stats, and global search"
 }
