@@ -5135,12 +5135,12 @@ function loadSavedTableState() {
   try {
     const savedState = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
     restoreTablePageStates(savedState);
+    restoreLinkedWalletState(savedState);
     restoreWatchlistState();
     restoreMenuState(savedState);
     restoreRecentSearchState(savedState);
     restoreRecentEvaluationState(savedState);
     restorePlayerAttributeView(savedState);
-    restoreLinkedWalletState(savedState);
     applyGuestWatchlistIfNeeded();
     return savedState;
   } catch {
