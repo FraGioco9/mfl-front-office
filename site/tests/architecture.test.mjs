@@ -28,6 +28,7 @@ test("static shell resolves Watchlist names, table headers, and loading paginati
   const index = await read("index.html");
   const runtime = await read("modules/legacy-core.js");
   const styles = await read("styles.css");
+  const watchlistRouteUi = await read("watchlist-route-ui-runtime.js");
   assert.match(bridge, /const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:"/);
   assert.match(bridge, /function storedWatchlistTitle\(pathname\)/);
   assert.match(bridge, /route\.title = storedWatchlistTitle\(window\.location\.pathname\)/);
@@ -37,6 +38,8 @@ test("static shell resolves Watchlist names, table headers, and loading paginati
   assert.match(index, /html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager/);
   assert.match(runtime, /restoreTablePageStates\(savedState\);\s*restoreLinkedWalletState\(savedState\);\s*restoreWatchlistState\(\);/);
   assert.match(runtime, /const localWatchlists = localWatchlist\.some[\s\S]+applyWatchlists\(localWatchlists, "", localWatchlist\);/);
+  assert.match(watchlistRouteUi, /function syncWatchlistTitle\(\)/);
+  assert.match(watchlistRouteUi, /liveWatchlistName\(watchlistId\)\s*\|\| cachedWatchlistName\(watchlistId\)/);
   assert.doesNotMatch(styles, /data-initial-page="evaluation"[^\n]+evaluationSearchGroup/);
 });
 
