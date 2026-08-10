@@ -332,7 +332,8 @@ test("search pipelines stay independent and empty Evaluation primes recent resul
   assert.match(runtime, /const earlyGlobalSearch = primeGlobalSearchIndexes\(\)/);
   assert.match(runtime, /Promise\.allSettled\(\[earlyGlobalSearch, loadSummary\(\), loadWalletPreferences\(\)\]\)/);
   assert.match(runtime, /window\.__mflAppStartPromise = startApp\(\)/);
-  assert.match(entry, /if \(runtimeWindow\.__mflAppStartPromise\) await runtimeWindow\.__mflAppStartPromise/);
+  assert.match(entry, /const evaluationStartup = \/\^\\\/evaluation/);
+  assert.match(entry, /if \(evaluationStartup && runtimeWindow\.__mflAppStartPromise\)/);
   assert.match(runtime, /databaseSearchResponseCache\.delete\("players:"\)/);
   assert.match(runtime, /window\.addEventListener\("mfl:ready", focusSearch, \{ once: true \}\)/);
   assert.match(runtime, /evaluationSearchInput\.focus\(\{ preventScroll: true \}\)/);
