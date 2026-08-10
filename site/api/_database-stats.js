@@ -41,14 +41,18 @@ function databaseStatsData() {
        count(*) AS totalPlayers,
        sum(CASE WHEN ${activeSql} THEN 1 ELSE 0 END) AS totalActivePlayers
      FROM players
-     WHERE ${excludedOwnershipSql}`,
+     WHERE ${excludedOwnershipSql}
+       AND ${overallSql} IS NOT NULL`,
     ownershipParameters,
   );
 
   const retiredTotals = queryOne(
     `SELECT count(*) AS totalRetiredPlayers
      FROM players
-     WHERE ${retiredSql}`,
+     WHERE ${excludedOwnershipSql}
+       AND ${retiredSql}
+       AND ${overallSql} IS NOT NULL`,
+    ownershipParameters,
   );
 
   return {

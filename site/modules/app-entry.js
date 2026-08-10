@@ -11,6 +11,8 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/database-static-filter-runtime.js",
+  "/v1-123-31-runtime.js",
+  "/global-search-runtime.js",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
   "/watchlist-route-ui-runtime.js",
@@ -21,7 +23,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 ]);
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
-  "/global-search-runtime.js",
   "/database-stats-refinement-runtime.js",
   "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
@@ -89,7 +90,7 @@ async function start() {
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
 
-  // Keep late runtimes such as global search available as early as possible,
+  // Keep late runtimes such as selection bridges available as early as possible,
   // but do not expose pagination or release the startup loading state on player
   // table routes until the legacy table request has actually settled. Dedicated
   // Stats pages own their own readiness and therefore must not wait here.

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.30";
+  const STATIC_RELEASE_VERSION = "1.123.31";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -507,12 +507,14 @@
     const menuRail = document.querySelector("#menuRail");
     const menuButton = document.querySelector("#menuButton");
     const sidebar = document.querySelector("#sidebar");
+    const main = document.querySelector("main");
     const footer = document.querySelector(".siteFooter");
     const footerVersionLink = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     const homeOptInButton = document.querySelector("#homeOptInButton");
     const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
     const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
     const watchlistButtonText = document.querySelector("#watchlistButtonText");
+    const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
     const hideRetiredInput = document.querySelector("#hideRetiredInput");
     const hideRetiringInput = document.querySelector("#hideRetiringInput");
     const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
@@ -548,6 +550,19 @@
       if (showWatchlistSwitcher && watchlistButtonText instanceof HTMLElement) {
         watchlistButtonText.textContent = storedWatchlistName(window.location.pathname) || "-";
       }
+    }
+
+    if (evaluationSearchInput instanceof HTMLInputElement) {
+      const loadingEvaluation = !lockedRoute && route.pageName === "evaluation";
+      evaluationSearchInput.inert = loadingEvaluation;
+      if (loadingEvaluation) {
+        evaluationSearchInput.blur();
+        evaluationSearchInput.dataset.staticFocusGuard = "true";
+      }
+    }
+    if (!lockedRoute && route.pageName === "evaluation") {
+      if (main instanceof HTMLElement) main.scrollTop = 0;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
     }
 
     const quickFilters = storedQuickFilters(route.pageName);
@@ -746,9 +761,7 @@
     function interactionShouldBeBlocked(event) {
       if (activeTokens.size) return true;
       const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest("#progressionPage .viewButton[data-view], #databaseStatsPage .viewButton[data-view], #mflStatsPage .viewButton[data-view]")) {
-        return false;
-      }
+      if (target?.closest(".viewButton[data-view]")) return false;
       return elementHasWaitCursor(target)
         || elementHasWaitCursor(document.documentElement)
         || elementHasWaitCursor(document.body)
