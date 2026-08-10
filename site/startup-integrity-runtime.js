@@ -267,7 +267,8 @@
     }
 
     function show(metric) {
-      if (!(metric instanceof HTMLElement) || !evaluationActive()) {
+      if (!(metric instanceof HTMLElement)) return;
+      if (!evaluationActive()) {
         hide(true);
         return;
       }
