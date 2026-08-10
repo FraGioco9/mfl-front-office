@@ -730,12 +730,33 @@
       }
     }
 
-    function interactionShouldBeBlocked() {
-      return activeTokens.size > 0;
+    /**
+     * @param {Element | null} element
+     * @param {string | null} pseudoElement
+     */
+    function elementHasWaitCursor(element, pseudoElement = null) {
+      if (!(element instanceof Element)) return false;
+      try {
+        return getComputedStyle(element, pseudoElement).cursor === "wait";
+      } catch {
+        return false;
+      }
+    }
+
+    function interactionShouldBeBlocked(event) {
+      if (activeTokens.size) return true;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("#progressionPage .viewButton[data-view], #databaseStatsPage .viewButton[data-view], #mflStatsPage .viewButton[data-view]")) {
+        return false;
+      }
+      return elementHasWaitCursor(target)
+        || elementHasWaitCursor(document.documentElement)
+        || elementHasWaitCursor(document.body)
+        || elementHasWaitCursor(document.body, "::before");
     }
 
     function blockInteraction(event) {
-      if (!interactionShouldBeBlocked()) return;
+      if (!interactionShouldBeBlocked(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     }
