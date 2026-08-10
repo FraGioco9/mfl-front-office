@@ -52,7 +52,7 @@ test("footer starts in the pinned content column with the current release", asyn
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const footer = page.locator(".siteFooter");
   await expect(footer).toBeVisible();
-  await expect(footer).toContainText("MFL Front Office v1.123.14");
+  await expect(footer).toContainText("MFL Front Office v1.123.16");
   await expect(page.locator("body")).toHaveClass(/pinnedSidebarVisible/);
   const layout = await page.evaluate(() => {
     const footer = globalThis.document.querySelector(".siteFooter");
@@ -153,4 +153,51 @@ test("Home never shows Changelog content after Changelog was the initial route",
   await expect(page.locator("#homePage")).toBeVisible();
   await expect(page.locator("#homePage .homeIntro")).toContainText("Manage scouting");
   await expect(page.locator("#changelogPage")).toBeHidden();
+});
+
+test("first Database visit has Hide MFL players selected", async ({ page }) => {
+  await page.goto("/database/attributes", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#hideMflPlayersInput")).toBeChecked();
+});
+
+test("protected opted-out routes show the locked page before release loading", async ({ page }) => {
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/watchlist", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#myPlayersLockedPage")).toBeVisible();
+  await expect(page.locator("#homePage")).toBeHidden();
+  await expect(page.locator("#progressionPage")).toBeHidden();
+  await expect(page.locator("#myPlayersOptInButton")).toBeVisible();
+
+  releaseMetadata();
+  await waitForArchitecture(page);
+});
+
+test("Custom Overall counts missing retirement years as active", async ({ page }) => {
+  await mockStats(page, {
+    totalActivePlayers: 14,
+    totalRetiredPlayers: 5,
+    rows: [
+      [80, 24, null, 4],
+      [80, 25, 0, 5],
+      [80, 25, 1, 7],
+      [90, 26, 2, 3],
+    ],
+  });
+  await page.goto("/database/stats");
+  await waitForArchitecture(page);
+
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  const portal = page.locator("#databaseStatsCustomTooltipPortal");
+  await portal.locator('[data-role="min"]').fill("80");
+  await portal.locator('[data-role="max"]').fill("80");
+  await portal.locator('[data-role="apply"]').click();
+
+  await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("11");
+  await expect(page.locator("#databaseStatsRetired")).toHaveText("5");
 });

@@ -1,11 +1,12 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.14";
+  const STATIC_RELEASE_VERSION = "1.123.16";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
+  const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     stats: "stats",
@@ -34,6 +35,7 @@
    * },
    * __mflWithInteractionBusy?: (callback: () => unknown) => Promise<unknown>,
    * __mflWrapInteractionBusyFunction?: (callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>,
+   * __mflSyncStoredAccessFlags?: () => { storedOptIn: boolean, storedAccess: boolean },
    * }} */
   const runtimeWindow = window;
 
@@ -68,6 +70,14 @@
     } catch {
       return false;
     }
+  }
+
+  function syncStoredAccessFlags() {
+    const storedOptIn = Boolean(storedWalletOptInAddress());
+    const storedAccess = hasStoredProgressionAccess();
+    document.documentElement.dataset.storedWalletOptIn = storedOptIn ? "true" : "false";
+    document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
+    return { storedOptIn, storedAccess };
   }
 
   function ensureDatabaseStatsStaticPage() {
@@ -146,8 +156,9 @@
   function primeStaticShell() {
     ensureDatabaseStatsStaticPage();
     const route = initialRoute(window.location.pathname);
-    const storedOptIn = Boolean(storedWalletOptInAddress());
-    const storedAccess = hasStoredProgressionAccess();
+    const { storedOptIn, storedAccess } = syncStoredAccessFlags();
+    const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS.has(route.pageName);
+    const initialPageId = lockedRoute ? "myPlayersLockedPage" : route.pageId;
     const appShell = document.querySelector("#appShell");
     const menuRail = document.querySelector("#menuRail");
     const menuButton = document.querySelector("#menuButton");
@@ -180,7 +191,7 @@
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page.id !== route.pageId;
+      if (page instanceof HTMLElement) page.hidden = page.id !== initialPageId;
     });
 
     const navPage = route.navPage || route.pageName;
@@ -189,7 +200,26 @@
       button.classList.toggle("active", button.dataset.page === navPage);
     });
 
-    if (route.pageId === "progressionPage") {
+    if (lockedRoute) {
+      const lockedTitle = document.querySelector("#optInLockedTitle");
+      const lockedMessage = document.querySelector("#optInLockedMessage");
+      if (lockedTitle instanceof HTMLElement) {
+        lockedTitle.textContent = route.pageName === "watchlist"
+          ? "Watchlist"
+          : route.pageName === "settings"
+            ? "Settings"
+            : "My Players";
+      }
+      if (lockedMessage instanceof HTMLElement) {
+        lockedMessage.textContent = route.pageName === "watchlist"
+          ? "In order to use the watchlist, you need to opt in."
+          : route.pageName === "settings"
+            ? "In order to view settings, you need to opt in."
+            : "In order to see your players, you need to opt in.";
+      }
+    }
+
+    if (!lockedRoute && route.pageId === "progressionPage") {
       const title = document.querySelector("#tablePageTitle");
       if (title instanceof HTMLElement && route.title) title.textContent = route.title;
 
@@ -268,8 +298,31 @@
       }
     }
 
+    /**
+     * @param {Element | null} element
+     * @param {string | null} pseudoElement
+     */
+    function elementHasWaitCursor(element, pseudoElement = null) {
+      if (!(element instanceof Element)) return false;
+      try {
+        return getComputedStyle(element, pseudoElement).cursor === "wait";
+      } catch {
+        return false;
+      }
+    }
+
+    function interactionShouldBeBlocked(event) {
+      if (activeTokens.size) return true;
+      const target = event.target instanceof Element ? event.target : null;
+      return elementHasWaitCursor(target)
+        || elementHasWaitCursor(document.documentElement)
+        || elementHasWaitCursor(document.body)
+        || elementHasWaitCursor(document.body, "::before")
+        || elementHasWaitCursor(document.body, "::after");
+    }
+
     function blockInteraction(event) {
-      if (!activeTokens.size) return;
+      if (!interactionShouldBeBlocked(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     }
@@ -284,12 +337,30 @@
     function installLegacyBridge() {
       runtimeWindow.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
       runtimeWindow.__mflWrapInteractionBusyFunction = wrapBusyFunction;
+      runtimeWindow.__mflSyncStoredAccessFlags = syncStoredAccessFlags;
 
       try {
         window.eval("withInteractionBusy = window.__mflWithInteractionBusy");
       } catch {
         // The app still works if a future core stops exposing this global binding.
       }
+
+      try {
+        window.eval(`(() => {
+          if (typeof syncHomeLoginButton !== "function" || syncHomeLoginButton.__mflStoredAccessWrapped) return;
+          const original = syncHomeLoginButton;
+          const wrapped = function (...args) {
+            const result = original.apply(this, args);
+            window.__mflSyncStoredAccessFlags();
+            return result;
+          };
+          Object.defineProperty(wrapped, "__mflStoredAccessWrapped", { value: true });
+          syncHomeLoginButton = wrapped;
+        })()`);
+      } catch {
+        // Future cores can update the storage-backed flags directly instead.
+      }
+      syncStoredAccessFlags();
 
       [
         "ensureProgressionData",

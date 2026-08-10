@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.14");
+  assert.equal(release.version, "1.123.16");
   assert.ok(release.description.length > 20);
 });
 
@@ -32,15 +32,19 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.14"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.16"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
-  assert.match(bridge, /const storedOptIn = Boolean\(storedWalletOptInAddress\(\)\)/);
-  assert.match(bridge, /const storedAccess = hasStoredProgressionAccess\(\)/);
+  assert.match(bridge, /function syncStoredAccessFlags\(\)/);
+  assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
   assert.match(bridge, /homeOptInButton\.hidden = storedOptIn/);
   assert.match(bridge, /myPlayersOptInButton\.hidden = storedOptIn/);
   assert.match(bridge, /classList\.toggle\("guest", !storedAccess\)/);
+  assert.match(bridge, /runtimeWindow\.__mflSyncStoredAccessFlags = syncStoredAccessFlags/);
+  assert.match(bridge, /syncHomeLoginButton = wrapped/);
   assert.ok(bridge.indexOf("const footerVersionLink = primeStaticShell();") < bridge.indexOf("fetch(\"/release.json\""));
   assert.match(index, /root\.dataset\.storedWalletOptIn = optedIn \? "true" : "false"/);
+  assert.match(index, /root\.dataset\.storedProgressionAccess = optedIn && permission\?\.allowed === true \? "true" : "false"/);
+  assert.match(index, /html\[data-stored-progression-access="false"\] #sidebar \.navButton\[data-page="progression"\]/);
   assert.match(index, /html\[data-stored-wallet-opt-in="true"\] :is\(#homeOptInButton, #myPlayersOptInButton\)/);
   assert.match(index, /<button id="homeOptInButton" class="homeOptInButton" type="button">/);
   assert.match(index, /<header class="topbar">/);
@@ -108,6 +112,14 @@ test("loading lock remains scoped to explicit data operations including both Sta
   assert.match(databaseRuntime, /window\.__mflInteractionBusy\.begin\("databaseStatsData"\)/);
   assert.match(mflRuntime, /window\.__mflInteractionBusy\.begin\("mflStatsData"\)/);
   assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|syncKnownLoadingStates|namedTokens/);
+});
+
+test("wait-cursor elements are interaction locked even without a busy token", async () => {
+  const bridge = await read("app.js");
+  assert.match(bridge, /function elementHasWaitCursor\(element, pseudoElement = null\)/);
+  assert.match(bridge, /function interactionShouldBeBlocked\(event\)/);
+  assert.match(bridge, /elementHasWaitCursor\(document\.body, "::before"\)/);
+  assert.match(bridge, /if \(!interactionShouldBeBlocked\(event\)\) return;/);
 });
 
 test("pager and showing-player count stay hidden while table data is loading", async () => {
@@ -195,8 +207,35 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.16", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
+});
+
+test("first Database visit defaults Hide MFL players to selected", async () => {
+  const index = await read("index.html");
+  const legacy = await read("modules/legacy-core.js");
+  assert.match(index, /<input id="hideMflPlayersInput" type="checkbox" checked>/);
+  assert.match(legacy, /hideMflPlayers: pageName === "database"/);
+  assert.match(legacy, /savedState\.hideMflPlayers !== undefined \? Boolean\(savedState\.hideMflPlayers\) : true/);
+});
+
+test("protected routes select the locked Opt In shell before the main runtime", async () => {
+  const bridge = await read("app.js");
+  const index = await read("index.html");
+  assert.match(bridge, /const OPT_IN_REQUIRED_PAGE_IDS = new Set\(\["myplayers", "watchlist", "settings"\]\)/);
+  assert.match(bridge, /const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS\.has\(route\.pageName\)/);
+  assert.match(bridge, /const initialPageId = lockedRoute \? "myPlayersLockedPage" : route\.pageId/);
+  assert.match(index, /\[data-initial-page\^="my-players"\]/);
+  assert.match(index, /\[data-initial-page\^="watchlist"\]/);
+  assert.match(index, /\[data-initial-page="settings"\]/);
+});
+
+test("custom Database Stats treats missing retirement years as active", async () => {
+  const runtime = await read("database-stats-runtime.js");
+  assert.match(runtime, /function retirementYearsForGroup\(group\)/);
+  assert.match(runtime, /rawValue === null \|\| rawValue === undefined \|\| rawValue === ""/);
+  assert.match(runtime, /const filteredActivePlayers = sumGroups\(groups, \(group\) => !isRetiredGroup\(group\)\)/);
+  assert.match(runtime, /const filteredRetiredPlayers = sumGroups\(groups, isRetiredGroup\)/);
 });
