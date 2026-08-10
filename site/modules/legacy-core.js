@@ -3477,7 +3477,11 @@ function applyWatchlists(nextWatchlists, currentWatchlistId = "", legacyIds = []
 
 function ensureDefaultWatchlist() {
   if (!state.watchlists.length) {
-    applyWatchlists([], "", loadLocalWalletWatchlist());
+    const localWatchlist = loadLocalWalletWatchlist();
+    const localWatchlists = localWatchlist.some((item) => item && typeof item === "object" && !Array.isArray(item))
+      ? localWatchlist
+      : [];
+    applyWatchlists(localWatchlists, "", localWatchlist);
   }
   return activeWatchlist();
 }
