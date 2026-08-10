@@ -13,12 +13,12 @@ test("static app bridge owns the current footer before asynchronous runtime", as
   const bridge = await read("app.js");
   const vercel = await read("vercel.json");
 
-  assert.equal(release.version, "1.123.30");
+  assert.equal(release.version, "1.123.31");
   assert.match(index, /<body data-page="home" class="pinnedSidebarVisible">/);
   assert.match(index, />MFL Front Office v1\.123\.22<\/a>/);
   assert.match(index, /href="\/styles\.css\?v=1\.123\.22"/);
   assert.match(index, /src="\/app\.js\?v=1\.123\.22"/);
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.30"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.31"/);
   assert.match(bridge, /footerVersionLink\.textContent = `MFL Front Office v\$\{STATIC_RELEASE_VERSION\}`/);
   assert.match(bridge, /classList\.add\("mflStaticShellReady", "mflInitialRouteResolved"\)/);
   assert.match(vercel, /"source": "\/app\.js"[^\n]+"no-store, max-age=0"/);
@@ -48,14 +48,15 @@ test("Database Stats route and saved view bridge are active before deferred star
   assert.doesNotMatch(bootstrap, /history\.pushState\s*=|history\.replaceState\s*=/);
 });
 
-test("Retired Database Stats total counts every retirement_years zero row", async () => {
+test("Retired Database Stats total uses the same ownership and Overall scope as filtered rows", async () => {
   const api = await read("api/_database-stats.js");
   const runtime = await read("database-stats-runtime.js");
   const retiredSection = api.slice(api.indexOf("const retiredTotals"), api.indexOf("return {"));
 
   assert.match(api, /totalRetiredPlayers/);
   assert.match(api, /coalesce\(CAST\(retirement_years AS INTEGER\), -1\) = 0/);
-  assert.doesNotMatch(retiredSection, /excludedOwnershipSql|overallSql/);
+  assert.match(retiredSection, /excludedOwnershipSql/);
+  assert.match(retiredSection, /overallSql/);
   assert.match(runtime, /data\.totalRetiredPlayers/);
 });
 
@@ -78,9 +79,9 @@ test("Custom tooltip draft is event driven and keeps Database Stats visible", as
 
   assert.doesNotMatch(portal, /new MutationObserver/);
   assert.match(portal, /function keepStatsPageVisible\(\)/);
-  assert.match(portal, /window\.setDatabaseStatsPageVisibility\?\.\(true\)/);
+  assert.match(portal, /window\.__mflSetDatabaseStatsPageVisibility\?\.\(true\)/);
   assert.match(portal, /stopPortalEvent/);
   assert.match(stateRuntime, /function keepDraftOnStats\(event\)/);
   assert.match(stateRuntime, /document\.addEventListener\("beforeinput", keepDraftOnStats, true\)/);
-  assert.match(stateRuntime, /window\.setDatabaseStatsPageVisibility\?\.\(true\)/);
+  assert.match(stateRuntime, /window\.__mflSetDatabaseStatsPageVisibility\?\.\(true\)/);
 });
