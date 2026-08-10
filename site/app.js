@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.16";
+  const STATIC_RELEASE_VERSION = "1.123.17";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -155,6 +155,10 @@
 
   function primeStaticShell() {
     ensureDatabaseStatsStaticPage();
+    if (/^\/database\/?$/i.test(window.location.pathname)) {
+      window.history.replaceState({}, "", "/database/attributes");
+      document.documentElement.dataset.initialPage = "database/attributes";
+    }
     const route = initialRoute(window.location.pathname);
     const { storedOptIn, storedAccess } = syncStoredAccessFlags();
     const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS.has(route.pageName);
@@ -241,7 +245,10 @@
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData"]);
-    const blockedEvents = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
+    const blockedEvents = [
+      "pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu",
+      "pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove",
+    ];
     const activeTokens = new Map();
     let tokenSequence = 0;
 
@@ -254,6 +261,17 @@
       html.${BUSY_CLASS} body *::before,
       html.${BUSY_CLASS} body *::after {
         cursor: wait !important;
+      }
+
+      html.${BUSY_CLASS} body * {
+        pointer-events: none !important;
+      }
+
+      html.${BUSY_CLASS} body *,
+      html.${BUSY_CLASS} body *::before,
+      html.${BUSY_CLASS} body *::after {
+        transition: none !important;
+        animation: none !important;
       }
 
       #progressionPage nav.pager {
