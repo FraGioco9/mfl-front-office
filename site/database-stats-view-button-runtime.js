@@ -1,6 +1,6 @@
 (() => {
-  const FEATURE_VERSION = "1.120.17";
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.35");
+  const FEATURE_VERSION = "1.120.18";
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.123.25");
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
   const STATS_PATH = /^\/database\/stats\/?$/i;
   const WITHOUT_DATABASE_STATS_PATH = /^\/(?:watchlists?|my-players|myplayers|progression)(?:\/|$)/i;
@@ -57,6 +57,11 @@
   }
 
   function openStats(event) {
+    // The same Stats button DOM node is reused by Database and MFL. A listener
+    // attached while Database was active must become inert after navigation to
+    // /mfl so the normal MFL handler can route to /mfl/stats.
+    if (!isDatabaseContext()) return;
+
     event?.preventDefault?.();
     event?.stopImmediatePropagation?.();
 
