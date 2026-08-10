@@ -42,12 +42,34 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.19");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.20");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
   await expect(page.locator("html")).not.toHaveClass(/mflDataLoading/);
   expect(await page.locator("body").getAttribute("aria-busy")).toBe("false");
+});
+
+test("Evaluation content uses its final position before release metadata resolves", async ({ page }) => {
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/evaluation", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#homePage")).toBeHidden();
+  await expect(page.locator("#evaluationPage")).toBeVisible();
+  const before = await page.locator("#evaluationPage .evaluationSearchGroup").boundingBox();
+  expect(before).not.toBeNull();
+
+  releaseMetadata();
+  await waitForArchitecture(page);
+  const after = await page.locator("#evaluationPage .evaluationSearchGroup").boundingBox();
+  expect(after).not.toBeNull();
+  expect(Math.abs(after.x - before.x)).toBeLessThan(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThan(1);
 });
 
 test("an already opted-in user never sees the home Opt In button on refresh", async ({ page }) => {
@@ -380,6 +402,12 @@ test("Database Stats content remains visible after ordinary page interactions", 
     await expect(statsPage).toBeVisible();
     await expect(statsPage.locator(".databaseStatsCards")).toBeVisible();
   }
+
+  await statsPage.locator(".tablePageTitle").click();
+  const histogramAnimation = await statsPage.locator(".mflStatsHistogram").evaluate(
+    (node) => globalThis.getComputedStyle(node).animationName,
+  );
+  expect(histogramAnimation).toBe("none");
 });
 
 test("Database Stats custom bars animate only when the portal Apply button is clicked", async ({ page }) => {
@@ -504,7 +532,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.19");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.20");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -524,8 +552,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.19");
-  expect(rows[0][0]).toBe("v1.123.19");
+  expect(metadata.version).toBe("1.123.20");
+  expect(rows[0][0]).toBe("v1.123.20");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -668,6 +696,59 @@ test("evaluation compact search omits retired players", async ({ page }) => {
   await expect(page.locator("#evaluationSearchResults")).not.toContainText("Retired Result");
 });
 
+test("empty Evaluation focuses recent results, exposes its tooltip, and global search reloads recents on that page", async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.localStorage.setItem("mfl-recent-evaluation-searches-v1", JSON.stringify(["102"]));
+    globalThis.localStorage.setItem("mfl-recent-searches-v1", JSON.stringify([
+      "agent:0xagent",
+      "club:roma-club",
+      "player:102",
+    ]));
+  });
+
+  let recentRequests = 0;
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("type") !== "recent") {
+      await route.continue();
+      return;
+    }
+    recentRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        players: {
+          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+          rows: [[102, "Recent Active Player", 88, "Italy", "CM", null]],
+        },
+        agents: {
+          columns: ["wallet_address", "wallet_name", "player_count"],
+          rows: [["0xagent", "Recent Agent", 12]],
+        },
+        clubs: [{ clubId: "roma-club", name: "Recent Club", division: 2 }],
+      }),
+    });
+  });
+
+  await page.goto("/evaluation");
+  await waitForArchitecture(page);
+  const evaluationInput = page.locator("#evaluationSearchInput");
+  await expect(evaluationInput).toBeFocused();
+  await expect(page.locator("#evaluationSearchResults")).toContainText("Recent Active Player");
+
+  await page.locator(".evaluationDiscountRate").hover();
+  const tooltip = page.locator("#evaluationDiscountTooltipPortal");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText("geometric mean");
+
+  await page.locator("#openSearchButton").click();
+  await expect(page.locator("#playerSearchResults")).toContainText("Recent Active Player");
+  await expect(page.locator("#playerSearchResults")).toContainText("Recent Club");
+  await expect(page.locator("#playerSearchResults")).toContainText("Recent Agent");
+  expect(recentRequests).toBeGreaterThanOrEqual(2);
+});
+
 test("typed global and Evaluation search results update before their requests finish", async ({ page }) => {
   let releaseGlobalSearch;
   const globalSearchGate = new Promise((resolve) => { releaseGlobalSearch = resolve; });
@@ -789,5 +870,5 @@ test("empty recent-search copy is padded and fallback font size is stabilized", 
   const hint = page.locator("#playerSearchResults .searchHint");
   await expect(hint).toHaveText("Recent searches will appear here.");
   expect(await hint.evaluate((node) => globalThis.getComputedStyle(node).paddingLeft)).toBe("8px");
-  expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.538");
+  expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.52");
 });
