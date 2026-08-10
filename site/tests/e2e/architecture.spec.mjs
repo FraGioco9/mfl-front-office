@@ -869,6 +869,8 @@ test("empty recent-search copy is padded and fallback font size is stabilized", 
   await page.locator("#openSearchButton").click();
   const hint = page.locator("#playerSearchResults .searchHint");
   await expect(hint).toHaveText("Recent searches will appear here.");
-  expect(await hint.evaluate((node) => globalThis.getComputedStyle(node).paddingLeft)).toBe("8px");
+  await expect.poll(() => hint.evaluate((node) => (
+    node.isConnected ? globalThis.getComputedStyle(node).paddingLeft : ""
+  ))).toBe("8px");
   expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.52");
 });
