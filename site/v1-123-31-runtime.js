@@ -2,27 +2,12 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "1.123.31");
-  const VIEW_PASS_CLASS = "mflViewButtonClickPassThrough";
-  const VIEW_EVENT_TYPES = ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu"];
   const previous = window.__mflV12331Runtime;
   previous?.destroy?.();
 
   let destroyed = false;
   let observer = null;
-  let releaseFrame = 0;
   let evaluationFocusQueued = false;
-
-  const style = document.createElement("style");
-  style.id = "mflV12331RuntimeStyles";
-  style.textContent = `
-    html.${VIEW_PASS_CLASS},
-    html.${VIEW_PASS_CLASS} body,
-    html.${VIEW_PASS_CLASS} body::before,
-    html.${VIEW_PASS_CLASS} .viewButton[data-view] {
-      cursor: pointer !important;
-    }
-  `;
-  document.head.appendChild(style);
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -31,22 +16,6 @@
   function appBusy() {
     return document.documentElement.classList.contains("mflInteractionBusy")
       || document.documentElement.dataset.interactionBusy === "true";
-  }
-
-  function releaseViewPass() {
-    if (releaseFrame) cancelAnimationFrame(releaseFrame);
-    releaseFrame = requestAnimationFrame(() => {
-      releaseFrame = 0;
-      document.documentElement.classList.remove(VIEW_PASS_CLASS);
-    });
-  }
-
-  function passViewInteraction(event) {
-    if (destroyed || appBusy()) return;
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target?.closest(".viewButton[data-view]")) return;
-    document.documentElement.classList.add(VIEW_PASS_CLASS);
-    releaseViewPass();
   }
 
   function linkedWallet() {
@@ -141,6 +110,29 @@
     }
   }
 
+  function syncEvaluationInput() {
+    const input = document.getElementById("evaluationSearchInput");
+    if (!(input instanceof HTMLInputElement)) return;
+    if (cleanPath() !== "/evaluation") {
+      if (input.dataset.staticFocusGuard === "true") {
+        input.inert = false;
+        delete input.dataset.staticFocusGuard;
+      }
+      return;
+    }
+
+    if (!evaluationReady()) {
+      input.inert = true;
+      input.dataset.staticFocusGuard = "true";
+      if (document.activeElement === input) input.blur();
+      keepEvaluationAtStaticPosition();
+      return;
+    }
+
+    input.inert = false;
+    delete input.dataset.staticFocusGuard;
+  }
+
   function focusEvaluationWhenReady() {
     if (evaluationFocusQueued || !evaluationReady() || evaluationSelected()) return;
     const input = document.getElementById("evaluationSearchInput");
@@ -148,6 +140,7 @@
     evaluationFocusQueued = true;
     requestAnimationFrame(() => {
       evaluationFocusQueued = false;
+      syncEvaluationInput();
       if (!evaluationReady() || evaluationSelected() || input.value.trim()) return;
       input.focus({ preventScroll: true });
     });
@@ -163,17 +156,17 @@
   function sync() {
     if (destroyed) return;
     pinWatchlistTitle();
+    syncEvaluationInput();
     keepEvaluationAtStaticPosition();
     focusEvaluationWhenReady();
   }
 
-  VIEW_EVENT_TYPES.forEach((eventName) => window.addEventListener(eventName, passViewInteraction, true));
   document.addEventListener("focusin", guardEvaluationFocus, true);
 
   observer = new MutationObserver(() => {
     // MutationObserver callbacks run before paint. Pin the watchlist title and
-    // Evaluation scroll position synchronously so legacy hydration cannot flash
-    // a temporary label or shifted layout for one rendered frame.
+    // Evaluation focus/scroll state synchronously so hydration cannot flash a
+    // temporary title, selected input, or shifted layout for one rendered frame.
     sync();
   });
   observer.observe(document.documentElement, {
@@ -189,16 +182,16 @@
 
   function destroy() {
     destroyed = true;
-    if (releaseFrame) cancelAnimationFrame(releaseFrame);
-    releaseFrame = 0;
     observer?.disconnect();
     observer = null;
-    VIEW_EVENT_TYPES.forEach((eventName) => window.removeEventListener(eventName, passViewInteraction, true));
     document.removeEventListener("focusin", guardEvaluationFocus, true);
     window.removeEventListener("popstate", sync);
     window.removeEventListener("mfl:ready", sync);
-    document.documentElement.classList.remove(VIEW_PASS_CLASS);
-    style.remove();
+    const input = document.getElementById("evaluationSearchInput");
+    if (input instanceof HTMLInputElement && input.dataset.staticFocusGuard === "true") {
+      input.inert = false;
+      delete input.dataset.staticFocusGuard;
+    }
   }
 
   window.__mflV12331Runtime = Object.freeze({ version: VERSION, sync, destroy });
