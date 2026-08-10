@@ -191,11 +191,34 @@
 
     let portal = null;
     let activeMetric = null;
+    let hoverMetric = null;
+    let keyboardFocusMetric = null;
     let hideTimer = 0;
+    let showFrame = 0;
+    let idleFrame = 0;
+    let showEpoch = 0;
+    let keyboardFocusMode = false;
+    let showScrollX = 0;
+    let showScrollY = 0;
+    let showMetricLeft = Number.NaN;
+    let showMetricTop = Number.NaN;
 
     const metricFrom = (target) => target instanceof Element
       ? target.closest(".evaluationMetric.evaluationDiscountRate")
       : null;
+
+    const evaluationActive = () => (
+      document.body?.dataset.page === "evaluation"
+      || /^\/evaluation\/?$/i.test(window.location.pathname)
+    );
+
+    const interactionBusy = () => document.documentElement.classList.contains("mflInteractionBusy");
+
+    function cancelPendingShow() {
+      showEpoch += 1;
+      if (showFrame) cancelAnimationFrame(showFrame);
+      showFrame = 0;
+    }
 
     function ensurePortal() {
       if (portal?.isConnected) return portal;
@@ -210,7 +233,7 @@
     }
 
     function position() {
-      if (!portal || !activeMetric?.isConnected) return;
+      if (!portal || !activeMetric?.isConnected || !evaluationActive()) return;
       const rect = activeMetric.getBoundingClientRect();
       const tooltipRect = portal.getBoundingClientRect();
       const gap = 8;
@@ -224,107 +247,242 @@
       portal.style.top = `${Math.round(top)}px`;
     }
 
+    function rememberScrollAnchor(metric) {
+      const rect = metric.getBoundingClientRect();
+      showScrollX = window.scrollX;
+      showScrollY = window.scrollY;
+      showMetricLeft = rect.left;
+      showMetricTop = rect.top;
+    }
+
+    function hide(immediate = false) {
+      cancelPendingShow();
+      activeMetric?.removeAttribute("aria-describedby");
+      activeMetric = null;
+      showMetricLeft = Number.NaN;
+      showMetricTop = Number.NaN;
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = 0;
+      }
+      if (!portal) return;
+      portal.classList.remove("visible");
+      if (immediate) {
+        portal?.remove();
+        portal = null;
+        return;
+      }
+      portal.classList.add("tooltipHiding");
+      const hidingPortal = portal;
+      hideTimer = window.setTimeout(() => {
+        if (portal === hidingPortal) {
+          portal.remove();
+          portal = null;
+        }
+        hideTimer = 0;
+      }, 170);
+    }
+
     function show(metric) {
       if (!(metric instanceof HTMLElement)) return;
+      if (!evaluationActive() || interactionBusy()) return;
       const text = String(metric.dataset.tooltip || "").trim();
-      if (!text) return;
+      if (!text) {
+        hide(true);
+        return;
+      }
+      cancelPendingShow();
       if (hideTimer) {
         clearTimeout(hideTimer);
         hideTimer = 0;
       }
       const tooltip = ensurePortal();
       if (!tooltip) return;
+      activeMetric?.removeAttribute("aria-describedby");
       activeMetric = metric;
+      rememberScrollAnchor(metric);
       tooltip.textContent = text;
       tooltip.classList.remove("tooltipHiding");
       metric.setAttribute("aria-describedby", tooltip.id);
       position();
-      requestAnimationFrame(() => {
-        if (portal === tooltip && activeMetric === metric) {
-          tooltip.classList.add("visible");
-          position();
-        }
+      const epoch = showEpoch;
+      showFrame = requestAnimationFrame(() => {
+        showFrame = 0;
+        if (epoch !== showEpoch || portal !== tooltip || activeMetric !== metric || !evaluationActive() || interactionBusy()) return;
+        tooltip.classList.add("visible");
+        position();
       });
     }
 
-    function hide(immediate = false) {
-      activeMetric?.removeAttribute("aria-describedby");
-      activeMetric = null;
-      if (!portal) return;
-      if (hideTimer) clearTimeout(hideTimer);
-      portal.classList.remove("visible");
-      if (immediate) {
-        portal.remove();
-        portal = null;
-        hideTimer = 0;
+    function scheduleIdleSync() {
+      if (idleFrame) return;
+      const retry = () => {
+        idleFrame = 0;
+        if (!evaluationActive()) {
+          clearAll(true);
+          return;
+        }
+        if (interactionBusy()) {
+          idleFrame = requestAnimationFrame(retry);
+          return;
+        }
+        sync();
+      };
+      idleFrame = requestAnimationFrame(retry);
+    }
+
+    function sync() {
+      if (!evaluationActive()) {
+        hoverMetric = null;
+        keyboardFocusMetric = null;
+        hide(true);
         return;
       }
-      portal.classList.add("tooltipHiding");
-      hideTimer = window.setTimeout(() => {
-        portal?.remove();
-        portal = null;
-        hideTimer = 0;
-      }, 170);
+      if (interactionBusy()) {
+        hide(true);
+        scheduleIdleSync();
+        return;
+      }
+      const next = keyboardFocusMetric || hoverMetric;
+      if (next instanceof HTMLElement && next.isConnected) show(next);
+      else hide(false);
+    }
+
+    function clearAll(immediate = true) {
+      hoverMetric = null;
+      keyboardFocusMetric = null;
+      hide(immediate);
     }
 
     function onPointerOver(event) {
+      keyboardFocusMode = false;
       const metric = metricFrom(event.target);
-      if (!metric || metric.contains(event.relatedTarget)) return;
-      show(metric);
+      if (!metric) return;
+      hoverMetric = metric;
+      if (interactionBusy()) {
+        scheduleIdleSync();
+        return;
+      }
+      sync();
+    }
+
+    function onPointerMove(event) {
+      keyboardFocusMode = false;
+      const metric = metricFrom(event.target);
+      if (metric === hoverMetric) return;
+      hoverMetric = metric;
+      if (interactionBusy()) {
+        scheduleIdleSync();
+        return;
+      }
+      sync();
     }
 
     function onPointerOut(event) {
       const metric = metricFrom(event.target);
       if (!metric || metric.contains(event.relatedTarget)) return;
-      hide(false);
+      if (hoverMetric === metric) hoverMetric = null;
+      sync();
     }
 
     function onFocusIn(event) {
       const metric = metricFrom(event.target);
-      if (metric) show(metric);
+      if (!metric) return;
+      if (keyboardFocusMode) keyboardFocusMetric = metric;
+      sync();
     }
 
     function onFocusOut(event) {
       const metric = metricFrom(event.target);
       if (!metric || metric.contains(event.relatedTarget)) return;
-      hide(false);
-    }
-
-    function onViewportChange() {
-      if (activeMetric) position();
+      if (keyboardFocusMetric === metric) keyboardFocusMetric = null;
+      sync();
     }
 
     function onPointerDown(event) {
-      if (!metricFrom(event.target)) hide(true);
+      keyboardFocusMode = false;
+      const metric = metricFrom(event.target);
+      if (!metric) {
+        clearAll(true);
+        return;
+      }
+      hoverMetric = metric;
+      if (keyboardFocusMetric === metric) keyboardFocusMetric = null;
+      sync();
     }
 
     function onKeyDown(event) {
-      if (event.key === "Escape") hide(true);
+      keyboardFocusMode = true;
+      if (event.key === "Escape") clearAll(true);
     }
 
+    function onScroll() {
+      if (!(activeMetric instanceof HTMLElement) || !activeMetric.isConnected) return;
+      const rect = activeMetric.getBoundingClientRect();
+      const viewportMoved = Math.abs(window.scrollX - showScrollX) > 0.5
+        || Math.abs(window.scrollY - showScrollY) > 0.5;
+      const metricMoved = Math.abs(rect.left - showMetricLeft) > 0.5
+        || Math.abs(rect.top - showMetricTop) > 0.5;
+      if (viewportMoved || metricMoved) clearAll(true);
+    }
+
+    function onResize() {
+      if (activeMetric) position();
+    }
+
+    function onWindowBlur() {
+      clearAll(true);
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState !== "visible") clearAll(true);
+    }
+
+    function onPageLifecycleChange() {
+      clearAll(true);
+    }
+
+    window.addEventListener("pointerover", onPointerOver, true);
+    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointerout", onPointerOut, true);
+    window.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("pointerover", onPointerOver, true);
+    document.addEventListener("pointermove", onPointerMove, true);
     document.addEventListener("pointerout", onPointerOut, true);
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onKeyDown, true);
-    window.addEventListener("resize", onViewportChange);
-    window.addEventListener("scroll", onViewportChange, true);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("pagehide", onPageLifecycleChange);
+    window.addEventListener("popstate", onPageLifecycleChange);
+    window.addEventListener("hashchange", onPageLifecycleChange);
 
     function destroy() {
-      if (hideTimer) clearTimeout(hideTimer);
+      clearAll(true);
+      if (idleFrame) cancelAnimationFrame(idleFrame);
+      idleFrame = 0;
+      window.removeEventListener("pointerover", onPointerOver, true);
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerout", onPointerOut, true);
+      window.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("pointerover", onPointerOver, true);
+      document.removeEventListener("pointermove", onPointerMove, true);
       document.removeEventListener("pointerout", onPointerOut, true);
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown, true);
-      window.removeEventListener("resize", onViewportChange);
-      window.removeEventListener("scroll", onViewportChange, true);
-      activeMetric?.removeAttribute("aria-describedby");
-      portal?.remove();
-      portal = null;
-      activeMetric = null;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("pagehide", onPageLifecycleChange);
+      window.removeEventListener("popstate", onPageLifecycleChange);
+      window.removeEventListener("hashchange", onPageLifecycleChange);
     }
 
     window.__mflDiscountTooltipController = { version: VERSION, show, hide, destroy };
@@ -348,10 +506,10 @@
     script.textContent = patchCore(originalSource);
     document.head.appendChild(script);
     installRateChrome();
-    installTooltipController();
   }
 
   installStaticStyles();
+  installTooltipController();
   start().catch((error) => {
     console.error(error?.message || "Could not initialize startup integrity.");
   });

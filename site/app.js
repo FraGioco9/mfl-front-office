@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.22";
+  const STATIC_RELEASE_VERSION = "1.123.23";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -80,6 +80,22 @@
     active_contract_club_name: { label: "Club Name", className: "col-contract-club", width: 227.16 },
     active_contract_club_division: { label: "Division", className: "col-contract-division", width: 280 },
     player_link: { label: "", className: "col-link", width: 48.39 },
+  });
+  const STATIC_TABLE_COLUMN_PERCENTAGES = Object.freeze({
+    "col-select": 3,
+    "col-id": 3,
+    "col-flag": 3,
+    "col-name": 13,
+    "col-nationality": 7,
+    "col-age": 4,
+    "col-positions": 8,
+    "col-seasons": 5,
+    "col-stat": 6,
+    "col-contract-revenue": 8,
+    "col-contract-club": 19,
+    "col-contract-division": 9,
+    "col-agent": 9,
+    "col-link": 3,
   });
 
   /** @type {Window & {
@@ -239,6 +255,78 @@
       : column;
   }
 
+  function staticTableColumnPercentage(element) {
+    if (!(element instanceof Element)) return null;
+    const className = Object.keys(STATIC_TABLE_COLUMN_PERCENTAGES)
+      .find((name) => element.classList.contains(name));
+    return className ? STATIC_TABLE_COLUMN_PERCENTAGES[className] : null;
+  }
+
+  function staticTableContentWidth() {
+    const main = document.querySelector("main");
+    if (!(main instanceof HTMLElement)) return 0;
+    const styles = getComputedStyle(main);
+    const viewportWidth = document.documentElement.clientWidth;
+    const menuRail = document.getElementById("menuRail");
+    const sidebarWidth = menuRail instanceof HTMLElement && !menuRail.hidden ? 190 : 0;
+    const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+    const paddingRight = parseFloat(styles.paddingRight) || 0;
+    return Math.max(0, viewportWidth - sidebarWidth - paddingLeft - paddingRight);
+  }
+
+  function applyStaticSharedTableWidths(table, tableColGroup, headerRow) {
+    const contentWidth = staticTableContentWidth();
+    if (!(contentWidth > 0)) return;
+    const columns = Array.from(tableColGroup.children);
+    const percentages = columns.map(staticTableColumnPercentage);
+    if (!percentages.length || percentages.some((value) => !Number.isFinite(value))) return;
+
+    const exactWidth = `${contentWidth.toFixed(4)}px`;
+    document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.style.setProperty("width", exactWidth, "important");
+      element.style.setProperty("min-width", exactWidth, "important");
+      element.style.setProperty("max-width", exactWidth, "important");
+      element.style.setProperty("box-sizing", "border-box", "important");
+      element.style.setProperty("overflow", "hidden", "important");
+    });
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", exactWidth, "important");
+    table.style.setProperty("min-width", exactWidth, "important");
+    table.style.setProperty("max-width", exactWidth, "important");
+    table.style.setProperty("box-sizing", "border-box", "important");
+    table.style.setProperty("border-spacing", "0", "important");
+
+    let assignedWidth = 0;
+    columns.forEach((column, index) => {
+      const pixelWidth = contentWidth * Number(percentages[index]) / 100;
+      assignedWidth += pixelWidth;
+      const width = `${pixelWidth.toFixed(4)}px`;
+      column.style.setProperty("width", width, "important");
+      column.style.setProperty("min-width", width, "important");
+      column.style.setProperty("max-width", width, "important");
+      column.style.setProperty("transition", "none", "important");
+    });
+
+    const fillerWidth = Math.max(0, contentWidth - assignedWidth);
+    if (fillerWidth > 0.01) {
+      const width = `${fillerWidth.toFixed(4)}px`;
+      const fillerColumn = document.createElement("col");
+      const fillerHeader = document.createElement("th");
+      fillerColumn.className = "col-shared-width-filler";
+      fillerHeader.className = "col-shared-width-filler";
+      fillerHeader.setAttribute("aria-hidden", "true");
+      [fillerColumn, fillerHeader].forEach((element) => {
+        element.style.setProperty("width", width, "important");
+        element.style.setProperty("min-width", width, "important");
+        element.style.setProperty("max-width", width, "important");
+      });
+      tableColGroup.appendChild(fillerColumn);
+      headerRow.appendChild(fillerHeader);
+    }
+    document.querySelector("#progressionPage .tableScroller")?.classList.add("tableWidthsReady");
+  }
+
   function primeStaticTableHeader(route) {
     if (!route || route.pageId !== "progressionPage") return;
     const columns = STATIC_TABLE_VIEW_COLUMNS[route.view];
@@ -253,7 +341,6 @@
     const selectionInput = document.createElement("input");
     const selectionCol = document.createElement("col");
     const colFragment = document.createDocumentFragment();
-    let totalWidth = 51.09;
 
     selectionHeader.className = "selectionCell";
     selectionInput.id = "selectVisiblePlayersInput";
@@ -262,7 +349,6 @@
     selectionHeader.appendChild(selectionInput);
     headerRow.appendChild(selectionHeader);
     selectionCol.className = "col-select";
-    selectionCol.style.width = "51.09px";
     colFragment.appendChild(selectionCol);
 
     columns.forEach((column) => {
@@ -279,9 +365,7 @@
       label.textContent = meta.label;
       cell.appendChild(label);
       headerRow.appendChild(cell);
-      col.style.width = `${meta.width}px`;
       colFragment.appendChild(col);
-      totalWidth += meta.width;
     });
 
     tableHead.replaceChildren(headerRow);
@@ -289,8 +373,7 @@
     tableColGroup.replaceChildren(colFragment);
     const table = tableHead.closest("table");
     if (table instanceof HTMLTableElement) {
-      table.style.width = `${totalWidth}px`;
-      table.style.minWidth = `${totalWidth}px`;
+      applyStaticSharedTableWidths(table, tableColGroup, headerRow);
     }
   }
 
@@ -369,7 +452,9 @@
       const title = document.querySelector("#tablePageTitle");
       if (title instanceof HTMLElement && route.title) title.textContent = route.title;
 
-      const allowed = new Set(ALLOWED_TABLE_VIEWS[route.pageName] || []);
+      const allowedViews = ALLOWED_TABLE_VIEWS[route.pageName] || [];
+      const allowed = new Set(allowedViews);
+      const views = document.querySelector("#progressionPage .views");
       document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
         if (!(button instanceof HTMLButtonElement)) return;
         const view = String(button.dataset.view || "");
@@ -377,6 +462,13 @@
         button.classList.toggle("active", view === route.view);
         button.setAttribute("aria-pressed", String(view === route.view));
       });
+      if (views instanceof HTMLElement) {
+        const switcher = document.getElementById("watchlistSwitcher");
+        allowedViews.forEach((viewName) => {
+          const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+          if (button) views.insertBefore(button, switcher || null);
+        });
+      }
       primeStaticTableHeader(route);
     }
 
