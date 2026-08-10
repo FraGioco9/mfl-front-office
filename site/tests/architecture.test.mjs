@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.16");
+  assert.equal(release.version, "1.123.17");
   assert.ok(release.description.length > 20);
 });
 
@@ -207,7 +207,7 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.16", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.17", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
@@ -238,4 +238,28 @@ test("custom Database Stats treats missing retirement years as active", async ()
   assert.match(runtime, /rawValue === null \|\| rawValue === undefined \|\| rawValue === ""/);
   assert.match(runtime, /const filteredActivePlayers = sumGroups\(groups, \(group\) => !isRetiredGroup\(group\)\)/);
   assert.match(runtime, /const filteredRetiredPlayers = sumGroups\(groups, isRetiredGroup\)/);
+});
+
+test("theme control matches the resolved light or dark mode before runtime startup", async () => {
+  const index = await read("index.html");
+  const legacy = await read("modules/legacy-core.js");
+  assert.match(index, /<span class="themeMoonSymbol" aria-hidden="true">/);
+  assert.match(index, /<span class="themeSunSymbol" aria-hidden="true">/);
+  assert.match(index, /html\[data-theme="dark"\] #themeButton \.themeSunSymbol/);
+  assert.ok(legacy.includes('applyTheme(savedTheme || document.documentElement.dataset.theme || "dark");'));
+});
+
+test("first bare Database visit exposes every view and canonicalizes to Attributes", async () => {
+  const bridge = await read("app.js");
+  const legacy = await read("modules/legacy-core.js");
+  assert.ok(bridge.includes('window.history.replaceState({}, "", "/database/attributes");'));
+  assert.ok(bridge.includes('document.documentElement.dataset.initialPage = "database/attributes";'));
+  assert.ok(legacy.includes('database: ["attributes", "contracts", "stats"],'));
+});
+
+test("global busy state suppresses pointer targets and hover motion", async () => {
+  const bridge = await read("app.js");
+  assert.match(bridge, /"pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove"/);
+  assert.match(bridge, /pointer-events: none !important;/);
+  assert.match(bridge, /transition: none !important;\s*animation: none !important;/);
 });
