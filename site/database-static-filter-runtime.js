@@ -21,6 +21,7 @@
   let lastTablePage = "";
   let frame = 0;
   let observer = null;
+  let waitCursorSource = null;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -155,17 +156,36 @@
     }
   }
 
+  function sourceHasWaitCursor(source) {
+    return source?.element instanceof Element
+      && source.element.isConnected
+      && elementHasWaitCursor(source.element, source.pseudoElement || null);
+  }
+
+  function rememberWaitCursorSource(target = null) {
+    const candidates = [
+      { element: target, pseudoElement: null },
+      { element: document.documentElement, pseudoElement: null },
+      { element: document.body, pseudoElement: null },
+      { element: document.body, pseudoElement: "::before" },
+    ];
+    const source = candidates.find(sourceHasWaitCursor) || null;
+    if (source) waitCursorSource = source;
+    return Boolean(source);
+  }
+
   function waitCursorActive(target = null) {
-    return document.documentElement.classList.contains("mflInteractionBusy")
-      || elementHasWaitCursor(target)
-      || elementHasWaitCursor(document.documentElement)
-      || elementHasWaitCursor(document.body)
-      || elementHasWaitCursor(document.body, "::before");
+    if (document.documentElement.classList.contains("mflInteractionBusy")) return true;
+    if (sourceHasWaitCursor(waitCursorSource)) return true;
+    waitCursorSource = null;
+    return rememberWaitCursorSource(target);
   }
 
   function syncWaitHover(target = null) {
     if (destroyed) return;
-    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive(target));
+    const active = waitCursorActive(target);
+    if (!active) waitCursorSource = null;
+    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, active);
   }
 
   function installStyles() {
@@ -187,13 +207,6 @@
         padding-left: 5px !important;
         padding-right: 5px !important;
         white-space: nowrap !important;
-      }
-
-      html.${WAIT_HOVER_CLASS} body,
-      html.${WAIT_HOVER_CLASS} body *,
-      html.${WAIT_HOVER_CLASS} body *::before,
-      html.${WAIT_HOVER_CLASS} body *::after {
-        cursor: wait !important;
       }
 
       html.${WAIT_HOVER_CLASS} body * {
@@ -279,6 +292,7 @@
     frame = 0;
     observer?.disconnect();
     observer = null;
+    waitCursorSource = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
