@@ -68,6 +68,7 @@ async function start() {
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
+  const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
@@ -80,6 +81,13 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
+
+  // Keep late runtimes such as global search available as early as possible,
+  // but do not expose pagination or release the startup loading state on table
+  // routes until the legacy table request has actually settled.
+  if (tableStartup && runtimeWindow.__mflAppStartPromise) {
+    await runtimeWindow.__mflAppStartPromise;
+  }
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
