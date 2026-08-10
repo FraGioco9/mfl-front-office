@@ -1,4 +1,5 @@
 [
+  ["v1.123.26", "Prime Database filters, preserve MFL Stats, cap search results, and unify table loading"],
   ["v1.123.25", "Prime Watchlists, unify table loading, restore full search, and fix MFL Stats routing"],
   ["v1.123.24", "Fix full global search, stabilize table first paint, and preserve Watchlist titles"],
   ["v1.123.23", "Fix Discount Rate dismissal, global search scope, Database first paint, and Watchlist/My Players routing"],
