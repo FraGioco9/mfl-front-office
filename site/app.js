@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.29";
+  const STATIC_RELEASE_VERSION = "1.123.30";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -437,7 +437,6 @@
     const selectionInput = document.createElement("input");
     const selectionCol = document.createElement("col");
     const colFragment = document.createDocumentFragment();
-
     selectionHeader.className = "selectionCell";
     selectionInput.id = "selectVisiblePlayersInput";
     selectionInput.type = "checkbox";
@@ -731,30 +730,12 @@
       }
     }
 
-    /**
-     * @param {Element | null} element
-     * @param {string | null} pseudoElement
-     */
-    function elementHasWaitCursor(element, pseudoElement = null) {
-      if (!(element instanceof Element)) return false;
-      try {
-        return getComputedStyle(element, pseudoElement).cursor === "wait";
-      } catch {
-        return false;
-      }
-    }
-
-    function interactionShouldBeBlocked(event) {
-      if (activeTokens.size) return true;
-      const target = event.target instanceof Element ? event.target : null;
-      return elementHasWaitCursor(target)
-        || elementHasWaitCursor(document.documentElement)
-        || elementHasWaitCursor(document.body)
-        || elementHasWaitCursor(document.body, "::before");
+    function interactionShouldBeBlocked() {
+      return activeTokens.size > 0;
     }
 
     function blockInteraction(event) {
-      if (!interactionShouldBeBlocked(event)) return;
+      if (!interactionShouldBeBlocked()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     }
