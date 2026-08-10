@@ -1,4 +1,4 @@
 {
-  "version": "1.123.26",
-  "description": "Prime Database filters, preserve MFL Stats, cap search results, and unify table loading"
+  "version": "1.123.27",
+  "description": "Cache quick filters, compact MFL Stats controls, restore My Players order, and suppress wait hover"
 }
