@@ -91,6 +91,7 @@ const SEARCH_PLAYER_COLUMNS = Object.freeze([
   "overall",
   "nationality",
   "positions",
+  "retirement_years",
 ]);
 const VALID_PLAYER_COLUMNS = new Set(PLAYER_COLUMNS);
 
