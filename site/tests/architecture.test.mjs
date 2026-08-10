@@ -334,14 +334,14 @@ test("Evaluation first paint, global font scale, Stats animation, and discount t
   const index = await read("index.html");
   const styles = await read("styles.css");
   const stats = await read("database-stats-runtime.js");
-  const entry = await read("modules/app-entry.js");
-  const tooltip = await read("evaluation-discount-tooltip-runtime.js");
+  const tooltip = await read("startup-integrity-runtime.js");
   assert.match(index, /html \{\s*font-size-adjust: 0\.520;/);
   assert.match(styles, /font-size-adjust: 0\.520/);
   assert.match(index, /data-initial-page="evaluation"[^\n]+#homePage[\s\S]*display: none !important;[\s\S]*data-initial-page="evaluation"[^\n]+#evaluationPage[\s\S]*display: block !important;/);
   assert.match(stats, /#databaseStatsPage \.mflStatsHistogram \{\s*animation: none !important;\s*opacity: 1 !important;\s*transform: none !important;/);
-  assert.match(entry, /"\/evaluation-discount-tooltip-runtime\.js"/);
-  assert.match(tooltip, /#evaluationDiscountTooltipPortal/);
+  assert.match(tooltip, /portal\.id = "evaluationDiscountTooltipPortal"/);
+  assert.match(tooltip, /if \(!\(metric instanceof HTMLElement\)\) return;/);
+  assert.doesNotMatch(tooltip, /if \(!\(metric instanceof HTMLElement\)[\s\S]{0,120}evaluationDiscountRateReady/);
   assert.match(tooltip, /document\.addEventListener\("pointerover", onPointerOver, true\)/);
 });
 
