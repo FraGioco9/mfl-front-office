@@ -1,4 +1,4 @@
 {
-  "version": "1.123.15",
-  "description": "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"
+  "version": "1.123.16",
+  "description": "Default to hiding MFL players, show locked pages immediately, and fix custom Database Stats totals"
 }
