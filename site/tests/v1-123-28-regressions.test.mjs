@@ -17,7 +17,12 @@ test("wait cursor uses a viewport shield so underlying elements cannot enter hov
   }
 
   assert.match(runtime, /html\.\$\{WAIT_HOVER_CLASS\} body \* \{\s*pointer-events: none !important;/);
-  const waitDetector = runtime.slice(runtime.indexOf("function waitCursorActive"), runtime.indexOf("function syncWaitHover"));
-  assert.match(waitDetector, /elementHasWaitCursor\(document\.body, "::before"\)/);
-  assert.doesNotMatch(waitDetector, /elementHasWaitCursor\(document\.body, "::after"\)/);
+  assert.match(runtime, /let waitCursorSource = null/);
+  const waitSource = runtime.slice(
+    runtime.indexOf("function rememberWaitCursorSource"),
+    runtime.indexOf("function waitCursorActive"),
+  );
+  assert.match(waitSource, /pseudoElement: "::before"/);
+  assert.doesNotMatch(waitSource, /pseudoElement: "::after"/);
+  assert.match(runtime, /if \(sourceHasWaitCursor\(waitCursorSource\)\) return true/);
 });
