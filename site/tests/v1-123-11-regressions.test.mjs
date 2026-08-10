@@ -79,9 +79,9 @@ test("Custom tooltip draft is event driven and keeps Database Stats visible", as
 
   assert.doesNotMatch(portal, /new MutationObserver/);
   assert.match(portal, /function keepStatsPageVisible\(\)/);
-  assert.match(portal, /window\.__mflSetDatabaseStatsPageVisibility\?\.\(true\)/);
+  assert.match(portal, /window\.setDatabaseStatsPageVisibility\?\.\(true\)/);
   assert.match(portal, /stopPortalEvent/);
   assert.match(stateRuntime, /function keepDraftOnStats\(event\)/);
   assert.match(stateRuntime, /document\.addEventListener\("beforeinput", keepDraftOnStats, true\)/);
-  assert.match(stateRuntime, /window\.__mflSetDatabaseStatsPageVisibility\?\.\(true\)/);
+  assert.match(stateRuntime, /window\.setDatabaseStatsPageVisibility\?\.\(true\)/);
 });
