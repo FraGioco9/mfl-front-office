@@ -274,6 +274,17 @@
     ), 0);
   }
 
+  function retirementYearsForGroup(group) {
+    const rawValue = group?.[2];
+    if (rawValue === null || rawValue === undefined || rawValue === "") return null;
+    const value = Number(rawValue);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function isRetiredGroup(group) {
+    return retirementYearsForGroup(group) === 0;
+  }
+
   function setCard(id, value) {
     const element = page?.querySelector(`#${id}`);
     if (element) element.textContent = formatCount(value);
@@ -282,18 +293,18 @@
   function renderStats() {
     if (!page || !data) return;
     const groups = filteredGroups();
-    const filteredActivePlayers = sumGroups(groups, (group) => Number(group[2]) !== 0);
+    const filteredActivePlayers = sumGroups(groups, (group) => !isRetiredGroup(group));
     const totalActivePlayers = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
       ? Number(data.totalActivePlayers)
       : filteredActivePlayers;
-    const filteredRetiredPlayers = sumGroups(groups, (group) => Number(group[2]) === 0);
+    const filteredRetiredPlayers = sumGroups(groups, isRetiredGroup);
     const totalRetiredPlayers = activeFilter === "all" && Number.isFinite(Number(data.totalRetiredPlayers))
       ? Number(data.totalRetiredPlayers)
       : filteredRetiredPlayers;
     setCard("databaseStatsTotalPlayers", totalActivePlayers);
-    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => Number(group[2]) === 3));
-    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => Number(group[2]) === 2));
-    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => Number(group[2]) === 1));
+    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => retirementYearsForGroup(group) === 3));
+    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => retirementYearsForGroup(group) === 2));
+    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => retirementYearsForGroup(group) === 1));
     setCard("databaseStatsRetired", totalRetiredPlayers);
     renderDistribution();
   }
@@ -313,7 +324,7 @@
     const counts = new Map();
     let totalActive = 0;
     filteredGroups().forEach((group) => {
-      if (Number(group[2]) === 0) return;
+      if (isRetiredGroup(group)) return;
       const value = distributionMode === "age" ? group[1] : group[0];
       if (value === null || value === undefined || value === "") return;
       const numericValue = Number(value);
