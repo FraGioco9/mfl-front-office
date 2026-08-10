@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
   font-family: "Titillium Web", Arial, Helvetica, sans-serif;
+  font-size-adjust: 0.538;
   --page-bg: #f6f7f9;
   --surface: #ffffff;
   --surface-muted: #fbfcfe;
@@ -2683,6 +2684,10 @@ td a {
 .searchHint {
   color: var(--text-soft);
   font-size: 12px;
+}
+
+.searchResults > .searchHint {
+  padding-left: 8px;
 }
 
 .playerPage {

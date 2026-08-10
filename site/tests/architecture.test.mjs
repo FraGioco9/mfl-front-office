@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.17");
+  assert.equal(release.version, "1.123.18");
   assert.ok(release.description.length > 20);
 });
 
@@ -32,7 +32,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.17"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.18"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
@@ -207,7 +207,7 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.17", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.18", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
@@ -262,4 +262,38 @@ test("global busy state suppresses pointer targets and hover motion", async () =
   assert.match(bridge, /"pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove"/);
   assert.match(bridge, /pointer-events: none !important;/);
   assert.match(bridge, /transition: none !important;\s*animation: none !important;/);
+});
+
+test("Database clears uncached previous-page rows before its first payload arrives", async () => {
+  const runtime = await read("modules/legacy-core.js");
+  assert.match(runtime, /renderTableDestinationShell\(pageName, route\)/);
+  assert.match(runtime, /route && route\.scope !== "empty" && !incrementalRouteIsCached\(route, 1\)[\s\S]*showTableBusyState\(\)/);
+  assert.match(runtime, /setPage = async function setIncrementalPage[\s\S]*const route = prepareIncrementalRoute\(pageName[\s\S]*renderTableDestinationShell\(pageName, route\)/);
+});
+
+test("theme switching preserves loaded DOM and font metrics stay stable", async () => {
+  const runtime = await read("modules/legacy-core.js");
+  const styles = await read("styles.css");
+  assert.match(runtime, /themeButton\.dataset\.activeTheme = theme/);
+  assert.doesNotMatch(runtime, /themeButton\.textContent = theme === "dark"/);
+  assert.match(styles, /font-size-adjust: 0\.538/);
+});
+
+test("evaluation search excludes retired compact results", async () => {
+  const database = await read("api/_database.js");
+  const views = await read("api/_data-views.js");
+  const runtime = await read("modules/legacy-core.js");
+  assert.match(database, /SEARCH_PLAYER_COLUMNS = Object\.freeze\([\s\S]*"retirement_years"/);
+  assert.match(views, /excludeRetired: true/);
+  assert.match(views, /coalesce\(CAST\(p\.retirement_years AS INTEGER\), -1\) <> 0/);
+  assert.match(runtime, /retired: compactSearchValue\(row, columns, "retirement_years"\) !== null[\s\S]*Number\(compactSearchValue\(row, columns, "retirement_years"\)\) === 0/);
+});
+
+test("typed search cancels stale requests, reuses results, and pads its empty hint", async () => {
+  const runtime = await read("modules/legacy-core.js");
+  const styles = await read("styles.css");
+  assert.match(runtime, /databaseSearchAbortController\?\.abort\(\)/);
+  assert.match(runtime, /databaseSearchResponseCache/);
+  assert.match(runtime, /signal: controller\.signal/);
+  assert.match(styles, /\.searchResults > \.searchHint \{\s*padding-left: 8px;/);
 });

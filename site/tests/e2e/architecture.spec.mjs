@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.17");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.18");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -420,7 +420,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.17");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.18");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -440,8 +440,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.17");
-  expect(rows[0][0]).toBe("v1.123.17");
+  expect(metadata.version).toBe("1.123.18");
+  expect(rows[0][0]).toBe("v1.123.18");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -545,4 +545,51 @@ test("busy cursor blocks click handlers and hover motion across the site", async
   });
   expect(result.blockedCounts).toEqual({ clickCount: 0, hoverCount: 0 });
   expect(result.releasedCounts).toEqual({ clickCount: 1, hoverCount: 1 });
+});
+
+test("theme toggle preserves the loaded page DOM", async ({ page }) => {
+  await page.goto("/");
+  await waitForArchitecture(page);
+  const sentinel = page.locator("#homePage").evaluate((home) => {
+    const node = globalThis.document.createElement("span");
+    node.id = "themeContentSentinel";
+    node.textContent = "loaded";
+    home.appendChild(node);
+    return globalThis.document.documentElement.dataset.theme;
+  });
+  const previousTheme = await sentinel;
+  await page.locator("#themeButton").click();
+  await expect(page.locator("#themeContentSentinel")).toHaveText("loaded");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", previousTheme === "dark" ? "light" : "dark");
+  await expect(page).toHaveURL("/");
+});
+
+test("evaluation compact search omits retired players", async ({ page }) => {
+  await page.goto("/evaluation");
+  await waitForArchitecture(page);
+  await page.evaluate(() => {
+    globalThis.eval(`
+      applyDatabaseSearchPayload({
+        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+        rows: [
+          [101, "Retired Result", 90, "Italy", "ST", 0],
+          [102, "Active Result", 80, "Italy", "CM", null]
+        ]
+      }, "players");
+      evaluationSearchInput.value = "result";
+      renderEvaluationSearchResults();
+    `);
+  });
+  await expect(page.locator("#evaluationSearchResults")).toContainText("Active Result");
+  await expect(page.locator("#evaluationSearchResults")).not.toContainText("Retired Result");
+});
+
+test("empty recent-search copy is padded and fallback font size is stabilized", async ({ page }) => {
+  await page.goto("/");
+  await waitForArchitecture(page);
+  await page.locator("#openSearchButton").click();
+  const hint = page.locator("#playerSearchResults .searchHint");
+  await expect(hint).toHaveText("Recent searches will appear here.");
+  expect(await hint.evaluate((node) => globalThis.getComputedStyle(node).paddingLeft)).toBe("8px");
+  expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.538");
 });

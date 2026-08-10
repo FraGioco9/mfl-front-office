@@ -1,4 +1,4 @@
 {
-  "version": "1.123.17",
-  "description": "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"
+  "version": "1.123.18",
+  "description": "Keep route contents stable, speed up search, exclude retired evaluations, and stabilize font loading"
 }
