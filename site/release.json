@@ -1,4 +1,4 @@
 {
-  "version": "1.123.24",
-  "description": "Fix full global search, stabilize table first paint, and preserve Watchlist titles"
+  "version": "1.123.25",
+  "description": "Prime Watchlists, unify table loading, restore full search, and fix MFL Stats routing"
 }
