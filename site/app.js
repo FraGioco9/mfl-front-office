@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.27";
+  const STATIC_RELEASE_VERSION = "1.123.28";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -117,7 +117,6 @@
     const address = String(value || "").trim().toLowerCase();
     return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
   }
-
   function storedWalletOptInAddress() {
     try {
       const linkedWallet = normalizeStoredWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
@@ -600,6 +599,18 @@
       html.${BUSY_CLASS} body *,
       html.${BUSY_CLASS} body *::before,
       html.${BUSY_CLASS} body *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+
+      html.${BUSY_CLASS} body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: transparent;
+        pointer-events: auto !important;
+        cursor: wait !important;
         transition: none !important;
         animation: none !important;
       }
