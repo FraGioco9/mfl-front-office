@@ -13,7 +13,6 @@
   let showFrame = 0;
   let epoch = 0;
   let keyboardFocusMode = false;
-  let observer = null;
 
   const metricFrom = (target) => target instanceof Element
     ? target.closest(".evaluationMetric.evaluationDiscountRate")
@@ -166,7 +165,6 @@
       return;
     }
     hoverMetric = metric;
-    // Pointer-created focus must not pin the tooltip after the pointer leaves.
     if (keyboardFocusMetric === metric) keyboardFocusMetric = null;
     sync();
   }
@@ -206,7 +204,7 @@
     if (document.visibilityState !== "visible") clearAll(true);
   }
 
-  function onPageHide() {
+  function onPageLifecycleChange() {
     clearAll(true);
   }
 
@@ -221,22 +219,12 @@
   window.addEventListener("scroll", onScroll, true);
   window.addEventListener("resize", onResize);
   window.addEventListener("blur", onWindowBlur);
-  window.addEventListener("pagehide", onPageHide);
-
-  observer = new MutationObserver(() => {
-    if (!evaluationActive() || activeMetric?.closest("[hidden]")) clearAll(true);
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["data-page", "hidden"],
-  });
+  window.addEventListener("pagehide", onPageLifecycleChange);
+  window.addEventListener("popstate", onPageLifecycleChange);
+  window.addEventListener("hashchange", onPageLifecycleChange);
 
   function destroy() {
     clearAll(true);
-    observer?.disconnect();
-    observer = null;
     document.removeEventListener("pointerover", onPointerOver, true);
     document.removeEventListener("pointermove", onPointerMove, true);
     document.removeEventListener("pointerout", onPointerOut, true);
@@ -248,7 +236,9 @@
     window.removeEventListener("scroll", onScroll, true);
     window.removeEventListener("resize", onResize);
     window.removeEventListener("blur", onWindowBlur);
-    window.removeEventListener("pagehide", onPageHide);
+    window.removeEventListener("pagehide", onPageLifecycleChange);
+    window.removeEventListener("popstate", onPageLifecycleChange);
+    window.removeEventListener("hashchange", onPageLifecycleChange);
   }
 
   const controller = Object.freeze({ version: VERSION, show, hide, destroy });
