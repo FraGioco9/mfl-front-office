@@ -5883,8 +5883,8 @@ function buildSearchIndex(options = {}) {
   state.searchIndexesLoaded = true;
 }
 
-let databaseSearchSequence = 0;
-let databaseSearchAbortController = null;
+const databaseSearchSequences = new Map();
+const databaseSearchAbortControllers = new Map();
 const databaseSearchResponseCache = new Map();
 const DATABASE_SEARCH_RESPONSE_CACHE_LIMIT = 80;
 
@@ -5950,12 +5950,13 @@ function applyDatabaseSearchPayload(payload, type = "all") {
 async function requestDatabaseSearch(rawQuery = "", type = "all") {
   const query = String(rawQuery || "").trim();
   const normalizedQuery = normalizeSearchText(query);
-  const sequence = ++databaseSearchSequence;
+  const sequence = (databaseSearchSequences.get(type) || 0) + 1;
+  databaseSearchSequences.set(type, sequence);
   const cacheKey = `${type}:${normalizedQuery}`;
   const cachedPayload = databaseSearchResponseCache.get(cacheKey);
   const activeInput = () => type === "players" ? evaluationSearchInput?.value : playerSearchInput?.value;
 
-  databaseSearchAbortController?.abort();
+  databaseSearchAbortControllers.get(type)?.abort();
   if (cachedPayload) {
     if (normalizeSearchText(activeInput()) !== normalizedQuery) return false;
     applyDatabaseSearchPayload(cachedPayload, type);
@@ -5963,7 +5964,7 @@ async function requestDatabaseSearch(rawQuery = "", type = "all") {
   }
 
   const controller = new AbortController();
-  databaseSearchAbortController = controller;
+  databaseSearchAbortControllers.set(type, controller);
   const parameters = new URLSearchParams({ mode: "search", type, limit: "20" });
   if (query) parameters.set("q", query);
   else {
@@ -5982,7 +5983,7 @@ async function requestDatabaseSearch(rawQuery = "", type = "all") {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Could not search the database.");
-    if (sequence !== databaseSearchSequence || normalizeSearchText(activeInput()) !== normalizedQuery) return false;
+    if (sequence !== databaseSearchSequences.get(type) || normalizeSearchText(activeInput()) !== normalizedQuery) return false;
     const searchPayload = !query && type === "players" ? (payload?.players || {}) : payload;
     cacheDatabaseSearchResponse(cacheKey, searchPayload);
     applyDatabaseSearchPayload(searchPayload, type);
@@ -5991,17 +5992,17 @@ async function requestDatabaseSearch(rawQuery = "", type = "all") {
     if (error?.name === "AbortError") return false;
     throw error;
   } finally {
-    if (databaseSearchAbortController === controller) {
-      databaseSearchAbortController = null;
+    if (databaseSearchAbortControllers.get(type) === controller) {
+      databaseSearchAbortControllers.delete(type);
     }
   }
 }
 
 async function ensureSearchIndexes() {
+  databaseSearchResponseCache.delete("all:");
   try { await requestDatabaseSearch("", "all"); return true; }
   catch (error) {
     console.error(error?.message || "Could not load recent database search results.");
-    applyDatabaseSearchPayload({ players: {}, agents: {}, clubs: [] }, "all");
     return false;
   }
 }
@@ -6742,10 +6743,53 @@ function handleEvaluationSearchInput() {
       if (await requestDatabaseSearch(query, "players")) renderEvaluationSearchResults();
     } catch (error) {
       console.error(error?.message || "Could not search players.");
-      applyDatabaseSearchPayload({ columns: [], rows: [] }, "players");
       renderEvaluationSearchResults();
     }
   })();
+}
+
+let evaluationRecentSearchPrimed = false;
+let evaluationRecentSearchPrimePromise = null;
+let evaluationEmptySearchFocusScheduled = false;
+
+function focusEmptyEvaluationSearchWhenReady() {
+  if (evaluationEmptySearchFocusScheduled) return;
+  evaluationEmptySearchFocusScheduled = true;
+
+  const focusSearch = () => {
+    evaluationEmptySearchFocusScheduled = false;
+    requestAnimationFrame(() => {
+      if (!isPlainEvaluationUrl() || state.evaluationPlayerId || evaluationSearchInput.value.trim()) return;
+      evaluationSearchInput.focus({ preventScroll: true });
+      renderEvaluationSearchResults();
+    });
+  };
+
+  if (document.documentElement.dataset.mflReady === "true") focusSearch();
+  else window.addEventListener("mfl:ready", focusSearch, { once: true });
+}
+
+function primeEmptyEvaluationSearch() {
+  focusEmptyEvaluationSearchWhenReady();
+  if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) return evaluationRecentSearchPrimePromise;
+
+  databaseSearchResponseCache.delete("players:");
+  evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
+    .then((loaded) => {
+      if (loaded) {
+        evaluationRecentSearchPrimed = true;
+        if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
+      }
+      return loaded;
+    })
+    .catch((error) => {
+      console.error(error?.message || "Could not load recent Evaluation searches.");
+      return false;
+    })
+    .finally(() => {
+      evaluationRecentSearchPrimePromise = null;
+    });
+  return evaluationRecentSearchPrimePromise;
 }
 
 function evaluationOverallKey(row) {
@@ -7003,6 +7047,7 @@ async function renderEvaluationPage() {
 
   if (!state.evaluationPlayerId) {
     renderEmptyEvaluationSelection(true);
+    void primeEmptyEvaluationSearch();
     return;
   }
 
@@ -7965,7 +8010,6 @@ function renderSearchResults() {
       if (await requestDatabaseSearch(query, "all")) renderSearchResultsNow();
     } catch (error) {
       console.error(error?.message || "Could not search the database.");
-      applyDatabaseSearchPayload({ players: {}, agents: {}, clubs: [] }, "all");
       renderSearchResultsNow();
     }
   })();
