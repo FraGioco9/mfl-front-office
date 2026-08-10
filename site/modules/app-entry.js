@@ -12,6 +12,8 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/mfl-stats-first-paint-runtime.js",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
+  "/watchlist-route-ui-runtime.js",
+  "/table-loading-runtime.js",
   "/database-stats-navigation-release-runtime.js",
   "/database-stats-runtime.js",
   "/database-stats-state-runtime.js",
@@ -19,7 +21,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/global-search-runtime.js",
-  "/watchlist-route-ui-runtime.js",
   "/database-stats-refinement-runtime.js",
   "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
@@ -31,6 +32,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
 
 /** @type {Window & {
  * __mflInteractionBusy?: { installLegacyBridge?: () => void },
+ * __mflTableLoadingRuntime?: { installLegacyBridge?: () => void, sync?: () => void },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
@@ -67,6 +69,8 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
+  runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
+  runtimeWindow.__mflTableLoadingRuntime?.sync?.();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
@@ -82,6 +86,7 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
+  runtimeWindow.__mflTableLoadingRuntime?.sync?.();
 
   // Keep late runtimes such as global search available as early as possible,
   // but do not expose pagination or release the startup loading state on player
