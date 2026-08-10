@@ -1,11 +1,12 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.15";
+  const STATIC_RELEASE_VERSION = "1.123.16";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
+  const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     stats: "stats",
@@ -156,6 +157,8 @@
     ensureDatabaseStatsStaticPage();
     const route = initialRoute(window.location.pathname);
     const { storedOptIn, storedAccess } = syncStoredAccessFlags();
+    const lockedRoute = !storedOptIn && OPT_IN_REQUIRED_PAGE_IDS.has(route.pageName);
+    const initialPageId = lockedRoute ? "myPlayersLockedPage" : route.pageId;
     const appShell = document.querySelector("#appShell");
     const menuRail = document.querySelector("#menuRail");
     const menuButton = document.querySelector("#menuButton");
@@ -188,7 +191,7 @@
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page.id !== route.pageId;
+      if (page instanceof HTMLElement) page.hidden = page.id !== initialPageId;
     });
 
     const navPage = route.navPage || route.pageName;
@@ -197,7 +200,26 @@
       button.classList.toggle("active", button.dataset.page === navPage);
     });
 
-    if (route.pageId === "progressionPage") {
+    if (lockedRoute) {
+      const lockedTitle = document.querySelector("#optInLockedTitle");
+      const lockedMessage = document.querySelector("#optInLockedMessage");
+      if (lockedTitle instanceof HTMLElement) {
+        lockedTitle.textContent = route.pageName === "watchlist"
+          ? "Watchlist"
+          : route.pageName === "settings"
+            ? "Settings"
+            : "My Players";
+      }
+      if (lockedMessage instanceof HTMLElement) {
+        lockedMessage.textContent = route.pageName === "watchlist"
+          ? "In order to use the watchlist, you need to opt in."
+          : route.pageName === "settings"
+            ? "In order to view settings, you need to opt in."
+            : "In order to see your players, you need to opt in.";
+      }
+    }
+
+    if (!lockedRoute && route.pageId === "progressionPage") {
       const title = document.querySelector("#tablePageTitle");
       if (title instanceof HTMLElement && route.title) title.textContent = route.title;
 
