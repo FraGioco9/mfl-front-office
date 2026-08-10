@@ -41,7 +41,10 @@
     row.appendChild(cell);
     body.replaceChildren(row);
     body.dataset.staticLoading = "true";
-    if (empty) empty.hidden = true;
+    if (empty) {
+      empty.hidden = true;
+      empty.textContent = "";
+    }
     return true;
   }
 
