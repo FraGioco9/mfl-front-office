@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.120.44");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.32");
 
   window.__mflEvaluationStaticChrome?.destroy?.();
   window.__mflReleaseVersion = VERSION;
@@ -36,13 +36,20 @@
     return 400;
   }
 
+  function normalizeWalletAddress(value) {
+    const address = String(value || "").trim().toLowerCase();
+    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+  }
+
   function hasStoredWalletOptIn() {
+    if (document.documentElement.dataset.storedWalletOptIn === "true") return true;
     try {
-      const address = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim();
+      const address = normalizeWalletAddress(localStorage.getItem("mfl-linked-wallet-v1"));
       const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+      const proofAddress = normalizeWalletAddress(proof?.address);
       return Boolean(
         address
-        && proof?.address === address
+        && proofAddress === address
         && proof?.message
         && Array.isArray(proof?.signatures)
         && proof.signatures.length,
