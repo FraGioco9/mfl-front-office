@@ -50,8 +50,11 @@ function literalLikePattern(value, prefixOnly = false) {
   return prefixOnly ? `${escaped}%` : `%${escaped}%`;
 }
 
-function playerSearchRows(query, limit) {
+function playerSearchRows(query, limit, options = {}) {
   const columns = SEARCH_PLAYER_COLUMNS;
+  const activeCondition = options.excludeRetired
+    ? "AND coalesce(CAST(p.retirement_years AS INTEGER), -1) <> 0"
+    : "";
   const contains = literalLikePattern(query);
   const prefix = literalLikePattern(query, true);
   const useRuntimeSearch = tableExists("runtime_player_search");
@@ -62,8 +65,9 @@ function playerSearchRows(query, limit) {
   const rows = queryRows(
     `SELECT ${qualifiedSelectList("p", columns)}
      FROM ${fromSql}
-     WHERE CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\'
-        OR ${normalizedName} LIKE ? ESCAPE '\\'
+     WHERE (CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\'
+        OR ${normalizedName} LIKE ? ESCAPE '\\')
+       ${activeCondition}
      ORDER BY CASE
        WHEN CAST(p.player_id AS TEXT) = ? OR ${normalizedName} = ? THEN 0
        WHEN CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\' THEN 1
@@ -272,7 +276,7 @@ function searchData(request) {
   }
   if (type === "agents") return agentSearchRows(query, limit);
   if (type === "clubs") return { results: clubSearchRows(query, limit) };
-  return playerSearchRows(query, limit);
+  return playerSearchRows(query, limit, { excludeRetired: true });
 }
 
 function summaryData() {
