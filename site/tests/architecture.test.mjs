@@ -36,6 +36,7 @@ test("static shell resolves Watchlist names, table headers, and loading paginati
   assert.match(bridge, /primeStaticTableHeader\(route\)/);
   assert.match(index, /html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager/);
   assert.match(runtime, /restoreTablePageStates\(savedState\);\s*restoreLinkedWalletState\(savedState\);\s*restoreWatchlistState\(\);/);
+  assert.match(runtime, /const localWatchlists = localWatchlist\.some[\s\S]+applyWatchlists\(localWatchlists, "", localWatchlist\);/);
   assert.doesNotMatch(styles, /data-initial-page="evaluation"[^\n]+evaluationSearchGroup/);
 });
 
