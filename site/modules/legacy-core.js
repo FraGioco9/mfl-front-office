@@ -41,6 +41,7 @@ const state = {
   playerAttributeView: "attributes",
   trainingAdjustments: {},
   searchIndex: [],
+  evaluationSearchIndex: [],
   agentSearchIndex: [],
   clubSearchIndex: [],
   searchIndexesLoaded: false,
@@ -2763,24 +2764,36 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (evaluationPageActive) {
+    const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    document.documentElement.classList.remove("mflEvaluationReady");
+    document.body.classList.add("evaluationPageLoading");
     if (options.plain) {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
       state.evaluationPlayerId = null;
       evaluationSearchInput.value = "";
     }
+    try {
+      await renderEvaluationPage();
+      await finishEvaluationReadiness();
+      if (document.body.classList.contains("loading")) {
+        await finishLoading();
+      }
 
-    await renderEvaluationPage();
-    if (document.body.classList.contains("loading")) {
-      await finishLoading();
+      syncHomeLoginButton();
+      if (shouldResetScroll) {
+        resetPageScroll();
+      }
+      document.documentElement.classList.add("mflEvaluationReady");
+      window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
+      return;
+    } finally {
+      document.body.classList.remove("evaluationPageLoading");
+      if (!document.documentElement.classList.contains("mflEvaluationReady")) {
+        document.documentElement.classList.add("mflEvaluationReady");
+      }
+      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
     }
-
-    syncHomeLoginButton();
-    if (shouldResetScroll) {
-      resetPageScroll();
-    }
-
-    return;
   }
 
   if (playerPageActive) {
@@ -5866,6 +5879,9 @@ function buildSearchIndex(options = {}) {
   }
 
   state.searchIndex = state.rows.map((row) => buildPlayerSearchEntryFromRow(row));
+  if (!state.evaluationSearchIndex.length || options.force) {
+    state.evaluationSearchIndex = [...state.searchIndex];
+  }
 
   const agentsByWallet = new Map();
   const addAgent = (walletAddress, name) => {
@@ -5921,10 +5937,13 @@ function applyDatabaseSearchPayload(payload, type = "all") {
   const agents = type === "players" ? { columns: [], rows: [] } : (payload?.agents || { columns: [], rows: [] });
   const playerColumns = Array.isArray(players?.columns) ? players.columns : [];
   const agentColumns = Array.isArray(agents?.columns) ? agents.columns : [];
-  state.searchIndex = Array.isArray(players?.rows)
+  const playerEntries = Array.isArray(players?.rows)
     ? players.rows.map((row) => buildPlayerSearchEntryFromCompactRow(row, playerColumns)).filter(Boolean)
     : [];
-  if (type !== "players") {
+  if (type === "players") {
+    state.evaluationSearchIndex = playerEntries;
+  } else {
+    state.searchIndex = playerEntries;
     state.agentSearchIndex = Array.isArray(agents?.rows)
       ? agents.rows.map((row) => buildAgentSearchEntry(
         compactSearchValue(row, agentColumns, "wallet_address"),
@@ -5998,13 +6017,27 @@ async function requestDatabaseSearch(rawQuery = "", type = "all") {
   }
 }
 
-async function ensureSearchIndexes() {
+let globalSearchPrimePromise = null;
+
+function primeGlobalSearchIndexes() {
+  if (globalSearchPrimePromise) return globalSearchPrimePromise;
   databaseSearchResponseCache.delete("all:");
-  try { await requestDatabaseSearch("", "all"); return true; }
-  catch (error) {
-    console.error(error?.message || "Could not load recent database search results.");
-    return false;
-  }
+  const promise = requestDatabaseSearch("", "all")
+    .then(() => true)
+    .catch((error) => {
+      console.error(error?.message || "Could not load recent database search results.");
+      return false;
+    });
+  globalSearchPrimePromise = promise;
+  window.__mflGlobalSearchReadyPromise = promise;
+  void promise.then((loaded) => {
+    if (!loaded && globalSearchPrimePromise === promise) globalSearchPrimePromise = null;
+  });
+  return promise;
+}
+
+async function ensureSearchIndexes() {
+  return primeGlobalSearchIndexes();
 }
 
 const DEFAULT_EVALUATION_MFL_PER_USD = 400;
@@ -6605,13 +6638,13 @@ function evaluationSearchMatches(query) {
     return [];
   }
 
-  if (!state.searchIndex.length && state.rows.length) {
+  if (!state.evaluationSearchIndex.length && state.rows.length) {
     buildSearchIndex();
   }
 
   const results = [];
 
-  state.searchIndex.forEach((entry) => {
+  state.evaluationSearchIndex.forEach((entry) => {
     if (entry.retired || (!entry.id.includes(query) && !entry.name.includes(query))) {
       return;
     }
@@ -6626,7 +6659,7 @@ function evaluationSearchMatches(query) {
 
 function recentEvaluationRows() {
   return state.recentEvaluationPlayerIds
-    .map((playerId) => state.searchIndex.find((entry) => String(entry.playerId) === String(playerId)) || null)
+    .map((playerId) => state.evaluationSearchIndex.find((entry) => String(entry.playerId) === String(playerId)) || null)
     .filter((entry) => entry && !entry.retired);
 }
 
@@ -6790,6 +6823,37 @@ function primeEmptyEvaluationSearch() {
       evaluationRecentSearchPrimePromise = null;
     });
   return evaluationRecentSearchPrimePromise;
+}
+
+function waitForEvaluationDiscountRate() {
+  if (document.documentElement.dataset.mflEvaluationRateSettled === "true") {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    let timeout = 0;
+    const finish = () => {
+      window.removeEventListener("mfl:evaluation-rate-settled", finish);
+      if (timeout) window.clearTimeout(timeout);
+      resolve(document.documentElement.dataset.mflEvaluationRateSettled === "true");
+    };
+    window.addEventListener("mfl:evaluation-rate-settled", finish, { once: true });
+    timeout = window.setTimeout(finish, 15_000);
+  });
+}
+
+function waitForEvaluationLayout() {
+  const fontsReady = document.fonts?.ready || Promise.resolve();
+  return Promise.resolve(fontsReady).then(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
+async function finishEvaluationReadiness() {
+  const dependencies = [primeGlobalSearchIndexes(), waitForEvaluationDiscountRate()];
+  if (!state.evaluationPlayerId) dependencies.push(primeEmptyEvaluationSearch());
+  await Promise.allSettled(dependencies);
+  await waitForEvaluationLayout();
 }
 
 function evaluationOverallKey(row) {
@@ -10483,6 +10547,7 @@ async function startApp() {
   setupChangelogSections();
   const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   loadSavedTableState();
+  const earlyGlobalSearch = primeGlobalSearchIndexes();
   applyStoredWalletPermission();
   loadEvaluationMflPerUsd();
   loadEvaluationLateSeasonRewardRates();
@@ -10491,7 +10556,7 @@ async function startApp() {
   updateMenuVisibility();
   showAppShell();
   void ensureFlowWallet();
-  await Promise.allSettled([loadSummary(), loadWalletPreferences()]);
+  await Promise.allSettled([earlyGlobalSearch, loadSummary(), loadWalletPreferences()]);
   applyStoredWalletPermission();
   updateAccountState();
   await showHomeShell(initialTarget.pageName, false, initialTarget.options);
@@ -12660,7 +12725,7 @@ async function startApp() {
   };
 })();
 
-startApp();
+window.__mflAppStartPromise = startApp();
 
 ;(() => {
   if (window.__mflFooterSpaNavigationBound) return;
