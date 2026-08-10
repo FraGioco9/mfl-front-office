@@ -286,7 +286,7 @@ test("evaluation search excludes retired compact results", async () => {
   assert.match(database, /SEARCH_PLAYER_COLUMNS = Object\.freeze\([\s\S]*"retirement_years"/);
   assert.match(views, /excludeRetired: true/);
   assert.match(views, /coalesce\(CAST\(p\.retirement_years AS INTEGER\), -1\) <> 0/);
-  assert.match(runtime, /retired: Number\(compactSearchValue\(row, columns, "retirement_years"\)\) === 0/);
+  assert.match(runtime, /retired: compactSearchValue\(row, columns, "retirement_years"\) !== null[\s\S]*Number\(compactSearchValue\(row, columns, "retirement_years"\)\) === 0/);
 });
 
 test("typed search cancels stale requests, reuses results, and pads its empty hint", async () => {
