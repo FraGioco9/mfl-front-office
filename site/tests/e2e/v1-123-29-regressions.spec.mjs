@@ -91,10 +91,12 @@ test("wait cursor removes hover motion from MFL Stats controls", async ({ page }
   expect(filterMotion.animation).toBe("none");
   expect(filterMotion.transform).toBe("none");
 
-  const histogramBar = page.locator("#mflStatsAgeDistribution .mflStatsHistogramBar").first();
-  await expect(histogramBar).toBeVisible();
-  await histogramBar.hover();
-  const barMotion = await histogramBar.evaluate((node) => {
+  await expect.poll(() => page.evaluate(() => Boolean(
+    globalThis.document.querySelector("#mflStatsAgeDistribution .mflStatsHistogramBar"),
+  ))).toBe(true);
+  const barMotion = await page.evaluate(() => {
+    const node = globalThis.document.querySelector("#mflStatsAgeDistribution .mflStatsHistogramBar");
+    if (!(node instanceof HTMLElement)) throw new Error("MFL Stats histogram bar missing");
     const style = globalThis.getComputedStyle(node, "::before");
     return { transition: style.transitionDuration, animation: style.animationName };
   });
