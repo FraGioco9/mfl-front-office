@@ -42,9 +42,11 @@ test("Discount Rate tooltip dismissal reconciles pointer focus and page lifecycl
   assert.match(runtime, /document\.addEventListener\("pointerdown", onPointerDown, true\)/);
   assert.match(runtime, /if \(keyboardFocusMetric === metric\) keyboardFocusMetric = null/);
   assert.match(runtime, /window\.addEventListener\("blur", onWindowBlur\)/);
-  assert.match(runtime, /window\.addEventListener\("pagehide", onPageHide\)/);
+  assert.match(runtime, /window\.addEventListener\("pagehide", onPageLifecycleChange\)/);
+  assert.match(runtime, /window\.addEventListener\("popstate", onPageLifecycleChange\)/);
+  assert.match(runtime, /window\.addEventListener\("hashchange", onPageLifecycleChange\)/);
   assert.match(runtime, /document\.addEventListener\("visibilitychange", onVisibilityChange\)/);
-  assert.match(runtime, /if \(!evaluationActive\(\) \|\| activeMetric\?\.closest\("\[hidden\]"\)\) clearAll\(true\)/);
+  assert.doesNotMatch(runtime, /new MutationObserver/);
 });
 
 test("Watchlist and My Players navigation is latest-intent wins", async () => {
