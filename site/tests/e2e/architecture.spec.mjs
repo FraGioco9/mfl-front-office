@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.18");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.19");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -128,6 +128,55 @@ test("does not flash Progression for an opted-in user without permission", async
   await expect(page.locator("#sidebar")).toBeVisible();
   await expect(page.locator('#sidebar .navButton[data-page="progression"]')).toBeHidden();
   releaseMetadata();
+});
+
+test("an opted-in user with permission keeps Progression visible throughout startup", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wallet = "0x1234";
+    globalThis.localStorage.setItem("mfl-linked-wallet-v1", wallet);
+    globalThis.localStorage.setItem("mfl-linked-wallet-proof-v1", JSON.stringify({
+      type: "user-signature",
+      address: wallet,
+      signingAddress: wallet,
+      message: "MFL Front Office Dapper Opt-In",
+      appIdentifier: "MFL Front Office Dapper Opt-In",
+      signatures: ["signature"],
+    }));
+    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({
+      allowed: true,
+      checkedAt: Date.now(),
+    }));
+    globalThis.__progressionWasVisible = false;
+    globalThis.__progressionDisappearedAfterVisible = false;
+    const inspect = () => {
+      const button = globalThis.document.querySelector('#sidebar .navButton[data-page="progression"]');
+      if (!button) return;
+      const visible = globalThis.getComputedStyle(button).display !== "none";
+      if (globalThis.__progressionWasVisible && !visible) globalThis.__progressionDisappearedAfterVisible = true;
+      if (visible) globalThis.__progressionWasVisible = true;
+    };
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "hidden", "data-stored-progression-access"],
+    });
+    globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
+  });
+
+  let releaseMetadata;
+  const gate = new Promise((resolve) => { releaseMetadata = resolve; });
+  await page.route("**/release.json", async (route) => {
+    await gate;
+    await route.continue();
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('#sidebar .navButton[data-page="progression"]')).toBeVisible();
+  releaseMetadata();
+  await waitForArchitecture(page);
+  await expect(page.locator('#sidebar .navButton[data-page="progression"]')).toBeVisible();
+  expect(await page.evaluate(() => globalThis.__progressionDisappearedAfterVisible)).toBe(false);
 });
 
 test("opting out on a locked page restores its Opt In button", async ({ page }) => {
@@ -298,6 +347,41 @@ test("Total active players uses the API total for all non-MFL, non-retired playe
   await expect(page.locator("#databaseStatsTotalPlayers")).toHaveText("7");
 });
 
+test("Database Stats content remains visible after ordinary page interactions", async ({ page }) => {
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") === "database-stats") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(databaseStatsPayload()),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/database/stats");
+  await waitForArchitecture(page);
+  const statsPage = page.locator("#databaseStatsPage");
+  await expect(statsPage).toBeVisible();
+  await expect(statsPage.locator('.viewButton[data-view="attributes"]')).toBeVisible();
+  await expect(statsPage.locator('.viewButton[data-view="contracts"]')).toBeVisible();
+  await expect(statsPage.locator('.viewButton[data-view="stats"]')).toBeVisible();
+
+  for (const target of [
+    statsPage.locator(".tablePageTitle"),
+    statsPage.locator(".databaseStatsCards article").first(),
+    page.getByRole("button", { name: "Rare", exact: true }),
+    page.getByRole("button", { name: "Age", exact: true }),
+  ]) {
+    await target.click();
+    await expect(page).toHaveURL(/\/database\/stats$/);
+    await expect(statsPage).toBeVisible();
+    await expect(statsPage.locator(".databaseStatsCards")).toBeVisible();
+  }
+});
+
 test("Database Stats custom bars animate only when the portal Apply button is clicked", async ({ page }) => {
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
@@ -420,7 +504,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.18");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.19");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -440,8 +524,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.18");
-  expect(rows[0][0]).toBe("v1.123.18");
+  expect(metadata.version).toBe("1.123.19");
+  expect(rows[0][0]).toBe("v1.123.19");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -582,6 +666,120 @@ test("evaluation compact search omits retired players", async ({ page }) => {
   });
   await expect(page.locator("#evaluationSearchResults")).toContainText("Active Result");
   await expect(page.locator("#evaluationSearchResults")).not.toContainText("Retired Result");
+});
+
+test("typed global and Evaluation search results update before their requests finish", async ({ page }) => {
+  let releaseGlobalSearch;
+  const globalSearchGate = new Promise((resolve) => { releaseGlobalSearch = resolve; });
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "roma") {
+      await route.continue();
+      return;
+    }
+    await globalSearchGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        players: {
+          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+          rows: [
+            [101, "Roma Player 1", 90, "Italy", "ST", null],
+            [102, "Roma Player 2", 89, "Italy", "ST", null],
+            [103, "Roma Player 3", 88, "Italy", "ST", null],
+            [104, "Roma Player 4", 87, "Italy", "ST", null],
+            [105, "Roma Player 5", 86, "Italy", "ST", null],
+            [106, "Roma Player 6", 85, "Italy", "ST", null],
+          ],
+        },
+        agents: {
+          columns: ["wallet_address", "wallet_name", "player_count"],
+          rows: [["0xagent", "Roma Agent", 12]],
+        },
+        clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }],
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await waitForArchitecture(page);
+  const recentResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.searchParams.get("mode") === "search" && url.searchParams.get("type") === "recent";
+  });
+  await page.locator("#openSearchButton").click();
+  await recentResponse;
+  await page.locator("#playerSearchInput").focus();
+  await page.evaluate(() => {
+    globalThis.eval(`applyDatabaseSearchPayload({
+      players: {
+        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+        rows: [
+          [101, "Roma Player 1", 90, "Italy", "ST", null],
+          [102, "Roma Player 2", 89, "Italy", "ST", null],
+          [103, "Roma Player 3", 88, "Italy", "ST", null],
+          [104, "Roma Player 4", 87, "Italy", "ST", null],
+          [105, "Roma Player 5", 86, "Italy", "ST", null],
+          [106, "Roma Player 6", 85, "Italy", "ST", null]
+        ]
+      },
+      agents: {
+        columns: ["wallet_address", "wallet_name", "player_count"],
+        rows: [["0xagent", "Roma Agent", 12]]
+      },
+      clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }]
+    }, "all")`);
+  });
+
+  const globalResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "roma";
+  });
+  await page.locator("#playerSearchInput").fill("roma");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Player 1");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
+  await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
+  releaseGlobalSearch();
+  await globalResponse;
+
+  await page.locator("#closeSearchButton").click();
+  await page.goto("/evaluation");
+  await waitForArchitecture(page);
+
+  let releaseEvaluationSearch;
+  const evaluationSearchGate = new Promise((resolve) => { releaseEvaluationSearch = resolve; });
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "active") {
+      await route.continue();
+      return;
+    }
+    await evaluationSearchGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+        rows: [[102, "Active Player", 88, "Italy", "CM", null]],
+      }),
+    });
+  });
+  await page.evaluate(() => {
+    globalThis.eval(`applyDatabaseSearchPayload({
+      columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+      rows: [[102, "Active Player", 88, "Italy", "CM", null]]
+    }, "players")`);
+  });
+
+  const evaluationResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "active";
+  });
+  await page.locator("#evaluationSearchInput").fill("active");
+  await expect(page.locator("#evaluationSearchResults")).toContainText("Active Player");
+  releaseEvaluationSearch();
+  await evaluationResponse;
 });
 
 test("empty recent-search copy is padded and fallback font size is stabilized", async ({ page }) => {

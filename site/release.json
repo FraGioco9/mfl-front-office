@@ -1,4 +1,4 @@
 {
-  "version": "1.123.18",
-  "description": "Keep route contents stable, speed up search, exclude retired evaluations, and stabilize font loading"
+  "version": "1.123.19",
+  "description": "Preserve Database Stats, stabilize first paint, and show complete live search results"
 }

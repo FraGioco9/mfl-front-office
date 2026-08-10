@@ -136,9 +136,9 @@
       page.innerHTML = `
         <h2 class="tablePageTitle">Database</h2>
         <section class="views mflStatsViews" aria-label="Database views">
-          <button class="viewButton" type="button" data-view="attributes">Attributes</button>
-          <button class="viewButton" type="button" data-view="contracts">Contracts</button>
-          <button class="viewButton active" type="button" data-view="stats">Stats</button>
+          <button class="viewButton" type="button" data-page="database" data-view="attributes">Attributes</button>
+          <button class="viewButton" type="button" data-page="database" data-view="contracts">Contracts</button>
+          <button class="viewButton active" type="button" data-page="database" data-view="stats">Stats</button>
         </section>
         <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
           <span>Overall Filters</span>
@@ -457,9 +457,16 @@
       && Boolean(target.closest('#progressionPage .viewButton[data-view="stats"]'));
   }
 
+  function preserveStatsShellAfterInteraction() {
+    requestAnimationFrame(() => {
+      if (!destroyed && isStatsPath()) showStatsShell();
+    });
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    if (isStatsPath()) preserveStatsShellAfterInteraction();
     if (shouldOpenStats(target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -474,6 +481,7 @@
 
   function onDocumentPointerDown(event) {
     const target = event.target instanceof Element ? event.target : null;
+    if (target && isStatsPath()) preserveStatsShellAfterInteraction();
     if (!target || target.closest("#databaseStatsPage") || shouldOpenStats(target)) return;
     if (target.closest("a[href], .navButton, [data-page], #progressionPage .viewButton[data-view]")) {
       hideStatsPage();

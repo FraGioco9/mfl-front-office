@@ -106,10 +106,13 @@
         }
       }
     </style>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.18">
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPecZTIAOhVxoMyOr9n_E7fdMPmDQ.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffBzCGItzYw.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffHjDGItzYw.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=block" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=1.123.19">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -265,9 +268,9 @@
         <section id="databaseStatsPage" class="pageView mflStatsPage databaseStatsPage" data-static-database-stats="true" hidden>
           <h2 class="tablePageTitle">Database</h2>
           <section class="views mflStatsViews" aria-label="Database views">
-            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
-            <button class="viewButton" type="button" data-view="contracts">Contracts</button>
-            <button class="viewButton active" type="button" data-view="stats">Stats</button>
+            <button class="viewButton" type="button" data-page="database" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-page="database" data-view="contracts">Contracts</button>
+            <button class="viewButton active" type="button" data-page="database" data-view="stats">Stats</button>
           </section>
           <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
             <span>Overall Filters</span>
@@ -497,7 +500,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.18</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.19</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -665,6 +668,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.18"></script>
+    <script src="/app.js?v=1.123.19"></script>
   </body>
 </html>
