@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.27");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.28");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
   const VIEW_ORDER = Object.freeze({
@@ -21,6 +21,7 @@
   let lastTablePage = "";
   let frame = 0;
   let observer = null;
+  let waitCursorSource = null;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -155,18 +156,36 @@
     }
   }
 
+  function sourceHasWaitCursor(source) {
+    return source?.element instanceof Element
+      && source.element.isConnected
+      && elementHasWaitCursor(source.element, source.pseudoElement || null);
+  }
+
+  function rememberWaitCursorSource(target = null) {
+    const candidates = [
+      { element: target, pseudoElement: null },
+      { element: document.documentElement, pseudoElement: null },
+      { element: document.body, pseudoElement: null },
+      { element: document.body, pseudoElement: "::before" },
+    ];
+    const source = candidates.find(sourceHasWaitCursor) || null;
+    if (source) waitCursorSource = source;
+    return Boolean(source);
+  }
+
   function waitCursorActive(target = null) {
-    return document.documentElement.classList.contains("mflInteractionBusy")
-      || elementHasWaitCursor(target)
-      || elementHasWaitCursor(document.documentElement)
-      || elementHasWaitCursor(document.body)
-      || elementHasWaitCursor(document.body, "::before")
-      || elementHasWaitCursor(document.body, "::after");
+    if (document.documentElement.classList.contains("mflInteractionBusy")) return true;
+    if (sourceHasWaitCursor(waitCursorSource)) return true;
+    waitCursorSource = null;
+    return rememberWaitCursorSource(target);
   }
 
   function syncWaitHover(target = null) {
     if (destroyed) return;
-    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive(target));
+    const active = waitCursorActive(target);
+    if (!active) waitCursorSource = null;
+    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, active);
   }
 
   function installStyles() {
@@ -190,6 +209,10 @@
         white-space: nowrap !important;
       }
 
+      html.${WAIT_HOVER_CLASS} body * {
+        pointer-events: none !important;
+      }
+
       html.${WAIT_HOVER_CLASS} body *,
       html.${WAIT_HOVER_CLASS} body *::before,
       html.${WAIT_HOVER_CLASS} body *::after {
@@ -201,6 +224,18 @@
       html.${WAIT_HOVER_CLASS} body *:hover::before,
       html.${WAIT_HOVER_CLASS} body *:hover::after {
         transform: none !important;
+      }
+
+      html.${WAIT_HOVER_CLASS} body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: transparent;
+        pointer-events: auto !important;
+        cursor: wait !important;
+        transition: none !important;
+        animation: none !important;
       }
     `;
     document.head.appendChild(style);
@@ -257,6 +292,7 @@
     frame = 0;
     observer?.disconnect();
     observer = null;
+    waitCursorSource = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
