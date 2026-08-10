@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.20");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.21");
   const MFL_STATS_PATH = /^\/mfl\/stats\/?$/i;
   const FIRST_PAINT_GUARD_CLASS = "mflStatsFirstPaintGuard";
   const FILTERS = [
