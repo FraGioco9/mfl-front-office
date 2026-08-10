@@ -24,7 +24,7 @@ test("Database Hide MFL players is part of first paint", async () => {
 test("shared Stats button is hidden rather than removed and returns on MFL", async () => {
   const runtime = await read("database-stats-view-button-runtime.js");
 
-  assert.match(runtime, /const MFL_PATH = \^\\\/mfl/);
+  assert.ok(runtime.includes('const MFL_PATH = /^\\/mfl'));
   assert.match(runtime, /function syncSharedStatsVisibility\(\)/);
   assert.match(runtime, /button\.hidden = true/);
   assert.match(runtime, /if \(isMflContext\(\)\)/);
@@ -48,5 +48,5 @@ test("legacy loading is collapsed before paint without recreating the canonical 
   assert.match(runtime, /if \(legacyLoadingVisible\) show\(\)/);
   assert.doesNotMatch(runtime, /legacyLoadingVisible \|\| loadingRow/);
   assert.match(runtime, /new MutationObserver\(\(\) => \{[\s\S]*sync\(\);[\s\S]*\}\)/);
-  assert.match(runtime, /sync: sync/);
+  assert.match(runtime, /\n    sync,\n/);
 });
