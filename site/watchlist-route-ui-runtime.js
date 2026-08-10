@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "1.119.8";
+  const VERSION = "1.123.22";
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
   const previous = window.__mflWatchlistRouteUiRuntime;
@@ -18,6 +18,54 @@
   let pointerY = -1;
 
   const isWatchlistPath = (pathname = location.pathname) => WATCHLIST_PATH.test(String(pathname || ""));
+  const viewSlugs = new Set(["attributes", "next-overall", "contracts", "current-season", "all-time"]);
+
+  function routeWatchlistId(pathname = location.pathname) {
+    const segment = decodeURIComponent(String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/)?.[1] || "");
+    return viewSlugs.has(segment) ? "" : segment;
+  }
+
+  function liveWatchlistName(watchlistId) {
+    try {
+      if (typeof state !== "object" || !Array.isArray(state?.watchlists)) return "";
+      const selected = watchlistId
+        ? state.watchlists.find((watchlist) => String(watchlist?.id || "") === watchlistId)
+        : state.watchlists.find((watchlist) => String(watchlist?.id || "") === String(state?.currentWatchlistId || ""))
+          || state.watchlists[0];
+      return String(selected?.name || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function cachedWatchlistName(watchlistId) {
+    try {
+      const wallet = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim().toLowerCase();
+      if (!wallet) return "";
+      const saved = JSON.parse(localStorage.getItem(`mfl-wallet-watchlist-v1:${wallet}`) || "[]");
+      if (!Array.isArray(saved)) return "";
+      const watchlists = saved.filter((item) => item && typeof item === "object" && !Array.isArray(item));
+      const selected = watchlistId
+        ? watchlists.find((watchlist) => String(watchlist.id || "") === watchlistId)
+        : watchlists[0];
+      return String(selected?.name || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function syncWatchlistTitle() {
+    if (!isWatchlistPath()) return;
+    const title = document.getElementById("tablePageTitle");
+    if (!title) return;
+    const watchlistId = routeWatchlistId();
+    const name = liveWatchlistName(watchlistId)
+      || cachedWatchlistName(watchlistId)
+      || String(document.getElementById("watchlistButtonText")?.textContent || "").trim()
+      || "Default";
+    const nextTitle = `Watchlist - ${name}`;
+    if (title.textContent !== nextTitle) title.textContent = nextTitle;
+  }
 
   function asUrl(value) {
     try {
@@ -132,6 +180,7 @@
     frame = 0;
     normalizeRenameButtons();
     releaseInitialRoute();
+    syncWatchlistTitle();
     if (!isWatchlistPath()) hideSwitcher();
   }
 
