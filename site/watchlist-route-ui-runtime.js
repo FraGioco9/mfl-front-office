@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.24");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
   const previous = window.__mflWatchlistRouteUiRuntime;
@@ -39,7 +39,7 @@
     if (!isWatchlistPath()) return;
     const visibleTitle = String(document.getElementById("tablePageTitle")?.textContent || "").trim();
     const match = visibleTitle.match(/^Watchlist\s*-\s*(.+)$/i);
-    if (match?.[1]) stableWatchlistName = match[1].trim();
+    if (match?.[1] && match[1].trim() !== "-") stableWatchlistName = match[1].trim();
     const id = routeWatchlistId() || stateWatchlistId();
     if (id) stableWatchlistId = id;
   }
@@ -73,20 +73,43 @@
     }
   }
 
+  function currentWatchlistIdentity() {
+    const routeId = routeWatchlistId();
+    const liveId = stateWatchlistId();
+    const watchlistId = routeId || liveId || stableWatchlistId;
+    if (routeId || liveId) stableWatchlistId = routeId || liveId;
+    const name = liveWatchlistName(watchlistId)
+      || cachedWatchlistName(watchlistId)
+      || stableWatchlistName;
+    if (name) stableWatchlistName = name;
+    return { watchlistId, name };
+  }
+
+  function syncWatchlistSwitcher() {
+    const switcher = document.getElementById("watchlistSwitcher");
+    const buttonText = document.getElementById("watchlistButtonText");
+    if (!(switcher instanceof HTMLElement) || !(buttonText instanceof HTMLElement)) return;
+
+    const optedIn = document.documentElement.dataset.storedWalletOptIn !== "false";
+    if (!isWatchlistPath() || !optedIn || document.body?.dataset.page === "myplayers") {
+      switcher.hidden = true;
+      return;
+    }
+
+    const { name } = currentWatchlistIdentity();
+    buttonText.textContent = name || "-";
+    switcher.hidden = false;
+  }
+
   function syncWatchlistTitle() {
     if (!isWatchlistPath()) return;
     const title = document.getElementById("tablePageTitle");
     if (!title) return;
 
-    const routeId = routeWatchlistId();
-    const liveId = stateWatchlistId();
-    const watchlistId = routeId || liveId || stableWatchlistId;
-    if (routeId || liveId) stableWatchlistId = routeId || liveId;
-
-    const name = liveWatchlistName(watchlistId)
-      || cachedWatchlistName(watchlistId)
-      || stableWatchlistName
-      || String(document.getElementById("watchlistButtonText")?.textContent || "").trim()
+    const { name: resolvedName } = currentWatchlistIdentity();
+    const switcherText = String(document.getElementById("watchlistButtonText")?.textContent || "").trim();
+    const name = resolvedName
+      || (switcherText && switcherText !== "-" ? switcherText : "")
       || "Default";
     stableWatchlistName = name;
     const nextTitle = `Watchlist - ${name}`;
@@ -206,6 +229,7 @@
     frame = 0;
     normalizeRenameButtons();
     releaseInitialRoute();
+    syncWatchlistSwitcher();
     syncWatchlistTitle();
     if (!isWatchlistPath()) hideSwitcher();
   }
@@ -346,7 +370,7 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["hidden", "data-page", "data-tooltip"],
+    attributeFilter: ["hidden", "data-page", "data-tooltip", "data-stored-wallet-opt-in"],
   });
 
   function destroy() {

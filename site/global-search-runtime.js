@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.24");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
 
@@ -46,36 +46,19 @@
     renderCurrentResults();
   }
 
-  async function searchThroughLegacyPipeline(query, normalizedQuery, requestSequence) {
-    const input = searchInput();
-    if (!input) return null;
-
-    window.__mflGlobalSearchQuery = query;
-    let result;
+  function invalidateLegacyAllSearch() {
     try {
-      result = window.eval(`
-        typeof requestDatabaseSearch === "function"
-          ? requestDatabaseSearch(window.__mflGlobalSearchQuery, "all", { force: true })
-          : null
-      `);
+      window.eval(`(() => {
+        if (typeof databaseSearchAbortControllers !== "undefined") {
+          databaseSearchAbortControllers.get("all")?.abort?.();
+        }
+        if (typeof databaseSearchSequences !== "undefined") {
+          databaseSearchSequences.set("all", (databaseSearchSequences.get("all") || 0) + 1);
+        }
+      })();`);
     } catch {
-      return null;
-    } finally {
-      delete window.__mflGlobalSearchQuery;
-    }
-
-    if (!result || typeof result.then !== "function") return null;
-
-    try {
-      const loaded = await result;
-      if (destroyed || requestSequence !== sequence || normalize(input.value) !== normalizedQuery) return false;
-      if (loaded) renderCurrentResults();
-      return Boolean(loaded);
-    } catch (error) {
-      if (error?.name !== "AbortError") {
-        console.error(error?.message || "Could not search the database.");
-      }
-      return false;
+      // Typed search remains authoritative through its own request sequence even
+      // if a future core stops exposing the legacy search coordination bindings.
     }
   }
 
@@ -86,15 +69,8 @@
     if (!input || !normalizedQuery) return false;
 
     const requestSequence = ++sequence;
-
-    // Use the legacy database-search pipeline when available. It owns the same
-    // abort controller/sequence as the startup recent-results request, so a
-    // typed query cancels that older request instead of letting it overwrite
-    // the complete players / clubs / agents results after they arrive.
-    const legacyResult = await searchThroughLegacyPipeline(query, normalizedQuery, requestSequence);
-    if (legacyResult !== null) return legacyResult;
-
     controller?.abort();
+    invalidateLegacyAllSearch();
     controller = new AbortController();
     const activeController = controller;
     const parameters = new URLSearchParams({
@@ -134,18 +110,24 @@
     const input = searchInput();
     if (!input || event.target !== input) return;
 
-    // Own typed global-search requests so the recent-result bootstrap cannot
-    // answer a typed query or race a complete players / clubs / agents search.
+    // Typed global search is the authoritative owner of non-empty queries. Do
+    // not let the recent-results handler reuse its five cached items as the
+    // search universe while the full database request is in flight.
     event.stopImmediatePropagation();
     const query = String(input.value || "").trim();
-    renderCurrentResults();
 
     if (!query) {
       sequence += 1;
       controller?.abort();
       controller = null;
+      renderCurrentResults();
       return;
     }
+
+    // Preserve the existing real-time feel by filtering whatever index is
+    // already available immediately; the authoritative full-database payload
+    // replaces it as soon as the network request resolves.
+    renderCurrentResults();
     void searchDatabase(query);
   }
 

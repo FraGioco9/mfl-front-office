@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.24";
+  const STATIC_RELEASE_VERSION = "1.123.25";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -226,9 +226,9 @@
     return { pageName: "home", pageId: "homePage", title: "", view: "", navPage: "home" };
   }
 
-  function storedWatchlistTitle(pathname) {
+  function storedWatchlistName(pathname) {
     const linkedWallet = storedWalletOptInAddress();
-    if (!linkedWallet) return "Watchlist";
+    if (!linkedWallet) return "";
 
     try {
       const match = String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/i);
@@ -241,12 +241,18 @@
         ? saved.filter((item) => item && typeof item === "object" && !Array.isArray(item))
         : [];
       const selected = watchlists.find((watchlist) => String(watchlist.id || "") === requestedId)
-        || watchlists[0];
-      const name = String(selected?.name || "Default").trim().replace(/\s+/g, " ").slice(0, 20) || "Default";
-      return `Watchlist - ${name}`;
+        || (!requestedId ? watchlists[0] : null);
+      return String(selected?.name || "").trim().replace(/\s+/g, " ").slice(0, 20);
     } catch {
-      return "Watchlist - Default";
+      return "";
     }
+  }
+
+  function storedWatchlistTitle(pathname) {
+    const linkedWallet = storedWalletOptInAddress();
+    if (!linkedWallet) return "Watchlist";
+    const name = storedWatchlistName(pathname) || "Default";
+    return `Watchlist - ${name}`;
   }
 
   function staticTableColumnKey(column, pageName) {
@@ -429,6 +435,8 @@
     const footerVersionLink = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     const homeOptInButton = document.querySelector("#homeOptInButton");
     const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
+    const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
+    const watchlistButtonText = document.querySelector("#watchlistButtonText");
 
     document.body.dataset.page = route.pageName;
     document.body.classList.toggle("guest", !storedAccess);
@@ -450,6 +458,13 @@
     if (footerVersionLink instanceof HTMLAnchorElement) {
       footerVersionLink.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
       footerVersionLink.hidden = false;
+    }
+    if (watchlistSwitcher instanceof HTMLElement) {
+      const showWatchlistSwitcher = !lockedRoute && route.pageName === "watchlist";
+      watchlistSwitcher.hidden = !showWatchlistSwitcher;
+      if (showWatchlistSwitcher && watchlistButtonText instanceof HTMLElement) {
+        watchlistButtonText.textContent = storedWatchlistName(window.location.pathname) || "-";
+      }
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {

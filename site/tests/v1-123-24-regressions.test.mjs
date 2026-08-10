@@ -7,19 +7,19 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-test("typed global search shares the legacy request owner with recent-result bootstrap", async () => {
+test("typed global search owns one all-category database request", async () => {
   const runtime = await read("global-search-runtime.js");
-  assert.match(runtime, /requestDatabaseSearch\(window\.__mflGlobalSearchQuery, "all", \{ force: true \}\)/);
-  assert.match(runtime, /typed query cancels that older request/);
   assert.match(runtime, /type: "all"/);
-  assert.match(runtime, /applyDatabaseSearchPayload\(payload, "all"\)/);
+  assert.match(runtime, /q: query/);
+  assert.match(runtime, /databaseSearchAbortControllers\.get\("all"\)/);
+  assert.match(runtime, /databaseSearchSequences\.set\("all"/);
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/);
 });
 
 test("table first paint uses the final viewport width and renders a loading body immediately", async () => {
   const bridge = await read("app.js");
   const entry = await read("modules/app-entry.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.24"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.25"/);
   assert.match(bridge, /function staticBrowserScrollbarWidth\(\)/);
   assert.match(bridge, /window\.innerWidth - staticBrowserScrollbarWidth\(\)/);
   assert.match(bridge, /const viewportWidth = Math\.min\(clientWidth, reservedViewportWidth\)/);
