@@ -35,6 +35,32 @@ test("Discount Rate tooltip always dismisses after pointer focus leaves it", asy
   const search = page.locator("#evaluationSearchInput");
 
   await metric.hover();
+  const diagnostics = await page.evaluate(() => {
+    const metric = globalThis.document.querySelector(".evaluationMetric.evaluationDiscountRate");
+    const rect = metric?.getBoundingClientRect();
+    const x = rect ? rect.left + rect.width / 2 : 0;
+    const y = rect ? rect.top + rect.height / 2 : 0;
+    const hit = rect ? globalThis.document.elementFromPoint(x, y) : null;
+    const beforeDirect = globalThis.document.querySelectorAll("#evaluationDiscountTooltipPortal").length;
+    if (!beforeDirect && metric instanceof globalThis.HTMLElement) {
+      globalThis.__mflDiscountTooltipController?.show?.(metric);
+    }
+    const afterDirect = globalThis.document.querySelectorAll("#evaluationDiscountTooltipPortal").length;
+    return {
+      controller: Boolean(globalThis.__mflDiscountTooltipController),
+      controllerVersion: globalThis.__mflDiscountTooltipController?.version || "",
+      busy: globalThis.document.documentElement.classList.contains("mflInteractionBusy"),
+      bodyPage: globalThis.document.body?.dataset.page || "",
+      path: globalThis.location.pathname,
+      tooltipText: metric instanceof globalThis.HTMLElement ? String(metric.dataset.tooltip || "") : "",
+      pointerEvents: metric ? globalThis.getComputedStyle(metric).pointerEvents : "",
+      hitClass: hit instanceof globalThis.Element ? hit.className : "",
+      hitMetric: Boolean(hit instanceof globalThis.Element && hit.closest(".evaluationMetric.evaluationDiscountRate")),
+      beforeDirect,
+      afterDirect,
+    };
+  });
+  expect(diagnostics.beforeDirect, JSON.stringify(diagnostics)).toBe(1);
   await expect(tooltip).toBeVisible();
   await metric.click();
   await search.hover();
