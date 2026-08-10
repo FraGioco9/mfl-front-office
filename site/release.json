@@ -1,4 +1,4 @@
 {
-  "version": "1.123.16",
-  "description": "Default to hiding MFL players, show locked pages immediately, and fix custom Database Stats totals"
+  "version": "1.123.17",
+  "description": "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"
 }
