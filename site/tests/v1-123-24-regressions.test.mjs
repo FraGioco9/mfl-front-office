@@ -27,7 +27,7 @@ test("table first paint uses the final viewport width and renders a loading body
   assert.match(bridge, /cell\.textContent = "Loading players\.\.\."/);
   assert.match(bridge, /primeStaticTableHeader\(route\);\s+primeStaticTableLoadingBody\(route\);/);
   assert.match(entry, /const tableStartup = /);
-  assert.match(entry, /!\/\^\\\/(?:database\|mfl)\\\/stats/);
+  assert.ok(entry.includes('&& !/^\\/(?:database|mfl)\\/stats\\/?$/i.test(window.location.pathname);'));
   assert.match(entry, /if \(tableStartup && runtimeWindow\.__mflAppStartPromise\)/);
   assert.match(entry, /await loadScriptGroup\(LATE_RUNTIME_SCRIPTS, release\.version\);/);
 });
