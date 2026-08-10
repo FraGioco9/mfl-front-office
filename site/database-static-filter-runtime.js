@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.27");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.28");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
   const VIEW_ORDER = Object.freeze({
@@ -160,8 +160,7 @@
       || elementHasWaitCursor(target)
       || elementHasWaitCursor(document.documentElement)
       || elementHasWaitCursor(document.body)
-      || elementHasWaitCursor(document.body, "::before")
-      || elementHasWaitCursor(document.body, "::after");
+      || elementHasWaitCursor(document.body, "::before");
   }
 
   function syncWaitHover(target = null) {
@@ -190,6 +189,17 @@
         white-space: nowrap !important;
       }
 
+      html.${WAIT_HOVER_CLASS} body,
+      html.${WAIT_HOVER_CLASS} body *,
+      html.${WAIT_HOVER_CLASS} body *::before,
+      html.${WAIT_HOVER_CLASS} body *::after {
+        cursor: wait !important;
+      }
+
+      html.${WAIT_HOVER_CLASS} body * {
+        pointer-events: none !important;
+      }
+
       html.${WAIT_HOVER_CLASS} body *,
       html.${WAIT_HOVER_CLASS} body *::before,
       html.${WAIT_HOVER_CLASS} body *::after {
@@ -201,6 +211,18 @@
       html.${WAIT_HOVER_CLASS} body *:hover::before,
       html.${WAIT_HOVER_CLASS} body *:hover::after {
         transform: none !important;
+      }
+
+      html.${WAIT_HOVER_CLASS} body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: transparent;
+        pointer-events: auto !important;
+        cursor: wait !important;
+        transition: none !important;
+        animation: none !important;
       }
     `;
     document.head.appendChild(style);
