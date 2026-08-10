@@ -74,27 +74,30 @@ test("global busy removes the actual hover state until wait ends", async ({ page
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
 });
 
-test("a non-token wait cursor also shields hover and releases without sticking", async ({ page }) => {
-  await page.goto("/");
+test("a non-token wait cursor disables hover motion without trapping later clicks", async ({ page }) => {
+  await page.goto("/database/attributes");
   await waitForArchitecture(page);
   await installHoverProbe(page);
 
   const probe = page.locator("#waitHoverShieldProbe");
-  await probe.hover();
-  await expect.poll(() => probe.evaluate((node) => node.matches(":hover"))).toBe(true);
-
   await page.evaluate(() => {
     globalThis.document.body.style.cursor = "wait";
   });
   await expect(page.locator("html")).toHaveClass(/mflWaitHoverSuppressed/);
-  await expect.poll(() => probe.evaluate((node) => node.matches(":hover"))).toBe(false);
 
+  await probe.hover();
   const waiting = await hoverState(page);
-  expect(waiting.background).toBe("rgb(0, 0, 255)");
+  expect(waiting.hovered).toBe(true);
+  expect(waiting.background).toBe("rgb(255, 0, 0)");
   expect(waiting.transform).toBe("none");
+  expect(waiting.transitionDuration).toBe("0s");
 
   await page.evaluate(() => {
     globalThis.document.body.style.cursor = "";
   });
   await expect(page.locator("html")).not.toHaveClass(/mflWaitHoverSuppressed/);
+
+  await page.locator('#progressionPage .viewButton[data-view="contracts"]').click();
+  await expect(page).toHaveURL(/\/database\/contracts$/);
+  await expect(page.locator('#progressionPage .viewButton[data-view="contracts"]')).toHaveClass(/active/);
 });

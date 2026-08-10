@@ -6,3 +6,7 @@ interface Window {
   __mflReleaseUiRuntime?: { destroy?: () => void };
   __mflDatabaseStatsRuntime?: { sync?: () => void };
 }
+
+interface ParentNode {
+  querySelectorAll(selectors: ".mflStatsFilterButton"): NodeListOf<HTMLElement>;
+}

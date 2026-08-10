@@ -1,4 +1,5 @@
 [
+  ["v1.123.29", "Restore view clicks, suppress wait hover motion, and prime MFL Stats filters"],
   ["v1.123.28", "Block every hover state while the cursor is waiting"],
   ["v1.123.27", "Cache quick filters, compact MFL Stats controls, restore My Players order, and suppress wait hover"],
   ["v1.123.26", "Prime Database filters, preserve MFL Stats, cap search results, and unify table loading"],

@@ -1,9 +1,26 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.28");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.29");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
+  const MFL_STATS_FILTERS = Object.freeze([
+    ["all", "All"],
+    ["90-94", "90-94"],
+    ["legendary", "Legendary"],
+    ["85-89", "85-89"],
+    ["80-84", "80-84"],
+    ["rare", "Rare"],
+    ["75-79", "75-79"],
+    ["70-74", "70-74"],
+    ["uncommon", "Uncommon"],
+    ["65-69", "65-69"],
+    ["60-64", "60-64"],
+    ["limited", "Limited"],
+    ["55-59", "55-59"],
+    ["50-54", "50-54"],
+    ["common", "Common"],
+  ]);
   const VIEW_ORDER = Object.freeze({
     database: ["attributes", "contracts", "stats"],
     mfl: ["attributes", "stats"],
@@ -21,7 +38,6 @@
   let lastTablePage = "";
   let frame = 0;
   let observer = null;
-  let waitCursorSource = null;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -102,6 +118,33 @@
     if (newMintsInput instanceof HTMLInputElement) newMintsInput.checked = Boolean(cached.newMints);
   }
 
+  function primeMflStatsOverallFilters() {
+    const container = document.getElementById("mflStatsOverallFilters");
+    if (!(container instanceof HTMLElement)) return;
+    const expectedIds = MFL_STATS_FILTERS.map(([id]) => id);
+    const currentButtons = Array.from(container.querySelectorAll(".mflStatsFilterButton"));
+    const valid = currentButtons.length === expectedIds.length
+      && currentButtons.every((button, index) => String(button.dataset.filter || "") === expectedIds[index]);
+    if (valid) {
+      container.dataset.staticOverallFilters = "true";
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    MFL_STATS_FILTERS.forEach(([id, label], index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `mflStatsFilterButton${index === 0 ? " active" : ""}`;
+      button.dataset.filter = id;
+      button.dataset.mflStatsStatic = "true";
+      button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      button.textContent = label;
+      fragment.appendChild(button);
+    });
+    container.replaceChildren(fragment);
+    container.dataset.staticOverallFilters = "true";
+  }
+
   function syncViewButtons(pageName) {
     const order = VIEW_ORDER[pageName];
     const views = document.querySelector("#progressionPage .views");
@@ -123,6 +166,7 @@
   function primeTableChrome(pageName) {
     const normalized = normalizePageName(pageName);
     if (!VIEW_ORDER[normalized]) return;
+    primeMflStatsOverallFilters();
     syncQuickFilterLabels(normalized);
     applyCachedQuickFilters(normalized);
     syncViewButtons(normalized);
@@ -132,6 +176,7 @@
   function syncTableChrome() {
     frame = 0;
     if (destroyed) return;
+    primeMflStatsOverallFilters();
     const pageName = currentTablePage();
     if (!pageName) return;
     syncQuickFilterLabels(pageName);
@@ -156,36 +201,17 @@
     }
   }
 
-  function sourceHasWaitCursor(source) {
-    return source?.element instanceof Element
-      && source.element.isConnected
-      && elementHasWaitCursor(source.element, source.pseudoElement || null);
-  }
-
-  function rememberWaitCursorSource(target = null) {
-    const candidates = [
-      { element: target, pseudoElement: null },
-      { element: document.documentElement, pseudoElement: null },
-      { element: document.body, pseudoElement: null },
-      { element: document.body, pseudoElement: "::before" },
-    ];
-    const source = candidates.find(sourceHasWaitCursor) || null;
-    if (source) waitCursorSource = source;
-    return Boolean(source);
-  }
-
   function waitCursorActive(target = null) {
-    if (document.documentElement.classList.contains("mflInteractionBusy")) return true;
-    if (sourceHasWaitCursor(waitCursorSource)) return true;
-    waitCursorSource = null;
-    return rememberWaitCursorSource(target);
+    return document.documentElement.classList.contains("mflInteractionBusy")
+      || elementHasWaitCursor(target)
+      || elementHasWaitCursor(document.documentElement)
+      || elementHasWaitCursor(document.body)
+      || elementHasWaitCursor(document.body, "::before");
   }
 
   function syncWaitHover(target = null) {
     if (destroyed) return;
-    const active = waitCursorActive(target);
-    if (!active) waitCursorSource = null;
-    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, active);
+    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive(target));
   }
 
   function installStyles() {
@@ -209,10 +235,6 @@
         white-space: nowrap !important;
       }
 
-      html.${WAIT_HOVER_CLASS} body * {
-        pointer-events: none !important;
-      }
-
       html.${WAIT_HOVER_CLASS} body *,
       html.${WAIT_HOVER_CLASS} body *::before,
       html.${WAIT_HOVER_CLASS} body *::after {
@@ -226,14 +248,9 @@
         transform: none !important;
       }
 
-      html.${WAIT_HOVER_CLASS} body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: 2147483647;
-        background: transparent;
-        pointer-events: auto !important;
-        cursor: wait !important;
+      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *,
+      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *::before,
+      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *::after {
         transition: none !important;
         animation: none !important;
       }
@@ -258,11 +275,13 @@
   }
 
   function onPopState() {
+    primeMflStatsOverallFilters();
     primeTableChrome(tablePageFromPath());
     syncWaitHover();
   }
 
   installStyles();
+  primeMflStatsOverallFilters();
   primeTableChrome(currentTablePage());
   syncWaitHover();
 
@@ -292,7 +311,6 @@
     frame = 0;
     observer?.disconnect();
     observer = null;
-    waitCursorSource = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
@@ -304,6 +322,7 @@
     version: VERSION,
     sync: syncTableChrome,
     prime: primeTableChrome,
+    primeMflStatsOverallFilters,
     destroy,
   });
 })();
