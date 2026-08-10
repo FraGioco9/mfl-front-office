@@ -1,4 +1,4 @@
 {
-  "version": "1.123.22",
-  "description": "Show Watchlist and table chrome immediately, reveal Evaluation controls, and search the full database"
+  "version": "1.123.23",
+  "description": "Fix Discount Rate dismissal, global search scope, Database first paint, and Watchlist/My Players routing"
 }
