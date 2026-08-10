@@ -64,7 +64,10 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
-  if (runtimeWindow.__mflAppStartPromise) await runtimeWindow.__mflAppStartPromise;
+  const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
+  if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
+    await runtimeWindow.__mflAppStartPromise;
+  }
   runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
