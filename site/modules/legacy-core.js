@@ -5838,7 +5838,7 @@ function buildPlayerSearchEntryFromCompactRow(row, columns) {
     nationalityDisplay,
     positionsDisplay,
     overall: Number(compactSearchValue(row, columns, "overall") || 0),
-    retired: Number(compactSearchValue(row, columns, "retirement_years")) === 0,
+    retired: compactSearchValue(row, columns, "retirement_years") !== null\n      && Number(compactSearchValue(row, columns, "retirement_years")) === 0,
   };
 }
 
