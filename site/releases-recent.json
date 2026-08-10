@@ -1,47 +1,186 @@
 [
-  ["v1.123.21", "Stabilize Evaluation loading, close tooltips, reduce text, and search the full database"],
-  ["v1.123.20", "Stabilize Stats and Evaluation, refine typography, and keep live search results available"],
-  ["v1.123.19", "Preserve Database Stats, stabilize first paint, and show complete live search results"],
-  ["v1.123.18", "Keep route contents stable, speed up search, exclude retired evaluations, and stabilize font loading"],
-  ["v1.123.17", "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"],
-  ["v1.123.16", "Default to hiding MFL players, show locked pages immediately, and fix custom Database Stats totals"],
-  ["v1.123.15", "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"],
-  ["v1.123.14", "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"],
-  ["v1.123.13", "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"],
-  ["v1.123.12", "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"],
-  ["v1.123.11", "Keep static chrome fixed and stabilize Database Stats routing, retired totals, Custom filters, and saved view state"],
-  ["v1.123.10", "Restore Database Stats loading, counts, saved view state, and complete Changelog history"],
-  ["v1.123.9", "Stabilize opted-in and stats first paint, correct active-player ownership, and remove stale Changelog source"],
-  ["v1.123.8", "Restore stable loading completion, hide player totals while loading, and fix stats first paint and active counts"],
-  ["v1.123.6", "Hide unauthorized Progression before first paint and hide pagination while player data loads"],
-  ["v1.123.5", "Retry loading interaction lock from the stable v1.123.3 baseline without global fetch tracking"],
-  ["v1.123.3", "Render header, sidebar, footer, and destination page chrome together on refresh"],
-  ["v1.123.2", "Render the complete Changelog atomically and remove stale first-paint version conflicts"],
-  ["v1.123.1", "Restore the known-good direct application startup path after the client-core refactor"],
-  ["v1.123.0", "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"],
-  ["v1.122.0", "Remove legacy loading, JSON compatibility, and dead runtime code"],
-  ["v1.121.0", "Query the runtime SQLite database for every site data request"],
-  ["v1.120.48", "Preload MFL Stats filters and restrict Database Stats transitions to Apply"],
-  ["v1.120.47", "Select MFL immediately and limit Stats bar transitions to final or applied renders"],
-  ["v1.120.46", "Animate Database Stats bars only after applying Custom filters"],
-  ["v1.120.45", "Use current season MFL/USD for the Discount Rate and align the Evaluation title"],
-  ["v1.120.44", "Show the Evaluation Load button immediately for opted-in users"],
-  ["v1.120.43", "Show Evaluation static controls immediately with the page"],
-  ["v1.120.42", "Restore the Evaluation Discount Rate and its tooltip"],
-  ["v1.120.41", "Bound optional startup waits to prevent infinite local loading"],
-  ["v1.120.40", "Support Windows line endings in the local startup chain"],
-  ["v1.120.39", "Use one stable asynchronous startup chain locally and on Vercel"],
-  ["v1.120.38", "Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations"],
-  ["v1.120.37", "Restore static startup content, full MFL Stats, and the live Discount Rate"],
-  ["v1.120.36", "Remove remaining first-paint version conflicts and restore Evaluation loading"],
-  ["v1.120.35", "Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip"],
-  ["v1.120.34", "Centralize release versioning and prevent legacy footer overrides"],
-  ["v1.120.33", "Clarify the Evaluation Discount Rate tooltip"],
-  ["v1.120.32", "Recalculate the Evaluation Discount Rate from a fresh request on every load"],
-  ["v1.120.31", "Refresh the Evaluation Discount Rate from live season ratios"],
-  ["v1.120.30", "Restore stable site loading after Discount Rate changes"],
-  ["v1.120.3", "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"],
-  ["v1.120.2", "Use a custom Overall tooltip and exclude MFL wallets from Database Stats"],
-  ["v1.120.1", "Keep Database Stats isolated from table rendering and refine view controls"],
-  ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"]
+  [
+    "v1.123.22",
+    "Show Watchlist and table chrome immediately, reveal Evaluation controls, and search the full database"
+  ],
+  [
+    "v1.123.21",
+    "Stabilize Evaluation loading, close tooltips, reduce text, and search the full database"
+  ],
+  [
+    "v1.123.20",
+    "Stabilize Stats and Evaluation, refine typography, and keep live search results available"
+  ],
+  [
+    "v1.123.19",
+    "Preserve Database Stats, stabilize first paint, and show complete live search results"
+  ],
+  [
+    "v1.123.18",
+    "Keep route contents stable, speed up search, exclude retired evaluations, and stabilize font loading"
+  ],
+  [
+    "v1.123.17",
+    "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"
+  ],
+  [
+    "v1.123.16",
+    "Default to hiding MFL players, show locked pages immediately, and fix custom Database Stats totals"
+  ],
+  [
+    "v1.123.15",
+    "Hide unauthorized Progression before first paint, restore Opt In after opt-out, and block wait-cursor clicks"
+  ],
+  [
+    "v1.123.14",
+    "Make Home and Stats first paint static, stabilize Database card sizing, and fix MFL Stats navigation"
+  ],
+  [
+    "v1.123.13",
+    "Stabilize Home first paint and Stats interactions, and load MFL Stats from a compact summary"
+  ],
+  [
+    "v1.123.12",
+    "Keep Database Stats stable through deferred startup, Custom edits, and Supabase view restoration"
+  ],
+  [
+    "v1.123.11",
+    "Keep static chrome fixed and stabilize Database Stats routing, retired totals, Custom filters, and saved view state"
+  ],
+  [
+    "v1.123.10",
+    "Restore Database Stats loading, counts, saved view state, and complete Changelog history"
+  ],
+  [
+    "v1.123.9",
+    "Stabilize opted-in and stats first paint, correct active-player ownership, and remove stale Changelog source"
+  ],
+  [
+    "v1.123.8",
+    "Restore stable loading completion, hide player totals while loading, and fix stats first paint and active counts"
+  ],
+  [
+    "v1.123.6",
+    "Hide unauthorized Progression before first paint and hide pagination while player data loads"
+  ],
+  [
+    "v1.123.5",
+    "Retry loading interaction lock from the stable v1.123.3 baseline without global fetch tracking"
+  ],
+  [
+    "v1.123.3",
+    "Render header, sidebar, footer, and destination page chrome together on refresh"
+  ],
+  [
+    "v1.123.2",
+    "Render the complete Changelog atomically and remove stale first-paint version conflicts"
+  ],
+  [
+    "v1.123.1",
+    "Restore the known-good direct application startup path after the client-core refactor"
+  ],
+  [
+    "v1.123.0",
+    "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"
+  ],
+  [
+    "v1.122.0",
+    "Remove legacy loading, JSON compatibility, and dead runtime code"
+  ],
+  [
+    "v1.121.0",
+    "Query the runtime SQLite database for every site data request"
+  ],
+  [
+    "v1.120.48",
+    "Preload MFL Stats filters and restrict Database Stats transitions to Apply"
+  ],
+  [
+    "v1.120.47",
+    "Select MFL immediately and limit Stats bar transitions to final or applied renders"
+  ],
+  [
+    "v1.120.46",
+    "Animate Database Stats bars only after applying Custom filters"
+  ],
+  [
+    "v1.120.45",
+    "Use current season MFL/USD for the Discount Rate and align the Evaluation title"
+  ],
+  [
+    "v1.120.44",
+    "Show the Evaluation Load button immediately for opted-in users"
+  ],
+  [
+    "v1.120.43",
+    "Show Evaluation static controls immediately with the page"
+  ],
+  [
+    "v1.120.42",
+    "Restore the Evaluation Discount Rate and its tooltip"
+  ],
+  [
+    "v1.120.41",
+    "Bound optional startup waits to prevent infinite local loading"
+  ],
+  [
+    "v1.120.40",
+    "Support Windows line endings in the local startup chain"
+  ],
+  [
+    "v1.120.39",
+    "Use one stable asynchronous startup chain locally and on Vercel"
+  ],
+  [
+    "v1.120.38",
+    "Stabilize Evaluation loading, first-paint MFL views, and Database Stats animations"
+  ],
+  [
+    "v1.120.37",
+    "Restore static startup content, full MFL Stats, and the live Discount Rate"
+  ],
+  [
+    "v1.120.36",
+    "Remove remaining first-paint version conflicts and restore Evaluation loading"
+  ],
+  [
+    "v1.120.35",
+    "Remove legacy version conflicts and restore the Evaluation Discount Rate tooltip"
+  ],
+  [
+    "v1.120.34",
+    "Centralize release versioning and prevent legacy footer overrides"
+  ],
+  [
+    "v1.120.33",
+    "Clarify the Evaluation Discount Rate tooltip"
+  ],
+  [
+    "v1.120.32",
+    "Recalculate the Evaluation Discount Rate from a fresh request on every load"
+  ],
+  [
+    "v1.120.31",
+    "Refresh the Evaluation Discount Rate from live season ratios"
+  ],
+  [
+    "v1.120.30",
+    "Restore stable site loading after Discount Rate changes"
+  ],
+  [
+    "v1.120.3",
+    "Restore complete Changelog history, latest footer version, and the custom Overall tooltip"
+  ],
+  [
+    "v1.120.2",
+    "Use a custom Overall tooltip and exclude MFL wallets from Database Stats"
+  ],
+  [
+    "v1.120.1",
+    "Keep Database Stats isolated from table rendering and refine view controls"
+  ],
+  [
+    "v1.120.0",
+    "Add Database Stats with retirement counts and active-player distributions"
+  ]
 ]
