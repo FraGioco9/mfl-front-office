@@ -34,6 +34,26 @@ test("Discount Rate tooltip always dismisses after pointer focus leaves it", asy
   const tooltip = page.locator("#evaluationDiscountTooltipPortal");
   const search = page.locator("#evaluationSearchInput");
 
+  await page.evaluate(() => {
+    const eventNames = ["pointerover", "pointermove", "mouseover", "mousemove", "scroll", "blur", "focusin", "focusout"];
+    const events = {};
+    for (const eventName of eventNames) {
+      events[eventName] = { count: 0, metricTargets: 0, lastTarget: "" };
+      globalThis.addEventListener(eventName, (event) => {
+        const bucket = events[eventName];
+        bucket.count += 1;
+        const target = event.target;
+        if (target instanceof globalThis.Element) {
+          bucket.lastTarget = `${target.tagName}.${String(target.className || "")}`;
+          if (target.closest(".evaluationMetric.evaluationDiscountRate")) bucket.metricTargets += 1;
+        } else {
+          bucket.lastTarget = String(target?.constructor?.name || "");
+        }
+      }, true);
+    }
+    globalThis.__mflTooltipHoverDiagnostics = events;
+  });
+
   await metric.hover();
   const diagnostics = await page.evaluate(() => {
     const metric = globalThis.document.querySelector(".evaluationMetric.evaluationDiscountRate");
@@ -49,6 +69,8 @@ test("Discount Rate tooltip always dismisses after pointer focus leaves it", asy
     return {
       controller: Boolean(globalThis.__mflDiscountTooltipController),
       controllerVersion: globalThis.__mflDiscountTooltipController?.version || "",
+      mouseRuntime: Boolean(globalThis.__mflDiscountTooltipMouseRuntime),
+      mouseRuntimeVersion: globalThis.__mflDiscountTooltipMouseRuntime?.version || "",
       busy: globalThis.document.documentElement.classList.contains("mflInteractionBusy"),
       bodyPage: globalThis.document.body?.dataset.page || "",
       path: globalThis.location.pathname,
@@ -56,6 +78,7 @@ test("Discount Rate tooltip always dismisses after pointer focus leaves it", asy
       pointerEvents: metric ? globalThis.getComputedStyle(metric).pointerEvents : "",
       hitClass: hit instanceof globalThis.Element ? hit.className : "",
       hitMetric: Boolean(hit instanceof globalThis.Element && hit.closest(".evaluationMetric.evaluationDiscountRate")),
+      events: globalThis.__mflTooltipHoverDiagnostics,
       beforeDirect,
       afterDirect,
     };
