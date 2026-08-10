@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.29";
+  const STATIC_RELEASE_VERSION = "1.123.30";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -437,7 +437,6 @@
     const selectionInput = document.createElement("input");
     const selectionCol = document.createElement("col");
     const colFragment = document.createDocumentFragment();
-
     selectionHeader.className = "selectionCell";
     selectionInput.id = "selectVisiblePlayersInput";
     selectionInput.type = "checkbox";
@@ -747,6 +746,9 @@
     function interactionShouldBeBlocked(event) {
       if (activeTokens.size) return true;
       const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("#progressionPage .viewButton[data-view], #databaseStatsPage .viewButton[data-view], #mflStatsPage .viewButton[data-view]")) {
+        return false;
+      }
       return elementHasWaitCursor(target)
         || elementHasWaitCursor(document.documentElement)
         || elementHasWaitCursor(document.body)

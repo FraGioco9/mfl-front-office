@@ -1,4 +1,4 @@
 {
-  "version": "1.123.29",
-  "description": "Restore view clicks, suppress wait hover motion, and prime MFL Stats filters"
+  "version": "1.123.30",
+  "description": "Restore Database and Progression view-button clicks outside real busy states"
 }
