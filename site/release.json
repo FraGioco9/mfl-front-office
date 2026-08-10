@@ -1,4 +1,4 @@
 {
-  "version": "1.123.28",
-  "description": "Block every hover state while the cursor is waiting"
+  "version": "1.123.29",
+  "description": "Restore view clicks, suppress wait hover motion, and prime MFL Stats filters"
 }
