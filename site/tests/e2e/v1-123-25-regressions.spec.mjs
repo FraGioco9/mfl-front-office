@@ -72,9 +72,11 @@ test("legacy table loading reuses the one Loading players row", async ({ page })
     globalThis.eval("showTableBusyState()");
   });
 
-  await expect(page.getByText("Loading players...", { exact: true })).toHaveCount(1);
-  await expect(page.locator("#tableBody .staticTableLoadingCell")).toHaveText("Loading players...");
+  const loadingCell = page.locator("#tableBody .staticTableLoadingCell");
+  await expect(loadingCell).toHaveCount(1);
+  await expect(loadingCell).toHaveText("Loading players...");
   await expect(page.locator("#emptyState")).toBeHidden();
+  await expect(page.locator("#emptyState")).toHaveText("");
 });
 
 test("typed global search uses full player club and agent results instead of recent-only state", async ({ page }) => {
