@@ -45,8 +45,9 @@ test("wait cursors suppress hover transitions animations and hover transforms", 
   const runtime = await read("database-static-filter-runtime.js");
 
   assert.match(runtime, /const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed"/);
-  assert.match(runtime, /document\.documentElement\.classList\.toggle\(WAIT_HOVER_CLASS, waitCursorActive\(target\)\)/);
+  assert.match(runtime, /const active = waitCursorActive\(target\)/);
+  assert.match(runtime, /document\.documentElement\.classList\.toggle\(WAIT_HOVER_CLASS, active\)/);
   assert.match(runtime, /html\.\$\{WAIT_HOVER_CLASS\} body \*[\s\S]*transition: none !important;[\s\S]*animation: none !important/);
   assert.match(runtime, /html\.\$\{WAIT_HOVER_CLASS\} body \*:hover[\s\S]*transform: none !important/);
-  assert.match(runtime, /elementHasWaitCursor\(document\.body, "::before"\)/);
+  assert.match(runtime, /pseudoElement: "::before"/);
 });
