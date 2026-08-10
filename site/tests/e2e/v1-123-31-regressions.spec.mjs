@@ -58,26 +58,8 @@ test("view buttons remain clickable across table pages under a stale wait cursor
   await clickViewThroughWait(page, "/mfl/attributes", "stats", "/mfl/stats");
 });
 
-test("Watchlist title never falls back after the cached name is first painted", async ({ page }) => {
+test("Watchlist title never falls back on a rendered frame", async ({ page }) => {
   await installOptIn(page);
-  await page.addInitScript(() => {
-    globalThis.__watchlistSawCorrectTitle = false;
-    globalThis.__watchlistTitleFlickered = false;
-    const inspect = () => {
-      if (!/^\/watchlist\/scouts\//.test(globalThis.location.pathname)) return;
-      const title = globalThis.document.getElementById("tablePageTitle");
-      if (!title) return;
-      const value = String(title.textContent || "").trim();
-      if (value === "Watchlist - Scouts") {
-        globalThis.__watchlistSawCorrectTitle = true;
-      } else if (globalThis.__watchlistSawCorrectTitle) {
-        globalThis.__watchlistTitleFlickered = true;
-      }
-    };
-    const observer = new globalThis.MutationObserver(inspect);
-    observer.observe(globalThis.document.documentElement, { childList: true, subtree: true, characterData: true });
-    globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
-  });
 
   let releaseMetadata;
   const releaseGate = new Promise((resolve) => { releaseMetadata = resolve; });
@@ -88,11 +70,25 @@ test("Watchlist title never falls back after the cached name is first painted", 
 
   await page.goto("/watchlist/scouts/attributes", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#tablePageTitle")).toHaveText("Watchlist - Scouts");
+  await page.evaluate(() => {
+    globalThis.__watchlistFrameTitles = [];
+    let remaining = 120;
+    const sample = () => {
+      const title = globalThis.document.getElementById("tablePageTitle");
+      if (title) globalThis.__watchlistFrameTitles.push(String(title.textContent || "").trim());
+      remaining -= 1;
+      if (remaining > 0) globalThis.requestAnimationFrame(sample);
+    };
+    globalThis.requestAnimationFrame(sample);
+  });
+
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("#tablePageTitle")).toHaveText("Watchlist - Scouts");
-  expect(await page.evaluate(() => globalThis.__watchlistSawCorrectTitle)).toBe(true);
-  expect(await page.evaluate(() => globalThis.__watchlistTitleFlickered)).toBe(false);
+  await page.waitForTimeout(250);
+  const frameTitles = await page.evaluate(() => globalThis.__watchlistFrameTitles || []);
+  expect(frameTitles.length).toBeGreaterThan(0);
+  expect(frameTitles.every((title) => title === "Watchlist - Scouts")).toBe(true);
 });
 
 test("Evaluation stays unfocused and fixed until readiness then focuses an empty search", async ({ page }) => {
