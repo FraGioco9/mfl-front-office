@@ -1,4 +1,5 @@
 [
+  ["v1.123.20", "Stabilize Stats and Evaluation, refine typography, and keep live search results available"],
   ["v1.123.19", "Preserve Database Stats, stabilize first paint, and show complete live search results"],
   ["v1.123.18", "Keep route contents stable, speed up search, exclude retired evaluations, and stabilize font loading"],
   ["v1.123.17", "Resolve theme symbols before paint, open Database on Attributes, and suppress wait-state interactions"],

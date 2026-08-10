@@ -200,8 +200,7 @@
     }
 
     function show(metric) {
-      if (!(metric instanceof HTMLElement)
-          || !document.body?.classList.contains("evaluationDiscountRateReady")) return;
+      if (!(metric instanceof HTMLElement)) return;
       const text = String(metric.dataset.tooltip || "").trim();
       if (!text) return;
       if (hideTimer) {

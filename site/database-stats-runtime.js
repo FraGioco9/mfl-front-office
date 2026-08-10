@@ -76,6 +76,11 @@
         color: var(--text);
         font: inherit;
       }
+      #databaseStatsPage .mflStatsHistogram {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
       #databaseStatsPage .mflStatsHistogramBar,
       #databaseStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
