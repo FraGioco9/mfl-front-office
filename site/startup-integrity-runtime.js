@@ -251,7 +251,7 @@
       if (!portal) return;
       portal.classList.remove("visible");
       if (immediate) {
-        portal.remove();
+        portal?.remove();
         portal = null;
         return;
       }
