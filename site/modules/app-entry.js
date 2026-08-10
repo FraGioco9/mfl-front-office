@@ -18,7 +18,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/global-search-runtime.js",
-  "/discount-tooltip-stability-runtime.js",
   "/watchlist-route-ui-runtime.js",
   "/database-stats-refinement-runtime.js",
   "/v1-120-10-runtime.js",
