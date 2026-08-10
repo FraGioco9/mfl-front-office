@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.25");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.26");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -576,7 +576,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.25");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.26");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -596,8 +596,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.25");
-  expect(rows[0][0]).toBe("v1.123.25");
+  expect(metadata.version).toBe("1.123.26");
+  expect(rows[0][0]).toBe("v1.123.26");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -815,9 +815,6 @@ test("typed global and Evaluation search results update before their requests fi
             [201, "Roma Fresh Player", 90, "Italy", "ST", null],
             [102, "Roma Player 2", 89, "Italy", "ST", null],
             [103, "Roma Player 3", 88, "Italy", "ST", null],
-            [104, "Roma Player 4", 87, "Italy", "ST", null],
-            [105, "Roma Player 5", 86, "Italy", "ST", null],
-            [106, "Roma Player 6", 85, "Italy", "ST", null],
           ],
         },
         agents: {
@@ -841,10 +838,7 @@ test("typed global and Evaluation search results update before their requests fi
         rows: [
           [101, "Roma Player 1", 90, "Italy", "ST", null],
           [102, "Roma Player 2", 89, "Italy", "ST", null],
-          [103, "Roma Player 3", 88, "Italy", "ST", null],
-          [104, "Roma Player 4", 87, "Italy", "ST", null],
-          [105, "Roma Player 5", 86, "Italy", "ST", null],
-          [106, "Roma Player 6", 85, "Italy", "ST", null]
+          [103, "Roma Player 3", 88, "Italy", "ST", null]
         ]
       },
       agents: {
@@ -860,15 +854,18 @@ test("typed global and Evaluation search results update before their requests fi
     return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "roma";
   });
   await page.locator("#playerSearchInput").fill("roma");
+  const globalResults = page.locator("#playerSearchResults > .searchResult");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Player 1");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
+  await expect(globalResults).toHaveCount(5);
   releaseGlobalSearch();
   const completedGlobalResponse = await globalResponse;
   expect(new URL(completedGlobalResponse.url()).searchParams.get("type")).toBe("all");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Fresh Player");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
+  await expect(globalResults).toHaveCount(5);
 
   await page.locator("#closeSearchButton").click();
   await page.goto("/evaluation");

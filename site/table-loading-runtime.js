@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.26");
   const LOADING_TEXT = "Loading players...";
   const previous = window.__mflTableLoadingRuntime;
   previous?.destroy?.();
@@ -32,6 +32,18 @@
     const { head, body, empty } = tableElements();
     if (!head || !body) return false;
 
+    const existingCell = body.querySelector(":scope > .staticTableLoadingRow > .staticTableLoadingCell");
+    if (existingCell instanceof HTMLTableCellElement) {
+      existingCell.colSpan = Math.max(1, head.rows[0]?.cells.length || 1);
+      existingCell.textContent = LOADING_TEXT;
+      body.dataset.staticLoading = "true";
+      if (empty) {
+        empty.hidden = true;
+        empty.textContent = "";
+      }
+      return true;
+    }
+
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     row.className = "staticTableLoadingRow";
@@ -59,8 +71,7 @@
       && !empty.hidden
       && String(empty.textContent || "").trim() === LOADING_TEXT,
     );
-    const loadingRow = body.querySelector(":scope > .staticTableLoadingRow");
-    if (legacyLoadingVisible || loadingRow) show();
+    if (legacyLoadingVisible) show();
   }
 
   function schedule() {
@@ -83,13 +94,18 @@
         showTableBusyState = wrapped;
       })();`);
     } catch {
-      // The observer still collapses duplicate loading states if the legacy
-      // binding is no longer globally patchable in a future core.
+      // The observer still collapses a legacy loading state before it can paint
+      // if a future core stops exposing the binding used by the bridge.
     }
-    schedule();
+    sync();
   }
 
-  observer = new MutationObserver(schedule);
+  observer = new MutationObserver(() => {
+    // MutationObserver callbacks run before paint. Collapse the legacy empty
+    // state immediately rather than waiting one animation frame and flashing a
+    // second visual version of "Loading players...".
+    sync();
+  });
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
@@ -109,9 +125,9 @@
   window.__mflTableLoadingRuntime = Object.freeze({
     version: VERSION,
     show,
-    sync: schedule,
+    sync,
     installLegacyBridge,
     destroy,
   });
-  schedule();
+  sync();
 })();

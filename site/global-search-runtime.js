@@ -1,13 +1,16 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.26");
+  const MAX_RESULT_BOXES = 5;
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
 
   let controller = null;
   let sequence = 0;
   let destroyed = false;
+  let resultsObserver = null;
+  let observedResults = null;
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -20,15 +23,41 @@
     return input instanceof HTMLInputElement ? input : null;
   }
 
+  function searchResults() {
+    const results = document.getElementById("playerSearchResults");
+    return results instanceof HTMLElement ? results : null;
+  }
+
+  function capResultBoxes() {
+    const results = searchResults();
+    if (!results) return;
+    Array.from(results.querySelectorAll(":scope > .searchResult"))
+      .slice(MAX_RESULT_BOXES)
+      .forEach((result) => result.remove());
+  }
+
+  function observeResultBoxes() {
+    const results = searchResults();
+    if (!results || results === observedResults) return;
+    resultsObserver?.disconnect();
+    observedResults = results;
+    resultsObserver = new MutationObserver(capResultBoxes);
+    resultsObserver.observe(results, { childList: true });
+    capResultBoxes();
+  }
+
   function renderCurrentResults() {
     try {
       if (typeof window.renderSearchResultsNow === "function") {
         window.renderSearchResultsNow();
-        return;
+      } else {
+        window.eval("if (typeof renderSearchResultsNow === 'function') renderSearchResultsNow();");
       }
-      window.eval("if (typeof renderSearchResultsNow === 'function') renderSearchResultsNow();");
     } catch (error) {
       console.warn("Could not render global search results.", error);
+    } finally {
+      observeResultBoxes();
+      capResultBoxes();
     }
   }
 
@@ -132,18 +161,23 @@
   }
 
   document.addEventListener("input", onInput, true);
+  observeResultBoxes();
 
   function destroy() {
     destroyed = true;
     sequence += 1;
     controller?.abort();
     controller = null;
+    resultsObserver?.disconnect();
+    resultsObserver = null;
+    observedResults = null;
     document.removeEventListener("input", onInput, true);
   }
 
   window.__mflGlobalSearchRuntime = Object.freeze({
     version: VERSION,
     search: searchDatabase,
+    cap: capResultBoxes,
     destroy,
   });
 })();

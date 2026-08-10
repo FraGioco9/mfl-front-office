@@ -1,9 +1,10 @@
 (() => {
-  const FEATURE_VERSION = "1.120.18";
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.123.25");
+  const FEATURE_VERSION = "1.123.26";
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.123.26");
   const DATABASE_PATH = /^\/database(?:\/|$)/i;
+  const MFL_PATH = /^\/mfl(?:\/|$)/i;
   const STATS_PATH = /^\/database\/stats\/?$/i;
-  const WITHOUT_DATABASE_STATS_PATH = /^\/(?:watchlists?|my-players|myplayers|progression)(?:\/|$)/i;
+  const WITHOUT_SHARED_STATS_PATH = /^\/(?:watchlists?|my-players|myplayers|progression)(?:\/|$)/i;
 
   window.__mflReleaseVersion = RELEASE_VERSION;
 
@@ -54,6 +55,10 @@
 
   function isDatabaseContext() {
     return DATABASE_PATH.test(currentPath());
+  }
+
+  function isMflContext() {
+    return MFL_PATH.test(currentPath());
   }
 
   function openStats(event) {
@@ -114,14 +119,32 @@
     return button;
   }
 
-  function removeStatsFromExcludedViews() {
-    if (!WITHOUT_DATABASE_STATS_PATH.test(currentPath())) return;
-    document.querySelectorAll('#progressionPage .views .viewButton[data-view="stats"]')
-      .forEach((button) => button.remove());
+  function syncSharedStatsVisibility() {
+    const sharedStatsButtons = document.querySelectorAll('#progressionPage .views .viewButton[data-view="stats"]');
+    if (WITHOUT_SHARED_STATS_PATH.test(currentPath())) {
+      sharedStatsButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        button.hidden = true;
+        button.setAttribute("aria-hidden", "true");
+      });
+      return;
+    }
+
+    if (isMflContext()) {
+      sharedStatsButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        button.hidden = false;
+        button.removeAttribute("aria-hidden");
+      });
+    }
   }
 
   function syncStatsButtons() {
-    removeStatsFromExcludedViews();
+    // The shared Stats button is static HTML and is also used by MFL. Never
+    // remove it from the DOM when another page does not allow Stats; hiding it
+    // preserves the legacy click binding so it is immediately available again
+    // when the user enters /mfl.
+    syncSharedStatsVisibility();
     if (!isDatabaseContext()) return;
     document.querySelectorAll("#progressionPage .views, #databaseStatsPage .views")
       .forEach(ensureButtonInViews);

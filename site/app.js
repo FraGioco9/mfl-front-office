@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.25";
+  const STATIC_RELEASE_VERSION = "1.123.26";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -437,6 +437,7 @@
     const myPlayersOptInButton = document.querySelector("#myPlayersOptInButton");
     const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
     const watchlistButtonText = document.querySelector("#watchlistButtonText");
+    const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
 
     document.body.dataset.page = route.pageName;
     document.body.classList.toggle("guest", !storedAccess);
@@ -465,6 +466,9 @@
       if (showWatchlistSwitcher && watchlistButtonText instanceof HTMLElement) {
         watchlistButtonText.textContent = storedWatchlistName(window.location.pathname) || "-";
       }
+    }
+    if (hideMflPlayersFilter instanceof HTMLElement) {
+      hideMflPlayersFilter.hidden = lockedRoute || route.pageName !== "database";
     }
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
