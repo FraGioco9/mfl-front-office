@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.21");
+  assert.equal(release.version, "1.123.22");
   assert.ok(release.description.length > 20);
 });
 
@@ -23,6 +23,18 @@ test("application core keeps the known-good direct startup path", async () => {
   assert.doesNotMatch(bridge, /document\.(open|write|close)\s*\(/);
 });
 
+test("static shell resolves Watchlist names, table headers, and loading pagination before data", async () => {
+  const bridge = await read("app.js");
+  const index = await read("index.html");
+  assert.match(bridge, /const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:"/);
+  assert.match(bridge, /function storedWatchlistTitle\(pathname\)/);
+  assert.match(bridge, /route\.title = storedWatchlistTitle\(window\.location\.pathname\)/);
+  assert.match(bridge, /function primeStaticTableHeader\(route\)/);
+  assert.match(bridge, /tableHead\.dataset\.staticHeader = "true"/);
+  assert.match(bridge, /primeStaticTableHeader\(route\)/);
+  assert.match(index, /html:not\(\[data-mfl-ready="true"\]\) #progressionPage nav\.pager/);
+});
+
 test("nested routes load the module entry from the site root", async () => {
   const bridge = await read("app.js");
   assert.match(bridge, /new URL\("\/modules\/app-entry\.js", window\.location\.origin\)/);
@@ -32,7 +44,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.21"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.22"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
@@ -207,7 +219,7 @@ test("Changelog canonical data preserves the accepted 1.123, 1.121 and 1.120 his
   const versions = recent.map((entry) => entry[0]);
   assert.doesNotMatch(index, /1\.119\.29/);
   assert.match(index, /<ol class="changelogList" hidden data-history-loading="true"><\/ol>/);
-  for (const version of ["v1.123.21", "v1.123.20", "v1.123.19", "v1.123.18", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
+  for (const version of ["v1.123.22", "v1.123.21", "v1.123.20", "v1.123.19", "v1.123.18", "v1.123.15", "v1.123.14", "v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0"]) {
     assert.ok(versions.includes(version), `missing ${version}`);
   }
   assert.equal(new Set(versions).size, versions.length);
@@ -311,7 +323,7 @@ test("typed search renders immediately, requests all categories, reuses results,
   assert.match(runtime, /if \(type === "players"\) \{\s*state\.evaluationSearchIndex = playerEntries;\s*\} else \{\s*state\.searchIndex = playerEntries;/);
   assert.match(runtime, /signal: controller\.signal/);
   assert.match(evaluationHandler, /renderEvaluationSearchResults\(\);[\s\S]*requestDatabaseSearch\(query, "players"\)/);
-  assert.match(globalHandler, /renderSearchResultsNow\(\);[\s\S]*requestDatabaseSearch\(query, "all"\)/);
+  assert.match(globalHandler, /renderSearchResultsNow\(\);[\s\S]*requestDatabaseSearch\(query, "all", \{ force: Boolean\(query\) \}\)/);
   assert.doesNotMatch(evaluationHandler, /setTimeout/);
   assert.doesNotMatch(globalHandler, /setTimeout/);
   assert.match(views, /if \(type === "all"\) \{[\s\S]*players: playerSearchRows\(query, limit\),[\s\S]*agents: agentSearchRows\(query, limit\),[\s\S]*clubs: clubSearchRows\(query, limit\)/);
@@ -350,8 +362,10 @@ test("Evaluation waits for stable layout, uses the smaller font scale, and close
   assert.match(index, /html \{\s*font-size-adjust: 0\.500;/);
   assert.match(styles, /font-size-adjust: 0\.500/);
   assert.match(index, /data-initial-page="evaluation"[^\n]+#homePage[\s\S]*display: none !important;[\s\S]*data-initial-page="evaluation"[^\n]+#evaluationPage[\s\S]*display: block !important;/);
-  assert.match(index, /data-initial-page="evaluation"[^\n]+:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*[\s\S]*visibility: hidden !important;/);
-  assert.match(evaluationChrome, /html:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*/);
+  assert.doesNotMatch(index, /data-initial-page="evaluation"[^\n]+:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*/);
+  assert.doesNotMatch(evaluationChrome, /html:not\(\.mflEvaluationReady\)[^\n]+#evaluationPage > \*/);
+  assert.match(evaluationChrome, /\[titleRow, topBar, searchGroup, search, metrics\][\s\S]*visibility", "visible"/);
+  assert.match(runtime, /evaluationRouteLoading[^\n]+#evaluationPage #evaluationPanel/);
   assert.match(runtime, /window\.__mflInteractionBusy\?\.begin\?\.\("evaluation-loading"\)/);
   assert.match(runtime, /await finishEvaluationReadiness\(\)/);
   assert.match(runtime, /document\.fonts\?\.ready/);
