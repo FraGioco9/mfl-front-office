@@ -9,7 +9,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 
 test("v1.123.31 stale-wait compatibility remains while real busy tokens own click locking", async () => {
   const bridge = await read("app.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.33"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.34"/);
   assert.match(bridge, /function interactionShouldBeBlocked\(\)/);
   assert.match(bridge, /return activeTokens\.size > 0;/);
   assert.doesNotMatch(bridge, /function elementHasWaitCursor/);
