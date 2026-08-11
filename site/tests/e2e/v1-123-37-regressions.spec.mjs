@@ -70,3 +70,16 @@ test("all five recent global-search results keep their real navigation handlers"
     await expect(page).toHaveURL(new RegExp(`/players/${playerId}$`));
   }
 });
+
+test("global search input is focused as soon as search opens", async ({ page }) => {
+  await page.goto("/");
+  await waitForArchitecture(page);
+
+  const input = page.locator("#playerSearchInput");
+  await page.locator("#openSearchButton").click();
+  await expect(input).toBeVisible();
+  await expect(input).toBeFocused();
+
+  await page.keyboard.type("Gaetano");
+  await expect(input).toHaveValue("Gaetano");
+});
