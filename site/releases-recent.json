@@ -1,4 +1,5 @@
 [
+  ["v1.123.33", "Restore table interactions and synchronize Evaluation and global search loading"],
   ["v1.123.32", "Refresh entry assets and restore Evaluation and search interactions"],
   ["v1.123.31", "Restore all view navigation and stabilize Watchlist, Evaluation, Database Stats, and global search"],
   ["v1.123.30", "Restore Database and Progression view-button clicks outside real busy states"],
