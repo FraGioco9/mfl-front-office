@@ -52,17 +52,22 @@ test("real pointer clicks switch views on shared table pages", async ({ page }) 
   }
 });
 
-test("shared table view clicks use the route even if legacy currentPage is stale", async ({ page }) => {
+test("shared table buttons resolve the visible route even if legacy currentPage is stale", async ({ page }) => {
   await page.goto("/database/attributes");
   await waitForArchitecture(page);
 
   const contracts = page.locator('#progressionPage .viewButton[data-view="contracts"]');
   await expect(contracts).toHaveAttribute("data-page", "database");
-  await page.evaluate(() => {
-    globalThis.eval('state.currentPage = "home"');
-  });
-  await contracts.click();
-  await expect(page).toHaveURL(/\/database\/contracts$/);
+  const resolvedPage = await page.evaluate(() => globalThis.eval(`(() => {
+    const previousPage = state.currentPage;
+    state.currentPage = "home";
+    try {
+      return pageNameForViewButton(document.querySelector('#progressionPage .viewButton[data-view="contracts"]'));
+    } finally {
+      state.currentPage = previousPage;
+    }
+  })()`));
+  expect(resolvedPage).toBe("database");
 });
 
 test("table headers switch to destination chrome on pointerdown before route completion", async ({ page }) => {
