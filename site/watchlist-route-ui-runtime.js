@@ -161,11 +161,18 @@
 
   function stateReady() {
     if (!protectedRoute || document.body?.dataset.page !== "watchlist") return false;
+    const routeId = routeWatchlistId();
+    if (!routeId) return false;
     try {
-      return typeof state === "object"
-        && state?.currentPage === "watchlist"
-        && Boolean(state?.currentWatchlistId)
-        && Boolean(state?.walletPreferencesLoaded);
+      if (typeof state !== "object" || state?.currentPage !== "watchlist" || !state?.walletPreferencesLoaded) {
+        return false;
+      }
+      const liveId = String(state.currentWatchlistId || "");
+      const liveName = liveWatchlistName(routeId);
+      const expectedName = stableWatchlistName || cachedWatchlistName(routeId);
+      return liveId === routeId
+        && Boolean(liveName)
+        && (!expectedName || liveName === expectedName);
     } catch {
       return false;
     }
