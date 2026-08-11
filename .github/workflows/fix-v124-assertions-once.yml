@@ -1,0 +1,41 @@
+name: Align v1.124 assertions
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fix-v124-assertions-once.yml"
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Align escaped current-version assertions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("site/tests")
+          old = r"1\.123\.37"
+          new = r"1\.124\.0"
+          changed = []
+          for path in root.rglob("*.mjs"):
+              source = path.read_text(encoding="utf-8")
+              updated = source.replace(old, new)
+              if updated != source:
+                  path.write_text(updated, encoding="utf-8")
+                  changed.append(str(path))
+          print("Updated:", *changed, sep="\n")
+          if not changed:
+              raise SystemExit("No stale escaped current-version assertions found")
+          PY
+      - name: Commit assertion alignment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/tests
+          git commit -m "Align current-version assertions with v1.124.0"
+          git push origin HEAD:main
