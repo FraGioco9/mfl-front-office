@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("v1.123.33 uses real busy tokens as the only interaction lock", async () => {
   const source = await read("app.js");
-  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.36"/);
+  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
   assert.match(source, /function interactionShouldBeBlocked\(\)\s*{\s*return activeTokens\.size > 0;/);
   assert.doesNotMatch(source, /function elementHasWaitCursor/);
   assert.match(source, /html\.\$\{BUSY_CLASS\} body \* \{\s*pointer-events: none !important;/);
@@ -58,11 +58,11 @@ test("v1.123.33 Evaluation fallback and loading cursor survive runtime consolida
   assert.match(entry, /await loadScriptGroup\(LATE_RUNTIME_SCRIPTS[\s\S]*installLegacyBridges\(\);/);
 });
 
-test("v1.123.33 search runtime owns real result clicks and authoritative search buffering", async () => {
+test("v1.123.33 search runtime owns authoritative search buffering without replacing result clicks", async () => {
   const searchRuntime = await read("global-search-runtime.js");
   const entry = await read("modules/app-entry.js");
-  assert.match(searchRuntime, /window\.addEventListener\("click", onResultClick, true\)/);
-  assert.match(searchRuntime, /#playerSearchResults \.searchResult, #evaluationSearchResults \.evaluationSearchResult/);
+  assert.doesNotMatch(searchRuntime, /onResultClick|forwardingResultClick|dispatchEvent\(new MouseEvent\("click"/);
+  assert.doesNotMatch(searchRuntime, /window\.addEventListener\("click"/);
   assert.match(searchRuntime, /let pendingPayload = null/);
   assert.match(searchRuntime, /function flushPendingPayload\(\)/);
   assert.match(searchRuntime, /liveInput\.focus\(\{ preventScroll: true \}\);\s*liveInput\.select\(\);/);

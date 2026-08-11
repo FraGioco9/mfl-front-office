@@ -31,11 +31,3 @@ test("v1.123.36 primes the Evaluation discount placeholder before early runtimes
   assert.match(source, /discountRate\.style\.setProperty\("visibility", "visible", "important"\)/);
   assert.match(source, /primeEvaluationDiscountRatePlaceholder\(\);/);
 });
-
-test("v1.123.36 forwards result clicks without re-entering HTMLElement click activation", async () => {
-  const source = await read("global-search-runtime.js");
-
-  assert.match(source, /target\.dispatchEvent\(new MouseEvent\("click"/);
-  assert.match(source, /forwardingResultClick = true/);
-  assert.doesNotMatch(source, /target\.click\(\)/);
-});

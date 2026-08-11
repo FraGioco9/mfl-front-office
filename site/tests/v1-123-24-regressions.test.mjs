@@ -19,7 +19,7 @@ test("typed global search owns one all-category database request", async () => {
 test("table first paint uses the final viewport width and renders a loading body immediately", async () => {
   const bridge = await read("app.js");
   const entry = await read("modules/app-entry.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.36"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
   assert.match(bridge, /function staticBrowserScrollbarWidth\(\)/);
   assert.match(bridge, /window\.innerWidth - staticBrowserScrollbarWidth\(\)/);
   assert.match(bridge, /const viewportWidth = Math\.min\(clientWidth, reservedViewportWidth\)/);

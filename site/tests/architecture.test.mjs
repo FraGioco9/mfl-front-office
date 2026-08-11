@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.36");
+  assert.equal(release.version, "1.123.37");
   assert.ok(release.description.length > 20);
 });
 
@@ -52,7 +52,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.36"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
@@ -86,7 +86,7 @@ test("Database Stats view controls and five-card geometry are static HTML", asyn
   const lateScripts = entry.slice(entry.indexOf("const LATE_RUNTIME_SCRIPTS"), entry.indexOf("/** @type"));
 
   assert.match(index, /<section id="databaseStatsPage"[^>]*data-static-database-stats="true"[^>]*hidden>/);
-  assert.match(index, /aria-label="Database views"[\s\S]*data-view="attributes">Attributes<[\s\S]*data-view="contracts">Contracts<[\s\S]*data-view="stats">Stats</);
+  assert.match(index, /aria-label="Database views"[\s\S]*data-view="attributes">Attributes<[\s\S]*data-view="contracts">Contracts<[\s\S]*data-view="stats">Stats/);
   assert.match(index, /#databaseStatsPage \.databaseStatsCards \{\s*grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/);
   for (const label of ["All", "Ultimate", "Legendary", "Rare", "Uncommon", "Limited", "Common", "Custom"]) {
     assert.match(index, new RegExp(`mflStatsFilterButton[^>]*>${label}<\\/button>`));
@@ -393,7 +393,7 @@ test("Evaluation waits for stable layout, uses the smaller font scale, and close
 test("Database Stats keeps all views bound to Database and preserves its shell after interaction", async () => {
   const index = await read("index.html");
   const runtime = await read("database-stats-runtime.js");
-  assert.match(index, /aria-label="Database views"[\s\S]*data-page="database" data-view="attributes">Attributes<[\s\S]*data-page="database" data-view="contracts">Contracts<[\s\S]*data-page="database" data-view="stats">Stats</);
+  assert.match(index, /aria-label="Database views"[\s\S]*data-page="database" data-view="attributes">Attributes<[\s\S]*data-page="database" data-view="contracts">Contracts<[\s\S]*data-page="database" data-view="stats">Stats/);
   assert.match(runtime, /function preserveStatsShellAfterInteraction\(\)/);
   assert.match(runtime, /if \(!destroyed && isStatsPath\(\)\) showStatsShell\(\)/);
   assert.match(runtime, /if \(isStatsPath\(\)\) preserveStatsShellAfterInteraction\(\)/);
