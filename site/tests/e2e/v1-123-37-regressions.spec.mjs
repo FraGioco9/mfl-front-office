@@ -83,3 +83,22 @@ test("global search input is focused as soon as search opens", async ({ page }) 
   await page.keyboard.type("Gaetano");
   await expect(input).toHaveValue("Gaetano");
 });
+
+test("global search takes focus from the selected Evaluation search", async ({ page }) => {
+  await page.goto("/evaluation");
+  await waitForArchitecture(page);
+
+  const evaluationInput = page.locator("#evaluationSearchInput");
+  const globalInput = page.locator("#playerSearchInput");
+  await evaluationInput.focus();
+  await expect(evaluationInput).toBeFocused();
+
+  await page.locator("#openSearchButton").click();
+  await expect(globalInput).toBeVisible();
+  await expect(globalInput).toBeFocused();
+  await expect(evaluationInput).not.toBeFocused();
+
+  await page.keyboard.type("Michel");
+  await expect(globalInput).toHaveValue("Michel");
+  await expect(evaluationInput).toHaveValue("");
+});
