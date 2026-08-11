@@ -71,6 +71,48 @@ test("all five recent global-search results keep their real navigation handlers"
   }
 });
 
+test("typed global search uses full database results on a cold page", async ({ page }) => {
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (
+      url.searchParams.get("mode") !== "search"
+      || url.searchParams.get("type") !== "all"
+      || url.searchParams.get("q") !== "Needle"
+    ) {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        players: {
+          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+          rows: [[991001, "Needle Player", 88, "Italy", "ST", null]],
+        },
+        agents: {
+          columns: ["wallet_address", "wallet_name", "player_count"],
+          rows: [["0xneedle", "Needle Agent", 12]],
+        },
+        clubs: [{ clubId: "991002", name: "Needle Club", division: 2 }],
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await waitForArchitecture(page);
+  await page.locator("#openSearchButton").click();
+  const input = page.locator("#playerSearchInput");
+  await input.fill("Needle");
+
+  const results = page.locator("#playerSearchResults > .searchResult");
+  await expect(results).toHaveCount(3);
+  await expect(results.nth(0)).toContainText("Needle Player");
+  await expect(results.nth(1)).toContainText("Needle Club");
+  await expect(results.nth(2)).toContainText("Needle Agent");
+});
+
 test("global search input is focused as soon as search opens", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
