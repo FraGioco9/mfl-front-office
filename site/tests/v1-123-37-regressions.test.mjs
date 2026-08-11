@@ -35,6 +35,17 @@ test("v1.123.37 keeps global search focused without reselecting typed text", asy
   assert.doesNotMatch(search, /attributeFilter: \["hidden", "class", "style"\]/);
 });
 
+test("Evaluation recent results preserve their native click between mouse down and release", async () => {
+  const chrome = await read("evaluation-static-chrome-runtime.js");
+
+  assert.match(chrome, /function preserveEvaluationResultClick\(event\)/);
+  assert.match(chrome, /closest\("#evaluationSearchResults \.evaluationSearchResult"\)/);
+  assert.match(chrome, /event\.preventDefault\(\)/);
+  assert.match(chrome, /document\.addEventListener\("mousedown", preserveEvaluationResultClick, true\)/);
+  assert.match(chrome, /document\.removeEventListener\("mousedown", preserveEvaluationResultClick, true\)/);
+  assert.doesNotMatch(chrome, /\.click\(\)|dispatchEvent\(new MouseEvent\("click"/);
+});
+
 test("v1.123.37 aligns release metadata and static cache keys", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
