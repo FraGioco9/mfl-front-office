@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("v1.123.33 uses real busy tokens as the only interaction lock", async () => {
   const source = await read("app.js");
-  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.35"/);
+  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.36"/);
   assert.match(source, /function interactionShouldBeBlocked\(\)\s*{\s*return activeTokens\.size > 0;/);
   assert.doesNotMatch(source, /function elementHasWaitCursor/);
   assert.match(source, /html\.\$\{BUSY_CLASS\} body \* \{\s*pointer-events: none !important;/);

@@ -1,4 +1,5 @@
 [
+  ["v1.123.36", "Commit shared table view navigation across real pointer timing"],
   ["v1.123.35", "Restore shared table view clicks when legacy page state is stale"],
   ["v1.123.34", "Consolidate runtimes, remove dead compatibility code, and harden release maintenance"],
   ["v1.123.33", "Restore table interactions and synchronize Evaluation and global search loading"],

@@ -7,10 +7,19 @@
   const LEGACY_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
+    stats: "stats",
     contracts: "contracts",
     "next-overall": "next",
     "current-season": "current",
     "all-time": "all",
+  });
+  const SLUG_BY_VIEW = Object.freeze({
+    attributes: "attributes",
+    stats: "stats",
+    contracts: "contracts",
+    next: "next-overall",
+    current: "current-season",
+    all: "all-time",
   });
   const BASE_COLUMNS = Object.freeze([
     "player_id",
@@ -76,6 +85,9 @@
   let destroyed = false;
   let navigationIntentRoute = null;
   let navigationIntentExpiresAt = 0;
+  let pendingViewPointer = null;
+  let suppressPointerClick = false;
+  let suppressPointerClickTimer = 0;
 
   function normalizedPage(value) {
     const page = String(value || "").toLowerCase();
@@ -99,6 +111,50 @@
     const last = String(parts.at(-1) || "").toLowerCase();
     const fallbackView = pageName === "progression" || pageName === "watchlist" ? "current" : "attributes";
     return { pageName, view: VIEW_BY_SLUG[last] || fallbackView };
+  }
+
+  function sharedViewRouteForTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const viewButton = target.closest("#progressionPage .viewButton[data-view]");
+    if (!(viewButton instanceof HTMLButtonElement)) return null;
+    const view = String(viewButton.dataset.view || "");
+    const pathRoute = routeFromPath();
+    const pathPage = normalizedPage(pathRoute?.pageName || "");
+    const bodyPage = normalizedPage(document.body?.dataset.page || "");
+    const explicitPage = normalizedPage(viewButton.dataset.page || "");
+    const pageName = pathPage || bodyPage || explicitPage;
+    const standardView = Boolean(VIEW_COLUMNS[view]);
+    const statsView = view === "stats" && (pageName === "database" || pageName === "mfl");
+    if (!pageName || (!standardView && !statsView)) return null;
+    return { pageName, view, button: viewButton };
+  }
+
+  function sharedViewPath(route) {
+    const pageName = normalizedPage(route?.pageName || "");
+    const view = String(route?.view || "");
+    const slug = SLUG_BY_VIEW[view];
+    if (!pageName || !slug) return "";
+    if (pageName === "database" || pageName === "mfl" || pageName === "progression") {
+      return `/${pageName}/${slug}`;
+    }
+    if (pageName === "myplayers") return `/my-players/${slug}`;
+
+    const parts = String(window.location.pathname || "/").split("/").filter(Boolean);
+    if (pageName === "watchlist") {
+      const watchlistId = String(parts[0] || "").toLowerCase() === "watchlist"
+        && parts[1]
+        && !VIEW_BY_SLUG[String(parts[1]).toLowerCase()]
+        ? parts[1]
+        : "";
+      return watchlistId ? `/watchlist/${watchlistId}/${slug}` : `/watchlist/${slug}`;
+    }
+    if (pageName === "agents") {
+      const wallet = ["agents", "agent"].includes(String(parts[0] || "").toLowerCase())
+        ? String(parts[1] || "")
+        : "";
+      return wallet ? `/agents/${wallet}/${slug}` : "";
+    }
+    return "";
   }
 
   function isPlayerTableRoute(pathname = window.location.pathname) {
@@ -232,17 +288,11 @@
 
   function routeForTarget(target) {
     if (!(target instanceof Element)) return null;
-    const viewButton = target.closest(".viewButton[data-view]");
-    if (viewButton instanceof HTMLElement) {
-      const view = String(viewButton.dataset.view || "");
-      if (view === "stats") return null;
-      const pathRoute = routeFromPath();
-      const pathPage = normalizedPage(pathRoute?.pageName || "");
-      const bodyPage = normalizedPage(document.body?.dataset.page || "");
-      const explicitPage = normalizedPage(viewButton.dataset.page || "");
-      const pageName = pathPage || bodyPage || explicitPage;
-      if (!pageName || !VIEW_COLUMNS[view]) return null;
-      return { pageName, view };
+    const sharedViewRoute = sharedViewRouteForTarget(target);
+    if (sharedViewRoute) {
+      return sharedViewRoute.view === "stats"
+        ? null
+        : { pageName: sharedViewRoute.pageName, view: sharedViewRoute.view };
     }
 
     const nav = target.closest("#sidebar .navButton[href]");
@@ -289,12 +339,70 @@
   }
 
   function onNavigationIntent(event) {
-    const route = routeForTarget(event.target instanceof Element ? event.target : null);
+    const target = event.target instanceof Element ? event.target : null;
+    const sharedViewRoute = sharedViewRouteForTarget(target);
+    pendingViewPointer = sharedViewRoute && event.isPrimary !== false && event.button === 0
+      ? {
+          pointerId: event.pointerId,
+          route: { pageName: sharedViewRoute.pageName, view: sharedViewRoute.view },
+          button: sharedViewRoute.button,
+        }
+      : null;
+    const route = routeForTarget(target);
     if (!route) return;
     navigationIntentRoute = route;
     navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
     syncSharedViewButtonPage(route.pageName);
     primeRoute(route);
+  }
+
+  function releaseInsideButton(event, button) {
+    if (!(button instanceof HTMLButtonElement) || !button.isConnected) return false;
+    const targetButton = event.target instanceof Element
+      ? event.target.closest("#progressionPage .viewButton[data-view]")
+      : null;
+    if (targetButton === button) return true;
+    const rect = button.getBoundingClientRect();
+    return event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom;
+  }
+
+  function suppressFollowingPointerClick() {
+    suppressPointerClick = true;
+    if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
+    suppressPointerClickTimer = window.setTimeout(() => {
+      suppressPointerClickTimer = 0;
+      suppressPointerClick = false;
+    }, 0);
+  }
+
+  function onPointerUp(event) {
+    const pending = pendingViewPointer;
+    pendingViewPointer = null;
+    if (!pending || event.isPrimary === false || event.button !== 0) return;
+    if (pending.pointerId !== event.pointerId || !releaseInsideButton(event, pending.button)) return;
+
+    const targetPath = sharedViewPath(pending.route);
+    if (!targetPath) return;
+    suppressFollowingPointerClick();
+    event.preventDefault();
+    if (`${window.location.pathname}${window.location.search}` === targetPath) return;
+
+    window.history.pushState({}, "", targetPath);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+  }
+
+  function onPointerCancel() {
+    pendingViewPointer = null;
+  }
+
+  function onClickCapture(event) {
+    if (!suppressPointerClick) return;
+    suppressPointerClick = false;
+    if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
+    suppressPointerClickTimer = 0;
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }
 
   function onPopState() {
@@ -341,6 +449,9 @@
     attributeFilter: ["hidden", "data-page"],
   });
   window.addEventListener("pointerdown", onNavigationIntent, true);
+  window.addEventListener("pointerup", onPointerUp, true);
+  window.addEventListener("pointercancel", onPointerCancel, true);
+  window.addEventListener("click", onClickCapture, true);
   window.addEventListener("popstate", onPopState);
   window.addEventListener("mfl:ready", installLegacyBridge);
 
@@ -351,7 +462,11 @@
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
+    if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
     window.removeEventListener("pointerdown", onNavigationIntent, true);
+    window.removeEventListener("pointerup", onPointerUp, true);
+    window.removeEventListener("pointercancel", onPointerCancel, true);
+    window.removeEventListener("click", onClickCapture, true);
     window.removeEventListener("popstate", onPopState);
     window.removeEventListener("mfl:ready", installLegacyBridge);
   }
