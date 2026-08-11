@@ -78,11 +78,7 @@
     const liveId = stateWatchlistId();
     const watchlistId = routeId || liveId || stableWatchlistId;
     if (routeId || liveId) stableWatchlistId = routeId || liveId;
-    const protectedName = protectedRoute && routeId
-      ? stableWatchlistName || cachedWatchlistName(routeId)
-      : "";
-    const name = protectedName
-      || liveWatchlistName(watchlistId)
+    const name = liveWatchlistName(watchlistId)
       || cachedWatchlistName(watchlistId)
       || stableWatchlistName;
     if (name) stableWatchlistName = name;
@@ -161,18 +157,11 @@
 
   function stateReady() {
     if (!protectedRoute || document.body?.dataset.page !== "watchlist") return false;
-    const routeId = routeWatchlistId();
-    if (!routeId) return false;
     try {
-      if (typeof state !== "object" || state?.currentPage !== "watchlist" || !state?.walletPreferencesLoaded) {
-        return false;
-      }
-      const liveId = String(state.currentWatchlistId || "");
-      const liveName = liveWatchlistName(routeId);
-      const expectedName = stableWatchlistName || cachedWatchlistName(routeId);
-      return liveId === routeId
-        && Boolean(liveName)
-        && (!expectedName || liveName === expectedName);
+      return typeof state === "object"
+        && state?.currentPage === "watchlist"
+        && Boolean(state?.currentWatchlistId)
+        && Boolean(state?.walletPreferencesLoaded);
     } catch {
       return false;
     }
@@ -382,12 +371,6 @@
     if (event.target instanceof Element && event.target.closest(".watchlistDropdownRename")) hideTooltip();
   }, true);
   window.addEventListener("popstate", () => {
-    const currentRoute = `${location.pathname}${location.search}${location.hash}`;
-    if (protectedRoute && isWatchlistPath() && currentRoute === protectedRoute) {
-      syncWatchlistTitle();
-      schedule();
-      return;
-    }
     protectedRoute = "";
     if (!isWatchlistPath()) hideSwitcher();
     else syncWatchlistTitle();
