@@ -44,11 +44,14 @@ test("shared table view buttons bind to the actual route before the legacy click
 test("v1.123.33 Evaluation fallback and loading cursor survive runtime consolidation", async () => {
   const chrome = await read("evaluation-static-chrome-runtime.js");
   const entry = await read("modules/app-entry.js");
+  const core = await read("modules/legacy-core.js");
   assert.match(chrome, /if \(!String\(discountRate\.textContent \|\| ""\)\.trim\(\)\) discountRate\.textContent = "-";/);
   assert.match(chrome, /characterData: true/);
   assert.match(chrome, /controller\.begin\("evaluationRouteLoading"\)/);
   assert.match(chrome, /controller\.end\(evaluationBusyToken\)/);
   assert.match(chrome, /body\[data-page="evaluation"\]\.evaluationRouteLoading[\s\S]*cursor: wait !important;/);
+  assert.match(core, /let loadingSelectionOwned = false;/);
+  assert.match(core, /if \(!loadingSelectionOwned\) return;\s*document\.body\?\.classList\.remove\("evaluationRouteLoading"\);/);
   assert.match(chrome, /function syncSearchFocusGuard\(\)/);
   assert.doesNotMatch(entry, /v1-123-31-runtime\.js/);
   assert.match(entry, /installLegacyBridges\(\);[\s\S]*await loadScriptGroup\(LATE_RUNTIME_SCRIPTS/);

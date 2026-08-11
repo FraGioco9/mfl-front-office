@@ -37,6 +37,7 @@ test("v1.123.31 Watchlist title behavior is retained by the dedicated Watchlist 
   assert.match(runtime, /stableWatchlistName/);
   assert.match(runtime, /currentName: \(\) => currentWatchlistIdentity\(\)\.name/);
   assert.match(core, /window\.__mflWatchlistRouteUiRuntime\?\.currentName\?\.\(\)/);
+  assert.match(core, /pageName === "watchlist" \|\| \/\^\\\/watchlist/);
 });
 
 test("v1.123.31 installs full global search before legacy page startup waits", async () => {
