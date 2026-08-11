@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.33");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.34");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -399,11 +399,7 @@ test("Total active players uses the API total for all non-MFL, non-retired playe
       await route.continue();
       return;
     }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(databaseStatsPayload({ totalActivePlayers: 42 })),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(databaseStatsPayload({ totalActivePlayers: 42 })) });
   });
 
   await page.goto("/database/stats");
@@ -417,11 +413,7 @@ test("Database Stats content remains visible after ordinary page interactions", 
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("mode") === "database-stats") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(databaseStatsPayload()),
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(databaseStatsPayload()) });
       return;
     }
     await route.continue();
@@ -448,9 +440,7 @@ test("Database Stats content remains visible after ordinary page interactions", 
   }
 
   await statsPage.locator(".tablePageTitle").click();
-  const histogramAnimation = await statsPage.locator(".mflStatsHistogram").evaluate(
-    (node) => globalThis.getComputedStyle(node).animationName,
-  );
+  const histogramAnimation = await statsPage.locator(".mflStatsHistogram").evaluate((node) => globalThis.getComputedStyle(node).animationName);
   expect(histogramAnimation).toBe("none");
 });
 
@@ -464,16 +454,7 @@ test("Database Stats custom bars animate only when the portal Apply button is cl
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        totalPlayers: 18,
-        totalActivePlayers: 18,
-        totalRetiredPlayers: 0,
-        rows: [
-          [70, 21, 1, 4],
-          [80, 22, 2, 6],
-          [90, 23, 3, 8],
-        ],
-      }),
+      body: JSON.stringify({ totalPlayers: 18, totalActivePlayers: 18, totalRetiredPlayers: 0, rows: [[70, 21, 1, 4], [80, 22, 2, 6], [90, 23, 3, 8]] }),
     });
   });
 
@@ -509,11 +490,7 @@ test("Database Stats is saved and restored as the Database view", async ({ page 
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("mode") === "database-stats") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(databaseStatsPayload()),
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(databaseStatsPayload()) });
       return;
     }
     await route.continue();
@@ -538,22 +515,14 @@ test("MFL Stats never visibly exposes the player table during first load", async
     const inspect = () => {
       if (!/^\/mfl\/stats\/?$/i.test(globalThis.location.pathname)) return;
       const tablePage = globalThis.document.getElementById("progressionPage");
-      if (tablePage && globalThis.getComputedStyle(tablePage).display !== "none") {
-        globalThis.__mflStatsSawPlayerTable = true;
-      }
+      if (tablePage && globalThis.getComputedStyle(tablePage).display !== "none") globalThis.__mflStatsSawPlayerTable = true;
     };
-    new globalThis.MutationObserver(inspect).observe(globalThis.document, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden", "class", "data-page"],
-    });
+    new globalThis.MutationObserver(inspect).observe(globalThis.document, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class", "data-page"] });
     globalThis.document.addEventListener("DOMContentLoaded", inspect, { once: true });
   });
 
   await page.goto("/mfl/stats", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1000);
-
   await expect(page.locator("#mflStatsPage")).toBeVisible();
   await expect(page.locator("#progressionPage")).toBeHidden();
   await expect(page.locator("#mflStatsPage .mflStatsCards")).toBeVisible();
@@ -576,7 +545,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.33");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.34");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -596,8 +565,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.33");
-  expect(rows[0][0]).toBe("v1.123.33");
+  expect(metadata.version).toBe("1.123.34");
+  expect(rows[0][0]).toBe("v1.123.34");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);
@@ -608,17 +577,10 @@ test("refresh shows the theme symbol that matches light or dark mode before runt
   const context = page.context();
   for (const theme of ["light", "dark"]) {
     const themedPage = await context.newPage();
-    await themedPage.addInitScript((value) => {
-      globalThis.localStorage.setItem("mfl-theme", value);
-    }, theme);
-
+    await themedPage.addInitScript((value) => { globalThis.localStorage.setItem("mfl-theme", value); }, theme);
     let releaseMetadata;
     const gate = new Promise((resolve) => { releaseMetadata = resolve; });
-    await themedPage.route("**/release.json", async (route) => {
-      await gate;
-      await route.continue();
-    });
-
+    await themedPage.route("**/release.json", async (route) => { await gate; await route.continue(); });
     await themedPage.goto("/", { waitUntil: "domcontentloaded" });
     await expect(themedPage.locator("html")).toHaveAttribute("data-theme", theme);
     if (theme === "dark") {
@@ -628,7 +590,6 @@ test("refresh shows the theme symbol that matches light or dark mode before runt
       await expect(themedPage.locator("#themeButton .themeMoonSymbol")).toBeVisible();
       await expect(themedPage.locator("#themeButton .themeSunSymbol")).toBeHidden();
     }
-
     const releaseResponse = themedPage.waitForResponse((response) => response.url().endsWith("/release.json"));
     releaseMetadata();
     await releaseResponse;
@@ -640,21 +601,12 @@ test("refresh shows the theme symbol that matches light or dark mode before runt
 test("first bare Database visit opens Attributes with every Database view visible", async ({ page }) => {
   let releaseMetadata;
   const gate = new Promise((resolve) => { releaseMetadata = resolve; });
-  await page.route("**/release.json", async (route) => {
-    await gate;
-    await route.continue();
-  });
-
+  await page.route("**/release.json", async (route) => { await gate; await route.continue(); });
   await page.goto("/database", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/database\/attributes$/);
-  for (const view of ["attributes", "contracts", "stats"]) {
-    await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeVisible();
-  }
+  for (const view of ["attributes", "contracts", "stats"]) await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeVisible();
   await expect(page.locator('#progressionPage .viewButton[data-view="attributes"]')).toHaveClass(/active/);
-  for (const view of ["next", "current", "all"]) {
-    await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeHidden();
-  }
-
+  for (const view of ["next", "current", "all"]) await expect(page.locator(`#progressionPage .viewButton[data-view="${view}"]`)).toBeHidden();
   const releaseResponse = page.waitForResponse((response) => response.url().endsWith("/release.json"));
   releaseMetadata();
   await releaseResponse;
@@ -664,7 +616,6 @@ test("first bare Database visit opens Attributes with every Database view visibl
 test("busy cursor blocks click handlers and hover motion across the site", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
-
   const result = await page.evaluate(() => {
     const button = globalThis.document.createElement("button");
     button.style.transition = "background-color 1s ease";
@@ -674,31 +625,19 @@ test("busy cursor blocks click handlers and hover motion across the site", async
     button.addEventListener("click", () => { clickCount += 1; });
     button.addEventListener("pointerover", () => { hoverCount += 1; });
     globalThis.document.body.appendChild(button);
-
     const token = globalThis.__mflInteractionBusy.begin("interaction-loading");
     const busyStyle = globalThis.getComputedStyle(button);
-    const busyState = {
-      pointerEvents: busyStyle.pointerEvents,
-      transitionDuration: busyStyle.transitionDuration,
-      animationName: busyStyle.animationName,
-    };
+    const busyState = { pointerEvents: busyStyle.pointerEvents, transitionDuration: busyStyle.transitionDuration, animationName: busyStyle.animationName };
     button.dispatchEvent(new globalThis.PointerEvent("pointerover", { bubbles: true }));
     button.click();
     const blockedCounts = { clickCount, hoverCount };
-
     globalThis.__mflInteractionBusy.end(token);
     button.dispatchEvent(new globalThis.PointerEvent("pointerover", { bubbles: true }));
     button.click();
     button.remove();
-
     return { busyState, blockedCounts, releasedCounts: { clickCount, hoverCount } };
   });
-
-  expect(result.busyState).toEqual({
-    pointerEvents: "none",
-    transitionDuration: "0s",
-    animationName: "none",
-  });
+  expect(result.busyState).toEqual({ pointerEvents: "none", transitionDuration: "0s", animationName: "none" });
   expect(result.blockedCounts).toEqual({ clickCount: 0, hoverCount: 0 });
   expect(result.releasedCounts).toEqual({ clickCount: 1, hoverCount: 1 });
 });
@@ -724,17 +663,7 @@ test("evaluation compact search omits retired players", async ({ page }) => {
   await page.goto("/evaluation");
   await waitForArchitecture(page);
   await page.evaluate(() => {
-    globalThis.eval(`
-      applyDatabaseSearchPayload({
-        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-        rows: [
-          [101, "Retired Result", 90, "Italy", "ST", 0],
-          [102, "Active Result", 80, "Italy", "CM", null]
-        ]
-      }, "players");
-      evaluationSearchInput.value = "result";
-      renderEvaluationSearchResults();
-    `);
+    globalThis.eval(`applyDatabaseSearchPayload({ columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[101, "Retired Result", 90, "Italy", "ST", 0], [102, "Active Result", 80, "Italy", "CM", null]] }, "players"); evaluationSearchInput.value = "result"; renderEvaluationSearchResults();`);
   });
   await expect(page.locator("#evaluationSearchResults")).toContainText("Active Result");
   await expect(page.locator("#evaluationSearchResults")).not.toContainText("Retired Result");
@@ -743,51 +672,26 @@ test("evaluation compact search omits retired players", async ({ page }) => {
 test("empty Evaluation focuses recent results, exposes its tooltip, and global search reloads recents on that page", async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.localStorage.setItem("mfl-recent-evaluation-searches-v1", JSON.stringify(["102"]));
-    globalThis.localStorage.setItem("mfl-recent-searches-v1", JSON.stringify([
-      "agent:0xagent",
-      "club:roma-club",
-      "player:102",
-    ]));
+    globalThis.localStorage.setItem("mfl-recent-searches-v1", JSON.stringify(["agent:0xagent", "club:roma-club", "player:102"]));
   });
-
   let recentRequests = 0;
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
-    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("type") !== "recent") {
-      await route.continue();
-      return;
-    }
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("type") !== "recent") { await route.continue(); return; }
     recentRequests += 1;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        players: {
-          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-          rows: [[102, "Recent Active Player", 88, "Italy", "CM", null]],
-        },
-        agents: {
-          columns: ["wallet_address", "wallet_name", "player_count"],
-          rows: [["0xagent", "Recent Agent", 12]],
-        },
-        clubs: [{ clubId: "roma-club", name: "Recent Club", division: 2 }],
-      }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ players: { columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[102, "Recent Active Player", 88, "Italy", "CM", null]] }, agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [["0xagent", "Recent Agent", 12]] }, clubs: [{ clubId: "roma-club", name: "Recent Club", division: 2 }] }) });
   });
-
   await page.goto("/evaluation");
   await waitForArchitecture(page);
   const evaluationInput = page.locator("#evaluationSearchInput");
   await expect(evaluationInput).toBeFocused();
   await expect(page.locator("#evaluationSearchResults")).toContainText("Recent Active Player");
-
   await page.locator(".evaluationDiscountRate").hover();
   const tooltip = page.locator("#evaluationDiscountTooltipPortal");
   await expect(tooltip).toBeVisible();
   await expect(tooltip).toContainText("geometric mean");
   await page.locator("#evaluationPage .tablePageTitle").hover();
   await expect(tooltip).toBeHidden();
-
   await page.locator("#openSearchButton").click();
   await expect(page.locator("#playerSearchResults")).toContainText("Recent Active Player");
   await expect(page.locator("#playerSearchResults")).toContainText("Recent Club");
@@ -800,59 +704,19 @@ test("typed global and Evaluation search results update before their requests fi
   const globalSearchGate = new Promise((resolve) => { releaseGlobalSearch = resolve; });
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
-    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "roma") {
-      await route.continue();
-      return;
-    }
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "roma") { await route.continue(); return; }
     await globalSearchGate;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        players: {
-          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-          rows: [
-            [201, "Roma Fresh Player", 90, "Italy", "ST", null],
-            [102, "Roma Player 2", 89, "Italy", "ST", null],
-            [103, "Roma Player 3", 88, "Italy", "ST", null],
-          ],
-        },
-        agents: {
-          columns: ["wallet_address", "wallet_name", "player_count"],
-          rows: [["0xagent", "Roma Agent", 12]],
-        },
-        clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }],
-      }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ players: { columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[201, "Roma Fresh Player", 90, "Italy", "ST", null], [102, "Roma Player 2", 89, "Italy", "ST", null], [103, "Roma Player 3", 88, "Italy", "ST", null]] }, agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [["0xagent", "Roma Agent", 12]] }, clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }] }) });
   });
-
   await page.goto("/");
   await waitForArchitecture(page);
   expect(await page.evaluate(() => Boolean(globalThis.__mflGlobalSearchReadyPromise))).toBe(true);
   await page.locator("#openSearchButton").click();
   await page.locator("#playerSearchInput").focus();
   await page.evaluate(() => {
-    globalThis.eval(`applyDatabaseSearchPayload({
-      players: {
-        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-        rows: [
-          [101, "Roma Player 1", 90, "Italy", "ST", null],
-          [102, "Roma Player 2", 89, "Italy", "ST", null],
-          [103, "Roma Player 3", 88, "Italy", "ST", null]
-        ]
-      },
-      agents: {
-        columns: ["wallet_address", "wallet_name", "player_count"],
-        rows: [["0xagent", "Roma Agent", 12]]
-      },
-      clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }]
-    }, "all")`);
+    globalThis.eval(`applyDatabaseSearchPayload({ players: { columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[101, "Roma Player 1", 90, "Italy", "ST", null], [102, "Roma Player 2", 89, "Italy", "ST", null], [103, "Roma Player 3", 88, "Italy", "ST", null]] }, agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [["0xagent", "Roma Agent", 12]] }, clubs: [{ clubId: "roma-club", name: "Roma Club", division: 2 }] }, "all")`);
   });
-
-  const globalResponse = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "roma";
-  });
+  const globalResponse = page.waitForResponse((response) => { const url = new URL(response.url()); return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "roma"; });
   await page.locator("#playerSearchInput").fill("roma");
   const globalResults = page.locator("#playerSearchResults > .searchResult");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Player 1");
@@ -866,40 +730,19 @@ test("typed global and Evaluation search results update before their requests fi
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Club");
   await expect(page.locator("#playerSearchResults")).toContainText("Roma Agent");
   await expect(globalResults).toHaveCount(5);
-
   await page.locator("#closeSearchButton").click();
   await page.goto("/evaluation");
   await waitForArchitecture(page);
-
   let releaseEvaluationSearch;
   const evaluationSearchGate = new Promise((resolve) => { releaseEvaluationSearch = resolve; });
   await page.route("**/api/data?**", async (route) => {
     const url = new URL(route.request().url());
-    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "active") {
-      await route.continue();
-      return;
-    }
+    if (url.searchParams.get("mode") !== "search" || url.searchParams.get("q") !== "active") { await route.continue(); return; }
     await evaluationSearchGate;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-        rows: [[102, "Active Player", 88, "Italy", "CM", null]],
-      }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[102, "Active Player", 88, "Italy", "CM", null]] }) });
   });
-  await page.evaluate(() => {
-    globalThis.eval(`applyDatabaseSearchPayload({
-      columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-      rows: [[102, "Active Player", 88, "Italy", "CM", null]]
-    }, "players")`);
-  });
-
-  const evaluationResponse = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "active";
-  });
+  await page.evaluate(() => { globalThis.eval(`applyDatabaseSearchPayload({ columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[102, "Active Player", 88, "Italy", "CM", null]] }, "players")`); });
+  const evaluationResponse = page.waitForResponse((response) => { const url = new URL(response.url()); return url.searchParams.get("mode") === "search" && url.searchParams.get("q") === "active"; });
   await page.locator("#evaluationSearchInput").fill("active");
   await expect(page.locator("#evaluationSearchResults")).toContainText("Active Player");
   releaseEvaluationSearch();
@@ -913,9 +756,7 @@ test("empty recent-search copy is padded and fallback font size is stabilized", 
   await page.locator("#openSearchButton").click();
   const hint = page.locator("#playerSearchResults .searchHint");
   await expect(hint).toHaveText("Recent searches will appear here.");
-  await expect.poll(() => hint.evaluate((node) => (
-    node.isConnected ? globalThis.getComputedStyle(node).paddingLeft : ""
-  ))).toBe("8px");
+  await expect.poll(() => hint.evaluate((node) => (node.isConnected ? globalThis.getComputedStyle(node).paddingLeft : ""))).toBe("8px");
   expect(await page.locator("html").evaluate((node) => globalThis.getComputedStyle(node).fontSizeAdjust)).toBe("0.5");
   expect(await page.locator("#openFiltersButton").evaluate((node) => globalThis.getComputedStyle(node).fontSize)).toBe("14px");
 });
