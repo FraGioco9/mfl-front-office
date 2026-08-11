@@ -78,7 +78,11 @@
     const liveId = stateWatchlistId();
     const watchlistId = routeId || liveId || stableWatchlistId;
     if (routeId || liveId) stableWatchlistId = routeId || liveId;
-    const name = liveWatchlistName(watchlistId)
+    const protectedName = protectedRoute && routeId
+      ? stableWatchlistName || cachedWatchlistName(routeId)
+      : "";
+    const name = protectedName
+      || liveWatchlistName(watchlistId)
       || cachedWatchlistName(watchlistId)
       || stableWatchlistName;
     if (name) stableWatchlistName = name;

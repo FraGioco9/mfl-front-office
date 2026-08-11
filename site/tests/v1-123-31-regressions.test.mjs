@@ -34,6 +34,8 @@ test("v1.123.31 Watchlist title behavior is retained by the dedicated Watchlist 
   assert.match(runtime, /const nextTitle = `Watchlist - \$\{name\}`/);
   assert.match(runtime, /function syncWatchlistTitle\(\)/);
   assert.match(runtime, /liveWatchlistName\(watchlistId\)[\s\S]*cachedWatchlistName\(watchlistId\)/);
+  assert.match(runtime, /const protectedName = protectedRoute && routeId/);
+  assert.match(runtime, /stableWatchlistName \|\| cachedWatchlistName\(routeId\)/);
   assert.match(runtime, /stableWatchlistName/);
   assert.match(runtime, /currentName: \(\) => currentWatchlistIdentity\(\)\.name/);
   assert.match(core, /window\.__mflWatchlistRouteUiRuntime\?\.currentName\?\.\(\)/);
