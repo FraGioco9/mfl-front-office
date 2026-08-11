@@ -15,23 +15,25 @@ test("v1.123.31 stale-wait compatibility remains while real busy tokens own clic
   assert.doesNotMatch(bridge, /function elementHasWaitCursor/);
 });
 
-test("v1.123.31 primes Evaluation unfocused and releases focus only after readiness", async () => {
+test("v1.123.31 Evaluation focus behavior is retained by the consolidated Evaluation runtime", async () => {
   const bridge = await read("app.js");
-  const runtime = await read("v1-123-31-runtime.js");
+  const runtime = await read("evaluation-static-chrome-runtime.js");
   assert.match(bridge, /evaluationSearchInput\.inert = loadingEvaluation/);
   assert.match(bridge, /evaluationSearchInput\.dataset\.staticFocusGuard = "true"/);
   assert.match(runtime, /function evaluationReady\(\)/);
+  assert.match(runtime, /function syncSearchFocusGuard\(\)/);
   assert.match(runtime, /input\.inert = false/);
   assert.match(runtime, /input\.focus\(\{ preventScroll: true \}\)/);
   assert.match(runtime, /document\.scrollingElement\.scrollTop = 0/);
+  assert.doesNotMatch(runtime, /setInterval/);
 });
 
-test("v1.123.31 pins Watchlist title synchronously through hydration", async () => {
-  const runtime = await read("v1-123-31-runtime.js");
+test("v1.123.31 Watchlist title behavior is retained by the dedicated Watchlist runtime", async () => {
+  const runtime = await read("watchlist-route-ui-runtime.js");
   assert.match(runtime, /const nextTitle = `Watchlist - \$\{name\}`/);
-  assert.match(runtime, /new MutationObserver\(\(\) => \{[\s\S]*sync\(\);[\s\S]*\}\)/);
-  assert.match(runtime, /characterData: true/);
-  assert.match(runtime, /liveWatchlistIdentity\(\) \|\| cachedWatchlistIdentity\(\)/);
+  assert.match(runtime, /function syncWatchlistTitle\(\)/);
+  assert.match(runtime, /liveWatchlistName\(watchlistId\)[\s\S]*cachedWatchlistName\(watchlistId\)/);
+  assert.match(runtime, /stableWatchlistName/);
 });
 
 test("v1.123.31 installs full global search before legacy page startup waits", async () => {
