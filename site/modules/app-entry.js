@@ -22,7 +22,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-refinement-runtime.js",
-  "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
   "/selection-refresh-reset-runtime.js",
   "/my-players-refresh-view-runtime.js",
