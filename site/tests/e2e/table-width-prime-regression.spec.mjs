@@ -29,8 +29,8 @@ test("refresh shows settled player-table column widths before legacy data loads"
 
   const navigation = page.goto("/database/attributes", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => (
-    document.querySelector("#tableHead")?.dataset.staticHeader === "true"
-    && document.querySelector("#progressionPage .tableScroller")?.classList.contains("tableWidthsReady")
+    globalThis.document.querySelector("#tableHead")?.dataset.staticHeader === "true"
+    && globalThis.document.querySelector("#progressionPage .tableScroller")?.classList.contains("tableWidthsReady")
   ));
 
   const before = await columnWidths(page);
