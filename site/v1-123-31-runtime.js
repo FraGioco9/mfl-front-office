@@ -9,7 +9,6 @@
   let observer = null;
   let evaluationFocusQueued = false;
   let evaluationBusyToken = "";
-  let delegatedViewBusy = false;
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -174,54 +173,6 @@
     keepEvaluationAtStaticPosition();
   }
 
-  function invokeDelegatedView(viewName) {
-    window.__mflDelegatedViewName = viewName;
-    try {
-      window.eval(`(() => {
-        const viewName = String(window.__mflDelegatedViewName || "");
-        if (!viewName) return;
-        const page = String(document.body?.dataset.page || "").toLowerCase();
-        if (page === "mfl" && viewName === "stats") {
-          if (typeof setPage === "function") setPage("mflstats", true, { skipNavigationLoading: true });
-          return;
-        }
-        if (page === "mflstats" && viewName === "attributes") {
-          if (typeof setPage === "function") setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
-          return;
-        }
-        if (page === "databasestats" && viewName !== "stats") {
-          if (typeof setPage === "function") setPage("database", true, { view: viewName, skipNavigationLoading: true });
-          return;
-        }
-        if (typeof setView === "function") setView(viewName);
-      })();`);
-    } finally {
-      delete window.__mflDelegatedViewName;
-    }
-  }
-
-  function handleDelegatedViewClick(event) {
-    if (destroyed || delegatedViewBusy || event.defaultPrevented) return;
-    const target = event.target instanceof Element ? event.target.closest(".viewButton[data-view]") : null;
-    if (!(target instanceof HTMLButtonElement) || target.hidden || target.disabled) return;
-    if (document.documentElement.dataset.mflReady !== "true" || appBusy()) return;
-    const viewName = String(target.dataset.view || "");
-    if (!viewName || target.classList.contains("active")) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    delegatedViewBusy = true;
-    try {
-      window.__mflTableLoadingRuntime?.primeRoute?.({
-        pageName: String(document.body?.dataset.page || "").replace("databasestats", "database").replace("mflstats", "mfl"),
-        view: viewName,
-      });
-      invokeDelegatedView(viewName);
-    } finally {
-      delegatedViewBusy = false;
-    }
-  }
-
   function sync() {
     if (destroyed) return;
     syncEvaluationBusy();
@@ -232,7 +183,6 @@
   }
 
   document.addEventListener("focusin", guardEvaluationFocus, true);
-  window.addEventListener("click", handleDelegatedViewClick, true);
 
   observer = new MutationObserver(() => {
     // MutationObserver callbacks run before paint. Pin the watchlist title and
@@ -256,7 +206,6 @@
     observer?.disconnect();
     observer = null;
     document.removeEventListener("focusin", guardEvaluationFocus, true);
-    window.removeEventListener("click", handleDelegatedViewClick, true);
     window.removeEventListener("popstate", sync);
     window.removeEventListener("mfl:ready", sync);
     if (evaluationBusyToken) {
