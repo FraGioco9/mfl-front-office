@@ -1,4 +1,5 @@
 [
+  ["v1.123.34", "Consolidate runtimes, remove dead compatibility code, and harden release maintenance"],
   ["v1.123.33", "Restore table interactions and synchronize Evaluation and global search loading"],
   ["v1.123.32", "Refresh entry assets and restore Evaluation and search interactions"],
   ["v1.123.31", "Restore all view navigation and stabilize Watchlist, Evaluation, Database Stats, and global search"],
