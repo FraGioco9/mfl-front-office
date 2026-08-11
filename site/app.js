@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.32";
+  const STATIC_RELEASE_VERSION = "1.123.33";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -653,7 +653,7 @@
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
     const DATA_LOADING_CLASS = "mflDataLoading";
-    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData"]);
+    const DATA_LOADING_REASONS = new Set(["startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData", "evaluationRouteLoading", "loadSharedEvaluation", "loadSavedEvaluation", "openSavedEvaluationsModal"]);
     const blockedEvents = [
       "pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu",
       "pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove",
@@ -753,31 +753,12 @@
       }
     }
 
-    /**
-     * @param {Element | null} element
-     * @param {string | null} pseudoElement
-     */
-    function elementHasWaitCursor(element, pseudoElement = null) {
-      if (!(element instanceof Element)) return false;
-      try {
-        return getComputedStyle(element, pseudoElement).cursor === "wait";
-      } catch {
-        return false;
-      }
-    }
-
-    function interactionShouldBeBlocked(event) {
-      if (activeTokens.size) return true;
-      const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest(".viewButton[data-view], .searchResult, .evaluationSearchResult")) return false;
-      return elementHasWaitCursor(target)
-        || elementHasWaitCursor(document.documentElement)
-        || elementHasWaitCursor(document.body)
-        || elementHasWaitCursor(document.body, "::before");
+    function interactionShouldBeBlocked() {
+      return activeTokens.size > 0;
     }
 
     function blockInteraction(event) {
-      if (!interactionShouldBeBlocked(event)) return;
+      if (!interactionShouldBeBlocked()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     }
