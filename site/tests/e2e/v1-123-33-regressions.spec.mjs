@@ -86,35 +86,37 @@ test("real pointer clicks reach visible global and Evaluation result listeners",
   await page.locator("#openSearchButton").click();
 
   await page.evaluate(() => {
-    globalThis.__resultClickCounts = { global: 0, evaluation: 0 };
+    globalThis.__globalResultClicks = 0;
     const globalResults = globalThis.document.getElementById("playerSearchResults");
     const globalResult = globalThis.document.createElement("button");
     globalResult.type = "button";
     globalResult.className = "searchResult";
     globalResult.textContent = "Recent player";
-    globalResult.addEventListener("click", () => { globalThis.__resultClickCounts.global += 1; });
+    globalResult.addEventListener("click", () => { globalThis.__globalResultClicks += 1; });
     globalResults.replaceChildren(globalResult);
   });
 
   await page.locator("#playerSearchResults .searchResult").click();
+  expect(await page.evaluate(() => globalThis.__globalResultClicks)).toBe(1);
   await page.locator("#closeSearchButton").click();
 
   await installOptIn(page);
   await page.goto("/evaluation");
   await waitForArchitecture(page);
   await page.evaluate(() => {
+    globalThis.__evaluationResultClicks = 0;
     const evaluationResult = globalThis.document.createElement("button");
     evaluationResult.type = "button";
     evaluationResult.className = "evaluationSearchResult";
     evaluationResult.textContent = "Recent evaluation player";
-    evaluationResult.addEventListener("click", () => { globalThis.__resultClickCounts.evaluation += 1; });
+    evaluationResult.addEventListener("click", () => { globalThis.__evaluationResultClicks += 1; });
     const evaluationResults = globalThis.document.getElementById("evaluationSearchResults");
     evaluationResults.hidden = false;
     evaluationResults.replaceChildren(evaluationResult);
   });
 
   await page.locator("#evaluationSearchResults .evaluationSearchResult").click();
-  expect(await page.evaluate(() => globalThis.__resultClickCounts)).toEqual({ global: 1, evaluation: 1 });
+  expect(await page.evaluate(() => globalThis.__evaluationResultClicks)).toBe(1);
 });
 
 test("opening global search focuses the input and typed search returns every category immediately", async ({ page }) => {
