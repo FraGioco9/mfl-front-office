@@ -10,7 +10,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 test("release metadata is the current Semantic Version source", async () => {
   const release = JSON.parse(await read("release.json"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.version, "1.123.32");
+  assert.equal(release.version, "1.123.33");
   assert.ok(release.description.length > 20);
 });
 
@@ -52,7 +52,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.32"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.33"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);
@@ -134,12 +134,15 @@ test("loading lock remains scoped to explicit data operations including both Sta
   assert.doesNotMatch(bridge, /window\.fetch\s*=|trackedFetch|syncKnownLoadingStates|namedTokens/);
 });
 
-test("wait-cursor elements are interaction locked even without a busy token", async () => {
+test("only explicit busy tokens block interaction while wait remains visual", async () => {
   const bridge = await read("app.js");
-  assert.match(bridge, /function elementHasWaitCursor\(element, pseudoElement = null\)/);
-  assert.match(bridge, /function interactionShouldBeBlocked\(event\)/);
-  assert.match(bridge, /elementHasWaitCursor\(document\.body, "::before"\)/);
-  assert.match(bridge, /if \(!interactionShouldBeBlocked\(event\)\) return;/);
+  const waitRuntime = await read("database-static-filter-runtime.js");
+  assert.match(bridge, /function interactionShouldBeBlocked\(\)/);
+  assert.match(bridge, /return activeTokens\.size > 0;/);
+  assert.match(bridge, /if \(!interactionShouldBeBlocked\(\)\) return;/);
+  assert.doesNotMatch(bridge, /function elementHasWaitCursor/);
+  assert.match(waitRuntime, /function waitCursorActive\(target = null\)/);
+  assert.match(waitRuntime, /const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed"/);
 });
 
 test("pager and showing-player count stay hidden while table data is loading", async () => {

@@ -7,16 +7,16 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-test("v1.123.32 keeps entry asset cache keys aligned with the release", async () => {
+test("entry asset cache keys stay aligned with the current release", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const app = await read("app.js");
 
-  assert.equal(release.version, "1.123.32");
+  assert.equal(release.version, "1.123.33");
   assert.match(index, new RegExp(`/styles\\.css\\?v=${release.version.replaceAll(".", "\\.")}`));
   assert.match(index, new RegExp(`/app\\.js\\?v=${release.version.replaceAll(".", "\\.")}`));
   assert.match(index, new RegExp(`MFL Front Office v${release.version.replaceAll(".", "\\.")}`));
-  assert.match(app, /const STATIC_RELEASE_VERSION = "1\.123\.32"/);
+  assert.match(app, /const STATIC_RELEASE_VERSION = "1\.123\.33"/);
   assert.doesNotMatch(index, /(?:app\.js|styles\.css)\?v=1\.123\.22/);
 });
 
@@ -34,8 +34,9 @@ test("v1.123.32 owns Evaluation first paint before asynchronous startup", async 
   assert.match(chrome, /document\.documentElement\.dataset\.storedWalletOptIn === "true"/);
 });
 
-test("v1.123.32 stale wait state cannot swallow real navigation result controls", async () => {
+test("stale wait state cannot swallow navigation or result controls", async () => {
   const app = await read("app.js");
-  assert.match(app, /target\?\.closest\("\.viewButton\[data-view\], \.searchResult, \.evaluationSearchResult"\)/);
-  assert.match(app, /if \(activeTokens\.size\) return true/);
+  assert.match(app, /function interactionShouldBeBlocked\(\)/);
+  assert.match(app, /return activeTokens\.size > 0;/);
+  assert.doesNotMatch(app, /function elementHasWaitCursor/);
 });

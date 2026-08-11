@@ -45,7 +45,7 @@ test("legacy loading is collapsed before paint without recreating the canonical 
   const runtime = await read("table-loading-runtime.js");
 
   assert.match(runtime, /existingCell instanceof HTMLTableCellElement/);
-  assert.match(runtime, /if \(legacyLoadingVisible\) show\(\)/);
+  assert.match(runtime, /if \(legacyLoadingVisible\) \{[\s\S]*primeHeader\(route\.pageName, route\.view\);[\s\S]*show\(\);[\s\S]*\}/);
   assert.doesNotMatch(runtime, /legacyLoadingVisible \|\| loadingRow/);
   assert.match(runtime, /new MutationObserver\(\(\) => \{[\s\S]*sync\(\);[\s\S]*\}\)/);
   assert.ok(runtime.includes("\n    sync,\n"));

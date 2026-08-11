@@ -1,13 +1,14 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.31");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.33");
   const previous = window.__mflV12331Runtime;
   previous?.destroy?.();
 
   let destroyed = false;
   let observer = null;
   let evaluationFocusQueued = false;
+  let evaluationBusyToken = "";
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -101,6 +102,25 @@
       && !appBusy();
   }
 
+  function evaluationRouteLoading() {
+    return cleanPath() === "/evaluation"
+      && Boolean(document.body?.classList.contains("evaluationRouteLoading"));
+  }
+
+  function syncEvaluationBusy() {
+    const controller = window.__mflInteractionBusy;
+    if (!controller?.begin || !controller?.end) return;
+    const loading = evaluationRouteLoading();
+    if (loading && !evaluationBusyToken) {
+      evaluationBusyToken = controller.begin("evaluationRouteLoading");
+      return;
+    }
+    if (!loading && evaluationBusyToken) {
+      controller.end(evaluationBusyToken);
+      evaluationBusyToken = "";
+    }
+  }
+
   function keepEvaluationAtStaticPosition() {
     if (cleanPath() !== "/evaluation" || evaluationReady()) return;
     const main = document.querySelector("main");
@@ -155,6 +175,7 @@
 
   function sync() {
     if (destroyed) return;
+    syncEvaluationBusy();
     pinWatchlistTitle();
     syncEvaluationInput();
     keepEvaluationAtStaticPosition();
@@ -165,8 +186,8 @@
 
   observer = new MutationObserver(() => {
     // MutationObserver callbacks run before paint. Pin the watchlist title and
-    // Evaluation focus/scroll state synchronously so hydration cannot flash a
-    // temporary title, selected input, or shifted layout for one rendered frame.
+    // Evaluation focus/scroll/loading state synchronously so hydration cannot
+    // flash a temporary title, selected input, shifted layout, or normal cursor.
     sync();
   });
   observer.observe(document.documentElement, {
@@ -187,6 +208,10 @@
     document.removeEventListener("focusin", guardEvaluationFocus, true);
     window.removeEventListener("popstate", sync);
     window.removeEventListener("mfl:ready", sync);
+    if (evaluationBusyToken) {
+      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+      evaluationBusyToken = "";
+    }
     const input = document.getElementById("evaluationSearchInput");
     if (input instanceof HTMLInputElement && input.dataset.staticFocusGuard === "true") {
       input.inert = false;

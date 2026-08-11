@@ -12,6 +12,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/mfl-stats-first-paint-runtime.js",
   "/database-static-filter-runtime.js",
   "/v1-123-31-runtime.js",
+  "/search-result-click-runtime.js",
   "/global-search-runtime.js",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
@@ -38,6 +39,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
+ * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
  * __mflAppStartPromise?: Promise<void>,
  * }} */
 const runtimeWindow = window;
@@ -56,6 +58,14 @@ function showStartupError(error) {
   document.querySelector("main")?.prepend(message);
 }
 
+function installLegacyBridges() {
+  runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
+  runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
+  runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
+  runtimeWindow.__mflTableLoadingRuntime?.sync?.();
+  runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
+}
+
 async function start() {
   const release = await loadRelease();
   window.__mflRelease = release;
@@ -71,24 +81,26 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js", release.version);
-  runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
-  runtimeWindow.__mflTableLoadingRuntime?.sync?.();
+  installLegacyBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
-  runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
-  runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
+  // Late compatibility runtimes can replace legacy functions. Reinstall every
+  // bridge after they load so loading/cursor ownership and static table chrome
+  // keep wrapping the functions that are actually active in the page.
+  installLegacyBridges();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
+  runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
 
   // Keep late runtimes such as selection bridges available as early as possible,
   // but do not expose pagination or release the startup loading state on player

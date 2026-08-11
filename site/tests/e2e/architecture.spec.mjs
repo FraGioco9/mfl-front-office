@@ -42,7 +42,7 @@ test("boots with header, sidebar, footer and their content before release loadin
   await expect(page.locator('#sidebar .navButton[data-page="database"]')).toContainText("Database");
   await expect(page.locator('#sidebar .navButton[data-page="mfl"]')).toContainText("MFL");
   await expect(page.locator(".siteFooter")).toBeVisible();
-  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.32");
+  await expect(page.locator(".siteFooter")).toContainText("MFL Front Office v1.123.33");
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
@@ -309,7 +309,7 @@ test("scoped loading finishes without leaving the site interaction-locked", asyn
   expect(await page.locator("#openSearchButton").evaluate((node) => globalThis.getComputedStyle(node).cursor)).not.toBe("wait");
 });
 
-test("a wait cursor blocks clicks even without an explicit busy token", async ({ page }) => {
+test("a wait cursor remains visual-only without an explicit busy token", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
 
@@ -327,7 +327,7 @@ test("a wait cursor blocks clicks even without an explicit busy token", async ({
     return { waitCount, pointerCount: clickCount };
   });
 
-  expect(counts).toEqual({ waitCount: 0, pointerCount: 1 });
+  expect(counts).toEqual({ waitCount: 1, pointerCount: 2 });
 });
 
 test("Database Stats refresh shows boxes and Overall filters immediately, then holds wait cursor until data finishes", async ({ page }) => {
@@ -576,7 +576,7 @@ test("Changelog restores complete accepted history without stale first paint", a
   await waitForArchitecture(page);
   const list = page.locator(".changelogList");
   await expect(list).toBeVisible();
-  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.32");
+  await expect(list.locator(".changelogPatchList > li").first()).toContainText("v1.123.33");
   await expect(list).toContainText("v1.123.13");
   await expect(list).toContainText("v1.123.12");
   await expect(list).toContainText("v1.123.11");
@@ -596,8 +596,8 @@ test("serves the centralized release and complete recent Changelog bridge", asyn
   const rows = await history.json();
   const versions = rows.map((row) => row[0]);
 
-  expect(metadata.version).toBe("1.123.32");
-  expect(rows[0][0]).toBe("v1.123.32");
+  expect(metadata.version).toBe("1.123.33");
+  expect(rows[0][0]).toBe("v1.123.33");
   expect(rows[0][1]).toBe(metadata.description);
   for (const version of ["v1.123.13", "v1.123.12", "v1.123.11", "v1.123.10", "v1.123.9", "v1.121.0", "v1.120.48", "v1.120.30", "v1.120.3", "v1.120.0", "v1.119.8"]) {
     expect(versions).toContain(version);

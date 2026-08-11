@@ -7,13 +7,12 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-test("v1.123.31 broadens stale-wait view click pass-through without weakening real busy locks", async () => {
+test("v1.123.31 stale-wait compatibility remains while real busy tokens own click locking", async () => {
   const bridge = await read("app.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.32"/);
-  assert.match(bridge, /function interactionShouldBeBlocked\(event\)/);
-  assert.match(bridge, /if \(activeTokens\.size\) return true;/);
-  assert.match(bridge, /\.viewButton\[data-view\]/);
-  assert.match(bridge, /elementHasWaitCursor\(document\.body, "::before"\)/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.33"/);
+  assert.match(bridge, /function interactionShouldBeBlocked\(\)/);
+  assert.match(bridge, /return activeTokens\.size > 0;/);
+  assert.doesNotMatch(bridge, /function elementHasWaitCursor/);
 });
 
 test("v1.123.31 primes Evaluation unfocused and releases focus only after readiness", async () => {

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.32");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.33");
 
   window.__mflEvaluationStaticChrome?.destroy?.();
   window.__mflReleaseVersion = VERSION;
@@ -102,6 +102,13 @@
     }
   }
 
+  function syncDiscountRateFallback() {
+    const discountRate = document.getElementById("evaluationDiscountRate");
+    if (!(discountRate instanceof HTMLElement)) return;
+    if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
+    setImportant(discountRate, "visibility", "visible");
+  }
+
   function showEvaluationPage() {
     const page = document.getElementById("evaluationPage");
     if (!(page instanceof HTMLElement) || !document.body) return false;
@@ -159,14 +166,7 @@
       seededMflPerUsd = true;
     }
 
-    const discountRate = document.getElementById("evaluationDiscountRate");
-    if (discountRate
-        && !document.body.classList.contains("evaluationDiscountRateReady")
-        && !document.documentElement.classList.contains("mflEvaluationRateResolved")) {
-      discountRate.textContent = "-";
-      setImportant(discountRate, "visibility", "visible");
-    }
-
+    syncDiscountRateFallback();
     syncLoadButton();
     return true;
   }
@@ -228,6 +228,7 @@
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
+    characterData: true,
     attributes: true,
     attributeFilter: ["class", "data-page", "hidden"],
   });
