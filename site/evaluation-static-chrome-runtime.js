@@ -197,6 +197,19 @@
     keepStaticPosition();
   }
 
+  function preserveEvaluationResultClick(event) {
+    if (event.button !== 0) return;
+    const target = event.target instanceof Element
+      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
+      : null;
+    if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
+
+    // Keep the Evaluation input from blurring between mousedown and click.
+    // Preventing the mousedown default preserves the original trusted click
+    // handler on the result button instead of forwarding or synthesizing one.
+    event.preventDefault();
+  }
+
   function showEvaluationPage() {
     const page = document.getElementById("evaluationPage");
     if (!(page instanceof HTMLElement) || !document.body) return false;
@@ -335,6 +348,7 @@
   document.head.appendChild(style);
 
   document.addEventListener("focusin", guardEvaluationFocus, true);
+  document.addEventListener("mousedown", preserveEvaluationResultClick, true);
   observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
@@ -352,6 +366,7 @@
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
     document.removeEventListener("focusin", guardEvaluationFocus, true);
+    document.removeEventListener("mousedown", preserveEvaluationResultClick, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
     window.removeEventListener("mfl:ready", schedule);
