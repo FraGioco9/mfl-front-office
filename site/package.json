@@ -4,7 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js release-ui-runtime.js changelog-history-runtime.js tests playwright.config.mjs",
+    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js tests playwright.config.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
     "test:architecture": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
