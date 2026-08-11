@@ -102,3 +102,43 @@ test("global search takes focus from the selected Evaluation search", async ({ p
   await expect(globalInput).toHaveValue("Michel");
   await expect(evaluationInput).toHaveValue("");
 });
+
+test("all five recent Evaluation results keep their real click handlers", async ({ page }) => {
+  const playerIds = [911, 912, 913, 914, 915];
+  await page.addInitScript((ids) => {
+    globalThis.localStorage.setItem("mfl-recent-evaluation-searches-v1", JSON.stringify(ids.map(String)));
+  }, playerIds);
+
+  await page.route("**/api/data?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("mode") !== "search") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        players: {
+          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
+          rows: playerIds.map((id, index) => [id, `Evaluation Player ${index + 1}`, 95 - index, "Italy", "ST", null]),
+        },
+        agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [] },
+        clubs: [],
+      }),
+    });
+  });
+
+  for (const playerId of playerIds) {
+    await page.goto("/evaluation");
+    await waitForArchitecture(page);
+    const input = page.locator("#evaluationSearchInput");
+    await input.focus();
+    const results = page.locator("#evaluationSearchResults > .evaluationSearchResult");
+    await expect(results).toHaveCount(5);
+    const result = results.filter({ hasText: `#${playerId}` });
+    await expect(result).toBeVisible();
+    await result.click();
+    await expect.poll(async () => new URL(page.url()).searchParams.get("player")).toBe(String(playerId));
+  }
+});
