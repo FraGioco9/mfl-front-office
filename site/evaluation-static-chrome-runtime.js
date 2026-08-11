@@ -277,6 +277,14 @@
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
+  function onMutation() {
+    if (destroyed) return;
+    // Busy ownership is input gating, so mirror the loading class immediately
+    // in the observer microtask instead of waiting for the next animation frame.
+    syncEvaluationBusy();
+    schedule();
+  }
+
   const style = document.createElement("style");
   style.id = "mflEvaluationStaticChromeStyles";
   style.textContent = `
@@ -315,7 +323,7 @@
   document.head.appendChild(style);
 
   document.addEventListener("focusin", guardEvaluationFocus, true);
-  observer = new MutationObserver(schedule);
+  observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
