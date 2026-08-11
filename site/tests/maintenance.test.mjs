@@ -36,7 +36,7 @@ test("removed compatibility files stay removed", async () => {
   await assert.rejects(access(resolve(repositoryRoot, "run_flow_rebuild_paged.py")));
 });
 
-test("runtime consolidation removes duplicate polling and remote source injection", async () => {
+test("runtime consolidation removes duplicate polling, click interception, and remote source injection", async () => {
   const selectionStack = await readSite("selection-stack-runtime.js");
   const selectionReset = await readSite("selection-refresh-reset-runtime.js");
   const pairRoutes = await readSite("watchlist-myplayers-route-runtime.js");
@@ -49,7 +49,7 @@ test("runtime consolidation removes duplicate polling and remote source injectio
   assert.doesNotMatch(selectionReset, /setInterval|function syncFooter/);
   assert.doesNotMatch(pairRoutes, /setInterval|window\.fetch\s*=/);
   assert.doesNotMatch(releaseUi, /setInterval|syncSelectionBar|syncToast/);
-  assert.match(globalSearch, /window\.addEventListener\("click", onResultClick, true\)/);
+  assert.doesNotMatch(globalSearch, /onResultClick|window\.addEventListener\("click"/);
   assert.match(evaluation, /function syncEvaluationBusy\(\)/);
   assert.doesNotMatch(loader, /loadPreparedClassicScript|executeClassicSource/);
 });
