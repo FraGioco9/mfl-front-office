@@ -24,29 +24,21 @@ async function installOptIn(page) {
       appIdentifier: "MFL Front Office Dapper Opt-In",
       signatures: ["signature"],
     }));
-    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({
-      allowed: true,
-      checkedAt: Date.now(),
-    }));
+    globalThis.localStorage.setItem(`mfl-wallet-permission-cache-v1:${wallet}`, JSON.stringify({ allowed: true, checkedAt: Date.now() }));
   });
 }
 
-test("entry document requests v1.123.33 application and stylesheet assets", async ({ page }) => {
+test("entry document requests v1.123.34 application and stylesheet assets", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator('link[rel="stylesheet"][href="/styles.css?v=1.123.33"]')).toHaveCount(1);
-  await expect(page.locator('script[src="/app.js?v=1.123.33"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="stylesheet"][href="/styles.css?v=1.123.34"]')).toHaveCount(1);
+  await expect(page.locator('script[src="/app.js?v=1.123.34"]')).toHaveCount(1);
 });
 
 test("Evaluation title and Load button are final before release loading finishes", async ({ page }) => {
   await installOptIn(page);
-
   let releaseMetadata;
   const releaseGate = new Promise((resolve) => { releaseMetadata = resolve; });
-  await page.route("**/release.json", async (route) => {
-    await releaseGate;
-    await route.continue();
-  });
-
+  await page.route("**/release.json", async (route) => { await releaseGate; await route.continue(); });
   await page.goto("/evaluation", { waitUntil: "domcontentloaded" });
   const title = page.locator("#evaluationPage .evaluationTitleRow > .tablePageTitle");
   const load = page.locator("#evaluationLoadButton");
@@ -56,7 +48,6 @@ test("Evaluation title and Load button are final before release loading finishes
   await expect(input).not.toBeFocused();
   const before = await title.boundingBox();
   expect(before).not.toBeNull();
-
   releaseMetadata();
   await waitForArchitecture(page);
   await expect(load).toBeVisible();
@@ -69,7 +60,6 @@ test("Evaluation title and Load button are final before release loading finishes
 test("stale wait cursor does not block global or Evaluation recent-result buttons", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
-
   const clicked = await page.evaluate(() => {
     globalThis.document.body.style.cursor = "wait";
     let globalClicks = 0;
@@ -88,7 +78,6 @@ test("stale wait cursor does not block global or Evaluation recent-result button
     globalThis.document.body.style.cursor = "";
     return { globalClicks, evaluationClicks };
   });
-
   expect(clicked).toEqual({ globalClicks: 1, evaluationClicks: 1 });
 });
 
@@ -103,19 +92,12 @@ test("typed global search reaches all categories without visiting data pages", a
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        players: {
-          columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"],
-          rows: [[901, "Zephyr Player", 91, "Italy", "ST", null]],
-        },
+        players: { columns: ["player_id", "name", "overall", "nationality", "positions", "retirement_years"], rows: [[901, "Zephyr Player", 91, "Italy", "ST", null]] },
         clubs: [{ clubId: "zephyr-club", name: "Zephyr Club", division: 2 }],
-        agents: {
-          columns: ["wallet_address", "wallet_name", "player_count"],
-          rows: [["0xzephyr", "Zephyr Agent", 14]],
-        },
+        agents: { columns: ["wallet_address", "wallet_name", "player_count"], rows: [["0xzephyr", "Zephyr Agent", 14]] },
       }),
     });
   });
-
   await page.goto("/");
   await waitForArchitecture(page);
   await page.locator("#openSearchButton").click();
