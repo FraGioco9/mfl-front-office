@@ -1,4 +1,4 @@
 {
-  "version": "1.123.33",
-  "description": "Restore table interactions and synchronize Evaluation and global search loading"
+  "version": "1.123.34",
+  "description": "Consolidate runtimes, remove dead compatibility code, and harden release maintenance"
 }

@@ -9,12 +9,8 @@ export default [
     files: [
       "app.js",
       "modules/app-entry.js",
-      "modules/core-runtime.js",
       "modules/http.js",
-      "modules/release.js",
       "modules/runtime-loader.js",
-      "release-ui-runtime.js",
-      "changelog-history-runtime.js",
     ],
     languageOptions: {
       ecmaVersion: "latest",
@@ -24,6 +20,18 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+  {
+    files: ["*-runtime.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+      globals: globals.browser,
+    },
+    rules: {
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "no-undef": "off",
     },
   },
   {

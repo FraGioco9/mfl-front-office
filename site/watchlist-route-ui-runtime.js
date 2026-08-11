@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.25");
+  const VERSION = String(window.__mflReleaseVersion || "dev");
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
   const previous = window.__mflWatchlistRouteUiRuntime;
@@ -92,13 +92,14 @@
 
     const optedIn = document.documentElement.dataset.storedWalletOptIn !== "false";
     if (!isWatchlistPath() || !optedIn || document.body?.dataset.page === "myplayers") {
-      switcher.hidden = true;
+      if (!switcher.hidden) switcher.hidden = true;
       return;
     }
 
     const { name } = currentWatchlistIdentity();
-    buttonText.textContent = name || "-";
-    switcher.hidden = false;
+    const nextText = name || "-";
+    if (buttonText.textContent !== nextText) buttonText.textContent = nextText;
+    if (switcher.hidden) switcher.hidden = false;
   }
 
   function syncWatchlistTitle() {
@@ -238,11 +239,21 @@
     if (!frame) frame = requestAnimationFrame(sync);
   }
 
+  function onMutation() {
+    if (isWatchlistPath()) {
+      // Title identity is first-paint chrome. Re-pin it in the mutation microtask
+      // so legacy hydration cannot expose a fallback title for one rendered frame.
+      syncWatchlistTitle();
+    }
+    schedule();
+  }
+
   function performHistoryChange(method, stateValue, title, value) {
     const next = asUrl(value);
     const nextRoute = `${next.pathname}${next.search}${next.hash}`;
     if (protectedRoute && isWatchlistPath(next.pathname) && nextRoute !== protectedRoute) {
       const result = originalReplaceState(stateValue, title, protectedRoute);
+      syncWatchlistTitle();
       schedule();
       return result;
     }
@@ -250,6 +261,8 @@
     if (!isWatchlistPath(next.pathname)) {
       protectedRoute = "";
       hideSwitcher();
+    } else {
+      syncWatchlistTitle();
     }
     schedule();
     return result;
@@ -360,12 +373,13 @@
   window.addEventListener("popstate", () => {
     protectedRoute = "";
     if (!isWatchlistPath()) hideSwitcher();
+    else syncWatchlistTitle();
     schedule();
   });
   window.addEventListener("resize", repositionTooltip);
   window.addEventListener("scroll", repositionTooltip, true);
 
-  observer = new MutationObserver(schedule);
+  observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,

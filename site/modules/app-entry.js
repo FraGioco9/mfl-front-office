@@ -1,7 +1,6 @@
 // @ts-check
 
 import { installApiFetchPolicy } from "./http.js";
-import { loadRelease } from "./release.js";
 import { loadClassicScript, loadScriptGroup } from "./runtime-loader.js";
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
@@ -11,8 +10,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/database-static-filter-runtime.js",
-  "/v1-123-31-runtime.js",
-  "/search-result-click-runtime.js",
   "/global-search-runtime.js",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
@@ -25,10 +22,8 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-refinement-runtime.js",
-  "/v1-120-10-runtime.js",
   "/database-stats-view-button-runtime.js",
   "/selection-refresh-reset-runtime.js",
-  "/my-players-refresh-view-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
 ]);
@@ -58,6 +53,14 @@ function showStartupError(error) {
   document.querySelector("main")?.prepend(message);
 }
 
+function releaseFromEntryUrl() {
+  const version = new URL(import.meta.url).searchParams.get("v")?.trim() || "";
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error("The application entry is missing a valid release version.");
+  }
+  return Object.freeze({ version, description: "" });
+}
+
 function installLegacyBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
@@ -67,7 +70,10 @@ function installLegacyBridges() {
 }
 
 async function start() {
-  const release = await loadRelease();
+  // app.js already fetched and validated release.json before importing this
+  // versioned entry module. Reuse the version embedded in this module URL so
+  // startup never performs a duplicate release-metadata request.
+  const release = releaseFromEntryUrl();
   window.__mflRelease = release;
   window.__mflReleaseVersion = release.version;
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
@@ -99,8 +105,6 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
-  runtimeWindow.__mflTableLoadingRuntime?.sync?.();
-  runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
 
   // Keep late runtimes such as selection bridges available as early as possible,
   // but do not expose pagination or release the startup loading state on player

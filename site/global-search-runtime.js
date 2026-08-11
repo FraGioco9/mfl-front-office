@@ -1,14 +1,16 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.33");
+  const VERSION = String(window.__mflReleaseVersion || "dev");
   const MAX_RESULT_BOXES = 5;
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
+  window.__mflSearchResultClickRuntime?.destroy?.();
 
   let controller = null;
   let sequence = 0;
   let destroyed = false;
+  let forwardingResultClick = false;
   let resultsObserver = null;
   let observedResults = null;
   let modalObserver = null;
@@ -21,6 +23,11 @@
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+  function appBusy() {
+    return document.documentElement.classList.contains("mflInteractionBusy")
+      || document.documentElement.dataset.interactionBusy === "true";
+  }
 
   function searchInput() {
     const input = document.getElementById("playerSearchInput");
@@ -204,6 +211,25 @@
     void searchDatabase(query);
   }
 
+  function onResultClick(event) {
+    if (destroyed || forwardingResultClick || appBusy()) return;
+    const target = event.target instanceof Element
+      ? event.target.closest("#playerSearchResults .searchResult, #evaluationSearchResults .evaluationSearchResult")
+      : null;
+    if (!(target instanceof HTMLButtonElement) || target.hidden || target.disabled) return;
+
+    // Own the real pointer click before document-level compatibility blockers,
+    // then forward exactly one click to the result's original application handler.
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    forwardingResultClick = true;
+    try {
+      target.click();
+    } finally {
+      forwardingResultClick = false;
+    }
+  }
+
   function focusAndSelectSearch() {
     if (destroyed) return;
     const modal = searchModal();
@@ -238,13 +264,13 @@
   }
 
   document.addEventListener("input", onInput, true);
+  window.addEventListener("click", onResultClick, true);
   document.getElementById("openSearchButton")?.addEventListener("click", onOpenSearch, true);
   window.addEventListener("mfl:ready", flushPendingPayload);
   observeResultBoxes();
   observeSearchModal();
   document.documentElement.dataset.globalSearchAuthoritative = "true";
-  const globalSearchReady = Promise.resolve(true);
-  window.__mflGlobalSearchReadyPromise = globalSearchReady;
+  window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
 
   function destroy() {
     destroyed = true;
@@ -262,6 +288,7 @@
     focusFrame = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
     document.removeEventListener("input", onInput, true);
+    window.removeEventListener("click", onResultClick, true);
     document.getElementById("openSearchButton")?.removeEventListener("click", onOpenSearch, true);
     window.removeEventListener("mfl:ready", flushPendingPayload);
   }

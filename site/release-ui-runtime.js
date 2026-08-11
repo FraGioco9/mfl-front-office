@@ -1,13 +1,13 @@
 (() => {
+  "use strict";
+
   const VERSION = String(window.__mflRelease?.version || window.__mflReleaseVersion || "dev");
-  const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage";
   const STATS_PATH = /^\/database\/stats\/?$/i;
 
   window.__mflReleaseUiRuntime?.destroy?.();
 
   let frame = 0;
   let observer = null;
-  let interval = 0;
 
   function installFirstPaintGuards() {
     if (document.getElementById("mflReleaseFirstPaintGuards")) return;
@@ -29,22 +29,9 @@
     element.style.setProperty(property, value, "important");
   }
 
-  function setDocumentVariable(name, value) {
-    if (document.documentElement.style.getPropertyValue(name) === value) return;
-    document.documentElement.style.setProperty(name, value);
-  }
-
   function setAttributeIfChanged(element, name, value) {
     if (!(element instanceof Element) || element.getAttribute(name) === value) return;
     element.setAttribute(name, value);
-  }
-
-  function visible(element) {
-    if (!(element instanceof HTMLElement) || element.hidden) return false;
-    const style = getComputedStyle(element);
-    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
   }
 
   function syncFooter() {
@@ -69,44 +56,6 @@
     setImportant(link, "display", "inline-block");
     setImportant(link, "visibility", "visible");
     setImportant(link, "opacity", "1");
-  }
-
-  function selectionBottom() {
-    const footer = document.querySelector(".siteFooter");
-    if (!visible(footer)) return 12;
-    return Math.max(12, Math.ceil(innerHeight - footer.getBoundingClientRect().top + 12));
-  }
-
-  function syncSelectionBar() {
-    const bar = document.querySelector("#selectionBar");
-    const main = document.querySelector("#appShell main, main");
-    if (!(bar instanceof HTMLElement) || !(main instanceof HTMLElement)) return;
-
-    if (bar.parentElement !== main) main.appendChild(bar);
-    const mainRect = main.getBoundingClientRect();
-    const bottom = selectionBottom();
-    setImportant(bar, "position", "fixed");
-    setImportant(bar, "left", `${Math.round(mainRect.left + mainRect.width / 2)}px`);
-    setImportant(bar, "right", "auto");
-    setImportant(bar, "bottom", `${bottom}px`);
-    setImportant(bar, "transform", "translateX(-50%)");
-    setImportant(bar, "z-index", "2147483500");
-    setDocumentVariable("--mfl-selection-bar-bottom", `${bottom}px`);
-  }
-
-  function syncToasts() {
-    const bar = document.querySelector("#selectionBar");
-    const bottom = visible(bar)
-      ? Math.max(12, Math.ceil(innerHeight - bar.getBoundingClientRect().top + 12))
-      : 88;
-    const value = `${bottom}px`;
-    setDocumentVariable("--mfl-toast-bottom", value);
-    document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
-      if (!(toast instanceof HTMLElement)) return;
-      setImportant(toast, "position", "fixed");
-      setImportant(toast, "bottom", value);
-      setImportant(toast, "z-index", "2147483635");
-    });
   }
 
   function syncStatsChrome() {
@@ -137,14 +86,11 @@
     frame = 0;
     installFirstPaintGuards();
     syncFooter();
-    syncSelectionBar();
-    syncToasts();
     syncStatsChrome();
   }
 
   function schedule() {
-    if (frame) cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(sync);
+    if (!frame) frame = requestAnimationFrame(sync);
   }
 
   installFirstPaintGuards();
@@ -154,25 +100,21 @@
     subtree: true,
     attributes: true,
     characterData: true,
-    attributeFilter: ["class", "hidden", "style", "data-page", "aria-hidden"],
+    attributeFilter: ["class", "hidden", "data-page", "aria-hidden"],
   });
-  window.addEventListener("resize", schedule);
-  window.addEventListener("scroll", schedule, true);
   window.addEventListener("popstate", schedule);
-  interval = window.setInterval(schedule, 250);
   sync();
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
-    if (interval) clearInterval(interval);
-    window.removeEventListener("resize", schedule);
-    window.removeEventListener("scroll", schedule, true);
     window.removeEventListener("popstate", schedule);
-    document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
-    document.documentElement.style.removeProperty("--mfl-toast-bottom");
     document.getElementById("mflReleaseFirstPaintGuards")?.remove();
   }
 
-  window.__mflReleaseUiRuntime = { version: VERSION, sync: schedule, destroy };
+  window.__mflReleaseUiRuntime = Object.freeze({
+    version: VERSION,
+    sync: schedule,
+    destroy,
+  });
 })();

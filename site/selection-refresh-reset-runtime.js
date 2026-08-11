@@ -1,9 +1,7 @@
 (() => {
   const FEATURE_VERSION = "1.120.25";
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "1.120.35");
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "dev");
   const RESET_WINDOW_MS = 1000;
-
-  window.__mflReleaseVersion = RELEASE_VERSION;
 
   const existing = window.__mflSelectionRefreshResetRuntime;
   if (existing?.version === FEATURE_VERSION) {
@@ -13,30 +11,9 @@
   existing?.destroy?.();
 
   let resetTimer = 0;
-  let footerTimer = 0;
+  let resetObserver = null;
   let destroyed = false;
   const startedAt = Date.now();
-
-  function syncFooter() {
-    const footer = document.querySelector(".siteFooter");
-    if (!(footer instanceof HTMLElement)) return;
-
-    let link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
-    if (!(link instanceof HTMLAnchorElement)) {
-      link = document.createElement("a");
-      footer.prepend(link);
-    }
-
-    const text = `MFL Front Office v${RELEASE_VERSION}`;
-    link.hidden = false;
-    link.removeAttribute("aria-hidden");
-    link.href = "/changelog";
-    link.dataset.page = "changelog";
-    link.dataset.releaseLabel = text;
-    link.textContent = text;
-    link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = RELEASE_VERSION;
-  }
 
   function applicationState() {
     try {
@@ -100,8 +77,10 @@
   }
 
   function finishResetWindow() {
-    if (resetTimer) clearInterval(resetTimer);
+    if (resetTimer) clearTimeout(resetTimer);
     resetTimer = 0;
+    resetObserver?.disconnect();
+    resetObserver = null;
     clearCurrentSelection();
     document.documentElement.classList.remove("mflSelectionRefreshResetPending");
     document.getElementById("mflSelectionRefreshResetStyles")?.remove();
@@ -109,7 +88,6 @@
 
   function runResetPass() {
     if (destroyed) return;
-    syncFooter();
     clearCurrentSelection();
     if (Date.now() - startedAt >= RESET_WINDOW_MS) finishResetWindow();
   }
@@ -133,20 +111,24 @@
   }
 
   function rebind() {
-    if (destroyed) return;
-    syncFooter();
-    runResetPass();
+    if (!destroyed) runResetPass();
   }
 
   ensurePendingStyle();
-  resetTimer = window.setInterval(runResetPass, 50);
-  footerTimer = window.setInterval(syncFooter, 500);
+  resetObserver = new MutationObserver(runResetPass);
+  resetObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class", "hidden", "data-page", "data-mfl-ready"],
+  });
+  resetTimer = window.setTimeout(finishResetWindow, RESET_WINDOW_MS);
   runResetPass();
 
   function destroy() {
     destroyed = true;
-    if (resetTimer) clearInterval(resetTimer);
-    if (footerTimer) clearInterval(footerTimer);
+    if (resetTimer) clearTimeout(resetTimer);
+    resetObserver?.disconnect();
     document.documentElement.classList.remove("mflSelectionRefreshResetPending");
     document.getElementById("mflSelectionRefreshResetStyles")?.remove();
   }

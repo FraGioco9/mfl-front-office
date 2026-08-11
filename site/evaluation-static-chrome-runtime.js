@@ -1,14 +1,16 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.33");
+  "use strict";
+
+  const VERSION = String(window.__mflReleaseVersion || "dev");
 
   window.__mflEvaluationStaticChrome?.destroy?.();
-  window.__mflReleaseVersion = VERSION;
 
   let destroyed = false;
   let frame = 0;
-  let interval = 0;
   let observer = null;
   let seededMflPerUsd = false;
+  let focusQueued = false;
+  let evaluationBusyToken = "";
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -16,6 +18,21 @@
 
   function evaluationActive() {
     return cleanPath() === "/evaluation";
+  }
+
+  function appBusy() {
+    return document.documentElement.classList.contains("mflInteractionBusy")
+      || document.documentElement.dataset.interactionBusy === "true";
+  }
+
+  function evaluationReady() {
+    return evaluationActive()
+      && document.documentElement.dataset.mflReady === "true"
+      && !appBusy();
+  }
+
+  function evaluationRouteLoading() {
+    return evaluationActive() && Boolean(document.body?.classList.contains("evaluationRouteLoading"));
   }
 
   function setImportant(element, property, value) {
@@ -109,6 +126,72 @@
     setImportant(discountRate, "visibility", "visible");
   }
 
+  function syncEvaluationBusy() {
+    const controller = window.__mflInteractionBusy;
+    if (!controller?.begin || !controller?.end) return;
+    const loading = evaluationRouteLoading();
+    if (loading && !evaluationBusyToken) {
+      evaluationBusyToken = controller.begin("evaluationRouteLoading");
+    } else if (!loading && evaluationBusyToken) {
+      controller.end(evaluationBusyToken);
+      evaluationBusyToken = "";
+    }
+  }
+
+  function keepStaticPosition() {
+    if (!evaluationActive() || evaluationReady()) return;
+    const main = document.querySelector("main");
+    if (main instanceof HTMLElement && main.scrollTop !== 0) main.scrollTop = 0;
+    if (document.scrollingElement && document.scrollingElement.scrollTop !== 0) {
+      document.scrollingElement.scrollTop = 0;
+    }
+  }
+
+  function syncSearchFocusGuard() {
+    const input = document.getElementById("evaluationSearchInput");
+    if (!(input instanceof HTMLInputElement)) return;
+
+    if (!evaluationActive()) {
+      if (input.dataset.staticFocusGuard === "true") {
+        input.inert = false;
+        delete input.dataset.staticFocusGuard;
+      }
+      return;
+    }
+
+    if (!evaluationReady()) {
+      input.inert = true;
+      input.dataset.staticFocusGuard = "true";
+      if (document.activeElement === input) input.blur();
+      keepStaticPosition();
+      return;
+    }
+
+    input.inert = false;
+    delete input.dataset.staticFocusGuard;
+  }
+
+  function focusEmptyEvaluationWhenReady() {
+    if (focusQueued || !evaluationReady() || hasSelectedEvaluation()) return;
+    const input = document.getElementById("evaluationSearchInput");
+    if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
+
+    focusQueued = true;
+    requestAnimationFrame(() => {
+      focusQueued = false;
+      syncSearchFocusGuard();
+      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim()) return;
+      input.focus({ preventScroll: true });
+    });
+  }
+
+  function guardEvaluationFocus(event) {
+    const input = document.getElementById("evaluationSearchInput");
+    if (event.target !== input || evaluationReady()) return;
+    input.blur();
+    keepStaticPosition();
+  }
+
   function showEvaluationPage() {
     const page = document.getElementById("evaluationPage");
     if (!(page instanceof HTMLElement) || !document.body) return false;
@@ -144,10 +227,8 @@
     const search = page.querySelector(".evaluationSearch");
     const metrics = page.querySelector(".evaluationMetrics");
 
-    [page].forEach((element) => {
-      setImportant(element, "visibility", "visible");
-      setImportant(element, "opacity", "1");
-    });
+    setImportant(page, "visibility", "visible");
+    setImportant(page, "opacity", "1");
     [titleRow, topBar, searchGroup, search, metrics].forEach((element) => {
       setImportant(element, "visibility", "visible");
       setImportant(element, "opacity", "1");
@@ -168,12 +249,21 @@
 
     syncDiscountRateFallback();
     syncLoadButton();
+    syncEvaluationBusy();
+    syncSearchFocusGuard();
+    keepStaticPosition();
+    focusEmptyEvaluationWhenReady();
     return true;
   }
 
   function clearRouteState() {
     document.documentElement.classList.remove("mflEvaluationInitialLoadVisible", "mflEvaluationReady");
     document.body?.classList.remove("evaluationStaticChromeReady");
+    if (evaluationBusyToken) {
+      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+      evaluationBusyToken = "";
+    }
+    syncSearchFocusGuard();
   }
 
   function sync() {
@@ -185,6 +275,14 @@
 
   function schedule() {
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
+  }
+
+  function onMutation() {
+    if (destroyed) return;
+    // Busy ownership is input gating, so mirror the loading class immediately
+    // in the observer microtask instead of waiting for the next animation frame.
+    syncEvaluationBusy();
+    schedule();
   }
 
   const style = document.createElement("style");
@@ -224,34 +322,42 @@
   `;
   document.head.appendChild(style);
 
-  observer = new MutationObserver(schedule);
+  document.addEventListener("focusin", guardEvaluationFocus, true);
+  observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ["class", "data-page", "hidden"],
+    attributeFilter: ["class", "data-page", "data-mfl-ready", "data-interaction-busy", "hidden"],
   });
-  interval = window.setInterval(schedule, 100);
   window.addEventListener("popstate", schedule);
   window.addEventListener("storage", schedule);
+  window.addEventListener("mfl:ready", schedule);
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
-    if (interval) clearInterval(interval);
     observer?.disconnect();
+    document.removeEventListener("focusin", guardEvaluationFocus, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
+    window.removeEventListener("mfl:ready", schedule);
+    if (evaluationBusyToken) window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+    const input = document.getElementById("evaluationSearchInput");
+    if (input instanceof HTMLInputElement && input.dataset.staticFocusGuard === "true") {
+      input.inert = false;
+      delete input.dataset.staticFocusGuard;
+    }
     style.remove();
     clearRouteState();
   }
 
-  window.__mflEvaluationStaticChrome = {
+  window.__mflEvaluationStaticChrome = Object.freeze({
     version: VERSION,
     sync: schedule,
     destroy,
-  };
+  });
 
   sync();
 })();
