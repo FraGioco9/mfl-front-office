@@ -10,7 +10,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/database-static-filter-runtime.js",
-  "/global-search-runtime.js",
+  "/global-search-runtime.js?rev=full-database-search",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
   "/watchlist-route-ui-runtime.js",
