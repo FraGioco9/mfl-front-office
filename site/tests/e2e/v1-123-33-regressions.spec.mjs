@@ -92,7 +92,7 @@ test("Evaluation never renders a blank discount rate and route loading owns the 
 
   await page.evaluate(() => globalThis.document.body.classList.add("evaluationRouteLoading"));
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#evaluationPage").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
+  await expect.poll(async () => page.locator("#evaluationPage").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
 
   await page.evaluate(() => globalThis.document.body.classList.remove("evaluationRouteLoading"));
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
