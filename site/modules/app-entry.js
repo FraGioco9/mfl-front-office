@@ -14,6 +14,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
   "/watchlist-route-ui-runtime.js",
+  "/table-width-prime-runtime.js",
   "/table-loading-runtime.js",
   "/database-stats-navigation-release-runtime.js",
   "/database-stats-runtime.js",
