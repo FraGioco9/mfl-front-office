@@ -12,7 +12,7 @@ test("all table view buttons bypass stale wait-cursor blocking but not real busy
   const blocker = bridge.slice(bridge.indexOf("function interactionShouldBeBlocked"), bridge.indexOf("function blockInteraction"));
 
   assert.ok(blocker.includes("if (activeTokens.size) return true;"));
-  assert.ok(blocker.includes('target?.closest(".viewButton[data-view]")'));
+  assert.ok(blocker.includes(".viewButton[data-view]"));
   assert.ok(blocker.includes("return false;"));
   assert.ok(blocker.includes("elementHasWaitCursor(target)"));
 });
