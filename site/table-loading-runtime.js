@@ -4,6 +4,7 @@
   const VERSION = String(window.__mflReleaseVersion || "1.123.33");
   const LOADING_TEXT = "Loading players...";
   const NAVIGATION_INTENT_MS = 1500;
+  const LEGACY_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     contracts: "contracts",
@@ -129,6 +130,16 @@
       : column;
   }
 
+  function syncSharedViewButtonPage(pageName) {
+    const normalizedPageName = normalizedPage(pageName);
+    const legacyPageName = LEGACY_TABLE_PAGES.has(normalizedPageName) ? normalizedPageName : "";
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      if (legacyPageName) button.dataset.page = legacyPageName;
+      else delete button.dataset.page;
+    });
+  }
+
   function primeHeader(pageName, view) {
     const normalizedPageName = normalizedPage(pageName);
     const columns = VIEW_COLUMNS[view];
@@ -209,7 +220,9 @@
   }
 
   function primeRoute(route) {
-    if (!route || !primeHeader(route.pageName, route.view)) return false;
+    if (!route) return false;
+    syncSharedViewButtonPage(route.pageName);
+    if (!primeHeader(route.pageName, route.view)) return false;
     show();
     return true;
   }
@@ -221,8 +234,10 @@
       const view = String(viewButton.dataset.view || "");
       if (view === "stats") return null;
       const pathRoute = routeFromPath();
+      const pathPage = normalizedPage(pathRoute?.pageName || "");
+      const bodyPage = normalizedPage(document.body?.dataset.page || "");
       const explicitPage = normalizedPage(viewButton.dataset.page || "");
-      const pageName = explicitPage || normalizedPage(document.body?.dataset.page || pathRoute?.pageName);
+      const pageName = pathPage || bodyPage || explicitPage;
       if (!pageName || !VIEW_COLUMNS[view]) return null;
       return { pageName, view };
     }
@@ -250,6 +265,8 @@
   function sync() {
     frame = 0;
     if (destroyed || !tableContextActive()) return;
+    const route = activePrimeRoute();
+    if (route) syncSharedViewButtonPage(route.pageName);
     const { body, empty } = tableElements();
     if (!body) return;
 
@@ -259,7 +276,6 @@
       && String(empty.textContent || "").trim() === LOADING_TEXT,
     );
     if (legacyLoadingVisible) {
-      const route = activePrimeRoute();
       if (route) primeHeader(route.pageName, route.view);
       show();
     }
@@ -274,6 +290,7 @@
     if (!route) return;
     navigationIntentRoute = route;
     navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
+    syncSharedViewButtonPage(route.pageName);
     primeRoute(route);
   }
 
@@ -342,6 +359,7 @@
     sync,
     primeHeader,
     primeRoute,
+    syncSharedViewButtonPage,
     installLegacyBridge,
     destroy,
   });
