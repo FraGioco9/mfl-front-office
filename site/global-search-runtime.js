@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.31");
+  const VERSION = String(window.__mflReleaseVersion || "1.123.33");
   const MAX_RESULT_BOXES = 5;
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
@@ -11,6 +11,10 @@
   let destroyed = false;
   let resultsObserver = null;
   let observedResults = null;
+  let modalObserver = null;
+  let focusFrame = 0;
+  let pendingPayload = null;
+  let pendingQuery = "";
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -26,6 +30,11 @@
   function searchResults() {
     const results = document.getElementById("playerSearchResults");
     return results instanceof HTMLElement ? results : null;
+  }
+
+  function searchModal() {
+    const modal = document.getElementById("searchModal");
+    return modal instanceof HTMLElement ? modal : null;
   }
 
   function capResultBoxes() {
@@ -61,7 +70,22 @@
     }
   }
 
-  function applyPayload(payload) {
+  function legacyPayloadApplierReady() {
+    if (typeof window.applyDatabaseSearchPayload === "function") return true;
+    try {
+      return Boolean(window.eval("typeof applyDatabaseSearchPayload === 'function'"));
+    } catch {
+      return false;
+    }
+  }
+
+  function applyPayload(payload, normalizedQuery = "") {
+    if (!legacyPayloadApplierReady()) {
+      pendingPayload = payload;
+      pendingQuery = normalizedQuery;
+      return false;
+    }
+
     window.__mflAuthoritativeGlobalSearchPayload = payload;
     try {
       if (typeof window.applyDatabaseSearchPayload === "function") {
@@ -72,7 +96,21 @@
     } finally {
       delete window.__mflAuthoritativeGlobalSearchPayload;
     }
+    pendingPayload = null;
+    pendingQuery = "";
     renderCurrentResults();
+    return true;
+  }
+
+  function flushPendingPayload() {
+    if (!pendingPayload) return false;
+    const input = searchInput();
+    if (!input || !pendingQuery || normalize(input.value) !== pendingQuery) {
+      pendingPayload = null;
+      pendingQuery = "";
+      return false;
+    }
+    return applyPayload(pendingPayload, pendingQuery);
   }
 
   function invalidateLegacyAllSearch() {
@@ -124,7 +162,7 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || "Could not search the database.");
       if (destroyed || requestSequence !== sequence || normalize(input.value) !== normalizedQuery) return false;
-      applyPayload(payload);
+      applyPayload(payload, normalizedQuery);
       return true;
     } catch (error) {
       if (error?.name !== "AbortError") {
@@ -153,6 +191,8 @@
       sequence += 1;
       controller?.abort();
       controller = null;
+      pendingPayload = null;
+      pendingQuery = "";
       delete document.documentElement.dataset.globalSearchQueryPending;
       renderCurrentResults();
       return;
@@ -164,8 +204,44 @@
     void searchDatabase(query);
   }
 
+  function focusAndSelectSearch() {
+    if (destroyed) return;
+    const modal = searchModal();
+    const input = searchInput();
+    if (!modal || modal.hidden || !input) return;
+    if (focusFrame) cancelAnimationFrame(focusFrame);
+    focusFrame = requestAnimationFrame(() => {
+      focusFrame = 0;
+      const liveModal = searchModal();
+      const liveInput = searchInput();
+      if (destroyed || !liveModal || liveModal.hidden || !liveInput) return;
+      liveInput.focus({ preventScroll: true });
+      liveInput.select();
+    });
+  }
+
+  function onOpenSearch() {
+    window.setTimeout(focusAndSelectSearch, 0);
+  }
+
+  function observeSearchModal() {
+    const modal = searchModal();
+    if (!modal) return;
+    modalObserver?.disconnect();
+    modalObserver = new MutationObserver(() => {
+      if (!modal.hidden) focusAndSelectSearch();
+    });
+    modalObserver.observe(modal, {
+      attributes: true,
+      attributeFilter: ["hidden", "class", "style"],
+    });
+  }
+
   document.addEventListener("input", onInput, true);
+  document.getElementById("openSearchButton")?.addEventListener("click", onOpenSearch, true);
+  window.addEventListener("mfl:ready", flushPendingPayload);
   observeResultBoxes();
+  observeSearchModal();
   document.documentElement.dataset.globalSearchAuthoritative = "true";
   const globalSearchReady = Promise.resolve(true);
   window.__mflGlobalSearchReadyPromise = globalSearchReady;
@@ -175,17 +251,27 @@
     sequence += 1;
     controller?.abort();
     controller = null;
+    pendingPayload = null;
+    pendingQuery = "";
     resultsObserver?.disconnect();
     resultsObserver = null;
     observedResults = null;
+    modalObserver?.disconnect();
+    modalObserver = null;
+    if (focusFrame) cancelAnimationFrame(focusFrame);
+    focusFrame = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
     document.removeEventListener("input", onInput, true);
+    document.getElementById("openSearchButton")?.removeEventListener("click", onOpenSearch, true);
+    window.removeEventListener("mfl:ready", flushPendingPayload);
   }
 
   window.__mflGlobalSearchRuntime = Object.freeze({
     version: VERSION,
     search: searchDatabase,
     cap: capResultBoxes,
+    flush: flushPendingPayload,
+    focus: focusAndSelectSearch,
     destroy,
   });
 })();
