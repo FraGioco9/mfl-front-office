@@ -49,13 +49,6 @@
       .forEach((result) => result.remove());
   }
 
-  function clearTypedResults() {
-    const results = searchResults();
-    if (!results) return;
-    results.querySelectorAll(":scope > .searchResult").forEach((result) => result.remove());
-    results.classList.remove("filledSearchResults");
-  }
-
   function observeResultBoxes() {
     const results = searchResults();
     if (!results || results === observedResults) return;
@@ -209,9 +202,8 @@
     const input = searchInput();
     if (!input || event.target !== input) return;
 
-    // Typed global search is the authoritative owner of non-empty queries. Do
-    // not let the recent-results handler reuse its five cached items as the
-    // search universe while the full database request is in flight.
+    // Typed global search owns the network request so every non-empty query
+    // reaches the complete players, clubs, and agents database exactly once.
     event.stopImmediatePropagation();
     const query = String(input.value || "").trim();
 
@@ -229,10 +221,9 @@
       return;
     }
 
-    // A typed query always belongs to the complete server-side search. Remove
-    // recent or page-loaded matches immediately so they can never masquerade as
-    // the complete search universe while the database response is in flight.
-    clearTypedResults();
+    // Keep the fast local render while the authoritative full-database request
+    // is in flight. Its response replaces/extends these indexes and rerenders.
+    renderCurrentResults();
     void searchDatabase(query);
   }
 
