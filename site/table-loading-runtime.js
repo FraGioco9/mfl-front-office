@@ -135,8 +135,11 @@
     const legacyPageName = LEGACY_TABLE_PAGES.has(normalizedPageName) ? normalizedPageName : "";
     document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
-      if (legacyPageName) button.dataset.page = legacyPageName;
-      else delete button.dataset.page;
+      if (legacyPageName) {
+        if (button.dataset.page !== legacyPageName) button.dataset.page = legacyPageName;
+      } else if (button.hasAttribute("data-page")) {
+        button.removeAttribute("data-page");
+      }
     });
   }
 
