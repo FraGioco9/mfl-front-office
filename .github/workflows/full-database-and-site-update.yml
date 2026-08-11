@@ -201,8 +201,17 @@ jobs:
           ACTUAL_SHA="$(git -C production-site rev-parse HEAD)"
           EXPECTED_SHA="${{ steps.production_site.outputs.sha }}"
           test "$ACTUAL_SHA" = "$EXPECTED_SHA"
-          echo "Deploying fresh SQLite data with unchanged site source $ACTUAL_SHA."
-          grep -m 1 -E 'RELEASE_VERSION|const VERSION' production-site/site/app.js production-site/site/bootstrap.js || true
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          release = json.loads(Path("production-site/site/release.json").read_text(encoding="utf-8"))
+          version = str(release.get("version", "")).strip()
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              raise SystemExit("production-site/site/release.json does not contain a valid Semantic Version")
+          print(f"Deploying fresh SQLite data with unchanged MFL Front Office v{version} source.")
+          PY
 
       - name: Install Vercel CLI
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
