@@ -19,6 +19,12 @@ const removedSiteFiles = [
   "v1-123-31-runtime.js",
 ];
 
+const databaseBuilderDependencies = [
+  "populate_seasons_from_flow.py",
+  "populate_seasons_from_flow_original.py",
+  "run_flow_rebuild_paged.py",
+];
+
 test("runtime entry graph contains only consolidated owners", async () => {
   const entry = await readSite("modules/app-entry.js");
   for (const path of removedSiteFiles) {
@@ -29,11 +35,23 @@ test("runtime entry graph contains only consolidated owners", async () => {
   assert.doesNotMatch(entry, /my-players-refresh-view-runtime|search-result-click-runtime|v1-120-10-runtime|v1-123-31-runtime/);
 });
 
-test("removed compatibility files stay removed", async () => {
+test("removed site compatibility files stay removed", async () => {
   for (const path of removedSiteFiles) {
     await assert.rejects(access(resolve(siteRoot, path)));
   }
-  await assert.rejects(access(resolve(repositoryRoot, "run_flow_rebuild_paged.py")));
+});
+
+test("database builder keeps every imported rebuild dependency", async () => {
+  const rebuild = await readRepository("rebuild_database.py");
+  const runner = await readRepository("rebuild_database_runner.py");
+
+  for (const path of databaseBuilderDependencies) {
+    await access(resolve(repositoryRoot, path));
+  }
+
+  assert.match(rebuild, /import populate_seasons_from_flow/);
+  assert.match(rebuild, /import run_flow_rebuild_paged/);
+  assert.match(runner, /import run_flow_rebuild_paged as paged/);
 });
 
 test("runtime consolidation removes duplicate polling, click interception, and remote source injection", async () => {
@@ -54,23 +72,32 @@ test("runtime consolidation removes duplicate polling, click interception, and r
   assert.doesNotMatch(loader, /loadPreparedClassicScript|executeClassicSource/);
 });
 
-test("deployment workflows validate the canonical release metadata", async () => {
+test("deployment workflows validate the canonical release metadata when available", async () => {
   const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
   const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
 
+  assert.match(siteDeploy, /release\.json/);
+  assert.match(databaseDeploy, /release_path = Path\("production-site\/site\/release\.json"\)/);
   for (const workflow of [siteDeploy, databaseDeploy]) {
-    assert.match(workflow, /release\.json/);
     assert.doesNotMatch(workflow, /site\/bootstrap\.js/);
     assert.doesNotMatch(workflow, /grep -m 1 -E 'RELEASE_VERSION\|const VERSION'/);
   }
 });
 
-test("database deployments never roll production back to a stale manual deploy", async () => {
+test("database production refreshes reuse the last explicitly published site source", async () => {
   const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
 
-  assert.match(databaseDeploy, /--workflow site-quality\.yml/);
-  assert.match(databaseDeploy, /Using latest validated site source commit/);
-  assert.doesNotMatch(databaseDeploy, /--workflow vercel-site-update\.yml/);
+  assert.match(databaseDeploy, /--workflow vercel-site-update\.yml/);
+  assert.match(databaseDeploy, /Using last published site source commit/);
+  assert.match(databaseDeploy, /Verify published site source is unchanged/);
+  assert.doesNotMatch(databaseDeploy, /--workflow site-quality\.yml/);
+});
+
+test("database production refresh resolves GitHub runs inside the checked-out builder repository", async () => {
+  const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
+
+  assert.match(databaseDeploy, /Restore previous database for email comparison[\s\S]*working-directory: builder/);
+  assert.match(databaseDeploy, /Resolve last published site source[\s\S]*working-directory: builder/);
 });
 
 test("active consolidated runtimes never overwrite the global release version", async () => {
