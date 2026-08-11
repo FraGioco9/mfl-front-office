@@ -382,6 +382,12 @@
     if (event.target instanceof Element && event.target.closest(".watchlistDropdownRename")) hideTooltip();
   }, true);
   window.addEventListener("popstate", () => {
+    const currentRoute = `${location.pathname}${location.search}${location.hash}`;
+    if (protectedRoute && isWatchlistPath() && currentRoute === protectedRoute) {
+      syncWatchlistTitle();
+      schedule();
+      return;
+    }
     protectedRoute = "";
     if (!isWatchlistPath()) hideSwitcher();
     else syncWatchlistTitle();
