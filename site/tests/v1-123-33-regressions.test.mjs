@@ -29,6 +29,16 @@ test("v1.123.33 primes table headers on navigation intent", async () => {
   assert.match(source, /cell\.textContent = LOADING_TEXT/);
 });
 
+test("shared table view buttons bind to the actual route before the legacy click handler", async () => {
+  const source = await read("table-loading-runtime.js");
+  assert.match(source, /const LEGACY_TABLE_PAGES = new Set\(\["database", "mfl", "progression", "watchlist", "myplayers", "agents"\]\)/);
+  assert.match(source, /function syncSharedViewButtonPage\(pageName\)/);
+  assert.match(source, /button\.dataset\.page = legacyPageName/);
+  assert.match(source, /const pageName = pathPage \|\| bodyPage \|\| explicitPage/);
+  assert.match(source, /function primeRoute\(route\)\s*{[\s\S]*syncSharedViewButtonPage\(route\.pageName\)/);
+  assert.match(source, /function onNavigationIntent\(event\)[\s\S]*syncSharedViewButtonPage\(route\.pageName\)[\s\S]*primeRoute\(route\)/);
+});
+
 test("v1.123.33 Evaluation fallback and loading cursor survive runtime consolidation", async () => {
   const chrome = await read("evaluation-static-chrome-runtime.js");
   const entry = await read("modules/app-entry.js");
