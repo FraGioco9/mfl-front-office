@@ -1,4 +1,4 @@
 {
-  "version": "1.123.35",
-  "description": "Restore shared table view clicks when legacy page state is stale"
+  "version": "1.123.36",
+  "description": "Commit shared table view navigation across real pointer timing"
 }
