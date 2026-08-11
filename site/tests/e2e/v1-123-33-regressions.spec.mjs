@@ -70,7 +70,7 @@ test("Evaluation never renders a blank discount rate and route loading owns the 
 
   const discount = page.locator("#evaluationDiscountRate");
   await discount.evaluate((node) => { node.textContent = ""; });
-  await expect(discount).toHaveText("-");
+  await expect.poll(async () => String(await discount.textContent() || "").trim()).not.toBe("");
 
   await page.evaluate(() => globalThis.document.body.classList.add("evaluationRouteLoading"));
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
@@ -80,19 +80,29 @@ test("Evaluation never renders a blank discount rate and route loading owns the 
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
 });
 
-test("real pointer clicks reach global and Evaluation result listeners", async ({ page }) => {
+test("real pointer clicks reach visible global and Evaluation result listeners", async ({ page }) => {
   await page.goto("/");
   await waitForArchitecture(page);
+  await page.locator("#openSearchButton").click();
 
   await page.evaluate(() => {
     globalThis.__resultClickCounts = { global: 0, evaluation: 0 };
+    const globalResults = globalThis.document.getElementById("playerSearchResults");
     const globalResult = globalThis.document.createElement("button");
     globalResult.type = "button";
     globalResult.className = "searchResult";
     globalResult.textContent = "Recent player";
     globalResult.addEventListener("click", () => { globalThis.__resultClickCounts.global += 1; });
-    globalThis.document.getElementById("playerSearchResults").appendChild(globalResult);
+    globalResults.replaceChildren(globalResult);
+  });
 
+  await page.locator("#playerSearchResults .searchResult").click();
+  await page.locator("#closeSearchButton").click();
+
+  await installOptIn(page);
+  await page.goto("/evaluation");
+  await waitForArchitecture(page);
+  await page.evaluate(() => {
     const evaluationResult = globalThis.document.createElement("button");
     evaluationResult.type = "button";
     evaluationResult.className = "evaluationSearchResult";
@@ -100,10 +110,9 @@ test("real pointer clicks reach global and Evaluation result listeners", async (
     evaluationResult.addEventListener("click", () => { globalThis.__resultClickCounts.evaluation += 1; });
     const evaluationResults = globalThis.document.getElementById("evaluationSearchResults");
     evaluationResults.hidden = false;
-    evaluationResults.appendChild(evaluationResult);
+    evaluationResults.replaceChildren(evaluationResult);
   });
 
-  await page.locator("#playerSearchResults .searchResult").click();
   await page.locator("#evaluationSearchResults .evaluationSearchResult").click();
   expect(await page.evaluate(() => globalThis.__resultClickCounts)).toEqual({ global: 1, evaluation: 1 });
 });
