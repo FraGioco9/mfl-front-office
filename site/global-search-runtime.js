@@ -206,13 +206,21 @@
     void searchDatabase(query);
   }
 
-  function focusSearchInput() {
+  function focusSearchInput(selectText = false) {
     const modal = searchModal();
     const input = searchInput();
     if (destroyed || !modal || modal.hidden || !input) return false;
     input.focus({ preventScroll: true });
-    input.select();
+    if (selectText) input.select();
     return document.activeElement === input;
+  }
+
+  function restoreSearchFocusIfNeeded() {
+    const modal = searchModal();
+    const input = searchInput();
+    if (!destroyed && modal && !modal.hidden && input && document.activeElement !== input) {
+      focusSearchInput(false);
+    }
   }
 
   function focusAndSelectSearch() {
@@ -220,26 +228,17 @@
     if (focusFrame) cancelAnimationFrame(focusFrame);
     if (focusSettleTimer) window.clearTimeout(focusSettleTimer);
 
-    focusSearchInput();
+    // Select exactly once when the modal becomes visible. Follow-up passes may
+    // restore stolen focus, but never reselect after the user begins typing.
+    focusSearchInput(true);
     focusFrame = requestAnimationFrame(() => {
       focusFrame = 0;
-      focusSearchInput();
+      restoreSearchFocusIfNeeded();
     });
-
-    // Legacy modal startup still has asynchronous callbacks. Reassert focus
-    // only if one of them actually steals it, so user typing is never reselected.
     focusSettleTimer = window.setTimeout(() => {
       focusSettleTimer = 0;
-      const input = searchInput();
-      const modal = searchModal();
-      if (!destroyed && modal && !modal.hidden && input && document.activeElement !== input) {
-        focusSearchInput();
-      }
+      restoreSearchFocusIfNeeded();
     }, 80);
-  }
-
-  function onOpenSearch() {
-    window.setTimeout(focusAndSelectSearch, 0);
   }
 
   function observeSearchModal() {
@@ -249,14 +248,15 @@
     modalObserver = new MutationObserver(() => {
       if (!modal.hidden) focusAndSelectSearch();
     });
+    // Opening/closing is owned by the hidden attribute. Do not observe the
+    // animation class, because it changes after opening and would reselect text.
     modalObserver.observe(modal, {
       attributes: true,
-      attributeFilter: ["hidden", "class", "style"],
+      attributeFilter: ["hidden"],
     });
   }
 
   document.addEventListener("input", onInput, true);
-  document.getElementById("openSearchButton")?.addEventListener("click", onOpenSearch, true);
   window.addEventListener("mfl:ready", flushPendingPayload);
   observeResultBoxes();
   observeSearchModal();
@@ -281,7 +281,6 @@
     focusSettleTimer = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
     document.removeEventListener("input", onInput, true);
-    document.getElementById("openSearchButton")?.removeEventListener("click", onOpenSearch, true);
     window.removeEventListener("mfl:ready", flushPendingPayload);
   }
 
