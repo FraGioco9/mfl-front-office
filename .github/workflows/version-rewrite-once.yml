@@ -1,0 +1,84 @@
+name: One-shot release alignment
+
+on:
+  push:
+    paths:
+      - ".github/workflows/version-rewrite-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  align-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Align static release sources and regression ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          old = "1.123.37"
+          new = "1.124.0"
+
+          for name in [
+              "site/app.js",
+              "site/index.html",
+              "site/tests/v1-123-11-regressions.test.mjs",
+              "site/tests/v1-123-32-regressions.test.mjs",
+              "site/tests/v1-123-37-regressions.test.mjs",
+              "site/tests/e2e/v1-123-37-regressions.spec.mjs",
+          ]:
+              path = Path(name)
+              source = path.read_text(encoding="utf-8")
+              source = source.replace(old, new)
+              path.write_text(source, encoding="utf-8")
+
+          architecture = Path("site/tests/architecture.test.mjs")
+          source = architecture.read_text(encoding="utf-8")
+          source = source.replace('assert.equal(release.version, "1.123.37");', 'assert.equal(release.version, "1.124.0");')
+          source = source.replace('assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\\.123\\.37"/);', 'assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\\.124\\.0"/);')
+          old_block = re.compile(r'for \(const version of \["v1\.123\.22".*?\]\) \{\n    assert\.ok\(versions\.includes\(version\), `missing \$\{version\}`\);\n  \}', re.S)
+          new_block = '''for (const version of [
+    "v1.124.0",
+    "v1.123.6",
+    "v1.123.5",
+    "v1.123.4",
+    "v1.123.3",
+    "v1.123.2",
+    "v1.123.1",
+    "v1.123.0",
+    "v1.122.0",
+    "v1.121.0",
+    "v1.120.4",
+    "v1.120.3",
+    "v1.120.2",
+    "v1.120.1",
+    "v1.120.0",
+  ]) {
+    assert.ok(versions.includes(version), `missing ${version}`);
+  }'''
+          source, count = old_block.subn(new_block, source, count=1)
+          if count != 1:
+              raise SystemExit("Could not replace the canonical Changelog release list.")
+          architecture.write_text(source, encoding="utf-8")
+          PY
+
+      - name: Commit aligned release sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Release sources are already aligned."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/app.js site/index.html site/tests/architecture.test.mjs site/tests/v1-123-11-regressions.test.mjs site/tests/v1-123-32-regressions.test.mjs site/tests/v1-123-37-regressions.test.mjs site/tests/e2e/v1-123-37-regressions.spec.mjs
+          git commit -m "Align static release sources with v1.124.0"
+          git push origin HEAD:main
