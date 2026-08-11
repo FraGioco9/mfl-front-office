@@ -58,7 +58,7 @@ test("view buttons remain clickable across table pages under a stale wait cursor
   await clickViewThroughWait(page, "/mfl/attributes", "stats", "/mfl/stats");
 });
 
-test("Watchlist title never falls back on a rendered frame", async ({ page }) => {
+test("Watchlist title never falls back on a visible rendered frame", async ({ page }) => {
   await installOptIn(page);
 
   let releaseMetadata;
@@ -74,8 +74,14 @@ test("Watchlist title never falls back on a rendered frame", async ({ page }) =>
     globalThis.__watchlistFrameTitles = [];
     let remaining = 120;
     const sample = () => {
+      const pageView = globalThis.document.getElementById("progressionPage");
       const title = globalThis.document.getElementById("tablePageTitle");
-      if (title) globalThis.__watchlistFrameTitles.push(String(title.textContent || "").trim());
+      const visible = pageView
+        && !pageView.hidden
+        && globalThis.getComputedStyle(pageView).display !== "none"
+        && title
+        && globalThis.getComputedStyle(title).visibility !== "hidden";
+      if (visible) globalThis.__watchlistFrameTitles.push(String(title.textContent || "").trim());
       remaining -= 1;
       if (remaining > 0) globalThis.requestAnimationFrame(sample);
     };
