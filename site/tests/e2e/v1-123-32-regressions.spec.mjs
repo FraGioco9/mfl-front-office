@@ -31,10 +31,10 @@ async function installOptIn(page) {
   });
 }
 
-test("entry document requests v1.123.32 application and stylesheet assets", async ({ page }) => {
+test("entry document requests v1.123.33 application and stylesheet assets", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator('link[rel="stylesheet"][href="/styles.css?v=1.123.32"]')).toHaveCount(1);
-  await expect(page.locator('script[src="/app.js?v=1.123.32"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="stylesheet"][href="/styles.css?v=1.123.33"]')).toHaveCount(1);
+  await expect(page.locator('script[src="/app.js?v=1.123.33"]')).toHaveCount(1);
 });
 
 test("Evaluation title and Load button are final before release loading finishes", async ({ page }) => {
