@@ -24,7 +24,6 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-refinement-runtime.js",
   "/database-stats-view-button-runtime.js",
   "/selection-refresh-reset-runtime.js",
-  "/my-players-refresh-view-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
 ]);
