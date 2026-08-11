@@ -52,7 +52,7 @@ test("nested routes load the module entry from the site root", async () => {
 test("static shell resolves Home wallet geometry before app.js executes", async () => {
   const bridge = await read("app.js");
   const index = await read("index.html");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
   assert.match(bridge, /function storedWalletOptInAddress\(\)/);
   assert.match(bridge, /function syncStoredAccessFlags\(\)/);
   assert.match(bridge, /const \{ storedOptIn, storedAccess \} = syncStoredAccessFlags\(\)/);

@@ -65,7 +65,7 @@ test("v1.124.0 aligns release metadata and static cache keys", async () => {
   const app = await read("app.js");
 
   assert.equal(release.version, "1.124.0");
-  assert.match(app, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
-  assert.match(index, /href="\/styles\.css\?v=1\.123\.37"/);
-  assert.match(index, /src="\/app\.js\?v=1\.123\.37"/);
+  assert.match(app, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
+  assert.match(index, /href="\/styles\.css\?v=1\.124\.0"/);
+  assert.match(index, /src="\/app\.js\?v=1\.124\.0"/);
 });

@@ -15,10 +15,10 @@ test("static app bridge owns the current footer before asynchronous runtime", as
 
   assert.equal(release.version, "1.124.0");
   assert.match(index, /<body data-page="home" class="pinnedSidebarVisible">/);
-  assert.match(index, />MFL Front Office v1\.123\.37<\/a>/);
-  assert.match(index, /href="\/styles\.css\?v=1\.123\.37"/);
-  assert.match(index, /src="\/app\.js\?v=1\.123\.37"/);
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
+  assert.match(index, />MFL Front Office v1\.124\.0<\/a>/);
+  assert.match(index, /href="\/styles\.css\?v=1\.124\.0"/);
+  assert.match(index, /src="\/app\.js\?v=1\.124\.0"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
   assert.match(bridge, /footerVersionLink\.textContent = `MFL Front Office v\$\{STATIC_RELEASE_VERSION\}`/);
   assert.match(bridge, /classList\.add\("mflStaticShellReady", "mflInitialRouteResolved"\)/);
   assert.match(vercel, /"source": "\/app\.js"[^\n]+"no-store, max-age=0"/);
