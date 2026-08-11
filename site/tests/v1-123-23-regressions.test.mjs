@@ -23,7 +23,7 @@ test("Database first paint uses final view order and shared column constraints",
 test("typed global search owns one all-category database request", async () => {
   const runtime = await read("global-search-runtime.js");
   const entry = await read("modules/app-entry.js");
-  assert.match(entry, /"\/global-search-runtime\.js"/);
+  assert.match(entry, /"\/global-search-runtime\.js(?:\?[^"\n]+)?"/);
   assert.match(runtime, /mode: "search"/);
   assert.match(runtime, /type: "all"/);
   assert.match(runtime, /limit: "20"/);
