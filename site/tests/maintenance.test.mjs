@@ -65,6 +65,14 @@ test("deployment workflows validate the canonical release metadata", async () =>
   }
 });
 
+test("database deployments never roll production back to a stale manual deploy", async () => {
+  const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
+
+  assert.match(databaseDeploy, /--workflow site-quality\.yml/);
+  assert.match(databaseDeploy, /Using latest validated site source commit/);
+  assert.doesNotMatch(databaseDeploy, /--workflow vercel-site-update\.yml/);
+});
+
 test("active consolidated runtimes never overwrite the global release version", async () => {
   for (const path of [
     "evaluation-static-chrome-runtime.js",
