@@ -3,6 +3,7 @@
 
   const VERSION = String(window.__mflReleaseVersion || "1.123.33");
   const LOADING_TEXT = "Loading players...";
+  const NAVIGATION_INTENT_MS = 1500;
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     contracts: "contracts",
@@ -72,6 +73,8 @@
   let observer = null;
   let frame = 0;
   let destroyed = false;
+  let navigationIntentRoute = null;
+  let navigationIntentExpiresAt = 0;
 
   function normalizedPage(value) {
     const page = String(value || "").toLowerCase();
@@ -101,6 +104,12 @@
     return Boolean(routeFromPath(pathname));
   }
 
+  function tableContextActive() {
+    if (isPlayerTableRoute()) return true;
+    const page = normalizedPage(document.body?.dataset.page || "");
+    return ["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"].includes(page);
+  }
+
   function tableElements() {
     const head = document.getElementById("tableHead");
     const body = document.getElementById("tableBody");
@@ -121,7 +130,7 @@
   }
 
   function primeHeader(pageName, view) {
-    const normalizedPage = normalizedPage(pageName);
+    const normalizedPageName = normalizedPage(pageName);
     const columns = VIEW_COLUMNS[view];
     const { head, colGroup } = tableElements();
     if (!columns || !head || !colGroup) return false;
@@ -141,7 +150,7 @@
     cols.appendChild(selectCol);
 
     columns.forEach((column) => {
-      const key = displayColumnKey(column, normalizedPage);
+      const key = displayColumnKey(column, normalizedPageName);
       const meta = COLUMN_META[key];
       if (!meta) return;
       const cell = document.createElement("th");
@@ -160,14 +169,14 @@
 
     head.replaceChildren(row);
     head.dataset.staticHeader = "true";
-    head.dataset.staticHeaderPage = normalizedPage;
+    head.dataset.staticHeaderPage = normalizedPageName;
     head.dataset.staticHeaderView = view;
     colGroup.replaceChildren(cols);
     return true;
   }
 
   function show() {
-    if (!isPlayerTableRoute()) return false;
+    if (!tableContextActive()) return false;
     const { head, body, empty } = tableElements();
     if (!head || !body) return false;
 
@@ -212,7 +221,8 @@
       const view = String(viewButton.dataset.view || "");
       if (view === "stats") return null;
       const pathRoute = routeFromPath();
-      const pageName = normalizedPage(document.body?.dataset.page || pathRoute?.pageName);
+      const explicitPage = normalizedPage(viewButton.dataset.page || "");
+      const pageName = explicitPage || normalizedPage(document.body?.dataset.page || pathRoute?.pageName);
       if (!pageName || !VIEW_COLUMNS[view]) return null;
       return { pageName, view };
     }
@@ -228,9 +238,18 @@
     return null;
   }
 
+  function activePrimeRoute() {
+    if (navigationIntentRoute && performance.now() < navigationIntentExpiresAt) {
+      return navigationIntentRoute;
+    }
+    navigationIntentRoute = null;
+    navigationIntentExpiresAt = 0;
+    return routeFromPath();
+  }
+
   function sync() {
     frame = 0;
-    if (destroyed || !isPlayerTableRoute()) return;
+    if (destroyed || !tableContextActive()) return;
     const { body, empty } = tableElements();
     if (!body) return;
 
@@ -240,7 +259,7 @@
       && String(empty.textContent || "").trim() === LOADING_TEXT,
     );
     if (legacyLoadingVisible) {
-      const route = routeFromPath();
+      const route = activePrimeRoute();
       if (route) primeHeader(route.pageName, route.view);
       show();
     }
@@ -252,10 +271,15 @@
 
   function onNavigationIntent(event) {
     const route = routeForTarget(event.target instanceof Element ? event.target : null);
-    if (route) primeRoute(route);
+    if (!route) return;
+    navigationIntentRoute = route;
+    navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
+    primeRoute(route);
   }
 
   function onPopState() {
+    navigationIntentRoute = null;
+    navigationIntentExpiresAt = 0;
     const route = routeFromPath();
     if (route) primeRoute(route);
     schedule();
@@ -298,6 +322,7 @@
   });
   window.addEventListener("pointerdown", onNavigationIntent, true);
   window.addEventListener("popstate", onPopState);
+  window.addEventListener("mfl:ready", installLegacyBridge);
 
   const initialRoute = routeFromPath();
   if (initialRoute) primeRoute(initialRoute);
@@ -308,6 +333,7 @@
     observer?.disconnect();
     window.removeEventListener("pointerdown", onNavigationIntent, true);
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", installLegacyBridge);
   }
 
   window.__mflTableLoadingRuntime = Object.freeze({
