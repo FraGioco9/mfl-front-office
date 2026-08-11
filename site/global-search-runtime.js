@@ -14,6 +14,7 @@
   let observedResults = null;
   let modalObserver = null;
   let focusFrame = 0;
+  let focusSettleTimer = 0;
   let pendingPayload = null;
   let pendingQuery = "";
 
@@ -205,20 +206,36 @@
     void searchDatabase(query);
   }
 
-  function focusAndSelectSearch() {
-    if (destroyed) return;
+  function focusSearchInput() {
     const modal = searchModal();
     const input = searchInput();
-    if (!modal || modal.hidden || !input) return;
+    if (destroyed || !modal || modal.hidden || !input) return false;
+    input.focus({ preventScroll: true });
+    input.select();
+    return document.activeElement === input;
+  }
+
+  function focusAndSelectSearch() {
+    if (destroyed) return;
     if (focusFrame) cancelAnimationFrame(focusFrame);
+    if (focusSettleTimer) window.clearTimeout(focusSettleTimer);
+
+    focusSearchInput();
     focusFrame = requestAnimationFrame(() => {
       focusFrame = 0;
-      const liveModal = searchModal();
-      const liveInput = searchInput();
-      if (destroyed || !liveModal || liveModal.hidden || !liveInput) return;
-      liveInput.focus({ preventScroll: true });
-      liveInput.select();
+      focusSearchInput();
     });
+
+    // Legacy modal startup still has asynchronous callbacks. Reassert focus
+    // only if one of them actually steals it, so user typing is never reselected.
+    focusSettleTimer = window.setTimeout(() => {
+      focusSettleTimer = 0;
+      const input = searchInput();
+      const modal = searchModal();
+      if (!destroyed && modal && !modal.hidden && input && document.activeElement !== input) {
+        focusSearchInput();
+      }
+    }, 80);
   }
 
   function onOpenSearch() {
@@ -260,6 +277,8 @@
     modalObserver = null;
     if (focusFrame) cancelAnimationFrame(focusFrame);
     focusFrame = 0;
+    if (focusSettleTimer) window.clearTimeout(focusSettleTimer);
+    focusSettleTimer = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
     document.removeEventListener("input", onInput, true);
     document.getElementById("openSearchButton")?.removeEventListener("click", onOpenSearch, true);
