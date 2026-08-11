@@ -2558,7 +2558,7 @@ function resetPageScroll() {
 }
 
 function tableTitleForPage(pageName) {
-  if (pageName === "watchlist") {
+  if (pageName === "watchlist" || /^\/watchlist(?:\/|$)/i.test(window.location.pathname)) {
     return `Watchlist - ${currentWatchlistName()}`;
   }
 
@@ -3800,7 +3800,8 @@ function renderSettingsPage(renderOptions = {}) {
   });
 }
 function currentWatchlistName() {
-  return activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
+  const pinnedName = String(window.__mflWatchlistRouteUiRuntime?.currentName?.() || "").trim();
+  return pinnedName || activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
 }
 
 function updateWatchlistTitle() {
@@ -9957,6 +9958,10 @@ viewButtons.forEach((button) => {
       setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
       return;
     }
+    if (pageName !== state.currentPage && tablePages.has(pageName)) {
+      state.currentPage = pageName;
+      document.body.dataset.page = pageName;
+    }
     setView(viewName);
   });
 });
@@ -12864,6 +12869,7 @@ window.__mflAppStartPromise = startApp();
   let guardedRender = null;
   let recoveryPromise = null;
   let renderedPlayerId = "";
+  let loadingSelectionOwned = false;
 
   function evaluationRouteActive() {
     return String(location.pathname || "").replace(/\/+$/, "") === "/evaluation";
@@ -12922,11 +12928,16 @@ window.__mflAppStartPromise = startApp();
     if (panel instanceof HTMLElement) panel.hidden = true;
     const results = document.getElementById("evaluationSearchResults");
     if (results instanceof HTMLElement) results.hidden = true;
-    document.body.classList.add("evaluationRouteLoading");
+    if (!document.body.classList.contains("evaluationRouteLoading")) {
+      document.body.classList.add("evaluationRouteLoading");
+      loadingSelectionOwned = true;
+    }
   }
 
   function finishLoadingSelection() {
+    if (!loadingSelectionOwned) return;
     document.body?.classList.remove("evaluationRouteLoading");
+    loadingSelectionOwned = false;
   }
 
   function installRenderGuard() {

@@ -9,7 +9,7 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 
 test("v1.123.31 stale-wait compatibility remains while real busy tokens own click locking", async () => {
   const bridge = await read("app.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.34"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.35"/);
   assert.match(bridge, /function interactionShouldBeBlocked\(\)/);
   assert.match(bridge, /return activeTokens\.size > 0;/);
   assert.doesNotMatch(bridge, /function elementHasWaitCursor/);
@@ -30,10 +30,14 @@ test("v1.123.31 Evaluation focus behavior is retained by the consolidated Evalua
 
 test("v1.123.31 Watchlist title behavior is retained by the dedicated Watchlist runtime", async () => {
   const runtime = await read("watchlist-route-ui-runtime.js");
+  const core = await read("modules/legacy-core.js");
   assert.match(runtime, /const nextTitle = `Watchlist - \$\{name\}`/);
   assert.match(runtime, /function syncWatchlistTitle\(\)/);
   assert.match(runtime, /liveWatchlistName\(watchlistId\)[\s\S]*cachedWatchlistName\(watchlistId\)/);
   assert.match(runtime, /stableWatchlistName/);
+  assert.match(runtime, /currentName: \(\) => currentWatchlistIdentity\(\)\.name/);
+  assert.match(core, /window\.__mflWatchlistRouteUiRuntime\?\.currentName\?\.\(\)/);
+  assert.match(core, /pageName === "watchlist" \|\| \/\^\\\/watchlist/);
 });
 
 test("v1.123.31 installs full global search before legacy page startup waits", async () => {

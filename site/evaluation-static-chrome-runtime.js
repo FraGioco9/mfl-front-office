@@ -288,6 +288,13 @@
   const style = document.createElement("style");
   style.id = "mflEvaluationStaticChromeStyles";
   style.textContent = `
+    body[data-page="evaluation"].evaluationRouteLoading,
+    body[data-page="evaluation"].evaluationRouteLoading *,
+    body[data-page="evaluation"].evaluationRouteLoading *::before,
+    body[data-page="evaluation"].evaluationRouteLoading *::after {
+      cursor: wait !important;
+    }
+
     html[data-initial-page="evaluation"] body #evaluationPage .evaluationTitleRow,
     html[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
     html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,

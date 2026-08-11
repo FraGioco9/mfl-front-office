@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.34";
+  const STATIC_RELEASE_VERSION = "1.123.35";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -797,7 +797,6 @@
         // Future cores can update the storage-backed flags directly instead.
       }
       syncStoredAccessFlags();
-
       [
         "ensureProgressionData",
         "requestIncrementalRoute",

@@ -397,7 +397,12 @@
     style.remove();
   }
 
-  window.__mflWatchlistRouteUiRuntime = { version: VERSION, sync, destroy };
+  window.__mflWatchlistRouteUiRuntime = {
+    version: VERSION,
+    currentName: () => currentWatchlistIdentity().name,
+    sync,
+    destroy,
+  };
   rememberVisibleWatchlistTitle();
   sync();
   [0, 50, 150, 400, 1000, 2000, 5000].forEach((delay) => setTimeout(schedule, delay));

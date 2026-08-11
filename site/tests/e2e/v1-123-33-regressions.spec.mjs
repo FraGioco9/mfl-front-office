@@ -52,6 +52,18 @@ test("real pointer clicks switch views on shared table pages", async ({ page }) 
   }
 });
 
+test("shared table buttons resolve the visible route even if legacy currentPage is stale", async ({ page }) => {
+  await page.goto("/database/attributes");
+  await waitForArchitecture(page);
+
+  const contracts = page.locator('#progressionPage .viewButton[data-view="contracts"]');
+  await expect(contracts).toHaveAttribute("data-page", "database");
+  await page.evaluate(() => globalThis.eval('state.currentPage = "home"'));
+  await contracts.click();
+  await expect(page).toHaveURL(/\/database\/contracts$/);
+  expect(await page.evaluate(() => globalThis.eval("state.currentPage"))).toBe("database");
+});
+
 test("table headers switch to destination chrome on pointerdown before route completion", async ({ page }) => {
   await page.goto("/database/attributes");
   await waitForArchitecture(page);
@@ -74,7 +86,7 @@ test("Evaluation never renders a blank discount rate and route loading owns the 
 
   await page.evaluate(() => globalThis.document.body.classList.add("evaluationRouteLoading"));
   await expect(page.locator("html")).toHaveClass(/mflInteractionBusy/);
-  expect(await page.locator("#evaluationPage").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
+  await expect.poll(async () => page.locator("#evaluationPage").evaluate((node) => globalThis.getComputedStyle(node).cursor)).toBe("wait");
 
   await page.evaluate(() => globalThis.document.body.classList.remove("evaluationRouteLoading"));
   await expect(page.locator("html")).not.toHaveClass(/mflInteractionBusy/);
