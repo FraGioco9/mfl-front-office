@@ -51,10 +51,10 @@ test("typed global search stays fresh independently of visited page data", async
   const entry = await read("modules/app-entry.js");
   const vercel = await read("vercel.json");
 
-  assert.match(search, /function clearTypedResults\(\)/);
-  assert.match(search, /clearTypedResults\(\);\s*void searchDatabase\(query\)/);
+  assert.match(search, /renderCurrentResults\(\);\s*void searchDatabase\(query\)/);
   assert.match(search, /mode: "search"/);
   assert.match(search, /type: "all"/);
+  assert.match(search, /cache: "no-store"/);
   assert.match(entry, /"\/global-search-runtime\.js\?rev=full-database-search"/);
   assert.match(vercel, /"source": "\/global-search-runtime\.js"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
 });
