@@ -1,0 +1,17 @@
+[
+  ["v1.123.37", "Make full search authoritative, keep validated deployments current, and stabilize table widths"],
+  ["v1.123.36", "Stabilize Evaluation and global search focus, recent result navigation, and cold-page full search"],
+  ["v1.123.35", "Consolidate runtimes and restore shared table view navigation"],
+  ["v1.123.34", "Cache table filters, unify loading states, and stabilize MFL Stats and wait interactions"],
+  ["v1.123.33", "Make global search authoritative and stabilize Watchlist, table, and Evaluation first paint"],
+  ["v1.123.32", "Stabilize Database Stats state, MFL Stats summaries, and static page rendering"],
+  ["v1.123.31", "Restore static application chrome, protected-route first paint, and loading completion"],
+  ["v1.123.30", "Modularize the client runtime, centralize release metadata and requests, and add automated quality checks"],
+  ["v1.122.0", "Remove legacy loading, JSON compatibility, and dead runtime code"],
+  ["v1.121.0", "Query the runtime SQLite database for every site data request"],
+  ["v1.120.4", "Prime Evaluation controls and MFL Stats filters before data loads"],
+  ["v1.120.3", "Stabilize startup, Evaluation loading, and first-paint Stats rendering"],
+  ["v1.120.2", "Refresh the Evaluation Discount Rate from live MFL/USD season ratios"],
+  ["v1.120.1", "Refine Database Stats filtering, tooltips, and Changelog rendering"],
+  ["v1.120.0", "Add Database Stats with retirement counts and active-player distributions"]
+]
