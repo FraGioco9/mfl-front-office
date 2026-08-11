@@ -12,7 +12,7 @@ test("entry asset cache keys stay aligned with the current release", async () =>
   const index = await read("index.html");
   const app = await read("app.js");
 
-  assert.equal(release.version, "1.123.37");
+  assert.equal(release.version, "1.124.0");
   assert.match(index, new RegExp(`/styles\\.css\\?v=${release.version.replaceAll(".", "\\.")}`));
   assert.match(index, new RegExp(`/app\\.js\\?v=${release.version.replaceAll(".", "\\.")}`));
   assert.match(index, new RegExp(`MFL Front Office v${release.version.replaceAll(".", "\\.")}`));

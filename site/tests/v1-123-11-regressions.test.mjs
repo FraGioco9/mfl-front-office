@@ -13,7 +13,7 @@ test("static app bridge owns the current footer before asynchronous runtime", as
   const bridge = await read("app.js");
   const vercel = await read("vercel.json");
 
-  assert.equal(release.version, "1.123.37");
+  assert.equal(release.version, "1.124.0");
   assert.match(index, /<body data-page="home" class="pinnedSidebarVisible">/);
   assert.match(index, />MFL Front Office v1\.123\.37<\/a>/);
   assert.match(index, /href="\/styles\.css\?v=1\.123\.37"/);

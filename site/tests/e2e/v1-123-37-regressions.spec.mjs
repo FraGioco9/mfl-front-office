@@ -15,7 +15,7 @@ async function waitForArchitecture(page) {
 test("Evaluation shows its dash before app.js can take over", async ({ page }) => {
   let releaseApp;
   const appGate = new Promise((resolve) => { releaseApp = resolve; });
-  await page.route("**/app.js?v=1.123.37", async (route) => {
+  await page.route("**/app.js?v=1.124.0", async (route) => {
     await appGate;
     await route.continue();
   });

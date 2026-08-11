@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("v1.123.37 keeps the Evaluation discount fallback visible from static HTML", async () => {
+test("v1.124.0 keeps the Evaluation discount fallback visible from static HTML", async () => {
   const index = await read("index.html");
   const chrome = await read("evaluation-static-chrome-runtime.js");
 
@@ -13,7 +13,7 @@ test("v1.123.37 keeps the Evaluation discount fallback visible from static HTML"
   assert.match(chrome, /setImportant\(discountRate, "visibility", "visible"\)/);
 });
 
-test("v1.123.37 lets recent result buttons use their original trusted click handlers", async () => {
+test("v1.124.0 lets recent result buttons use their original trusted click handlers", async () => {
   const search = await read("global-search-runtime.js");
 
   assert.doesNotMatch(search, /onResultClick|forwardingResultClick/);
@@ -22,7 +22,7 @@ test("v1.123.37 lets recent result buttons use their original trusted click hand
   assert.match(search, /document\.addEventListener\("input", onInput, true\)/);
 });
 
-test("v1.123.37 keeps global search focused without reselecting typed text", async () => {
+test("v1.124.0 keeps global search focused without reselecting typed text", async () => {
   const search = await read("global-search-runtime.js");
 
   assert.match(search, /function focusSearchInput\(selectText = false\)/);
@@ -59,12 +59,12 @@ test("typed global search stays fresh independently of visited page data", async
   assert.match(vercel, /"source": "\/global-search-runtime\.js"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
 });
 
-test("v1.123.37 aligns release metadata and static cache keys", async () => {
+test("v1.124.0 aligns release metadata and static cache keys", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const app = await read("app.js");
 
-  assert.equal(release.version, "1.123.37");
+  assert.equal(release.version, "1.124.0");
   assert.match(app, /const STATIC_RELEASE_VERSION = "1\.123\.37"/);
   assert.match(index, /href="\/styles\.css\?v=1\.123\.37"/);
   assert.match(index, /src="\/app\.js\?v=1\.123\.37"/);
