@@ -17,6 +17,8 @@
   let focusSettleTimer = 0;
   let pendingPayload = null;
   let pendingQuery = "";
+  let pendingFlushTimer = 0;
+  let pendingFlushAttempts = 0;
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -45,6 +47,13 @@
     Array.from(results.querySelectorAll(":scope > .searchResult"))
       .slice(MAX_RESULT_BOXES)
       .forEach((result) => result.remove());
+  }
+
+  function clearTypedResults() {
+    const results = searchResults();
+    if (!results) return;
+    results.querySelectorAll(":scope > .searchResult").forEach((result) => result.remove());
+    results.classList.remove("filledSearchResults");
   }
 
   function observeResultBoxes() {
@@ -81,10 +90,21 @@
     }
   }
 
+  function schedulePendingFlush() {
+    if (destroyed || !pendingPayload || pendingFlushTimer || pendingFlushAttempts >= 20) return;
+    pendingFlushAttempts += 1;
+    pendingFlushTimer = window.setTimeout(() => {
+      pendingFlushTimer = 0;
+      if (!flushPendingPayload() && pendingPayload) schedulePendingFlush();
+    }, 50);
+  }
+
   function applyPayload(payload, normalizedQuery = "") {
     if (!legacyPayloadApplierReady()) {
       pendingPayload = payload;
       pendingQuery = normalizedQuery;
+      pendingFlushAttempts = 0;
+      schedulePendingFlush();
       return false;
     }
 
@@ -100,6 +120,9 @@
     }
     pendingPayload = null;
     pendingQuery = "";
+    pendingFlushAttempts = 0;
+    if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
+    pendingFlushTimer = 0;
     renderCurrentResults();
     return true;
   }
@@ -110,6 +133,9 @@
     if (!input || !pendingQuery || normalize(input.value) !== pendingQuery) {
       pendingPayload = null;
       pendingQuery = "";
+      pendingFlushAttempts = 0;
+      if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
+      pendingFlushTimer = 0;
       return false;
     }
     return applyPayload(pendingPayload, pendingQuery);
@@ -195,14 +221,18 @@
       controller = null;
       pendingPayload = null;
       pendingQuery = "";
+      pendingFlushAttempts = 0;
+      if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
+      pendingFlushTimer = 0;
       delete document.documentElement.dataset.globalSearchQueryPending;
       renderCurrentResults();
       return;
     }
 
-    // Keep already-known matches responsive while typing, but always replace
-    // them with the authoritative players + clubs + agents database response.
-    renderCurrentResults();
+    // A typed query always belongs to the complete server-side search. Remove
+    // recent or page-loaded matches immediately so they can never masquerade as
+    // the complete search universe while the database response is in flight.
+    clearTypedResults();
     void searchDatabase(query);
   }
 
@@ -270,6 +300,9 @@
     controller = null;
     pendingPayload = null;
     pendingQuery = "";
+    pendingFlushAttempts = 0;
+    if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
+    pendingFlushTimer = 0;
     resultsObserver?.disconnect();
     resultsObserver = null;
     observedResults = null;
