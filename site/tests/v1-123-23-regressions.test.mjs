@@ -49,14 +49,18 @@ test("Discount Rate tooltip has one deterministic pointer focus and page lifecyc
   assert.match(runtime, /document\.addEventListener\("visibilitychange", onVisibilityChange\)/);
 });
 
-test("Watchlist and My Players navigation is latest-intent wins", async () => {
+test("Watchlist and My Players navigation is latest-intent wins without polling", async () => {
   const runtime = await read("watchlist-myplayers-route-runtime.js");
   const entry = await read("modules/app-entry.js");
   assert.match(entry, /"\/watchlist-myplayers-route-runtime\.js"/);
+  assert.doesNotMatch(entry, /my-players-refresh-view-runtime\.js/);
   assert.match(runtime, /const PAIR = new Set\(\["watchlist", "myplayers"\]\)/);
   assert.match(runtime, /latestIntent = \{/);
   assert.match(runtime, /if \(pairNavigation && latestIntent\?\.sequence !== requestSequence\)/);
   assert.match(runtime, /await reconcile\(latestIntent\)/);
   assert.match(runtime, /skipNavigationLoading: true/);
-  assert.doesNotMatch(runtime, /__mflWithInteractionBusy|window\.fetch\s*=|MutationObserver/);
+  assert.match(runtime, /initialViewObserver = new MutationObserver\(scheduleInitialViewRestore\)/);
+  assert.match(runtime, /initialViewTimer = window\.setTimeout\(finishInitialViewRestore, INITIAL_VIEW_MAX_WAIT_MS\)/);
+  assert.doesNotMatch(runtime, /__mflWithInteractionBusy|window\.fetch\s*=/);
+  assert.doesNotMatch(runtime, /setInterval/);
 });
