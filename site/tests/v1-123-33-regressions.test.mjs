@@ -48,6 +48,7 @@ test("v1.123.33 Evaluation fallback and loading cursor survive runtime consolida
   assert.match(chrome, /characterData: true/);
   assert.match(chrome, /controller\.begin\("evaluationRouteLoading"\)/);
   assert.match(chrome, /controller\.end\(evaluationBusyToken\)/);
+  assert.match(chrome, /body\[data-page="evaluation"\]\.evaluationRouteLoading[\s\S]*cursor: wait !important;/);
   assert.match(chrome, /function syncSearchFocusGuard\(\)/);
   assert.doesNotMatch(entry, /v1-123-31-runtime\.js/);
   assert.match(entry, /installLegacyBridges\(\);[\s\S]*await loadScriptGroup\(LATE_RUNTIME_SCRIPTS/);

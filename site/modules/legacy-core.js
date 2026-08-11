@@ -3800,7 +3800,8 @@ function renderSettingsPage(renderOptions = {}) {
   });
 }
 function currentWatchlistName() {
-  return activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
+  const pinnedName = String(window.__mflWatchlistRouteUiRuntime?.currentName?.() || "").trim();
+  return pinnedName || activeWatchlist()?.name || DEFAULT_WATCHLIST_NAME;
 }
 
 function updateWatchlistTitle() {

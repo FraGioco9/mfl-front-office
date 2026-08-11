@@ -30,10 +30,13 @@ test("v1.123.31 Evaluation focus behavior is retained by the consolidated Evalua
 
 test("v1.123.31 Watchlist title behavior is retained by the dedicated Watchlist runtime", async () => {
   const runtime = await read("watchlist-route-ui-runtime.js");
+  const core = await read("modules/legacy-core.js");
   assert.match(runtime, /const nextTitle = `Watchlist - \$\{name\}`/);
   assert.match(runtime, /function syncWatchlistTitle\(\)/);
   assert.match(runtime, /liveWatchlistName\(watchlistId\)[\s\S]*cachedWatchlistName\(watchlistId\)/);
   assert.match(runtime, /stableWatchlistName/);
+  assert.match(runtime, /currentName: \(\) => currentWatchlistIdentity\(\)\.name/);
+  assert.match(core, /window\.__mflWatchlistRouteUiRuntime\?\.currentName\?\.\(\)/);
 });
 
 test("v1.123.31 installs full global search before legacy page startup waits", async () => {
