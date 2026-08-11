@@ -227,7 +227,9 @@
     const search = page.querySelector(".evaluationSearch");
     const metrics = page.querySelector(".evaluationMetrics");
 
-    [page, titleRow, topBar, searchGroup, search, metrics].forEach((element) => {
+    setImportant(page, "visibility", "visible");
+    setImportant(page, "opacity", "1");
+    [titleRow, topBar, searchGroup, search, metrics].forEach((element) => {
       setImportant(element, "visibility", "visible");
       setImportant(element, "opacity", "1");
     });
