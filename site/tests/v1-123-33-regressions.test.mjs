@@ -65,7 +65,7 @@ test("v1.123.33 search runtime owns authoritative search buffering without repla
   assert.doesNotMatch(searchRuntime, /window\.addEventListener\("click"/);
   assert.match(searchRuntime, /let pendingPayload = null/);
   assert.match(searchRuntime, /function flushPendingPayload\(\)/);
-  assert.match(searchRuntime, /liveInput\.focus\(\{ preventScroll: true \}\);\s*liveInput\.select\(\);/);
+  assert.match(searchRuntime, /input\.focus\(\{ preventScroll: true \}\);\s*input\.select\(\);/);
   assert.match(searchRuntime, /type: "all"/);
   assert.doesNotMatch(entry, /search-result-click-runtime\.js/);
 });
