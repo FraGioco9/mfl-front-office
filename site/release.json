@@ -1,4 +1,4 @@
 {
-  "version": "1.123.34",
-  "description": "Consolidate runtimes, remove dead compatibility code, and harden release maintenance"
+  "version": "1.123.35",
+  "description": "Restore shared table view clicks when legacy page state is stale"
 }
