@@ -219,12 +219,28 @@
     if (!(target instanceof HTMLButtonElement) || target.hidden || target.disabled) return;
 
     // Own the real pointer click before document-level compatibility blockers,
-    // then forward exactly one click to the result's original application handler.
+    // then forward one non-reentrant click event to the result's application handler.
     event.preventDefault();
     event.stopImmediatePropagation();
     forwardingResultClick = true;
     try {
-      target.click();
+      target.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+        detail: event.detail,
+        screenX: event.screenX,
+        screenY: event.screenY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+        button: event.button,
+        buttons: event.buttons,
+      }));
     } finally {
       forwardingResultClick = false;
     }

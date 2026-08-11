@@ -39,6 +39,16 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * }} */
 const runtimeWindow = window;
 
+function primeEvaluationDiscountRatePlaceholder() {
+  if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
+  const discountRate = document.getElementById("evaluationDiscountRate");
+  if (!(discountRate instanceof HTMLElement)) return;
+  if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
+  discountRate.style.setProperty("visibility", "visible", "important");
+}
+
+primeEvaluationDiscountRatePlaceholder();
+
 function showStartupError(error) {
   console.error(error);
   document.documentElement.dataset.mflReady = "error";

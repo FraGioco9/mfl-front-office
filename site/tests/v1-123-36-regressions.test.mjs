@@ -22,3 +22,20 @@ test("v1.123.36 keeps keyboard view activation on the legacy click path", async 
   assert.match(source, /pendingViewPointer = sharedViewRoute && event\.isPrimary !== false && event\.button === 0/);
   assert.match(source, /function onClickCapture\(event\) \{\s*if \(!suppressPointerClick\) return;/);
 });
+
+test("v1.123.36 primes the Evaluation discount placeholder before early runtimes", async () => {
+  const source = await read("modules/app-entry.js");
+
+  assert.match(source, /function primeEvaluationDiscountRatePlaceholder\(\)/);
+  assert.match(source, /discountRate\.textContent = "-"/);
+  assert.match(source, /discountRate\.style\.setProperty\("visibility", "visible", "important"\)/);
+  assert.match(source, /primeEvaluationDiscountRatePlaceholder\(\);/);
+});
+
+test("v1.123.36 forwards result clicks without re-entering HTMLElement click activation", async () => {
+  const source = await read("global-search-runtime.js");
+
+  assert.match(source, /target\.dispatchEvent\(new MouseEvent\("click"/);
+  assert.match(source, /forwardingResultClick = true/);
+  assert.doesNotMatch(source, /target\.click\(\)/);
+});
