@@ -12,9 +12,9 @@
   window.__mflSelectionFeedbackRuntime?.destroy?.();
 
   let frame = 0;
-  let interval = 0;
   let observer = null;
   let exitTimer = 0;
+  let toastAnchorTimer = 0;
   let destroyed = false;
   let fallbackClearing = false;
   let actionSequence = 0;
@@ -95,31 +95,6 @@
     if (style && style.textContent !== css) style.textContent = css;
   }
 
-  function syncFooter() {
-    const footer = document.querySelector(".siteFooter");
-    if (!(footer instanceof HTMLElement)) return;
-    let link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
-    if (!(link instanceof HTMLAnchorElement)) {
-      link = document.createElement("a");
-      footer.prepend(link);
-    }
-    const text = `MFL Front Office v${VERSION}`;
-    if (link.textContent === text
-        && link.getAttribute("href") === "/changelog"
-        && link.dataset.page === "changelog"
-        && footer.dataset.releaseVersion === VERSION
-        && !link.hidden) return;
-
-    link.hidden = false;
-    link.removeAttribute("aria-hidden");
-    link.href = "/changelog";
-    link.dataset.page = "changelog";
-    link.dataset.releaseLabel = text;
-    link.textContent = text;
-    link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = VERSION;
-  }
-
   function syncSelectionBarPosition() {
     const bar = selectionBar();
     const main = document.querySelector("#appShell main, main");
@@ -161,6 +136,11 @@
   function prepareToastAnchor() {
     rememberBarTop();
     toastAnchorUntil = Date.now() + TOAST_ANCHOR_MS;
+    if (toastAnchorTimer) clearTimeout(toastAnchorTimer);
+    toastAnchorTimer = window.setTimeout(() => {
+      toastAnchorTimer = 0;
+      schedule();
+    }, TOAST_ANCHOR_MS);
     schedule();
   }
 
@@ -283,7 +263,6 @@
     if (destroyed) return;
     ensureStyles();
     bindObserver();
-    syncFooter();
     syncSelectionBarPosition();
     syncSelectionState();
     syncToastPosition();
@@ -325,14 +304,13 @@
   window.addEventListener("click", onClick, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
-  interval = window.setInterval(schedule, 100);
   rebind();
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
-    if (interval) clearInterval(interval);
     if (exitTimer) clearTimeout(exitTimer);
+    if (toastAnchorTimer) clearTimeout(toastAnchorTimer);
     observer?.disconnect();
     window.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("click", onClick, true);
