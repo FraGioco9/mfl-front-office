@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.123.31";
+  const STATIC_RELEASE_VERSION = "1.123.32";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -515,6 +515,8 @@
     const watchlistSwitcher = document.querySelector("#watchlistSwitcher");
     const watchlistButtonText = document.querySelector("#watchlistButtonText");
     const evaluationSearchInput = document.querySelector("#evaluationSearchInput");
+    const evaluationButtons = document.querySelector("#evaluationButtons");
+    const evaluationLoadButton = document.querySelector("#evaluationLoadButton");
     const hideRetiredInput = document.querySelector("#hideRetiredInput");
     const hideRetiringInput = document.querySelector("#hideRetiringInput");
     const hideMflPlayersFilter = document.querySelector("#hideMflPlayersFilter");
@@ -561,6 +563,12 @@
       }
     }
     if (!lockedRoute && route.pageName === "evaluation") {
+      const params = new URLSearchParams(window.location.search);
+      const selectedEvaluation = Boolean(params.get("player") || params.get("saved") || params.get("share"));
+      const showInitialLoad = storedOptIn && !selectedEvaluation;
+      document.documentElement.classList.toggle("mflEvaluationInitialLoadVisible", showInitialLoad);
+      if (evaluationButtons instanceof HTMLElement) evaluationButtons.hidden = !showInitialLoad;
+      if (evaluationLoadButton instanceof HTMLButtonElement) evaluationLoadButton.hidden = !showInitialLoad;
       if (main instanceof HTMLElement) main.scrollTop = 0;
       if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
     }
@@ -761,7 +769,7 @@
     function interactionShouldBeBlocked(event) {
       if (activeTokens.size) return true;
       const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest(".viewButton[data-view]")) return false;
+      if (target?.closest(".viewButton[data-view], .searchResult, .evaluationSearchResult")) return false;
       return elementHasWaitCursor(target)
         || elementHasWaitCursor(document.documentElement)
         || elementHasWaitCursor(document.body)
@@ -778,7 +786,7 @@
       document.addEventListener(eventName, blockInteraction, true);
     });
 
-    /** @type {(callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>} */
+    /** @type {(callback: (...args: any[]) => any, reason: string) => (...args) => Promise<any>} */
     const wrapBusyFunction = (callback, reason) => (...args) => run(() => callback(...args), reason);
 
     function installLegacyBridge() {

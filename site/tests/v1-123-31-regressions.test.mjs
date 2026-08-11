@@ -9,10 +9,10 @@ const read = (path) => readFile(resolve(root, path), "utf8");
 
 test("v1.123.31 broadens stale-wait view click pass-through without weakening real busy locks", async () => {
   const bridge = await read("app.js");
-  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.31"/);
+  assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.123\.32"/);
   assert.match(bridge, /function interactionShouldBeBlocked\(event\)/);
   assert.match(bridge, /if \(activeTokens\.size\) return true;/);
-  assert.match(bridge, /target\?\.closest\("\.viewButton\[data-view\]"\)/);
+  assert.match(bridge, /\.viewButton\[data-view\]/);
   assert.match(bridge, /elementHasWaitCursor\(document\.body, "::before"\)/);
 });
 

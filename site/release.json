@@ -1,4 +1,4 @@
 {
-  "version": "1.123.31",
-  "description": "Restore all view navigation and stabilize Watchlist, Evaluation, Database Stats, and global search"
+  "version": "1.123.32",
+  "description": "Refresh entry assets and restore Evaluation and search interactions"
 }

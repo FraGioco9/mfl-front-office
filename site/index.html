@@ -8,6 +8,8 @@
       (() => {
         const root = document.documentElement;
         root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+        const evaluationParams = new URLSearchParams(window.location.search);
+        root.dataset.initialEvaluationSelection = evaluationParams.get("player") || evaluationParams.get("saved") || evaluationParams.get("share") ? "true" : "false";
         try {
           root.dataset.theme = localStorage.getItem("mfl-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
           const normalize = (value) => {
@@ -78,6 +80,23 @@
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #evaluationPage {
         display: block !important;
       }
+      html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {
+        align-items: flex-start !important;
+      }
+      html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow > .tablePageTitle {
+        margin-top: 0 !important;
+        line-height: 1.2 !important;
+      }
+      html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationLoadButton {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
       html:not([data-mfl-ready="true"]) #progressionPage nav.pager,
       html.mflDataLoading #progressionPage nav.pager {
         display: none !important;
@@ -125,7 +144,7 @@
     <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPDcZTIAOhVxoMyOr9n_E7ffHjDGItzYw.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=block" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=1.123.22">
+    <link rel="stylesheet" href="/styles.css?v=1.123.32">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -513,7 +532,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.22</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.123.32</a>
       <span id="statusText">Updated -</span>
     </footer>
 
@@ -681,6 +700,6 @@
         </footer>
       </section>
     </div>
-    <script src="/app.js?v=1.123.22"></script>
+    <script src="/app.js?v=1.123.32"></script>
   </body>
 </html>

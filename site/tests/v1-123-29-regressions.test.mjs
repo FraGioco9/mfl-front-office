@@ -36,7 +36,7 @@ test("generic wait hover suppression never owns an interaction shield or permane
 
   const blocker = bridge.slice(bridge.indexOf("function interactionShouldBeBlocked"), bridge.indexOf("function blockInteraction"));
   assert.ok(blocker.includes("if (activeTokens.size) return true;"));
-  assert.ok(blocker.includes('target?.closest(".viewButton[data-view]")'));
+  assert.ok(blocker.includes(".viewButton[data-view]"));
   assert.ok(blocker.includes('elementHasWaitCursor(document.body, "::before")'));
   assert.ok(!blocker.includes('elementHasWaitCursor(document.body, "::after")'));
 });
