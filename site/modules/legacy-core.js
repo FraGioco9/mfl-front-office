@@ -9957,6 +9957,10 @@ viewButtons.forEach((button) => {
       setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
       return;
     }
+    if (pageName !== state.currentPage && tablePages.has(pageName)) {
+      state.currentPage = pageName;
+      document.body.dataset.page = pageName;
+    }
     setView(viewName);
   });
 });

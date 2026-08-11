@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("v1.123.33 uses real busy tokens as the only interaction lock", async () => {
   const source = await read("app.js");
-  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.34"/);
+  assert.match(source, /const STATIC_RELEASE_VERSION = "1\.123\.35"/);
   assert.match(source, /function interactionShouldBeBlocked\(\)\s*{\s*return activeTokens\.size > 0;/);
   assert.doesNotMatch(source, /function elementHasWaitCursor/);
   assert.match(source, /html\.\$\{BUSY_CLASS\} body \* \{\s*pointer-events: none !important;/);
@@ -31,12 +31,14 @@ test("v1.123.33 primes table headers on navigation intent", async () => {
 
 test("shared table view buttons bind to the actual route before the legacy click handler", async () => {
   const source = await read("table-loading-runtime.js");
+  const core = await read("modules/legacy-core.js");
   assert.match(source, /const LEGACY_TABLE_PAGES = new Set\(\["database", "mfl", "progression", "watchlist", "myplayers", "agents"\]\)/);
   assert.match(source, /function syncSharedViewButtonPage\(pageName\)/);
   assert.match(source, /button\.dataset\.page = legacyPageName/);
   assert.match(source, /const pageName = pathPage \|\| bodyPage \|\| explicitPage/);
   assert.match(source, /function primeRoute\(route\)\s*{[\s\S]*syncSharedViewButtonPage\(route\.pageName\)/);
   assert.match(source, /function onNavigationIntent\(event\)[\s\S]*syncSharedViewButtonPage\(route\.pageName\)[\s\S]*primeRoute\(route\)/);
+  assert.match(core, /if \(pageName !== state\.currentPage && tablePages\.has\(pageName\)\) \{\s*state\.currentPage = pageName;\s*document\.body\.dataset\.page = pageName;/);
 });
 
 test("v1.123.33 Evaluation fallback and loading cursor survive runtime consolidation", async () => {

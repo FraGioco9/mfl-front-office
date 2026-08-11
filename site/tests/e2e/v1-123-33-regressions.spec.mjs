@@ -58,16 +58,10 @@ test("shared table buttons resolve the visible route even if legacy currentPage 
 
   const contracts = page.locator('#progressionPage .viewButton[data-view="contracts"]');
   await expect(contracts).toHaveAttribute("data-page", "database");
-  const resolvedPage = await page.evaluate(() => globalThis.eval(`(() => {
-    const previousPage = state.currentPage;
-    state.currentPage = "home";
-    try {
-      return pageNameForViewButton(document.querySelector('#progressionPage .viewButton[data-view="contracts"]'));
-    } finally {
-      state.currentPage = previousPage;
-    }
-  })()`));
-  expect(resolvedPage).toBe("database");
+  await page.evaluate(() => globalThis.eval('state.currentPage = "home"'));
+  await contracts.click();
+  await expect(page).toHaveURL(/\/database\/contracts$/);
+  expect(await page.evaluate(() => globalThis.eval("state.currentPage"))).toBe("database");
 });
 
 test("table headers switch to destination chrome on pointerdown before route completion", async ({ page }) => {
