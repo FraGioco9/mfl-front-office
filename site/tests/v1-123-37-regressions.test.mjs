@@ -22,6 +22,16 @@ test("v1.123.37 lets recent result buttons use their original trusted click hand
   assert.match(search, /document\.addEventListener\("input", onInput, true\)/);
 });
 
+test("v1.123.37 keeps global search focused when the modal opens", async () => {
+  const search = await read("global-search-runtime.js");
+
+  assert.match(search, /function focusSearchInput\(\)/);
+  assert.match(search, /input\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(search, /input\.select\(\)/);
+  assert.match(search, /document\.activeElement !== input/);
+  assert.match(search, /focusSettleTimer = window\.setTimeout/);
+});
+
 test("v1.123.37 aligns release metadata and static cache keys", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
