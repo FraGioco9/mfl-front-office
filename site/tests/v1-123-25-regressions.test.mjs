@@ -15,7 +15,8 @@ test("Watchlist switcher primes from cache and otherwise shows a dash", async ()
 
   assert.match(bridge, /function storedWatchlistName\(pathname\)/);
   assert.match(bridge, /watchlistButtonText\.textContent = storedWatchlistName\(window\.location\.pathname\) \|\| "-"/);
-  assert.match(routeUi, /buttonText\.textContent = name \|\| "-"/);
+  assert.match(routeUi, /const nextText = name \|\| "-"/);
+  assert.match(routeUi, /if \(buttonText\.textContent !== nextText\) buttonText\.textContent = nextText/);
   assert.match(early, /watchlist-route-ui-runtime\.js/);
 });
 
