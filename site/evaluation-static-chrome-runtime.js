@@ -20,6 +20,11 @@
     return cleanPath() === "/evaluation";
   }
 
+  function globalSearchOpen() {
+    const modal = document.getElementById("searchModal");
+    return modal instanceof HTMLElement && !modal.hidden;
+  }
+
   function appBusy() {
     return document.documentElement.classList.contains("mflInteractionBusy")
       || document.documentElement.dataset.interactionBusy === "true";
@@ -172,7 +177,7 @@
   }
 
   function focusEmptyEvaluationWhenReady() {
-    if (focusQueued || !evaluationReady() || hasSelectedEvaluation()) return;
+    if (focusQueued || !evaluationReady() || hasSelectedEvaluation() || globalSearchOpen()) return;
     const input = document.getElementById("evaluationSearchInput");
     if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
 
@@ -180,7 +185,7 @@
     requestAnimationFrame(() => {
       focusQueued = false;
       syncSearchFocusGuard();
-      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim()) return;
+      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim() || globalSearchOpen()) return;
       input.focus({ preventScroll: true });
     });
   }
