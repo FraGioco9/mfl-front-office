@@ -20,9 +20,31 @@
       cursor: default !important;
     }
 
+    /* During loading the transparent page shield is the only pointer target.
+       This prevents clicks and also prevents underlying controls from entering
+       or leaving hover states as loading content changes beneath the pointer. */
+    html.mflInteractionBusy body *,
+    html.mflInteractionBusy body *::before,
+    html.mflInteractionBusy body *::after {
+      pointer-events: none !important;
+      transition: none !important;
+      animation: none !important;
+    }
+
+    html.mflInteractionBusy body::after {
+      pointer-events: auto !important;
+    }
+
     #${TOAST_ID} {
+      top: 50% !important;
+      bottom: auto !important;
+      transform: translate(-50%, -50%) !important;
       pointer-events: none !important;
       user-select: none;
+    }
+
+    #${TOAST_ID}.visible {
+      transform: translate(-50%, -50%) !important;
     }
   `;
   document.head.appendChild(style);
