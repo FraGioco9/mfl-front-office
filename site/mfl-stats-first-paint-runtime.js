@@ -74,10 +74,8 @@
         transform: none !important;
       }
 
-      #mflStatsPage .mflStatsHistogramBar,
       #mflStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
-        transition: none !important;
       }
 
       #mflStatsPage .mflStatsHistogram.mflStatsFinalTransition .mflStatsHistogramBar::after {
