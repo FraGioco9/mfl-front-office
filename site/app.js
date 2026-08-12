@@ -480,20 +480,30 @@
     if (!(tableHead instanceof HTMLTableSectionElement) || !(tableBody instanceof HTMLTableSectionElement)) return;
 
     const columnCount = Math.max(1, tableHead.rows[0]?.cells.length || 1);
-    const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
+    const rowPaints = [
+      { background: 28, border: 85 },
+      { background: 21, border: 65 },
+      { background: 14, border: 45 },
+      { background: 8, border: 28 },
+      { background: 3, border: 12 },
+    ];
     const fragment = document.createDocumentFragment();
-    opacities.forEach((opacity, index) => {
+    rowPaints.forEach(({ background, border }, index) => {
       const row = document.createElement("tr");
       row.className = "staticTableBlankRow";
       row.dataset.loadingRow = String(index + 1);
       row.setAttribute("aria-hidden", "true");
-      row.style.opacity = String(opacity);
+      row.style.setProperty("opacity", "1", "important");
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
         const cell = document.createElement("td");
         cell.style.height = "38px";
         cell.style.minHeight = "38px";
         cell.style.paddingTop = "0";
         cell.style.paddingBottom = "0";
+        cell.style.setProperty("opacity", "1", "important");
+        cell.style.setProperty("background", `color-mix(in srgb, var(--border-strong) ${background}%, transparent)`, "important");
+        cell.style.setProperty("background-image", "none", "important");
+        cell.style.setProperty("border-bottom-color", `color-mix(in srgb, var(--border-strong) ${border}%, transparent)`, "important");
         row.appendChild(cell);
       }
       fragment.appendChild(row);
