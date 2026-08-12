@@ -12535,6 +12535,18 @@ async function startApp() {
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const requestedMflView = pageName === "mfl"
+      ? normalizeViewForPage(options.view, "mfl")
+      : "";
+    if (pageName === "mfl" && requestedMflView === "stats") {
+      state.incrementalMode = false;
+      return originalSetPage.call(this, pageName, updateHash, {
+        ...options,
+        view: "stats",
+        skipNavigationLoading: true,
+      });
+    }
+
     const previousPage = state.currentPage;
     const previousTablePage = tablePageKey();
     if (previousTablePage) {
