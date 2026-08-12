@@ -9,6 +9,8 @@
 
   let controller = null;
   let sequence = 0;
+  let evaluationController = null;
+  let evaluationSequence = 0;
   let destroyed = false;
   let resultsObserver = null;
   let observedResults = null;
@@ -19,6 +21,10 @@
   let pendingQuery = "";
   let pendingFlushTimer = 0;
   let pendingFlushAttempts = 0;
+  let pendingEvaluationPayload = null;
+  let pendingEvaluationQuery = "";
+  let pendingEvaluationFlushTimer = 0;
+  let pendingEvaluationFlushAttempts = 0;
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -41,9 +47,25 @@
     return modal instanceof HTMLElement ? modal : null;
   }
 
+  function evaluationInput() {
+    const input = document.getElementById("evaluationSearchInput");
+    return input instanceof HTMLInputElement ? input : null;
+  }
+
+  function evaluationResults() {
+    const results = document.getElementById("evaluationSearchResults");
+    return results instanceof HTMLElement ? results : null;
+  }
+
   function syncClearButton() {
     const input = searchInput();
     const button = document.getElementById("playerSearchClearButton");
+    if (input && button instanceof HTMLElement) button.hidden = !input.value.trim();
+  }
+
+  function syncEvaluationClearButton() {
+    const input = evaluationInput();
+    const button = document.getElementById("evaluationSearchClearButton");
     if (input && button instanceof HTMLElement) button.hidden = !input.value.trim();
   }
 
@@ -57,6 +79,16 @@
     results.classList.remove("filledSearchResults");
   }
 
+  function renderEvaluationMessage(message) {
+    const results = evaluationResults();
+    if (!results) return;
+    const hint = document.createElement("div");
+    hint.className = "searchHint";
+    hint.textContent = message;
+    results.replaceChildren(hint);
+    results.hidden = false;
+  }
+
   function markSearching(normalizedQuery) {
     if (!normalizedQuery) return;
     document.documentElement.dataset.globalSearchQueryPending = normalizedQuery;
@@ -67,6 +99,19 @@
   function finishSearching(normalizedQuery) {
     if (document.documentElement.dataset.globalSearchQueryPending === normalizedQuery) {
       delete document.documentElement.dataset.globalSearchQueryPending;
+    }
+  }
+
+  function markEvaluationSearching(normalizedQuery) {
+    if (!normalizedQuery) return;
+    document.documentElement.dataset.evaluationSearchQueryPending = normalizedQuery;
+    syncEvaluationClearButton();
+    renderEvaluationMessage("Searching…");
+  }
+
+  function finishEvaluationSearching(normalizedQuery) {
+    if (document.documentElement.dataset.evaluationSearchQueryPending === normalizedQuery) {
+      delete document.documentElement.dataset.evaluationSearchQueryPending;
     }
   }
 
@@ -103,6 +148,30 @@
     }
   }
 
+  function renderCurrentEvaluationResults() {
+    try {
+      if (typeof window.renderEvaluationSearchResults === "function") {
+        window.renderEvaluationSearchResults();
+      } else {
+        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
+      }
+    } catch (error) {
+      console.warn("Could not render Evaluation search results.", error);
+    }
+  }
+
+  function resetEvaluationSelection() {
+    try {
+      if (typeof window.resetEvaluationSelection === "function") {
+        window.resetEvaluationSelection();
+      } else {
+        window.eval("if (typeof resetEvaluationSelection === 'function') resetEvaluationSelection();");
+      }
+    } catch (error) {
+      console.warn("Could not reset Evaluation selection.", error);
+    }
+  }
+
   function legacyPayloadApplierReady() {
     if (typeof window.applyDatabaseSearchPayload === "function") return true;
     try {
@@ -118,6 +187,16 @@
     pendingFlushTimer = window.setTimeout(() => {
       pendingFlushTimer = 0;
       if (!flushPendingPayload() && pendingPayload) schedulePendingFlush();
+    }, 50);
+  }
+
+  function schedulePendingEvaluationFlush() {
+    if (destroyed || !pendingEvaluationPayload || pendingEvaluationFlushTimer
+      || pendingEvaluationFlushAttempts >= 20) return;
+    pendingEvaluationFlushAttempts += 1;
+    pendingEvaluationFlushTimer = window.setTimeout(() => {
+      pendingEvaluationFlushTimer = 0;
+      if (!flushPendingEvaluationPayload() && pendingEvaluationPayload) schedulePendingEvaluationFlush();
     }, 50);
   }
 
@@ -150,6 +229,35 @@
     return true;
   }
 
+  function applyEvaluationPayload(payload, normalizedQuery = "") {
+    if (!legacyPayloadApplierReady()) {
+      pendingEvaluationPayload = payload;
+      pendingEvaluationQuery = normalizedQuery;
+      pendingEvaluationFlushAttempts = 0;
+      schedulePendingEvaluationFlush();
+      return false;
+    }
+
+    window.__mflAuthoritativeEvaluationSearchPayload = payload;
+    try {
+      if (typeof window.applyDatabaseSearchPayload === "function") {
+        window.applyDatabaseSearchPayload(payload, "players");
+      } else {
+        window.eval("if (typeof applyDatabaseSearchPayload === 'function') applyDatabaseSearchPayload(window.__mflAuthoritativeEvaluationSearchPayload, 'players');");
+      }
+    } finally {
+      delete window.__mflAuthoritativeEvaluationSearchPayload;
+    }
+    pendingEvaluationPayload = null;
+    pendingEvaluationQuery = "";
+    pendingEvaluationFlushAttempts = 0;
+    if (pendingEvaluationFlushTimer) window.clearTimeout(pendingEvaluationFlushTimer);
+    pendingEvaluationFlushTimer = 0;
+    renderCurrentEvaluationResults();
+    finishEvaluationSearching(normalizedQuery);
+    return true;
+  }
+
   function flushPendingPayload() {
     if (!pendingPayload) return false;
     const input = searchInput();
@@ -162,6 +270,20 @@
       return false;
     }
     return applyPayload(pendingPayload, pendingQuery);
+  }
+
+  function flushPendingEvaluationPayload() {
+    if (!pendingEvaluationPayload) return false;
+    const input = evaluationInput();
+    if (!input || !pendingEvaluationQuery || normalize(input.value) !== pendingEvaluationQuery) {
+      pendingEvaluationPayload = null;
+      pendingEvaluationQuery = "";
+      pendingEvaluationFlushAttempts = 0;
+      if (pendingEvaluationFlushTimer) window.clearTimeout(pendingEvaluationFlushTimer);
+      pendingEvaluationFlushTimer = 0;
+      return false;
+    }
+    return applyEvaluationPayload(pendingEvaluationPayload, pendingEvaluationQuery);
   }
 
   function invalidateLegacyAllSearch() {
@@ -177,6 +299,21 @@
     } catch {
       // Typed search remains authoritative through its own request sequence even
       // if a future core stops exposing the legacy search coordination bindings.
+    }
+  }
+
+  function invalidateLegacyEvaluationSearch() {
+    try {
+      window.eval(`(() => {
+        if (typeof databaseSearchAbortControllers !== "undefined") {
+          databaseSearchAbortControllers.get("players")?.abort?.();
+        }
+        if (typeof databaseSearchSequences !== "undefined") {
+          databaseSearchSequences.set("players", (databaseSearchSequences.get("players") || 0) + 1);
+        }
+      })();`);
+    } catch {
+      // Evaluation typed search remains authoritative through its own sequence.
     }
   }
 
@@ -231,6 +368,59 @@
     }
   }
 
+  async function searchEvaluationDatabase(rawQuery) {
+    const query = String(rawQuery || "").trim();
+    const normalizedQuery = normalize(query);
+    const input = evaluationInput();
+    if (!input || !normalizedQuery) return false;
+
+    const requestSequence = ++evaluationSequence;
+    evaluationController?.abort();
+    invalidateLegacyEvaluationSearch();
+    evaluationController = new AbortController();
+    const activeController = evaluationController;
+    const parameters = new URLSearchParams({
+      mode: "search",
+      type: "players",
+      limit: "20",
+      q: query,
+      v: VERSION,
+    });
+
+    // Evaluation follows the same all-at-once lifecycle as global search: no
+    // previously loaded player matches are visible while SQLite is searching.
+    markEvaluationSearching(normalizedQuery);
+    try {
+      const response = await fetch(`/api/data?${parameters}`, {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Cache-Control": "no-cache, no-store, max-age=0",
+          Pragma: "no-cache",
+        },
+        signal: activeController.signal,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Could not search players.");
+      if (destroyed || requestSequence !== evaluationSequence
+        || normalize(input.value) !== normalizedQuery) return false;
+      applyEvaluationPayload(payload, normalizedQuery);
+      return true;
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error(error?.message || "Could not search players.");
+        if (!destroyed && requestSequence === evaluationSequence
+          && normalize(input.value) === normalizedQuery) {
+          renderEvaluationMessage("Could not search.");
+          finishEvaluationSearching(normalizedQuery);
+        }
+      }
+      return false;
+    } finally {
+      if (evaluationController === activeController) evaluationController = null;
+    }
+  }
+
   function onInput(event) {
     const input = searchInput();
     if (!input || event.target !== input) return;
@@ -256,6 +446,44 @@
     }
 
     void searchDatabase(query);
+  }
+
+  function onEvaluationInput(event) {
+    const input = evaluationInput();
+    if (!input || event.target !== input) return;
+
+    // Suppress the legacy immediate local-index render and its duplicate
+    // request. Evaluation exposes only the completed authoritative response.
+    event.stopImmediatePropagation();
+    const query = String(input.value || "").trim();
+
+    if (!query) {
+      evaluationSequence += 1;
+      evaluationController?.abort();
+      evaluationController = null;
+      pendingEvaluationPayload = null;
+      pendingEvaluationQuery = "";
+      pendingEvaluationFlushAttempts = 0;
+      if (pendingEvaluationFlushTimer) window.clearTimeout(pendingEvaluationFlushTimer);
+      pendingEvaluationFlushTimer = 0;
+      delete document.documentElement.dataset.evaluationSearchQueryPending;
+      syncEvaluationClearButton();
+      resetEvaluationSelection();
+      renderCurrentEvaluationResults();
+      return;
+    }
+
+    void searchEvaluationDatabase(query);
+  }
+
+  function onEvaluationFocus(event) {
+    const input = evaluationInput();
+    if (!input || event.target !== input) return;
+    const normalizedQuery = normalize(input.value);
+    if (!normalizedQuery
+      || document.documentElement.dataset.evaluationSearchQueryPending !== normalizedQuery) return;
+    event.stopImmediatePropagation();
+    renderEvaluationMessage("Searching…");
   }
 
   function focusSearchInput(selectText = false) {
@@ -309,22 +537,34 @@
   }
 
   document.addEventListener("input", onInput, true);
+  document.addEventListener("input", onEvaluationInput, true);
+  document.addEventListener("focus", onEvaluationFocus, true);
   window.addEventListener("mfl:ready", flushPendingPayload);
+  window.addEventListener("mfl:ready", flushPendingEvaluationPayload);
   observeResultBoxes();
   observeSearchModal();
   document.documentElement.dataset.globalSearchAuthoritative = "true";
+  document.documentElement.dataset.evaluationSearchAuthoritative = "true";
   window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
 
   function destroy() {
     destroyed = true;
     sequence += 1;
+    evaluationSequence += 1;
     controller?.abort();
     controller = null;
+    evaluationController?.abort();
+    evaluationController = null;
     pendingPayload = null;
     pendingQuery = "";
     pendingFlushAttempts = 0;
+    pendingEvaluationPayload = null;
+    pendingEvaluationQuery = "";
+    pendingEvaluationFlushAttempts = 0;
     if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
     pendingFlushTimer = 0;
+    if (pendingEvaluationFlushTimer) window.clearTimeout(pendingEvaluationFlushTimer);
+    pendingEvaluationFlushTimer = 0;
     resultsObserver?.disconnect();
     resultsObserver = null;
     observedResults = null;
@@ -335,15 +575,21 @@
     if (focusSettleTimer) window.clearTimeout(focusSettleTimer);
     focusSettleTimer = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
+    delete document.documentElement.dataset.evaluationSearchQueryPending;
     document.removeEventListener("input", onInput, true);
+    document.removeEventListener("input", onEvaluationInput, true);
+    document.removeEventListener("focus", onEvaluationFocus, true);
     window.removeEventListener("mfl:ready", flushPendingPayload);
+    window.removeEventListener("mfl:ready", flushPendingEvaluationPayload);
   }
 
   window.__mflGlobalSearchRuntime = Object.freeze({
     version: VERSION,
     search: searchDatabase,
+    searchEvaluation: searchEvaluationDatabase,
     cap: capResultBoxes,
     flush: flushPendingPayload,
+    flushEvaluation: flushPendingEvaluationPayload,
     focus: focusAndSelectSearch,
     destroy,
   });
