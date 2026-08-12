@@ -74,8 +74,47 @@
         transform: none !important;
       }
 
+      #mflStatsPage .mflStatsHistogramBar,
       #mflStatsPage .mflStatsHistogramBar::after {
         animation: none !important;
+        transition: none !important;
+      }
+
+      #mflStatsPage .mflStatsHistogramBar::before {
+        content: none !important;
+        display: none !important;
+      }
+
+      #mflStatsPage .mflStatsHistogramTooltip {
+        position: absolute;
+        left: 50%;
+        bottom: min(calc(var(--bar-height, 0%) + 8px), calc(100% - 28px));
+        z-index: 30;
+        width: max-content;
+        max-width: 140px;
+        padding: 4px 7px;
+        border: 1px solid var(--border-strong);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+        font-size: clamp(8px, 0.58vw, 11px);
+        font-weight: 800;
+        line-height: 1.1;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 4px);
+        transition: opacity 120ms ease, transform 120ms ease;
+        white-space: nowrap;
+      }
+
+      #mflStatsPage .mflStatsHistogramBar:hover {
+        z-index: 31;
+      }
+
+      #mflStatsPage .mflStatsHistogramBar:hover .mflStatsHistogramTooltip {
+        opacity: 1;
+        transform: translate(-50%, 0);
       }
 
       #mflStatsPage .mflStatsHistogram.mflStatsFinalTransition .mflStatsHistogramBar::after {
@@ -237,8 +276,14 @@
       item.className = "mflStatsHistogramItem";
       const bar = document.createElement("div");
       bar.className = "mflStatsHistogramBar";
-      bar.dataset.tooltip = `${formatCount(count)} (${totalPercent}%)`;
+      const tooltipText = `${formatCount(count)} (${totalPercent}%)`;
+      bar.dataset.tooltip = tooltipText;
+      bar.setAttribute("aria-label", tooltipText);
       bar.style.setProperty("--bar-height", `${barHeight}%`);
+      const tooltip = document.createElement("span");
+      tooltip.className = "mflStatsHistogramTooltip";
+      tooltip.textContent = tooltipText;
+      bar.appendChild(tooltip);
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
       label.textContent = String(value);
