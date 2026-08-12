@@ -325,6 +325,14 @@
   const style = document.createElement("style");
   style.id = "watchlistRouteUiRuntimeStyles";
   style.textContent = `
+    body[data-page="watchlist"] #progressionPage .viewButton {
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease !important;
+    }
+    body[data-page="watchlist"] #progressionPage .viewButton:not(.active):hover:not(:disabled) {
+      border-color: var(--primary-hover) !important;
+      background: var(--row-hover) !important;
+      color: var(--text) !important;
+    }
     .watchlistDropdownRename::before,
     .watchlistDropdownRename::after {
       display: none !important;
