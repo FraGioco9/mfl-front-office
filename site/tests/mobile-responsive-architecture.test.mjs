@@ -15,7 +15,7 @@ test("responsive layout has one explicit final owner loaded before runtime start
   assert.match(responsive, /@media \(max-width: 900px\)/);
   assert.match(entry, /data-mfl-responsive-layout/);
   assert.match(entry, /responsive\.css\?v=/);
-  assert.match(entry, /await responsiveStylesReady;\n  installApiFetchPolicy\(\);/);
+  assert.match(entry, /await responsiveStylesReady;\n\s+installApiFetchPolicy\(\);/);
 });
 
 test("mobile owner neutralizes the pinned desktop shell instead of adding another sidebar width", async () => {
@@ -32,7 +32,7 @@ test("mobile table ownership keeps exact columns and scrolls the component rathe
   const responsive = await readSite("responsive.css");
 
   assert.match(responsive, /#progressionPage \.tableScroller,[\s\S]*?overflow-x: auto !important/);
-  assert.match(responsive, /#progressionPage \.tableScroller table \{\n    min-width: 1240px !important;/);
+  assert.match(responsive, /#progressionPage \.tableScroller table \{\n\s+min-width: 1240px !important;/);
   assert.doesNotMatch(responsive, /\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|agent|contract|link)\s*\{/);
 });
 
