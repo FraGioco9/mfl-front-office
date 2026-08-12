@@ -19,6 +19,8 @@
   let pointerFocusedControl = null;
   let recentEvaluationResultNodes = [];
   let recentEvaluationObserver = null;
+  let recentEvaluationRestoreFrame = 0;
+  let recentEvaluationRestoreSettleFrame = 0;
   const evaluationResultBusyTokens = new Set();
 
   function installStyles() {
@@ -35,6 +37,14 @@
         background: var(--surface);
         color: var(--text);
         box-shadow: none;
+      }
+
+      /* A busy page must not leave underlying controls eligible for hover.
+         The central busy overlay remains the sole pointer target. */
+      html.mflInteractionBusy body *,
+      html.mflInteractionBusy body *::before,
+      html.mflInteractionBusy body *::after {
+        pointer-events: none !important;
       }
 
       /* One canonical close control for every popup header. Keep the button
@@ -150,7 +160,15 @@
     const buttons = Array.from(results.querySelectorAll(":scope > .evaluationSearchResult"))
       .filter((button) => button instanceof HTMLButtonElement)
       .slice(0, 5);
-    if (buttons.length) recentEvaluationResultNodes = buttons;
+    if (!buttons.length) return;
+
+    // Authoritative typed search replaces the in-memory Evaluation index. While
+    // the input is being cleared the legacy renderer can therefore produce only
+    // a partial recent list. Never let that transient subset shrink a fuller
+    // last-five cache.
+    if (!recentEvaluationResultNodes.length || buttons.length >= recentEvaluationResultNodes.length) {
+      recentEvaluationResultNodes = buttons;
+    }
   }
 
   function rememberClickedEvaluationResult(button) {
@@ -178,6 +196,24 @@
     return true;
   }
 
+  function scheduleRecentEvaluationRestore() {
+    if (destroyed) return;
+    queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
+
+    if (recentEvaluationRestoreFrame) cancelAnimationFrame(recentEvaluationRestoreFrame);
+    if (recentEvaluationRestoreSettleFrame) cancelAnimationFrame(recentEvaluationRestoreSettleFrame);
+    recentEvaluationRestoreSettleFrame = 0;
+
+    recentEvaluationRestoreFrame = requestAnimationFrame(() => {
+      recentEvaluationRestoreFrame = 0;
+      restoreRecentEvaluationResultsIfEmpty();
+      recentEvaluationRestoreSettleFrame = requestAnimationFrame(() => {
+        recentEvaluationRestoreSettleFrame = 0;
+        restoreRecentEvaluationResultsIfEmpty();
+      });
+    });
+  }
+
   function releaseEvaluationResultBusyToken(token) {
     if (!token || !evaluationResultBusyTokens.has(token)) return;
     evaluationResultBusyTokens.delete(token);
@@ -193,13 +229,24 @@
     if (!token) return;
     evaluationResultBusyTokens.add(token);
 
-    // The trusted click is already being dispatched, so the interaction shield
-    // cannot swallow it. Two render frames cover cached Evaluation routes; a
-    // network route has already entered its normal withInteractionBusy token by
-    // then, so releasing this pre-selection token cannot expose hover states.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => releaseEvaluationResultBusyToken(token));
-    });
+    const startedAt = performance.now();
+    let sawRouteLoading = Boolean(document.body?.classList.contains("evaluationRouteLoading"));
+    const settle = () => {
+      if (destroyed || !evaluationResultBusyTokens.has(token)) return;
+      const routeLoading = Boolean(document.body?.classList.contains("evaluationRouteLoading"));
+      if (routeLoading) sawRouteLoading = true;
+
+      // Keep the pre-selection lock through the real Evaluation loading class.
+      // If the route was cached and never enters that class, retain it long
+      // enough for the result list/search clear control to settle under the
+      // pointer. Network loads also own their normal interaction-busy token.
+      if ((sawRouteLoading && !routeLoading) || (!sawRouteLoading && performance.now() - startedAt >= 240)) {
+        releaseEvaluationResultBusyToken(token);
+        return;
+      }
+      requestAnimationFrame(settle);
+    };
+    requestAnimationFrame(settle);
   }
 
   function clearEvaluationSearchFromButton(event, target) {
@@ -231,7 +278,7 @@
     } catch {
       // The input event above still restores the normal recent-results path.
     }
-    restoreRecentEvaluationResultsIfEmpty();
+    scheduleRecentEvaluationRestore();
     return true;
   }
 
@@ -265,10 +312,10 @@
   function onInput(event) {
     const input = evaluationSearchInput();
     if (!input || event.target !== input || input.value.trim()) return;
-    // This capture listener runs before the authoritative Evaluation input owner.
-    // Restore after the event completes so an empty query always ends with the
-    // recent five visible, including when the user backspaces typed text away.
-    queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
+    // Treat deletion/backspacing to an empty string exactly like an untouched
+    // empty Evaluation search. Restore after both the authoritative input owner
+    // and the following render frame have had a chance to run.
+    scheduleRecentEvaluationRestore();
   }
 
   function onChange(event) {
@@ -341,7 +388,7 @@
     if (pointerFocusedControl && target !== pointerFocusedControl) pointerFocusedControl = null;
 
     if (target === evaluationSearchInput() && !target.value.trim()) {
-      queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
+      scheduleRecentEvaluationRestore();
     }
 
     const control = neutralControlFromTarget(event.target);
@@ -372,6 +419,10 @@
     pointerFocusedControl = null;
     recentEvaluationObserver?.disconnect();
     recentEvaluationObserver = null;
+    if (recentEvaluationRestoreFrame) cancelAnimationFrame(recentEvaluationRestoreFrame);
+    if (recentEvaluationRestoreSettleFrame) cancelAnimationFrame(recentEvaluationRestoreSettleFrame);
+    recentEvaluationRestoreFrame = 0;
+    recentEvaluationRestoreSettleFrame = 0;
     evaluationResultBusyTokens.forEach((token) => window.__mflInteractionBusy?.end?.(token));
     evaluationResultBusyTokens.clear();
     document.removeEventListener("click", onClick, true);
