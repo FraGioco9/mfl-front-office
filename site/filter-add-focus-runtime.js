@@ -123,8 +123,41 @@
     return button instanceof HTMLButtonElement ? button : null;
   }
 
+  function clearEvaluationSearchFromButton(event, target) {
+    const button = target?.closest?.("#evaluationSearchClearButton");
+    if (!(button instanceof HTMLButtonElement)) return false;
+
+    const input = document.getElementById("evaluationSearchInput");
+    if (!(input instanceof HTMLInputElement)) return false;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    input.value = "";
+    button.hidden = true;
+
+    // Let the authoritative Evaluation search owner cancel any pending query,
+    // clear the selected player, and restore its recent-result state.
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // Focus before the final render so the empty Evaluation search explicitly
+    // qualifies for recent results even while route state is being reset.
+    input.focus({ preventScroll: true });
+    try {
+      if (typeof window.renderEvaluationSearchResults === "function") {
+        window.renderEvaluationSearchResults();
+      } else {
+        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
+      }
+    } catch {
+      // The input event above still restores the normal recent-results path.
+    }
+    return true;
+  }
+
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
+    if (clearEvaluationSearchFromButton(event, target)) return;
     if (!target?.closest("#showAddFilterButton")) return;
 
     const select = addFilterSelect();
