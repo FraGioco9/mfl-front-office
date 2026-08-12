@@ -411,6 +411,7 @@
           button: sharedViewRoute.button,
         }
       : null;
+    if (sharedViewRoute?.button.classList.contains("active")) return;
     const route = routeForTarget(target);
     if (!route) return;
     navigationIntentRoute = route;
@@ -460,6 +461,16 @@
   }
 
   function onClickCapture(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const activeViewButton = target?.closest("#progressionPage .viewButton[data-view].active");
+    if (activeViewButton instanceof HTMLButtonElement) {
+      suppressPointerClick = false;
+      if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
+      suppressPointerClickTimer = 0;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (!suppressPointerClick) return;
     suppressPointerClick = false;
     if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
