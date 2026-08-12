@@ -17,7 +17,8 @@
   ].join(", ");
   let destroyed = false;
   let pointerFocusedControl = null;
-  let evaluationRecentRefreshSequence = 0;
+  let recentEvaluationResultNodes = [];
+  let recentEvaluationObserver = null;
   const evaluationResultBusyCleanups = new Map();
 
   function installStyles() {
@@ -38,11 +39,25 @@
 
       /* While the shared busy controller is active, the transparent busy
          overlay is the only pointer target. This prevents controls underneath
-         it from acquiring :hover while their loading state is changing. */
+         it from acquiring pointer interaction while their loading state changes. */
       html.mflInteractionBusy body *,
       html.mflInteractionBusy body *::before,
       html.mflInteractionBusy body *::after {
         pointer-events: none !important;
+      }
+
+      /* The Evaluation clear control also carries popupCloseButton. Neutralize
+         the generic popup hover background while busy so the X cannot flash when
+         the results list disappears underneath a stationary pointer. */
+      html.mflInteractionBusy body .evaluationSearchClearButton,
+      html.mflInteractionBusy body .evaluationSearchClearButton:hover:not(:disabled),
+      html.mflInteractionBusy body .evaluationSearchClearButton:focus:not(:disabled),
+      html.mflInteractionBusy body .evaluationSearchClearButton:focus-visible:not(:disabled) {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+        transition: none;
+        animation: none;
       }
 
       /* One canonical close control for every popup header. Keep the button
@@ -139,58 +154,84 @@
     return input instanceof HTMLInputElement ? input : null;
   }
 
-  function renderEvaluationRecentResults() {
-    try {
-      if (typeof window.renderEvaluationSearchResults === "function") {
-        window.renderEvaluationSearchResults();
-      } else {
-        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
-      }
-    } catch (error) {
-      console.warn("Could not render recent Evaluation results.", error);
-    }
+  function evaluationSearchResults() {
+    const results = document.getElementById("evaluationSearchResults");
+    return results instanceof HTMLElement ? results : null;
   }
 
-  function requestFreshEvaluationRecents() {
-    try {
-      if (typeof window.requestDatabaseSearch === "function") {
-        return window.requestDatabaseSearch("", "players", { force: true });
-      }
-      return window.eval(
-        "typeof requestDatabaseSearch === 'function' ? requestDatabaseSearch('', 'players', { force: true }) : Promise.resolve(false)",
-      );
-    } catch {
-      return Promise.resolve(false);
-    }
+  function evaluationResultId(button) {
+    if (!(button instanceof HTMLButtonElement)) return "";
+    const match = String(button.textContent || "").match(/#(\d+)/);
+    return match?.[1] || "";
   }
 
-  async function refreshEvaluationRecentsIfEmpty() {
+  function rememberVisibleEvaluationRecents(force = false) {
     const input = evaluationSearchInput();
-    if (destroyed || !input || input.value.trim()) return false;
+    const results = evaluationSearchResults();
+    if (!input || !results || (!force && input.value.trim())) return false;
 
-    const refreshSequence = ++evaluationRecentRefreshSequence;
-    try {
-      await Promise.resolve(requestFreshEvaluationRecents());
-    } catch (error) {
-      console.warn(error?.message || "Could not reload recent Evaluation results.");
-    }
+    const buttons = Array.from(results.querySelectorAll(":scope > .evaluationSearchResult"))
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (!buttons.length) return false;
 
-    if (destroyed || refreshSequence !== evaluationRecentRefreshSequence || input.value.trim()) return false;
-    renderEvaluationRecentResults();
+    recentEvaluationResultNodes = buttons;
     return true;
   }
 
-  function scheduleEvaluationRecentRefresh() {
-    if (destroyed) return;
-    const refreshSequence = ++evaluationRecentRefreshSequence;
-    queueMicrotask(() => {
-      if (destroyed || refreshSequence !== evaluationRecentRefreshSequence) return;
-      // The authoritative Evaluation input handler has now cancelled the typed
-      // query and reset the selection. Re-query the saved recent player ids so
-      // the typed-search result index cannot determine the empty-search list.
-      evaluationRecentRefreshSequence -= 1;
-      void refreshEvaluationRecentsIfEmpty();
+  function rememberClickedEvaluationResult(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const playerId = evaluationResultId(button);
+    const remaining = recentEvaluationResultNodes.filter((candidate) => {
+      if (!(candidate instanceof HTMLButtonElement)) return false;
+      return !playerId || evaluationResultId(candidate) !== playerId;
     });
+    recentEvaluationResultNodes = [button, ...remaining].slice(0, 5);
+  }
+
+  function restoreRecentEvaluationResultsImmediately() {
+    const input = evaluationSearchInput();
+    const results = evaluationSearchResults();
+    if (!input || input.value.trim() || !results || !recentEvaluationResultNodes.length) return false;
+
+    const nodes = recentEvaluationResultNodes
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (!nodes.length) return false;
+
+    results.replaceChildren(...nodes);
+    results.hidden = false;
+    return true;
+  }
+
+  function resetEvaluationSelection() {
+    try {
+      if (typeof window.resetEvaluationSelection === "function") {
+        window.resetEvaluationSelection();
+      } else {
+        window.eval("if (typeof resetEvaluationSelection === 'function') resetEvaluationSelection();");
+      }
+    } catch (error) {
+      console.warn("Could not reset Evaluation selection.", error);
+    }
+  }
+
+  function enterEmptyEvaluationSearch(event = null) {
+    const input = evaluationSearchInput();
+    if (!input || input.value.trim()) return false;
+
+    // This runtime loads before the authoritative search runtime. Own the empty
+    // input event so deleting the final character does not first render from the
+    // typed-query index or wait for another database request.
+    event?.stopImmediatePropagation?.();
+    delete document.documentElement.dataset.evaluationSearchQueryPending;
+
+    const clearButton = document.getElementById("evaluationSearchClearButton");
+    if (clearButton instanceof HTMLElement) clearButton.hidden = true;
+
+    resetEvaluationSelection();
+    restoreRecentEvaluationResultsImmediately();
+    return true;
   }
 
   function releaseEvaluationResultBusyToken(token) {
@@ -244,8 +285,8 @@
 
       // A real panel mutation means the selected player's Evaluation has
       // rendered. If the route used the stability loading class, wait for that
-      // class to end as well. The extra two frames keep the newly exposed search
-      // clear X non-interactive until the final layout has settled.
+      // class to end as well. Two additional frames keep the newly exposed X
+      // under the shared busy styling until final layout has settled.
       if (panelChanged || sawRouteLoading) releaseAfterSettledFrames();
     };
 
@@ -265,8 +306,7 @@
     const bodyObserver = new MutationObserver(maybeRelease);
     if (document.body) bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
-    // This is only a safety valve for an unexpected failed render. Normal
-    // network requests are bounded by the site's 60-second API timeout.
+    // Safety valve only. Normal network requests are bounded by the site's API timeout.
     const fallbackTimer = window.setTimeout(() => releaseEvaluationResultBusyToken(token), 65_000);
     evaluationResultBusyCleanups.set(token, cleanup);
   }
@@ -283,9 +323,9 @@
 
     input.value = "";
     button.hidden = true;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    resetEvaluationSelection();
     input.focus({ preventScroll: true });
-    scheduleEvaluationRecentRefresh();
+    restoreRecentEvaluationResultsImmediately();
     return true;
   }
 
@@ -295,6 +335,7 @@
 
     const evaluationResult = target?.closest?.("#evaluationSearchResults .evaluationSearchResult");
     if (evaluationResult instanceof HTMLButtonElement && !evaluationResult.disabled) {
+      rememberClickedEvaluationResult(evaluationResult);
       primeEvaluationResultBusy(evaluationResult);
       return;
     }
@@ -318,15 +359,17 @@
   function onInput(event) {
     const input = evaluationSearchInput();
     if (!input || event.target !== input) return;
-    if (input.value.trim()) {
-      evaluationRecentRefreshSequence += 1;
+
+    if (!input.value.trim()) {
+      enterEmptyEvaluationSearch(event);
       return;
     }
 
-    // Deleting/backspacing the final character is the same state as opening an
-    // untouched empty Evaluation search. Reload the saved recent ids after the
-    // authoritative typed-search handler finishes processing this input event.
-    scheduleEvaluationRecentRefresh();
+    // On the first typed character the DOM still contains the empty-state recent
+    // results. Capture them before the authoritative runtime replaces the list
+    // with Searching/results, so final-character deletion can restore them in
+    // this exact input event with no network wait.
+    if (!recentEvaluationResultNodes.length) rememberVisibleEvaluationRecents(true);
   }
 
   function onChange(event) {
@@ -402,6 +445,15 @@
     if (control && document.activeElement === control) control.blur();
   }
 
+  function observeEvaluationRecentResults() {
+    const results = evaluationSearchResults();
+    if (!results) return;
+    recentEvaluationObserver?.disconnect();
+    recentEvaluationObserver = new MutationObserver(() => rememberVisibleEvaluationRecents(false));
+    recentEvaluationObserver.observe(results, { childList: true });
+    rememberVisibleEvaluationRecents(false);
+  }
+
   installStyles();
   document.addEventListener("click", onClick, true);
   document.addEventListener("input", onInput, true);
@@ -410,11 +462,14 @@
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn, true);
+  observeEvaluationRecentResults();
 
   function destroy() {
     destroyed = true;
     pointerFocusedControl = null;
-    evaluationRecentRefreshSequence += 1;
+    recentEvaluationObserver?.disconnect();
+    recentEvaluationObserver = null;
+    recentEvaluationResultNodes = [];
     Array.from(evaluationResultBusyCleanups.keys()).forEach(releaseEvaluationResultBusyToken);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("input", onInput, true);
