@@ -30,10 +30,20 @@ test("mobile owner neutralizes the pinned desktop shell instead of adding anothe
 
 test("mobile table ownership keeps exact columns and scrolls the component rather than the page", async () => {
   const responsive = await readSite("responsive.css");
+  const widths = await readSite("table-width-prime-runtime.js");
+  const entry = await readSite("modules/app-entry.js");
 
   assert.match(responsive, /#progressionPage \.tableScroller,[\s\S]*?overflow-x: auto !important/);
   assert.match(responsive, /#progressionPage \.tableScroller table \{\n\s+min-width: 1240px !important;/);
   assert.doesNotMatch(responsive, /\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|agent|contract|link)\s*\{/);
+
+  assert.match(widths, /const MOBILE_TABLE_MIN_WIDTH = 1240;/);
+  assert.match(widths, /getPropertyValue\("--pinned-sidebar-width"\)/);
+  assert.doesNotMatch(widths, /return rail && !rail\.hidden \? 190 : 0/);
+  assert.match(widths, /if \(mobileLayoutActive\(\)\) return applyFallbackWidths\(\);/);
+  assert.match(widths, /scroller\.style\.setProperty\("overflow-x", "auto", "important"\)/);
+  assert.match(widths, /takeOwnership/);
+  assert.match(entry, /__mflTableWidthPrimeRuntime\?\.takeOwnership\?\.\(\)/);
 });
 
 test("mobile owner covers every fixed-width application surface", async () => {
