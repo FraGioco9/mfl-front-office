@@ -6,12 +6,7 @@ export default [
     ignores: ["node_modules/**", ".vercel/**"],
   },
   {
-    files: [
-      "app.js",
-      "modules/app-entry.js",
-      "modules/http.js",
-      "modules/runtime-loader.js",
-    ],
+    files: ["app.js", "modules/app-entry.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -53,7 +48,7 @@ export default [
     rules: js.configs.recommended.rules,
   },
   {
-    files: ["tests/**/*.mjs", "playwright.config.mjs"],
+    files: ["validate.mjs"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",

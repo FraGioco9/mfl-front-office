@@ -34,11 +34,21 @@ vercel.cmd dev --listen 4000
 
 Node.js 22 is required for `node:sqlite`.
 
+For lightweight repository checks without browser-test infrastructure:
+
+```powershell
+cd site
+npm install
+npm run check
+```
+
 ## GitHub Actions
 
-The repository intentionally contains three workflows:
+The repository contains four workflows:
 
 - **Full database update** rebuilds and uploads the SQLite artifact without deploying.
 - **Vercel site update** deploys the newest approved site source and latest database.
-- **Full database and site update** refreshes SQLite while retaining the source
-  commit and displayed version from the latest successful Vercel site update.
+- **Full database refresh** refreshes SQLite while retaining the source commit and
+  displayed version from the latest successful Vercel site update.
+- **Site quality** runs only the relevant lint, typecheck, database-builder smoke,
+  and lightweight repository-validation checks for each change.

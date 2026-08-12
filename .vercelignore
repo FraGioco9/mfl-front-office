@@ -5,9 +5,8 @@ README.md
 *.py
 supabase-schema.sql
 
-# Site development and regression assets.
-site/tests
-site/playwright.config.mjs
+# Site development and validation assets.
+site/validate.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types

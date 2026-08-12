@@ -4,15 +4,13 @@
     "node": "22.x"
   },
   "scripts": {
-    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js tests playwright.config.mjs",
+    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
-    "test:architecture": "node --test tests/*.test.mjs",
-    "test:e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test:architecture"
+    "validate": "node validate.mjs",
+    "check": "npm run lint && npm run typecheck && npm run validate"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
-    "@playwright/test": "^1.50.0",
     "eslint": "^9.0.0",
     "globals": "^16.0.0",
     "typescript": "^5.0.0"
