@@ -139,11 +139,6 @@
     return input instanceof HTMLInputElement ? input : null;
   }
 
-  function evaluationSearchResults() {
-    const results = document.getElementById("evaluationSearchResults");
-    return results instanceof HTMLElement ? results : null;
-  }
-
   function renderEvaluationRecentResults() {
     try {
       if (typeof window.renderEvaluationSearchResults === "function") {
