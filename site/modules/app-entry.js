@@ -32,6 +32,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
 /** @type {Window & {
  * __mflInteractionBusy?: { installLegacyBridge?: () => void },
  * __mflTableLoadingRuntime?: { installLegacyBridge?: () => void, sync?: () => void },
+ * __mflTableWidthPrimeRuntime?: { takeOwnership?: () => boolean },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
@@ -98,6 +99,7 @@ function installLegacyBridges() {
   runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
+  runtimeWindow.__mflTableWidthPrimeRuntime?.takeOwnership?.();
 }
 
 async function start() {
