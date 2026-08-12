@@ -148,11 +148,6 @@ async function start() {
     await runtimeWindow.__mflAppStartPromise;
   }
 
-  // The asynchronous legacy table renderer can write its desktop overflow
-  // geometry after the first bridge installation. Make the responsive width
-  // runtime the final owner before readiness is observable by the page.
-  runtimeWindow.__mflTableWidthPrimeRuntime?.takeOwnership?.();
-
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
 }
