@@ -2,6 +2,8 @@
 
 const nativeFetch = window.fetch.bind(window);
 const DEFAULT_TIMEOUT_MS = 60_000;
+const LOCAL_RUNTIME_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const LOCAL_RUNTIME_REVISION = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 /** @param {RequestInfo | URL} input */
 function isSameOriginApiRequest(input) {
@@ -58,6 +60,9 @@ function installApiFetchPolicy({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
 function versionedAssetUrl(path, version) {
   const url = new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`);
   url.searchParams.set("v", version);
+  if (LOCAL_RUNTIME_HOSTS.has(window.location.hostname)) {
+    url.searchParams.set("dev", LOCAL_RUNTIME_REVISION);
+  }
   return url.href;
 }
 
