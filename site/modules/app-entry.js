@@ -40,6 +40,34 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * }} */
 const runtimeWindow = window;
 
+function releaseFromEntryUrl() {
+  const version = new URL(import.meta.url).searchParams.get("v")?.trim() || "";
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error("The application entry is missing a valid release version.");
+  }
+  return Object.freeze({ version, description: "" });
+}
+
+function installResponsiveStylesheet(version) {
+  const existing = document.querySelector('link[data-mfl-responsive-layout="true"]');
+  if (existing instanceof HTMLLinkElement) return Promise.resolve();
+
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.dataset.mflResponsiveLayout = "true";
+  link.href = `/responsive.css?v=${encodeURIComponent(version)}`;
+
+  const ready = new Promise((resolve, reject) => {
+    link.addEventListener("load", () => resolve(undefined), { once: true });
+    link.addEventListener("error", () => reject(new Error("Could not load the responsive layout stylesheet.")), { once: true });
+  });
+  document.head.append(link);
+  return ready;
+}
+
+const entryRelease = releaseFromEntryUrl();
+const responsiveStylesReady = installResponsiveStylesheet(entryRelease.version);
+
 function primeEvaluationDiscountRatePlaceholder() {
   if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
   const discountRate = document.getElementById("evaluationDiscountRate");
@@ -64,14 +92,6 @@ function showStartupError(error) {
   document.querySelector("main")?.prepend(message);
 }
 
-function releaseFromEntryUrl() {
-  const version = new URL(import.meta.url).searchParams.get("v")?.trim() || "";
-  if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    throw new Error("The application entry is missing a valid release version.");
-  }
-  return Object.freeze({ version, description: "" });
-}
-
 function installLegacyBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
   runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
@@ -84,11 +104,12 @@ async function start() {
   // app.js already fetched and validated release.json before importing this
   // versioned entry module. Reuse the version embedded in this module URL so
   // startup never performs a duplicate release-metadata request.
-  const release = releaseFromEntryUrl();
+  const release = entryRelease;
   window.__mflRelease = release;
   window.__mflReleaseVersion = release.version;
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 
+  await responsiveStylesReady;
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
 
