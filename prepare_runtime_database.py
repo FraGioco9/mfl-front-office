@@ -9,6 +9,7 @@ serverless API. It never creates JSON exports.
 import argparse
 import sqlite3
 import unicodedata
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -230,7 +231,12 @@ def prepare_runtime_database(database_path: Path) -> None:
             """,
             parameters,
         ).fetchone()
+        generated_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
+            "+00:00",
+            "Z",
+        )
         metadata = {
+            "generated_at": generated_at,
             "database_stats_total_players": str(int(total_players or 0)),
             "database_stats_total_active_players": str(int(total_active_players or 0)),
         }

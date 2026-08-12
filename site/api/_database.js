@@ -135,7 +135,7 @@ function getDatabase() {
       .all()
       .map((row) => String(row.name)),
   );
-  for (const requiredTable of ["players", "wallets"]) {
+  for (const requiredTable of ["players", "wallets", "runtime_metadata"]) {
     if (!tables.has(requiredTable)) {
       throw new Error(`Database is incomplete: missing ${requiredTable} table.`);
     }
@@ -149,7 +149,13 @@ function getDatabase() {
     throw new Error(`Database is incomplete: missing player columns ${missingColumns.join(", ")}.`);
   }
 
-  generatedAt = fs.statSync(filePath).mtime.toISOString();
+  const generatedAtRow = database.prepare(
+    "SELECT value FROM runtime_metadata WHERE key = ? LIMIT 1",
+  ).get("generated_at");
+  generatedAt = String(generatedAtRow?.value || "").trim();
+  if (!generatedAt || Number.isNaN(Date.parse(generatedAt))) {
+    throw new Error("Database is incomplete: missing valid runtime_metadata generated_at value.");
+  }
   return database;
 }
 

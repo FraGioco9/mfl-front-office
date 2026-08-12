@@ -114,29 +114,41 @@ test("deployment workflows validate the canonical release metadata when availabl
   }
 });
 
-test("database production refreshes reuse the last explicitly published site source", async () => {
+test("database production refreshes preserve the last explicitly published frontend", async () => {
   const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
 
   assert.match(databaseDeploy, /--workflow vercel-site-update\.yml/);
   assert.match(databaseDeploy, /Using last published site source commit/);
-  assert.match(databaseDeploy, /Verify published site source is unchanged/);
+  assert.match(databaseDeploy, /Verify published frontend source is unchanged/);
+  assert.match(databaseDeploy, /cp builder\/site\/api\/_database\.js production-site\/site\/api\/_database\.js/);
+  assert.match(databaseDeploy, /unchanged published MFL Front Office v\{version\} frontend/);
   assert.doesNotMatch(databaseDeploy, /--workflow site-quality\.yml/);
 });
 
-test("Vercel SQLite deployments bypass function caches and verify production freshness", async () => {
+test("SQLite freshness is embedded in database metadata and verified exactly in production", async () => {
   const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
   const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
+  const preparer = await readRepository("prepare_runtime_database.py");
+  const databaseRuntime = await readSite("api/_database.js");
 
   for (const workflow of [siteDeploy, databaseDeploy]) {
     assert.match(workflow, /vercel deploy --prod --yes --force/);
   }
+
+  assert.match(preparer, /"generated_at": generated_at/);
+  assert.match(preparer, /datetime\.now\(timezone\.utc\)\.isoformat\(timespec="milliseconds"\)/);
+  assert.match(databaseRuntime, /runtime_metadata/);
+  assert.match(databaseRuntime, /\.get\("generated_at"\)/);
+  assert.doesNotMatch(databaseRuntime, /statSync\(filePath\)\.mtime/);
 
   assert.match(databaseDeploy, /Record expected database summary/);
   assert.match(databaseDeploy, /Verify live production database/);
   assert.match(databaseDeploy, /api\/data\?mode=summary/);
   assert.match(databaseDeploy, /playerCount/);
   assert.match(databaseDeploy, /walletCount/);
-  assert.match(databaseDeploy, /minimumGeneratedAt/);
+  assert.match(databaseDeploy, /"generatedAt": generated_at/);
+  assert.match(databaseDeploy, /str\(live\.get\("generatedAt", ""\)\)\.strip\(\) == str\(expected\["generatedAt"\]\)/);
+  assert.doesNotMatch(databaseDeploy, /minimumGeneratedAt|timedelta\(minutes=/);
   assert.match(databaseDeploy, /Live production database verified/);
 });
 

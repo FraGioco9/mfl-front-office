@@ -175,7 +175,7 @@ jobs:
           ref: ${{ steps.production_site.outputs.sha }}
           path: production-site
 
-      - name: Install fresh database in published site source
+      - name: Install fresh database runtime in published site source
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
@@ -186,10 +186,15 @@ jobs:
             echo "Publish a SQLite-capable site version once before using database-only production refreshes." >&2
             exit 1
           fi
+          if [ ! -f builder/site/api/_database.js ]; then
+            echo "The current database runtime adapter is missing." >&2
+            exit 1
+          fi
 
           rm -rf production-site/site/api/data-files
           mkdir -p production-site/site/api/data-files
           cp builder/mfl_database.db production-site/site/api/data-files/mfl_database.db
+          cp builder/site/api/_database.js production-site/site/api/_database.js
           test -s production-site/site/api/data-files/mfl_database.db
           if find production-site/site/api/data-files -maxdepth 1 -type f -name '*.json' | grep -q .; then
             echo "Generated JSON data files are not allowed." >&2
@@ -205,32 +210,35 @@ jobs:
           import json
           import os
           import sqlite3
-          from datetime import datetime, timezone
           from pathlib import Path
 
           database_path = Path("production-site/site/api/data-files/mfl_database.db")
           with sqlite3.connect(database_path) as connection:
               player_count = int(connection.execute("SELECT count(*) FROM players").fetchone()[0])
               wallet_count = int(connection.execute("SELECT count(*) FROM wallets").fetchone()[0])
+              generated_at_row = connection.execute(
+                  "SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1"
+              ).fetchone()
 
+          if not generated_at_row or not str(generated_at_row[0]).strip():
+              raise SystemExit("Runtime database is missing runtime_metadata generated_at.")
+
+          generated_at = str(generated_at_row[0]).strip()
           expected = {
               "playerCount": player_count,
               "walletCount": wallet_count,
-              "minimumGeneratedAt": datetime.fromtimestamp(
-                  database_path.stat().st_mtime,
-                  timezone.utc,
-              ).isoformat().replace("+00:00", "Z"),
+              "generatedAt": generated_at,
           }
           output_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
           output_path.write_text(json.dumps(expected), encoding="utf-8")
           print(
               "Expected live database: "
               f"{player_count} players, {wallet_count} wallets, "
-              f"generated no earlier than {expected['minimumGeneratedAt']}."
+              f"generatedAt {generated_at}."
           )
           PY
 
-      - name: Verify published site source is unchanged
+      - name: Verify published frontend source is unchanged
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
@@ -262,9 +270,15 @@ jobs:
                   version = match.group(1)
 
           if version:
-              print(f"Deploying fresh SQLite data with the unchanged published MFL Front Office v{version} source.")
+              print(
+                  f"Deploying fresh SQLite data/runtime adapter with the unchanged "
+                  f"published MFL Front Office v{version} frontend."
+              )
           else:
-              print("Deploying fresh SQLite data with the exact unchanged source from the last successful Vercel site update.")
+              print(
+                  "Deploying fresh SQLite data/runtime adapter with the exact unchanged "
+                  "frontend from the last successful Vercel site update."
+              )
           PY
 
       - name: Install Vercel CLI
@@ -283,7 +297,7 @@ jobs:
           mkdir -p .vercel
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
-      - name: Deploy database with unchanged published site source
+      - name: Deploy database with unchanged published frontend
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: production-site
         env:
@@ -303,14 +317,10 @@ jobs:
           import time
           import urllib.parse
           import urllib.request
-          from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
           expected_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
           expected = json.loads(expected_path.read_text(encoding="utf-8"))
-          minimum_generated_at = datetime.fromisoformat(
-              expected["minimumGeneratedAt"].replace("Z", "+00:00")
-          ) - timedelta(minutes=5)
           base_url = os.environ["PRODUCTION_DATABASE_URL"]
           run_id = os.environ.get("GITHUB_RUN_ID", "run")
           last_error = "No response received."
@@ -330,18 +340,12 @@ jobs:
                   with urllib.request.urlopen(request, timeout=30) as response:
                       live = json.loads(response.read().decode("utf-8"))
 
-                  generated_at = datetime.fromisoformat(
-                      str(live.get("generatedAt", "")).replace("Z", "+00:00")
-                  )
-                  if generated_at.tzinfo is None:
-                      generated_at = generated_at.replace(tzinfo=timezone.utc)
-
-                  counts_match = (
+                  matches = (
                       int(live.get("playerCount", -1)) == int(expected["playerCount"])
                       and int(live.get("walletCount", -1)) == int(expected["walletCount"])
+                      and str(live.get("generatedAt", "")).strip() == str(expected["generatedAt"])
                   )
-                  fresh_enough = generated_at >= minimum_generated_at
-                  if counts_match and fresh_enough:
+                  if matches:
                       print(
                           "Live production database verified: "
                           f"{live['playerCount']} players, {live['walletCount']} wallets, "
@@ -350,9 +354,9 @@ jobs:
                       raise SystemExit(0)
 
                   last_error = (
-                      f"attempt {attempt}: expected {expected['playerCount']} players and "
-                      f"{expected['walletCount']} wallets with generatedAt >= "
-                      f"{minimum_generated_at.isoformat()}, received {live!r}"
+                      f"attempt {attempt}: expected {expected['playerCount']} players, "
+                      f"{expected['walletCount']} wallets, generatedAt {expected['generatedAt']}; "
+                      f"received {live!r}"
                   )
               except Exception as error:
                   last_error = f"attempt {attempt}: {error}"
