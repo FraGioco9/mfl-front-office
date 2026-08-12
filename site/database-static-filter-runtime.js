@@ -4,6 +4,7 @@
   const VERSION = String(window.__mflReleaseVersion || "1.123.29");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
+  const FILTER_ESCAPE_CLASS = "mflEscapeClosingFilters";
   const POINTER_BLUR_SELECTOR = [
     "#watchlistButton",
     "#openFiltersButton",
@@ -52,6 +53,7 @@
   let pageSizePointerActive = false;
   let pageSizePointerStartedFocused = false;
   let pointerBlurControl = null;
+  let filterEscapeBlurTimer = 0;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -249,11 +251,33 @@
         white-space: nowrap !important;
       }
 
+      .field.rowsField {
+        min-width: 0 !important;
+      }
+
+      .field.rowsField > span {
+        flex: 0 0 auto !important;
+        pointer-events: none !important;
+      }
+
+      .field.rowsField > #pageSizeSelect {
+        flex: 1 1 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        pointer-events: auto !important;
+      }
+
       #pageSizeSelect:focus:not(:focus-visible):not(:hover) {
         outline: none !important;
         border-color: var(--border-strong) !important;
         background: var(--surface) !important;
         color: var(--text) !important;
+        box-shadow: none !important;
+      }
+
+      html.${FILTER_ESCAPE_CLASS} #openFiltersButton:focus,
+      html.${FILTER_ESCAPE_CLASS} #openFiltersButton:focus-visible {
+        outline: none !important;
         box-shadow: none !important;
       }
 
@@ -327,6 +351,21 @@
     }
   }
 
+  function filtersModalOpen() {
+    const modal = document.getElementById("filtersModal");
+    return modal instanceof HTMLElement && !modal.hidden;
+  }
+
+  function finishFilterEscapeFocusRelease() {
+    filterEscapeBlurTimer = 0;
+    if (destroyed) return;
+    const filterButton = document.getElementById("openFiltersButton");
+    if (filterButton instanceof HTMLElement && document.activeElement === filterButton) {
+      filterButton.blur();
+    }
+    document.documentElement.classList.remove(FILTER_ESCAPE_CLASS);
+  }
+
   function onPointerDown(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -375,7 +414,13 @@
 
   function onKeyDown(event) {
     if (event.key !== "Escape") return;
+    const closingFiltersWithEscape = filtersModalOpen();
     queueMicrotask(releaseFocusedHighlightControl);
+    if (!closingFiltersWithEscape) return;
+
+    document.documentElement.classList.add(FILTER_ESCAPE_CLASS);
+    if (filterEscapeBlurTimer) window.clearTimeout(filterEscapeBlurTimer);
+    filterEscapeBlurTimer = window.setTimeout(finishFilterEscapeFocusRelease, 220);
   }
 
   function onPointerActivity(event) {
@@ -421,6 +466,8 @@
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
+    if (filterEscapeBlurTimer) window.clearTimeout(filterEscapeBlurTimer);
+    filterEscapeBlurTimer = 0;
     observer?.disconnect();
     observer = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
@@ -430,7 +477,7 @@
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
     window.removeEventListener("popstate", onPopState);
-    document.documentElement.classList.remove(WAIT_HOVER_CLASS);
+    document.documentElement.classList.remove(WAIT_HOVER_CLASS, FILTER_ESCAPE_CLASS);
   }
 
   window.__mflDatabaseStaticFilterRuntime = Object.freeze({
