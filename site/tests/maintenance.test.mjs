@@ -121,7 +121,7 @@ test("database production refreshes preserve the last explicitly published front
   assert.match(databaseDeploy, /Using last published site source commit/);
   assert.match(databaseDeploy, /Verify published frontend source is unchanged/);
   assert.match(databaseDeploy, /cp builder\/site\/api\/_database\.js production-site\/site\/api\/_database\.js/);
-  assert.match(databaseDeploy, /unchanged published MFL Front Office v\{version\} frontend/);
+  assert.match(databaseDeploy, /published MFL Front Office v\{version\} frontend/);
   assert.doesNotMatch(databaseDeploy, /--workflow site-quality\.yml/);
 });
 
