@@ -4,7 +4,7 @@ const PHONE = { width: 390, height: 844 };
 
 async function waitForArchitecture(page) {
   await page.waitForFunction(() => {
-    const readiness = document.documentElement.dataset.mflReady;
+    const readiness = globalThis.document.documentElement.dataset.mflReady;
     return readiness === "true" || readiness === "error";
   });
   const readiness = await page.locator("html").getAttribute("data-mfl-ready");
@@ -16,10 +16,10 @@ async function waitForArchitecture(page) {
 
 async function expectNoPageHorizontalOverflow(page) {
   const dimensions = await page.evaluate(() => {
-    const main = document.querySelector("body > #appShell > main");
+    const main = globalThis.document.querySelector("body > #appShell > main");
     return {
-      viewport: window.innerWidth,
-      body: document.body.getBoundingClientRect().width,
+      viewport: globalThis.window.innerWidth,
+      body: globalThis.document.body.getBoundingClientRect().width,
       main: main?.getBoundingClientRect().width || 0,
       mainScroll: main?.scrollWidth || 0,
       mainClient: main?.clientWidth || 0,
@@ -40,18 +40,18 @@ test.describe("mobile responsive layout", () => {
     await expect(page.locator('link[data-mfl-responsive-layout="true"]')).toHaveCount(1);
 
     const layout = await page.evaluate(() => {
-      const main = document.querySelector("body > #appShell > main");
-      const rail = document.querySelector("#menuRail");
-      const sidebar = document.querySelector("#sidebar");
-      const menuButton = document.querySelector("#menuButton");
+      const main = globalThis.document.querySelector("body > #appShell > main");
+      const rail = globalThis.document.querySelector("#menuRail");
+      const sidebar = globalThis.document.querySelector("#sidebar");
+      const menuButton = globalThis.document.querySelector("#menuButton");
       return {
-        mainMarginLeft: main ? getComputedStyle(main).marginLeft : "",
+        mainMarginLeft: main ? globalThis.getComputedStyle(main).marginLeft : "",
         mainWidth: main?.getBoundingClientRect().width || 0,
         railWidth: rail?.getBoundingClientRect().width || 0,
-        railPosition: rail ? getComputedStyle(rail).position : "",
-        sidebarDirection: sidebar ? getComputedStyle(sidebar).flexDirection : "",
-        sidebarOverflowX: sidebar ? getComputedStyle(sidebar).overflowX : "",
-        menuDisplay: menuButton ? getComputedStyle(menuButton).display : "",
+        railPosition: rail ? globalThis.getComputedStyle(rail).position : "",
+        sidebarDirection: sidebar ? globalThis.getComputedStyle(sidebar).flexDirection : "",
+        sidebarOverflowX: sidebar ? globalThis.getComputedStyle(sidebar).overflowX : "",
+        menuDisplay: menuButton ? globalThis.getComputedStyle(menuButton).display : "",
       };
     });
 
@@ -81,13 +81,13 @@ test.describe("mobile responsive layout", () => {
   test("player tables scroll inside their shell without widening the page", async ({ page }) => {
     await page.goto("/database/attributes");
     await waitForArchitecture(page);
-    await page.waitForFunction(() => document.querySelector("#tableHead")?.dataset.staticHeader === "true");
+    await page.waitForFunction(() => globalThis.document.querySelector("#tableHead")?.dataset.staticHeader === "true");
 
     const tableLayout = await page.evaluate(() => {
-      const scroller = document.querySelector("#progressionPage .tableScroller");
+      const scroller = globalThis.document.querySelector("#progressionPage .tableScroller");
       const table = scroller?.querySelector("table");
       return {
-        overflowX: scroller ? getComputedStyle(scroller).overflowX : "",
+        overflowX: scroller ? globalThis.getComputedStyle(scroller).overflowX : "",
         clientWidth: scroller?.clientWidth || 0,
         scrollWidth: scroller?.scrollWidth || 0,
         tableWidth: table?.getBoundingClientRect().width || 0,
@@ -105,7 +105,7 @@ test.describe("mobile responsive layout", () => {
     await waitForArchitecture(page);
 
     const evaluationColumns = await page.locator(".evaluationSearchGroup").evaluate((element) => (
-      getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length
+      globalThis.getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length
     ));
     expect(evaluationColumns).toBe(1);
     await expectNoPageHorizontalOverflow(page);
@@ -113,7 +113,7 @@ test.describe("mobile responsive layout", () => {
     await page.goto("/database/stats");
     await waitForArchitecture(page);
     const statsColumns = await page.locator("#databaseStatsPage .databaseStatsCards").evaluate((element) => (
-      getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length
+      globalThis.getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length
     ));
     expect(statsColumns).toBe(1);
     await expectNoPageHorizontalOverflow(page);
