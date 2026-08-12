@@ -4,6 +4,17 @@
   const VERSION = String(window.__mflReleaseVersion || "1.123.29");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
+  const POINTER_BLUR_SELECTOR = [
+    "#watchlistButton",
+    "#openFiltersButton",
+    "#quickClearFiltersButton",
+    ".quickFilters input",
+    "#sidebar .navButton[data-page]",
+  ].join(", ");
+  const ESCAPE_BLUR_SELECTOR = [
+    "#pageSizeSelect",
+    POINTER_BLUR_SELECTOR,
+  ].join(", ");
   const MFL_STATS_FILTERS = Object.freeze([
     ["all", "All"],
     ["90-94", "90-94"],
@@ -40,6 +51,7 @@
   let observer = null;
   let pageSizePointerActive = false;
   let pageSizePointerStartedFocused = false;
+  let pointerBlurControl = null;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -237,6 +249,36 @@
         white-space: nowrap !important;
       }
 
+      #pageSizeSelect:focus:not(:focus-visible):not(:hover) {
+        outline: none !important;
+        border-color: var(--border-strong) !important;
+        background: var(--surface) !important;
+        color: var(--text) !important;
+        box-shadow: none !important;
+      }
+
+      .watchlistButton[aria-expanded="true"]:not(:hover):not(:focus-visible) {
+        border-color: var(--border-strong) !important;
+        background: var(--surface) !important;
+        color: var(--text) !important;
+      }
+
+      #openFiltersButton:focus:not(:focus-visible):not(:hover),
+      #quickClearFiltersButton:focus:not(:focus-visible):not(:hover),
+      .quickFilters input:focus:not(:focus-visible):not(:hover),
+      #sidebar .navButton[data-page]:focus:not(:focus-visible):not(:hover) {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      .quickFilters label {
+        cursor: default !important;
+      }
+
+      .quickFilters input {
+        cursor: pointer !important;
+      }
+
       html.${WAIT_HOVER_CLASS} body *,
       html.${WAIT_HOVER_CLASS} body *::before,
       html.${WAIT_HOVER_CLASS} body *::after {
@@ -260,16 +302,29 @@
     document.head.appendChild(style);
   }
 
-  function pageSizeSelectFromTarget(target) {
+  function controlFromTarget(target, selector) {
     if (!(target instanceof Element)) return null;
-    const select = target.closest("#pageSizeSelect");
+    const control = target.closest(selector);
+    return control instanceof HTMLElement ? control : null;
+  }
+
+  function pageSizeSelectFromTarget(target) {
+    const select = controlFromTarget(target, "#pageSizeSelect");
     return select instanceof HTMLSelectElement ? select : null;
   }
 
-  function releasePageSizeSelectFocus(select) {
+  function releaseControlFocus(control) {
+    if (!(control instanceof HTMLElement)) return;
     queueMicrotask(() => {
-      if (!destroyed && document.activeElement === select) select.blur();
+      if (!destroyed && document.activeElement === control) control.blur();
     });
+  }
+
+  function releaseFocusedHighlightControl() {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.matches(ESCAPE_BLUR_SELECTOR)) {
+      active.blur();
+    }
   }
 
   function onPointerDown(event) {
@@ -283,6 +338,7 @@
       pageSizePointerActive = false;
       pageSizePointerStartedFocused = false;
     }
+    pointerBlurControl = controlFromTarget(target, POINTER_BLUR_SELECTOR);
     const nav = target.closest("#sidebar .navButton[data-page]");
     if (nav instanceof HTMLElement) {
       const destination = normalizePageName(nav.dataset.page);
@@ -293,19 +349,33 @@
 
   function onClick(event) {
     const select = pageSizeSelectFromTarget(event.target);
-    if (!(select instanceof HTMLSelectElement)) return;
-    if (pageSizePointerActive && pageSizePointerStartedFocused) {
-      releasePageSizeSelectFocus(select);
+    if (select instanceof HTMLSelectElement) {
+      if (pageSizePointerActive && pageSizePointerStartedFocused) {
+        releaseControlFocus(select);
+      }
+      pageSizePointerStartedFocused = false;
+      pointerBlurControl = null;
+      return;
     }
-    pageSizePointerStartedFocused = false;
+
+    const clickedControl = controlFromTarget(event.target, POINTER_BLUR_SELECTOR);
+    if (clickedControl && clickedControl === pointerBlurControl) {
+      releaseControlFocus(clickedControl);
+    }
+    pointerBlurControl = null;
   }
 
   function onChange(event) {
     const select = pageSizeSelectFromTarget(event.target);
     if (!(select instanceof HTMLSelectElement) || !pageSizePointerActive) return;
-    releasePageSizeSelectFocus(select);
+    releaseControlFocus(select);
     pageSizePointerActive = false;
     pageSizePointerStartedFocused = false;
+  }
+
+  function onKeyDown(event) {
+    if (event.key !== "Escape") return;
+    queueMicrotask(releaseFocusedHighlightControl);
   }
 
   function onPointerActivity(event) {
@@ -327,6 +397,7 @@
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
+  document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("pointerover", onPointerActivity, true);
   document.addEventListener("pointermove", onPointerActivity, true);
   window.addEventListener("popstate", onPopState);
@@ -355,6 +426,7 @@
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
+    document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
     window.removeEventListener("popstate", onPopState);
