@@ -1,0 +1,770 @@
+/* Canonical responsive layout owner.
+ * Desktop geometry remains in styles.css; viewport-specific adaptations live here.
+ * Keep new mobile/tablet media queries out of component and runtime files.
+ */
+
+@media (max-width: 1100px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.35fr) auto;
+    gap: 12px;
+    padding-inline: 18px;
+  }
+
+  .searchButton {
+    min-width: 0;
+  }
+
+  .stats div {
+    min-width: 96px;
+    padding-inline: 12px;
+  }
+
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --pinned-sidebar-width: 0px;
+    --mobile-nav-height: 58px;
+  }
+
+  html,
+  body {
+    max-width: 100%;
+  }
+
+  body > .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand controls"
+      "search search";
+    gap: 8px 10px;
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .topbar > :first-child {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    font-size: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .searchButton {
+    grid-area: search;
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+  }
+
+  .searchShortcut {
+    display: none;
+  }
+
+  .headerControls {
+    grid-area: controls;
+    min-width: 0;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .topbar .stats {
+    display: none;
+  }
+
+  .themeButton {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+  }
+
+  .accountMenu {
+    width: 44px;
+    flex: 0 0 44px;
+  }
+
+  #accountButton {
+    width: 44px;
+    height: 40px;
+    overflow: hidden;
+    padding: 0;
+    font-size: 0;
+  }
+
+  #accountButton::before {
+    content: "\1F464";
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .accountDropdown {
+    width: min(190px, calc(100vw - 24px));
+    right: 0;
+  }
+
+  .appShell,
+  .appShell.menuClosed,
+  .appShell.sidebarClosed,
+  .appShell.sidebarCollapsed,
+  .appShell.collapsed {
+    --sidebar-offset: 0px !important;
+    position: relative;
+  }
+
+  .menuRail,
+  .appShell.menuClosed .menuRail,
+  .appShell.sidebarClosed .menuRail,
+  .appShell.sidebarCollapsed .menuRail,
+  .appShell.collapsed .menuRail {
+    position: absolute !important;
+    inset: 0 0 auto !important;
+    z-index: 18;
+    width: 100% !important;
+    height: var(--mobile-nav-height);
+    min-height: var(--mobile-nav-height);
+    padding: 8px 10px !important;
+    overflow: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    align-items: stretch !important;
+  }
+
+  .menuButton,
+  .appShell.menuClosed .menuButton,
+  .appShell.sidebarClosed .menuButton,
+  .appShell.sidebarCollapsed .menuButton,
+  .appShell.collapsed .menuButton {
+    display: none !important;
+  }
+
+  .sidebar,
+  .appShell.menuClosed .sidebar,
+  .appShell.sidebarClosed .sidebar,
+  .appShell.sidebarCollapsed .sidebar,
+  .appShell.collapsed .sidebar {
+    display: flex !important;
+    flex-direction: row;
+    align-items: center !important;
+    gap: 6px;
+    width: 100% !important;
+    min-height: 0;
+    height: 42px;
+    margin: 0 !important;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navButton,
+  .appShell.menuClosed .navButton,
+  .appShell.sidebarClosed .navButton,
+  .appShell.sidebarCollapsed .navButton,
+  .appShell.collapsed .navButton {
+    flex: 0 0 auto;
+    width: auto !important;
+    height: 40px;
+    margin: 0;
+    gap: 6px !important;
+    padding: 0 10px !important;
+    white-space: nowrap;
+  }
+
+  .appShell.menuClosed .navText,
+  .appShell.sidebarClosed .navText,
+  .appShell.sidebarCollapsed .navText,
+  .appShell.collapsed .navText,
+  .navText {
+    max-width: none !important;
+    margin-left: 0 !important;
+    opacity: 1 !important;
+  }
+
+  .settingsNavButton {
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  body.pinnedSidebarVisible main,
+  body.pinnedSidebarVisible .siteFooter,
+  body:not(.pinnedSidebarVisible) main,
+  body:not(.pinnedSidebarVisible) .siteFooter {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  body > #appShell > main {
+    padding: calc(var(--mobile-nav-height) + 10px) 12px 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  body.pinnedSidebarVisible .myPlayersLockedPage,
+  body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
+    left: 0 !important;
+    width: auto !important;
+  }
+
+  .homePage,
+  .changelogPage,
+  .playerPage,
+  .evaluationPage,
+  .settingsPage,
+  .mflStatsPage,
+  .progressionPage {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .homePage {
+    min-height: calc(100dvh - 220px);
+  }
+
+  .homeIntro p {
+    font-size: 16px;
+  }
+
+  .homeStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .homeStats span {
+    font-size: 24px;
+  }
+
+  .tablePageTitle,
+  .evaluationTitleRow {
+    margin-top: 8px;
+  }
+
+  .views,
+  body[data-page="watchlist"] #progressionPage .views {
+    display: flex !important;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .views::-webkit-scrollbar {
+    display: none;
+  }
+
+  .viewButton {
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 100px;
+    height: 38px;
+  }
+
+  body[data-page="watchlist"] #progressionPage .views {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  body[data-page="watchlist"] #progressionPage .watchlistSwitcher,
+  .watchlistSwitcher {
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0 !important;
+  }
+
+  .watchlistSwitcherLabel {
+    flex: 0 0 auto;
+  }
+
+  .watchlistButton {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .watchlistDropdown {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .quickFilters {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px 12px;
+  }
+
+  .quickFilters label {
+    min-height: 30px;
+  }
+
+  .watchlistPlayerCount {
+    flex: 1 0 100%;
+    margin-left: 0;
+  }
+
+  .controlsBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #openFiltersButton,
+  #quickClearFiltersButton,
+  .controlsBar button {
+    width: 100%;
+  }
+
+  #filterSummary {
+    grid-column: 1 / -1;
+    height: 28px;
+  }
+
+  .field.compact.rowsField {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #pageSizeSelect {
+    width: min(160px, 48vw);
+  }
+
+  #progressionPage .tableShell {
+    max-width: 100%;
+    overflow: hidden !important;
+  }
+
+  #progressionPage .tableScroller,
+  .tableScroller {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #progressionPage .tableScroller table {
+    min-width: 1240px !important;
+  }
+
+  .pager {
+    left: 0;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .pager button {
+    width: auto;
+    min-width: 82px;
+    flex: 0 0 auto;
+  }
+
+  #pageText {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .selectionBar {
+    width: calc(100vw - 24px);
+    max-width: 520px;
+    flex-wrap: wrap;
+    justify-content: center;
+    bottom: 12px;
+  }
+
+  .selectionSummary,
+  .selectionActions {
+    min-width: 0;
+  }
+
+  .selectionActions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .modalBackdrop {
+    padding: 8px;
+  }
+
+  .searchDialog,
+  .filtersDialog,
+  .advancedSettingsDialog,
+  .evaluationLoadDialog,
+  .watchlistChoiceDialog,
+  .addWatchlistDialog,
+  .deleteWatchlistDialog {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .searchDialog,
+  .evaluationLoadDialog {
+    height: min(560px, calc(100dvh - 16px));
+  }
+
+  .searchBody,
+  .filterBuilder,
+  .advancedSettingsBody,
+  .evaluationLoadList {
+    padding-inline: 12px;
+  }
+
+  .filterRule {
+    grid-template-columns: 1fr;
+  }
+
+  .filterRule select[hidden] {
+    display: none;
+  }
+
+  .betweenValue,
+  .dateRangeValue {
+    grid-template-columns: 1fr;
+  }
+
+  .advancedSettingHeader,
+  .advancedLateSeasonRewardSetting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .advancedSettingHeaderControl,
+  .advancedRewardRateControlGroup {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .advancedMflUsdControl,
+  .advancedPercentControl {
+    margin-left: auto;
+  }
+
+  .advancedPlayerTableSection {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .playerHero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .playerHeroActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .playerEvaluateButton,
+  .playerWatchlistButton,
+  .playerExternalButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .playerGrid,
+  .attributeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .playerPanelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .playerAttributeViews {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .playerAttributeViews::-webkit-scrollbar {
+    display: none;
+  }
+
+  .playerAttributeViewButton {
+    flex: 0 0 auto;
+  }
+
+  .pitch {
+    width: min(360px, 100%);
+    height: auto;
+    aspect-ratio: 360 / 498;
+  }
+
+  .evaluationTitleRow {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .advancedSettingsButton {
+    width: 100%;
+  }
+
+  .evaluationSearchGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .evaluationSearch {
+    width: 100%;
+    max-width: none;
+  }
+
+  .evaluationActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .evaluationButtons,
+  .evaluationMetrics {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .evaluationButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .evaluationPlayerPageButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .evaluationMetrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .evaluationMetric,
+  .evaluationMflUsdGroup {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .evaluationMetric {
+    text-align: left;
+  }
+
+  .evaluationMetricLabel {
+    justify-content: flex-start;
+  }
+
+  .evaluationFooterActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .evaluationFooterSavedActions {
+    justify-content: stretch;
+  }
+
+  .evaluationFooterButton,
+  .evaluationFooterSavedActions > * {
+    flex: 1 1 auto;
+  }
+
+  .evaluationSummaryShell,
+  .evaluationTableShell {
+    max-width: 100%;
+  }
+
+  .evaluationSummaryTable {
+    font-size: 11px;
+  }
+
+  .evaluationSummaryTable th,
+  .evaluationSummaryTable td {
+    padding-inline: 4px;
+  }
+
+  .evaluationLoadResult {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .evaluationLoadPresentValue {
+    grid-column: 1;
+    min-width: 0;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .evaluationLoadActions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .mflStatsFilterButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mflStatsFilterButton {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+  }
+
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mflStatsDistributionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mflStatsDistributionModeButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mflStatsDistributionModeButton {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mflStatsAgeDistribution {
+    min-height: 280px;
+    height: min(52dvh, 420px);
+    overflow-x: auto;
+  }
+
+  .mflStatsHistogram {
+    min-width: 620px;
+  }
+
+  .settingsPanel {
+    max-width: 100%;
+  }
+
+  .settingsIdentity {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsDateFormatOptions,
+  .settingsEmailAddressRow {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settingsToggleButton,
+  .settingsEmailAddressInput,
+  .settingsEmailActionButton {
+    width: 100%;
+    max-width: none;
+  }
+
+  .changelogPatchList li {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 7px;
+    padding-inline: 6px;
+  }
+
+  .changelogMinorToggle {
+    gap: 8px;
+  }
+
+  .siteFooter {
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .homeStats,
+  #databaseStatsPage .databaseStatsCards,
+  .mflStatsCards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .playerHeroActions,
+  .evaluationButtons,
+  .evaluationMetrics,
+  .mflStatsFilterButtons,
+  .mflStatsDistributionModeButtons {
+    grid-template-columns: 1fr;
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluationOptionFilters {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .filtersFooter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .advancedSettingsFooter {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filtersFooter button,
+  .advancedSettingsFooter button,
+  .addWatchlistFooter button,
+  .deleteWatchlistFooter button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .selectionBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .selectionActions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .selectionBar button:not(.textButton) {
+    width: 100%;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  input,
+  select,
+  .navButton,
+  .viewButton {
+    touch-action: manipulation;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after,
+  [data-note-tooltip]::before,
+  [data-note-tooltip]::after {
+    pointer-events: none !important;
+  }
+}
