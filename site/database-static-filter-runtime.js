@@ -5,6 +5,7 @@
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
   const FILTER_ESCAPE_CLASS = "mflEscapeClosingFilters";
+  const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const POINTER_BLUR_SELECTOR = [
     "#watchlistButton",
     "#openFiltersButton",
@@ -276,6 +277,17 @@
         box-shadow: none !important;
       }
 
+      #pageSizeSelect.${PAGE_SIZE_ESCAPE_CLASS},
+      #pageSizeSelect.${PAGE_SIZE_ESCAPE_CLASS}:hover,
+      #pageSizeSelect.${PAGE_SIZE_ESCAPE_CLASS}:focus,
+      #pageSizeSelect.${PAGE_SIZE_ESCAPE_CLASS}:focus-visible {
+        outline: none !important;
+        border-color: var(--border-strong) !important;
+        background: var(--surface) !important;
+        color: var(--text) !important;
+        box-shadow: none !important;
+      }
+
       html.${FILTER_ESCAPE_CLASS} #openFiltersButton:focus,
       html.${FILTER_ESCAPE_CLASS} #openFiltersButton:focus-visible {
         outline: none !important;
@@ -352,6 +364,15 @@
     }
   }
 
+  function pageSizeSelect() {
+    const select = document.getElementById("pageSizeSelect");
+    return select instanceof HTMLSelectElement ? select : null;
+  }
+
+  function clearPageSizeEscapeSuppression() {
+    pageSizeSelect()?.classList.remove(PAGE_SIZE_ESCAPE_CLASS);
+  }
+
   function filtersModalOpen() {
     const modal = document.getElementById("filtersModal");
     return modal instanceof HTMLElement && !modal.hidden;
@@ -372,6 +393,7 @@
     if (!target) return;
     const pageSizeSelect = pageSizeSelectFromTarget(target);
     if (pageSizeSelect) {
+      clearPageSizeEscapeSuppression();
       pageSizePointerActive = true;
       pageSizePointerStartedFocused = document.activeElement === pageSizeSelect;
     } else {
@@ -414,12 +436,18 @@
   }
 
   function onKeyDown(event) {
-    if (event.key !== "Escape") return;
+    const select = pageSizeSelect();
+    if (event.key !== "Escape") {
+      if (select?.classList.contains(PAGE_SIZE_ESCAPE_CLASS)) clearPageSizeEscapeSuppression();
+      return;
+    }
+
     const active = document.activeElement;
     const pageSizeEscape = active instanceof HTMLSelectElement && active.id === "pageSizeSelect";
     const closingFiltersWithEscape = filtersModalOpen();
 
     if (pageSizeEscape) {
+      active.classList.add(PAGE_SIZE_ESCAPE_CLASS);
       window.setTimeout(() => {
         if (!destroyed && document.activeElement === active) active.blur();
       }, 0);
@@ -436,6 +464,10 @@
 
   function onPointerActivity(event) {
     const target = event.target instanceof Element ? event.target : null;
+    const select = pageSizeSelect();
+    if (select?.classList.contains(PAGE_SIZE_ESCAPE_CLASS) && target !== select) {
+      clearPageSizeEscapeSuppression();
+    }
     syncWaitHover(target);
   }
 
@@ -479,6 +511,7 @@
     frame = 0;
     if (filterEscapeBlurTimer) window.clearTimeout(filterEscapeBlurTimer);
     filterEscapeBlurTimer = 0;
+    clearPageSizeEscapeSuppression();
     observer?.disconnect();
     observer = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
