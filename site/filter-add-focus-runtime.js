@@ -23,6 +23,54 @@
         color: var(--text);
         box-shadow: none;
       }
+
+      /* One canonical close control for every popup header. Keep the button
+         geometry and the drawn X independent from surrounding popup styles. */
+      .filtersHeader > .popupCloseButton {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 36px;
+        width: 36px;
+        min-width: 36px;
+        max-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        max-height: 36px;
+        margin: 0;
+        padding: 0;
+        font-size: 0;
+        line-height: 0;
+        text-indent: 0;
+      }
+
+      .filtersHeader > .popupCloseButton::before,
+      .filtersHeader > .popupCloseButton::after {
+        content: "";
+        position: absolute;
+        display: block;
+        top: 50%;
+        left: 50%;
+        right: auto;
+        bottom: auto;
+        width: 12px;
+        height: 2px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: currentColor;
+        transform-origin: 50% 50%;
+        pointer-events: none;
+      }
+
+      .filtersHeader > .popupCloseButton::before {
+        transform: translate(-50%, -50%) rotate(45deg);
+      }
+
+      .filtersHeader > .popupCloseButton::after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+      }
     `;
     document.head.appendChild(style);
   }
