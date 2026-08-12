@@ -5,14 +5,8 @@
 
   const TOAST_ID = "mflLoadingToast";
   const STYLE_ID = "mflLoadingToastRuntimeStyles";
-  const PLAYER_LOADING_TEXT = "Loading players...";
-  const BLANK_ROW_CLASS = "staticTableBlankRow";
-  const BLANK_ROW_OPACITIES = Object.freeze([0.7, 0.42, 0.2]);
-  const TABLE_ROW_HEIGHT = 38;
   let destroyed = false;
   let observer = null;
-  let tableObserver = null;
-  let tableFrame = 0;
 
   const style = document.createElement("style");
   style.id = STYLE_ID;
@@ -76,35 +70,6 @@
       pointer-events: none !important;
       user-select: none;
     }
-
-    /* table-loading-runtime keeps this row as its lifecycle marker. The visual
-       loading state is owned by the fading blank rows below instead. */
-    #tableBody > .staticTableLoadingRow {
-      display: none !important;
-    }
-
-    #tableBody > .${BLANK_ROW_CLASS},
-    #tableBody > .${BLANK_ROW_CLASS} > td {
-      pointer-events: none !important;
-      transition: none !important;
-      animation: none !important;
-    }
-
-    #tableBody > .${BLANK_ROW_CLASS} > td {
-      height: ${TABLE_ROW_HEIGHT}px !important;
-      min-height: ${TABLE_ROW_HEIGHT}px !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      background: var(--surface-muted) !important;
-      color: transparent !important;
-      user-select: none !important;
-    }
-
-    #tableBody > .${BLANK_ROW_CLASS}:hover > td,
-    #tableBody > .${BLANK_ROW_CLASS} > td:hover {
-      background: var(--surface-muted) !important;
-      background-image: none !important;
-    }
   `;
   document.head.appendChild(style);
 
@@ -146,95 +111,8 @@
   function toastSuppressed() {
     // evaluationLoadIntent is owned exclusively by the initial fetch that opens
     // the saved-evaluations popup. Keep the interaction lock active, but let
-    // the popup's own "Loading saved evaluations..." state be the only feedback.
+    // the popup's own loading state be the only feedback.
     return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
-  }
-
-  function tableBody() {
-    const body = document.getElementById("tableBody");
-    return body instanceof HTMLTableSectionElement ? body : null;
-  }
-
-  function tableHead() {
-    const head = document.getElementById("tableHead");
-    return head instanceof HTMLTableSectionElement ? head : null;
-  }
-
-  function suppressLegacyPlayerLoadingMessage() {
-    const empty = document.getElementById("emptyState");
-    if (!(empty instanceof HTMLElement)) return;
-    if (String(empty.textContent || "").trim() !== PLAYER_LOADING_TEXT) return;
-    empty.textContent = "";
-    empty.hidden = true;
-  }
-
-  function tableLoadingActive(body) {
-    if (!(body instanceof HTMLTableSectionElement)) return false;
-    return body.dataset.staticLoading === "true"
-      || Boolean(body.querySelector(":scope > .staticTableLoadingRow"));
-  }
-
-  function syncTableLoadingRows() {
-    tableFrame = 0;
-    if (destroyed) return;
-    suppressLegacyPlayerLoadingMessage();
-
-    const body = tableBody();
-    if (!body) return;
-    const existing = Array.from(body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`));
-    if (!tableLoadingActive(body)) {
-      existing.forEach((row) => row.remove());
-      return;
-    }
-
-    const head = tableHead();
-    const columnCount = Math.max(1, head?.rows[0]?.cells.length || 1);
-    const alreadyReady = existing.length === BLANK_ROW_OPACITIES.length
-      && existing.every((row, index) => (
-        row instanceof HTMLTableRowElement
-        && row.cells.length === columnCount
-        && row.dataset.loadingRow === String(index + 1)
-      ));
-    if (alreadyReady) return;
-
-    existing.forEach((row) => row.remove());
-    const fragment = document.createDocumentFragment();
-    BLANK_ROW_OPACITIES.forEach((opacity, index) => {
-      const row = document.createElement("tr");
-      row.className = BLANK_ROW_CLASS;
-      row.dataset.loadingRow = String(index + 1);
-      row.setAttribute("aria-hidden", "true");
-      row.style.opacity = String(opacity);
-      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-        row.appendChild(document.createElement("td"));
-      }
-      fragment.appendChild(row);
-    });
-    body.appendChild(fragment);
-  }
-
-  function scheduleTableLoadingRows() {
-    if (destroyed || tableFrame) return;
-    tableFrame = window.requestAnimationFrame(syncTableLoadingRows);
-  }
-
-  function observeTableLoadingRows() {
-    tableObserver?.disconnect();
-    tableObserver = new MutationObserver(scheduleTableLoadingRows);
-    const body = tableBody();
-    const head = tableHead();
-    const empty = document.getElementById("emptyState");
-    if (body) {
-      tableObserver.observe(body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["data-static-loading"],
-      });
-    }
-    if (head) tableObserver.observe(head, { childList: true, subtree: true });
-    if (empty) tableObserver.observe(empty, { childList: true, subtree: true, characterData: true });
-    scheduleTableLoadingRows();
   }
 
   function sync() {
@@ -246,13 +124,11 @@
     if (busy && !toastSuppressed()) {
       toast.hidden = false;
       toast.classList.add("visible");
-    } else {
-      // Hide immediately when the final busy token ends or when this busy period
-      // is the saved-evaluations popup fetch, which has its own loading message.
-      toast.classList.remove("visible");
-      toast.hidden = true;
+      return;
     }
-    scheduleTableLoadingRows();
+
+    toast.classList.remove("visible");
+    toast.hidden = true;
   }
 
   observer = new MutationObserver(sync);
@@ -267,30 +143,16 @@
     });
   }
 
-  function onReady() {
-    observeTableLoadingRows();
-    sync();
-  }
-
-  function onResize() {
-    sync();
-    scheduleTableLoadingRows();
-  }
-
-  window.addEventListener("mfl:ready", onReady);
-  window.addEventListener("resize", onResize);
-  observeTableLoadingRows();
+  window.addEventListener("mfl:ready", sync);
+  window.addEventListener("resize", sync);
   sync();
 
   function destroy() {
     destroyed = true;
     observer?.disconnect();
-    tableObserver?.disconnect();
-    if (tableFrame) window.cancelAnimationFrame(tableFrame);
-    window.removeEventListener("mfl:ready", onReady);
-    window.removeEventListener("resize", onResize);
+    window.removeEventListener("mfl:ready", sync);
+    window.removeEventListener("resize", sync);
     document.getElementById(TOAST_ID)?.remove();
-    document.querySelectorAll(`#tableBody > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
     style.remove();
   }
 

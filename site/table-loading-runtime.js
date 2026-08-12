@@ -2,9 +2,12 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "1.123.33");
-  const LOADING_TEXT = "Loading players...";
   const NAVIGATION_INTENT_MS = 1500;
   const PAGER_SELECTOR = "#progressionPage nav.pager";
+  const STYLE_ID = "mflTableLoadingStyles";
+  const BLANK_ROW_CLASS = "staticTableBlankRow";
+  const BLANK_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
+  const TABLE_ROW_HEIGHT = 38;
   const LEGACY_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -90,6 +93,34 @@
   let suppressPointerClick = false;
   let suppressPointerClickTimer = 0;
   let pagerObservedDataLoading = false;
+
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    #tableBody > .${BLANK_ROW_CLASS},
+    #tableBody > .${BLANK_ROW_CLASS} > td {
+      pointer-events: none !important;
+      transition: none !important;
+      animation: none !important;
+    }
+
+    #tableBody > .${BLANK_ROW_CLASS} > td {
+      height: ${TABLE_ROW_HEIGHT}px !important;
+      min-height: ${TABLE_ROW_HEIGHT}px !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      background: var(--surface-muted) !important;
+      color: transparent !important;
+      user-select: none !important;
+    }
+
+    #tableBody > .${BLANK_ROW_CLASS}:hover > td,
+    #tableBody > .${BLANK_ROW_CLASS} > td:hover {
+      background: var(--surface-muted) !important;
+      background-image: none !important;
+    }
+  `;
+  document.head.appendChild(style);
 
   function normalizedPage(value) {
     const page = String(value || "").toLowerCase();
@@ -219,7 +250,10 @@
     if (!pagerObservedDataLoading) return false;
 
     const body = document.getElementById("tableBody");
-    if (body instanceof HTMLElement) delete body.dataset.staticLoading;
+    if (body instanceof HTMLElement) {
+      delete body.dataset.staticLoading;
+      body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
+    }
     pagers.forEach((pager) => {
       if (pager.dataset.staticLoadingPager !== "true") return;
       const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
@@ -305,32 +339,39 @@
     return true;
   }
 
+  function blankRowsReady(body, columnCount) {
+    const rows = Array.from(body.rows);
+    return rows.length === BLANK_ROW_OPACITIES.length
+      && rows.every((row, index) => (
+        row.classList.contains(BLANK_ROW_CLASS)
+        && row.cells.length === columnCount
+        && row.dataset.loadingRow === String(index + 1)
+      ));
+  }
+
   function show() {
     if (!tableContextActive()) return false;
     const { head, body, empty } = tableElements();
     if (!head || !body) return false;
     hidePagerForLoading();
 
-    const existingCell = body.querySelector(":scope > .staticTableLoadingRow > .staticTableLoadingCell");
-    if (existingCell instanceof HTMLTableCellElement) {
-      existingCell.colSpan = Math.max(1, head.rows[0]?.cells.length || 1);
-      existingCell.textContent = LOADING_TEXT;
-      body.dataset.staticLoading = "true";
-      if (empty) {
-        empty.hidden = true;
-        empty.textContent = "";
-      }
-      return true;
+    const columnCount = Math.max(1, head.rows[0]?.cells.length || 1);
+    if (!blankRowsReady(body, columnCount)) {
+      const fragment = document.createDocumentFragment();
+      BLANK_ROW_OPACITIES.forEach((opacity, index) => {
+        const row = document.createElement("tr");
+        row.className = BLANK_ROW_CLASS;
+        row.dataset.loadingRow = String(index + 1);
+        row.setAttribute("aria-hidden", "true");
+        row.style.opacity = String(opacity);
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+          row.appendChild(document.createElement("td"));
+        }
+        fragment.appendChild(row);
+      });
+      body.replaceChildren(fragment);
     }
 
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    row.className = "staticTableLoadingRow";
-    cell.className = "staticTableLoadingCell";
-    cell.colSpan = Math.max(1, head.rows[0]?.cells.length || 1);
-    cell.textContent = LOADING_TEXT;
-    row.appendChild(cell);
-    body.replaceChildren(row);
     body.dataset.staticLoading = "true";
     if (empty) {
       empty.hidden = true;
@@ -384,12 +425,16 @@
     const { body, empty } = tableElements();
     if (!body) return;
 
-    const legacyLoadingVisible = Boolean(
-      empty
-      && !empty.hidden
-      && String(empty.textContent || "").trim() === LOADING_TEXT,
-    );
-    if (legacyLoadingVisible) {
+    if (!dataLoadingActive() && pagerObservedDataLoading && releasePagerWhenReady()) return;
+
+    const rows = Array.from(body.rows);
+    const blankRowsOnly = rows.length > 0 && rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
+    const loadingOwned = body.dataset.staticLoading === "true";
+    const loadingSurfaceNeedsRepair = body.rows.length === 0
+      || blankRowsOnly
+      || Boolean(empty && !empty.hidden);
+
+    if ((dataLoadingActive() || loadingOwned) && loadingSurfaceNeedsRepair) {
       if (route) primeHeader(route.pageName, route.view);
       show();
       return;
@@ -486,29 +531,26 @@
   function installLegacyBridge() {
     try {
       window.eval(`(() => {
-        if (typeof showTableBusyState !== "function" || showTableBusyState.__mflSingleLoadingState) return;
+        if (typeof showTableBusyState !== "function" || showTableBusyState.__mflBlankRows) return;
         const original = showTableBusyState;
-        const wrapped = function (message = "${LOADING_TEXT}") {
-          if (String(message || "") === "${LOADING_TEXT}" && window.__mflTableLoadingRuntime?.show?.()) {
-            return;
-          }
+        const wrapped = function () {
+          if (window.__mflTableLoadingRuntime?.show?.()) return;
           return original.apply(this, arguments);
         };
-        wrapped.__mflSingleLoadingState = true;
+        wrapped.__mflBlankRows = true;
         wrapped.__mflOriginal = original;
         showTableBusyState = wrapped;
       })();`);
     } catch {
-      // The observer still collapses a legacy loading state before it can paint
-      // if a future core stops exposing the binding used by the bridge.
+      // The observer keeps the blank loading rows authoritative if a future core
+      // stops exposing the legacy table busy-state binding.
     }
     sync();
   }
 
   observer = new MutationObserver(() => {
-    // MutationObserver callbacks run before paint. Collapse the legacy empty
-    // state immediately rather than waiting one animation frame and flashing a
-    // second visual version of "Loading players...".
+    // Keep the loading surface structural before paint even if the legacy core
+    // clears the table body or exposes its empty-state element while loading.
     sync();
   });
   observer.observe(document.documentElement, {
@@ -539,6 +581,8 @@
     window.removeEventListener("click", onClickCapture, true);
     window.removeEventListener("popstate", onPopState);
     window.removeEventListener("mfl:ready", installLegacyBridge);
+    document.querySelectorAll(`#tableBody > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
+    style.remove();
   }
 
   window.__mflTableLoadingRuntime = Object.freeze({
