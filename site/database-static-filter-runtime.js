@@ -253,6 +253,7 @@
 
       .field.rowsField {
         min-width: 0 !important;
+        pointer-events: none !important;
       }
 
       .field.rowsField > span {
@@ -414,8 +415,18 @@
 
   function onKeyDown(event) {
     if (event.key !== "Escape") return;
+    const active = document.activeElement;
+    const pageSizeEscape = active instanceof HTMLSelectElement && active.id === "pageSizeSelect";
     const closingFiltersWithEscape = filtersModalOpen();
-    queueMicrotask(releaseFocusedHighlightControl);
+
+    if (pageSizeEscape) {
+      window.setTimeout(() => {
+        if (!destroyed && document.activeElement === active) active.blur();
+      }, 0);
+    } else {
+      queueMicrotask(releaseFocusedHighlightControl);
+    }
+
     if (!closingFiltersWithEscape) return;
 
     document.documentElement.classList.add(FILTER_ESCAPE_CLASS);
