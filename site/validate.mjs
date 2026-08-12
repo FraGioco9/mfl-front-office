@@ -33,6 +33,14 @@ const release = JSON.parse(await readSite("release.json"));
 invariant(/^\d+\.\d+\.\d+$/.test(release.version), "release.json must contain a Semantic Version.");
 invariant(String(release.description || "").trim().length > 20, "release.json must contain a useful description.");
 
+const packageManifest = JSON.parse(await readSite("package.json"));
+invariant(
+  String(packageManifest.dependencies?.["@onflow/fcl"] || "").trim(),
+  "package.json must keep @onflow/fcl as a runtime dependency for server-side Dapper proof verification.",
+);
+const dataAuth = await readSite("api/_data-auth.js");
+matches(dataAuth, /require\(["']@onflow\/fcl["']\)/, "The data API must verify Dapper proofs with @onflow/fcl.");
+
 const bridge = await readSite("app.js");
 const staticVersion = bridge.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
 invariant(staticVersion === release.version, `app.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
