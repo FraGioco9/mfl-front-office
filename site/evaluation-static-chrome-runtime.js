@@ -25,6 +25,11 @@
     return modal instanceof HTMLElement && !modal.hidden;
   }
 
+  function mflUsdEditorOpen() {
+    const editor = document.getElementById("evaluationMflUsdEditor");
+    return editor instanceof HTMLElement && !editor.hidden;
+  }
+
   function appBusy() {
     return document.documentElement.classList.contains("mflInteractionBusy")
       || document.documentElement.dataset.interactionBusy === "true";
@@ -177,7 +182,7 @@
   }
 
   function focusEmptyEvaluationWhenReady() {
-    if (focusQueued || !evaluationReady() || hasSelectedEvaluation() || globalSearchOpen()) return;
+    if (focusQueued || !evaluationReady() || hasSelectedEvaluation() || globalSearchOpen() || mflUsdEditorOpen()) return;
     const input = document.getElementById("evaluationSearchInput");
     if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
 
@@ -185,7 +190,7 @@
     requestAnimationFrame(() => {
       focusQueued = false;
       syncSearchFocusGuard();
-      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim() || globalSearchOpen()) return;
+      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim() || globalSearchOpen() || mflUsdEditorOpen()) return;
       input.focus({ preventScroll: true });
     });
   }
@@ -208,6 +213,23 @@
     // Preventing the mousedown default preserves the original trusted click
     // handler on the result button instead of forwarding or synthesizing one.
     event.preventDefault();
+  }
+
+  function releaseSearchForMflUsdEdit(event) {
+    if (event.button !== 0) return;
+    const target = event.target instanceof Element
+      ? event.target.closest("#evaluationMflUsdEditButton")
+      : null;
+    if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
+
+    // The legacy Edit button prevents the mousedown default so it does not take
+    // focus itself. If Evaluation search owns focus, release it explicitly before
+    // the trusted click reaches the existing Edit handler. The handler can then
+    // focus/select the MFL/USD input normally.
+    const input = document.getElementById("evaluationSearchInput");
+    if (input instanceof HTMLInputElement && document.activeElement === input) {
+      input.blur();
+    }
   }
 
   function showEvaluationPage() {
@@ -349,6 +371,7 @@
 
   document.addEventListener("focusin", guardEvaluationFocus, true);
   document.addEventListener("mousedown", preserveEvaluationResultClick, true);
+  document.addEventListener("mousedown", releaseSearchForMflUsdEdit, true);
   observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
@@ -367,6 +390,7 @@
     observer?.disconnect();
     document.removeEventListener("focusin", guardEvaluationFocus, true);
     document.removeEventListener("mousedown", preserveEvaluationResultClick, true);
+    document.removeEventListener("mousedown", releaseSearchForMflUsdEdit, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
     window.removeEventListener("mfl:ready", schedule);
