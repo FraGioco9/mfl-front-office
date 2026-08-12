@@ -28,10 +28,12 @@ async function installOptIn(page) {
   });
 }
 
-test("entry document requests v1.124.0 application and stylesheet assets", async ({ page }) => {
+test("entry document requests queryless application and stylesheet assets", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator('link[rel="stylesheet"][href="/styles.css?v=1.124.0"]')).toHaveCount(1);
-  await expect(page.locator('script[src="/app.js?v=1.124.0"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="stylesheet"][href="/styles.css"]')).toHaveCount(1);
+  await expect(page.locator('script[src="/app.js"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="stylesheet"][href*="?v="]')).toHaveCount(0);
+  await expect(page.locator('script[src*="?v="]')).toHaveCount(0);
 });
 
 test("Evaluation title and Load button are final before release loading finishes", async ({ page }) => {

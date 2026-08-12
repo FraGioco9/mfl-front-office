@@ -875,8 +875,8 @@
       // The static release keeps first paint stable even if metadata is unavailable.
     }
 
+    window.__mflReleaseVersion = version;
     const entryUrl = new URL("/modules/app-entry.js", window.location.origin);
-    entryUrl.searchParams.set("v", version);
 
     try {
       await import(entryUrl.href);

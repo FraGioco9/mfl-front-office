@@ -14,7 +14,8 @@ test("responsive layout has one explicit final owner loaded before runtime start
   assert.match(responsive, /Canonical responsive layout owner/);
   assert.match(responsive, /@media \(max-width: 900px\)/);
   assert.match(entry, /data-mfl-responsive-layout/);
-  assert.match(entry, /responsive\.css\?v=/);
+  assert.match(entry, /link\.href = "\/responsive\.css";/);
+  assert.doesNotMatch(entry, /responsive\.css\?v=/);
   assert.match(entry, /await responsiveStylesReady;\n\s+installApiFetchPolicy\(\);/);
 });
 

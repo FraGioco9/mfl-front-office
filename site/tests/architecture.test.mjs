@@ -17,7 +17,7 @@ test("release metadata is the current Semantic Version source", async () => {
 test("application core keeps the known-good direct startup path", async () => {
   const entry = await read("modules/app-entry.js");
   const bridge = await read("app.js");
-  assert.match(entry, /loadClassicScript\("\/modules\/legacy-core\.js", release\.version\)/);
+  assert.match(entry, /loadClassicScript\("\/modules\/legacy-core\.js"\)/);
   assert.doesNotMatch(entry, /prepareCoreRuntimeSource|loadPreparedClassicScript|loadPartitionedClassicScript/);
   assert.doesNotMatch(entry, /document\.(open|write|close)\s*\(/);
   assert.doesNotMatch(bridge, /document\.(open|write|close)\s*\(/);
@@ -47,6 +47,26 @@ test("nested routes load the module entry from the site root", async () => {
   const bridge = await read("app.js");
   assert.match(bridge, /new URL\("\/modules\/app-entry\.js", window\.location\.origin\)/);
   assert.doesNotMatch(bridge, /new URL\("\.\/modules\/app-entry\.js", window\.location\.href\)/);
+});
+
+test("runtime assets use plain URLs with a no-store cache policy", async () => {
+  const bridge = await read("app.js");
+  const entry = await read("modules/app-entry.js");
+  const vercel = JSON.parse(await read("vercel.json"));
+
+  assert.match(bridge, /window\.__mflReleaseVersion = version;/);
+  assert.doesNotMatch(bridge, /searchParams\.set\("v"/);
+  assert.match(entry, /function releaseFromBootstrap\(\)/);
+  assert.match(entry, /link\.href = "\/responsive\.css";/);
+  assert.match(entry, /"\/global-search-runtime\.js"/);
+  assert.doesNotMatch(entry, /\?(?:v|dev|rev)=/);
+  assert.doesNotMatch(entry, /searchParams\.set\("(?:v|dev|rev)"/);
+
+  const cacheHeaders = new Map(
+    vercel.headers.map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]),
+  );
+  assert.equal(cacheHeaders.get("/(.*\\.js)"), "no-store, max-age=0");
+  assert.equal(cacheHeaders.get("/(.*\\.css)"), "no-store, max-age=0");
 });
 
 test("static shell resolves Home wallet geometry before app.js executes", async () => {

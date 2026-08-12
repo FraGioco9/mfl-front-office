@@ -11,17 +11,20 @@ test("static app bridge owns the current footer before asynchronous runtime", as
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const bridge = await read("app.js");
-  const vercel = await read("vercel.json");
+  const vercel = JSON.parse(await read("vercel.json"));
 
   assert.equal(release.version, "1.124.0");
   assert.match(index, /<body data-page="home" class="pinnedSidebarVisible">/);
   assert.match(index, />MFL Front Office v1\.124\.0<\/a>/);
-  assert.match(index, /href="\/styles\.css\?v=1\.124\.0"/);
-  assert.match(index, /src="\/app\.js\?v=1\.124\.0"/);
+  assert.match(index, /href="\/styles\.css"/);
+  assert.match(index, /src="\/app\.js"/);
   assert.match(bridge, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
   assert.match(bridge, /footerVersionLink\.textContent = `MFL Front Office v\$\{STATIC_RELEASE_VERSION\}`/);
   assert.match(bridge, /classList\.add\("mflStaticShellReady", "mflInitialRouteResolved"\)/);
-  assert.match(vercel, /"source": "\/app\.js"[^\n]+"no-store, max-age=0"/);
+  const cacheHeaders = new Map(
+    vercel.headers.map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]),
+  );
+  assert.equal(cacheHeaders.get("/(.*\\.js)"), "no-store, max-age=0");
 });
 
 test("Database Stats route and saved view bridge are active before deferred startup finishes", async () => {
@@ -38,7 +41,7 @@ test("Database Stats route and saved view bridge are active before deferred star
   const legacyLoad = entry.indexOf('loadClassicScript("/modules/legacy-core.js"');
   const firstStateSync = entry.indexOf("__mflDatabaseStatsStateRuntime?.sync?.()", legacyLoad);
   const restoreRoute = entry.indexOf("__mflDatabaseStatsReloadBootstrap?.restoreRoute?.()", legacyLoad);
-  const lateLoad = entry.indexOf("await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version)");
+  const lateLoad = entry.indexOf("await loadScriptGroup(LATE_RUNTIME_SCRIPTS)");
   const finalize = entry.indexOf("__mflDatabaseStatsReloadBootstrap?.finalize?.()");
   const finalStateSync = entry.lastIndexOf("__mflDatabaseStatsStateRuntime?.sync?.()");
   const ready = entry.indexOf('dataset.mflReady = "true"');

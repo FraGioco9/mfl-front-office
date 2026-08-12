@@ -7,17 +7,17 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (path) => readFile(resolve(root, path), "utf8");
 
-test("entry asset cache keys stay aligned with the current release", async () => {
+test("entry assets stay queryless while release metadata stays aligned", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const app = await read("app.js");
 
   assert.equal(release.version, "1.124.0");
-  assert.match(index, new RegExp(`/styles\\.css\\?v=${release.version.replaceAll(".", "\\.")}`));
-  assert.match(index, new RegExp(`/app\\.js\\?v=${release.version.replaceAll(".", "\\.")}`));
+  assert.match(index, /href="\/styles\.css"/);
+  assert.match(index, /src="\/app\.js"/);
+  assert.doesNotMatch(index, /(?:app\.js|styles\.css)\?(?:v|dev|rev)=/);
   assert.match(index, new RegExp(`MFL Front Office v${release.version.replaceAll(".", "\\.")}`));
   assert.match(app, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
-  assert.doesNotMatch(index, /(?:app\.js|styles\.css)\?v=1\.123\.22/);
 });
 
 test("v1.123.32 owns Evaluation first paint before asynchronous startup", async () => {

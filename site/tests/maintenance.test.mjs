@@ -32,7 +32,7 @@ test("runtime entry graph contains only consolidated owners", async () => {
   for (const path of removedSiteFiles) {
     assert.doesNotMatch(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
-  assert.match(entry, /function releaseFromEntryUrl\(\)/);
+  assert.match(entry, /function releaseFromBootstrap\(\)/);
   assert.match(entry, /function installApiFetchPolicy\(/);
   assert.match(entry, /function loadScriptGroup\(/);
   assert.doesNotMatch(entry, /from "\.\/(?:http|runtime-loader)\.js"/);
@@ -75,14 +75,14 @@ test("runtime consolidation removes duplicate polling, click interception, and s
   assert.doesNotMatch(globalSearch, /onResultClick|window\.addEventListener\("click"/);
   assert.match(evaluation, /function syncEvaluationBusy\(\)/);
   assert.doesNotMatch(entry, /loadPreparedClassicScript|executeClassicSource/);
-  assert.match(entry, /const loaders = paths\.map\(\(path\) => loadClassicScript\(path, version\)\);/);
+  assert.match(entry, /const loaders = paths\.map\(\(path\) => loadClassicScript\(path\)\);/);
   assert.match(entry, /await Promise\.all\(loaders\);/);
-  assert.match(entry, /preloadClassicScript\("\/modules\/legacy-core\.js", entryRelease\.version\);/);
+  assert.match(entry, /preloadClassicScript\("\/modules\/legacy-core\.js"\);/);
 });
 
 test("production deployment excludes development assets without weakening runtime freshness", async () => {
   const ignore = await readRepository(".vercelignore");
-  const vercel = await readSite("vercel.json");
+  const vercel = JSON.parse(await readSite("vercel.json"));
 
   for (const path of [
     ".github",
@@ -97,9 +97,12 @@ test("production deployment excludes development assets without weakening runtim
     assert.match(ignore, new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"));
   }
 
-  assert.match(vercel, /"source": "\/modules\/:path\*"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
-  assert.match(vercel, /"source": "\/global-search-runtime\.js"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
-  assert.match(vercel, /"source": "\/release\.json"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
+  const cacheHeaders = new Map(
+    vercel.headers.map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]),
+  );
+  assert.equal(cacheHeaders.get("/(.*\\.js)"), "no-store, max-age=0");
+  assert.equal(cacheHeaders.get("/(.*\\.css)"), "no-store, max-age=0");
+  assert.equal(cacheHeaders.get("/release.json"), "no-store, max-age=0");
 });
 
 test("deployment workflows validate the canonical release metadata when available", async () => {

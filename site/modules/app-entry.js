@@ -2,8 +2,6 @@
 
 const nativeFetch = window.fetch.bind(window);
 const DEFAULT_TIMEOUT_MS = 60_000;
-const LOCAL_RUNTIME_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
-const LOCAL_RUNTIME_REVISION = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 /** @param {RequestInfo | URL} input */
 function isSameOriginApiRequest(input) {
@@ -53,30 +51,21 @@ function installApiFetchPolicy({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   };
 }
 
-/**
- * @param {string} path
- * @param {string} version
- */
-function versionedAssetUrl(path, version) {
-  const url = new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`);
-  url.searchParams.set("v", version);
-  if (LOCAL_RUNTIME_HOSTS.has(window.location.hostname)) {
-    url.searchParams.set("dev", LOCAL_RUNTIME_REVISION);
-  }
-  return url.href;
+/** @param {string} path */
+function assetUrl(path) {
+  return new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 }
 
 /**
  * Start a classic-script request immediately while keeping browser execution order deterministic.
  * Dynamic classic scripts with async=false execute in insertion order even when their downloads overlap.
  * @param {string} path
- * @param {string} version
  * @returns {Promise<void>}
  */
-function loadClassicScript(path, version) {
+function loadClassicScript(path) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = versionedAssetUrl(path, version);
+    script.src = assetUrl(path);
     script.async = false;
     script.dataset.mflRuntime = path;
     script.addEventListener("load", () => resolve(), { once: true });
@@ -89,24 +78,22 @@ function loadClassicScript(path, version) {
  * Fetch a group concurrently. async=false on each classic script retains insertion/execution order,
  * so dependent runtime owners keep the same semantics without serial network round trips.
  * @param {readonly string[]} paths
- * @param {string} version
  */
-async function loadScriptGroup(paths, version) {
-  const loaders = paths.map((path) => loadClassicScript(path, version));
+async function loadScriptGroup(paths) {
+  const loaders = paths.map((path) => loadClassicScript(path));
   await Promise.all(loaders);
 }
 
 /**
  * Preload a later classic script without executing it yet.
  * @param {string} path
- * @param {string} version
  */
-function preloadClassicScript(path, version) {
+function preloadClassicScript(path) {
   if (document.querySelector(`link[data-mfl-runtime-preload="${path}"]`)) return;
   const link = document.createElement("link");
   link.rel = "preload";
   link.as = "script";
-  link.href = versionedAssetUrl(path, version);
+  link.href = assetUrl(path);
   link.dataset.mflRuntimePreload = path;
   document.head.appendChild(link);
 }
@@ -118,7 +105,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-static-chrome-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/database-static-filter-runtime.js",
-  "/global-search-runtime.js?rev=full-database-search",
+  "/global-search-runtime.js",
   "/startup-integrity-runtime.js",
   "/discount-tooltip-mouse-runtime.js",
   "/watchlist-route-ui-runtime.js",
@@ -138,6 +125,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
 ]);
 
 /** @type {Window & {
+ * __mflReleaseVersion?: string,
  * __mflInteractionBusy?: { installLegacyBridge?: () => void },
  * __mflTableLoadingRuntime?: { installLegacyBridge?: () => void, sync?: () => void },
  * __mflTableWidthPrimeRuntime?: { takeOwnership?: () => boolean },
@@ -149,22 +137,22 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * }} */
 const runtimeWindow = window;
 
-function releaseFromEntryUrl() {
-  const version = new URL(import.meta.url).searchParams.get("v")?.trim() || "";
+function releaseFromBootstrap() {
+  const version = String(runtimeWindow.__mflReleaseVersion || "").trim();
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    throw new Error("The application entry is missing a valid release version.");
+    throw new Error("The application bootstrap is missing a valid release version.");
   }
   return Object.freeze({ version, description: "" });
 }
 
-function installResponsiveStylesheet(version) {
+function installResponsiveStylesheet() {
   const existing = document.querySelector('link[data-mfl-responsive-layout="true"]');
   if (existing instanceof HTMLLinkElement) return Promise.resolve();
 
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.dataset.mflResponsiveLayout = "true";
-  link.href = `/responsive.css?v=${encodeURIComponent(version)}`;
+  link.href = "/responsive.css";
 
   const ready = new Promise((resolve, reject) => {
     link.addEventListener("load", () => resolve(undefined), { once: true });
@@ -174,9 +162,9 @@ function installResponsiveStylesheet(version) {
   return ready;
 }
 
-const entryRelease = releaseFromEntryUrl();
-const responsiveStylesReady = installResponsiveStylesheet(entryRelease.version);
-preloadClassicScript("/modules/legacy-core.js", entryRelease.version);
+const entryRelease = releaseFromBootstrap();
+const responsiveStylesReady = installResponsiveStylesheet();
+preloadClassicScript("/modules/legacy-core.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
   if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
@@ -212,9 +200,6 @@ function installLegacyBridges() {
 }
 
 async function start() {
-  // app.js already fetched and validated release.json before importing this
-  // versioned entry module. Reuse the version embedded in this module URL so
-  // startup never performs a duplicate release-metadata request.
   const release = entryRelease;
   window.__mflRelease = release;
   window.__mflReleaseVersion = release.version;
@@ -222,14 +207,14 @@ async function start() {
 
   await responsiveStylesReady;
   installApiFetchPolicy();
-  await loadScriptGroup(EARLY_RUNTIME_SCRIPTS, release.version);
+  await loadScriptGroup(EARLY_RUNTIME_SCRIPTS);
 
   if (/^\/changelog\/?$/i.test(window.location.pathname)) {
     const changelogWindow = /** @type {Window & { __mflChangelogHistoryReady?: Promise<boolean> }} */ (window);
     if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
   }
 
-  await loadClassicScript("/modules/legacy-core.js", release.version);
+  await loadClassicScript("/modules/legacy-core.js");
   installLegacyBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
@@ -240,7 +225,7 @@ async function start() {
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
-  await loadScriptGroup(LATE_RUNTIME_SCRIPTS, release.version);
+  await loadScriptGroup(LATE_RUNTIME_SCRIPTS);
   // Late compatibility runtimes can replace legacy functions. Reinstall every
   // bridge after they load so loading/cursor ownership and static table chrome
   // keep wrapping the functions that are actually active in the page.

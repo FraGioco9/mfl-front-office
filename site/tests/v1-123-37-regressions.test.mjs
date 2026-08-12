@@ -49,23 +49,28 @@ test("Evaluation recent results preserve their native click between mouse down a
 test("typed global search stays fresh independently of visited page data", async () => {
   const search = await read("global-search-runtime.js");
   const entry = await read("modules/app-entry.js");
-  const vercel = await read("vercel.json");
+  const vercel = JSON.parse(await read("vercel.json"));
 
   assert.match(search, /renderCurrentResults\(\);\s*void searchDatabase\(query\)/);
   assert.match(search, /mode: "search"/);
   assert.match(search, /type: "all"/);
   assert.match(search, /cache: "no-store"/);
-  assert.match(entry, /"\/global-search-runtime\.js\?rev=full-database-search"/);
-  assert.match(vercel, /"source": "\/global-search-runtime\.js"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
+  assert.match(entry, /"\/global-search-runtime\.js"/);
+  assert.doesNotMatch(entry, /global-search-runtime\.js\?/);
+  const cacheHeaders = new Map(
+    vercel.headers.map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]),
+  );
+  assert.equal(cacheHeaders.get("/(.*\\.js)"), "no-store, max-age=0");
 });
 
-test("v1.124.0 aligns release metadata and static cache keys", async () => {
+test("v1.124.0 aligns release metadata and static asset paths", async () => {
   const release = JSON.parse(await read("release.json"));
   const index = await read("index.html");
   const app = await read("app.js");
 
   assert.equal(release.version, "1.124.0");
   assert.match(app, /const STATIC_RELEASE_VERSION = "1\.124\.0"/);
-  assert.match(index, /href="\/styles\.css\?v=1\.124\.0"/);
-  assert.match(index, /src="\/app\.js\?v=1\.124\.0"/);
+  assert.match(index, /href="\/styles\.css"/);
+  assert.match(index, /src="\/app\.js"/);
+  assert.doesNotMatch(index, /\?(?:v|dev|rev)=/);
 });

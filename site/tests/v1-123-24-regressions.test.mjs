@@ -29,7 +29,7 @@ test("table first paint uses the final viewport width and renders a loading body
   assert.match(entry, /const tableStartup = /);
   assert.ok(entry.includes('&& !/^\\/(?:database|mfl)\\/stats\\/?$/i.test(window.location.pathname);'));
   assert.match(entry, /if \(tableStartup && runtimeWindow\.__mflAppStartPromise\)/);
-  assert.match(entry, /await loadScriptGroup\(LATE_RUNTIME_SCRIPTS, release\.version\);/);
+  assert.match(entry, /await loadScriptGroup\(LATE_RUNTIME_SCRIPTS\);/);
 });
 
 test("Watchlist title keeps the last stable watchlist identity across view switches", async () => {
