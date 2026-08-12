@@ -9,8 +9,6 @@
   let nationalityOptions = [];
   let loadingPromise = null;
   let filterRulesObserver = null;
-  let suppressAddedFilterAutofocus = false;
-  const initializedSelects = new WeakSet();
 
   function nationalityLabel(value) {
     return String(value || "")
@@ -34,12 +32,6 @@
       : nationalityOptions;
   }
 
-  function releaseInitialFocus(select, selectedValue) {
-    if (initializedSelects.has(select)) return;
-    initializedSelects.add(select);
-    if (!selectedValue && document.activeElement === select) select.blur();
-  }
-
   function syncSelect(select) {
     if (!(select instanceof HTMLSelectElement) || !nationalityOptions.length) return;
 
@@ -50,7 +42,6 @@
       .map((option) => option.value);
     if (currentValues.length === values.length
       && currentValues.every((value, index) => value === values[index])) {
-      releaseInitialFocus(select, selectedValue);
       return;
     }
 
@@ -69,7 +60,6 @@
 
     select.replaceChildren(fragment);
     select.value = selectedValue;
-    releaseInitialFocus(select, selectedValue);
   }
 
   function sync() {
@@ -123,37 +113,19 @@
     return true;
   }
 
-  function armAddedFilterAutofocusSuppression() {
-    suppressAddedFilterAutofocus = true;
-    queueMicrotask(() => {
-      suppressAddedFilterAutofocus = false;
-    });
-  }
-
-  function onFocusIn(event) {
-    if (!suppressAddedFilterAutofocus) return;
-    const target = event.target instanceof HTMLElement ? event.target : null;
-    if (!target?.matches("#addFilterSelect") && !target?.closest("#filterRules .filterRule")) return;
-    suppressAddedFilterAutofocus = false;
-    target.blur();
-  }
-
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("#openFiltersButton")) void load();
-    if (target?.closest("#showAddFilterButton")) armAddedFilterAutofocusSuppression();
   }
 
   function onChange(event) {
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.matches("#addFilterSelect")) armAddedFilterAutofocusSuppression();
     if (!target?.closest("#filterRules, #addFilterSelect")) return;
     queueMicrotask(sync);
   }
 
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
-  document.addEventListener("focusin", onFocusIn, true);
   if (!observeFilterRules()) {
     window.addEventListener("DOMContentLoaded", observeFilterRules, { once: true });
   }
@@ -161,12 +133,10 @@
 
   function destroy() {
     destroyed = true;
-    suppressAddedFilterAutofocus = false;
     filterRulesObserver?.disconnect();
     filterRulesObserver = null;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
-    document.removeEventListener("focusin", onFocusIn, true);
     window.removeEventListener("DOMContentLoaded", observeFilterRules);
   }
 
