@@ -103,6 +103,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
   "/evaluation-static-chrome-runtime.js",
+  "/evaluation-discount-rate-guard-runtime.js",
   "/evaluation-load-intent-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/view-button-visibility-runtime.js",
@@ -139,9 +140,6 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
  * __mflAppStartPromise?: Promise<void>,
- * __mflDynamicDiscountResult?: { rate?: number } | null,
- * __mflSupabaseDiscountRateFunction?: (() => number | null),
- * __mflEvaluationDiscountRateAuthority?: (() => number | null),
  * }} */
 const runtimeWindow = window;
 
@@ -174,135 +172,15 @@ const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
 preloadClassicScript("/modules/legacy-core.js");
 
-let evaluationDiscountRateObserver = null;
-let evaluationDiscountRouteActive = false;
-
-function evaluationRouteActive() {
-  const path = String(window.location.pathname || "").replace(/\/+$/, "") || "/";
-  return path === "/evaluation" || document.body?.dataset.page === "evaluation";
-}
-
-function evaluationDiscountRateIsLive() {
-  return document.documentElement.dataset.mflDiscountRateSource === "supabase-live-request";
-}
-
-function authoritativeEvaluationDiscountRateValue() {
-  const resultRate = runtimeWindow.__mflDynamicDiscountResult?.rate;
-  if (typeof resultRate === "number" && Number.isFinite(resultRate)) return resultRate;
-
-  const liveFunction = runtimeWindow.__mflSupabaseDiscountRateFunction;
-  if (typeof liveFunction === "function" && liveFunction !== authoritativeEvaluationDiscountRateValue) {
-    const liveRate = liveFunction();
-    if (typeof liveRate === "number" && Number.isFinite(liveRate)) return liveRate;
-  }
-  return null;
-}
-
-function authoritativeEvaluationDiscountRateLabel() {
-  const rate = authoritativeEvaluationDiscountRateValue();
-  return typeof rate === "number" && Number.isFinite(rate)
-    ? `${(rate * 100).toFixed(2)}%`
-    : "";
-}
-
-function clearNonAuthoritativeDiscountRate() {
-  const discountRate = document.getElementById("evaluationDiscountRate");
-  const advancedRate = document.getElementById("advancedDiscountRateValue");
-  const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
-
-  if (discountRate instanceof HTMLElement && discountRate.textContent !== "-") {
-    discountRate.textContent = "-";
-  }
-  if (advancedRate instanceof HTMLElement && advancedRate.textContent !== "-") {
-    advancedRate.textContent = "-";
-  }
-  if (metric instanceof HTMLElement) {
-    metric.removeAttribute("data-tooltip");
-    metric.removeAttribute("aria-describedby");
-  }
-  document.body?.classList.remove("evaluationDiscountRateReady");
-  document.documentElement.classList.remove("mflEvaluationRateResolved");
-}
-
-function paintAuthoritativeDiscountRate(label) {
-  const discountRate = document.getElementById("evaluationDiscountRate");
-  const advancedRate = document.getElementById("advancedDiscountRateValue");
-  if (discountRate instanceof HTMLElement && discountRate.textContent !== label) {
-    discountRate.textContent = label;
-  }
-  if (advancedRate instanceof HTMLElement && advancedRate.textContent !== label) {
-    advancedRate.textContent = label;
-  }
-  if (document.documentElement.dataset.mflDiscountRate !== label) {
-    document.documentElement.dataset.mflDiscountRate = label;
-  }
-}
-
-function syncEvaluationDiscountRateAuthority() {
-  const active = evaluationRouteActive();
-  if (active && !evaluationDiscountRouteActive) {
-    document.documentElement.dataset.mflDiscountRate = "-";
-    document.documentElement.dataset.mflDiscountRateSource = "supabase-loading";
-  }
-  evaluationDiscountRouteActive = active;
-  if (!active) return;
-
-  const authoritativeLabel = authoritativeEvaluationDiscountRateLabel();
-  if (!evaluationDiscountRateIsLive() || !authoritativeLabel) {
-    clearNonAuthoritativeDiscountRate();
-  } else {
-    paintAuthoritativeDiscountRate(authoritativeLabel);
-  }
-
-  const discountRate = document.getElementById("evaluationDiscountRate");
-  if (discountRate instanceof HTMLElement) {
-    discountRate.style.setProperty("visibility", "visible", "important");
-  }
-}
-
-function installEvaluationDiscountRateAuthorityGuard() {
-  syncEvaluationDiscountRateAuthority();
-  if (evaluationDiscountRateObserver) return;
-  evaluationDiscountRateObserver = new MutationObserver(syncEvaluationDiscountRateAuthority);
-  evaluationDiscountRateObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: [
-      "class",
-      "data-page",
-      "data-tooltip",
-      "data-mfl-discount-rate",
-      "data-mfl-discount-rate-source",
-    ],
-  });
-  window.addEventListener("popstate", syncEvaluationDiscountRateAuthority);
-  window.addEventListener("mfl:season-ratios-ready", syncEvaluationDiscountRateAuthority);
-}
-
-function installEvaluationDiscountRateFunctionAuthority() {
-  runtimeWindow.__mflEvaluationDiscountRateAuthority = authoritativeEvaluationDiscountRateValue;
-  try {
-    window.eval("evaluationDiscountRateValue = window.__mflEvaluationDiscountRateAuthority");
-  } catch (error) {
-    console.warn("Could not replace the legacy Evaluation Discount Rate fallback.", error);
-  }
-}
-
 function primeEvaluationDiscountRatePlaceholder() {
   if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
-  clearNonAuthoritativeDiscountRate();
-  document.documentElement.dataset.mflDiscountRate = "-";
-  document.documentElement.dataset.mflDiscountRateSource = "supabase-loading";
   const discountRate = document.getElementById("evaluationDiscountRate");
-  if (discountRate instanceof HTMLElement) {
-    discountRate.style.setProperty("visibility", "visible", "important");
-  }
+  if (!(discountRate instanceof HTMLElement)) return;
+  if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
+  discountRate.style.setProperty("visibility", "visible", "important");
 }
 
 primeEvaluationDiscountRatePlaceholder();
-installEvaluationDiscountRateAuthorityGuard();
 
 function showStartupError(error) {
   console.error(error);
@@ -343,8 +221,6 @@ async function start() {
   }
 
   await loadClassicScript("/modules/legacy-core.js");
-  installEvaluationDiscountRateFunctionAuthority();
-  syncEvaluationDiscountRateAuthority();
   installLegacyBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
@@ -360,8 +236,6 @@ async function start() {
   // Late compatibility runtimes can replace legacy functions. Reinstall every
   // bridge after they load so loading/cursor ownership and static table chrome
   // keep wrapping the functions that are actually active in the page.
-  installEvaluationDiscountRateFunctionAuthority();
-  syncEvaluationDiscountRateAuthority();
   installLegacyBridges();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
