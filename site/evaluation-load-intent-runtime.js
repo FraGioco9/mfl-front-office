@@ -5,12 +5,23 @@
   previous?.destroy?.();
 
   const WAIT_CLASS = "evaluationLoadIntent";
-  const LOCK_CLASS = "evaluationLoadInteractionLocked";
+  const LEGACY_LOCK_CLASS = "evaluationLoadInteractionLocked";
   const LOADING_TEXT = "Loading saved evaluations...";
+  const waitStates = Object.freeze([
+    { key: "wallet-opt-in", target: () => document.body, className: "walletOptingIn" },
+    { key: "mfl-stats-stable", target: () => document.documentElement, className: "mflStatsStableLoading" },
+    { key: "mfl-stats-root", target: () => document.documentElement, className: "mflStatsLoading" },
+    { key: "mfl-stats-body", target: () => document.body, className: "mflStatsLoading" },
+    { key: "evaluation-route", target: () => document.body, className: "evaluationRouteLoading" },
+    { key: "evaluation-load", target: () => document.body, className: WAIT_CLASS },
+  ]);
+
+  const mirroredWaitTokens = new Map();
   let destroyed = false;
   let loadClicked = false;
   let releaseTimer = 0;
-  let observer = null;
+  let loadObserver = null;
+  let waitObserver = null;
 
   function evaluationActive() {
     return String(location.pathname || "/").replace(/\/+$/, "") === "/evaluation";
@@ -46,28 +57,55 @@
     if (input && document.activeElement === input) input.blur();
   }
 
+  function busyController() {
+    const controller = window.__mflInteractionBusy;
+    return controller?.begin && controller?.end ? controller : null;
+  }
+
+  function waitStateActive(state) {
+    const target = state.target();
+    return target instanceof Element && target.classList.contains(state.className);
+  }
+
+  function syncGlobalWaitLock() {
+    if (destroyed) return;
+    const controller = busyController();
+    if (!controller) return;
+
+    waitStates.forEach((state) => {
+      const active = waitStateActive(state);
+      const token = mirroredWaitTokens.get(state.key) || "";
+      if (active && !token) {
+        mirroredWaitTokens.set(state.key, controller.begin(`wait:${state.key}`));
+      } else if (!active && token) {
+        mirroredWaitTokens.delete(state.key);
+        controller.end(token);
+      }
+    });
+  }
+
+  function releaseMirroredWaitTokens() {
+    const controller = busyController();
+    if (controller) {
+      mirroredWaitTokens.forEach((token) => controller.end(token));
+    }
+    mirroredWaitTokens.clear();
+  }
+
   function beginWait() {
     if (!evaluationActive() || !document.body) return false;
     blurEvaluationSearch();
     document.body.classList.add(WAIT_CLASS);
+    syncGlobalWaitLock();
     return true;
-  }
-
-  function lockInteractions() {
-    if (!evaluationActive() || !document.body) return;
-    document.body.classList.add(LOCK_CLASS);
   }
 
   function finishWait() {
     loadClicked = false;
     if (releaseTimer) window.clearTimeout(releaseTimer);
     releaseTimer = 0;
-    document.body?.classList.remove(WAIT_CLASS, LOCK_CLASS);
-  }
-
-  function appBusy() {
-    return document.documentElement.classList.contains("mflInteractionBusy")
-      || document.documentElement.dataset.interactionBusy === "true";
+    document.body?.classList.remove(WAIT_CLASS, LEGACY_LOCK_CLASS);
+    syncGlobalWaitLock();
   }
 
   function syncLoadState() {
@@ -76,10 +114,10 @@
 
     const modal = evaluationLoadModal();
     if (!modal || modal.hidden) {
-      if (!appBusy() && !releaseTimer) {
+      if (!releaseTimer) {
         releaseTimer = window.setTimeout(() => {
           releaseTimer = 0;
-          if (loadClicked && (evaluationLoadModal()?.hidden ?? true) && !appBusy()) finishWait();
+          if (loadClicked && (evaluationLoadModal()?.hidden ?? true)) finishWait();
         }, 0);
       }
       return;
@@ -93,25 +131,16 @@
 
   function onPointerDown(event) {
     if (event.button !== 0 || event.isPrimary === false || !loadButtonFromTarget(event.target)) return;
-    beginWait();
+    // Blur on pointer intent, but do not enter a wait state before the trusted
+    // click is dispatched or the global interaction shield would block it.
+    blurEvaluationSearch();
   }
 
   function onClick(event) {
     if (!loadButtonFromTarget(event.target)) return;
     if (!beginWait()) return;
     loadClicked = true;
-    // The initiating click has already been targeted, so locking here still lets
-    // the legacy Load evaluations handler run while blocking every later input.
-    lockInteractions();
     queueMicrotask(syncLoadState);
-  }
-
-  function onPointerUp() {
-    if (!document.body?.classList.contains(WAIT_CLASS) || loadClicked || releaseTimer) return;
-    releaseTimer = window.setTimeout(() => {
-      releaseTimer = 0;
-      if (!loadClicked) finishWait();
-    }, 0);
   }
 
   function onPointerCancel() {
@@ -134,37 +163,16 @@
     body.${WAIT_CLASS} *::after {
       cursor: wait !important;
     }
-
-    body[data-page="evaluation"].${LOCK_CLASS} *,
-    body[data-page="evaluation"].${LOCK_CLASS} *::before,
-    body[data-page="evaluation"].${LOCK_CLASS} *::after {
-      pointer-events: none !important;
-      transition: none !important;
-      animation: none !important;
-    }
-
-    body[data-page="evaluation"].${LOCK_CLASS}::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 2147483647;
-      background: transparent;
-      pointer-events: auto !important;
-      cursor: wait !important;
-      transition: none !important;
-      animation: none !important;
-    }
   `;
   document.head.appendChild(style);
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
-  document.addEventListener("pointerup", onPointerUp, true);
   document.addEventListener("pointercancel", onPointerCancel, true);
   document.addEventListener("focusin", onFocusIn, true);
 
-  observer = new MutationObserver(syncLoadState);
-  observer.observe(document.documentElement, {
+  loadObserver = new MutationObserver(syncLoadState);
+  loadObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -172,21 +180,41 @@
     attributeFilter: ["hidden"],
   });
 
+  waitObserver = new MutationObserver(syncGlobalWaitLock);
+  waitObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  if (document.body) {
+    waitObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+
+  window.addEventListener("mfl:ready", syncGlobalWaitLock);
+  syncGlobalWaitLock();
+
   function destroy() {
     destroyed = true;
     if (releaseTimer) window.clearTimeout(releaseTimer);
-    observer?.disconnect();
+    loadObserver?.disconnect();
+    waitObserver?.disconnect();
+    window.removeEventListener("mfl:ready", syncGlobalWaitLock);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
-    document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("pointercancel", onPointerCancel, true);
     document.removeEventListener("focusin", onFocusIn, true);
-    finishWait();
+    document.body?.classList.remove(WAIT_CLASS, LEGACY_LOCK_CLASS);
+    releaseMirroredWaitTokens();
     style.remove();
   }
 
   window.__mflEvaluationLoadIntentRuntime = Object.freeze({
-    sync: syncLoadState,
+    sync: () => {
+      syncGlobalWaitLock();
+      syncLoadState();
+    },
     destroy,
   });
 })();
