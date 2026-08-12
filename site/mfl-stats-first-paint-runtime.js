@@ -44,6 +44,74 @@
     return new Intl.NumberFormat("en-US").format(Number(value || 0));
   }
 
+  function histogramTooltipPortal() {
+    let portal = document.getElementById("mflStatsHistogramTooltipPortal");
+    if (portal instanceof HTMLElement) return portal;
+    portal = document.createElement("div");
+    portal.id = "mflStatsHistogramTooltipPortal";
+    portal.setAttribute("role", "tooltip");
+    portal.setAttribute("aria-hidden", "true");
+    portal.dataset.placement = "above";
+    document.body.appendChild(portal);
+    return portal;
+  }
+
+  function histogramBarFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const bar = target.closest('#mflStatsPage .mflStatsHistogramBar[data-tooltip]');
+    return bar instanceof HTMLElement ? bar : null;
+  }
+
+  function positionHistogramTooltip(portal, bar) {
+    const rect = bar.getBoundingClientRect();
+    const rawHeight = Number.parseFloat(bar.style.getPropertyValue("--bar-height"));
+    const heightPercent = Number.isFinite(rawHeight) ? Math.max(0, Math.min(100, rawHeight)) : 0;
+    const paintedTop = rect.bottom - (rect.height * heightPercent / 100);
+    const viewportPadding = 8;
+    const x = Math.max(70, Math.min(window.innerWidth - 70, rect.left + rect.width / 2));
+    const placeBelow = paintedTop < 38;
+    portal.dataset.placement = placeBelow ? "below" : "above";
+    portal.style.left = `${x}px`;
+    portal.style.top = `${placeBelow ? Math.min(window.innerHeight - viewportPadding, paintedTop + 8) : Math.max(viewportPadding, paintedTop - 8)}px`;
+  }
+
+  function showHistogramTooltip(bar) {
+    if (!isMflStats() || !(bar instanceof HTMLElement)) return;
+    const text = String(bar.dataset.tooltip || "").trim();
+    if (!text) return;
+    const portal = histogramTooltipPortal();
+    if (portal.textContent !== text) portal.textContent = text;
+    positionHistogramTooltip(portal, bar);
+    portal.setAttribute("aria-hidden", "false");
+    portal.classList.add("visible");
+  }
+
+  function hideHistogramTooltip() {
+    const portal = document.getElementById("mflStatsHistogramTooltipPortal");
+    if (!(portal instanceof HTMLElement)) return;
+    portal.classList.remove("visible");
+    portal.setAttribute("aria-hidden", "true");
+  }
+
+  function onHistogramPointerOver(event) {
+    const bar = histogramBarFromTarget(event.target);
+    if (bar) showHistogramTooltip(bar);
+  }
+
+  function onHistogramPointerMove(event) {
+    const bar = histogramBarFromTarget(event.target);
+    if (!bar) return;
+    const portal = histogramTooltipPortal();
+    positionHistogramTooltip(portal, bar);
+  }
+
+  function onHistogramPointerOut(event) {
+    const bar = histogramBarFromTarget(event.target);
+    if (!bar) return;
+    if (event.relatedTarget instanceof Node && bar.contains(event.relatedTarget)) return;
+    hideHistogramTooltip();
+  }
+
   function syncFirstPaintGuard() {
     document.documentElement.classList.toggle(FIRST_PAINT_GUARD_CLASS, isMflStats());
   }
@@ -85,13 +153,11 @@
         display: none !important;
       }
 
-      #mflStatsPage .mflStatsHistogramTooltip {
-        position: absolute;
-        left: 50%;
-        bottom: min(calc(var(--bar-height, 0%) + 8px), calc(100% - 28px));
-        z-index: 30;
+      #mflStatsHistogramTooltipPortal {
+        position: fixed !important;
+        z-index: 2147483646 !important;
         width: max-content;
-        max-width: 140px;
+        max-width: 180px;
         padding: 4px 7px;
         border: 1px solid var(--border-strong);
         border-radius: 5px;
@@ -102,19 +168,30 @@
         font-weight: 800;
         line-height: 1.1;
         opacity: 0;
-        pointer-events: none;
-        transform: translate(-50%, 4px);
-        transition: opacity 120ms ease, transform 120ms ease;
+        visibility: hidden;
+        pointer-events: none !important;
         white-space: nowrap;
       }
 
-      #mflStatsPage .mflStatsHistogramBar:hover {
-        z-index: 31;
+      #mflStatsHistogramTooltipPortal[data-placement="above"] {
+        transform: translate(-50%, -100%) translateY(4px);
       }
 
-      #mflStatsPage .mflStatsHistogramBar:hover .mflStatsHistogramTooltip {
-        opacity: 1;
-        transform: translate(-50%, 0);
+      #mflStatsHistogramTooltipPortal[data-placement="below"] {
+        transform: translate(-50%, 0) translateY(-4px);
+      }
+
+      #mflStatsHistogramTooltipPortal.visible {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+
+      #mflStatsHistogramTooltipPortal.visible[data-placement="above"] {
+        transform: translate(-50%, -100%) translateY(0);
+      }
+
+      #mflStatsHistogramTooltipPortal.visible[data-placement="below"] {
+        transform: translate(-50%, 0) translateY(0);
       }
 
       #mflStatsPage .mflStatsHistogram.mflStatsFinalTransition .mflStatsHistogramBar::after {
@@ -280,10 +357,6 @@
       bar.dataset.tooltip = tooltipText;
       bar.setAttribute("aria-label", tooltipText);
       bar.style.setProperty("--bar-height", `${barHeight}%`);
-      const tooltip = document.createElement("span");
-      tooltip.className = "mflStatsHistogramTooltip";
-      tooltip.textContent = tooltipText;
-      bar.appendChild(tooltip);
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
       label.textContent = String(value);
@@ -376,6 +449,7 @@
     syncFirstPaintGuard();
     installStyles();
     if (!isMflStats()) {
+      hideHistogramTooltip();
       clearAnimationClass();
       return;
     }
@@ -399,6 +473,7 @@
     const leavesThroughNavigation = Boolean(target.closest("#sidebar .navButton[data-page], a[data-page]"));
     if (!leavesThroughView && !leavesThroughNavigation) return false;
     document.documentElement.classList.remove(FIRST_PAINT_GUARD_CLASS);
+    hideHistogramTooltip();
     clearAnimationClass();
     return true;
   }
@@ -439,6 +514,9 @@
   syncFirstPaintGuard();
   installStyles();
   document.addEventListener("click", onDocumentClick, true);
+  document.addEventListener("pointerover", onHistogramPointerOver, true);
+  document.addEventListener("pointermove", onHistogramPointerMove, true);
+  document.addEventListener("pointerout", onHistogramPointerOut, true);
   window.addEventListener("popstate", sync);
   window.addEventListener("mfl:ready", () => {
     installLegacyBridge();
@@ -452,6 +530,9 @@
     if (animationTimer) window.clearTimeout(animationTimer);
     endDataBusy();
     document.removeEventListener("click", onDocumentClick, true);
+    document.removeEventListener("pointerover", onHistogramPointerOver, true);
+    document.removeEventListener("pointermove", onHistogramPointerMove, true);
+    document.removeEventListener("pointerout", onHistogramPointerOut, true);
     window.removeEventListener("popstate", sync);
     document.documentElement.classList.remove(FIRST_PAINT_GUARD_CLASS);
     clearAnimationClass();
@@ -459,6 +540,7 @@
       window.renderMflStatsPage = originalLegacyRenderer;
     }
     delete window.__mflRenderMflStatsSummary;
+    document.getElementById("mflStatsHistogramTooltipPortal")?.remove();
     document.getElementById("mflStatsFirstPaintStyles")?.remove();
   }
 
