@@ -60,6 +60,15 @@
         animation: none;
       }
 
+      /* Editing MFL/USD intentionally focuses and selects the value input. Keep
+         that programmatic focus from adding a browser-native white focus ring. */
+      .evaluationMflUsdInput:focus,
+      .evaluationMflUsdInput:focus-visible {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: none;
+      }
+
       /* One canonical close control for every popup header. Keep the button
          geometry and the drawn X independent from surrounding popup styles. */
       .filtersHeader > .popupCloseButton {
