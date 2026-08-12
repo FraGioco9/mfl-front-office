@@ -5,6 +5,7 @@
 
   const TOAST_ID = "mflLoadingToast";
   const STYLE_ID = "mflLoadingToastRuntimeStyles";
+  const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   let destroyed = false;
   let observer = null;
 
@@ -36,6 +37,28 @@
     html.mflInteractionBusy body [role="button"] * {
       transition: none !important;
       animation: none !important;
+    }
+
+    /* The footer is never an interactive loading surface. Keep its normal
+       resting appearance and suppress link hover/focus/active paint entirely. */
+    .siteFooter.${FOOTER_LOCK_CLASS},
+    .siteFooter.${FOOTER_LOCK_CLASS} * {
+      pointer-events: none !important;
+      cursor: default !important;
+      transition: none !important;
+      animation: none !important;
+    }
+
+    .siteFooter.${FOOTER_LOCK_CLASS} a,
+    .siteFooter.${FOOTER_LOCK_CLASS} a:hover,
+    .siteFooter.${FOOTER_LOCK_CLASS} a:focus,
+    .siteFooter.${FOOTER_LOCK_CLASS} a:focus-visible,
+    .siteFooter.${FOOTER_LOCK_CLASS} a:active {
+      color: var(--text) !important;
+      text-decoration: none !important;
+      transform: none !important;
+      box-shadow: none !important;
+      outline: none !important;
     }
 
     /* Keep native scrolling available while descendants remain non-targetable.
@@ -108,6 +131,30 @@
       || root.dataset.interactionBusy === "true";
   }
 
+  function footerLoadingActive() {
+    const root = document.documentElement;
+    return interactionBusy()
+      || root.classList.contains("mflDataLoading")
+      || root.dataset.mflReady !== "true"
+      || document.body?.getAttribute("aria-busy") === "true";
+  }
+
+  function syncFooterLock() {
+    const footer = document.querySelector(".siteFooter");
+    if (!(footer instanceof HTMLElement)) return;
+    const locked = footerLoadingActive();
+    footer.classList.toggle(FOOTER_LOCK_CLASS, locked);
+    if (locked) {
+      footer.inert = true;
+      footer.dataset.mflLoadingLocked = "true";
+      return;
+    }
+    if (footer.dataset.mflLoadingLocked === "true") {
+      footer.inert = false;
+      delete footer.dataset.mflLoadingLocked;
+    }
+  }
+
   function toastSuppressed() {
     // evaluationLoadIntent is owned exclusively by the initial fetch that opens
     // the saved-evaluations popup. Keep the interaction lock active, but let
@@ -117,6 +164,7 @@
 
   function sync() {
     if (destroyed || !document.body) return;
+    syncFooterLock();
     const toast = ensureToast();
     positionToast(toast);
     const busy = interactionBusy();
@@ -134,12 +182,12 @@
   observer = new MutationObserver(sync);
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "data-interaction-busy"],
+    attributeFilter: ["class", "data-interaction-busy", "data-mfl-ready"],
   });
   if (document.body) {
     observer.observe(document.body, {
       attributes: true,
-      attributeFilter: ["class"],
+      attributeFilter: ["class", "aria-busy"],
     });
   }
 
@@ -153,6 +201,14 @@
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
     document.getElementById(TOAST_ID)?.remove();
+    const footer = document.querySelector(".siteFooter");
+    if (footer instanceof HTMLElement) {
+      footer.classList.remove(FOOTER_LOCK_CLASS);
+      if (footer.dataset.mflLoadingLocked === "true") {
+        footer.inert = false;
+        delete footer.dataset.mflLoadingLocked;
+      }
+    }
     style.remove();
   }
 
