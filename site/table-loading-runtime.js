@@ -190,9 +190,12 @@
     pagerElements().forEach((pager) => {
       if (pager.dataset.staticLoadingPager !== "true") {
         pager.dataset.staticLoadingPreviousHidden = pager.hidden ? "true" : "false";
+        pager.dataset.staticLoadingPreviousDisplay = pager.style.getPropertyValue("display");
+        pager.dataset.staticLoadingPreviousDisplayPriority = pager.style.getPropertyPriority("display");
       }
       pager.dataset.staticLoadingPager = "true";
       pager.hidden = true;
+      pager.style.setProperty("display", "none", "important");
     });
   }
 
@@ -218,9 +221,18 @@
     pagerElements().forEach((pager) => {
       if (pager.dataset.staticLoadingPager !== "true") return;
       const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
+      const previousDisplay = pager.dataset.staticLoadingPreviousDisplay || "";
+      const previousDisplayPriority = pager.dataset.staticLoadingPreviousDisplayPriority || "";
       delete pager.dataset.staticLoadingPager;
       delete pager.dataset.staticLoadingPreviousHidden;
+      delete pager.dataset.staticLoadingPreviousDisplay;
+      delete pager.dataset.staticLoadingPreviousDisplayPriority;
       pager.hidden = previouslyHidden;
+      if (previousDisplay) {
+        pager.style.setProperty("display", previousDisplay, previousDisplayPriority);
+      } else {
+        pager.style.removeProperty("display");
+      }
     });
     return true;
   }
