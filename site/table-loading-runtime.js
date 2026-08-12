@@ -560,11 +560,8 @@
     characterData: true,
     attributeFilter: ["hidden", "data-page", "class"],
   });
-  window.addEventListener("pointerdown", onNavigationIntent, true);
-  window.addEventListener("pointerup", onPointerUp, true);
-  window.addEventListener("pointercancel", onPointerCancel, true);
-  window.addEventListener("click", onClickCapture, true);
-  window.addEventListener("popstate", onPopState);
+  // Table loading is presentation-only. Navigation/view clicks are owned by
+  // the SPA route handlers so this runtime cannot swallow or replay them.
   window.addEventListener("mfl:ready", installLegacyBridge);
 
   const initialRoute = routeFromPath();
