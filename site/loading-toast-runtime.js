@@ -20,9 +20,8 @@
       cursor: default !important;
     }
 
-    /* Loading owns pointer interaction completely. Keeping the transparent
-       shield as the sole hit target also clears button hover states while the
-       underlying page changes. */
+    /* Controls remain completely non-targetable while loading, which prevents
+       both clicks and hover states without freezing the page's scroll surfaces. */
     html.mflInteractionBusy body *,
     html.mflInteractionBusy body *::before,
     html.mflInteractionBusy body *::after {
@@ -39,9 +38,21 @@
       animation: none !important;
     }
 
+    /* Keep native scrolling available while descendants remain non-targetable.
+       Wheel input lands on the nearest scroll surface rather than a control. */
+    html.mflInteractionBusy body main,
+    html.mflInteractionBusy body .tableScroller,
+    html.mflInteractionBusy body .evaluationLoadList,
+    html.mflInteractionBusy body .searchBody,
+    html.mflInteractionBusy body .filterBuilder,
+    html.mflInteractionBusy body .advancedSettingsBody,
+    html.mflInteractionBusy body .sidebar {
+      pointer-events: auto !important;
+    }
+
     /* Older route-specific CSS hides body::after on Evaluation and Stats.
-       Busy mode must win that conflict so Load, Reset, Filters, and every other
-       control are no longer hover targets until the last busy token ends. */
+       Keep the layer present for consistent busy styling, but do not let it
+       swallow wheel input now that scrolling remains available during loading. */
     html.mflInteractionBusy body::after {
       content: "" !important;
       display: block !important;
@@ -50,7 +61,7 @@
       inset: 0 !important;
       z-index: 2147483647 !important;
       background: transparent !important;
-      pointer-events: auto !important;
+      pointer-events: none !important;
       transition: none !important;
       animation: none !important;
     }
@@ -99,7 +110,7 @@
 
   function toastSuppressed() {
     // evaluationLoadIntent is owned exclusively by the initial fetch that opens
-    // the saved-evaluations popup. Keep the interaction shield active, but let
+    // the saved-evaluations popup. Keep the interaction lock active, but let
     // the popup's own "Loading saved evaluations..." state be the only feedback.
     return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
   }
