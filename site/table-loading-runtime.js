@@ -529,39 +529,25 @@
   }
 
   function installLegacyBridge() {
-    try {
-      window.eval(`(() => {
-        if (typeof showTableBusyState !== "function" || showTableBusyState.__mflBlankRows) return;
-        const original = showTableBusyState;
-        const wrapped = function () {
-          if (window.__mflTableLoadingRuntime?.show?.()) return;
-          return original.apply(this, arguments);
-        };
-        wrapped.__mflBlankRows = true;
-        wrapped.__mflOriginal = original;
-        showTableBusyState = wrapped;
-      })();`);
-    } catch {
-      // The observer keeps the blank loading rows authoritative if a future core
-      // stops exposing the legacy table busy-state binding.
-    }
+    // legacy-core delegates to this runtime directly. Rewriting the
+    // same global function again can create competing wrapper chains.
     sync();
   }
 
-  observer = new MutationObserver(() => {
-    // Keep the loading surface structural before paint even if the legacy core
-    // clears the table body or exposes its empty-state element while loading.
-    sync();
-  });
+  // Observe only state changes that can start/end table loading.
+  // Never observe the table DOM itself: show() mutates that DOM, so a
+  // subtree observer can repeatedly trigger sync() -> show() forever.
+  observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
     attributes: true,
-    characterData: true,
-    attributeFilter: ["hidden", "data-page", "class"],
+    attributeFilter: ["class"],
   });
-  // Table loading is presentation-only. Navigation/view clicks are owned by
-  // the SPA route handlers so this runtime cannot swallow or replay them.
+  if (document.body) {
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-page"],
+    });
+  }
   window.addEventListener("mfl:ready", installLegacyBridge);
 
   const initialRoute = routeFromPath();
