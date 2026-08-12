@@ -4,6 +4,7 @@
   const VERSION = String(window.__mflReleaseVersion || "1.123.33");
   const LOADING_TEXT = "Loading players...";
   const NAVIGATION_INTENT_MS = 1500;
+  const PAGER_SELECTOR = "#progressionPage nav.pager";
   const LEGACY_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -180,6 +181,50 @@
     };
   }
 
+  function pagerElements() {
+    return Array.from(document.querySelectorAll(PAGER_SELECTOR))
+      .filter((pager) => pager instanceof HTMLElement);
+  }
+
+  function hidePagerForLoading() {
+    pagerElements().forEach((pager) => {
+      if (pager.dataset.staticLoadingPager !== "true") {
+        pager.dataset.staticLoadingPreviousHidden = pager.hidden ? "true" : "false";
+      }
+      pager.dataset.staticLoadingPager = "true";
+      pager.hidden = true;
+    });
+  }
+
+  function releasePagerWhenReady() {
+    const { body, empty } = tableElements();
+    if (!body) return false;
+
+    const loadingRow = body.querySelector(":scope > .staticTableLoadingRow");
+    const emptyText = String(empty?.textContent || "").trim();
+    const legacyLoadingVisible = Boolean(empty && !empty.hidden && emptyText === LOADING_TEXT);
+    if (loadingRow || legacyLoadingVisible) return false;
+
+    const hasRenderedRows = body.rows.length > 0;
+    const hasSettledEmptyState = Boolean(
+      empty
+      && !empty.hidden
+      && emptyText
+      && emptyText !== LOADING_TEXT,
+    );
+    if (!hasRenderedRows && !hasSettledEmptyState) return false;
+
+    delete body.dataset.staticLoading;
+    pagerElements().forEach((pager) => {
+      if (pager.dataset.staticLoadingPager !== "true") return;
+      const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
+      delete pager.dataset.staticLoadingPager;
+      delete pager.dataset.staticLoadingPreviousHidden;
+      pager.hidden = previouslyHidden;
+    });
+    return true;
+  }
+
   function displayColumnKey(column, pageName) {
     return column === "wallet_name" && ["myplayers", "agents", "mfl"].includes(pageName)
       ? "owned_since"
@@ -249,6 +294,7 @@
     if (!tableContextActive()) return false;
     const { head, body, empty } = tableElements();
     if (!head || !body) return false;
+    hidePagerForLoading();
 
     const existingCell = body.querySelector(":scope > .staticTableLoadingRow > .staticTableLoadingCell");
     if (existingCell instanceof HTMLTableCellElement) {
@@ -315,6 +361,14 @@
     return routeFromPath();
   }
 
+  function beginNavigation(route) {
+    if (!route) return false;
+    navigationIntentRoute = route;
+    navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
+    syncSharedViewButtonPage(route.pageName);
+    return primeRoute(route);
+  }
+
   function sync() {
     frame = 0;
     if (destroyed || !tableContextActive()) return;
@@ -331,7 +385,9 @@
     if (legacyLoadingVisible) {
       if (route) primeHeader(route.pageName, route.view);
       show();
+      return;
     }
+    releasePagerWhenReady();
   }
 
   function schedule() {
@@ -348,12 +404,7 @@
           button: sharedViewRoute.button,
         }
       : null;
-    const route = routeForTarget(target);
-    if (!route) return;
-    navigationIntentRoute = route;
-    navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
-    syncSharedViewButtonPage(route.pageName);
-    primeRoute(route);
+    beginNavigation(routeForTarget(target));
   }
 
   function releaseInsideButton(event, button) {
@@ -397,7 +448,13 @@
   }
 
   function onClickCapture(event) {
-    if (!suppressPointerClick) return;
+    if (!suppressPointerClick) {
+      if (event.detail === 0) {
+        const target = event.target instanceof Element ? event.target : null;
+        beginNavigation(routeForTarget(target));
+      }
+      return;
+    }
     suppressPointerClick = false;
     if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
     suppressPointerClickTimer = 0;
