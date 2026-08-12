@@ -357,6 +357,27 @@
     return true;
   }
 
+  function primeEvaluationNavigation(event) {
+    if (event.button !== 0 || event.defaultPrevented) return;
+    const link = event.target instanceof Element
+      ? event.target.closest('#sidebar .navButton[data-page="evaluation"]')
+      : null;
+    if (!(link instanceof HTMLAnchorElement)) return;
+
+    try {
+      const url = new URL(link.href, window.location.href);
+      const path = String(url.pathname || "/").replace(/\/+$/, "") || "/";
+      if (url.origin !== window.location.origin || path !== "/evaluation") return;
+    } catch {
+      return;
+    }
+
+    // Prime the final Evaluation chrome in this trusted click turn. Do not
+    // prevent or synthesize the click: the existing navigation owner still
+    // updates history and starts any required data work normally.
+    showEvaluationPage();
+  }
+
   function clearRouteState() {
     document.documentElement.classList.remove("mflEvaluationInitialLoadVisible", "mflEvaluationReady");
     document.body?.classList.remove("evaluationStaticChromeReady");
@@ -411,6 +432,46 @@
       opacity: 1 !important;
     }
 
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
+    body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
+      display: block !important;
+      margin-bottom: 18px !important;
+    }
+
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
+    body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
+      display: grid !important;
+      grid-template-columns: minmax(320px, 560px) minmax(520px, 1fr) !important;
+      column-gap: 8px !important;
+      row-gap: 8px !important;
+      align-items: end !important;
+      justify-content: space-between !important;
+      min-width: 0 !important;
+    }
+
+    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
+    body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+      position: relative !important;
+      display: grid !important;
+      gap: 10px !important;
+      width: auto !important;
+      max-width: 560px !important;
+      min-width: 0 !important;
+    }
+
+    @media (max-width: 900px) {
+      html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
+      body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
+        grid-template-columns: minmax(0, 1fr) !important;
+      }
+
+      html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
+      body[data-page="evaluation"] #evaluationPage .evaluationSearch {
+        width: 100% !important;
+        max-width: none !important;
+      }
+    }
+
     html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
     body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
       visibility: visible !important;
@@ -435,6 +496,7 @@
   document.addEventListener("mousedown", preserveEvaluationResultClick, true);
   document.addEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
   document.addEventListener("mousedown", releaseSearchForMflUsdEdit, true);
+  document.addEventListener("click", primeEvaluationNavigation, true);
   document.addEventListener("keydown", allowKeyboardSearchFocus, true);
   observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
@@ -456,6 +518,7 @@
     document.removeEventListener("mousedown", preserveEvaluationResultClick, true);
     document.removeEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
     document.removeEventListener("mousedown", releaseSearchForMflUsdEdit, true);
+    document.removeEventListener("click", primeEvaluationNavigation, true);
     document.removeEventListener("keydown", allowKeyboardSearchFocus, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
