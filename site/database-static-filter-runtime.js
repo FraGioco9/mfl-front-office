@@ -12,6 +12,7 @@
     "#quickClearFiltersButton",
     ".quickFilters input",
     "#sidebar .navButton[data-page]",
+    "#filtersModal button",
   ].join(", ");
   const ESCAPE_BLUR_SELECTOR = [
     "#pageSizeSelect",
