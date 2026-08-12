@@ -80,7 +80,7 @@ function ruleSql(rule, parameters) {
       return `${normalizedEpochSeconds(quotedColumn)} BETWEEN ? AND ?`;
     }
 
-    if (!['before', 'after'].includes(operator)) return "0";
+    if (!["before", "after"].includes(operator)) return "0";
     parameters.push(from);
     return `${normalizedEpochSeconds(quotedColumn)} ${operator === "before" ? "<" : ">"} ?`;
   }
@@ -180,6 +180,14 @@ function integerIds(value, maximum = 5000) {
   return [...new Set(values)].slice(0, maximum);
 }
 
+function progressionActivityCondition(view) {
+  if (!["current", "all"].includes(view)) return "";
+  const suffix = view === "current" ? "prog_current_season" : "prog_all";
+  return `(${Array.from(STAT_COLUMNS)
+    .map((column) => `coalesce(${quoteIdentifier(`${column}_${suffix}`)}, 0) > 0`)
+    .join(" OR ")})`;
+}
+
 async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
   const query = request.query || {};
   const scope = String(query.scope || "database").toLowerCase();
@@ -203,6 +211,8 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
 
   if (scope === "progression") {
     appendCondition(baseConditions, baseParameters, `NOT ${mflCondition()}`, MFL_WALLET_ADDRESS);
+    const activityCondition = progressionActivityCondition(view);
+    if (activityCondition) baseConditions.push(activityCondition);
   } else if (["mfl", "mflstats"].includes(scope)) {
     appendCondition(baseConditions, baseParameters, mflCondition(), MFL_WALLET_ADDRESS);
   } else if (scope === "agent") {
