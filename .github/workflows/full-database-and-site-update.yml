@@ -196,6 +196,40 @@ jobs:
             exit 1
           fi
 
+      - name: Record expected database summary
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          database_path = Path("production-site/site/api/data-files/mfl_database.db")
+          with sqlite3.connect(database_path) as connection:
+              player_count = int(connection.execute("SELECT count(*) FROM players").fetchone()[0])
+              wallet_count = int(connection.execute("SELECT count(*) FROM wallets").fetchone()[0])
+
+          expected = {
+              "playerCount": player_count,
+              "walletCount": wallet_count,
+              "minimumGeneratedAt": datetime.fromtimestamp(
+                  database_path.stat().st_mtime,
+                  timezone.utc,
+              ).isoformat().replace("+00:00", "Z"),
+          }
+          output_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
+          output_path.write_text(json.dumps(expected), encoding="utf-8")
+          print(
+              "Expected live database: "
+              f"{player_count} players, {wallet_count} wallets, "
+              f"generated no earlier than {expected['minimumGeneratedAt']}."
+          )
+          PY
+
       - name: Verify published site source is unchanged
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
@@ -254,4 +288,80 @@ jobs:
         working-directory: production-site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel deploy --prod --yes --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
+        run: vercel deploy --prod --yes --force --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
+
+      - name: Verify live production database
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          PRODUCTION_DATABASE_URL: https://mfl-front-office.vercel.app/api/data?mode=summary
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          expected_path = Path(os.environ["RUNNER_TEMP"]) / "mfl-database-expected.json"
+          expected = json.loads(expected_path.read_text(encoding="utf-8"))
+          minimum_generated_at = datetime.fromisoformat(
+              expected["minimumGeneratedAt"].replace("Z", "+00:00")
+          ) - timedelta(minutes=5)
+          base_url = os.environ["PRODUCTION_DATABASE_URL"]
+          run_id = os.environ.get("GITHUB_RUN_ID", "run")
+          last_error = "No response received."
+
+          for attempt in range(1, 13):
+              separator = "&" if "?" in base_url else "?"
+              verify_token = urllib.parse.quote(f"{run_id}-{attempt}-{time.time_ns()}")
+              request = urllib.request.Request(
+                  f"{base_url}{separator}verify={verify_token}",
+                  headers={
+                      "Accept": "application/json",
+                      "Cache-Control": "no-cache, no-store",
+                      "Pragma": "no-cache",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      live = json.loads(response.read().decode("utf-8"))
+
+                  generated_at = datetime.fromisoformat(
+                      str(live.get("generatedAt", "")).replace("Z", "+00:00")
+                  )
+                  if generated_at.tzinfo is None:
+                      generated_at = generated_at.replace(tzinfo=timezone.utc)
+
+                  counts_match = (
+                      int(live.get("playerCount", -1)) == int(expected["playerCount"])
+                      and int(live.get("walletCount", -1)) == int(expected["walletCount"])
+                  )
+                  fresh_enough = generated_at >= minimum_generated_at
+                  if counts_match and fresh_enough:
+                      print(
+                          "Live production database verified: "
+                          f"{live['playerCount']} players, {live['walletCount']} wallets, "
+                          f"generatedAt {live['generatedAt']}."
+                      )
+                      raise SystemExit(0)
+
+                  last_error = (
+                      f"attempt {attempt}: expected {expected['playerCount']} players and "
+                      f"{expected['walletCount']} wallets with generatedAt >= "
+                      f"{minimum_generated_at.isoformat()}, received {live!r}"
+                  )
+              except Exception as error:
+                  last_error = f"attempt {attempt}: {error}"
+
+              print(f"Live database verification not ready ({last_error}); retrying.")
+              time.sleep(5)
+
+          raise SystemExit(
+              "Production deployment completed, but the live SQLite database could not be verified. "
+              + last_error
+          )
+          PY
