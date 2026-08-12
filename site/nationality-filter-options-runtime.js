@@ -9,6 +9,7 @@
   let nationalityOptions = [];
   let loadingPromise = null;
   let filterRulesObserver = null;
+  const initializedSelects = new WeakSet();
 
   function nationalityLabel(value) {
     return String(value || "")
@@ -32,6 +33,12 @@
       : nationalityOptions;
   }
 
+  function releaseInitialFocus(select, selectedValue) {
+    if (initializedSelects.has(select)) return;
+    initializedSelects.add(select);
+    if (!selectedValue && document.activeElement === select) select.blur();
+  }
+
   function syncSelect(select) {
     if (!(select instanceof HTMLSelectElement) || !nationalityOptions.length) return;
 
@@ -42,6 +49,7 @@
       .map((option) => option.value);
     if (currentValues.length === values.length
       && currentValues.every((value, index) => value === values[index])) {
+      releaseInitialFocus(select, selectedValue);
       return;
     }
 
@@ -60,6 +68,7 @@
 
     select.replaceChildren(fragment);
     select.value = selectedValue;
+    releaseInitialFocus(select, selectedValue);
   }
 
   function sync() {
