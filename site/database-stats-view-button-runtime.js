@@ -16,34 +16,12 @@
   existing?.destroy?.();
 
   let frame = 0;
-  let interval = 0;
   let observer = null;
   let observedRoot = null;
   let destroyed = false;
 
   function currentPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
-  }
-
-  function syncFooter() {
-    const footer = document.querySelector(".siteFooter");
-    if (!(footer instanceof HTMLElement)) return;
-
-    let link = footer.querySelector('a[href="/changelog"], a[data-page="changelog"]');
-    if (!(link instanceof HTMLAnchorElement)) {
-      link = document.createElement("a");
-      footer.prepend(link);
-    }
-
-    const text = `MFL Front Office v${RELEASE_VERSION}`;
-    link.hidden = false;
-    link.removeAttribute("aria-hidden");
-    link.href = "/changelog";
-    link.dataset.page = "changelog";
-    link.dataset.releaseLabel = text;
-    link.textContent = text;
-    link.setAttribute("aria-label", `${text}, open Changelog`);
-    footer.dataset.releaseVersion = RELEASE_VERSION;
   }
 
   function statsIsActive() {
@@ -151,17 +129,15 @@
   }
 
   function bindObserver() {
-    const root = document.documentElement;
+    const root = document.body;
     if (!root || root === observedRoot) return;
 
     observer?.disconnect();
     observedRoot = root;
     observer = new MutationObserver(schedule);
     observer.observe(root, {
-      childList: true,
-      subtree: true,
       attributes: true,
-      attributeFilter: ["hidden", "class", "data-page", "aria-hidden"],
+      attributeFilter: ["data-page"],
     });
   }
 
@@ -169,7 +145,6 @@
     frame = 0;
     if (destroyed) return;
     bindObserver();
-    syncFooter();
     syncStatsButtons();
   }
 
@@ -189,15 +164,15 @@
   }
 
   window.addEventListener("popstate", onPopState);
-  interval = window.setInterval(schedule, 250);
+  window.addEventListener("mfl:ready", schedule);
   rebind();
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
-    if (interval) clearInterval(interval);
     observer?.disconnect();
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", schedule);
   }
 
   window.__mflDatabaseStatsButtonRuntime = {

@@ -194,7 +194,16 @@
     return Boolean(routeFromPath(pathname));
   }
 
+  function statsRouteActive() {
+    const path = String(window.location.pathname || "/");
+    const bodyPage = String(document.body?.dataset.page || "").toLowerCase();
+    return /^\/(?:database|mfl)\/stats\/?$/i.test(path)
+      || bodyPage === "databasestats"
+      || bodyPage === "mflstats";
+  }
+
   function tableContextActive() {
+    if (statsRouteActive()) return false;
     if (isPlayerTableRoute()) return true;
     const page = normalizedPage(document.body?.dataset.page || "");
     return ["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"].includes(page);
@@ -417,9 +426,42 @@
     return routeFromPath();
   }
 
+  function releaseInactiveTableLoading() {
+    const { body } = tableElements();
+    if (body) {
+      delete body.dataset.staticLoading;
+      body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
+    }
+
+    pagerElements().forEach((pager) => {
+      if (pager.dataset.staticLoadingPager !== "true") return;
+      const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
+      const previousDisplay = pager.dataset.staticLoadingPreviousDisplay || "";
+      const previousDisplayPriority = pager.dataset.staticLoadingPreviousDisplayPriority || "";
+      delete pager.dataset.staticLoadingPager;
+      delete pager.dataset.staticLoadingPreviousHidden;
+      delete pager.dataset.staticLoadingPreviousDisplay;
+      delete pager.dataset.staticLoadingPreviousDisplayPriority;
+      pager.hidden = previouslyHidden;
+      if (previousDisplay) {
+        pager.style.setProperty("display", previousDisplay, previousDisplayPriority);
+      } else {
+        pager.style.removeProperty("display");
+      }
+    });
+
+    pagerObservedDataLoading = false;
+    navigationIntentRoute = null;
+    navigationIntentExpiresAt = 0;
+  }
+
   function sync() {
     frame = 0;
-    if (destroyed || !tableContextActive()) return;
+    if (destroyed) return;
+    if (!tableContextActive()) {
+      releaseInactiveTableLoading();
+      return;
+    }
     const route = activePrimeRoute();
     if (route) syncSharedViewButtonPage(route.pageName);
     const { body, empty } = tableElements();
