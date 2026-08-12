@@ -18,6 +18,19 @@
       html[data-stored-progression-access="true"] #myPlayersOptInButton {
         display: none !important;
       }
+
+      button:focus,
+      button:focus-visible,
+      [role="button"]:focus,
+      [role="button"]:focus-visible {
+        outline: none !important;
+        outline-offset: 0 !important;
+      }
+
+      button::-moz-focus-inner,
+      [role="button"]::-moz-focus-inner {
+        border: 0 !important;
+      }
     `;
     document.head.appendChild(style);
   }
