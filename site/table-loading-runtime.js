@@ -89,6 +89,7 @@
   let pendingViewPointer = null;
   let suppressPointerClick = false;
   let suppressPointerClickTimer = 0;
+  let pagerObservedDataLoading = false;
 
   function normalizedPage(value) {
     const page = String(value || "").toLowerCase();
@@ -186,8 +187,17 @@
       .filter((pager) => pager instanceof HTMLElement);
   }
 
+  function dataLoadingActive() {
+    return document.documentElement.classList.contains("mflDataLoading");
+  }
+
   function hidePagerForLoading() {
-    pagerElements().forEach((pager) => {
+    const pagers = pagerElements();
+    const alreadyOwned = pagers.some((pager) => pager.dataset.staticLoadingPager === "true");
+    if (!alreadyOwned) pagerObservedDataLoading = false;
+    if (dataLoadingActive()) pagerObservedDataLoading = true;
+
+    pagers.forEach((pager) => {
       if (pager.dataset.staticLoadingPager !== "true") {
         pager.dataset.staticLoadingPreviousHidden = pager.hidden ? "true" : "false";
         pager.dataset.staticLoadingPreviousDisplay = pager.style.getPropertyValue("display");
@@ -200,25 +210,17 @@
   }
 
   function releasePagerWhenReady() {
-    const { body, empty } = tableElements();
-    if (!body) return false;
+    const pagers = pagerElements();
+    if (!pagers.some((pager) => pager.dataset.staticLoadingPager === "true")) return false;
+    if (dataLoadingActive()) {
+      pagerObservedDataLoading = true;
+      return false;
+    }
+    if (!pagerObservedDataLoading) return false;
 
-    const loadingRow = body.querySelector(":scope > .staticTableLoadingRow");
-    const emptyText = String(empty?.textContent || "").trim();
-    const legacyLoadingVisible = Boolean(empty && !empty.hidden && emptyText === LOADING_TEXT);
-    if (loadingRow || legacyLoadingVisible) return false;
-
-    const hasRenderedRows = body.rows.length > 0;
-    const hasSettledEmptyState = Boolean(
-      empty
-      && !empty.hidden
-      && emptyText
-      && emptyText !== LOADING_TEXT,
-    );
-    if (!hasRenderedRows && !hasSettledEmptyState) return false;
-
-    delete body.dataset.staticLoading;
-    pagerElements().forEach((pager) => {
+    const body = document.getElementById("tableBody");
+    if (body instanceof HTMLElement) delete body.dataset.staticLoading;
+    pagers.forEach((pager) => {
       if (pager.dataset.staticLoadingPager !== "true") return;
       const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
       const previousDisplay = pager.dataset.staticLoadingPreviousDisplay || "";
@@ -234,6 +236,7 @@
         pager.style.removeProperty("display");
       }
     });
+    pagerObservedDataLoading = false;
     return true;
   }
 
@@ -506,7 +509,7 @@
     subtree: true,
     attributes: true,
     characterData: true,
-    attributeFilter: ["hidden", "data-page"],
+    attributeFilter: ["hidden", "data-page", "class"],
   });
   window.addEventListener("pointerdown", onNavigationIntent, true);
   window.addEventListener("pointerup", onPointerUp, true);

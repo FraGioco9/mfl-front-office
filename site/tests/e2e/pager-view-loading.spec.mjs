@@ -4,7 +4,7 @@ async function waitForArchitecture(page) {
   await page.waitForFunction(() => globalThis.document.documentElement.dataset.mflReady === "true");
 }
 
-test("pager hides on view pointer intent and returns only after table loading settles", async ({ page }) => {
+test("pager hides on view pointer intent and returns only after data loading settles", async ({ page }) => {
   await page.goto("/database/attributes");
   await waitForArchitecture(page);
 
@@ -24,6 +24,11 @@ test("pager hides on view pointer intent and returns only after table loading se
   await expect(pager).toBeHidden();
   await expect(body.locator(":scope > .staticTableLoadingRow")).toBeVisible();
 
+  await page.evaluate(() => {
+    globalThis.document.documentElement.classList.add("mflDataLoading");
+  });
+  await expect(pager).toBeHidden();
+
   await body.evaluate((node) => {
     const row = globalThis.document.createElement("tr");
     const cell = globalThis.document.createElement("td");
@@ -35,6 +40,11 @@ test("pager hides on view pointer intent and returns only after table loading se
       empty.hidden = true;
       empty.textContent = "";
     }
+  });
+  await expect(pager).toBeHidden();
+
+  await page.evaluate(() => {
+    globalThis.document.documentElement.classList.remove("mflDataLoading");
   });
 
   await expect(pager).toBeVisible();
