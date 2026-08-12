@@ -2,6 +2,8 @@
   "use strict";
 
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
+  const MOBILE_LAYOUT = "(max-width: 900px)";
+  const MOBILE_TABLE_MIN_WIDTH = 1240;
   const WIDTHS = Object.freeze({
     "col-select": 3,
     "col-id": 3,
@@ -26,6 +28,7 @@
   previous?.destroy?.();
 
   let observer = null;
+  let applyFrame = 0;
   let cachedScrollbarWidth = null;
   let destroyed = false;
 
@@ -35,9 +38,17 @@
       || ["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"].includes(page);
   }
 
+  function mobileLayoutActive() {
+    return window.matchMedia(MOBILE_LAYOUT).matches;
+  }
+
   function pinnedSidebarWidth() {
     const rail = document.querySelector("#menuRail");
-    return rail && !rail.hidden ? 190 : 0;
+    if (!rail || rail.hidden) return 0;
+    const value = parseFloat(
+      window.getComputedStyle(document.documentElement).getPropertyValue("--pinned-sidebar-width"),
+    );
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
   }
 
   function browserScrollbarWidth() {
@@ -95,6 +106,30 @@
     });
   }
 
+  function applyMobileContainers(page, visibleWidth) {
+    const exactVisibleWidth = `${visibleWidth.toFixed(4)}px`;
+    const shell = page.querySelector(".tableShell");
+    const scroller = page.querySelector(".tableScroller");
+
+    if (shell instanceof HTMLElement) {
+      shell.style.setProperty("width", exactVisibleWidth, "important");
+      shell.style.setProperty("min-width", exactVisibleWidth, "important");
+      shell.style.setProperty("max-width", exactVisibleWidth, "important");
+      shell.style.setProperty("box-sizing", "border-box", "important");
+      shell.style.setProperty("overflow", "hidden", "important");
+    }
+
+    if (scroller instanceof HTMLElement) {
+      scroller.style.setProperty("width", exactVisibleWidth, "important");
+      scroller.style.setProperty("min-width", exactVisibleWidth, "important");
+      scroller.style.setProperty("max-width", exactVisibleWidth, "important");
+      scroller.style.setProperty("box-sizing", "border-box", "important");
+      scroller.style.setProperty("overflow-x", "auto", "important");
+      scroller.style.setProperty("overflow-y", "hidden", "important");
+      scroller.style.setProperty("-webkit-overflow-scrolling", "touch");
+    }
+  }
+
   function applyFallbackWidths() {
     const page = document.querySelector("#progressionPage");
     const table = page?.querySelector(".tableScroller table");
@@ -111,7 +146,12 @@
     const totalPercentage = percentages.reduce((sum, width) => sum + width, 0);
     if (totalPercentage > 100.01) return false;
 
-    const exactWidth = `${contentWidth.toFixed(4)}px`;
+    const mobile = mobileLayoutActive();
+    const tableWidth = mobile ? Math.max(MOBILE_TABLE_MIN_WIDTH, contentWidth) : contentWidth;
+    if (mobile) applyMobileContainers(page, contentWidth);
+
+    const exactWidth = `${tableWidth.toFixed(4)}px`;
+    table.style.setProperty("table-layout", "fixed", "important");
     table.style.setProperty("width", exactWidth, "important");
     table.style.setProperty("min-width", exactWidth, "important");
     table.style.setProperty("max-width", exactWidth, "important");
@@ -120,7 +160,7 @@
 
     let assignedWidth = 0;
     columns.forEach((column, index) => {
-      const pixelWidth = contentWidth * percentages[index] / 100;
+      const pixelWidth = tableWidth * percentages[index] / 100;
       assignedWidth += pixelWidth;
       const width = `${pixelWidth.toFixed(4)}px`;
       column.style.setProperty("width", width, "important");
@@ -128,47 +168,95 @@
       column.style.setProperty("max-width", width, "important");
       column.style.setProperty("transition", "none", "important");
     });
-    appendFiller(table, Math.max(0, contentWidth - assignedWidth));
+    appendFiller(table, Math.max(0, tableWidth - assignedWidth));
     page.querySelector(".tableScroller")?.classList.add("tableWidthsReady");
     return true;
   }
 
   function apply() {
     if (destroyed || !tableRouteActive()) return false;
+    // Mobile has one authoritative owner: this early runtime. The legacy desktop
+    // table layout still runs for wide screens, but must never collapse or hide
+    // the phone scroller after startup.
+    if (mobileLayoutActive()) return applyFallbackWidths();
     if (typeof window.applyExactPlayerTableWidths === "function") {
       return Boolean(window.applyExactPlayerTableWidths());
     }
     return applyFallbackWidths();
   }
 
-  observer = new MutationObserver(() => {
-    // Child-list callbacks run before the next paint. When the loading runtime
-    // swaps the colgroup for a new view, give it the settled widths immediately.
-    apply();
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "data-page"],
-  });
+  function scheduleApply() {
+    window.cancelAnimationFrame(applyFrame);
+    applyFrame = window.requestAnimationFrame(() => {
+      applyFrame = 0;
+      apply();
+    });
+  }
 
-  window.addEventListener("resize", apply, { passive: true });
-  window.addEventListener("popstate", apply);
-  window.addEventListener("mfl:ready", apply);
+  function observe() {
+    observer?.disconnect();
+    observer = new MutationObserver(() => {
+      if (mobileLayoutActive()) scheduleApply();
+      else apply();
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden", "data-page"],
+    });
+  }
+
+  function onResize() {
+    cachedScrollbarWidth = null;
+    if (mobileLayoutActive()) scheduleApply();
+    else apply();
+  }
+
+  function onPopState() {
+    apply();
+  }
+
+  function onReady() {
+    takeOwnership();
+  }
+
+  function bindWindowEvents() {
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", onReady);
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("mfl:ready", onReady);
+  }
+
+  function takeOwnership() {
+    if (destroyed) return false;
+    // Re-register after legacy-core so its resize/mutation callbacks run first;
+    // the canonical mobile result is therefore the final result before paint.
+    observe();
+    bindWindowEvents();
+    return apply();
+  }
+
+  observe();
+  bindWindowEvents();
 
   function destroy() {
     destroyed = true;
+    window.cancelAnimationFrame(applyFrame);
+    applyFrame = 0;
     observer?.disconnect();
     observer = null;
-    window.removeEventListener("resize", apply);
-    window.removeEventListener("popstate", apply);
-    window.removeEventListener("mfl:ready", apply);
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", onReady);
   }
 
   window.__mflTableWidthPrimeRuntime = Object.freeze({
     widths: WIDTHS,
     apply,
+    takeOwnership,
     destroy,
   });
 
