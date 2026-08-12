@@ -5,11 +5,12 @@
 
   let destroyed = false;
   let frame = 0;
-  let observer = null;
+  const observers = [];
 
-  function evaluationDiscountRateElement() {
-    const element = document.getElementById("evaluationDiscountRate");
-    return element instanceof HTMLElement ? element : null;
+  function discountRateElements() {
+    return ["evaluationDiscountRate", "advancedDiscountRateValue"]
+      .map((id) => document.getElementById(id))
+      .filter((element) => element instanceof HTMLElement);
   }
 
   function evaluationDiscountMetric() {
@@ -28,14 +29,13 @@
     frame = 0;
     if (destroyed) return;
 
-    const value = evaluationDiscountRateElement();
-    if (!value) return;
-
     const authoritativeLabel = liveLabel();
     const nextLabel = authoritativeLabel || "-";
-    if (String(value.textContent || "").trim() !== nextLabel) {
-      value.textContent = nextLabel;
-    }
+    discountRateElements().forEach((element) => {
+      if (String(element.textContent || "").trim() !== nextLabel) {
+        element.textContent = nextLabel;
+      }
+    });
 
     if (!authoritativeLabel) {
       const metric = evaluationDiscountMetric();
@@ -48,26 +48,28 @@
     if (!destroyed && !frame) frame = requestAnimationFrame(sync);
   }
 
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    characterData: true,
+  discountRateElements().forEach((element) => {
+    const observer = new MutationObserver(schedule);
+    observer.observe(element, { childList: true, subtree: true, characterData: true });
+    observers.push(observer);
+  });
+
+  const sourceObserver = new MutationObserver(schedule);
+  sourceObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-mfl-discount-rate-source"],
   });
+  observers.push(sourceObserver);
 
   window.addEventListener("mfl:season-ratios-ready", schedule);
-  window.addEventListener("popstate", schedule);
   sync();
 
   function destroy() {
     destroyed = true;
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
-    observer?.disconnect();
+    observers.forEach((observer) => observer.disconnect());
     window.removeEventListener("mfl:season-ratios-ready", schedule);
-    window.removeEventListener("popstate", schedule);
   }
 
   window.__mflEvaluationDiscountRateGuard = Object.freeze({ sync: schedule, destroy });
