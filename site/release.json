@@ -1,4 +1,4 @@
 {
   "version": "1.124.0",
-  "description": "Make full search authoritative, keep validated deployments current, and stabilize table widths"
+  "description": "Add full mobile compatibility with responsive navigation, layouts, dialogs, and scrollable data tables"
 }
