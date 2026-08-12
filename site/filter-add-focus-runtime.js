@@ -17,6 +17,9 @@
   ].join(", ");
   let destroyed = false;
   let pointerFocusedControl = null;
+  let recentEvaluationResultNodes = [];
+  let recentEvaluationObserver = null;
+  const evaluationResultBusyTokens = new Set();
 
   function installStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -123,12 +126,88 @@
     return button instanceof HTMLButtonElement ? button : null;
   }
 
+  function evaluationSearchInput() {
+    const input = document.getElementById("evaluationSearchInput");
+    return input instanceof HTMLInputElement ? input : null;
+  }
+
+  function evaluationSearchResults() {
+    const results = document.getElementById("evaluationSearchResults");
+    return results instanceof HTMLElement ? results : null;
+  }
+
+  function evaluationResultId(button) {
+    if (!(button instanceof HTMLButtonElement)) return "";
+    const match = String(button.textContent || "").match(/#(\d+)/);
+    return match?.[1] || "";
+  }
+
+  function rememberVisibleEvaluationRecents() {
+    const input = evaluationSearchInput();
+    const results = evaluationSearchResults();
+    if (!input || input.value.trim() || !results) return;
+
+    const buttons = Array.from(results.querySelectorAll(":scope > .evaluationSearchResult"))
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (buttons.length) recentEvaluationResultNodes = buttons;
+  }
+
+  function rememberClickedEvaluationResult(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const playerId = evaluationResultId(button);
+    const remaining = recentEvaluationResultNodes.filter((candidate) => {
+      if (!(candidate instanceof HTMLButtonElement)) return false;
+      return !playerId || evaluationResultId(candidate) !== playerId;
+    });
+    recentEvaluationResultNodes = [button, ...remaining].slice(0, 5);
+  }
+
+  function restoreRecentEvaluationResultsIfEmpty() {
+    if (destroyed || !recentEvaluationResultNodes.length) return false;
+    const input = evaluationSearchInput();
+    const results = evaluationSearchResults();
+    if (!input || input.value.trim() || !results) return false;
+
+    const nodes = recentEvaluationResultNodes
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (!nodes.length) return false;
+    results.replaceChildren(...nodes);
+    results.hidden = false;
+    return true;
+  }
+
+  function releaseEvaluationResultBusyToken(token) {
+    if (!token || !evaluationResultBusyTokens.has(token)) return;
+    evaluationResultBusyTokens.delete(token);
+    window.__mflInteractionBusy?.end?.(token);
+  }
+
+  function primeEvaluationResultBusy(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const controller = window.__mflInteractionBusy;
+    if (!controller?.begin || !controller?.end) return;
+
+    const token = controller.begin("evaluation-result-selection");
+    if (!token) return;
+    evaluationResultBusyTokens.add(token);
+
+    // The trusted click is already being dispatched, so the interaction shield
+    // cannot swallow it. Two render frames cover cached Evaluation routes; a
+    // network route has already entered its normal withInteractionBusy token by
+    // then, so releasing this pre-selection token cannot expose hover states.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => releaseEvaluationResultBusyToken(token));
+    });
+  }
+
   function clearEvaluationSearchFromButton(event, target) {
     const button = target?.closest?.("#evaluationSearchClearButton");
     if (!(button instanceof HTMLButtonElement)) return false;
 
-    const input = document.getElementById("evaluationSearchInput");
-    if (!(input instanceof HTMLInputElement)) return false;
+    const input = evaluationSearchInput();
+    if (!input) return false;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -152,12 +231,21 @@
     } catch {
       // The input event above still restores the normal recent-results path.
     }
+    restoreRecentEvaluationResultsIfEmpty();
     return true;
   }
 
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (clearEvaluationSearchFromButton(event, target)) return;
+
+    const evaluationResult = target?.closest?.("#evaluationSearchResults .evaluationSearchResult");
+    if (evaluationResult instanceof HTMLButtonElement && !evaluationResult.disabled) {
+      rememberClickedEvaluationResult(evaluationResult);
+      primeEvaluationResultBusy(evaluationResult);
+      return;
+    }
+
     if (!target?.closest("#showAddFilterButton")) return;
 
     const select = addFilterSelect();
@@ -172,6 +260,15 @@
 
     const button = showAddFilterButton();
     if (button && document.activeElement === button) button.blur();
+  }
+
+  function onInput(event) {
+    const input = evaluationSearchInput();
+    if (!input || event.target !== input || input.value.trim()) return;
+    // This capture listener runs before the authoritative Evaluation input owner.
+    // Restore after the event completes so an empty query always ends with the
+    // recent five visible, including when the user backspaces typed text away.
+    queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
   }
 
   function onChange(event) {
@@ -243,22 +340,42 @@
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (pointerFocusedControl && target !== pointerFocusedControl) pointerFocusedControl = null;
 
+    if (target === evaluationSearchInput() && !target.value.trim()) {
+      queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
+    }
+
     const control = neutralControlFromTarget(event.target);
     if (control && document.activeElement === control) control.blur();
   }
 
+  function observeEvaluationRecentResults() {
+    const results = evaluationSearchResults();
+    if (!results) return;
+    recentEvaluationObserver?.disconnect();
+    recentEvaluationObserver = new MutationObserver(rememberVisibleEvaluationRecents);
+    recentEvaluationObserver.observe(results, { childList: true });
+    rememberVisibleEvaluationRecents();
+  }
+
   installStyles();
   document.addEventListener("click", onClick, true);
+  document.addEventListener("input", onInput, true);
   document.addEventListener("change", onChange, true);
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn, true);
+  observeEvaluationRecentResults();
 
   function destroy() {
     destroyed = true;
     pointerFocusedControl = null;
+    recentEvaluationObserver?.disconnect();
+    recentEvaluationObserver = null;
+    evaluationResultBusyTokens.forEach((token) => window.__mflInteractionBusy?.end?.(token));
+    evaluationResultBusyTokens.clear();
     document.removeEventListener("click", onClick, true);
+    document.removeEventListener("input", onInput, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerout", onPointerOut, true);
