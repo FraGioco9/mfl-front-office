@@ -200,7 +200,9 @@ function authoritativeEvaluationDiscountRateValue() {
 
 function authoritativeEvaluationDiscountRateLabel() {
   const rate = authoritativeEvaluationDiscountRateValue();
-  return Number.isFinite(rate) ? `${(rate * 100).toFixed(2)}%` : "";
+  return typeof rate === "number" && Number.isFinite(rate)
+    ? `${(rate * 100).toFixed(2)}%`
+    : "";
 }
 
 function clearNonAuthoritativeDiscountRate() {
