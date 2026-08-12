@@ -186,6 +186,23 @@ function evaluationDiscountRateIsLive() {
   return document.documentElement.dataset.mflDiscountRateSource === "supabase-live-request";
 }
 
+function authoritativeEvaluationDiscountRateValue() {
+  const resultRate = Number(runtimeWindow.__mflDynamicDiscountResult?.rate);
+  if (Number.isFinite(resultRate)) return resultRate;
+
+  const liveFunction = runtimeWindow.__mflSupabaseDiscountRateFunction;
+  if (typeof liveFunction === "function" && liveFunction !== authoritativeEvaluationDiscountRateValue) {
+    const liveRate = Number(liveFunction());
+    if (Number.isFinite(liveRate)) return liveRate;
+  }
+  return null;
+}
+
+function authoritativeEvaluationDiscountRateLabel() {
+  const rate = authoritativeEvaluationDiscountRateValue();
+  return Number.isFinite(rate) ? `${(rate * 100).toFixed(2)}%` : "";
+}
+
 function clearNonAuthoritativeDiscountRate() {
   const discountRate = document.getElementById("evaluationDiscountRate");
   const advancedRate = document.getElementById("advancedDiscountRateValue");
@@ -205,6 +222,20 @@ function clearNonAuthoritativeDiscountRate() {
   document.documentElement.classList.remove("mflEvaluationRateResolved");
 }
 
+function paintAuthoritativeDiscountRate(label) {
+  const discountRate = document.getElementById("evaluationDiscountRate");
+  const advancedRate = document.getElementById("advancedDiscountRateValue");
+  if (discountRate instanceof HTMLElement && discountRate.textContent !== label) {
+    discountRate.textContent = label;
+  }
+  if (advancedRate instanceof HTMLElement && advancedRate.textContent !== label) {
+    advancedRate.textContent = label;
+  }
+  if (document.documentElement.dataset.mflDiscountRate !== label) {
+    document.documentElement.dataset.mflDiscountRate = label;
+  }
+}
+
 function syncEvaluationDiscountRateAuthority() {
   const active = evaluationRouteActive();
   if (active && !evaluationDiscountRouteActive) {
@@ -214,7 +245,12 @@ function syncEvaluationDiscountRateAuthority() {
   evaluationDiscountRouteActive = active;
   if (!active) return;
 
-  if (!evaluationDiscountRateIsLive()) clearNonAuthoritativeDiscountRate();
+  const authoritativeLabel = authoritativeEvaluationDiscountRateLabel();
+  if (!evaluationDiscountRateIsLive() || !authoritativeLabel) {
+    clearNonAuthoritativeDiscountRate();
+  } else {
+    paintAuthoritativeDiscountRate(authoritativeLabel);
+  }
 
   const discountRate = document.getElementById("evaluationDiscountRate");
   if (discountRate instanceof HTMLElement) {
@@ -241,18 +277,6 @@ function installEvaluationDiscountRateAuthorityGuard() {
   });
   window.addEventListener("popstate", syncEvaluationDiscountRateAuthority);
   window.addEventListener("mfl:season-ratios-ready", syncEvaluationDiscountRateAuthority);
-}
-
-function authoritativeEvaluationDiscountRateValue() {
-  const resultRate = Number(runtimeWindow.__mflDynamicDiscountResult?.rate);
-  if (Number.isFinite(resultRate)) return resultRate;
-
-  const liveFunction = runtimeWindow.__mflSupabaseDiscountRateFunction;
-  if (typeof liveFunction === "function" && liveFunction !== authoritativeEvaluationDiscountRateValue) {
-    const liveRate = Number(liveFunction());
-    if (Number.isFinite(liveRate)) return liveRate;
-  }
-  return null;
 }
 
 function installEvaluationDiscountRateFunctionAuthority() {
