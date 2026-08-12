@@ -1,4 +1,4 @@
-name: Full database and site update
+name: Full database refresh
 
 on:
   schedule:
