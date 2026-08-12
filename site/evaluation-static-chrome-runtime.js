@@ -11,6 +11,7 @@
   let seededMflPerUsd = false;
   let focusQueued = false;
   let evaluationBusyToken = "";
+  let searchFocusDismissed = false;
 
   function cleanPath() {
     return String(location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -181,8 +182,27 @@
     delete input.dataset.staticFocusGuard;
   }
 
+  function renderEmptyEvaluationRecents() {
+    const input = document.getElementById("evaluationSearchInput");
+    if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
+    try {
+      if (typeof window.renderEvaluationSearchResults === "function") {
+        window.renderEvaluationSearchResults();
+      } else {
+        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
+      }
+    } catch (error) {
+      console.warn("Could not keep recent Evaluation results visible.", error);
+    }
+  }
+
   function focusEmptyEvaluationWhenReady() {
-    if (focusQueued || !evaluationReady() || hasSelectedEvaluation() || globalSearchOpen() || mflUsdEditorOpen()) return;
+    if (focusQueued
+      || searchFocusDismissed
+      || !evaluationReady()
+      || hasSelectedEvaluation()
+      || globalSearchOpen()
+      || mflUsdEditorOpen()) return;
     const input = document.getElementById("evaluationSearchInput");
     if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
 
@@ -190,14 +210,25 @@
     requestAnimationFrame(() => {
       focusQueued = false;
       syncSearchFocusGuard();
-      if (!evaluationReady() || hasSelectedEvaluation() || input.value.trim() || globalSearchOpen() || mflUsdEditorOpen()) return;
+      if (searchFocusDismissed
+        || !evaluationReady()
+        || hasSelectedEvaluation()
+        || input.value.trim()
+        || globalSearchOpen()
+        || mflUsdEditorOpen()) return;
       input.focus({ preventScroll: true });
     });
   }
 
   function guardEvaluationFocus(event) {
     const input = document.getElementById("evaluationSearchInput");
-    if (event.target !== input || evaluationReady()) return;
+    if (event.target !== input) return;
+    if (searchFocusDismissed) {
+      input.blur();
+      renderEmptyEvaluationRecents();
+      return;
+    }
+    if (evaluationReady()) return;
     input.blur();
     keepStaticPosition();
   }
@@ -213,6 +244,36 @@
     // Preventing the mousedown default preserves the original trusted click
     // handler on the result button instead of forwarding or synthesizing one.
     event.preventDefault();
+  }
+
+  function evaluationSearchInteraction(target) {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest(
+      "#evaluationSearchInput, #evaluationSearchClearButton, #evaluationSearchResults",
+    ));
+  }
+
+  function handleEvaluationSearchPointerIntent(event) {
+    if (event.button !== 0 || !evaluationActive()) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (evaluationSearchInteraction(target)) {
+      if (target?.closest("#evaluationSearchInput, #evaluationSearchClearButton")) {
+        searchFocusDismissed = false;
+      }
+      return;
+    }
+
+    searchFocusDismissed = true;
+    const input = document.getElementById("evaluationSearchInput");
+    if (input instanceof HTMLInputElement && document.activeElement === input) {
+      input.blur();
+    }
+    queueMicrotask(renderEmptyEvaluationRecents);
+  }
+
+  function allowKeyboardSearchFocus(event) {
+    if (!evaluationActive() || event.key !== "Tab") return;
+    searchFocusDismissed = false;
   }
 
   function releaseSearchForMflUsdEdit(event) {
@@ -299,6 +360,7 @@
   function clearRouteState() {
     document.documentElement.classList.remove("mflEvaluationInitialLoadVisible", "mflEvaluationReady");
     document.body?.classList.remove("evaluationStaticChromeReady");
+    searchFocusDismissed = false;
     if (evaluationBusyToken) {
       window.__mflInteractionBusy?.end?.(evaluationBusyToken);
       evaluationBusyToken = "";
@@ -371,7 +433,9 @@
 
   document.addEventListener("focusin", guardEvaluationFocus, true);
   document.addEventListener("mousedown", preserveEvaluationResultClick, true);
+  document.addEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
   document.addEventListener("mousedown", releaseSearchForMflUsdEdit, true);
+  document.addEventListener("keydown", allowKeyboardSearchFocus, true);
   observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, {
     childList: true,
@@ -390,7 +454,9 @@
     observer?.disconnect();
     document.removeEventListener("focusin", guardEvaluationFocus, true);
     document.removeEventListener("mousedown", preserveEvaluationResultClick, true);
+    document.removeEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
     document.removeEventListener("mousedown", releaseSearchForMflUsdEdit, true);
+    document.removeEventListener("keydown", allowKeyboardSearchFocus, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
     window.removeEventListener("mfl:ready", schedule);
