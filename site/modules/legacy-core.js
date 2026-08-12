@@ -2667,7 +2667,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
 
-  if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
+  if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = !tablePage;
@@ -9688,7 +9688,6 @@ function incrementalRouteTarget(pageName, options = {}) {
   if (pageName === "database") return { ...base, scope: "database" };
   if (pageName === "progression") return { ...base, scope: "progression" };
   if (pageName === "mfl") return { ...base, scope: "mfl" };
-  if (pageName === "mflstats") return { ...base, scope: "mflstats", view: "stats" };
   if (pageName === "agents") {
     return {
       ...base,
@@ -9730,7 +9729,7 @@ function incrementalDataQuery(route, page = 1) {
     page: String(page),
     pageSize: String(["player", "evaluation"].includes(route.scope)
       ? 1
-      : ["club", "mflstats"].includes(route.scope)
+      : route.scope === "club"
         ? 5000
         : state.pageSize),
     sortKey: route.scope === "club" ? "positions" : state.sortKey,
