@@ -93,6 +93,23 @@ test("database production refreshes reuse the last explicitly published site sou
   assert.doesNotMatch(databaseDeploy, /--workflow site-quality\.yml/);
 });
 
+test("Vercel SQLite deployments bypass function caches and verify production freshness", async () => {
+  const siteDeploy = await readRepository(".github/workflows/vercel-site-update.yml");
+  const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
+
+  for (const workflow of [siteDeploy, databaseDeploy]) {
+    assert.match(workflow, /vercel deploy --prod --yes --force/);
+  }
+
+  assert.match(databaseDeploy, /Record expected database summary/);
+  assert.match(databaseDeploy, /Verify live production database/);
+  assert.match(databaseDeploy, /api\/data\?mode=summary/);
+  assert.match(databaseDeploy, /playerCount/);
+  assert.match(databaseDeploy, /walletCount/);
+  assert.match(databaseDeploy, /minimumGeneratedAt/);
+  assert.match(databaseDeploy, /Live production database verified/);
+});
+
 test("database production refresh resolves GitHub runs inside the checked-out builder repository", async () => {
   const databaseDeploy = await readRepository(".github/workflows/full-database-and-site-update.yml");
 
