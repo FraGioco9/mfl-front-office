@@ -17,11 +17,8 @@
   ].join(", ");
   let destroyed = false;
   let pointerFocusedControl = null;
-  let recentEvaluationResultNodes = [];
-  let recentEvaluationObserver = null;
-  let recentEvaluationRestoreFrame = 0;
-  let recentEvaluationRestoreSettleFrame = 0;
-  const evaluationResultBusyTokens = new Set();
+  let evaluationRecentRefreshSequence = 0;
+  const evaluationResultBusyCleanups = new Map();
 
   function installStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -39,8 +36,9 @@
         box-shadow: none;
       }
 
-      /* A busy page must not leave underlying controls eligible for hover.
-         The central busy overlay remains the sole pointer target. */
+      /* While the shared busy controller is active, the transparent busy
+         overlay is the only pointer target. This prevents controls underneath
+         it from acquiring :hover while their loading state is changing. */
       html.mflInteractionBusy body *,
       html.mflInteractionBusy body *::before,
       html.mflInteractionBusy body *::after {
@@ -146,77 +144,65 @@
     return results instanceof HTMLElement ? results : null;
   }
 
-  function evaluationResultId(button) {
-    if (!(button instanceof HTMLButtonElement)) return "";
-    const match = String(button.textContent || "").match(/#(\d+)/);
-    return match?.[1] || "";
-  }
-
-  function rememberVisibleEvaluationRecents() {
-    const input = evaluationSearchInput();
-    const results = evaluationSearchResults();
-    if (!input || input.value.trim() || !results) return;
-
-    const buttons = Array.from(results.querySelectorAll(":scope > .evaluationSearchResult"))
-      .filter((button) => button instanceof HTMLButtonElement)
-      .slice(0, 5);
-    if (!buttons.length) return;
-
-    // Authoritative typed search replaces the in-memory Evaluation index. While
-    // the input is being cleared the legacy renderer can therefore produce only
-    // a partial recent list. Never let that transient subset shrink a fuller
-    // last-five cache.
-    if (!recentEvaluationResultNodes.length || buttons.length >= recentEvaluationResultNodes.length) {
-      recentEvaluationResultNodes = buttons;
+  function renderEvaluationRecentResults() {
+    try {
+      if (typeof window.renderEvaluationSearchResults === "function") {
+        window.renderEvaluationSearchResults();
+      } else {
+        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
+      }
+    } catch (error) {
+      console.warn("Could not render recent Evaluation results.", error);
     }
   }
 
-  function rememberClickedEvaluationResult(button) {
-    if (!(button instanceof HTMLButtonElement)) return;
-    const playerId = evaluationResultId(button);
-    const remaining = recentEvaluationResultNodes.filter((candidate) => {
-      if (!(candidate instanceof HTMLButtonElement)) return false;
-      return !playerId || evaluationResultId(candidate) !== playerId;
-    });
-    recentEvaluationResultNodes = [button, ...remaining].slice(0, 5);
+  function requestFreshEvaluationRecents() {
+    try {
+      if (typeof window.requestDatabaseSearch === "function") {
+        return window.requestDatabaseSearch("", "players", { force: true });
+      }
+      return window.eval(
+        "typeof requestDatabaseSearch === 'function' ? requestDatabaseSearch('', 'players', { force: true }) : Promise.resolve(false)",
+      );
+    } catch {
+      return Promise.resolve(false);
+    }
   }
 
-  function restoreRecentEvaluationResultsIfEmpty() {
-    if (destroyed || !recentEvaluationResultNodes.length) return false;
+  async function refreshEvaluationRecentsIfEmpty() {
     const input = evaluationSearchInput();
-    const results = evaluationSearchResults();
-    if (!input || input.value.trim() || !results) return false;
+    if (destroyed || !input || input.value.trim()) return false;
 
-    const nodes = recentEvaluationResultNodes
-      .filter((button) => button instanceof HTMLButtonElement)
-      .slice(0, 5);
-    if (!nodes.length) return false;
-    results.replaceChildren(...nodes);
-    results.hidden = false;
+    const refreshSequence = ++evaluationRecentRefreshSequence;
+    try {
+      await Promise.resolve(requestFreshEvaluationRecents());
+    } catch (error) {
+      console.warn(error?.message || "Could not reload recent Evaluation results.");
+    }
+
+    if (destroyed || refreshSequence !== evaluationRecentRefreshSequence || input.value.trim()) return false;
+    renderEvaluationRecentResults();
     return true;
   }
 
-  function scheduleRecentEvaluationRestore() {
+  function scheduleEvaluationRecentRefresh() {
     if (destroyed) return;
-    queueMicrotask(restoreRecentEvaluationResultsIfEmpty);
-
-    if (recentEvaluationRestoreFrame) cancelAnimationFrame(recentEvaluationRestoreFrame);
-    if (recentEvaluationRestoreSettleFrame) cancelAnimationFrame(recentEvaluationRestoreSettleFrame);
-    recentEvaluationRestoreSettleFrame = 0;
-
-    recentEvaluationRestoreFrame = requestAnimationFrame(() => {
-      recentEvaluationRestoreFrame = 0;
-      restoreRecentEvaluationResultsIfEmpty();
-      recentEvaluationRestoreSettleFrame = requestAnimationFrame(() => {
-        recentEvaluationRestoreSettleFrame = 0;
-        restoreRecentEvaluationResultsIfEmpty();
-      });
+    const refreshSequence = ++evaluationRecentRefreshSequence;
+    queueMicrotask(() => {
+      if (destroyed || refreshSequence !== evaluationRecentRefreshSequence) return;
+      // The authoritative Evaluation input handler has now cancelled the typed
+      // query and reset the selection. Re-query the saved recent player ids so
+      // the typed-search result index cannot determine the empty-search list.
+      evaluationRecentRefreshSequence -= 1;
+      void refreshEvaluationRecentsIfEmpty();
     });
   }
 
   function releaseEvaluationResultBusyToken(token) {
-    if (!token || !evaluationResultBusyTokens.has(token)) return;
-    evaluationResultBusyTokens.delete(token);
+    if (!token) return;
+    const cleanup = evaluationResultBusyCleanups.get(token);
+    if (cleanup) cleanup();
+    evaluationResultBusyCleanups.delete(token);
     window.__mflInteractionBusy?.end?.(token);
   }
 
@@ -227,26 +213,67 @@
 
     const token = controller.begin("evaluation-result-selection");
     if (!token) return;
-    evaluationResultBusyTokens.add(token);
 
-    const startedAt = performance.now();
+    const panel = document.getElementById("evaluationPanel");
+    let panelChanged = false;
     let sawRouteLoading = Boolean(document.body?.classList.contains("evaluationRouteLoading"));
-    const settle = () => {
-      if (destroyed || !evaluationResultBusyTokens.has(token)) return;
+    let releaseFrame = 0;
+    let releaseSettleFrame = 0;
+
+    const cleanup = () => {
+      panelObserver?.disconnect();
+      bodyObserver?.disconnect();
+      window.clearTimeout(fallbackTimer);
+      if (releaseFrame) cancelAnimationFrame(releaseFrame);
+      if (releaseSettleFrame) cancelAnimationFrame(releaseSettleFrame);
+      releaseFrame = 0;
+      releaseSettleFrame = 0;
+    };
+
+    const releaseAfterSettledFrames = () => {
+      if (!evaluationResultBusyCleanups.has(token) || releaseFrame) return;
+      releaseFrame = requestAnimationFrame(() => {
+        releaseFrame = 0;
+        releaseSettleFrame = requestAnimationFrame(() => {
+          releaseSettleFrame = 0;
+          releaseEvaluationResultBusyToken(token);
+        });
+      });
+    };
+
+    const maybeRelease = () => {
+      if (!evaluationResultBusyCleanups.has(token)) return;
       const routeLoading = Boolean(document.body?.classList.contains("evaluationRouteLoading"));
       if (routeLoading) sawRouteLoading = true;
+      if (routeLoading) return;
 
-      // Keep the pre-selection lock through the real Evaluation loading class.
-      // If the route was cached and never enters that class, retain it long
-      // enough for the result list/search clear control to settle under the
-      // pointer. Network loads also own their normal interaction-busy token.
-      if ((sawRouteLoading && !routeLoading) || (!sawRouteLoading && performance.now() - startedAt >= 240)) {
-        releaseEvaluationResultBusyToken(token);
-        return;
-      }
-      requestAnimationFrame(settle);
+      // A real panel mutation means the selected player's Evaluation has
+      // rendered. If the route used the stability loading class, wait for that
+      // class to end as well. The extra two frames keep the newly exposed search
+      // clear X non-interactive until the final layout has settled.
+      if (panelChanged || sawRouteLoading) releaseAfterSettledFrames();
     };
-    requestAnimationFrame(settle);
+
+    const panelObserver = panel instanceof HTMLElement
+      ? new MutationObserver(() => {
+        panelChanged = true;
+        maybeRelease();
+      })
+      : null;
+    panelObserver?.observe(panel, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+    });
+
+    const bodyObserver = new MutationObserver(maybeRelease);
+    if (document.body) bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+    // This is only a safety valve for an unexpected failed render. Normal
+    // network requests are bounded by the site's 60-second API timeout.
+    const fallbackTimer = window.setTimeout(() => releaseEvaluationResultBusyToken(token), 65_000);
+    evaluationResultBusyCleanups.set(token, cleanup);
   }
 
   function clearEvaluationSearchFromButton(event, target) {
@@ -261,24 +288,9 @@
 
     input.value = "";
     button.hidden = true;
-
-    // Let the authoritative Evaluation search owner cancel any pending query,
-    // clear the selected player, and restore its recent-result state.
     input.dispatchEvent(new Event("input", { bubbles: true }));
-
-    // Focus before the final render so the empty Evaluation search explicitly
-    // qualifies for recent results even while route state is being reset.
     input.focus({ preventScroll: true });
-    try {
-      if (typeof window.renderEvaluationSearchResults === "function") {
-        window.renderEvaluationSearchResults();
-      } else {
-        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
-      }
-    } catch {
-      // The input event above still restores the normal recent-results path.
-    }
-    scheduleRecentEvaluationRestore();
+    scheduleEvaluationRecentRefresh();
     return true;
   }
 
@@ -288,7 +300,6 @@
 
     const evaluationResult = target?.closest?.("#evaluationSearchResults .evaluationSearchResult");
     if (evaluationResult instanceof HTMLButtonElement && !evaluationResult.disabled) {
-      rememberClickedEvaluationResult(evaluationResult);
       primeEvaluationResultBusy(evaluationResult);
       return;
     }
@@ -311,11 +322,16 @@
 
   function onInput(event) {
     const input = evaluationSearchInput();
-    if (!input || event.target !== input || input.value.trim()) return;
-    // Treat deletion/backspacing to an empty string exactly like an untouched
-    // empty Evaluation search. Restore after both the authoritative input owner
-    // and the following render frame have had a chance to run.
-    scheduleRecentEvaluationRestore();
+    if (!input || event.target !== input) return;
+    if (input.value.trim()) {
+      evaluationRecentRefreshSequence += 1;
+      return;
+    }
+
+    // Deleting/backspacing the final character is the same state as opening an
+    // untouched empty Evaluation search. Reload the saved recent ids after the
+    // authoritative typed-search handler finishes processing this input event.
+    scheduleEvaluationRecentRefresh();
   }
 
   function onChange(event) {
@@ -387,21 +403,8 @@
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (pointerFocusedControl && target !== pointerFocusedControl) pointerFocusedControl = null;
 
-    if (target === evaluationSearchInput() && !target.value.trim()) {
-      scheduleRecentEvaluationRestore();
-    }
-
     const control = neutralControlFromTarget(event.target);
     if (control && document.activeElement === control) control.blur();
-  }
-
-  function observeEvaluationRecentResults() {
-    const results = evaluationSearchResults();
-    if (!results) return;
-    recentEvaluationObserver?.disconnect();
-    recentEvaluationObserver = new MutationObserver(rememberVisibleEvaluationRecents);
-    recentEvaluationObserver.observe(results, { childList: true });
-    rememberVisibleEvaluationRecents();
   }
 
   installStyles();
@@ -412,19 +415,12 @@
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn, true);
-  observeEvaluationRecentResults();
 
   function destroy() {
     destroyed = true;
     pointerFocusedControl = null;
-    recentEvaluationObserver?.disconnect();
-    recentEvaluationObserver = null;
-    if (recentEvaluationRestoreFrame) cancelAnimationFrame(recentEvaluationRestoreFrame);
-    if (recentEvaluationRestoreSettleFrame) cancelAnimationFrame(recentEvaluationRestoreSettleFrame);
-    recentEvaluationRestoreFrame = 0;
-    recentEvaluationRestoreSettleFrame = 0;
-    evaluationResultBusyTokens.forEach((token) => window.__mflInteractionBusy?.end?.(token));
-    evaluationResultBusyTokens.clear();
+    evaluationRecentRefreshSequence += 1;
+    Array.from(evaluationResultBusyCleanups.keys()).forEach(releaseEvaluationResultBusyToken);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("change", onChange, true);
