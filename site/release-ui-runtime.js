@@ -32,31 +32,42 @@
         border: 0 !important;
       }
 
-      /* Fade loading placeholders at the cell layer. Table-row opacity can be
-         flattened by table painting or later row rules, so keep the row fully
-         opaque and make each placeholder cell authoritative instead. */
-      #tableBody > .staticTableBlankRow {
+      /* Loading rows fade through their actual paint colors instead of element
+         opacity. This keeps cell backgrounds and collapsed row separators in
+         the same fade and makes every successive row visibly more transparent. */
+      #tableBody > .staticTableBlankRow,
+      #tableBody > .staticTableBlankRow > td {
         opacity: 1 !important;
       }
 
       #tableBody > .staticTableBlankRow[data-loading-row="1"] > td {
-        opacity: 0.90 !important;
+        background: color-mix(in srgb, var(--border-strong) 28%, transparent) !important;
+        background-image: none !important;
+        border-bottom-color: color-mix(in srgb, var(--border-strong) 85%, transparent) !important;
       }
 
       #tableBody > .staticTableBlankRow[data-loading-row="2"] > td {
-        opacity: 0.68 !important;
+        background: color-mix(in srgb, var(--border-strong) 21%, transparent) !important;
+        background-image: none !important;
+        border-bottom-color: color-mix(in srgb, var(--border-strong) 65%, transparent) !important;
       }
 
       #tableBody > .staticTableBlankRow[data-loading-row="3"] > td {
-        opacity: 0.46 !important;
+        background: color-mix(in srgb, var(--border-strong) 14%, transparent) !important;
+        background-image: none !important;
+        border-bottom-color: color-mix(in srgb, var(--border-strong) 45%, transparent) !important;
       }
 
       #tableBody > .staticTableBlankRow[data-loading-row="4"] > td {
-        opacity: 0.26 !important;
+        background: color-mix(in srgb, var(--border-strong) 8%, transparent) !important;
+        background-image: none !important;
+        border-bottom-color: color-mix(in srgb, var(--border-strong) 28%, transparent) !important;
       }
 
       #tableBody > .staticTableBlankRow[data-loading-row="5"] > td {
-        opacity: 0.10 !important;
+        background: color-mix(in srgb, var(--border-strong) 3%, transparent) !important;
+        background-image: none !important;
+        border-bottom-color: color-mix(in srgb, var(--border-strong) 12%, transparent) !important;
       }
     `;
     document.head.appendChild(style);
