@@ -361,14 +361,6 @@
     return routeFromPath();
   }
 
-  function beginNavigation(route) {
-    if (!route) return false;
-    navigationIntentRoute = route;
-    navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
-    syncSharedViewButtonPage(route.pageName);
-    return primeRoute(route);
-  }
-
   function sync() {
     frame = 0;
     if (destroyed || !tableContextActive()) return;
@@ -404,7 +396,12 @@
           button: sharedViewRoute.button,
         }
       : null;
-    beginNavigation(routeForTarget(target));
+    const route = routeForTarget(target);
+    if (!route) return;
+    navigationIntentRoute = route;
+    navigationIntentExpiresAt = performance.now() + NAVIGATION_INTENT_MS;
+    syncSharedViewButtonPage(route.pageName);
+    primeRoute(route);
   }
 
   function releaseInsideButton(event, button) {
@@ -448,13 +445,7 @@
   }
 
   function onClickCapture(event) {
-    if (!suppressPointerClick) {
-      if (event.detail === 0) {
-        const target = event.target instanceof Element ? event.target : null;
-        beginNavigation(routeForTarget(target));
-      }
-      return;
-    }
+    if (!suppressPointerClick) return;
     suppressPointerClick = false;
     if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
     suppressPointerClickTimer = 0;

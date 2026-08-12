@@ -14,5 +14,5 @@ test("table loading runtime owns pager visibility for view changes", async () =>
   assert.match(source, /function releasePagerWhenReady\(\)[\s\S]*pager\.hidden = previouslyHidden;/);
   assert.match(source, /function show\(\)[\s\S]*hidePagerForLoading\(\);/);
   assert.match(source, /function sync\(\)[\s\S]*releasePagerWhenReady\(\);/);
-  assert.match(source, /function onClickCapture\(event\)[\s\S]*event\.detail === 0[\s\S]*beginNavigation\(routeForTarget\(target\)\)/);
+  assert.match(source, /function onNavigationIntent\(event\)[\s\S]*primeRoute\(route\)/);
 });
