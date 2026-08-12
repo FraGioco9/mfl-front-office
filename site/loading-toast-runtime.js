@@ -20,9 +20,9 @@
       cursor: default !important;
     }
 
-    /* During loading the transparent page shield is the only pointer target.
-       This prevents clicks and also prevents underlying controls from entering
-       or leaving hover states as loading content changes beneath the pointer. */
+    /* Loading owns pointer interaction completely. Keeping the transparent
+       shield as the sole hit target also clears button hover states while the
+       underlying page changes. */
     html.mflInteractionBusy body *,
     html.mflInteractionBusy body *::before,
     html.mflInteractionBusy body *::after {
@@ -31,20 +31,33 @@
       animation: none !important;
     }
 
+    html.mflInteractionBusy body button,
+    html.mflInteractionBusy body button *,
+    html.mflInteractionBusy body [role="button"],
+    html.mflInteractionBusy body [role="button"] * {
+      transition: none !important;
+      animation: none !important;
+    }
+
+    /* Older route-specific CSS hides body::after on Evaluation and Stats.
+       Busy mode must win that conflict so Load, Reset, Filters, and every other
+       control are no longer hover targets until the last busy token ends. */
     html.mflInteractionBusy body::after {
+      content: "" !important;
+      display: block !important;
+      visibility: visible !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 2147483647 !important;
+      background: transparent !important;
       pointer-events: auto !important;
+      transition: none !important;
+      animation: none !important;
     }
 
     #${TOAST_ID} {
-      top: 50% !important;
-      bottom: auto !important;
-      transform: translate(-50%, -50%) !important;
       pointer-events: none !important;
       user-select: none;
-    }
-
-    #${TOAST_ID}.visible {
-      transform: translate(-50%, -50%) !important;
     }
   `;
   document.head.appendChild(style);
@@ -65,6 +78,19 @@
     return toast;
   }
 
+  function positionToast(toast) {
+    if (!(toast instanceof HTMLElement)) return;
+    const main = document.querySelector("main");
+    if (!(main instanceof HTMLElement)) {
+      toast.style.removeProperty("left");
+      return;
+    }
+
+    const rect = main.getBoundingClientRect();
+    if (!(rect.width > 0)) return;
+    toast.style.setProperty("left", `${rect.left + rect.width / 2}px`, "important");
+  }
+
   function interactionBusy() {
     const root = document.documentElement;
     return root.classList.contains("mflInteractionBusy")
@@ -74,6 +100,7 @@
   function sync() {
     if (destroyed || !document.body) return;
     const toast = ensureToast();
+    positionToast(toast);
     const busy = interactionBusy();
 
     if (busy) {
@@ -95,12 +122,14 @@
   });
 
   window.addEventListener("mfl:ready", sync);
+  window.addEventListener("resize", sync);
   sync();
 
   function destroy() {
     destroyed = true;
     observer?.disconnect();
     window.removeEventListener("mfl:ready", sync);
+    window.removeEventListener("resize", sync);
     document.getElementById(TOAST_ID)?.remove();
     style.remove();
   }
