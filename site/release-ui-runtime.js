@@ -31,6 +31,33 @@
       [role="button"]::-moz-focus-inner {
         border: 0 !important;
       }
+
+      /* Fade loading placeholders at the cell layer. Table-row opacity can be
+         flattened by table painting or later row rules, so keep the row fully
+         opaque and make each placeholder cell authoritative instead. */
+      #tableBody > .staticTableBlankRow {
+        opacity: 1 !important;
+      }
+
+      #tableBody > .staticTableBlankRow[data-loading-row="1"] > td {
+        opacity: 0.90 !important;
+      }
+
+      #tableBody > .staticTableBlankRow[data-loading-row="2"] > td {
+        opacity: 0.68 !important;
+      }
+
+      #tableBody > .staticTableBlankRow[data-loading-row="3"] > td {
+        opacity: 0.46 !important;
+      }
+
+      #tableBody > .staticTableBlankRow[data-loading-row="4"] > td {
+        opacity: 0.26 !important;
+      }
+
+      #tableBody > .staticTableBlankRow[data-loading-row="5"] > td {
+        opacity: 0.10 !important;
+      }
     `;
     document.head.appendChild(style);
   }
