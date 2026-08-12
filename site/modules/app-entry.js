@@ -187,13 +187,13 @@ function evaluationDiscountRateIsLive() {
 }
 
 function authoritativeEvaluationDiscountRateValue() {
-  const resultRate = Number(runtimeWindow.__mflDynamicDiscountResult?.rate);
-  if (Number.isFinite(resultRate)) return resultRate;
+  const resultRate = runtimeWindow.__mflDynamicDiscountResult?.rate;
+  if (typeof resultRate === "number" && Number.isFinite(resultRate)) return resultRate;
 
   const liveFunction = runtimeWindow.__mflSupabaseDiscountRateFunction;
   if (typeof liveFunction === "function" && liveFunction !== authoritativeEvaluationDiscountRateValue) {
-    const liveRate = Number(liveFunction());
-    if (Number.isFinite(liveRate)) return liveRate;
+    const liveRate = liveFunction();
+    if (typeof liveRate === "number" && Number.isFinite(liveRate)) return liveRate;
   }
   return null;
 }
