@@ -38,6 +38,8 @@
   let lastTablePage = "";
   let frame = 0;
   let observer = null;
+  let pageSizePointerActive = false;
+  let pageSizePointerStartedFocused = false;
 
   function normalizePageName(value) {
     const page = String(value || "").toLowerCase();
@@ -258,15 +260,52 @@
     document.head.appendChild(style);
   }
 
+  function pageSizeSelectFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const select = target.closest("#pageSizeSelect");
+    return select instanceof HTMLSelectElement ? select : null;
+  }
+
+  function releasePageSizeSelectFocus(select) {
+    queueMicrotask(() => {
+      if (!destroyed && document.activeElement === select) select.blur();
+    });
+  }
+
   function onPointerDown(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    const pageSizeSelect = pageSizeSelectFromTarget(target);
+    if (pageSizeSelect) {
+      pageSizePointerActive = true;
+      pageSizePointerStartedFocused = document.activeElement === pageSizeSelect;
+    } else {
+      pageSizePointerActive = false;
+      pageSizePointerStartedFocused = false;
+    }
     const nav = target.closest("#sidebar .navButton[data-page]");
     if (nav instanceof HTMLElement) {
       const destination = normalizePageName(nav.dataset.page);
       if (VIEW_ORDER[destination]) primeTableChrome(destination);
     }
     syncWaitHover(target);
+  }
+
+  function onClick(event) {
+    const select = pageSizeSelectFromTarget(event.target);
+    if (!(select instanceof HTMLSelectElement)) return;
+    if (pageSizePointerActive && pageSizePointerStartedFocused) {
+      releasePageSizeSelectFocus(select);
+    }
+    pageSizePointerStartedFocused = false;
+  }
+
+  function onChange(event) {
+    const select = pageSizeSelectFromTarget(event.target);
+    if (!(select instanceof HTMLSelectElement) || !pageSizePointerActive) return;
+    releasePageSizeSelectFocus(select);
+    pageSizePointerActive = false;
+    pageSizePointerStartedFocused = false;
   }
 
   function onPointerActivity(event) {
@@ -286,6 +325,8 @@
   syncWaitHover();
 
   document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("click", onClick, true);
+  document.addEventListener("change", onChange, true);
   document.addEventListener("pointerover", onPointerActivity, true);
   document.addEventListener("pointermove", onPointerActivity, true);
   window.addEventListener("popstate", onPopState);
@@ -312,6 +353,8 @@
     observer?.disconnect();
     observer = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("click", onClick, true);
+    document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
     window.removeEventListener("popstate", onPopState);
