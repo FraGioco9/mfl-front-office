@@ -130,6 +130,18 @@
     }
   }
 
+  function mobileLayoutIntact() {
+    const page = document.querySelector("#progressionPage");
+    const scroller = page?.querySelector(".tableScroller");
+    const table = scroller?.querySelector("table");
+    if (!page || page.hidden || !(scroller instanceof HTMLElement) || !(table instanceof HTMLTableElement)) {
+      return true;
+    }
+    const overflowX = window.getComputedStyle(scroller).overflowX;
+    return ["auto", "scroll"].includes(overflowX)
+      && table.getBoundingClientRect().width >= MOBILE_TABLE_MIN_WIDTH - 1;
+  }
+
   function applyFallbackWidths() {
     const page = document.querySelector("#progressionPage");
     const table = page?.querySelector(".tableScroller table");
@@ -193,17 +205,35 @@
     });
   }
 
+  function mobileStyleMutation(records) {
+    return records.some((record) => {
+      if (record.type !== "attributes" || record.attributeName !== "style") return false;
+      const target = record.target;
+      return target instanceof Element && Boolean(target.closest("#progressionPage .tableShell"));
+    });
+  }
+
   function observe() {
     observer?.disconnect();
-    observer = new MutationObserver(() => {
-      if (mobileLayoutActive()) scheduleApply();
-      else apply();
+    observer = new MutationObserver((records) => {
+      if (mobileLayoutActive()) {
+        // Legacy desktop rendering still owns wide-screen exact widths. If it
+        // writes inline table styles on a phone, repair that mutation in the
+        // same microtask checkpoint so no later task can observe the conflict.
+        if (mobileStyleMutation(records)) {
+          if (!mobileLayoutIntact()) applyFallbackWidths();
+          return;
+        }
+        scheduleApply();
+        return;
+      }
+      apply();
     });
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["hidden", "data-page"],
+      attributeFilter: ["hidden", "data-page", "style"],
     });
   }
 
