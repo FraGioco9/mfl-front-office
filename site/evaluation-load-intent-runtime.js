@@ -5,6 +5,7 @@
   previous?.destroy?.();
 
   const WAIT_CLASS = "evaluationLoadIntent";
+  const LOCK_CLASS = "evaluationLoadInteractionLocked";
   const LOADING_TEXT = "Loading saved evaluations...";
   let destroyed = false;
   let loadClicked = false;
@@ -52,11 +53,16 @@
     return true;
   }
 
+  function lockInteractions() {
+    if (!evaluationActive() || !document.body) return;
+    document.body.classList.add(LOCK_CLASS);
+  }
+
   function finishWait() {
     loadClicked = false;
     if (releaseTimer) window.clearTimeout(releaseTimer);
     releaseTimer = 0;
-    document.body?.classList.remove(WAIT_CLASS);
+    document.body?.classList.remove(WAIT_CLASS, LOCK_CLASS);
   }
 
   function appBusy() {
@@ -94,6 +100,9 @@
     if (!loadButtonFromTarget(event.target)) return;
     if (!beginWait()) return;
     loadClicked = true;
+    // The initiating click has already been targeted, so locking here still lets
+    // the legacy Load evaluations handler run while blocking every later input.
+    lockInteractions();
     queueMicrotask(syncLoadState);
   }
 
@@ -124,6 +133,26 @@
     body.${WAIT_CLASS} *::before,
     body.${WAIT_CLASS} *::after {
       cursor: wait !important;
+    }
+
+    body[data-page="evaluation"].${LOCK_CLASS} *,
+    body[data-page="evaluation"].${LOCK_CLASS} *::before,
+    body[data-page="evaluation"].${LOCK_CLASS} *::after {
+      pointer-events: none !important;
+      transition: none !important;
+      animation: none !important;
+    }
+
+    body[data-page="evaluation"].${LOCK_CLASS}::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      background: transparent;
+      pointer-events: auto !important;
+      cursor: wait !important;
+      transition: none !important;
+      animation: none !important;
     }
   `;
   document.head.appendChild(style);
