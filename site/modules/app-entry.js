@@ -108,6 +108,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/view-button-visibility-runtime.js",
   "/database-static-filter-runtime.js",
   "/filter-add-focus-runtime.js",
+  "/evaluation-mfl-usd-input-runtime.js",
   "/nationality-filter-options-runtime.js",
   "/global-search-runtime.js",
   "/startup-integrity-runtime.js",
