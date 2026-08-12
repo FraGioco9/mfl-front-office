@@ -103,6 +103,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
   "/evaluation-static-chrome-runtime.js",
+  "/evaluation-load-intent-runtime.js",
   "/mfl-stats-first-paint-runtime.js",
   "/view-button-visibility-runtime.js",
   "/database-static-filter-runtime.js",
