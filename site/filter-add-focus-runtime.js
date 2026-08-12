@@ -6,7 +6,17 @@
 
   const NEUTRAL_ATTRIBUTE = "data-mfl-initial-filter-neutral";
   const STYLE_ID = "mflFilterAddFocusRuntimeStyles";
+  const POINTER_ESCAPE_CONTROL_SELECTOR = [
+    "button",
+    'input[type="button"]',
+    'input[type="submit"]',
+    'input[type="reset"]',
+    'input[type="checkbox"]',
+    'input[type="radio"]',
+    '[role="button"]',
+  ].join(", ");
   let destroyed = false;
+  let pointerFocusedControl = null;
 
   function installStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -149,8 +159,21 @@
     return control instanceof HTMLElement ? control : null;
   }
 
+  function pointerControlFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const direct = target.closest(POINTER_ESCAPE_CONTROL_SELECTOR);
+    if (direct instanceof HTMLElement) return direct;
+
+    const label = target.closest("label");
+    const control = label instanceof HTMLLabelElement ? label.control : null;
+    return control instanceof HTMLElement && control.matches(POINTER_ESCAPE_CONTROL_SELECTOR)
+      ? control
+      : null;
+  }
+
   function onPointerDown(event) {
     clearInitialNeutral(neutralControlFromTarget(event.target));
+    pointerFocusedControl = pointerControlFromTarget(event.target);
   }
 
   function onPointerOut(event) {
@@ -162,12 +185,27 @@
   }
 
   function onKeyDown(event) {
+    if (event.key === "Escape") {
+      const active = document.activeElement;
+      if (pointerFocusedControl && active === pointerFocusedControl) {
+        pointerFocusedControl.blur();
+        pointerFocusedControl = null;
+      }
+    } else if (!event.metaKey && !event.ctrlKey && !event.altKey) {
+      // Once the user deliberately returns to keyboard navigation, leave native
+      // focus-visible behavior intact for accessibility.
+      pointerFocusedControl = null;
+    }
+
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#filtersModal")) return;
     document.querySelectorAll(`#filtersModal [${NEUTRAL_ATTRIBUTE}="true"]`).forEach(clearInitialNeutral);
   }
 
   function onFocusIn(event) {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (pointerFocusedControl && target !== pointerFocusedControl) pointerFocusedControl = null;
+
     const control = neutralControlFromTarget(event.target);
     if (control && document.activeElement === control) control.blur();
   }
@@ -182,6 +220,7 @@
 
   function destroy() {
     destroyed = true;
+    pointerFocusedControl = null;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
