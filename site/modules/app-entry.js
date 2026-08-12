@@ -99,6 +99,7 @@ function preloadClassicScript(path) {
 }
 
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
+  "/loading-toast-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
