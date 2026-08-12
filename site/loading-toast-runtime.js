@@ -97,20 +97,27 @@
       || root.dataset.interactionBusy === "true";
   }
 
+  function toastSuppressed() {
+    // evaluationLoadIntent is owned exclusively by the initial fetch that opens
+    // the saved-evaluations popup. Keep the interaction shield active, but let
+    // the popup's own "Loading saved evaluations..." state be the only feedback.
+    return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
+  }
+
   function sync() {
     if (destroyed || !document.body) return;
     const toast = ensureToast();
     positionToast(toast);
     const busy = interactionBusy();
 
-    if (busy) {
+    if (busy && !toastSuppressed()) {
       toast.hidden = false;
       toast.classList.add("visible");
       return;
     }
 
-    // Hide immediately when the final busy token ends. Do not leave a toast
-    // fade-out behind after interactions have already been re-enabled.
+    // Hide immediately when the final busy token ends or when this busy period
+    // is the saved-evaluations popup fetch, which has its own loading message.
     toast.classList.remove("visible");
     toast.hidden = true;
   }
@@ -120,6 +127,12 @@
     attributes: true,
     attributeFilter: ["class", "data-interaction-busy"],
   });
+  if (document.body) {
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
 
   window.addEventListener("mfl:ready", sync);
   window.addEventListener("resize", sync);
