@@ -219,6 +219,7 @@ async function start() {
   await loadClassicScript("/modules/legacy-core.js");
   installLegacyBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
+  const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
@@ -237,10 +238,10 @@ async function start() {
   runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
 
   // Keep late runtimes such as selection bridges available as early as possible,
-  // but do not expose pagination or release the startup loading state on player
-  // table routes until the legacy table request has actually settled. Dedicated
-  // Stats pages own their own readiness and therefore must not wait here.
-  if (tableStartup && runtimeWindow.__mflAppStartPromise) {
+  // but do not release the startup loading state on the homepage or player-table
+  // routes until the legacy app startup has actually settled. Dedicated Stats
+  // pages own their own readiness and therefore must not wait here.
+  if ((homeStartup || tableStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
 
