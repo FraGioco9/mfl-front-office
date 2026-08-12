@@ -446,6 +446,12 @@
     if (!pending || event.isPrimary === false || event.button !== 0) return;
     if (pending.pointerId !== event.pointerId || !releaseInsideButton(event, pending.button)) return;
 
+    if (pending.button.classList.contains("active")) {
+      suppressFollowingPointerClick();
+      event.preventDefault();
+      return;
+    }
+
     const targetPath = sharedViewPath(pending.route);
     if (!targetPath) return;
     suppressFollowingPointerClick();
@@ -461,16 +467,6 @@
   }
 
   function onClickCapture(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    const activeViewButton = target?.closest("#progressionPage .viewButton[data-view].active");
-    if (activeViewButton instanceof HTMLButtonElement) {
-      suppressPointerClick = false;
-      if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
-      suppressPointerClickTimer = 0;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
     if (!suppressPointerClick) return;
     suppressPointerClick = false;
     if (suppressPointerClickTimer) window.clearTimeout(suppressPointerClickTimer);
