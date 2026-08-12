@@ -69,6 +69,15 @@
         box-shadow: none;
       }
 
+      /* Advanced Settings uses the same selected-box treatment as the Evaluation
+         MFL/USD editor instead of the browser-native white focus ring. */
+      .advancedSettingsDialog input:focus,
+      .advancedSettingsDialog input:focus-visible {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: none;
+      }
+
       /* One canonical close control for every popup header. Keep the button
          geometry and the drawn X independent from surrounding popup styles. */
       .filtersHeader > .popupCloseButton {
