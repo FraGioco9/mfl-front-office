@@ -84,7 +84,7 @@ const releaseApi = await readSite("api/releases.js");
 matches(releaseApi, /require\(["']\.\.\/releases-rewritten\.json["']\)/, "The releases API must serve rewritten release history.");
 excludes(releaseApi, /releases-recent\.json/, "The releases API must not serve the development release history.");
 
-const databaseRefresh = await readRepository(".github/workflows/full-database-and-site-update.yml");
+const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
 matches(databaseRefresh, /--workflow\s+vercel-site-update\.yml/, "Database refreshes must resolve the last explicit site release.");
 excludes(databaseRefresh, /--workflow\s+site-quality\.yml/, "Database refreshes must not publish the latest quality-check commit.");
 matches(databaseRefresh, /Verify published frontend source is unchanged/, "Database refreshes must verify the published frontend source.");
