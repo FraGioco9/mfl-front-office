@@ -1,11 +1,20 @@
 const { performance } = require("node:perf_hooks");
 
 let fcl = null;
-try {
-  fcl = require("@onflow/fcl");
-  fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
-} catch {
-  // Allows local SQL tests to run before dependencies are installed.
+let fclLoadAttempted = false;
+
+function flowClient() {
+  if (fclLoadAttempted) return fcl;
+  fclLoadAttempted = true;
+  try {
+    fcl = require("@onflow/fcl");
+    fcl.config({ "accessNode.api": "https://rest-mainnet.onflow.org" });
+  } catch {
+    // Public SQLite routes such as search do not require Flow verification.
+    // Signed progression routes still fail closed if FCL is unavailable.
+    fcl = null;
+  }
+  return fcl;
 }
 
 const WALLET_PERMISSION_CACHE = new Map();
@@ -89,18 +98,22 @@ async function signedWalletFromRequest(request) {
     return "";
   }
 
+  // Avoid loading Flow at all for public API requests. This keeps local public
+  // SQLite routes (notably global search) independent from wallet tooling.
   if (!wallet
       || !signingWallet
       || message !== walletAccessMessage()
       || !Array.isArray(signatures)
-      || !signatures.length
-      || !fcl) {
+      || !signatures.length) {
     return "";
   }
 
+  const flow = flowClient();
+  if (!flow) return "";
+
   try {
     if (proofType === "account-proof") {
-      const verified = await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+      const verified = await flow.AppUtils.verifyAccountProof(appIdentifier, {
         address: signingWallet,
         nonce,
         signatures,
@@ -108,7 +121,7 @@ async function signedWalletFromRequest(request) {
       if (verified) return wallet;
 
       if (signingWallet !== wallet) {
-        return await fcl.AppUtils.verifyAccountProof(appIdentifier, {
+        return await flow.AppUtils.verifyAccountProof(appIdentifier, {
           address: wallet,
           nonce,
           signatures,
@@ -118,7 +131,7 @@ async function signedWalletFromRequest(request) {
     }
 
     if (!signatureWalletAddresses(signatures).has(signingWallet)) return "";
-    return await fcl.AppUtils.verifyUserSignatures(stringToHex(message), signatures)
+    return await flow.AppUtils.verifyUserSignatures(stringToHex(message), signatures)
       ? wallet
       : "";
   } catch (error) {

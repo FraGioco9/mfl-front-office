@@ -41,6 +41,35 @@
     return modal instanceof HTMLElement ? modal : null;
   }
 
+  function syncClearButton() {
+    const input = searchInput();
+    const button = document.getElementById("playerSearchClearButton");
+    if (input && button instanceof HTMLElement) button.hidden = !input.value.trim();
+  }
+
+  function renderSearchMessage(message) {
+    const results = searchResults();
+    if (!results) return;
+    const hint = document.createElement("div");
+    hint.className = "searchHint";
+    hint.textContent = message;
+    results.replaceChildren(hint);
+    results.classList.remove("filledSearchResults");
+  }
+
+  function markSearching(normalizedQuery) {
+    if (!normalizedQuery) return;
+    document.documentElement.dataset.globalSearchQueryPending = normalizedQuery;
+    syncClearButton();
+    renderSearchMessage("Searching…");
+  }
+
+  function finishSearching(normalizedQuery) {
+    if (document.documentElement.dataset.globalSearchQueryPending === normalizedQuery) {
+      delete document.documentElement.dataset.globalSearchQueryPending;
+    }
+  }
+
   function capResultBoxes() {
     const results = searchResults();
     if (!results) return;
@@ -117,6 +146,7 @@
     if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
     pendingFlushTimer = 0;
     renderCurrentResults();
+    finishSearching(normalizedQuery);
     return true;
   }
 
@@ -169,7 +199,9 @@
       v: VERSION,
     });
 
-    document.documentElement.dataset.globalSearchQueryPending = normalizedQuery;
+    // Never expose partial results from a previous query or from the currently
+    // loaded local indexes. A typed query has one authoritative database result.
+    markSearching(normalizedQuery);
     try {
       const response = await fetch(`/api/data?${parameters}`, {
         cache: "no-store",
@@ -188,13 +220,14 @@
     } catch (error) {
       if (error?.name !== "AbortError") {
         console.error(error?.message || "Could not search the database.");
+        if (!destroyed && requestSequence === sequence && normalize(input.value) === normalizedQuery) {
+          renderSearchMessage("Could not search.");
+          finishSearching(normalizedQuery);
+        }
       }
       return false;
     } finally {
       if (controller === activeController) controller = null;
-      if (document.documentElement.dataset.globalSearchQueryPending === normalizedQuery) {
-        delete document.documentElement.dataset.globalSearchQueryPending;
-      }
     }
   }
 
@@ -202,8 +235,8 @@
     const input = searchInput();
     if (!input || event.target !== input) return;
 
-    // Typed global search owns the network request so every non-empty query
-    // reaches the complete players, clubs, and agents database exactly once.
+    // Typed global search owns the request and rendering lifecycle so every
+    // non-empty query is shown only after the complete database result arrives.
     event.stopImmediatePropagation();
     const query = String(input.value || "").trim();
 
@@ -217,13 +250,11 @@
       if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
       pendingFlushTimer = 0;
       delete document.documentElement.dataset.globalSearchQueryPending;
+      syncClearButton();
       renderCurrentResults();
       return;
     }
 
-    // Keep the fast local render while the authoritative full-database request
-    // is in flight. Its response replaces/extends these indexes and rerenders.
-    renderCurrentResults();
     void searchDatabase(query);
   }
 
