@@ -20,124 +20,47 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
-          path = Path('site/table-loading-runtime.js')
-          source = path.read_text(encoding='utf-8')
+          path = Path("site/table-loading-runtime.js")
+          source = path.read_text(encoding="utf-8")
 
-          def replace_once(old, new, label):
-              global source
-              if old not in source:
-                  raise SystemExit(f'Expected {label} block not found.')
-              source = source.replace(old, new, 1)
-
-          replace_once(
-              '''    pagers.forEach((pager) => {
-      if (pager.dataset.staticLoadingPager !== "true") {
-        pager.dataset.staticLoadingPreviousHidden = pager.hidden ? "true" : "false";
-        pager.dataset.staticLoadingPreviousDisplay = pager.style.getPropertyValue("display");
-        pager.dataset.staticLoadingPreviousDisplayPriority = pager.style.getPropertyPriority("display");
-      }
-      pager.dataset.staticLoadingPager = "true";
-      pager.hidden = true;
-      pager.style.setProperty("display", "none", "important");
-    });''',
-              '''    pagers.forEach((pager) => {
-      if (pager.dataset.staticLoadingPager !== "true") {
-        pager.dataset.staticLoadingPreviousHidden = pager.hidden ? "true" : "false";
-        pager.dataset.staticLoadingPreviousDisplay = pager.style.getPropertyValue("display");
-        pager.dataset.staticLoadingPreviousDisplayPriority = pager.style.getPropertyPriority("display");
-        pager.dataset.staticLoadingPager = "true";
-      }
-      if (!pager.hidden) pager.hidden = true;
-      if (pager.style.getPropertyValue("display") !== "none"
-        || pager.style.getPropertyPriority("display") !== "important") {
-        pager.style.setProperty("display", "none", "important");
-      }
-    });''',
-              'idempotent pager loading ownership',
+          pattern = r'  function installLegacyBridge\(\) \{.*?\n  window\.addEventListener\("mfl:ready", installLegacyBridge\);'
+          replacement = (
+              '  function installLegacyBridge() {\n'
+              '    // legacy-core delegates to this runtime directly. Rewriting the\n'
+              '    // same global function again can create competing wrapper chains.\n'
+              '    sync();\n'
+              '  }\n\n'
+              '  // Observe only state changes that can start/end table loading.\n'
+              '  // Never observe the table DOM itself: show() mutates that DOM, so a\n'
+              '  // subtree observer can repeatedly trigger sync() -> show() forever.\n'
+              '  observer = new MutationObserver(schedule);\n'
+              '  observer.observe(document.documentElement, {\n'
+              '    attributes: true,\n'
+              '    attributeFilter: ["class"],\n'
+              '  });\n'
+              '  if (document.body) {\n'
+              '    observer.observe(document.body, {\n'
+              '      attributes: true,\n'
+              '      attributeFilter: ["data-page"],\n'
+              '    });\n'
+              '  }\n'
+              '  window.addEventListener("mfl:ready", installLegacyBridge);'
           )
+          source, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit("Could not replace the table loading bridge/observer block.")
 
-          replace_once(
-              '''    body.dataset.staticLoading = "true";
-    if (empty) {
-      empty.hidden = true;
-      empty.textContent = "";
-    }
-    return true;''',
-              '''    if (body.dataset.staticLoading !== "true") body.dataset.staticLoading = "true";
-    if (empty) {
-      if (!empty.hidden) empty.hidden = true;
-      if (empty.textContent) empty.textContent = "";
-    }
-    return true;''',
-              'idempotent table placeholder state',
-          )
+          bridge_start = source.index("  function installLegacyBridge() {")
+          ready_listener = source.index('  window.addEventListener("mfl:ready", installLegacyBridge);', bridge_start)
+          guarded = source[bridge_start:ready_listener]
+          if "childList: true" in guarded or "subtree: true" in guarded or "characterData: true" in guarded:
+              raise SystemExit("Broad table DOM observation is still present.")
+          if "window.eval" in guarded:
+              raise SystemExit("Legacy table loading function rewriting is still present.")
 
-          replace_once(
-              '''    const rows = Array.from(body.rows);
-    const blankRowsOnly = rows.length > 0 && rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
-    const loadingOwned = body.dataset.staticLoading === "true";
-    const loadingSurfaceNeedsRepair = body.rows.length === 0
-      || blankRowsOnly
-      || Boolean(empty && !empty.hidden);
-
-    if ((dataLoadingActive() || loadingOwned) && loadingSurfaceNeedsRepair) {
-      if (route) primeHeader(route.pageName, route.view);
-      show();
-      return;
-    }
-    releasePagerWhenReady();''',
-              '''    const rows = Array.from(body.rows);
-    const blankRowsOnly = rows.length > 0 && rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
-    const columnCount = Math.max(1, document.getElementById("tableHead")?.rows?.[0]?.cells?.length || 1);
-    const blankRowsCurrent = blankRowsOnly && blankRowsReady(body, columnCount);
-    const loadingOwned = body.dataset.staticLoading === "true";
-    const loadingSurfaceNeedsRepair = body.rows.length === 0
-      || (blankRowsOnly && !blankRowsCurrent)
-      || Boolean(empty && !empty.hidden);
-
-    if ((dataLoadingActive() || loadingOwned) && loadingSurfaceNeedsRepair) {
-      if (route) primeHeader(route.pageName, route.view);
-      show();
-      return;
-    }
-    releasePagerWhenReady();''',
-              'non-recursive loading surface repair',
-          )
-
-          start = source.find('  function installLegacyBridge() {')
-          if start < 0:
-              raise SystemExit('installLegacyBridge start not found.')
-          end_marker = '\n  observer = new MutationObserver'
-          end = source.find(end_marker, start)
-          if end < 0:
-              raise SystemExit('observer marker not found after installLegacyBridge.')
-          source = source[:start] + '''  function installLegacyBridge() {
-    // legacy-core now delegates to this runtime directly. Do not rewrite the
-    // global function again: repeated bridge installation can create wrapper
-    // chains and re-enter the same loading path.
-    sync();
-  }
-
-  observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-  if (document.body) {
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["data-page"],
-    });
-  }''' + source[end + len(end_marker):]
-
-          # The replacement above intentionally consumes the old observer declaration.
-          if 'childList: true' in source[source.find('function installLegacyBridge'):source.find('window.addEventListener("mfl:ready"')]:
-              raise SystemExit('Broad table-loading MutationObserver still present.')
-          if 'window.eval(`(() => {' in source[source.find('function installLegacyBridge'):source.find('window.addEventListener("mfl:ready"')]:
-              raise SystemExit('Legacy table-loading function rewrite still present.')
-
-          path.write_text(source, encoding='utf-8')
+          path.write_text(source, encoding="utf-8")
           PY
 
       - name: Validate site
