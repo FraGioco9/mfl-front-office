@@ -479,16 +479,31 @@
     const emptyState = document.querySelector("#emptyState");
     if (!(tableHead instanceof HTMLTableSectionElement) || !(tableBody instanceof HTMLTableSectionElement)) return;
 
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    row.className = "staticTableLoadingRow";
-    cell.className = "staticTableLoadingCell";
-    cell.colSpan = Math.max(1, tableHead.rows[0]?.cells.length || 1);
-    cell.textContent = "Loading players...";
-    row.appendChild(cell);
-    tableBody.replaceChildren(row);
+    const columnCount = Math.max(1, tableHead.rows[0]?.cells.length || 1);
+    const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
+    const fragment = document.createDocumentFragment();
+    opacities.forEach((opacity, index) => {
+      const row = document.createElement("tr");
+      row.className = "staticTableBlankRow";
+      row.dataset.loadingRow = String(index + 1);
+      row.setAttribute("aria-hidden", "true");
+      row.style.opacity = String(opacity);
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+        const cell = document.createElement("td");
+        cell.style.height = "38px";
+        cell.style.minHeight = "38px";
+        cell.style.paddingTop = "0";
+        cell.style.paddingBottom = "0";
+        row.appendChild(cell);
+      }
+      fragment.appendChild(row);
+    });
+    tableBody.replaceChildren(fragment);
     tableBody.dataset.staticLoading = "true";
-    if (emptyState instanceof HTMLElement) emptyState.hidden = true;
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = true;
+      emptyState.textContent = "";
+    }
   }
 
   function primeStaticShell() {

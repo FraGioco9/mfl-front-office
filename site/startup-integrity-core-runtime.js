@@ -164,8 +164,9 @@
     document.body.classList.toggle("tableRowsLoading", !hasRows);
     const empty = document.getElementById("emptyState");
     if (!hasRows && empty instanceof HTMLElement) {
-      if (empty.hidden) empty.hidden = false;
-      setText(empty, "Loading players...");
+      if (!empty.hidden) empty.hidden = true;
+      setText(empty, "");
+      window.__mflTableLoadingRuntime?.show?.();
     }
   }
 

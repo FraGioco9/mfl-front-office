@@ -119,6 +119,11 @@
       background: var(--surface-muted) !important;
       background-image: none !important;
     }
+
+    html.mflDataLoading #progressionPage #emptyState,
+    #progressionPage:has(#tableBody[data-static-loading="true"]) #emptyState {
+      display: none !important;
+    }
   `;
   document.head.appendChild(style);
 
@@ -220,6 +225,11 @@
 
   function dataLoadingActive() {
     return document.documentElement.classList.contains("mflDataLoading");
+  }
+
+  function routeLoadingIntentActive() {
+    if (navigationIntentRoute && performance.now() < navigationIntentExpiresAt) return true;
+    return Boolean(routeFromPath()) && document.documentElement.dataset.mflReady !== "true";
   }
 
   function hidePagerForLoading() {
@@ -417,24 +427,44 @@
     return routeFromPath();
   }
 
+  function installLegacyBridge() {
+    try {
+      window.eval(`(() => {
+        if (typeof showTableBusyState !== "function" || showTableBusyState.__mflBlankRows) return;
+        const original = showTableBusyState;
+        const wrapped = function () {
+          if (window.__mflTableLoadingRuntime?.show?.()) return;
+          return original.apply(this, arguments);
+        };
+        wrapped.__mflBlankRows = true;
+        wrapped.__mflOriginal = original;
+        showTableBusyState = wrapped;
+      })();`);
+    } catch {
+      // The structural table renderer still repairs legacy writes before paint.
+    }
+  }
+
   function sync() {
     frame = 0;
     if (destroyed || !tableContextActive()) return;
+    installLegacyBridge();
     const route = activePrimeRoute();
     if (route) syncSharedViewButtonPage(route.pageName);
     const { body, empty } = tableElements();
     if (!body) return;
 
-    if (!dataLoadingActive() && pagerObservedDataLoading && releasePagerWhenReady()) return;
+    if (!dataLoadingActive() && !routeLoadingIntentActive() && pagerObservedDataLoading && releasePagerWhenReady()) return;
 
     const rows = Array.from(body.rows);
     const blankRowsOnly = rows.length > 0 && rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
     const loadingOwned = body.dataset.staticLoading === "true";
+    const loadingActive = dataLoadingActive() || loadingOwned || routeLoadingIntentActive();
     const loadingSurfaceNeedsRepair = body.rows.length === 0
       || blankRowsOnly
       || Boolean(empty && !empty.hidden);
 
-    if ((dataLoadingActive() || loadingOwned) && loadingSurfaceNeedsRepair) {
+    if (loadingActive && loadingSurfaceNeedsRepair) {
       if (route) primeHeader(route.pageName, route.view);
       show();
       return;
@@ -528,29 +558,14 @@
     schedule();
   }
 
-  function installLegacyBridge() {
-    try {
-      window.eval(`(() => {
-        if (typeof showTableBusyState !== "function" || showTableBusyState.__mflBlankRows) return;
-        const original = showTableBusyState;
-        const wrapped = function () {
-          if (window.__mflTableLoadingRuntime?.show?.()) return;
-          return original.apply(this, arguments);
-        };
-        wrapped.__mflBlankRows = true;
-        wrapped.__mflOriginal = original;
-        showTableBusyState = wrapped;
-      })();`);
-    } catch {
-      // The observer keeps the blank loading rows authoritative if a future core
-      // stops exposing the legacy table busy-state binding.
-    }
+  function onReady() {
+    installLegacyBridge();
     sync();
   }
 
   observer = new MutationObserver(() => {
-    // Keep the loading surface structural before paint even if the legacy core
-    // clears the table body or exposes its empty-state element while loading.
+    // MutationObserver callbacks run before paint. Keep five structural rows
+    // authoritative if legacy startup clears the table or exposes empty-state UI.
     sync();
   });
   observer.observe(document.documentElement, {
@@ -558,14 +573,14 @@
     subtree: true,
     attributes: true,
     characterData: true,
-    attributeFilter: ["hidden", "data-page", "class"],
+    attributeFilter: ["hidden", "data-page", "class", "data-mfl-ready"],
   });
   window.addEventListener("pointerdown", onNavigationIntent, true);
   window.addEventListener("pointerup", onPointerUp, true);
   window.addEventListener("pointercancel", onPointerCancel, true);
   window.addEventListener("click", onClickCapture, true);
   window.addEventListener("popstate", onPopState);
-  window.addEventListener("mfl:ready", installLegacyBridge);
+  window.addEventListener("mfl:ready", onReady);
 
   const initialRoute = routeFromPath();
   if (initialRoute) primeRoute(initialRoute);
@@ -580,7 +595,7 @@
     window.removeEventListener("pointercancel", onPointerCancel, true);
     window.removeEventListener("click", onClickCapture, true);
     window.removeEventListener("popstate", onPopState);
-    window.removeEventListener("mfl:ready", installLegacyBridge);
+    window.removeEventListener("mfl:ready", onReady);
     document.querySelectorAll(`#tableBody > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
     style.remove();
   }
@@ -595,5 +610,6 @@
     installLegacyBridge,
     destroy,
   });
+  installLegacyBridge();
   sync();
 })();

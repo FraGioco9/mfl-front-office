@@ -2593,9 +2593,10 @@ function renderTableLoadingShell(pageName) {
   syncQuickFilterLabels();
   updateViewButtons();
   tablePageTitle.textContent = tableTitleForPage(pageName);
-  emptyState.hidden = false;
-  emptyState.textContent = "Loading players...";
+  emptyState.hidden = true;
+  emptyState.textContent = "";
   tableBody.replaceChildren();
+  window.__mflTableLoadingRuntime?.show?.();
 }
 async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
@@ -9574,9 +9575,10 @@ function csvEscape(value) {
 }
 
 
-function showTableBusyState(message = "Loading players...") {
-  emptyState.hidden = false;
-  emptyState.textContent = message;
+function showTableBusyState() {
+  if (window.__mflTableLoadingRuntime?.show?.()) return;
+  emptyState.hidden = true;
+  emptyState.textContent = "";
   tableBody.replaceChildren();
 }
 
@@ -12447,7 +12449,7 @@ async function startApp() {
       if (mflStatsAgedPlayers) mflStatsAgedPlayers.textContent = "-";
       if (mflStatsOtherPlayers) mflStatsOtherPlayers.textContent = "-";
       if (mflStatsAgeDistribution) {
-        mflStatsAgeDistribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
+        mflStatsAgeDistribution.replaceChildren();
       }
     } else if (playerPageActive && playerDetail) {
       playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';

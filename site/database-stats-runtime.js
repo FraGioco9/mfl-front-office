@@ -178,7 +178,7 @@
               <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
             </div>
           </div>
-          <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"><p class="mflStatsEmpty">Loading players...</p></div>
+          <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"></div>
         </section>
       `;
       main.appendChild(page);
@@ -413,7 +413,7 @@
 
     showStatsShell();
     const distribution = page?.querySelector("#databaseStatsDistribution");
-    if (!data && distribution) distribution.innerHTML = '<p class="mflStatsEmpty">Loading players...</p>';
+    if (!data && distribution) distribution.replaceChildren();
 
     try {
       if (!data) beginDataBusy();
