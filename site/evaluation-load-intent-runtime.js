@@ -6,6 +6,8 @@
 
   const WAIT_CLASS = "evaluationLoadIntent";
   const LOADING_TEXT = "Loading saved evaluations...";
+  const INERT_OWNER = "evaluationLoadIntentInert";
+  const PREVIOUS_INERT = "evaluationLoadIntentPreviousInert";
   let destroyed = false;
   let loadClicked = false;
   let releaseTimer = 0;
@@ -35,14 +37,30 @@
     return list instanceof HTMLElement ? list : null;
   }
 
-  function blurEvaluationSearch() {
+  function holdEvaluationSearchDeselected() {
     const input = evaluationSearchInput();
-    if (input && document.activeElement === input) input.blur();
+    if (!input) return;
+
+    if (input.dataset[INERT_OWNER] !== "true") {
+      input.dataset[PREVIOUS_INERT] = input.inert ? "true" : "false";
+      input.dataset[INERT_OWNER] = "true";
+    }
+    if (document.activeElement === input) input.blur();
+    input.inert = true;
+  }
+
+  function releaseEvaluationSearch() {
+    const input = evaluationSearchInput();
+    if (!input || input.dataset[INERT_OWNER] !== "true") return;
+    const wasInert = input.dataset[PREVIOUS_INERT] === "true";
+    delete input.dataset[INERT_OWNER];
+    delete input.dataset[PREVIOUS_INERT];
+    input.inert = wasInert;
   }
 
   function beginWait() {
     if (!evaluationActive() || !document.body) return false;
-    blurEvaluationSearch();
+    holdEvaluationSearchDeselected();
     document.body.classList.add(WAIT_CLASS);
     return true;
   }
@@ -52,6 +70,7 @@
     if (releaseTimer) window.clearTimeout(releaseTimer);
     releaseTimer = 0;
     document.body?.classList.remove(WAIT_CLASS);
+    releaseEvaluationSearch();
   }
 
   function appBusy() {
@@ -61,6 +80,8 @@
 
   function syncLoadState() {
     if (destroyed || !loadClicked) return;
+    holdEvaluationSearchDeselected();
+
     const modal = evaluationLoadModal();
     if (!modal || modal.hidden) {
       if (!appBusy() && !releaseTimer) {
@@ -102,6 +123,13 @@
     if (!loadClicked) finishWait();
   }
 
+  function onFocusIn(event) {
+    const input = evaluationSearchInput();
+    if (event.target !== input || !document.body?.classList.contains(WAIT_CLASS)) return;
+    input.blur();
+    input.inert = true;
+  }
+
   const style = document.createElement("style");
   style.id = "mflEvaluationLoadIntentStyles";
   style.textContent = `
@@ -118,6 +146,7 @@
   document.addEventListener("click", onClick, true);
   document.addEventListener("pointerup", onPointerUp, true);
   document.addEventListener("pointercancel", onPointerCancel, true);
+  document.addEventListener("focusin", onFocusIn, true);
 
   observer = new MutationObserver(syncLoadState);
   observer.observe(document.documentElement, {
@@ -125,7 +154,7 @@
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ["hidden"],
+    attributeFilter: ["hidden", "inert"],
   });
 
   function destroy() {
@@ -136,6 +165,7 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("pointercancel", onPointerCancel, true);
+    document.removeEventListener("focusin", onFocusIn, true);
     finishWait();
     style.remove();
   }
