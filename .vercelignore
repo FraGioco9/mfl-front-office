@@ -1,0 +1,14 @@
+# Repository/CI files are not part of the production Vercel artifact.
+.github
+supabase
+README.md
+*.py
+supabase-schema.sql
+
+# Site development and regression assets.
+site/tests
+site/playwright.config.mjs
+site/eslint.config.mjs
+site/jsconfig.json
+site/types
+site/releases-recent.json

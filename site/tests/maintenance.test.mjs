@@ -11,7 +11,9 @@ const readRepository = (path) => readFile(resolve(repositoryRoot, path), "utf8")
 
 const removedSiteFiles = [
   "modules/core-runtime.js",
+  "modules/http.js",
   "modules/release.js",
+  "modules/runtime-loader.js",
   "my-players-refresh-view-runtime.js",
   "search-result-click-runtime.js",
   "selection-stack-source-v1.120.26.js",
@@ -31,6 +33,9 @@ test("runtime entry graph contains only consolidated owners", async () => {
     assert.doesNotMatch(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.match(entry, /function releaseFromEntryUrl\(\)/);
+  assert.match(entry, /function installApiFetchPolicy\(/);
+  assert.match(entry, /function loadScriptGroup\(/);
+  assert.doesNotMatch(entry, /from "\.\/(?:http|runtime-loader)\.js"/);
   assert.doesNotMatch(entry, /loadRelease|loadPreparedClassicScript|executeClassicSource/);
   assert.doesNotMatch(entry, /my-players-refresh-view-runtime|search-result-click-runtime|v1-120-10-runtime|v1-123-31-runtime/);
 });
@@ -54,14 +59,14 @@ test("database builder keeps every imported rebuild dependency", async () => {
   assert.match(runner, /import run_flow_rebuild_paged as paged/);
 });
 
-test("runtime consolidation removes duplicate polling, click interception, and remote source injection", async () => {
+test("runtime consolidation removes duplicate polling, click interception, and serialized bootstrap requests", async () => {
   const selectionStack = await readSite("selection-stack-runtime.js");
   const selectionReset = await readSite("selection-refresh-reset-runtime.js");
   const pairRoutes = await readSite("watchlist-myplayers-route-runtime.js");
   const releaseUi = await readSite("release-ui-runtime.js");
   const globalSearch = await readSite("global-search-runtime.js");
   const evaluation = await readSite("evaluation-static-chrome-runtime.js");
-  const loader = await readSite("modules/runtime-loader.js");
+  const entry = await readSite("modules/app-entry.js");
 
   assert.doesNotMatch(selectionStack, /setInterval|fetch\s*\(/);
   assert.doesNotMatch(selectionReset, /setInterval|function syncFooter/);
@@ -69,7 +74,34 @@ test("runtime consolidation removes duplicate polling, click interception, and r
   assert.doesNotMatch(releaseUi, /setInterval|syncSelectionBar|syncToast/);
   assert.doesNotMatch(globalSearch, /onResultClick|window\.addEventListener\("click"/);
   assert.match(evaluation, /function syncEvaluationBusy\(\)/);
-  assert.doesNotMatch(loader, /loadPreparedClassicScript|executeClassicSource/);
+  assert.doesNotMatch(entry, /loadPreparedClassicScript|executeClassicSource/);
+  assert.match(entry, /const loaders = paths\.map\(\(path\) => loadClassicScript\(path, version\)\);/);
+  assert.match(entry, /await Promise\.all\(loaders\);/);
+  assert.match(entry, /preloadClassicScript\("\/modules\/legacy-core\.js", entryRelease\.version\);/);
+});
+
+test("production deployment excludes development assets and caches versioned static files", async () => {
+  const ignore = await readRepository(".vercelignore");
+  const vercel = await readSite("vercel.json");
+
+  for (const path of [
+    ".github",
+    "supabase",
+    "site/tests",
+    "site/playwright.config.mjs",
+    "site/eslint.config.mjs",
+    "site/jsconfig.json",
+    "site/types",
+    "site/releases-recent.json",
+  ]) {
+    assert.match(ignore, new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"));
+  }
+
+  assert.match(vercel, /public, max-age=31536000, immutable/);
+  assert.match(vercel, /"source": "\/modules\/:path\*"/);
+  assert.match(vercel, /"source": "\/\(\.\*\)-runtime\.js"/);
+  assert.match(vercel, /"source": "\/release\.json"[\s\S]*?"value": "no-store, max-age=0"/);
+  assert.match(vercel, /"source": "\/app\.js"[\s\S]*?"value": "no-store, max-age=0"/);
 });
 
 test("deployment workflows validate the canonical release metadata when available", async () => {
