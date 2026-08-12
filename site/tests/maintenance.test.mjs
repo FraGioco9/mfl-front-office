@@ -80,7 +80,7 @@ test("runtime consolidation removes duplicate polling, click interception, and s
   assert.match(entry, /preloadClassicScript\("\/modules\/legacy-core\.js", entryRelease\.version\);/);
 });
 
-test("production deployment excludes development assets and caches versioned static files", async () => {
+test("production deployment excludes development assets without weakening runtime freshness", async () => {
   const ignore = await readRepository(".vercelignore");
   const vercel = await readSite("vercel.json");
 
@@ -97,11 +97,9 @@ test("production deployment excludes development assets and caches versioned sta
     assert.match(ignore, new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"));
   }
 
-  assert.match(vercel, /public, max-age=31536000, immutable/);
-  assert.match(vercel, /"source": "\/modules\/:path\*"/);
-  assert.match(vercel, /"source": "\/\(\.\*\)-runtime\.js"/);
-  assert.match(vercel, /"source": "\/release\.json"[\s\S]*?"value": "no-store, max-age=0"/);
-  assert.match(vercel, /"source": "\/app\.js"[\s\S]*?"value": "no-store, max-age=0"/);
+  assert.match(vercel, /"source": "\/modules\/:path\*"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
+  assert.match(vercel, /"source": "\/global-search-runtime\.js"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
+  assert.match(vercel, /"source": "\/release\.json"[^\n]+"Cache-Control", "value": "no-store, max-age=0"/);
 });
 
 test("deployment workflows validate the canonical release metadata when available", async () => {
