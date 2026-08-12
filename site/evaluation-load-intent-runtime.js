@@ -6,8 +6,6 @@
 
   const WAIT_CLASS = "evaluationLoadIntent";
   const LOADING_TEXT = "Loading saved evaluations...";
-  const INERT_OWNER = "evaluationLoadIntentInert";
-  const PREVIOUS_INERT = "evaluationLoadIntentPreviousInert";
   let destroyed = false;
   let loadClicked = false;
   let releaseTimer = 0;
@@ -37,30 +35,19 @@
     return list instanceof HTMLElement ? list : null;
   }
 
-  function holdEvaluationSearchDeselected() {
-    const input = evaluationSearchInput();
-    if (!input) return;
-
-    if (input.dataset[INERT_OWNER] !== "true") {
-      input.dataset[PREVIOUS_INERT] = input.inert ? "true" : "false";
-      input.dataset[INERT_OWNER] = "true";
-    }
-    if (document.activeElement === input) input.blur();
-    input.inert = true;
+  function savedEvaluationsModalOpen() {
+    const modal = evaluationLoadModal();
+    return Boolean(modal && !modal.hidden);
   }
 
-  function releaseEvaluationSearch() {
+  function blurEvaluationSearch() {
     const input = evaluationSearchInput();
-    if (!input || input.dataset[INERT_OWNER] !== "true") return;
-    const wasInert = input.dataset[PREVIOUS_INERT] === "true";
-    delete input.dataset[INERT_OWNER];
-    delete input.dataset[PREVIOUS_INERT];
-    input.inert = wasInert;
+    if (input && document.activeElement === input) input.blur();
   }
 
   function beginWait() {
     if (!evaluationActive() || !document.body) return false;
-    holdEvaluationSearchDeselected();
+    blurEvaluationSearch();
     document.body.classList.add(WAIT_CLASS);
     return true;
   }
@@ -70,7 +57,6 @@
     if (releaseTimer) window.clearTimeout(releaseTimer);
     releaseTimer = 0;
     document.body?.classList.remove(WAIT_CLASS);
-    releaseEvaluationSearch();
   }
 
   function appBusy() {
@@ -80,7 +66,7 @@
 
   function syncLoadState() {
     if (destroyed || !loadClicked) return;
-    holdEvaluationSearchDeselected();
+    blurEvaluationSearch();
 
     const modal = evaluationLoadModal();
     if (!modal || modal.hidden) {
@@ -125,9 +111,9 @@
 
   function onFocusIn(event) {
     const input = evaluationSearchInput();
-    if (event.target !== input || !document.body?.classList.contains(WAIT_CLASS)) return;
+    if (event.target !== input) return;
+    if (!document.body?.classList.contains(WAIT_CLASS) && !savedEvaluationsModalOpen()) return;
     input.blur();
-    input.inert = true;
   }
 
   const style = document.createElement("style");
@@ -154,7 +140,7 @@
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ["hidden", "inert"],
+    attributeFilter: ["hidden"],
   });
 
   function destroy() {
