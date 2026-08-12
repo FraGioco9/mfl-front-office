@@ -55,7 +55,9 @@
       }
 
       .filtersHeader > .popupCloseButton::before,
-      .filtersHeader > .popupCloseButton::after {
+      .filtersHeader > .popupCloseButton::after,
+      .evaluationSearchClearButton::before,
+      .evaluationSearchClearButton::after {
         content: "";
         position: absolute;
         display: block;
@@ -74,11 +76,13 @@
         pointer-events: none;
       }
 
-      .filtersHeader > .popupCloseButton::before {
+      .filtersHeader > .popupCloseButton::before,
+      .evaluationSearchClearButton::before {
         transform: translate(-50%, -50%) rotate(45deg);
       }
 
-      .filtersHeader > .popupCloseButton::after {
+      .filtersHeader > .popupCloseButton::after,
+      .evaluationSearchClearButton::after {
         transform: translate(-50%, -50%) rotate(-45deg);
       }
     `;
