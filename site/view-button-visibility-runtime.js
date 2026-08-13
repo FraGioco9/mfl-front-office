@@ -2,6 +2,7 @@
   "use strict";
 
   const POINTER_HOVER_ATTRIBUTE = "data-mfl-view-button-pointer-hover";
+  const COLUMN_HOVER_ATTRIBUTE = "data-mfl-column-hover";
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/i;
   const DATABASE_VIEWS = new Set(["attributes", "contracts", "stats"]);
   const VIEW_BY_SLUG = Object.freeze({
@@ -42,6 +43,7 @@
   previous?.destroy?.();
 
   let pointerHoverButton = null;
+  let statsTooltipBar = null;
   let initialActiveObserver = null;
   let databaseVisibilityObserver = null;
   let statsHistogramObserver = null;
@@ -77,6 +79,18 @@
     html #mflStatsPage .mflStatsHistogramBar[data-tooltip]::before {
       content: attr(data-tooltip) !important;
       display: block !important;
+    }
+
+    html #mflStatsPage .mflStatsHistogramBar[data-tooltip]:is(:hover, :focus-visible)::before,
+    html #databaseStatsPage .mflStatsHistogramBar[data-tooltip]:is(:hover, :focus-visible)::before {
+      opacity: 0 !important;
+      transform: translate(-50%, 4px) !important;
+    }
+
+    html #mflStatsPage .mflStatsHistogramBar[data-tooltip][${COLUMN_HOVER_ATTRIBUTE}="true"]::before,
+    html #databaseStatsPage .mflStatsHistogramBar[data-tooltip][${COLUMN_HOVER_ATTRIBUTE}="true"]::before {
+      opacity: 1 !important;
+      transform: translate(-50%, 0) !important;
     }
 
     #mflStatsHistogramTooltipPortal {
@@ -135,9 +149,16 @@
     const container = document.getElementById(containerId);
     if (!(container instanceof HTMLElement)) return;
     const current = Array.from(container.querySelectorAll(".mflStatsFilterButton"));
-    const valid = current.length === filters.length
-      && current.every((button, index) => String(button.dataset.filter || "") === filters[index][0]);
-    if (!valid) {
+    const matchesFilters = current.length === filters.length
+      && current.every((button, index) => String(button.textContent || "").trim() === filters[index][1]);
+
+    if (matchesFilters) {
+      current.forEach((button, index) => {
+        const [id] = filters[index];
+        if (button.dataset.filter !== id) button.dataset.filter = id;
+        button.setAttribute("aria-pressed", String(button.classList.contains("active")));
+      });
+    } else {
       const fragment = document.createDocumentFragment();
       filters.forEach(([id, label], index) => {
         const button = document.createElement("button");
@@ -282,6 +303,48 @@
       .forEach(animateStatsHistogram);
   }
 
+  function clearStatsColumnHover(bar = statsTooltipBar) {
+    if (bar instanceof HTMLElement) bar.removeAttribute(COLUMN_HOVER_ATTRIBUTE);
+    if (bar === statsTooltipBar) statsTooltipBar = null;
+  }
+
+  function statsHistogramBarFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const bar = target.closest(
+      "#mflStatsPage .mflStatsHistogramBar[data-tooltip], #databaseStatsPage .mflStatsHistogramBar[data-tooltip]",
+    );
+    return bar instanceof HTMLElement ? bar : null;
+  }
+
+  function syncStatsColumnHover(event) {
+    if (event.pointerType === "touch") {
+      clearStatsColumnHover();
+      return;
+    }
+    const bar = statsHistogramBarFromTarget(event.target);
+    if (!(bar instanceof HTMLElement)) {
+      clearStatsColumnHover();
+      return;
+    }
+
+    const rect = bar.getBoundingClientRect();
+    const rawHeight = Number.parseFloat(bar.style.getPropertyValue("--bar-height"));
+    const heightPercent = Number.isFinite(rawHeight) ? Math.max(0, Math.min(100, rawHeight)) : 0;
+    const paintedTop = rect.bottom - (rect.height * heightPercent / 100);
+    const overPaintedColumn = event.clientX >= rect.left
+      && event.clientX <= rect.right
+      && event.clientY >= paintedTop
+      && event.clientY <= rect.bottom;
+
+    if (!overPaintedColumn) {
+      clearStatsColumnHover();
+      return;
+    }
+    if (statsTooltipBar && statsTooltipBar !== bar) clearStatsColumnHover(statsTooltipBar);
+    statsTooltipBar = bar;
+    bar.setAttribute(COLUMN_HOVER_ATTRIBUTE, "true");
+  }
+
   function clearPointerHover(button = pointerHoverButton) {
     if (!(button instanceof HTMLButtonElement)) {
       if (button === pointerHoverButton) pointerHoverButton = null;
@@ -330,6 +393,7 @@
   }
 
   function syncPointerHover(event) {
+    syncStatsColumnHover(event);
     if (event.pointerType === "touch") {
       clearPointerHover();
       return;
@@ -467,11 +531,16 @@
   }
 
   function onPointerOut(event) {
+    if (statsTooltipBar) {
+      const related = event.relatedTarget;
+      if (!(related instanceof Node) || !statsTooltipBar.contains(related)) clearStatsColumnHover();
+    }
     if (!pointerHoverButton) return;
     if (event.relatedTarget == null) clearPointerHover();
   }
 
   function onWindowBlur() {
+    clearStatsColumnHover();
     clearPointerHover();
   }
 
@@ -493,6 +562,7 @@
     statsHistogramObserver?.disconnect();
     statsHistogramObserver = null;
     clearPendingStatsTableNavigation();
+    clearStatsColumnHover();
     document.removeEventListener("pointerover", syncPointerHover, true);
     document.removeEventListener("pointermove", syncPointerHover, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
