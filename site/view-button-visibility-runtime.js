@@ -2,10 +2,19 @@
   "use strict";
 
   const POINTER_HOVER_ATTRIBUTE = "data-mfl-view-button-pointer-hover";
+  const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/i;
+  const VIEW_BY_SLUG = Object.freeze({
+    attributes: "attributes",
+    "next-overall": "next",
+    contracts: "contracts",
+    "current-season": "current",
+    "all-time": "all",
+  });
   const previous = window.__mflViewButtonVisibilityRuntime;
   previous?.destroy?.();
 
   let pointerHoverButton = null;
+  let initialActiveObserver = null;
 
   const style = document.createElement("style");
   style.id = "mflViewButtonVisibilityGuard";
@@ -72,6 +81,47 @@
     }
   `;
   document.head.appendChild(style);
+
+  function initialWatchlistView() {
+    if (document.documentElement.dataset.mflReady === "true" || !WATCHLIST_PATH.test(window.location.pathname)) return "";
+    const parts = String(window.location.pathname || "").split("/").filter(Boolean);
+    const slug = String(parts.at(-1) || "").toLowerCase();
+    return VIEW_BY_SLUG[slug] || "current";
+  }
+
+  function syncInitialWatchlistActiveView() {
+    const view = initialWatchlistView();
+    if (!view) {
+      initialActiveObserver?.disconnect();
+      initialActiveObserver = null;
+      return;
+    }
+
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const active = String(button.dataset.view || "") === view;
+      if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
+      if (button.getAttribute("aria-pressed") !== String(active)) button.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  function installInitialWatchlistActiveGuard() {
+    if (!initialWatchlistView()) return;
+    syncInitialWatchlistActiveView();
+    initialActiveObserver = new MutationObserver(syncInitialWatchlistActiveView);
+    initialActiveObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-mfl-ready"],
+    });
+    const views = document.querySelector("#progressionPage .views");
+    if (views instanceof HTMLElement) {
+      initialActiveObserver.observe(views, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ["class", "aria-pressed"],
+      });
+    }
+  }
 
   function clearPointerHover(button = pointerHoverButton) {
     if (!(button instanceof HTMLButtonElement)) {
@@ -147,6 +197,7 @@
     clearPointerHover();
   }
 
+  installInitialWatchlistActiveGuard();
   document.addEventListener("pointerover", syncPointerHover, true);
   document.addEventListener("pointermove", syncPointerHover, true);
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -154,6 +205,8 @@
   window.addEventListener("blur", onWindowBlur);
 
   function destroy() {
+    initialActiveObserver?.disconnect();
+    initialActiveObserver = null;
     document.removeEventListener("pointerover", syncPointerHover, true);
     document.removeEventListener("pointermove", syncPointerHover, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
