@@ -88,12 +88,17 @@
     const pageName = String(document.body?.dataset.page || "").toLowerCase();
     const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
     const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+    const newMintsLabel = document.getElementById("newMintsLabel");
 
     if (hideMflPlayersFilter instanceof HTMLElement) {
       hideMflPlayersFilter.hidden = pageName !== "database";
     }
     if (packablePlayersFilter instanceof HTMLElement) {
       packablePlayersFilter.hidden = pageName !== "mfl";
+    }
+    if (newMintsLabel instanceof HTMLElement) {
+      const label = pageName === "mfl" ? "Only aged players" : "Only new mints";
+      if (newMintsLabel.textContent !== label) newMintsLabel.textContent = label;
     }
   }
 
