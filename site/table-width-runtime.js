@@ -4,6 +4,12 @@
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/|$)|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const MOBILE_LAYOUT = "(max-width: 900px)";
   const MOBILE_TABLE_MIN_WIDTH = 1240;
+  const MOBILE_COLUMN_WIDTHS = Object.freeze({
+    "col-select": 3, "col-id": 3, "col-flag": 3, "col-name": 13, "col-nationality": 7,
+    "col-age": 4, "col-positions": 8, "col-seasons": 5, "col-stat": 6,
+    "col-contract-revenue": 8, "col-contract-club": 19, "col-contract-division": 9,
+    "col-agent": 9, "col-joined-agency": 9, "col-owned-since": 9, "col-link": 3,
+  });
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
 
   window.__mflTableWidthRuntime?.destroy?.();
@@ -63,9 +69,13 @@
     removeInlineGeometry(table, [
       "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
     ]);
-    table.querySelectorAll("col").forEach((column) => removeInlineGeometry(column, [
-      "width", "min-width", "max-width", "transition",
-    ]));
+    table.querySelectorAll("col").forEach((column) => {
+      const className = Object.keys(MOBILE_COLUMN_WIDTHS).find((name) => column.classList.contains(name));
+      if (!className) return;
+      const width = `${MOBILE_COLUMN_WIDTHS[className]}%`;
+      ["width", "min-width", "max-width"].forEach((property) => column.style.setProperty(property, width, "important"));
+      column.style.setProperty("transition", "none", "important");
+    });
 
     scroller.dataset.mobileTableScroll = "true";
     scroller.classList.add("tableWidthsReady");
