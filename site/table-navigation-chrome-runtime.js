@@ -2,11 +2,13 @@
   "use strict";
 
   const TABLE_PAGES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers"]);
+  const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const previous = window.__mflTableNavigationChromeRuntime;
   previous?.destroy?.();
 
   let pendingPage = "";
   let repairFrame = 0;
+  let pageSizeEscapeFrame = 0;
 
   function normalizePage(value) {
     const page = String(value || "").toLowerCase();
@@ -49,6 +51,28 @@
     });
   }
 
+  function pageSizeSelectFromEscape(event) {
+    const target = event.target;
+    if (target instanceof HTMLSelectElement && target.id === "pageSizeSelect") return target;
+    const active = document.activeElement;
+    return active instanceof HTMLSelectElement && active.id === "pageSizeSelect" ? active : null;
+  }
+
+  function clearPageSizeHighlightOnEscape(event) {
+    if (event.key !== "Escape") return;
+    const select = pageSizeSelectFromEscape(event);
+    if (!select) return;
+
+    select.classList.add(PAGE_SIZE_ESCAPE_CLASS);
+    select.blur();
+
+    if (pageSizeEscapeFrame) cancelAnimationFrame(pageSizeEscapeFrame);
+    pageSizeEscapeFrame = requestAnimationFrame(() => {
+      pageSizeEscapeFrame = 0;
+      if (select.isConnected && document.activeElement === select) select.blur();
+    });
+  }
+
   function onPointerDown(event) {
     const page = tablePageFromTarget(event.target);
     if (page) {
@@ -75,14 +99,18 @@
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
+  document.addEventListener("keydown", clearPageSizeHighlightOnEscape, true);
   window.addEventListener("popstate", onPopState);
 
   function destroy() {
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
+    if (pageSizeEscapeFrame) cancelAnimationFrame(pageSizeEscapeFrame);
+    pageSizeEscapeFrame = 0;
     pendingPage = "";
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
+    document.removeEventListener("keydown", clearPageSizeHighlightOnEscape, true);
     window.removeEventListener("popstate", onPopState);
   }
 
