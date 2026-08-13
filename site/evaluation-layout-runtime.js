@@ -3,7 +3,7 @@
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
 
-  window.__mflEvaluationStaticChrome?.destroy?.();
+  window.__mflEvaluationLayoutRuntime?.destroy?.();
 
   let destroyed = false;
   let frame = 0;
@@ -533,7 +533,7 @@
     clearRouteState();
   }
 
-  window.__mflEvaluationStaticChrome = Object.freeze({
+  window.__mflEvaluationLayoutRuntime = Object.freeze({
     version: VERSION,
     sync: schedule,
     destroy,

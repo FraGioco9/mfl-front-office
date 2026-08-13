@@ -24,7 +24,7 @@
   });
   const FILLER_CLASS = "col-shared-width-filler";
 
-  const previous = window.__mflTableWidthPrimeRuntime;
+  const previous = window.__mflTableWidthRuntime;
   previous?.destroy?.();
 
   let observer = null;
@@ -283,7 +283,7 @@
     window.removeEventListener("mfl:ready", onReady);
   }
 
-  window.__mflTableWidthPrimeRuntime = Object.freeze({
+  window.__mflTableWidthRuntime = Object.freeze({
     widths: WIDTHS,
     apply,
     takeOwnership,

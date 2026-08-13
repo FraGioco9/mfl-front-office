@@ -4,7 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "lint": "eslint app.js modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate.mjs",
+    "lint": "eslint bootstrap.js modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
     "validate": "node validate.mjs",
     "check": "npm run lint && npm run typecheck && npm run validate"

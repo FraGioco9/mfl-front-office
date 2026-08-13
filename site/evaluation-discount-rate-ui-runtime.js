@@ -1,117 +1,5 @@
 (() => {
   const VERSION = String(window.__mflReleaseVersion || "1.123.13");
-  const assetUrl = typeof window.__mflAssetUrl === "function"
-    ? window.__mflAssetUrl
-    : (path) => new URL(String(path || "").replace(/^\/+/, ""), window.location.origin + "/").href;
-  const CORE_URL = assetUrl("startup-integrity-core-runtime.js");
-  const releaseToken = `${VERSION}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  function replaceRegexRequired(source, pattern, replacement, label) {
-    if (!pattern.test(source)) throw new Error(`Could not locate ${label}.`);
-    return source.replace(pattern, replacement);
-  }
-
-  function patchCore(originalSource) {
-    let source = String(originalSource || "").replace(/\r\n?/g, "\n");
-    if (!source) throw new Error("The startup integrity core is empty.");
-
-    source = replaceRegexRequired(
-      source,
-      /const VERSION = String\(window\.__mflReleaseVersion \|\| "1\.120\.37"\);/,
-      `const VERSION = String(window.__mflReleaseVersion || ${JSON.stringify(VERSION)});`,
-      "the startup integrity version marker",
-    );
-
-    const stateMarker = "  let discountFunction = null;";
-    if (!source.includes(stateMarker)) throw new Error("Could not locate the Discount Rate route state.");
-    source = source.replace(
-      stateMarker,
-      `${stateMarker}\n  let discountWasEvaluation = false;`,
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  function syncDynamic\(\) \{[\s\S]*?\n  \}\n\n  function sync\(\)/,
-      `  function syncDynamic() {
-    const evaluationActive = isEvaluation();
-    if (evaluationActive && !discountWasEvaluation) {
-      discountWasEvaluation = true;
-      discountResult = null;
-      discountMflPerUsd = null;
-      discountRetryAt = 0;
-      document.documentElement.dataset.mflEvaluationRateSettled = "false";
-      void requestRate(true);
-    } else if (!evaluationActive && discountWasEvaluation) {
-      discountWasEvaluation = false;
-      discountResult = null;
-      discountMflPerUsd = null;
-      discountRetryAt = 0;
-      document.body?.classList.remove("evaluationDiscountRateReady");
-      document.documentElement.classList.remove("mflEvaluationRateResolved");
-      document.documentElement.dataset.mflEvaluationRateSettled = "false";
-      window.__mflDiscountTooltipController?.hide?.(true);
-    }
-    if (evaluationActive) {
-      const currentValue = currentMflPerUsd();
-      if (!discountPromise && discountResult && discountMflPerUsd !== currentValue) {
-        void requestRate(true);
-      } else if (!discountPromise && !discountResult
-          && (!discountRetryAt || Date.now() >= discountRetryAt)) {
-        void requestRate(Boolean(discountRetryAt));
-      }
-      paintRate();
-    }
-    applyStats();
-  }
-
-  function sync()`,
-      "the Evaluation Discount Rate route synchronization",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  function applyStats\(\) \{[\s\S]*?\n  \}\n\n  function syncDynamic\(\)/,
-      `  function applyStats() {
-    if (isMflStats()) window.__mflStatsFirstPaintRuntime?.sync?.();
-  }
-
-  function syncDynamic()`,
-      "the MFL Stats full-row loading path",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /  if \(isMflStats\(\)\) void loadStats\(\);/,
-      `  if (isMflStats()) window.__mflStatsFirstPaintRuntime?.sync?.();`,
-      "the direct MFL Stats full-row request",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /    discountResult = null;\n    paintRate\(\);\n    const nonce =/,
-      `    discountResult = null;
-    document.documentElement.dataset.mflEvaluationRateSettled = "false";
-    paintRate();
-    const nonce =`,
-      "the Evaluation Discount Rate request start",
-    );
-
-    source = replaceRegexRequired(
-      source,
-      /      \.finally\(\(\) => \{ discountPromise = null; \}\);/,
-      `      .finally(() => {
-        discountPromise = null;
-        document.documentElement.dataset.mflEvaluationRateSettled = "true";
-        window.dispatchEvent(new CustomEvent("mfl:evaluation-rate-settled", {
-          detail: { ready: Boolean(discountResult) },
-        }));
-      });`,
-      "the Evaluation Discount Rate request settlement",
-    );
-
-    return `${source}\n//# sourceURL=mfl-startup-integrity-core-v${VERSION}.js`;
-  }
-
   function installStaticStyles() {
     document.getElementById("mflEvaluationReleaseStyles")?.remove();
     const style = document.createElement("style");
@@ -446,12 +334,8 @@
     window.addEventListener("pointermove", onPointerMove, true);
     window.addEventListener("pointerout", onPointerOut, true);
     window.addEventListener("pointerdown", onPointerDown, true);
-    document.addEventListener("pointerover", onPointerOver, true);
-    document.addEventListener("pointermove", onPointerMove, true);
-    document.addEventListener("pointerout", onPointerOut, true);
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
-    document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("resize", onResize);
@@ -469,12 +353,8 @@
       window.removeEventListener("pointermove", onPointerMove, true);
       window.removeEventListener("pointerout", onPointerOut, true);
       window.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("pointerover", onPointerOver, true);
-      document.removeEventListener("pointermove", onPointerMove, true);
-      document.removeEventListener("pointerout", onPointerOut, true);
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
-      document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("resize", onResize);
@@ -488,29 +368,7 @@
     window.__mflDiscountTooltipController = { version: VERSION, show, hide, destroy };
   }
 
-  async function start() {
-    const response = await fetch(
-      `${CORE_URL}?v=${encodeURIComponent(VERSION)}&release=${encodeURIComponent(releaseToken)}`,
-      {
-        cache: "no-store",
-        headers: {
-          Accept: "application/javascript,text/plain;q=0.9,*/*;q=0.8",
-          "Cache-Control": "no-cache, no-store, max-age=0",
-          Pragma: "no-cache",
-        },
-      },
-    );
-    if (!response.ok) throw new Error(`Could not load the startup integrity core (${response.status}).`);
-    const originalSource = await response.text();
-    const script = document.createElement("script");
-    script.textContent = patchCore(originalSource);
-    document.head.appendChild(script);
-    installRateChrome();
-  }
-
   installStaticStyles();
   installTooltipController();
-  start().catch((error) => {
-    console.error(error?.message || "Could not initialize startup integrity.");
-  });
+  installRateChrome();
 })();

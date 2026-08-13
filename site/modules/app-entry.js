@@ -15,7 +15,7 @@ function isSameOriginApiRequest(input) {
 }
 
 /**
- * Install one request policy for same-origin API calls made by the legacy and modular clients.
+ * Install one request policy for same-origin API calls made by the application core and modular runtimes.
  * Existing caller signals are preserved; calls without a signal receive a bounded timeout.
  * @param {{timeoutMs?: number}} [options]
  */
@@ -103,29 +103,29 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-tooltip-portal-runtime.js",
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
-  "/evaluation-static-chrome-runtime.js",
+  "/evaluation-layout-runtime.js",
   "/evaluation-discount-rate-guard-runtime.js",
   "/evaluation-load-intent-runtime.js",
-  "/mfl-stats-first-paint-runtime.js",
+  "/mfl-stats-runtime.js",
   "/view-button-visibility-runtime.js",
-  "/database-static-filter-runtime.js",
-  "/filter-add-focus-runtime.js",
+  "/shared-table-ui-runtime.js",
+  "/control-interactions-runtime.js",
   "/evaluation-mfl-usd-input-runtime.js",
   "/nationality-filter-options-runtime.js",
   "/global-search-runtime.js",
-  "/startup-integrity-runtime.js",
-  "/discount-tooltip-mouse-runtime.js",
+  "/evaluation-discount-rate-runtime.js",
+  "/evaluation-discount-rate-ui-runtime.js",
+  "/evaluation-discount-tooltip-pointer-runtime.js",
   "/watchlist-route-ui-runtime.js",
-  "/table-width-prime-runtime.js",
+  "/table-width-runtime.js",
   "/table-loading-runtime.js",
-  "/database-stats-navigation-release-runtime.js",
+  "/database-stats-reload-bootstrap-runtime.js",
   "/database-stats-runtime.js",
   "/database-stats-state-runtime.js",
 ]);
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-refinement-runtime.js",
-  "/database-stats-view-button-runtime.js",
+  "/database-stats-custom-filter-runtime.js",
   "/selection-refresh-reset-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
@@ -133,12 +133,12 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
- * __mflInteractionBusy?: { installLegacyBridge?: () => void },
- * __mflTableLoadingRuntime?: { installLegacyBridge?: () => void, sync?: () => void },
- * __mflTableWidthPrimeRuntime?: { takeOwnership?: () => boolean },
+ * __mflInteractionBusy?: { installCoreBridge?: () => void },
+ * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
+ * __mflTableWidthRuntime?: { takeOwnership?: () => boolean },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
- * __mflStatsFirstPaintRuntime?: { sync?: () => void, installLegacyBridge?: () => void },
+ * __mflStatsRuntime?: { sync?: () => void, installCoreBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
  * __mflAppStartPromise?: Promise<void>,
  * }} */
@@ -171,7 +171,7 @@ function installResponsiveStylesheet() {
 
 const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
-preloadClassicScript("/modules/legacy-core.js");
+preloadClassicScript("/modules/app-core.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
   if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
@@ -197,19 +197,18 @@ function showStartupError(error) {
   document.querySelector("main")?.prepend(message);
 }
 
-function installLegacyBridges() {
-  runtimeWindow.__mflTableLoadingRuntime?.installLegacyBridge?.();
-  runtimeWindow.__mflInteractionBusy?.installLegacyBridge?.();
-  runtimeWindow.__mflStatsFirstPaintRuntime?.installLegacyBridge?.();
+function installCoreBridges() {
+  runtimeWindow.__mflTableLoadingRuntime?.installCoreBridge?.();
+  runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
+  runtimeWindow.__mflStatsRuntime?.installCoreBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
-  runtimeWindow.__mflTableWidthPrimeRuntime?.takeOwnership?.();
+  runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
 }
 
 async function start() {
   const release = entryRelease;
   window.__mflRelease = release;
-  window.__mflReleaseVersion = release.version;
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 
   await responsiveStylesReady;
@@ -221,8 +220,8 @@ async function start() {
     if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
   }
 
-  await loadClassicScript("/modules/legacy-core.js");
-  installLegacyBridges();
+  await loadClassicScript("/modules/app-core.js");
+  installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
@@ -230,21 +229,21 @@ async function start() {
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
-  runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
+  runtimeWindow.__mflStatsRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS);
-  // Late compatibility runtimes can replace legacy functions. Reinstall every
-  // bridge after they load so loading/cursor ownership and static table chrome
-  // keep wrapping the functions that are actually active in the page.
-  installLegacyBridges();
+  // Late route and selection runtimes can replace core functions. Reinstall the
+  // bridges after they load so loading/cursor ownership and table chrome keep
+  // wrapping the functions that are actually active in the page.
+  installCoreBridges();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  runtimeWindow.__mflStatsFirstPaintRuntime?.sync?.();
+  runtimeWindow.__mflStatsRuntime?.sync?.();
 
   // Keep late runtimes such as selection bridges available as early as possible,
   // but do not release the startup loading state on the homepage or player-table
-  // routes until the legacy app startup has actually settled. Dedicated Stats
+  // routes until application startup has actually settled. Dedicated Stats
   // pages own their own readiness and therefore must not wait here.
   if ((homeStartup || tableStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;

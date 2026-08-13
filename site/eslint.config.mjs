@@ -6,7 +6,7 @@ export default [
     ignores: ["node_modules/**", ".vercel/**"],
   },
   {
-    files: ["app.js", "modules/app-entry.js"],
+    files: ["bootstrap.js", "modules/app-entry.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -30,7 +30,7 @@ export default [
     },
   },
   {
-    files: ["modules/legacy-core.js"],
+    files: ["modules/app-core.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

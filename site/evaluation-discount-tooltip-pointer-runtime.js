@@ -2,7 +2,7 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "1.123.23");
-  window.__mflDiscountTooltipMouseRuntime?.destroy?.();
+  window.__mflEvaluationDiscountTooltipPointerRuntime?.destroy?.();
 
   let keyboardMode = false;
   let pointerX = Number.NaN;
@@ -34,23 +34,10 @@
     return metricFrom(hitAtPointer());
   }
 
-  function hasWaitCursor(element, pseudoElement = null) {
-    if (!(element instanceof Element)) return false;
-    try {
-      return getComputedStyle(element, pseudoElement).cursor === "wait";
-    } catch {
-      return false;
-    }
-  }
-
   function interactionBlocked() {
-    if (document.documentElement.classList.contains("mflInteractionBusy")) return true;
-    const hit = hitAtPointer();
-    return hasWaitCursor(hit)
-      || hasWaitCursor(document.documentElement)
-      || hasWaitCursor(document.body)
-      || hasWaitCursor(document.body, "::before")
-      || hasWaitCursor(document.body, "::after");
+    const root = document.documentElement;
+    return root.classList.contains("mflInteractionBusy")
+      || root.dataset.interactionBusy === "true";
   }
 
   function cancelPointerSync() {
@@ -174,5 +161,5 @@
     document.removeEventListener("visibilitychange", onVisibilityChange);
   }
 
-  window.__mflDiscountTooltipMouseRuntime = Object.freeze({ version: VERSION, destroy });
+  window.__mflEvaluationDiscountTooltipPointerRuntime = Object.freeze({ version: VERSION, destroy });
 })();

@@ -5,7 +5,6 @@
   const MAX_RESULT_BOXES = 5;
   const previous = window.__mflGlobalSearchRuntime;
   previous?.destroy?.();
-  window.__mflSearchResultClickRuntime?.destroy?.();
 
   let controller = null;
   let sequence = 0;

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const previous = window.__mflFilterAddFocusRuntime;
+  const previous = window.__mflControlInteractionsRuntime;
   previous?.destroy?.();
 
   const NEUTRAL_ATTRIBUTE = "data-mfl-initial-filter-neutral";
@@ -500,5 +500,5 @@
     document.getElementById(STYLE_ID)?.remove();
   }
 
-  window.__mflFilterAddFocusRuntime = Object.freeze({ destroy });
+  window.__mflControlInteractionsRuntime = Object.freeze({ destroy });
 })();

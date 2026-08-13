@@ -5,7 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-import populate_seasons_from_flow_original as _impl
+import flow_season_population_core as _impl
 
 DATABASE_PATH = _impl.DATABASE_PATH
 FLOW_SCRIPT_URL = _impl.FLOW_SCRIPT_URL

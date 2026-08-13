@@ -8,8 +8,6 @@
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage, .toast";
 
   window.__mflSelectionStackRuntime?.destroy?.();
-  window.__mflSelectionBarLayoutRuntime?.destroy?.();
-  window.__mflSelectionFeedbackRuntime?.destroy?.();
 
   let frame = 0;
   let observer = null;

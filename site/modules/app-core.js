@@ -10629,31 +10629,9 @@ async function startApp() {
 }
 
 (() => {
-  const currentVersion = "1.122.0";
   const maxNoteLength = 100;
   const watchlistViewsKey = "watchlistViews";
   const watchlistViews = {};
-
-  function syncVisibleVersion() {
-    const footerLink = document.querySelector('.siteFooter a[href="/changelog"]');
-    if (footerLink) footerLink.textContent = `MFL Front Office v${currentVersion}`;
-    document.querySelectorAll("[data-app-version], .footerVersion, #footerVersion").forEach((element) => {
-      element.textContent = `v${currentVersion}`;
-    });
-  }
-
-  const style = document.createElement("style");
-  style.textContent = [
-    ".tableScroller.sidebarSnapshotActive{position:relative!important}",
-    ".tableScroller.sidebarSnapshotActive>table:not(.sidebarTableSnapshot){opacity:0!important}",
-    ".sidebarTableSnapshot{position:absolute!important;inset:0 auto auto 0!important;width:100%!important;min-width:0!important;table-layout:fixed!important;z-index:20!important;pointer-events:none!important;margin:0!important;opacity:1!important;visibility:visible!important}",
-    ".sidebarTableSnapshot col,.sidebarTableSnapshot th,.sidebarTableSnapshot td,.sidebarTableSnapshot a,.sidebarTableSnapshot button{opacity:1!important;visibility:visible!important;transition:none!important}",
-    ".appShell,.appShell main,.tableScroller{will-change:width}",
-  ].join("");
-  document.head.appendChild(style);
-
-  syncVisibleVersion();
-  document.addEventListener("DOMContentLoaded", syncVisibleVersion, { once: true });
 
   if (typeof sanitizePlayerNote === "function") {
     sanitizePlayerNote = function sanitizePlayerNote100(note) {
@@ -10747,73 +10725,10 @@ async function startApp() {
       return result;
     };
   }
-
-  let transitionTimer = 0;
-  let activeSnapshot = null;
-  let activeScroller = null;
-
-  function removeDuplicateIds(root) {
-    root.removeAttribute?.("id");
-    root.querySelectorAll?.("[id]").forEach((element) => element.removeAttribute("id"));
-  }
-
-  function createSidebarSnapshot() {
-    const visibleTable = Array.from(document.querySelectorAll(".tableScroller > table"))
-      .find((table) => table.offsetParent !== null && !table.classList.contains("evaluationTable"));
-    if (!visibleTable) return;
-
-    const scroller = visibleTable.parentElement;
-    const snapshot = visibleTable.cloneNode(true);
-    removeDuplicateIds(snapshot);
-    snapshot.classList.add("sidebarTableSnapshot");
-    snapshot.setAttribute("aria-hidden", "true");
-
-    const sourceCols = Array.from(visibleTable.querySelectorAll("colgroup col"));
-    const snapshotCols = Array.from(snapshot.querySelectorAll("colgroup col"));
-    const totalWidth = visibleTable.getBoundingClientRect().width || 1;
-    sourceCols.forEach((column, index) => {
-      if (!snapshotCols[index]) return;
-      const width = column.getBoundingClientRect().width;
-      snapshotCols[index].style.width = `${(width / totalWidth) * 100}%`;
-      snapshotCols[index].style.minWidth = "0";
-      snapshotCols[index].style.maxWidth = "none";
-    });
-
-    scroller.classList.add("sidebarSnapshotActive");
-    scroller.appendChild(snapshot);
-    activeScroller = scroller;
-    activeSnapshot = snapshot;
-  }
-
-  function finishSidebarTransition() {
-    window.clearTimeout(transitionTimer);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      activeSnapshot?.remove();
-      activeScroller?.classList.remove("sidebarSnapshotActive");
-      activeSnapshot = null;
-      activeScroller = null;
-    }));
-  }
-
-  if (typeof toggleMenu === "function") {
-    const originalToggleMenu = toggleMenu;
-    toggleMenu = function smoothToggleMenu(...args) {
-      finishSidebarTransition();
-      createSidebarSnapshot();
-      const result = originalToggleMenu.apply(this, args);
-      transitionTimer = window.setTimeout(finishSidebarTransition, 420);
-      return result;
-    };
-
-    [appShell, sidebar, menuRail].filter(Boolean).forEach((element) => {
-      element.addEventListener("transitionend", (event) => {
-        if (event.target === element) finishSidebarTransition();
-      });
-    });
-  }
 })();
 
-/* Consolidated from v14974-mfl-wallet-search-fix.js */
+/* Keep MFL Wallet search navigation anchored to Attributes. */
+
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
@@ -10875,9 +10790,7 @@ async function startApp() {
 })();
 
 
-/* Consolidated from v14974-followup-fixes.js */
 (() => {
-  const requestedPatchText = "Keep every table column continuously visible during sidebar transitions";
   const mflWalletAddress = "0xff8d2bbed8164db0";
   const tableColumnPercentages = {
     selection: 3,
@@ -11005,29 +10918,6 @@ async function startApp() {
     };
   }
 
-  function renamePatch() {
-    document.querySelectorAll(".changelogList li").forEach((entry) => {
-      const version = entry.querySelector("span")?.textContent?.trim();
-      const description = entry.querySelector("p");
-      if (version === "v1.149.74" && description) description.textContent = requestedPatchText;
-    });
-  }
-
-  function searchResultForMflWallet(target) {
-    const result = target?.closest?.("a,button,[role='button'],li");
-    if (!result || !result.closest("#searchModal,.searchResults,#playerSearchResults,[class*='searchResult']")) return null;
-    const context = [result, result.closest("li"), result.parentElement]
-      .filter(Boolean)
-      .map((element) => `${element.textContent || ""} ${Array.from(element.attributes || []).map((attribute) => `${attribute.name}=${attribute.value}`).join(" ")}`.toLowerCase())
-      .join(" ");
-    return context.includes("mfl wallet") || context.includes(mflWalletAddress) ? result : null;
-  }
-
-  function onMflStatsPage() {
-    return window.location.pathname.toLowerCase() === "/mfl/stats"
-      || state.currentPage === "mflstats"
-      || (state.currentPage === "mfl" && state.view === "stats");
-  }
 
   document.addEventListener("click", (event) => {
     if (typeof menuButton !== "undefined" && menuButton && (event.target === menuButton || menuButton.contains(event.target))) {
@@ -11037,22 +10927,14 @@ async function startApp() {
       return;
     }
 
-    if (!onMflStatsPage() || !searchResultForMflWallet(event.target)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if (typeof closeSearch === "function") closeSearch();
-    void setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
   }, true);
 
   keepSidebarExpanded();
-  renamePatch();
   document.addEventListener("DOMContentLoaded", () => {
     keepSidebarExpanded();
-    renamePatch();
-    }, { once: true });
+      }, { once: true });
 })();
 
-/* Consolidated from v14974-agent-views-fix.js */
 (() => {
   const removedAgentViews = new Set(["current", "all"]);
   const removedAgentSlugs = new Set(["current-season", "all-time"]);
@@ -11172,7 +11054,7 @@ async function startApp() {
 })();
 
 
-/* v1.150.1 public progression table views */
+/* Public progression table views */
 (() => {
   const PUBLIC_PROGRESSION_VIEWS = ["current", "all"];
   const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);
@@ -11215,7 +11097,6 @@ async function startApp() {
   }
 })();
 
-/* Consolidated from v1500-club-pages.js */
 (() => {
   const CLUB_PAGE = "club";
   const CLUB_ID_COLUMNS = [
@@ -11740,7 +11621,6 @@ async function startApp() {
   }
 })();
 
-/* Consolidated from v1500-club-polish.js */
 (() => {
   const VERSION = "1.122.0";
   const MAX_SEARCH_RESULTS = 5;
@@ -12077,7 +11957,7 @@ async function startApp() {
   else initialize();
 })();
 
-/* v1.150.6 stable pinned layout and pre-reveal table widths */
+/* Stable pinned layout and pre-reveal table widths */
 (() => {
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/attributes)?\/?$|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
@@ -12327,7 +12207,7 @@ async function startApp() {
   applySharedTableWidths();
 })();
 
-/* v1.150.7 layout-centered feedback and transition-free shared views */
+/* Layout-centered feedback and transition-free shared views */
 (() => {
   function syncLayoutCenter() {
     const toast = document.querySelector("#toastMessage");
@@ -12357,7 +12237,7 @@ async function startApp() {
   syncLayoutCenter();
 })();
 
-/* v1.151.1 session-cached incremental route data and destination-first loading */
+/* Session-cached incremental route data and destination-first loading */
 (() => {
   const originalApplyFilters = applyFilters;
   const originalSetPage = setPage;
@@ -12922,7 +12802,6 @@ window.__mflAppStartPromise = startApp();
     void Promise.resolve(setPage("home", true));
   }, true);
 })();
-//# sourceURL=mfl-front-office-app-v1.122.0.js
 
 (() => {
   const VERSION = String(window.__mflReleaseVersion || "1.122.0");
@@ -13148,5 +13027,3 @@ window.__mflAppStartPromise = startApp();
 
   sync();
 })();
-
-//# sourceURL=mfl-evaluation-route-stability-v1.122.0.js

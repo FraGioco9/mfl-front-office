@@ -252,7 +252,7 @@ jobs:
           from pathlib import Path
 
           release_path = Path("production-site/site/release.json")
-          app_path = Path("production-site/site/app.js")
+          app_path = Path("production-site/site/bootstrap.js")
           version = ""
 
           if release_path.exists():

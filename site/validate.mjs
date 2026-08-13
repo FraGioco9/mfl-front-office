@@ -41,20 +41,21 @@ invariant(
 const dataAuth = await readSite("api/_data-auth.js");
 matches(dataAuth, /require\(["']@onflow\/fcl["']\)/, "The data API must verify Dapper proofs with @onflow/fcl.");
 
-const bridge = await readSite("app.js");
+const bridge = await readSite("bootstrap.js");
 const staticVersion = bridge.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
-invariant(staticVersion === release.version, `app.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
-matches(bridge, /window\.__mflReleaseVersion\s*=\s*version;/, "app.js must remain the release-version owner.");
-excludes(bridge, /searchParams\.set\(["'](?:v|dev|rev)["']/, "app.js must keep runtime asset URLs queryless.");
+invariant(staticVersion === release.version, `bootstrap.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
+matches(bridge, /window\.__mflReleaseVersion\s*=\s*version;/, "bootstrap.js must remain the release-version owner.");
+excludes(bridge, /searchParams\.set\(["'](?:v|dev|rev)["']/, "bootstrap.js must keep runtime asset URLs queryless.");
 
 const entry = await readSite("modules/app-entry.js");
-matches(entry, /loadClassicScript\(["']\/modules\/legacy-core\.js["']\)/, "app-entry.js must load the canonical legacy core directly.");
+matches(entry, /loadClassicScript\(["']\/modules\/app-core\.js["']\)/, "app-entry.js must load the canonical application core directly.");
 matches(entry, /link\.href\s*=\s*["']\/responsive\.css["'];/, "app-entry.js must load responsive.css from the site root.");
 excludes(entry, /\?(?:v|dev|rev)=|searchParams\.set\(["'](?:v|dev|rev)["']/, "app-entry.js must keep runtime asset URLs queryless.");
+excludes(entry, /window\.__mflReleaseVersion\s*=/, "app-entry.js must not overwrite the bootstrap-owned release version.");
 excludes(entry, /loadPreparedClassicScript|executeClassicSource|loadPartitionedClassicScript/, "app-entry.js must not restore deprecated runtime loaders.");
 
 for (const path of [
-  "evaluation-static-chrome-runtime.js",
+  "evaluation-layout-runtime.js",
   "global-search-runtime.js",
   "release-ui-runtime.js",
   "selection-refresh-reset-runtime.js",

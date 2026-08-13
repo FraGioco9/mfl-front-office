@@ -1,7 +1,7 @@
 (() => {
   const VERSION = String(window.__mflReleaseVersion || "1.123.9");
 
-  window.__mflDatabaseStatsRefinementRuntime?.destroy?.();
+  window.__mflDatabaseStatsCustomFilterRuntime?.destroy?.();
 
   let frame = 0;
   let destroyed = false;
@@ -165,7 +165,7 @@
     document.getElementById("databaseStatsRefinementStyles")?.remove();
   }
 
-  window.__mflDatabaseStatsRefinementRuntime = {
+  window.__mflDatabaseStatsCustomFilterRuntime = {
     version: VERSION,
     sync: schedule,
     destroy,

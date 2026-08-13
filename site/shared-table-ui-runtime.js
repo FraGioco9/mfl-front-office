@@ -45,7 +45,7 @@
     club: ["attributes", "next", "contracts", "current", "all"],
   });
 
-  const previous = window.__mflDatabaseStaticFilterRuntime;
+  const previous = window.__mflSharedTableUiRuntime;
   previous?.destroy?.();
 
   let destroyed = false;
@@ -517,7 +517,7 @@
     document.documentElement.classList.remove(WAIT_HOVER_CLASS, FILTER_ESCAPE_CLASS);
   }
 
-  window.__mflDatabaseStaticFilterRuntime = Object.freeze({
+  window.__mflSharedTableUiRuntime = Object.freeze({
     version: VERSION,
     sync: syncTableChrome,
     prime: primeTableChrome,

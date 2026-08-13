@@ -122,7 +122,7 @@
    *   end: (token: string) => void,
    *   run: <T>(callback: () => T | Promise<T>, reason?: string) => Promise<T>,
    *   isBusy: () => boolean,
-   *   installLegacyBridge: () => void,
+   *   installCoreBridge: () => void,
    * },
    * __mflWithInteractionBusy?: (callback: () => unknown) => Promise<unknown>,
    * __mflWrapInteractionBusyFunction?: (callback: (...args: any[]) => any, reason: string) => (...args: any[]) => Promise<any>,
@@ -795,7 +795,7 @@
     /** @type {(callback: (...args: any[]) => any, reason: string) => (...args) => Promise<any>} */
     const wrapBusyFunction = (callback, reason) => (...args) => run(() => callback(...args), reason);
 
-    function installLegacyBridge() {
+    function installCoreBridge() {
       runtimeWindow.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
       runtimeWindow.__mflWrapInteractionBusyFunction = wrapBusyFunction;
       runtimeWindow.__mflSyncStoredAccessFlags = syncStoredAccessFlags;
@@ -852,7 +852,7 @@
       end,
       run,
       isBusy: () => activeTokens.size > 0,
-      installLegacyBridge,
+      installCoreBridge,
     });
   }
 

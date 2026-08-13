@@ -22,7 +22,7 @@
     { id: "common", label: "Common", min: null, max: 54 },
   ];
 
-  window.__mflStatsFirstPaintRuntime?.destroy?.();
+  window.__mflStatsRuntime?.destroy?.();
 
   let destroyed = false;
   let data = null;
@@ -422,7 +422,7 @@
     return dataPromise;
   }
 
-  function installLegacyBridge() {
+  function installCoreBridge() {
     if (summaryLegacyRenderer) return;
     const current = window.renderMflStatsPage;
     if (typeof current !== "function") return;
@@ -519,7 +519,7 @@
   document.addEventListener("pointerout", onHistogramPointerOut, true);
   window.addEventListener("popstate", sync);
   window.addEventListener("mfl:ready", () => {
-    installLegacyBridge();
+    installCoreBridge();
     sync();
   }, { once: true });
   sync();
@@ -544,11 +544,11 @@
     document.getElementById("mflStatsFirstPaintStyles")?.remove();
   }
 
-  window.__mflStatsFirstPaintRuntime = {
+  window.__mflStatsRuntime = {
     version: VERSION,
     sync,
     render: renderSummary,
-    installLegacyBridge,
+    installCoreBridge,
     destroy,
   };
 })();
