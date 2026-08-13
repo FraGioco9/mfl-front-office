@@ -11365,6 +11365,11 @@ async function startApp() {
 
     const rows = currentPageRows();
     Array.from(tableBody.rows).forEach((tableRow, rowIndex) => {
+      if (
+        tableRow.classList.contains("staticTableBlankRow")
+        || tableRow.hasAttribute("data-loading-row")
+      ) return;
+
       const row = rows[rowIndex];
       const cell = tableRow.cells[clubNameIndex + 1];
       if (!row || !cell) return;

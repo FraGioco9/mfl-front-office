@@ -23,8 +23,13 @@
         background-image: none !important;
       }
 
-      #tableBody > .${BLANK_ROW_CLASS} > td > * {
+      #tableBody > .${BLANK_ROW_CLASS} > td > *,
+      #tableBody > .${BLANK_ROW_CLASS} > td::before,
+      #tableBody > .${BLANK_ROW_CLASS} > td::after,
+      #tableBody > .${BLANK_ROW_CLASS} > td *::before,
+      #tableBody > .${BLANK_ROW_CLASS} > td *::after {
         display: none !important;
+        content: none !important;
       }
     `;
     document.head.appendChild(style);
