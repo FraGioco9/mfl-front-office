@@ -5,10 +5,22 @@
   const MOBILE_LAYOUT = "(max-width: 900px)";
   const MOBILE_TABLE_MIN_WIDTH = 1240;
   const MOBILE_COLUMN_WIDTHS = Object.freeze({
-    "col-select": 3, "col-id": 3, "col-flag": 3, "col-name": 13, "col-nationality": 7,
-    "col-age": 4, "col-positions": 8, "col-seasons": 5, "col-stat": 6,
-    "col-contract-revenue": 8, "col-contract-club": 19, "col-contract-division": 9,
-    "col-agent": 9, "col-joined-agency": 9, "col-owned-since": 9, "col-link": 3,
+    "col-select": 51.09,
+    "col-id": 68.13,
+    "col-flag": 45.41,
+    "col-name": 212.89,
+    "col-nationality": 141.92,
+    "col-age": 65.28,
+    "col-positions": 119.22,
+    "col-seasons": 82.31,
+    "col-stat": 107.86,
+    "col-contract-revenue": 140,
+    "col-contract-club": 227.16,
+    "col-contract-division": 280,
+    "col-agent": 187.34,
+    "col-joined-agency": 187.34,
+    "col-owned-since": 187.34,
+    "col-link": 48.39,
   });
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
 
@@ -99,14 +111,35 @@
     removeInlineGeometry(table, [
       "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
     ]);
+
+    let tableWidth = 0;
+    let validColumns = 0;
     table.querySelectorAll("col").forEach((column) => {
       const className = Object.keys(MOBILE_COLUMN_WIDTHS).find((name) => column.classList.contains(name));
       if (!className) return;
-      const width = `${MOBILE_COLUMN_WIDTHS[className]}%`;
+      const widthValue = MOBILE_COLUMN_WIDTHS[className];
+      const width = `${widthValue.toFixed(2)}px`;
+      tableWidth += widthValue;
+      validColumns += 1;
       ["width", "min-width", "max-width"].forEach((property) => column.style.setProperty(property, width, "important"));
       column.style.setProperty("transition", "none", "important");
     });
 
+    if (validColumns > 0) {
+      const width = `${Math.max(MOBILE_TABLE_MIN_WIDTH, tableWidth).toFixed(2)}px`;
+      table.style.setProperty("table-layout", "fixed", "important");
+      table.style.setProperty("width", width, "important");
+      table.style.setProperty("min-width", width, "important");
+      table.style.setProperty("max-width", width, "important");
+      table.style.setProperty("box-sizing", "border-box", "important");
+      table.style.setProperty("border-spacing", "0", "important");
+    }
+
+    scroller.style.setProperty("overflow-x", "auto", "important");
+    scroller.style.setProperty("overflow-y", "hidden", "important");
+    scroller.style.setProperty("overscroll-behavior-x", "contain", "important");
+    scroller.style.setProperty("touch-action", "pan-x pan-y", "important");
+    scroller.style.setProperty("-webkit-overflow-scrolling", "touch");
     scroller.dataset.mobileTableScroll = "true";
     scroller.classList.add("tableWidthsReady");
     return true;
