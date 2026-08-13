@@ -14,6 +14,8 @@
   let probeTimer = 0;
   let safetyTimer = 0;
   let sawBusy = false;
+  let recentSearchNodes = [];
+
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
     : null;
@@ -21,10 +23,19 @@
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    html.${CLASS} body *, html.${CLASS} body *::before, html.${CLASS} body *::after {
+    html.${CLASS} body *,
+    html.${CLASS} body *::before,
+    html.${CLASS} body *::after {
       transition: none !important;
       animation: none !important;
     }
+
+    html.${CLASS} #evaluationSearchResults {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
     html.${CLASS} body::after {
       content: "" !important;
       display: block !important;
@@ -39,18 +50,49 @@
 
   const input = () => document.getElementById("evaluationSearchInput");
   const results = () => document.getElementById("evaluationSearchResults");
-  const normalize = (value) => String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalize = (value) => String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
+  const loadingLocked = () => document.documentElement.classList.contains(CLASS);
   const recentRule = () => {
     const field = input();
     return field instanceof HTMLInputElement && !field.value.trim() ? true : originalRecentRule?.() || false;
   };
 
   function installRecentRule() {
-    if (window.shouldShowEvaluationRecentResults !== recentRule) window.shouldShowEvaluationRecentResults = recentRule;
+    if (window.shouldShowEvaluationRecentResults !== recentRule) {
+      window.shouldShowEvaluationRecentResults = recentRule;
+    }
+  }
+
+  function rememberVisibleRecentSearches() {
+    if (loadingLocked()) return;
+    const field = input();
+    const container = results();
+    if (!(field instanceof HTMLInputElement) || field.value.trim() || !(container instanceof HTMLElement)) return;
+    const nodes = Array.from(container.children).slice(0, 5);
+    if (nodes.length) recentSearchNodes = nodes;
+  }
+
+  function restoreRecentSearches() {
+    const container = results();
+    if (!(container instanceof HTMLElement) || !recentSearchNodes.length) return false;
+    syncing = true;
+    container.replaceChildren(...recentSearchNodes);
+    container.hidden = false;
+    requestAnimationFrame(() => { syncing = false; });
+    return true;
   }
 
   function showSearching(container) {
+    const existing = container.querySelector(":scope > .searchHint");
+    if (existing instanceof HTMLElement && existing.textContent === "Searching…" && container.children.length === 1) {
+      container.hidden = false;
+      return;
+    }
     const hint = document.createElement("div");
     hint.className = "searchHint";
     hint.textContent = "Searching…";
@@ -59,24 +101,44 @@
   }
 
   function sync() {
-    if (destroyed || syncing || !active()) return;
+    if (destroyed || syncing || !active() || loadingLocked()) return;
     const field = input();
     const container = results();
     if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
+
     syncing = true;
     installRecentRule();
     const query = normalize(field.value);
-    if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) showSearching(container);
-    else window.renderEvaluationSearchResults?.();
-    if (!query && container.children.length) container.hidden = false;
+
+    if (!query && document.activeElement !== field && recentSearchNodes.length) {
+      container.replaceChildren(...recentSearchNodes);
+      container.hidden = false;
+    } else if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
+      showSearching(container);
+    } else {
+      window.renderEvaluationSearchResults?.();
+      if (!query) rememberVisibleRecentSearches();
+    }
+
     requestAnimationFrame(() => { syncing = false; });
   }
 
   function onBlur(event) {
     if (event.target !== input()) return;
     event.stopImmediatePropagation();
+    if (loadingLocked()) return;
+
+    const field = input();
     const container = results();
-    if (container instanceof HTMLElement && event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
+    if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
+    if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
+
+    if (!field.value.trim()) {
+      rememberVisibleRecentSearches();
+      if (container.children.length) container.hidden = false;
+      return;
+    }
+
     queueMicrotask(sync);
   }
 
@@ -84,8 +146,20 @@
     const container = results();
     if (!(container instanceof HTMLElement)) return;
     resultsObserver = new MutationObserver(() => {
+      if (syncing || loadingLocked()) return;
       const field = input();
-      if (!syncing && field instanceof HTMLInputElement && document.activeElement !== field) sync();
+      if (!(field instanceof HTMLInputElement)) return;
+
+      if (!field.value.trim()) {
+        if (document.activeElement === field) {
+          rememberVisibleRecentSearches();
+          return;
+        }
+        if ((container.hidden || !container.children.length) && recentSearchNodes.length) restoreRecentSearches();
+        return;
+      }
+
+      if (document.activeElement !== field) sync();
     });
     resultsObserver.observe(container, { childList: true, attributes: true, attributeFilter: ["hidden"] });
   }
@@ -109,10 +183,11 @@
     busyObserver?.disconnect();
     busyObserver = null;
     document.documentElement.classList.remove(CLASS);
+    queueMicrotask(sync);
   }
 
   function checkLock() {
-    if (!document.documentElement.classList.contains(CLASS)) return;
+    if (!loadingLocked()) return;
     if (loadingBusy()) {
       sawBusy = true;
       if (releaseFrame) cancelAnimationFrame(releaseFrame);
@@ -129,8 +204,11 @@
   }
 
   function startLock() {
-    if (!document.documentElement.classList.contains(CLASS)) {
+    const container = results();
+    if (!loadingLocked()) {
+      rememberVisibleRecentSearches();
       document.documentElement.classList.add(CLASS);
+      if (container instanceof HTMLElement) container.hidden = true;
       busyObserver = new MutationObserver(checkLock);
       busyObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-interaction-busy"] });
       if (document.body) busyObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "aria-busy"] });
@@ -142,7 +220,9 @@
   }
 
   function onClick(event) {
-    const target = event.target instanceof Element ? event.target.closest("#evaluationSearchResults .evaluationSearchResult") : null;
+    const target = event.target instanceof Element
+      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
+      : null;
     if (target instanceof HTMLButtonElement && !target.disabled) startLock();
   }
 
@@ -159,8 +239,11 @@
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     stopLock();
+    recentSearchNodes = [];
     style.remove();
-    if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) window.shouldShowEvaluationRecentResults = originalRecentRule;
+    if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
+      window.shouldShowEvaluationRecentResults = originalRecentRule;
+    }
   }
 
   window.__mflEvaluationSearchStateRuntime = Object.freeze({ sync, destroy });
