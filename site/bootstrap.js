@@ -75,7 +75,6 @@
     }
   }
 
-  window.__mflSyncQuickFilterFirstPaint = syncQuickFilterFirstPaint;
   syncQuickFilterFirstPaint();
 
   const core = document.createElement("script");
