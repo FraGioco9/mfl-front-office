@@ -3,6 +3,7 @@
 
   const STYLE_ID = "mflTableBlankRowGuardStyles";
   const BLANK_ROW_CLASS = "staticTableBlankRow";
+  const DATA_ROW_OUTER_HEIGHT = 39;
 
   window.__mflTableBlankRowGuard?.destroy?.();
 
@@ -16,6 +17,11 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
+      #tableBody > .${BLANK_ROW_CLASS} > td {
+        height: ${DATA_ROW_OUTER_HEIGHT}px !important;
+        min-height: ${DATA_ROW_OUTER_HEIGHT}px !important;
+      }
+
       #tableBody > .${BLANK_ROW_CLASS} > td,
       #tableBody > .${BLANK_ROW_CLASS} > td * {
         color: transparent !important;
