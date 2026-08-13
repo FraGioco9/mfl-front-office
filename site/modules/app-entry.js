@@ -111,6 +111,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/mfl-stats-runtime.js",
   "/view-button-visibility-runtime.js",
   "/shared-table-ui-runtime.js",
+  "/table-navigation-chrome-runtime.js",
   "/control-interactions-runtime.js",
   "/evaluation-mfl-usd-input-runtime.js",
   "/nationality-filter-options-runtime.js",
