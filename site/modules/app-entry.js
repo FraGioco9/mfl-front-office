@@ -169,6 +169,14 @@ function installResponsiveStylesheet() {
   return ready;
 }
 
+function promoteResponsiveStylesheet() {
+  const link = document.querySelector('link[data-mfl-responsive-layout="true"]');
+  if (!(link instanceof HTMLLinkElement) || link.parentElement !== document.head) return;
+  // responsive.css is render-blocking for first paint, then moved behind all
+  // runtime-owned styles so viewport adaptations remain the final CSS authority.
+  document.head.appendChild(link);
+}
+
 const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
 preloadClassicScript("/modules/app-core.js");
@@ -240,6 +248,7 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsRuntime?.sync?.();
+  promoteResponsiveStylesheet();
 
   // Keep late runtimes such as selection bridges available as early as possible,
   // but do not release the startup loading state on the homepage or player-table
@@ -249,6 +258,9 @@ async function start() {
     await runtimeWindow.__mflAppStartPromise;
   }
 
+  // Core startup can add route-specific style owners asynchronously. Reassert
+  // responsive.css once more immediately before the application is released.
+  promoteResponsiveStylesheet();
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
 }
