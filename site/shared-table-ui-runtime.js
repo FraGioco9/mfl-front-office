@@ -3,7 +3,6 @@
 
   const VERSION = String(window.__mflReleaseVersion || "1.123.29");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
-  const WAIT_HOVER_CLASS = "mflWaitHoverSuppressed";
   const FILTER_ESCAPE_CLASS = "mflEscapeClosingFilters";
   const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const POINTER_BLUR_SELECTOR = [
@@ -210,20 +209,6 @@
     frame = requestAnimationFrame(syncTableChrome);
   }
 
-  function waitCursorActive() {
-    const root = document.documentElement;
-    return root.classList.contains("mflInteractionBusy")
-      || root.dataset.interactionBusy === "true";
-  }
-
-  function syncWaitHover() {
-    if (destroyed) return;
-    // Hover suppression follows the authoritative busy controller only. A
-    // stale computed cursor must never leave Watchlist/view controls looking
-    // permanently disabled after loading has completed.
-    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive());
-  }
-
   function installStyles() {
     if (document.getElementById("mflTableChromeRuntimeStyles")) return;
     const style = document.createElement("style");
@@ -308,26 +293,6 @@
       .quickFilters input {
         cursor: pointer !important;
       }
-
-      html.${WAIT_HOVER_CLASS} body *,
-      html.${WAIT_HOVER_CLASS} body *::before,
-      html.${WAIT_HOVER_CLASS} body *::after {
-        transition: none !important;
-        animation: none !important;
-      }
-
-      html.${WAIT_HOVER_CLASS} body *:hover,
-      html.${WAIT_HOVER_CLASS} body *:hover::before,
-      html.${WAIT_HOVER_CLASS} body *:hover::after {
-        transform: none !important;
-      }
-
-      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *,
-      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *::before,
-      html.${WAIT_HOVER_CLASS} body[data-page="mflstats"] #mflStatsPage *::after {
-        transition: none !important;
-        animation: none !important;
-      }
     `;
     document.head.appendChild(style);
   }
@@ -399,7 +364,6 @@
       const destination = normalizePageName(nav.dataset.page);
       if (VIEW_ORDER[destination]) primeTableChrome(destination);
     }
-    syncWaitHover(target);
   }
 
   function onClick(event) {
@@ -461,19 +425,16 @@
     if (select?.classList.contains(PAGE_SIZE_ESCAPE_CLASS) && target !== select) {
       clearPageSizeEscapeSuppression();
     }
-    syncWaitHover(target);
   }
 
   function onPopState() {
     primeMflStatsOverallFilters();
     primeTableChrome(tablePageFromPath());
-    syncWaitHover();
   }
 
   installStyles();
   primeMflStatsOverallFilters();
   primeTableChrome(currentTablePage());
-  syncWaitHover();
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
@@ -485,11 +446,10 @@
 
   observer = new MutationObserver(() => {
     scheduleTableChrome();
-    syncWaitHover();
   });
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "style", "data-initial-page", "data-interaction-busy"],
+    attributeFilter: ["class", "style", "data-initial-page"],
   });
   if (document.body) {
     observer.observe(document.body, {
@@ -514,7 +474,7 @@
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
     window.removeEventListener("popstate", onPopState);
-    document.documentElement.classList.remove(WAIT_HOVER_CLASS, FILTER_ESCAPE_CLASS);
+    document.documentElement.classList.remove(FILTER_ESCAPE_CLASS);
   }
 
   window.__mflSharedTableUiRuntime = Object.freeze({
