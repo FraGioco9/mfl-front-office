@@ -133,6 +133,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/selection-refresh-reset-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
+  "/evaluation-search-state-runtime.js",
 ]);
 
 /** @type {Window & {
