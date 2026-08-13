@@ -2886,7 +2886,11 @@ function normalizeViewForPage(viewName, pageName = tablePageKey() || "progressio
 }
 
 function pageNameForViewButton(button) {
-  return button?.dataset?.page || (state.currentPage === "mflstats" ? "mfl" : tablePageKey() || "progression");
+  // Runtime/static helpers may leave data-page behind while the SPA has already
+  // moved to another shared table page. The live application page is the
+  // authoritative owner; data-page is only a first-paint fallback.
+  const currentPage = state.currentPage === "mflstats" ? "mfl" : tablePageKey();
+  return currentPage || button?.dataset?.page || "progression";
 }
 
 function preferredViewForPage(pageName) {
@@ -9947,23 +9951,74 @@ mflStatsDistributionModeButtons?.addEventListener("click", (event) => {
   renderMflStatsPage();
 });
 
+let pendingViewButtonPointer = null;
+let pointerCommittedViewButton = null;
+let pointerCommittedViewButtonTimer = 0;
+
+function activateViewButton(button) {
+  if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return;
+  const pageName = pageNameForViewButton(button);
+  const viewName = button.dataset.view;
+  if (!viewName) return;
+
+  if (pageName === "mfl" && viewName === "stats") {
+    void setPage("mflstats", true, { skipNavigationLoading: true });
+    return;
+  }
+  if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
+    void setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
+    return;
+  }
+  if (pageName !== state.currentPage && tablePages.has(pageName)) {
+    state.currentPage = pageName;
+    document.body.dataset.page = pageName;
+  }
+  void setView(viewName);
+}
+
+function clearPointerCommittedViewButton() {
+  pointerCommittedViewButton = null;
+  if (pointerCommittedViewButtonTimer) window.clearTimeout(pointerCommittedViewButtonTimer);
+  pointerCommittedViewButtonTimer = 0;
+}
+
+function commitViewButtonOnPointerRelease(button, event) {
+  const pending = pendingViewButtonPointer;
+  pendingViewButtonPointer = null;
+  if (!pending || pending.button !== button || pending.pointerId !== event.pointerId) return;
+  if (event.isPrimary === false || event.button !== 0) return;
+
+  // Commit on the button's own pointerup. This restores the real-pointer path
+  // without bringing back the former document-wide table-loading interceptor,
+  // synthetic popstate, or click swallowing that could freeze the site.
+  pointerCommittedViewButton = button;
+  if (pointerCommittedViewButtonTimer) window.clearTimeout(pointerCommittedViewButtonTimer);
+  pointerCommittedViewButtonTimer = window.setTimeout(clearPointerCommittedViewButton, 0);
+  activateViewButton(button);
+}
+
 viewButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const pageName = pageNameForViewButton(button);
-    const viewName = button.dataset.view;
-    if (pageName === "mfl" && viewName === "stats") {
-      setPage("mflstats", true, { skipNavigationLoading: true });
+  button.addEventListener("pointerdown", (event) => {
+    if (event.isPrimary === false || event.button !== 0 || button.disabled || button.hidden) {
+      pendingViewButtonPointer = null;
       return;
     }
-    if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
-      setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
+    pendingViewButtonPointer = { button, pointerId: event.pointerId };
+  });
+  button.addEventListener("pointerup", (event) => commitViewButtonOnPointerRelease(button, event));
+  button.addEventListener("pointercancel", () => {
+    if (pendingViewButtonPointer?.button === button) pendingViewButtonPointer = null;
+  });
+  button.addEventListener("click", (event) => {
+    if (pointerCommittedViewButton === button) {
+      // A normal mouse click follows pointerup in the same task. The view has
+      // already been committed once, so suppress only the duplicate default
+      // activation; keyboard-generated clicks still use this handler.
+      event.preventDefault();
+      clearPointerCommittedViewButton();
       return;
     }
-    if (pageName !== state.currentPage && tablePages.has(pageName)) {
-      state.currentPage = pageName;
-      document.body.dataset.page = pageName;
-    }
-    setView(viewName);
+    activateViewButton(button);
   });
 });
 

@@ -210,26 +210,18 @@
     frame = requestAnimationFrame(syncTableChrome);
   }
 
-  function elementHasWaitCursor(element, pseudoElement = null) {
-    if (!(element instanceof Element)) return false;
-    try {
-      return getComputedStyle(element, pseudoElement).cursor === "wait";
-    } catch {
-      return false;
-    }
+  function waitCursorActive() {
+    const root = document.documentElement;
+    return root.classList.contains("mflInteractionBusy")
+      || root.dataset.interactionBusy === "true";
   }
 
-  function waitCursorActive(target = null) {
-    return document.documentElement.classList.contains("mflInteractionBusy")
-      || elementHasWaitCursor(target)
-      || elementHasWaitCursor(document.documentElement)
-      || elementHasWaitCursor(document.body)
-      || elementHasWaitCursor(document.body, "::before");
-  }
-
-  function syncWaitHover(target = null) {
+  function syncWaitHover() {
     if (destroyed) return;
-    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive(target));
+    // Hover suppression follows the authoritative busy controller only. A
+    // stale computed cursor must never leave Watchlist/view controls looking
+    // permanently disabled after loading has completed.
+    document.documentElement.classList.toggle(WAIT_HOVER_CLASS, waitCursorActive());
   }
 
   function installStyles() {
@@ -497,7 +489,7 @@
   });
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "style", "data-initial-page"],
+    attributeFilter: ["class", "style", "data-initial-page", "data-interaction-busy"],
   });
   if (document.body) {
     observer.observe(document.body, {
