@@ -71,6 +71,15 @@
       transition: none !important;
     }
 
+    html #mflStatsPage .mflStatsHistogramBar[data-tooltip]::before {
+      content: attr(data-tooltip) !important;
+      display: block !important;
+    }
+
+    #mflStatsHistogramTooltipPortal {
+      display: none !important;
+    }
+
     body[data-page="database"] #progressionPage .viewButton:is(
       [data-view="next"],
       [data-view="current"],
