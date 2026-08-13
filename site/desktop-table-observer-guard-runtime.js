@@ -1,14 +1,14 @@
 (() => {
   "use strict";
 
-  // This runtime no longer replaces or filters the browser MutationObserver.
-  // Keep the legacy restore hook harmless because app-entry still calls it.
+  // Keep the legacy restore hook harmless. This runtime no longer replaces
+  // or filters MutationObserver, so loading and layout observers stay native.
   window.__mflRestoreNativeMutationObserver = () => {};
 
-  if (document.querySelector('script[data-mfl-desktop-width-owner="true"]')) return;
-  const script = document.createElement("script");
-  script.src = "/desktop-table-width-runtime.js";
-  script.async = false;
-  script.dataset.mflDesktopWidthOwner = "true";
-  document.head.appendChild(script);
+  if (document.querySelector('link[data-mfl-desktop-table-widths="true"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/desktop-table-width.css";
+  link.dataset.mflDesktopTableWidths = "true";
+  document.head.appendChild(link);
 })();
