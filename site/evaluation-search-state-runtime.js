@@ -7,7 +7,6 @@
 
   let destroyed = false;
   let syncing = false;
-  let primingRecents = false;
   let resultsObserver = null;
   let busyObserver = null;
   let releaseFrame = 0;
@@ -67,7 +66,6 @@
   }
 
   const recentRule = () => {
-    if (primingRecents) return true;
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
     if (field.value.trim()) return originalRecentRule?.() || false;
@@ -103,31 +101,6 @@
     if (buttons.length) recentSearchNodes = buttons;
   }
 
-  function primeRecentSearchNodes() {
-    const field = input();
-    const container = results();
-    if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
-
-    const clearButton = document.getElementById("evaluationSearchClearButton");
-    const previousValue = field.value;
-    const previousHidden = container.hidden;
-    const previousChildren = Array.from(container.childNodes);
-    const previousClearHidden = clearButton instanceof HTMLElement ? clearButton.hidden : true;
-
-    primingRecents = true;
-    field.value = "";
-    try {
-      window.renderEvaluationSearchResults?.();
-      captureRenderedRecents(container);
-    } finally {
-      field.value = previousValue;
-      container.replaceChildren(...previousChildren);
-      container.hidden = previousHidden;
-      if (clearButton instanceof HTMLElement) clearButton.hidden = previousClearHidden;
-      primingRecents = false;
-    }
-  }
-
   function restoreRecentSearches(container) {
     if (!(container instanceof HTMLElement)) return false;
     const nodes = recentSearchNodes
@@ -141,13 +114,13 @@
 
   function showSearching(container) {
     const existing = container.querySelector(":scope > .searchHint");
-    if (existing instanceof HTMLElement && existing.textContent === "Searching…" && container.children.length === 1) {
+    if (existing instanceof HTMLElement && existing.textContent === "Searchingº" && container.children.length === 1) {
       container.hidden = false;
       return;
     }
     const hint = document.createElement("div");
     hint.className = "searchHint";
-    hint.textContent = "Searching…";
+    hint.textContent = "Searchingº";
     container.replaceChildren(hint);
     container.hidden = false;
   }
@@ -197,7 +170,7 @@
 
     const container = results();
     if (!(container instanceof HTMLElement)) return;
-    if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
+    if (event.relatedTarget instanceof Node && container.contains (event.relatedTarget)) return;
 
     if (playerSelected()) {
       hideSuggestions(container);
@@ -223,12 +196,17 @@
     const container = results();
     if (!(container instanceof HTMLElement)) return;
     resultsObserver = new MutationObserver(() => {
-      if (syncing || primingRecents || loadingLocked()) return;
+      if (syncing || loadingLocked()) return;
       const field = input();
       if (!(field instanceof HTMLInputElement)) return;
 
       if (playerSelected() && document.activeElement !== field) {
         hideSuggestions(container);
+        return;
+      }
+
+      if (document.activeElement === field && !field.value.trim()) {
+        captureRenderedRecents(container);
         return;
       }
 
@@ -272,7 +250,11 @@
     releaseFrame = requestAnimationFrame(() => {
       releaseFrame = 0;
       if (loadingBusy()) return checkLock();
-      settleFrame = requestAnimationFrame(() => loadingBusy() ? checkLock() : stopLock());
+      settleFrame = requestAnimationFrame(() => {
+        settleFrame = 0;
+        if (loadingBusy()) return checkLock();
+        stopLock();
+      });
     });
   }
 
@@ -301,7 +283,7 @@
   }
 
   installRecentRule();
-  primeRecentSearchNodes();
+  captureRenderedRecents(results());
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
