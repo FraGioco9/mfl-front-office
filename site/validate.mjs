@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,6 +53,32 @@ matches(entry, /link\.href\s*=\s*["']\/responsive\.css["'];/, "app-entry.js must
 excludes(entry, /\?(?:v|dev|rev)=|searchParams\.set\(["'](?:v|dev|rev)["']/, "app-entry.js must keep runtime asset URLs queryless.");
 excludes(entry, /window\.__mflReleaseVersion\s*=/, "app-entry.js must not overwrite the bootstrap-owned release version.");
 excludes(entry, /loadPreparedClassicScript|executeClassicSource|loadPartitionedClassicScript/, "app-entry.js must not restore deprecated runtime loaders.");
+
+
+const responsive = await readSite("responsive.css");
+const indexHtml = await readSite("index.html");
+matches(indexHtml, /<meta[^>]+name=["']viewport["'][^>]+viewport-fit=cover/i, "Mobile first paint must enable safe-area viewport fitting.");
+matches(indexHtml, /<link[^>]+href=["']\/responsive\.css["'][^>]+data-mfl-responsive-layout=["']true["']/i, "responsive.css must be render-blocking on first paint.");
+invariant(indexHtml.includes(`MFL Front Office v${release.version}`), "The static footer version must match release.json before runtime startup.");
+matches(responsive, /\/\* Mobile parity contract\./, "responsive.css must keep the mobile parity contract.");
+matches(responsive, /#mflLoadingToast[\s\S]*--mfl-visual-viewport-bottom/, "Mobile loading toast must account for the visual viewport.");
+matches(responsive, /#progressionPage \.tableScroller[\s\S]*touch-action:\s*pan-x pan-y/, "Mobile player tables must remain touch-scrollable.");
+matches(bridge, /MOBILE_TABLE_MIN_WIDTH\s*=\s*1240/, "Static first paint must preserve a horizontally scrollable mobile table width.");
+matches(bridge, /eventTargetsBusyScrollSurface/, "Busy interaction blocking must preserve native scrolling.");
+
+const viewportMediaPattern = /@media\s*\(\s*(?:max|min)-width/i;
+const responsiveOwnerCandidates = [];
+for (const entry of await readdir(siteRoot, { withFileTypes: true })) {
+  if (!entry.isFile() || !/\.(?:css|html|js|mjs)$/.test(entry.name) || entry.name === "responsive.css") continue;
+  responsiveOwnerCandidates.push(entry.name);
+}
+for (const entry of await readdir(resolve(siteRoot, "modules"), { withFileTypes: true })) {
+  if (entry.isFile() && /\.(?:js|mjs)$/.test(entry.name)) responsiveOwnerCandidates.push(`modules/${entry.name}`);
+}
+for (const path of responsiveOwnerCandidates) {
+  const source = await readSite(path);
+  excludes(source, viewportMediaPattern, `${path} must keep viewport media queries in responsive.css.`);
+}
 
 for (const path of [
   "evaluation-layout-runtime.js",

@@ -459,18 +459,6 @@
       min-width: 0 !important;
     }
 
-    @media (max-width: 900px) {
-      html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
-      body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
-        grid-template-columns: minmax(0, 1fr) !important;
-      }
-
-      html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
-      body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-        width: 100% !important;
-        max-width: none !important;
-      }
-    }
 
     html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
     body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {

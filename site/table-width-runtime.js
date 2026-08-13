@@ -126,7 +126,10 @@
       scroller.style.setProperty("box-sizing", "border-box", "important");
       scroller.style.setProperty("overflow-x", "auto", "important");
       scroller.style.setProperty("overflow-y", "hidden", "important");
+      scroller.style.setProperty("overscroll-behavior-x", "contain", "important");
+      scroller.style.setProperty("touch-action", "pan-x pan-y", "important");
       scroller.style.setProperty("-webkit-overflow-scrolling", "touch");
+      scroller.dataset.mobileTableScroll = "true";
     }
   }
 
@@ -139,7 +142,9 @@
     }
     const overflowX = window.getComputedStyle(scroller).overflowX;
     return ["auto", "scroll"].includes(overflowX)
-      && table.getBoundingClientRect().width >= MOBILE_TABLE_MIN_WIDTH - 1;
+      && table.getBoundingClientRect().width >= MOBILE_TABLE_MIN_WIDTH - 1
+      && scroller.scrollWidth >= MOBILE_TABLE_MIN_WIDTH - 1
+      && scroller.scrollWidth > scroller.clientWidth + 1;
   }
 
   function applyFallbackWidths() {
@@ -185,12 +190,22 @@
     return true;
   }
 
+  function clearMobileContainerState() {
+    const scroller = document.querySelector("#progressionPage .tableScroller");
+    if (!(scroller instanceof HTMLElement)) return;
+    delete scroller.dataset.mobileTableScroll;
+    scroller.style.removeProperty("overscroll-behavior-x");
+    scroller.style.removeProperty("touch-action");
+    scroller.style.removeProperty("-webkit-overflow-scrolling");
+  }
+
   function apply() {
     if (destroyed || !tableRouteActive()) return false;
-    // Mobile has one authoritative owner: this early runtime. The legacy desktop
-    // table layout still runs for wide screens, but must never collapse or hide
-    // the phone scroller after startup.
+    // Mobile has one authoritative owner: this early runtime. The application
+    // core owns wide-screen exact widths, but must never collapse or hide the
+    // phone scroller after startup.
     if (mobileLayoutActive()) return applyFallbackWidths();
+    clearMobileContainerState();
     if (typeof window.applyExactPlayerTableWidths === "function") {
       return Boolean(window.applyExactPlayerTableWidths());
     }
@@ -217,7 +232,7 @@
     observer?.disconnect();
     observer = new MutationObserver((records) => {
       if (mobileLayoutActive()) {
-        // Legacy desktop rendering still owns wide-screen exact widths. If it
+        // Desktop core rendering still owns wide-screen exact widths. If it
         // writes inline table styles on a phone, repair that mutation in the
         // same microtask checkpoint so no later task can observe the conflict.
         if (mobileStyleMutation(records)) {
@@ -262,7 +277,7 @@
 
   function takeOwnership() {
     if (destroyed) return false;
-    // Re-register after legacy-core so its resize/mutation callbacks run first;
+    // Re-register after app-core so its resize/mutation callbacks run first;
     // the canonical mobile result is therefore the final result before paint.
     observe();
     bindWindowEvents();

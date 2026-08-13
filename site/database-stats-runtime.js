@@ -89,16 +89,6 @@
       #databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition="true"] .mflStatsHistogramBar::after {
         animation: mflStatsBarRise 220ms ease-out !important;
       }
-      @media (max-width: 1100px) {
-        #databaseStatsPage .databaseStatsCards {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-      }
-      @media (max-width: 720px) {
-        #databaseStatsPage .databaseStatsCards {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-      }
     `;
     document.head.appendChild(style);
   }

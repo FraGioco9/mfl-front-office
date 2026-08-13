@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.0";
+  const STATIC_RELEASE_VERSION = "1.124.1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -25,6 +25,8 @@
     ["common", "Common"],
   ]);
   const TABLE_PAGE_IDS = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
+  const MOBILE_LAYOUT_QUERY = "(max-width: 900px)";
+  const MOBILE_TABLE_MIN_WIDTH = 1240;
   const OPT_IN_REQUIRED_PAGE_IDS = new Set(["myplayers", "watchlist", "settings"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
@@ -364,7 +366,8 @@
     const reservedViewportWidth = Math.max(0, window.innerWidth - staticBrowserScrollbarWidth());
     const viewportWidth = Math.min(clientWidth, reservedViewportWidth);
     const menuRail = document.getElementById("menuRail");
-    const sidebarWidth = menuRail instanceof HTMLElement && !menuRail.hidden ? 190 : 0;
+    const mobile = window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+    const sidebarWidth = !mobile && menuRail instanceof HTMLElement && !menuRail.hidden ? 190 : 0;
     const paddingLeft = parseFloat(styles.paddingLeft) || 0;
     const paddingRight = parseFloat(styles.paddingRight) || 0;
     return Math.max(0, viewportWidth - sidebarWidth - paddingLeft - paddingRight);
@@ -377,15 +380,33 @@
     const percentages = columns.map(staticTableColumnPercentage);
     if (!percentages.length || percentages.some((value) => !Number.isFinite(value))) return;
 
-    const exactWidth = `${contentWidth.toFixed(4)}px`;
-    document.querySelectorAll("#progressionPage .tableShell, #progressionPage .tableScroller").forEach((element) => {
+    const mobile = window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+    const tableWidth = mobile ? Math.max(MOBILE_TABLE_MIN_WIDTH, contentWidth) : contentWidth;
+    const visibleWidth = `${contentWidth.toFixed(4)}px`;
+    const exactWidth = `${tableWidth.toFixed(4)}px`;
+    const shell = document.querySelector("#progressionPage .tableShell");
+    const scroller = document.querySelector("#progressionPage .tableScroller");
+    [shell, scroller].forEach((element) => {
       if (!(element instanceof HTMLElement)) return;
-      element.style.setProperty("width", exactWidth, "important");
-      element.style.setProperty("min-width", exactWidth, "important");
-      element.style.setProperty("max-width", exactWidth, "important");
+      element.style.setProperty("width", visibleWidth, "important");
+      element.style.setProperty("min-width", visibleWidth, "important");
+      element.style.setProperty("max-width", visibleWidth, "important");
       element.style.setProperty("box-sizing", "border-box", "important");
-      element.style.setProperty("overflow", "hidden", "important");
     });
+    if (shell instanceof HTMLElement) shell.style.setProperty("overflow", "hidden", "important");
+    if (scroller instanceof HTMLElement) {
+      if (mobile) {
+        scroller.style.setProperty("overflow-x", "auto", "important");
+        scroller.style.setProperty("overflow-y", "hidden", "important");
+        scroller.style.setProperty("overscroll-behavior-x", "contain", "important");
+        scroller.style.setProperty("touch-action", "pan-x pan-y", "important");
+        scroller.style.setProperty("-webkit-overflow-scrolling", "touch");
+        scroller.dataset.mobileTableScroll = "true";
+      } else {
+        scroller.style.setProperty("overflow", "hidden", "important");
+        delete scroller.dataset.mobileTableScroll;
+      }
+    }
     table.style.setProperty("table-layout", "fixed", "important");
     table.style.setProperty("width", exactWidth, "important");
     table.style.setProperty("min-width", exactWidth, "important");
@@ -395,7 +416,7 @@
 
     let assignedWidth = 0;
     columns.forEach((column, index) => {
-      const pixelWidth = contentWidth * Number(percentages[index]) / 100;
+      const pixelWidth = tableWidth * Number(percentages[index]) / 100;
       assignedWidth += pixelWidth;
       const width = `${pixelWidth.toFixed(4)}px`;
       column.style.setProperty("width", width, "important");
@@ -404,7 +425,7 @@
       column.style.setProperty("transition", "none", "important");
     });
 
-    const fillerWidth = Math.max(0, contentWidth - assignedWidth);
+    const fillerWidth = Math.max(0, tableWidth - assignedWidth);
     if (fillerWidth > 0.01) {
       const width = `${fillerWidth.toFixed(4)}px`;
       const fillerColumn = document.createElement("col");
@@ -683,6 +704,12 @@
       "pointerdown", "mousedown", "touchstart", "click", "dblclick", "auxclick", "contextmenu",
       "pointerover", "pointerenter", "pointermove", "mouseover", "mouseenter", "mousemove",
     ];
+    const scrollGestureEvents = new Set(["pointerdown", "mousedown", "touchstart", "pointermove", "mousemove"]);
+    const busyScrollSurfaceSelector = [
+      "main", ".tableScroller", ".sidebar", ".views", ".playerAttributeViews",
+      ".advancedPlayerTableSection", ".mflStatsAgeDistribution", ".evaluationLoadList",
+      ".searchBody", ".filterBuilder", ".advancedSettingsBody",
+    ].join(", ");
     const activeTokens = new Map();
     let tokenSequence = 0;
 
@@ -782,8 +809,15 @@
       return activeTokens.size > 0;
     }
 
+    function eventTargetsBusyScrollSurface(event) {
+      if (!scrollGestureEvents.has(event.type)) return false;
+      const target = event.target instanceof Element ? event.target : null;
+      return Boolean(target?.closest(busyScrollSurfaceSelector));
+    }
+
     function blockInteraction(event) {
       if (!interactionShouldBeBlocked()) return;
+      if (eventTargetsBusyScrollSurface(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     }

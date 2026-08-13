@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.1",
+    "Make mobile parity authoritative, restore touch table scrolling, and add mobile loading feedback"
+  ],
+  [
     "v1.124.0",
     "Add full mobile compatibility with responsive navigation, layouts, dialogs, and scrollable data tables"
   ],

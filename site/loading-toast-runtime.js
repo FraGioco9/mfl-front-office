@@ -69,7 +69,11 @@
     html.mflInteractionBusy body .searchBody,
     html.mflInteractionBusy body .filterBuilder,
     html.mflInteractionBusy body .advancedSettingsBody,
-    html.mflInteractionBusy body .sidebar {
+    html.mflInteractionBusy body .sidebar,
+    html.mflInteractionBusy body .views,
+    html.mflInteractionBusy body .playerAttributeViews,
+    html.mflInteractionBusy body .advancedPlayerTableSection,
+    html.mflInteractionBusy body .mflStatsAgeDistribution {
       pointer-events: auto !important;
     }
 
@@ -114,6 +118,17 @@
 
   function positionToast(toast) {
     if (!(toast instanceof HTMLElement)) return;
+    const mobile = window.matchMedia("(max-width: 900px)").matches;
+    const viewport = window.visualViewport;
+    if (mobile && viewport) {
+      toast.style.setProperty("left", `${viewport.offsetLeft + viewport.width / 2}px`, "important");
+      const layoutHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+      const obscuredBottom = Math.max(0, layoutHeight - viewport.offsetTop - viewport.height);
+      toast.style.setProperty("--mfl-visual-viewport-bottom", `${obscuredBottom}px`);
+      return;
+    }
+
+    toast.style.removeProperty("--mfl-visual-viewport-bottom");
     const main = document.querySelector("main");
     if (!(main instanceof HTMLElement)) {
       toast.style.removeProperty("left");
@@ -193,6 +208,8 @@
 
   window.addEventListener("mfl:ready", sync);
   window.addEventListener("resize", sync);
+  window.visualViewport?.addEventListener("resize", sync, { passive: true });
+  window.visualViewport?.addEventListener("scroll", sync, { passive: true });
   sync();
 
   function destroy() {
@@ -200,6 +217,8 @@
     observer?.disconnect();
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
+    window.visualViewport?.removeEventListener("resize", sync);
+    window.visualViewport?.removeEventListener("scroll", sync);
     document.getElementById(TOAST_ID)?.remove();
     const footer = document.querySelector(".siteFooter");
     if (footer instanceof HTMLElement) {

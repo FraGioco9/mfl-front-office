@@ -2363,86 +2363,6 @@ td a {
   color: var(--text-muted);
 }
 
-@media (max-width: 760px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-    padding: 16px;
-  }
-
-  .headerControls {
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .searchButton {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .appShell {
-    --sidebar-offset: 0px;
-  }
-
-  .menuRail {
-    position: static;
-    width: auto;
-    min-height: 0;
-  }
-
-  .sidebar {
-    display: flex;
-    width: 100%;
-    gap: 8px;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    padding: 10px 14px;
-  }
-
-  .navButton {
-    width: auto;
-    margin-bottom: 0;
-    white-space: nowrap;
-  }
-  main {
-    margin-left: 0;
-    padding: 14px;
-  }
-
-  .controlsBar {
-    grid-template-columns: 1fr;
-  }
-
-  .views {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .viewButton {
-    width: 100%;
-  }
-
-
-.quickFilters {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .filterRule {
-    grid-template-columns: 1fr;
-  }
-
-  .controlsBar button {
-    width: 100%;
-  }
-}
 
 .selectionBar {
   position: fixed;
@@ -3377,15 +3297,6 @@ td a {
   border-bottom: 0;
 }
 
-@media (max-width: 900px) {
-  .playerGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .attributeGrid {
-    grid-template-columns: 1fr;
-  }
-}
 
 .evaluationPage {
   width: min(1180px, 100%);
@@ -3964,16 +3875,6 @@ td a {
 
 .evaluationTable th {
   cursor: default;
-}
-@media (max-width: 760px) {
-  .evaluationSearchGroup {
-    grid-template-columns: 1fr;
-  }
-
-  .evaluationActions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 .evaluationOptionFilters {
@@ -4560,11 +4461,6 @@ td a {
   color: #fff7f7;
 }
 
-@media (max-width: 760px) {
-  .watchlistPlayerCount {
-    margin-left: 0;
-  }
-}
 
 /* v1.144.10 */
 .watchlistButton,
@@ -4961,18 +4857,6 @@ td a {
   font-weight: 700;
 }
 
-@media (max-width: 980px) {
-  .mflStatsCards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 620px) {
-  .mflStatsCards {
-    grid-template-columns: 1fr;
-  }
-
-}
 
 .settingsPage {
   width: min(1180px, 100%);
@@ -5609,8 +5493,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   pointer-events: none !important;
 }
 
-@media (min-width: 901px) {
-}
 
 @media (prefers-reduced-motion: reduce) {
   #progressionPage {

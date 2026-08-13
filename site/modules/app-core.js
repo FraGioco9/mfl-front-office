@@ -12076,6 +12076,9 @@ async function startApp() {
 
   function applySharedTableWidths() {
     if (!playerTablePageActive()) return false;
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      return Boolean(window.__mflTableWidthRuntime?.apply?.());
+    }
     restoreSingleTable();
     const page = document.querySelector("#progressionPage");
     const table = page?.querySelector(".tableScroller table");

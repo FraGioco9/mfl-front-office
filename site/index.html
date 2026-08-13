@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>MFL Front Office</title>
     <script>
       (() => {
@@ -127,16 +127,6 @@
         opacity: 1 !important;
         transform: none !important;
       }
-      @media (max-width: 1100px) {
-        #databaseStatsPage .databaseStatsCards {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-      }
-      @media (max-width: 720px) {
-        #databaseStatsPage .databaseStatsCards {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-      }
     </style>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" href="https://fonts.gstatic.com/s/titilliumweb/v19/NaPecZTIAOhVxoMyOr9n_E7fdMPmDQ.woff2" as="font" type="font/woff2" crossorigin>
@@ -145,6 +135,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;800&display=block" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/responsive.css" data-mfl-responsive-layout="true">
   </head>
   <body data-page="home" class="pinnedSidebarVisible">
     <header class="topbar">
@@ -532,7 +523,7 @@
     </div>
 
     <footer class="siteFooter">
-      <a href="/changelog" data-page="changelog">MFL Front Office v1.124.0</a>
+      <a href="/changelog" data-page="changelog">MFL Front Office v1.124.1</a>
       <span id="statusText">Updated -</span>
     </footer>
 
