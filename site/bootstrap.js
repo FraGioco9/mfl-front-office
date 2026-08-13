@@ -3,6 +3,8 @@
 
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+  const version = STATIC_RELEASE_VERSION;
+  window.__mflReleaseVersion = version;
 
   function initialTablePage() {
     const parts = String(window.location.pathname || "/").split("/").filter(Boolean);
@@ -79,7 +81,7 @@
   syncQuickFilterFirstPaint();
 
   const core = document.createElement("script");
-  core.src = `/bootstrap-core.js?v=${encodeURIComponent(STATIC_RELEASE_VERSION)}`;
+  core.src = "/bootstrap-core.js";
   core.async = false;
   core.addEventListener("load", syncQuickFilterFirstPaint, { once: true });
   core.addEventListener("error", () => {
