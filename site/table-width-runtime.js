@@ -41,52 +41,24 @@
     return window.matchMedia(MOBILE_LAYOUT).matches;
   }
 
-  function syncMobileButtons(mobile) {
-    document.querySelectorAll(".navButton").forEach((button) => {
-      const icon = button.querySelector(".navEmoji");
-      const text = button.querySelector(".navText");
-      if (mobile) {
-        button.style.setProperty("display", "grid", "important");
-        button.style.setProperty("grid-template-columns", "24px minmax(0, 1fr)", "important");
-        button.style.setProperty("align-items", "center", "important");
-        button.style.setProperty("gap", "0", "important");
-        button.style.setProperty("flex", "0 0 148px", "important");
-        button.style.setProperty("width", "148px", "important");
-        button.style.setProperty("min-width", "148px", "important");
-        button.style.setProperty("max-width", "148px", "important");
-        button.style.setProperty("padding", "0 8px", "important");
-        if (icon) {
-          icon.style.setProperty("grid-column", "1", "important");
-          icon.style.setProperty("justify-self", "center", "important");
-        }
-        if (text) {
-          text.style.setProperty("grid-column", "2", "important");
-          text.style.setProperty("justify-self", "stretch", "important");
-          text.style.setProperty("text-align", "center", "important");
-          text.style.setProperty("margin-left", "0", "important");
-          text.style.setProperty("max-width", "none", "important");
-        }
-      } else {
-        ["display", "grid-template-columns", "align-items", "gap", "flex", "width", "min-width", "max-width", "padding"].forEach((property) => button.style.removeProperty(property));
-        ["grid-column", "justify-self"].forEach((property) => icon?.style.removeProperty(property));
-        ["grid-column", "justify-self", "text-align", "margin-left", "max-width"].forEach((property) => text?.style.removeProperty(property));
-      }
-    });
+  function syncMobileFlag(mobile = isMobile()) {
+    document.documentElement.dataset.mflMobileLayout = mobile ? "true" : "false";
+  }
 
-    document.querySelectorAll(".viewButton").forEach((button) => {
-      if (mobile) {
-        button.style.setProperty("flex", "0 0 112px", "important");
-        button.style.setProperty("width", "112px", "important");
-        button.style.setProperty("min-width", "112px", "important");
-        button.style.setProperty("max-width", "112px", "important");
-      } else {
-        ["flex", "width", "min-width", "max-width"].forEach((property) => button.style.removeProperty(property));
-      }
-    });
+  function widthForColumn(column) {
+    if (!(column instanceof Element)) return null;
+    const className = Object.keys(MOBILE_COLUMN_WIDTHS).find((name) => column.classList.contains(name));
+    return className ? MOBILE_COLUMN_WIDTHS[className] : null;
+  }
 
-    const settings = document.querySelector(".settingsNavButton");
-    if (mobile) settings?.style.setProperty("margin-left", "0", "important");
-    else settings?.style.removeProperty("margin-left");
+  function mobileTableGeometry(table) {
+    const columns = Array.from(table.querySelectorAll("col"));
+    const widths = columns.map(widthForColumn).filter((width) => Number.isFinite(width));
+    return {
+      columns,
+      widths,
+      tableWidth: Math.max(MOBILE_TABLE_MIN_WIDTH, widths.reduce((sum, width) => sum + Number(width), 0)),
+    };
   }
 
   function removeInlineGeometry(element, properties) {
@@ -113,21 +85,19 @@
       "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
     ]);
 
-    let tableWidth = 0;
+    const { columns, tableWidth } = mobileTableGeometry(table);
     let validColumns = 0;
-    table.querySelectorAll("col").forEach((column) => {
-      const className = Object.keys(MOBILE_COLUMN_WIDTHS).find((name) => column.classList.contains(name));
-      if (!className) return;
-      const widthValue = MOBILE_COLUMN_WIDTHS[className];
-      const width = `${widthValue.toFixed(2)}px`;
-      tableWidth += widthValue;
+    columns.forEach((column) => {
+      const widthValue = widthForColumn(column);
+      if (!Number.isFinite(widthValue)) return;
+      const width = `${Number(widthValue).toFixed(2)}px`;
       validColumns += 1;
       ["width", "min-width", "max-width"].forEach((property) => column.style.setProperty(property, width, "important"));
       column.style.setProperty("transition", "none", "important");
     });
 
     if (validColumns > 0) {
-      const width = `${Math.max(MOBILE_TABLE_MIN_WIDTH, tableWidth).toFixed(2)}px`;
+      const width = `${tableWidth.toFixed(2)}px`;
       table.style.setProperty("table-layout", "fixed", "important");
       table.style.setProperty("width", width, "important");
       table.style.setProperty("min-width", width, "important");
@@ -146,9 +116,38 @@
     return true;
   }
 
+  function closeEnough(actual, expected) {
+    return Number.isFinite(actual) && Math.abs(actual - expected) < 0.2;
+  }
+
+  function mobileLayoutIntact() {
+    const page = document.querySelector("#progressionPage");
+    const scroller = page?.querySelector(".tableScroller");
+    const table = scroller?.querySelector("table");
+    if (!page || page.hidden || !(scroller instanceof HTMLElement) || !(table instanceof HTMLTableElement)) return true;
+
+    const { columns, widths, tableWidth } = mobileTableGeometry(table);
+    if (!widths.length) return true;
+    let widthIndex = 0;
+    for (const column of columns) {
+      const expected = widthForColumn(column);
+      if (!Number.isFinite(expected)) continue;
+      const actual = Number.parseFloat(column.style.width);
+      if (!closeEnough(actual, Number(expected))) return false;
+      widthIndex += 1;
+    }
+    if (widthIndex !== widths.length) return false;
+
+    const actualTableWidth = Number.parseFloat(table.style.width);
+    if (!closeEnough(actualTableWidth, tableWidth)) return false;
+    const overflowX = window.getComputedStyle(scroller).overflowX;
+    return ["auto", "scroll"].includes(overflowX)
+      && scroller.scrollWidth > scroller.clientWidth + 1;
+  }
+
   function apply() {
     const mobile = isMobile();
-    syncMobileButtons(mobile);
+    syncMobileFlag(mobile);
     if (destroyed || !isTableRoute()) return mobile;
     if (mobile) return applyMobileContract();
 
@@ -173,9 +172,20 @@
     return node.matches(TABLE_STRUCTURE_SELECTOR) || Boolean(node.querySelector(TABLE_STRUCTURE_SELECTOR));
   }
 
+  function styleMutationNeedsRepair(record) {
+    if (record.type !== "attributes" || record.attributeName !== "style" || !isMobile()) return false;
+    const target = record.target;
+    if (!(target instanceof Element)) return false;
+    const relevant = target.matches("#progressionPage .tableShell, #progressionPage .tableScroller, #progressionPage .tableScroller table, #progressionPage .tableScroller col");
+    return relevant && !mobileLayoutIntact();
+  }
+
   function shouldApplyForMutation(records) {
     return records.some((record) => {
-      if (record.type === "attributes") return record.attributeName === "hidden" || record.attributeName === "data-page";
+      if (record.type === "attributes") {
+        if (record.attributeName === "hidden" || record.attributeName === "data-page") return true;
+        return styleMutationNeedsRepair(record);
+      }
       return [...record.addedNodes, ...record.removedNodes].some(nodeChangesTableStructure);
     });
   }
@@ -183,13 +193,18 @@
   function observe() {
     observer?.disconnect();
     observer = new MutationObserver((records) => {
-      if (isTableRoute() && shouldApplyForMutation(records)) schedule();
+      if (!isTableRoute() || !shouldApplyForMutation(records)) return;
+      if (isMobile()) {
+        if (!mobileLayoutIntact()) applyMobileContract();
+        return;
+      }
+      schedule();
     });
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["hidden", "data-page"],
+      attributeFilter: ["hidden", "data-page", "style"],
     });
   }
 
