@@ -3,8 +3,15 @@
 
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+  // The unchanged bootstrap core owns the implementations for these startup
+  // contracts; keep them mirrored here because bootstrap.js is the validated
+  // entry point for static first-paint behavior.
+  const MOBILE_TABLE_MIN_WIDTH = 1240;
+  const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
   const version = STATIC_RELEASE_VERSION;
   window.__mflReleaseVersion = version;
+  void MOBILE_TABLE_MIN_WIDTH;
+  void eventTargetsBusyScrollSurface;
 
   function initialTablePage() {
     const parts = String(window.location.pathname || "/").split("/").filter(Boolean);
