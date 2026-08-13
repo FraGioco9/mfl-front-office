@@ -6,7 +6,7 @@
   const STYLE_ID = "mflTableLoadingStyles";
   const BLANK_ROW_CLASS = "staticTableBlankRow";
   const BLANK_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
-  const TABLE_ROW_HEIGHT = 38;
+  const TABLE_ROW_HEIGHT = 39;
   const LEGACY_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "myplayers", "agents"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
