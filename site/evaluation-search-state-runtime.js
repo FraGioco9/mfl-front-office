@@ -7,6 +7,7 @@
 
   let destroyed = false;
   let syncing = false;
+  let primingRecents = false;
   let resultsObserver = null;
   let busyObserver = null;
   let releaseFrame = 0;
@@ -14,6 +15,7 @@
   let probeTimer = 0;
   let safetyTimer = 0;
   let sawBusy = false;
+  let recentSearchNodes = [];
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -65,6 +67,7 @@
   }
 
   const recentRule = () => {
+    if (primingRecents) return true;
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
     if (field.value.trim()) return originalRecentRule?.() || false;
@@ -75,6 +78,65 @@
     if (window.shouldShowEvaluationRecentResults !== recentRule) {
       window.shouldShowEvaluationRecentResults = recentRule;
     }
+  }
+
+  function resultId(button) {
+    if (!(button instanceof HTMLButtonElement)) return "";
+    const match = String(button.textContent || "").match(/#(\d+)/);
+    return match?.[1] || "";
+  }
+
+  function rememberClickedSearch(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const id = resultId(button);
+    recentSearchNodes = [button, ...recentSearchNodes.filter((candidate) => {
+      if (!(candidate instanceof HTMLButtonElement)) return false;
+      return !id || resultId(candidate) !== id;
+    })].slice(0, 5);
+  }
+
+  function captureRenderedRecents(container) {
+    if (!(container instanceof HTMLElement)) return;
+    const buttons = Array.from(container.querySelectorAll(":scope > .evaluationSearchResult"))
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (buttons.length) recentSearchNodes = buttons;
+  }
+
+  function primeRecentSearchNodes() {
+    const field = input();
+    const container = results();
+    if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
+
+    const clearButton = document.getElementById("evaluationSearchClearButton");
+    const previousValue = field.value;
+    const previousHidden = container.hidden;
+    const previousChildren = Array.from(container.childNodes);
+    const previousClearHidden = clearButton instanceof HTMLElement ? clearButton.hidden : true;
+
+    primingRecents = true;
+    field.value = "";
+    try {
+      window.renderEvaluationSearchResults?.();
+      captureRenderedRecents(container);
+    } finally {
+      field.value = previousValue;
+      container.replaceChildren(...previousChildren);
+      container.hidden = previousHidden;
+      if (clearButton instanceof HTMLElement) clearButton.hidden = previousClearHidden;
+      primingRecents = false;
+    }
+  }
+
+  function restoreRecentSearches(container) {
+    if (!(container instanceof HTMLElement)) return false;
+    const nodes = recentSearchNodes
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, 5);
+    if (!nodes.length) return false;
+    container.replaceChildren(...nodes);
+    container.hidden = false;
+    return true;
   }
 
   function showSearching(container) {
@@ -113,10 +175,16 @@
     }
 
     const query = normalize(field.value);
+    if (!query && restoreRecentSearches(container)) {
+      requestAnimationFrame(() => { syncing = false; });
+      return;
+    }
+
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else {
       window.renderEvaluationSearchResults?.();
+      if (!query) captureRenderedRecents(container);
     }
 
     requestAnimationFrame(() => { syncing = false; });
@@ -155,7 +223,7 @@
     const container = results();
     if (!(container instanceof HTMLElement)) return;
     resultsObserver = new MutationObserver(() => {
-      if (syncing || loadingLocked()) return;
+      if (syncing || primingRecents || loadingLocked()) return;
       const field = input();
       if (!(field instanceof HTMLInputElement)) return;
 
@@ -227,10 +295,13 @@
     const target = event.target instanceof Element
       ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
       : null;
-    if (target instanceof HTMLButtonElement && !target.disabled) startLock();
+    if (!(target instanceof HTMLButtonElement) || target.disabled) return;
+    rememberClickedSearch(target);
+    startLock();
   }
 
   installRecentRule();
+  primeRecentSearchNodes();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
@@ -247,6 +318,7 @@
     document.removeEventListener("keyup", onKeyUp, true);
     document.removeEventListener("pointerup", onPointerUp, true);
     stopLock();
+    recentSearchNodes = [];
     style.remove();
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
