@@ -29,18 +29,48 @@
   }
 
   function syncMobileButtons(mobile) {
-    [[".navButton", "120px"], [".viewButton", "112px"]].forEach(([selector, width]) => {
-      document.querySelectorAll(selector).forEach((button) => {
-        if (mobile) {
-          button.style.setProperty("flex", `0 0 ${width}`, "important");
-          button.style.setProperty("width", width, "important");
-          button.style.setProperty("min-width", width, "important");
-          button.style.setProperty("max-width", width, "important");
-        } else {
-          ["flex", "width", "min-width", "max-width"].forEach((property) => button.style.removeProperty(property));
+    document.querySelectorAll(".navButton").forEach((button) => {
+      const icon = button.querySelector(".navEmoji");
+      const text = button.querySelector(".navText");
+      if (mobile) {
+        button.style.setProperty("display", "grid", "important");
+        button.style.setProperty("grid-template-columns", "24px minmax(0, 1fr)", "important");
+        button.style.setProperty("align-items", "center", "important");
+        button.style.setProperty("gap", "0", "important");
+        button.style.setProperty("flex", "0 0 148px", "important");
+        button.style.setProperty("width", "148px", "important");
+        button.style.setProperty("min-width", "148px", "important");
+        button.style.setProperty("max-width", "148px", "important");
+        button.style.setProperty("padding", "0 8px", "important");
+        if (icon) {
+          icon.style.setProperty("grid-column", "1", "important");
+          icon.style.setProperty("justify-self", "center", "important");
         }
-      });
+        if (text) {
+          text.style.setProperty("grid-column", "2", "important");
+          text.style.setProperty("justify-self", "stretch", "important");
+          text.style.setProperty("text-align", "center", "important");
+          text.style.setProperty("margin-left", "0", "important");
+          text.style.setProperty("max-width", "none", "important");
+        }
+      } else {
+        ["display", "grid-template-columns", "align-items", "gap", "flex", "width", "min-width", "max-width", "padding"].forEach((property) => button.style.removeProperty(property));
+        ["grid-column", "justify-self"].forEach((property) => icon?.style.removeProperty(property));
+        ["grid-column", "justify-self", "text-align", "margin-left", "max-width"].forEach((property) => text?.style.removeProperty(property));
+      }
     });
+
+    document.querySelectorAll(".viewButton").forEach((button) => {
+      if (mobile) {
+        button.style.setProperty("flex", "0 0 112px", "important");
+        button.style.setProperty("width", "112px", "important");
+        button.style.setProperty("min-width", "112px", "important");
+        button.style.setProperty("max-width", "112px", "important");
+      } else {
+        ["flex", "width", "min-width", "max-width"].forEach((property) => button.style.removeProperty(property));
+      }
+    });
+
     const settings = document.querySelector(".settingsNavButton");
     if (mobile) settings?.style.setProperty("margin-left", "0", "important");
     else settings?.style.removeProperty("margin-left");
