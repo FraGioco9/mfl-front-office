@@ -84,6 +84,19 @@
   `;
   document.head.appendChild(style);
 
+  function syncTablePageQuickFilterVisibility() {
+    const pageName = String(document.body?.dataset.page || "").toLowerCase();
+    const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
+    const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+
+    if (hideMflPlayersFilter instanceof HTMLElement) {
+      hideMflPlayersFilter.hidden = pageName !== "database";
+    }
+    if (packablePlayersFilter instanceof HTMLElement) {
+      packablePlayersFilter.hidden = pageName !== "mfl";
+    }
+  }
+
   function syncDatabaseViewButtons() {
     if (document.body?.dataset.page !== "database") return;
     document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
@@ -93,9 +106,14 @@
     });
   }
 
-  function installDatabaseViewGuard() {
+  function syncTableRouteChrome() {
+    syncTablePageQuickFilterVisibility();
     syncDatabaseViewButtons();
-    databaseVisibilityObserver = new MutationObserver(syncDatabaseViewButtons);
+  }
+
+  function installDatabaseViewGuard() {
+    syncTableRouteChrome();
+    databaseVisibilityObserver = new MutationObserver(syncTableRouteChrome);
     if (document.body) {
       databaseVisibilityObserver.observe(document.body, {
         attributes: true,
