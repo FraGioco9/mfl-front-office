@@ -14,7 +14,6 @@
   let probeTimer = 0;
   let safetyTimer = 0;
   let sawBusy = false;
-  let recentSearchNodes = [];
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -57,34 +56,25 @@
     .replace(/[\u0300-\u036f]/g, "");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
   const loadingLocked = () => document.documentElement.classList.contains(CLASS);
+
+  function playerSelected() {
+    const panel = document.getElementById("evaluationPanel");
+    if (panel instanceof HTMLElement && !panel.hidden) return true;
+    const params = new URLSearchParams(window.location.search);
+    return Boolean(params.get("player") || params.get("saved") || params.get("share"));
+  }
+
   const recentRule = () => {
     const field = input();
-    return field instanceof HTMLInputElement && !field.value.trim() ? true : originalRecentRule?.() || false;
+    if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
+    if (field.value.trim()) return originalRecentRule?.() || false;
+    return document.activeElement === field || !playerSelected();
   };
 
   function installRecentRule() {
     if (window.shouldShowEvaluationRecentResults !== recentRule) {
       window.shouldShowEvaluationRecentResults = recentRule;
     }
-  }
-
-  function rememberVisibleRecentSearches() {
-    if (loadingLocked()) return;
-    const field = input();
-    const container = results();
-    if (!(field instanceof HTMLInputElement) || field.value.trim() || !(container instanceof HTMLElement)) return;
-    const nodes = Array.from(container.children).slice(0, 5);
-    if (nodes.length) recentSearchNodes = nodes;
-  }
-
-  function restoreRecentSearches() {
-    const container = results();
-    if (!(container instanceof HTMLElement) || !recentSearchNodes.length) return false;
-    syncing = true;
-    container.replaceChildren(...recentSearchNodes);
-    container.hidden = false;
-    requestAnimationFrame(() => { syncing = false; });
-    return true;
   }
 
   function showSearching(container) {
@@ -100,6 +90,13 @@
     container.hidden = false;
   }
 
+  function hideSuggestions(container) {
+    if (!(container instanceof HTMLElement) || container.hidden) return;
+    syncing = true;
+    container.hidden = true;
+    requestAnimationFrame(() => { syncing = false; });
+  }
+
   function sync() {
     if (destroyed || syncing || !active() || loadingLocked()) return;
     const field = input();
@@ -108,16 +105,18 @@
 
     syncing = true;
     installRecentRule();
-    const query = normalize(field.value);
 
-    if (!query && document.activeElement !== field && recentSearchNodes.length) {
-      container.replaceChildren(...recentSearchNodes);
-      container.hidden = false;
-    } else if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
+    if (playerSelected() && document.activeElement !== field) {
+      container.hidden = true;
+      requestAnimationFrame(() => { syncing = false; });
+      return;
+    }
+
+    const query = normalize(field.value);
+    if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else {
       window.renderEvaluationSearchResults?.();
-      if (!query) rememberVisibleRecentSearches();
     }
 
     requestAnimationFrame(() => { syncing = false; });
@@ -128,18 +127,28 @@
     event.stopImmediatePropagation();
     if (loadingLocked()) return;
 
-    const field = input();
     const container = results();
-    if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
+    if (!(container instanceof HTMLElement)) return;
     if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
 
-    if (!field.value.trim()) {
-      rememberVisibleRecentSearches();
-      if (container.children.length) container.hidden = false;
+    if (playerSelected()) {
+      hideSuggestions(container);
       return;
     }
 
     queueMicrotask(sync);
+  }
+
+  function onKeyUp(event) {
+    const field = input();
+    if (!(field instanceof HTMLInputElement) || event.target !== field || field.value.trim()) return;
+    queueMicrotask(sync);
+  }
+
+  function onPointerUp(event) {
+    const target = event.target instanceof Element ? event.target.closest("#evaluationSearchClearButton") : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    window.setTimeout(sync, 0);
   }
 
   function installObserver() {
@@ -150,12 +159,8 @@
       const field = input();
       if (!(field instanceof HTMLInputElement)) return;
 
-      if (!field.value.trim()) {
-        if (document.activeElement === field) {
-          rememberVisibleRecentSearches();
-          return;
-        }
-        if ((container.hidden || !container.children.length) && recentSearchNodes.length) restoreRecentSearches();
+      if (playerSelected() && document.activeElement !== field) {
+        hideSuggestions(container);
         return;
       }
 
@@ -206,7 +211,6 @@
   function startLock() {
     const container = results();
     if (!loadingLocked()) {
-      rememberVisibleRecentSearches();
       document.documentElement.classList.add(CLASS);
       if (container instanceof HTMLElement) container.hidden = true;
       busyObserver = new MutationObserver(checkLock);
@@ -229,6 +233,8 @@
   installRecentRule();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
+  document.addEventListener("keyup", onKeyUp, true);
+  document.addEventListener("pointerup", onPointerUp, true);
   installObserver();
   sync();
 
@@ -238,8 +244,9 @@
     resultsObserver = null;
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
+    document.removeEventListener("keyup", onKeyUp, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
     stopLock();
-    recentSearchNodes = [];
     style.remove();
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
