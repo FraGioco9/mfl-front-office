@@ -11,6 +11,22 @@
       display: none;
     }
 
+    #progressionPage .viewButton {
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease !important;
+    }
+
+    #progressionPage .viewButton:not(.active):hover:not(:disabled) {
+      border-color: var(--primary-hover) !important;
+      background: var(--row-hover) !important;
+      color: var(--text) !important;
+    }
+
+    #progressionPage .viewButton.active:hover:not(:disabled) {
+      border-color: var(--primary) !important;
+      background: var(--primary) !important;
+      color: #ffffff !important;
+    }
+
     body[data-page="database"] #progressionPage .viewButton:is(
       [data-view="next"],
       [data-view="current"],
