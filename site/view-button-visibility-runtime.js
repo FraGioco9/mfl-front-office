@@ -305,6 +305,28 @@
     });
   }
 
+  function databaseStatsSourceButton(target) {
+    if (!(target instanceof Element) || document.body?.dataset.page !== "database") return null;
+    const button = target.closest('#progressionPage .views .viewButton[data-view="stats"]');
+    return button instanceof HTMLButtonElement ? button : null;
+  }
+
+  function openDatabaseStatsImmediately(button) {
+    if (!(button instanceof HTMLButtonElement)) return false;
+    activateViewButtonImmediately(button);
+    const runtime = /** @type {any} */ (window).__mflDatabaseStatsStateRuntime;
+    if (typeof runtime?.render === "function") {
+      void runtime.render(true);
+      return true;
+    }
+    const render = /** @type {any} */ (window).renderDatabaseStatsPage;
+    if (typeof render === "function") {
+      void render(true);
+      return true;
+    }
+    return false;
+  }
+
   function onPointerDown(event) {
     const target = event.target instanceof Element
       ? event.target.closest("main .views .viewButton[data-view]")
@@ -312,6 +334,14 @@
     if (!(target instanceof HTMLButtonElement)) return;
     clearPointerHover(target);
     activateViewButtonImmediately(target);
+  }
+
+  function onClick(event) {
+    const button = databaseStatsSourceButton(event.target);
+    if (!button) return;
+    if (!openDatabaseStatsImmediately(button)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }
 
   function onPointerOut(event) {
@@ -328,6 +358,7 @@
   document.addEventListener("pointerover", syncPointerHover, true);
   document.addEventListener("pointermove", syncPointerHover, true);
   document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("click", onClick, true);
   document.addEventListener("pointerout", onPointerOut, true);
   window.addEventListener("blur", onWindowBlur);
 
@@ -339,6 +370,7 @@
     document.removeEventListener("pointerover", syncPointerHover, true);
     document.removeEventListener("pointermove", syncPointerHover, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("click", onClick, true);
     document.removeEventListener("pointerout", onPointerOut, true);
     window.removeEventListener("blur", onWindowBlur);
     document.querySelectorAll(`#progressionPage .viewButton[${POINTER_HOVER_ATTRIBUTE}="true"]`).forEach((button) => {
