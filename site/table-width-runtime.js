@@ -23,6 +23,7 @@
     "col-link": 48.39,
   });
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
+  const TABLE_STRUCTURE_SELECTOR = "table, colgroup, col, thead";
 
   window.__mflTableWidthRuntime?.destroy?.();
 
@@ -167,10 +168,22 @@
     });
   }
 
+  function nodeChangesTableStructure(node) {
+    if (!(node instanceof Element)) return false;
+    return node.matches(TABLE_STRUCTURE_SELECTOR) || Boolean(node.querySelector(TABLE_STRUCTURE_SELECTOR));
+  }
+
+  function shouldApplyForMutation(records) {
+    return records.some((record) => {
+      if (record.type === "attributes") return record.attributeName === "hidden" || record.attributeName === "data-page";
+      return [...record.addedNodes, ...record.removedNodes].some(nodeChangesTableStructure);
+    });
+  }
+
   function observe() {
     observer?.disconnect();
-    observer = new MutationObserver(() => {
-      if (isTableRoute()) schedule();
+    observer = new MutationObserver((records) => {
+      if (isTableRoute() && shouldApplyForMutation(records)) schedule();
     });
     observer.observe(document.documentElement, {
       childList: true,
