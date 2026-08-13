@@ -101,6 +101,7 @@ function preloadClassicScript(path) {
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/loading-toast-runtime.js",
   "/mobile-ui-runtime.js",
+  "/desktop-table-observer-guard-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
   "/release-ui-runtime.js",
   "/changelog-history-runtime.js",
@@ -142,6 +143,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflStatsRuntime?: { sync?: () => void, installCoreBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
  * __mflAppStartPromise?: Promise<void>,
+ * __mflRestoreNativeMutationObserver?: () => void,
  * }} */
 const runtimeWindow = window;
 
@@ -166,7 +168,7 @@ function installResponsiveStylesheet() {
     link.addEventListener("load", () => resolve(undefined), { once: true });
     link.addEventListener("error", () => reject(new Error("Could not load the responsive layout stylesheet.")), { once: true });
   });
-  document.head.append(link);
+  document.head.appendChild(link);
   return ready;
 }
 
@@ -230,6 +232,7 @@ async function start() {
   }
 
   await loadClassicScript("/modules/app-core.js");
+  runtimeWindow.__mflRestoreNativeMutationObserver?.();
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
