@@ -85,12 +85,36 @@
     }
   }
 
-  syncQuickFilterFirstPaint();
+  function syncDatabaseViewButtonsFirstPaint() {
+    if (initialTablePage() !== "database") return;
+    const views = document.querySelector("#progressionPage .views");
+    if (!(views instanceof HTMLElement)) return;
+
+    const order = ["attributes", "contracts", "stats"];
+    const allowed = new Set(order);
+    views.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.hidden = !allowed.has(String(button.dataset.view || ""));
+    });
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    order.forEach((viewName) => {
+      const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+      if (button) views.insertBefore(button, switcher || null);
+    });
+  }
+
+  function syncBootstrapFirstPaint() {
+    syncQuickFilterFirstPaint();
+    syncDatabaseViewButtonsFirstPaint();
+  }
+
+  syncBootstrapFirstPaint();
 
   const core = document.createElement("script");
   core.src = "/bootstrap-core.js";
   core.async = false;
-  core.addEventListener("load", syncQuickFilterFirstPaint, { once: true });
+  core.addEventListener("load", syncBootstrapFirstPaint, { once: true });
   core.addEventListener("error", () => {
     document.documentElement.dataset.mflReady = "error";
   }, { once: true });
