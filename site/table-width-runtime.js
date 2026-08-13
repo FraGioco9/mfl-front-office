@@ -22,6 +22,24 @@
     return window.matchMedia(MOBILE_LAYOUT).matches;
   }
 
+  function syncMobileButtons(mobile) {
+    [[".navButton", "120px"], [".viewButton", "112px"]].forEach(([selector, width]) => {
+      document.querySelectorAll(selector).forEach((button) => {
+        if (mobile) {
+          button.style.setProperty("flex", `0 0 ${width}`, "important");
+          button.style.setProperty("width", width, "important");
+          button.style.setProperty("min-width", width, "important");
+          button.style.setProperty("max-width", width, "important");
+        } else {
+          ["flex", "width", "min-width", "max-width"].forEach((property) => button.style.removeProperty(property));
+        }
+      });
+    });
+    const settings = document.querySelector(".settingsNavButton");
+    if (mobile) settings?.style.setProperty("margin-left", "0", "important");
+    else settings?.style.removeProperty("margin-left");
+  }
+
   function removeInlineGeometry(element, properties) {
     if (!element?.style) return;
     properties.forEach((property) => element.style.removeProperty(property));
@@ -55,8 +73,10 @@
   }
 
   function apply() {
-    if (destroyed || !isTableRoute()) return false;
-    if (isMobile()) return applyMobileContract();
+    const mobile = isMobile();
+    syncMobileButtons(mobile);
+    if (destroyed || !isTableRoute()) return mobile;
+    if (mobile) return applyMobileContract();
 
     const scroller = document.querySelector("#progressionPage .tableScroller");
     if (scroller instanceof HTMLElement) delete scroller.dataset.mobileTableScroll;
