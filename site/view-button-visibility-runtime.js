@@ -44,6 +44,9 @@
   let pointerHoverButton = null;
   let initialActiveObserver = null;
   let databaseVisibilityObserver = null;
+  let statsHistogramObserver = null;
+  let pendingStatsTableNavigation = null;
+  let pendingStatsTableTimer = 0;
 
   const style = document.createElement("style");
   style.id = "mflViewButtonVisibilityGuard";
@@ -78,6 +81,11 @@
 
     #mflStatsHistogramTooltipPortal {
       display: none !important;
+    }
+
+    html #mflStatsPage .mflStatsHistogram[data-mfl-column-transition="true"] .mflStatsHistogramBar::after,
+    html #databaseStatsPage .mflStatsHistogram[data-mfl-column-transition="true"] .mflStatsHistogramBar::after {
+      animation: mflStatsBarRise 220ms ease-out !important;
     }
 
     body[data-page="database"] #progressionPage .viewButton:is(
@@ -244,6 +252,36 @@
     }
   }
 
+  function animateStatsHistogram(histogram) {
+    if (!(histogram instanceof HTMLElement)) return;
+    if (!histogram.closest("#mflStatsPage, #databaseStatsPage")) return;
+    histogram.removeAttribute("data-mfl-column-transition");
+    void histogram.offsetWidth;
+    histogram.setAttribute("data-mfl-column-transition", "true");
+    window.setTimeout(() => {
+      if (histogram.isConnected) histogram.removeAttribute("data-mfl-column-transition");
+    }, 260);
+  }
+
+  function animateStatsHistogramsFromNode(node) {
+    if (!(node instanceof Element)) return;
+    if (node.matches(".mflStatsHistogram")) animateStatsHistogram(node);
+    node.querySelectorAll?.(".mflStatsHistogram").forEach(animateStatsHistogram);
+  }
+
+  function installStatsHistogramTransitions() {
+    const main = document.querySelector("main");
+    if (!(main instanceof HTMLElement)) return;
+    statsHistogramObserver = new MutationObserver((records) => {
+      records.forEach((record) => {
+        record.addedNodes.forEach(animateStatsHistogramsFromNode);
+      });
+    });
+    statsHistogramObserver.observe(main, { childList: true, subtree: true });
+    document.querySelectorAll("#mflStatsPage .mflStatsHistogram, #databaseStatsPage .mflStatsHistogram")
+      .forEach(animateStatsHistogram);
+  }
+
   function clearPointerHover(button = pointerHoverButton) {
     if (!(button instanceof HTMLButtonElement)) {
       if (button === pointerHoverButton) pointerHoverButton = null;
@@ -314,6 +352,63 @@
     });
   }
 
+  function activateSharedTableView(pageName, viewName) {
+    const progressionPage = document.getElementById("progressionPage");
+    if (progressionPage instanceof HTMLElement) {
+      document.querySelectorAll("main > .pageView").forEach((candidate) => {
+        if (!(candidate instanceof HTMLElement)) return;
+        candidate.hidden = candidate !== progressionPage;
+      });
+      progressionPage.hidden = false;
+    }
+    document.documentElement.classList.remove("mflStatsFirstPaintGuard");
+    if (document.body?.dataset.page !== pageName) document.body.dataset.page = pageName;
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const active = String(button.dataset.view || "") === viewName;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      if (pageName === "database" || pageName === "mfl") button.dataset.page = pageName;
+    });
+    const loading = /** @type {any} */ (window).__mflTableLoadingRuntime;
+    loading?.primeHeader?.(pageName, viewName);
+    loading?.show?.();
+  }
+
+  function statsTableDestination(target) {
+    if (!(target instanceof Element)) return null;
+    const button = target.closest("#mflStatsPage .views .viewButton[data-view], #databaseStatsPage .views .viewButton[data-view]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return null;
+    const view = String(button.dataset.view || "");
+    if (!view || view === "stats") return null;
+    const pageName = button.closest("#mflStatsPage") ? "mfl" : button.closest("#databaseStatsPage") ? "database" : "";
+    if (!pageName) return null;
+    if (pageName === "mfl" && view !== "attributes") return null;
+    if (pageName === "database" && !["attributes", "contracts"].includes(view)) return null;
+    return { button, pageName, view };
+  }
+
+  function clearPendingStatsTableNavigation() {
+    if (pendingStatsTableTimer) window.clearTimeout(pendingStatsTableTimer);
+    pendingStatsTableTimer = 0;
+    pendingStatsTableNavigation = null;
+  }
+
+  function openStatsTableImmediately(destination) {
+    if (!destination || typeof setPage !== "function") return false;
+    clearPointerHover(destination.button);
+    activateViewButtonImmediately(destination.button);
+    pendingStatsTableNavigation = destination;
+    if (pendingStatsTableTimer) window.clearTimeout(pendingStatsTableTimer);
+    pendingStatsTableTimer = window.setTimeout(clearPendingStatsTableNavigation, 600);
+    void setPage(destination.pageName, true, {
+      view: destination.view,
+      skipNavigationLoading: false,
+    });
+    activateSharedTableView(destination.pageName, destination.view);
+    return true;
+  }
+
   function databaseStatsSourceButton(target) {
     if (!(target instanceof Element) || document.body?.dataset.page !== "database") return null;
     const button = target.closest('#progressionPage .views .viewButton[data-view="stats"]');
@@ -337,6 +432,9 @@
   }
 
   function onPointerDown(event) {
+    const statsDestination = statsTableDestination(event.target);
+    if (statsDestination && openStatsTableImmediately(statsDestination)) return;
+
     const target = event.target instanceof Element
       ? event.target.closest("main .views .viewButton[data-view]")
       : null;
@@ -346,6 +444,21 @@
   }
 
   function onClick(event) {
+    const statsDestination = statsTableDestination(event.target);
+    if (statsDestination) {
+      const pending = pendingStatsTableNavigation;
+      const alreadyOpened = pending
+        && pending.button === statsDestination.button
+        && pending.pageName === statsDestination.pageName
+        && pending.view === statsDestination.view;
+      if (alreadyOpened || openStatsTableImmediately(statsDestination)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        clearPendingStatsTableNavigation();
+        return;
+      }
+    }
+
     const button = databaseStatsSourceButton(event.target);
     if (!button) return;
     if (!openDatabaseStatsImmediately(button)) return;
@@ -364,6 +477,7 @@
 
   installDatabaseViewGuard();
   installInitialWatchlistActiveGuard();
+  installStatsHistogramTransitions();
   document.addEventListener("pointerover", syncPointerHover, true);
   document.addEventListener("pointermove", syncPointerHover, true);
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -376,6 +490,9 @@
     databaseVisibilityObserver = null;
     initialActiveObserver?.disconnect();
     initialActiveObserver = null;
+    statsHistogramObserver?.disconnect();
+    statsHistogramObserver = null;
+    clearPendingStatsTableNavigation();
     document.removeEventListener("pointerover", syncPointerHover, true);
     document.removeEventListener("pointermove", syncPointerHover, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
