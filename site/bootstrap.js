@@ -642,8 +642,8 @@
       row.style.setProperty("opacity", "1", "important");
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
         const cell = document.createElement("td");
-        cell.style.height = "38px";
-        cell.style.minHeight = "38px";
+        cell.style.height = "39px";
+        cell.style.minHeight = "39px";
         cell.style.paddingTop = "0";
         cell.style.paddingBottom = "0";
         cell.style.setProperty("opacity", "1", "important");

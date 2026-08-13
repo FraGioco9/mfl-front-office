@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality:
@@ -108,67 +108,6 @@ jobs:
           echo "Substantive workflow/deployment changes: $workflow"
           echo "Run repository validation: $quality"
 
-      - name: Apply first-paint source cleanup
-        id: first_paint_cleanup
-        if: github.event_name == 'push'
-        working-directory: .
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          bootstrap = Path("site/bootstrap.js")
-          bootstrap_text = bootstrap.read_text(encoding="utf-8")
-          old_height = '        cell.style.height = "38px";\n        cell.style.minHeight = "38px";'
-          new_height = '        cell.style.height = "39px";\n        cell.style.minHeight = "39px";'
-          if bootstrap_text.count(old_height) != 1:
-              raise SystemExit(f"Expected one 38px bootstrap loading-row owner, found {bootstrap_text.count(old_height)}")
-          bootstrap.write_text(bootstrap_text.replace(old_height, new_height, 1), encoding="utf-8")
-
-          responsive = Path("site/responsive.css")
-          responsive_text = responsive.read_text(encoding="utf-8")
-          marker = """/* Canonical responsive layout owner.
-           * Desktop geometry remains in styles.css; viewport-specific adaptations live here.
-           * Keep new mobile/tablet media queries out of component and runtime files.
-           */
-
-          """
-          rules = """/* First-paint table-route ownership. This stylesheet is render-blocking, so
-           * these rules apply before bootstrap.js creates loading rows or resolves the
-           * static HTML's default Home page. */
-          html #tableBody > .staticTableBlankRow > td {
-            height: 39px !important;
-            min-height: 39px !important;
-          }
-
-          html:not(.mflInitialRouteResolved):is(
-            [data-initial-page^="database"],
-            [data-initial-page^="mfl"],
-            [data-initial-page^="progression"],
-            [data-initial-page^="agents"],
-            [data-initial-page^="watchlist"],
-            [data-initial-page^="my-players"],
-            [data-initial-page^="clubs/"],
-            [data-initial-page^="club/"]
-          ) #homePage {
-            display: none !important;
-          }
-
-          """
-          if "First-paint table-route ownership" in responsive_text:
-              raise SystemExit("First-paint responsive ownership already exists unexpectedly.")
-          if responsive_text.count(marker) != 1:
-              raise SystemExit(f"Expected one responsive header marker, found {responsive_text.count(marker)}")
-          responsive.write_text(responsive_text.replace(marker, marker + rules, 1), encoding="utf-8")
-          PY
-
-          if git diff --quiet -- site/bootstrap.js site/responsive.css; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/setup-python@v5
         if: steps.changes.outputs.builder == 'true'
         with:
@@ -180,36 +119,22 @@ jobs:
         run: python -c "import rebuild_database; import rebuild_database_runner"
 
       - uses: actions/setup-node@v4
-        if: steps.changes.outputs.quality == 'true' || steps.first_paint_cleanup.outputs.changed == 'true'
+        if: steps.changes.outputs.quality == 'true'
         with:
           node-version: 22
 
       - name: Install site dependencies
-        if: steps.changes.outputs.site == 'true' || steps.first_paint_cleanup.outputs.changed == 'true'
+        if: steps.changes.outputs.site == 'true'
         run: npm install
 
       - name: Lint
-        if: steps.changes.outputs.site == 'true' || steps.first_paint_cleanup.outputs.changed == 'true'
+        if: steps.changes.outputs.site == 'true'
         run: npm run lint
 
       - name: Typecheck
-        if: steps.changes.outputs.site == 'true' || steps.first_paint_cleanup.outputs.changed == 'true'
+        if: steps.changes.outputs.site == 'true'
         run: npm run typecheck
 
       - name: Repository validation
-        if: steps.changes.outputs.quality == 'true' || steps.first_paint_cleanup.outputs.changed == 'true'
+        if: steps.changes.outputs.quality == 'true'
         run: npm run validate
-
-      - name: Commit verified first-paint cleanup
-        if: github.event_name == 'push' && steps.first_paint_cleanup.outputs.changed == 'true'
-        working-directory: .
-        shell: bash
-        run: |
-          set -euo pipefail
-          git checkout HEAD^ -- .github/workflows/site-quality.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/bootstrap.js site/responsive.css .github/workflows/site-quality.yml
-          git diff --cached --check
-          git commit -m "Remove first-paint loading conflicts"
-          git push origin HEAD:main
