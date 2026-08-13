@@ -44,8 +44,11 @@
   function ensureStatsAllowedInDatabaseView() {
     try {
       if (typeof pageViewOptions !== "object" || !Array.isArray(pageViewOptions.database)) return;
-      if (!pageViewOptions.database.includes("stats")) pageViewOptions.database.push("stats");
-      if (typeof updateViewButtons === "function" && state?.currentPage === "database") updateViewButtons();
+      const addedStatsView = !pageViewOptions.database.includes("stats");
+      if (addedStatsView) pageViewOptions.database.push("stats");
+      if (addedStatsView && typeof updateViewButtons === "function" && state?.currentPage === "database") {
+        updateViewButtons();
+      }
     } catch {
       // The Database view still renders even if a future core changes its view registry.
     }
@@ -107,6 +110,7 @@
         : {};
       state.tablePageStates = state.tablePageStates || {};
       state.tablePageStates.database = { ...existing, view: "stats" };
+      if (typeof updateViewButtons === "function") updateViewButtons();
       refreshDatabaseNavigation();
       if ((forceSave || !lastPersistedStatsRoute || !alreadyStats) && typeof saveTableState === "function") {
         saveTableState();
