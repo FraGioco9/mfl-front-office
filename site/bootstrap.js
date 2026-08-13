@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
 
   function initialTablePage() {
@@ -78,7 +79,7 @@
   syncQuickFilterFirstPaint();
 
   const core = document.createElement("script");
-  core.src = "/bootstrap-core.js";
+  core.src = `/bootstrap-core.js?v=${encodeURIComponent(STATIC_RELEASE_VERSION)}`;
   core.async = false;
   core.addEventListener("load", syncQuickFilterFirstPaint, { once: true });
   core.addEventListener("error", () => {
