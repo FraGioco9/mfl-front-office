@@ -20,3 +20,14 @@ html[data-mfl-mobile-layout="false"] #progressionPage .tableScroller .col-agent,
 html[data-mfl-mobile-layout="false"] #progressionPage .tableScroller .col-joined-agency,
 html[data-mfl-mobile-layout="false"] #progressionPage .tableScroller .col-owned-since { width: 9% !important; }
 html[data-mfl-mobile-layout="false"] #progressionPage .tableScroller .col-link { width: 3% !important; }
+
+body[data-page="watchlist"] #progressionPage .viewButton.active:hover:not(:disabled),
+body[data-page="watchlist"] #progressionPage .viewButton.active:focus:not(:disabled),
+body[data-page="watchlist"] #progressionPage .viewButton.active:focus-visible:not(:disabled) {
+  outline: none !important;
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
