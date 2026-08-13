@@ -114,13 +114,13 @@
 
   function showSearching(container) {
     const existing = container.querySelector(":scope > .searchHint");
-    if (existing instanceof HTMLElement && existing.textContent === "Searchingº" && container.children.length === 1) {
+    if (existing instanceof HTMLElement && existing.textContent === "Searching..." && container.children.length === 1) {
       container.hidden = false;
       return;
     }
     const hint = document.createElement("div");
     hint.className = "searchHint";
-    hint.textContent = "Searchingº";
+    hint.textContent = "Searching...";
     container.replaceChildren(hint);
     container.hidden = false;
   }
@@ -170,7 +170,7 @@
 
     const container = results();
     if (!(container instanceof HTMLElement)) return;
-    if (event.relatedTarget instanceof Node && container.contains (event.relatedTarget)) return;
+    if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
 
     if (playerSelected()) {
       hideSuggestions(container);
