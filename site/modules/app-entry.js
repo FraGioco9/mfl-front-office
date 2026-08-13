@@ -121,6 +121,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-route-ui-runtime.js",
   "/table-width-runtime.js",
   "/table-loading-runtime.js",
+  "/table-blank-row-guard-runtime.js",
   "/database-stats-reload-bootstrap-runtime.js",
   "/database-stats-runtime.js",
   "/database-stats-state-runtime.js",
