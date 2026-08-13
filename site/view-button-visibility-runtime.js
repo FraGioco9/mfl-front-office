@@ -3,6 +3,7 @@
 
   const POINTER_HOVER_ATTRIBUTE = "data-mfl-view-button-pointer-hover";
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/i;
+  const DATABASE_VIEWS = new Set(["attributes", "contracts", "stats"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     "next-overall": "next",
@@ -15,6 +16,7 @@
 
   let pointerHoverButton = null;
   let initialActiveObserver = null;
+  let databaseVisibilityObserver = null;
 
   const style = document.createElement("style");
   style.id = "mflViewButtonVisibilityGuard";
@@ -81,6 +83,34 @@
     }
   `;
   document.head.appendChild(style);
+
+  function syncDatabaseViewButtons() {
+    if (document.body?.dataset.page !== "database") return;
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const shouldHide = !DATABASE_VIEWS.has(String(button.dataset.view || ""));
+      if (button.hidden !== shouldHide) button.hidden = shouldHide;
+    });
+  }
+
+  function installDatabaseViewGuard() {
+    syncDatabaseViewButtons();
+    databaseVisibilityObserver = new MutationObserver(syncDatabaseViewButtons);
+    if (document.body) {
+      databaseVisibilityObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-page"],
+      });
+    }
+    const views = document.querySelector("#progressionPage .views");
+    if (views instanceof HTMLElement) {
+      databaseVisibilityObserver.observe(views, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ["hidden"],
+      });
+    }
+  }
 
   function initialWatchlistView() {
     if (document.documentElement.dataset.mflReady === "true" || !WATCHLIST_PATH.test(window.location.pathname)) return "";
@@ -197,6 +227,7 @@
     clearPointerHover();
   }
 
+  installDatabaseViewGuard();
   installInitialWatchlistActiveGuard();
   document.addEventListener("pointerover", syncPointerHover, true);
   document.addEventListener("pointermove", syncPointerHover, true);
@@ -205,6 +236,8 @@
   window.addEventListener("blur", onWindowBlur);
 
   function destroy() {
+    databaseVisibilityObserver?.disconnect();
+    databaseVisibilityObserver = null;
     initialActiveObserver?.disconnect();
     initialActiveObserver = null;
     document.removeEventListener("pointerover", syncPointerHover, true);
