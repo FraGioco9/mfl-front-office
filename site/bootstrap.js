@@ -104,9 +104,34 @@
     });
   }
 
+  function syncEvaluationActionsFirstPaint() {
+    if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
+
+    const root = document.documentElement;
+    const buttons = document.getElementById("evaluationButtons");
+    const resetButton = document.getElementById("evaluationResetButton");
+    const loadButton = document.getElementById("evaluationLoadButton");
+    const playerPageButton = document.getElementById("evaluationPlayerPageButton");
+    const storedWalletOptIn = root.dataset.storedWalletOptIn === "true";
+    const hasInitialSelection = root.dataset.initialEvaluationSelection === "true";
+
+    if (resetButton instanceof HTMLButtonElement) resetButton.hidden = true;
+    if (loadButton instanceof HTMLButtonElement) loadButton.hidden = true;
+    if (playerPageButton instanceof HTMLButtonElement) playerPageButton.hidden = true;
+
+    if (!(buttons instanceof HTMLElement)) return;
+    if (!hasInitialSelection && storedWalletOptIn) {
+      buttons.hidden = false;
+      if (loadButton instanceof HTMLButtonElement) loadButton.hidden = false;
+      return;
+    }
+    buttons.hidden = true;
+  }
+
   function syncBootstrapFirstPaint() {
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
+    syncEvaluationActionsFirstPaint();
   }
 
   syncBootstrapFirstPaint();
