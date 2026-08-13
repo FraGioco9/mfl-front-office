@@ -117,6 +117,22 @@
     "col-agent": 9,
     "col-link": 3,
   });
+  const STATIC_TABLE_COLUMN_WIDTHS = Object.freeze({
+    "col-select": 51.09,
+    "col-id": 68.13,
+    "col-flag": 45.41,
+    "col-name": 212.89,
+    "col-nationality": 141.92,
+    "col-age": 65.28,
+    "col-positions": 119.22,
+    "col-seasons": 82.31,
+    "col-stat": 107.86,
+    "col-contract-revenue": 140,
+    "col-contract-club": 227.16,
+    "col-contract-division": 280,
+    "col-agent": 187.34,
+    "col-link": 48.39,
+  });
 
   /** @type {Window & {
    * __mflInteractionBusy?: {
@@ -131,6 +147,103 @@
    * __mflSyncStoredAccessFlags?: () => { storedOptIn: boolean, storedAccess: boolean },
    * }} */
   const runtimeWindow = window;
+
+  function syncStaticMobileLayoutFlag() {
+    document.documentElement.dataset.mflMobileLayout = window.matchMedia(MOBILE_LAYOUT_QUERY).matches ? "true" : "false";
+  }
+
+  function installStaticMobileFirstPaintStyles() {
+    if (document.getElementById("mflStaticMobileFirstPaintStyles")) return;
+    const style = document.createElement("style");
+    style.id = "mflStaticMobileFirstPaintStyles";
+    style.textContent = `
+      html[data-mfl-mobile-layout="true"] body > .topbar {
+        grid-template-columns: minmax(0, 1fr) 40px auto !important;
+        grid-template-areas: "brand search controls" !important;
+        gap: 6px !important;
+      }
+      html[data-mfl-mobile-layout="true"] .topbar .searchButton {
+        grid-area: search !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        text-align: center !important;
+      }
+      html[data-mfl-mobile-layout="true"] .topbar .searchButton .searchLabel {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        gap: 0 !important;
+        font-size: 0 !important;
+      }
+      html[data-mfl-mobile-layout="true"] .topbar .searchButton .searchEmoji {
+        font-size: 18px !important;
+        line-height: 1 !important;
+      }
+      html[data-mfl-mobile-layout="true"] .topbar .searchShortcut {
+        display: none !important;
+      }
+      html[data-mfl-mobile-layout="true"] .headerControls {
+        gap: 6px !important;
+      }
+      html[data-mfl-mobile-layout="true"] .themeButton,
+      html[data-mfl-mobile-layout="true"] .accountMenu,
+      html[data-mfl-mobile-layout="true"] #accountButton {
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+      }
+      html[data-mfl-mobile-layout="true"] .accountMenu {
+        flex: 0 0 40px !important;
+      }
+      html[data-mfl-mobile-layout="true"] #sidebar .navButton,
+      html[data-mfl-mobile-layout="true"] .appShell.menuClosed #sidebar .navButton,
+      html[data-mfl-mobile-layout="true"] .appShell.sidebarClosed #sidebar .navButton,
+      html[data-mfl-mobile-layout="true"] .appShell.sidebarCollapsed #sidebar .navButton,
+      html[data-mfl-mobile-layout="true"] .appShell.collapsed #sidebar .navButton {
+        display: grid !important;
+        grid-template-columns: 18px minmax(0, 1fr) !important;
+        align-items: center !important;
+        flex: 0 0 128px !important;
+        width: 128px !important;
+        min-width: 128px !important;
+        max-width: 128px !important;
+        height: 36px !important;
+        gap: 0 !important;
+        padding: 0 6px !important;
+        font-size: 11px !important;
+      }
+      html[data-mfl-mobile-layout="true"] #sidebar .navButton .navEmoji {
+        grid-column: 1 !important;
+        width: 16px !important;
+        min-width: 16px !important;
+        max-width: 16px !important;
+        justify-self: center !important;
+      }
+      html[data-mfl-mobile-layout="true"] #sidebar .navButton .navText {
+        grid-column: 2 !important;
+        justify-self: stretch !important;
+        max-width: none !important;
+        margin-left: 0 !important;
+        font-size: 11px !important;
+        text-align: center !important;
+      }
+      html[data-mfl-mobile-layout="true"] #sidebar .settingsNavButton {
+        margin-left: 0 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  syncStaticMobileLayoutFlag();
+  installStaticMobileFirstPaintStyles();
+  window.addEventListener("resize", syncStaticMobileLayoutFlag, { passive: true });
 
   function normalizeStoredWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -346,6 +459,13 @@
     return className ? STATIC_TABLE_COLUMN_PERCENTAGES[className] : null;
   }
 
+  function staticTableColumnWidth(element) {
+    if (!(element instanceof Element)) return null;
+    const className = Object.keys(STATIC_TABLE_COLUMN_WIDTHS)
+      .find((name) => element.classList.contains(name));
+    return className ? STATIC_TABLE_COLUMN_WIDTHS[className] : null;
+  }
+
   let staticScrollbarWidth = null;
 
   function staticBrowserScrollbarWidth() {
@@ -381,7 +501,10 @@
     if (!percentages.length || percentages.some((value) => !Number.isFinite(value))) return;
 
     const mobile = window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
-    const tableWidth = mobile ? Math.max(MOBILE_TABLE_MIN_WIDTH, contentWidth) : contentWidth;
+    const mobileWidths = mobile ? columns.map(staticTableColumnWidth) : [];
+    if (mobile && mobileWidths.some((value) => !Number.isFinite(value))) return;
+    const mobileTableWidth = mobileWidths.reduce((sum, value) => sum + Number(value || 0), 0);
+    const tableWidth = mobile ? Math.max(MOBILE_TABLE_MIN_WIDTH, mobileTableWidth) : contentWidth;
     const visibleWidth = `${contentWidth.toFixed(4)}px`;
     const exactWidth = `${tableWidth.toFixed(4)}px`;
     const shell = document.querySelector("#progressionPage .tableShell");
@@ -416,7 +539,9 @@
 
     let assignedWidth = 0;
     columns.forEach((column, index) => {
-      const pixelWidth = tableWidth * Number(percentages[index]) / 100;
+      const pixelWidth = mobile
+        ? Number(mobileWidths[index])
+        : tableWidth * Number(percentages[index]) / 100;
       assignedWidth += pixelWidth;
       const width = `${pixelWidth.toFixed(4)}px`;
       column.style.setProperty("width", width, "important");
@@ -425,7 +550,7 @@
       column.style.setProperty("transition", "none", "important");
     });
 
-    const fillerWidth = Math.max(0, tableWidth - assignedWidth);
+    const fillerWidth = mobile ? 0 : Math.max(0, tableWidth - assignedWidth);
     if (fillerWidth > 0.01) {
       const width = `${fillerWidth.toFixed(4)}px`;
       const fillerColumn = document.createElement("col");
