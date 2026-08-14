@@ -292,7 +292,6 @@
   }
 
   syncBootstrapFirstPaint();
-  loadBootstrapRuntime("/dropdowns-runtime.js");
   loadBootstrapRuntime("/club-squad-route-runtime.js");
   loadBootstrapRuntime("/filter-controls-runtime.js");
 
