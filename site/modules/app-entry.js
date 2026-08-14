@@ -258,6 +258,38 @@ function installEvaluationRecentStateBridge() {
         return originalSaveTableStateLocally(localState);
       };
 
+      // Recent-player priming is a data concern only. Evaluation layout owns the
+      // one intended automatic focus, so loading recentEvaluationPlayerIds must
+      // never schedule a second focus that can steal it from the global-search modal.
+      if (typeof primeEmptyEvaluationSearch === "function"
+        && !primeEmptyEvaluationSearch.__mflDataOnly) {
+        const dataOnlyPrimeEmptyEvaluationSearch = function() {
+          if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) {
+            return evaluationRecentSearchPrimePromise;
+          }
+
+          databaseSearchResponseCache.delete("players:");
+          evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
+            .then((loaded) => {
+              if (loaded) {
+                evaluationRecentSearchPrimed = true;
+                if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
+              }
+              return loaded;
+            })
+            .catch((error) => {
+              console.error(error?.message || "Could not load recent Evaluation searches.");
+              return false;
+            })
+            .finally(() => {
+              evaluationRecentSearchPrimePromise = null;
+            });
+          return evaluationRecentSearchPrimePromise;
+        };
+        Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
+        primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
+      }
+
       return true;
     })();`));
   } catch (error) {
