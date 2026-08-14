@@ -89,6 +89,10 @@
   }
 
   function currentSidebarPage() {
+    const active = document.querySelector("#sidebar .navButton.active[data-page]");
+    if (active instanceof HTMLElement) {
+      return normalizePage(active.dataset.page);
+    }
     const page = normalizePage(document.body?.dataset.page);
     if (page === "databasestats") return "database";
     if (page === "mflstats") return "mfl";
