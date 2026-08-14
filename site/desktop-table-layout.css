@@ -31,3 +31,8 @@ body[data-page="watchlist"] #progressionPage .viewButton.active:focus-visible:no
   box-shadow: none !important;
   transition: none !important;
 }
+
+#progressionPage .tableShell:has(> #emptyState:not([hidden])) > .tableScroller {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
