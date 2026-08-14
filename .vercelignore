@@ -10,4 +10,3 @@ site/validate.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types
-site/releases-recent.json
