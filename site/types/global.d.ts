@@ -3,7 +3,11 @@ interface Window {
   __mflReleaseVersion?: string;
   __mflRelease?: Readonly<{ version: string; description: string }>;
   __mflAssetUrl?: (path: string) => string;
-  __mflReleaseUiRuntime?: { destroy?: () => void };
+  __mflPopupCenteringResizeObserver?: ResizeObserver;
+  __mflStaticUiRuntime?: { destroy?: () => void };
+  __mflFilterControlsRuntime?: { sync?: () => void };
+  __mflEvaluationDiscountRateDisplayRuntime?: { sync?: () => void; destroy?: () => void };
+  __mflSelectionStartupResetRuntime?: { rebind?: () => void; destroy?: () => void };
   __mflDatabaseStatsRuntime?: { sync?: () => void };
 }
 
