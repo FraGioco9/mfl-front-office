@@ -283,6 +283,45 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   box-shadow: none;
 }
 
+/* Training +/- controls use one centered vector glyph each. The plus is not a
+ * rotated second bar, so its vertical and horizontal strokes match the minus. */
+.trainingStatControls .popupAddButton::before,
+.trainingStatControls .popupMinusButton::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 0;
+  background: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 10px 10px;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 10px 10px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.trainingStatControls .popupAddButton::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9M5 1V9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9M5 1V9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.trainingStatControls .popupMinusButton::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.trainingStatControls .popupAddButton::after,
+.trainingStatControls .popupMinusButton::after {
+  content: none;
+  display: none;
+}
+
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
 html:has(body > .modalBackdrop:not([hidden])) body {
