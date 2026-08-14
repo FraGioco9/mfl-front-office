@@ -13,6 +13,7 @@
   let recentPrimePromise = null;
   let recentPayload = null;
   let recentPayloadSignature = "";
+  let recentWriteSequence = 0;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -141,6 +142,98 @@
     }
   }
 
+  function setRecentEvaluationPlayerIds(ids) {
+    const normalizedIds = Array.isArray(ids)
+      ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
+      : [];
+    window.__mflEvaluationNextRecentIds = normalizedIds;
+    try {
+      window.eval("if (typeof state === 'object' && state) state.recentEvaluationPlayerIds = [...window.__mflEvaluationNextRecentIds];");
+    } catch {
+      // Supabase write still owns persistence; this only keeps the current UI in sync.
+    } finally {
+      delete window.__mflEvaluationNextRecentIds;
+    }
+    return normalizedIds;
+  }
+
+  function promoteRecentEntry(playerId) {
+    const key = String(playerId || "").trim();
+    if (!key) return;
+    window.__mflEvaluationClickedRecentId = key;
+    try {
+      const entry = window.eval(`(() => {
+        if (typeof state !== "object" || !Array.isArray(state.evaluationSearchIndex)) return null;
+        return state.evaluationSearchIndex.find((item) => String(item?.playerId || "") === window.__mflEvaluationClickedRecentId) || null;
+      })()`);
+      if (!entry || entry.retired) return;
+      const current = Array.isArray(window[RECENT_ENTRIES_KEY]) ? window[RECENT_ENTRIES_KEY] : [];
+      window[RECENT_ENTRIES_KEY] = [
+        entry,
+        ...current.filter((item) => String(item?.playerId || "") !== key),
+      ].slice(0, 5);
+    } catch {
+      // The exact entry will be re-fetched from the database immediately below.
+    } finally {
+      delete window.__mflEvaluationClickedRecentId;
+    }
+  }
+
+  function persistRecentEvaluationToSupabase(ids, sequence) {
+    window.__mflEvaluationPendingRecentIds = ids;
+    let savePromise = Promise.resolve(false);
+    try {
+      savePromise = window.eval(`(() => {
+        if (typeof state !== "object" || !state) return Promise.resolve(false);
+        state.recentEvaluationPlayerIds = [...window.__mflEvaluationPendingRecentIds];
+        if (state.walletPreferencesSaveTimer) {
+          window.clearTimeout(state.walletPreferencesSaveTimer);
+          state.walletPreferencesSaveTimer = null;
+        }
+        if (!state.linkedWalletAddress
+          || typeof hasWalletProof !== "function"
+          || !hasWalletProof()
+          || typeof saveWalletPreferencesNow !== "function") {
+          return Promise.resolve(false);
+        }
+        return Promise.resolve(saveWalletPreferencesNow()).then(() => true, () => false);
+      })()`);
+    } catch {
+      savePromise = Promise.resolve(false);
+    } finally {
+      delete window.__mflEvaluationPendingRecentIds;
+    }
+
+    return Promise.resolve(savePromise).finally(() => {
+      if (destroyed || sequence !== recentWriteSequence) return;
+      setRecentEvaluationPlayerIds(ids);
+      recentPayload = null;
+      recentPayloadSignature = "";
+      void primeRecentSearchData({ force: true });
+    });
+  }
+
+  function commitRecentPlayer(playerId) {
+    const key = String(playerId || "").trim();
+    if (!key) return;
+
+    const currentIds = recentEvaluationPlayerIds();
+    const nextIds = setRecentEvaluationPlayerIds([
+      key,
+      ...currentIds.filter((id) => id !== key),
+    ].slice(0, 5));
+    promoteRecentEntry(key);
+    recentPayload = null;
+    recentPayloadSignature = "";
+    const sequence = ++recentWriteSequence;
+
+    queueMicrotask(() => {
+      if (destroyed || sequence !== recentWriteSequence) return;
+      void primeRecentSearchData({ force: true });
+      void persistRecentEvaluationToSupabase(nextIds, sequence);
+    });
+  }
+
   function buildRecentEntries(payload) {
     window.__mflEvaluationSupabaseRecentPayload = payload;
     try {
@@ -201,6 +294,26 @@
       })()`);
     } catch (error) {
       console.warn("Could not isolate empty Evaluation searches from generic recents.", error);
+    }
+  }
+
+  function installRecentWriteBridge() {
+    try {
+      window.eval(`(() => {
+        if (typeof rememberEvaluationResult !== "function") return false;
+        if (rememberEvaluationResult.__mflSupabaseImmediate) return true;
+        const originalRememberEvaluationResult = rememberEvaluationResult;
+        const supabaseImmediateRememberEvaluationResult = function(playerId) {
+          const result = originalRememberEvaluationResult.apply(this, arguments);
+          window.__mflEvaluationSearchStateRuntime?.commitRecentPlayer?.(playerId);
+          return result;
+        };
+        Object.defineProperty(supabaseImmediateRememberEvaluationResult, "__mflSupabaseImmediate", { value: true });
+        rememberEvaluationResult = supabaseImmediateRememberEvaluationResult;
+        return true;
+      })()`);
+    } catch (error) {
+      console.warn("Could not make Evaluation recent writes immediate.", error);
     }
   }
 
@@ -301,6 +414,7 @@
     installRecentRule();
     installCoreRecentRowsBridge();
     installEmptyPlayerSearchBridge();
+    installRecentWriteBridge();
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
 
@@ -365,7 +479,6 @@
     const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");
     if (!(result instanceof HTMLButtonElement) || result.disabled) return;
     rememberClickedSearch(result);
-    queueMicrotask(() => { void primeRecentSearchData({ force: true }); });
   }
 
   function installObserver() {
@@ -397,6 +510,7 @@
   installRecentRule();
   installCoreRecentRowsBridge();
   installEmptyPlayerSearchBridge();
+  installRecentWriteBridge();
   syncClearButton();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -423,11 +537,17 @@
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
+    recentWriteSequence += 1;
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
     }
   }
 
-  window.__mflEvaluationSearchStateRuntime = Object.freeze({ sync, restoreEmptyRecentResults, destroy });
+  window.__mflEvaluationSearchStateRuntime = Object.freeze({
+    sync,
+    restoreEmptyRecentResults,
+    commitRecentPlayer,
+    destroy,
+  });
 })();
