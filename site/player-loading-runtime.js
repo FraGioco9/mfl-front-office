@@ -3,6 +3,7 @@
 
   const PLAYER_LABEL_STORAGE_PREFIX = "mfl-player-label-v1:";
   const PLAYER_POSITION_STORAGE_PREFIX = "mfl-player-position-v1:";
+  const PLAYER_SNAPSHOT_STORAGE_PREFIX = "mfl-player-snapshot-v1:";
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const PROFILE_LABELS = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
   const ATTRIBUTE_LABELS = ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
@@ -13,7 +14,8 @@
     ["current", "Current Season"],
     ["all", "All Time"],
   ];
-  const PITCH_ROW_LENGTHS = [1, 3, 1, 3, 3, 3, 1];
+  const PITCH_ROWS = [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]];
+  const sessionPlayerSnapshots = new Map();
   let renderingSkeleton = false;
 
   function escapeHtml(value) {
@@ -44,6 +46,88 @@
     } catch {
       return "";
     }
+  }
+
+  function safeObject(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function cleanTextMap(value) {
+    const normalized = {};
+    Object.entries(safeObject(value)).forEach(([key, entry]) => {
+      const label = String(key || "").trim();
+      if (!label) return;
+      normalized[label] = entry === null || entry === undefined ? "" : String(entry).trim();
+    });
+    return normalized;
+  }
+
+  function cleanPitchRatings(value) {
+    const normalized = {};
+    Object.entries(safeObject(value)).forEach(([position, entry]) => {
+      const key = String(position || "").trim().toUpperCase();
+      const data = safeObject(entry);
+      const familiarity = String(data.familiarity || "").trim();
+      const rating = String(data.rating ?? "").trim();
+      if (!key || !["primary", "secondary", "fair", "some"].includes(familiarity) || !rating) return;
+      normalized[key] = { familiarity, rating };
+    });
+    return normalized;
+  }
+
+  function normalizedSnapshot(snapshot) {
+    const source = safeObject(snapshot);
+    const normalized = {
+      profile: cleanTextMap(source.profile),
+      attributes: cleanTextMap(source.attributes),
+      pitchRatings: cleanPitchRatings(source.pitchRatings),
+    };
+    ["name", "positions", "externalHref", "notes"].forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        normalized[key] = source[key] === null || source[key] === undefined ? "" : String(source[key]).trim();
+      }
+    });
+    if (typeof source.inWatchlist === "boolean") normalized.inWatchlist = source.inWatchlist;
+    if (typeof source.pitchHtml === "string" && source.pitchHtml.trim()) normalized.pitchHtml = source.pitchHtml;
+    return normalized;
+  }
+
+  function mergeSnapshots(base, next) {
+    const first = normalizedSnapshot(base);
+    const second = normalizedSnapshot(next);
+    const merged = {
+      ...first,
+      profile: { ...first.profile, ...second.profile },
+      attributes: { ...first.attributes, ...second.attributes },
+      pitchRatings: { ...first.pitchRatings, ...second.pitchRatings },
+    };
+    ["name", "positions", "externalHref", "notes", "inWatchlist", "pitchHtml"].forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(second, key)) merged[key] = second[key];
+    });
+    return merged;
+  }
+
+  function persistentPlayerSnapshot(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return {};
+    try {
+      return normalizedSnapshot(JSON.parse(localStorage.getItem(`${PLAYER_SNAPSHOT_STORAGE_PREFIX}${id}`) || "null"));
+    } catch {
+      return {};
+    }
+  }
+
+  function storedPlayerSnapshot(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return {};
+    let snapshot = persistentPlayerSnapshot(id);
+    const sessionSnapshot = sessionPlayerSnapshots.get(id);
+    if (sessionSnapshot) snapshot = mergeSnapshots(snapshot, sessionSnapshot);
+    const legacyName = storedPlayerName(id);
+    const legacyPosition = storedPlayerPosition(id);
+    if (!snapshot.name && legacyName) snapshot.name = legacyName;
+    if (!snapshot.positions && legacyPosition) snapshot.positions = legacyPosition;
+    return snapshot;
   }
 
   function storePlayerName(playerId, playerName) {
@@ -92,62 +176,345 @@
     }
   }
 
-  function rememberRenderedPlayerIdentity(playerId, detail) {
-    const name = detail?.querySelector?.(".playerTitleName")?.textContent?.trim() || "";
-    const position = detail?.querySelector?.(".playerHero p")?.textContent?.trim() || "";
-    storePlayerName(playerId, name);
-    storePlayerPosition(playerId, position);
+  function storePlayerSnapshot(playerId, snapshot) {
+    const id = String(playerId || "").trim();
+    if (!id) return {};
+    const merged = mergeSnapshots(storedPlayerSnapshot(id), snapshot);
+    sessionPlayerSnapshots.set(id, merged);
+    if (merged.name) storePlayerName(id, merged.name);
+    if (merged.positions) storePlayerPosition(id, merged.positions);
+    try {
+      const persistent = { ...merged };
+      delete persistent.pitchHtml;
+      localStorage.setItem(`${PLAYER_SNAPSHOT_STORAGE_PREFIX}${id}`, JSON.stringify(persistent));
+    } catch {
+      // The current session snapshot remains available if browser storage is blocked.
+    }
+    return merged;
   }
 
-  function searchResultPosition(searchResult) {
-    const summary = searchResult?.querySelector?.("span")?.textContent || "";
-    const parts = String(summary).split("·").map((part) => part.trim()).filter(Boolean);
-    return parts.length >= 4 ? String(parts.at(-1) || "").trim() : "";
+  function profileSnapshotFromRenderedPage(detail) {
+    const profile = {};
+    detail?.querySelectorAll?.(".playerInfoPanel .detailGrid > div").forEach((card) => {
+      const label = String(card.querySelector(":scope > span")?.textContent || "").trim();
+      if (!label) return;
+      if (label === "Contract") {
+        const team = String(card.querySelector(".playerContractTeam")?.textContent || "").trim();
+        const division = String(card.querySelector(".playerContractDivision")?.textContent || "").trim();
+        profile[label] = [team, division].filter(Boolean).join(" · ") || String(card.querySelector(":scope > strong")?.textContent || "").trim();
+        return;
+      }
+      profile[label] = String(card.querySelector(":scope > strong")?.textContent || "").trim();
+    });
+    return profile;
   }
 
-  function rememberNavigationPlayerIdentity(event) {
+  function attributeSnapshotFromRenderedPage(detail) {
+    const attributes = {};
+    detail?.querySelectorAll?.(".attributeGrid .playerAttributeCard").forEach((card) => {
+      const label = String(card.querySelector(":scope > span")?.textContent || "").trim();
+      if (!label) return;
+      const value = card.querySelector(".attributeValueText")?.textContent
+        ?? card.querySelector(":scope > strong")?.textContent
+        ?? "";
+      attributes[label] = String(value).trim();
+    });
+    return attributes;
+  }
+
+  function pitchRatingsFromRenderedPage(detail) {
+    const ratings = {};
+    detail?.querySelectorAll?.(".pitchPositionCircle").forEach((circle) => {
+      const position = String(circle.querySelector("small")?.textContent || "").trim().toUpperCase();
+      const rating = String(circle.querySelector("strong")?.textContent || "").trim();
+      const familiarity = ["primary", "secondary", "fair", "some"].find((name) => circle.classList.contains(name)) || "";
+      if (position && rating && familiarity) ratings[position] = { rating, familiarity };
+    });
+    return ratings;
+  }
+
+  function rememberRenderedPlayerSnapshot(playerId, detail) {
+    const id = String(playerId || "").trim();
+    if (!id || !(detail instanceof HTMLElement)) return;
+    const watchButton = detail.querySelector("#playerWatchlistButton");
+    const notesInput = detail.querySelector("#playerNotesInput");
+    const pitch = detail.querySelector(".pitch");
+    const snapshot = {
+      name: detail.querySelector(".playerTitleName")?.textContent?.trim() || "",
+      positions: detail.querySelector(".playerHero p")?.textContent?.trim() || "",
+      profile: profileSnapshotFromRenderedPage(detail),
+      attributes: attributeSnapshotFromRenderedPage(detail),
+      pitchRatings: pitchRatingsFromRenderedPage(detail),
+      externalHref: detail.querySelector("#openPlayerExternalButton")?.getAttribute("href") || "",
+      pitchHtml: pitch?.innerHTML || "",
+    };
+    if (watchButton instanceof HTMLElement) snapshot.inWatchlist = watchButton.classList.contains("active");
+    if (notesInput instanceof HTMLTextAreaElement) snapshot.notes = notesInput.value;
+    storePlayerSnapshot(id, snapshot);
+  }
+
+  function liveCorePlayerSnapshot(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return null;
+    window.__mflPlayerLoadingSnapshotId = id;
+    try {
+      return window.eval(`(() => {
+        try {
+          const id = String(window.__mflPlayerLoadingSnapshotId || "").trim();
+          if (!id || typeof rowByPlayerId !== "function") return null;
+          const row = rowByPlayerId(id);
+          if (!row) return null;
+          const loaded = (column) => typeof hasColumn === "function"
+            ? hasColumn(column)
+            : Array.isArray(state?.columns) && state.columns.includes(column);
+          const plain = (column) => {
+            if (!loaded(column)) return "";
+            if (typeof formatCellValue === "function") return String(formatCellValue(row, column) ?? "").trim();
+            const value = typeof getValue === "function" ? getValue(row, column) : "";
+            return value === null || value === undefined ? "" : String(value).trim();
+          };
+          const raw = (column) => loaded(column) && typeof getValue === "function" ? getValue(row, column) : null;
+          const positions = loaded("positions") && typeof playerPositions === "function"
+            ? playerPositions(row).join(", ")
+            : plain("positions");
+          const primaryPosition = positions.split(",")[0]?.trim().toUpperCase() || "";
+          const profile = {};
+          if (loaded("nationality")) profile.Nationality = plain("nationality");
+          if (loaded("age")) profile.Age = plain("age");
+          if (loaded("height")) {
+            const height = plain("height");
+            profile.Height = height && height !== "NULL" ? height + " cm" : height;
+          }
+          if (loaded("preferred_foot")) {
+            profile.Foot = typeof formatFootedness === "function"
+              ? String(formatFootedness(raw("preferred_foot")) ?? "").trim()
+              : plain("preferred_foot");
+          }
+          if (loaded("player_seasons")) profile.Seasons = plain("player_seasons");
+          if (loaded("wallet_name") || loaded("wallet_address")) {
+            profile.Agent = typeof formatCellValue === "function"
+              ? String(formatCellValue(row, "wallet_name") ?? "").trim()
+              : String(raw("wallet_name") || raw("wallet_address") || "").trim();
+          }
+          if (loaded("active_contract_club_name")) {
+            const active = typeof rowHasActiveContract === "function" ? rowHasActiveContract(row) : Boolean(raw("active_contract_club_name"));
+            const team = typeof formatContractClubName === "function"
+              ? String(formatContractClubName(row) ?? "").trim()
+              : plain("active_contract_club_name");
+            let division = "";
+            if (active && loaded("active_contract_club_division")) {
+              division = typeof formatContractDivision === "function"
+                ? String(formatContractDivision(raw("active_contract_club_division")) ?? "").trim()
+                : plain("active_contract_club_division");
+            }
+            profile.Contract = [team, division].filter(Boolean).join(" · ");
+            if (active && loaded("active_contract_revenue_share") && typeof formatContractRevenueShare === "function") {
+              const share = String(formatContractRevenueShare(raw("active_contract_revenue_share")) ?? "").trim();
+              if (share) profile["Rev Share"] = share;
+            }
+          }
+
+          const attributes = {};
+          const attributeColumns = primaryPosition === "GK"
+            ? [["overall", "Overall"], ["goalkeeping", "Goalkeeping"]]
+            : [["overall", "Overall"], ["pace", "Pace"], ["dribbling", "Dribbling"], ["shooting", "Shooting"], ["defense", "Defense"], ["passing", "Passing"], ["physical", "Physical"]];
+          attributeColumns.forEach(([column, label]) => {
+            if (!loaded(column) && !(column === "overall" && primaryPosition === "GK" && loaded("goalkeeping"))) return;
+            let value;
+            if (column === "overall" && typeof statDisplayValue === "function") value = statDisplayValue(row, column);
+            else value = raw(column);
+            attributes[label] = typeof formatPlainValue === "function"
+              ? String(formatPlainValue(value, column) ?? "").trim()
+              : (value === null || value === undefined ? "" : String(value).trim());
+          });
+
+          const pitchRatings = {};
+          const ratingColumns = primaryPosition === "GK"
+            ? ["goalkeeping"]
+            : ["pace", "shooting", "passing", "dribbling", "defense", "physical"];
+          const canRatePitch = Boolean(primaryPosition)
+            && ratingColumns.every(loaded)
+            && typeof familiarityForPosition === "function"
+            && typeof positionRating === "function";
+          if (canRatePitch) {
+            [["ST"], ["LW", "CF", "RW"], ["CAM"], ["LM", "CM", "RM"], ["LWB", "CDM", "RWB"], ["LB", "CB", "RB"], ["GK"]].flat().forEach((position) => {
+              const familiarity = familiarityForPosition(row, position);
+              if (!familiarity) return;
+              const rating = positionRating(row, position, familiarity);
+              if (rating === null || rating === undefined) return;
+              pitchRatings[position] = { familiarity, rating: String(rating) };
+            });
+          }
+
+          const snapshot = {
+            profile,
+            attributes,
+            pitchRatings,
+            externalHref: "https://app.playmfl.com/players/" + encodeURIComponent(id),
+          };
+          if (loaded("name")) snapshot.name = plain("name");
+          if (loaded("positions")) snapshot.positions = positions;
+          if (typeof state === "object" && state?.walletPreferencesLoaded) {
+            if (typeof playerIsInAnyWatchlist === "function") snapshot.inWatchlist = Boolean(playerIsInAnyWatchlist(id));
+            if (typeof playerNote === "function") snapshot.notes = String(playerNote(id) || "");
+          }
+          if (canRatePitch && typeof renderPitch === "function") snapshot.pitchHtml = renderPitch(row);
+          return snapshot;
+        } catch {
+          return null;
+        }
+      })()`);
+    } catch {
+      return null;
+    } finally {
+      delete window.__mflPlayerLoadingSnapshotId;
+    }
+  }
+
+  function tableRowSnapshot(row) {
+    if (!(row instanceof HTMLTableRowElement)) return {};
+    const table = row.closest("table");
+    const headerCells = Array.from(table?.querySelectorAll("thead tr:last-child th") || []);
+    const cells = Array.from(row.cells || []);
+    const values = {};
+    headerCells.forEach((header, index) => {
+      const label = String(header.textContent || "").replace(/[▲▼]/g, "").trim();
+      if (!label || !cells[index]) return;
+      values[label] = String(cells[index].textContent || "").trim();
+    });
+    const profile = {};
+    const attributes = {};
+    if (values.Nationality) profile.Nationality = values.Nationality;
+    if (values.Age) profile.Age = values.Age;
+    if (values.Seasons) profile.Seasons = values.Seasons;
+    if (values.Agent) profile.Agent = values.Agent;
+    const clubName = values["Club Name"] || "";
+    const division = values.Division || "";
+    if (clubName || division) profile.Contract = [clubName, division].filter(Boolean).join(" · ");
+    if (values["Rev. Share"]) profile["Rev Share"] = values["Rev. Share"];
+    ATTRIBUTE_LABELS.forEach((label) => {
+      if (values[label]) attributes[label] = values[label].split(" (")[0].trim();
+    });
+    const snapshot = { profile, attributes };
+    const name = values.Name || row.querySelector(".playerNameLink")?.textContent?.trim() || "";
+    const positions = values.Positions || row.querySelector(".col-positions")?.textContent?.trim() || "";
+    if (name) snapshot.name = name;
+    if (positions) snapshot.positions = positions;
+    return snapshot;
+  }
+
+  function searchResultSnapshot(searchResult) {
+    if (!(searchResult instanceof HTMLElement)) return {};
+    const summary = String(searchResult.querySelector(":scope > span")?.textContent || "");
+    const parts = summary.split("·").map((part) => part.trim()).filter(Boolean);
+    const overallPart = parts.find((part) => /^OVR\s+/i.test(part)) || "";
+    const overall = overallPart.replace(/^OVR\s+/i, "").trim();
+    const nationality = parts.length >= 3 ? parts.at(-2) : "";
+    const positions = parts.length >= 4 ? parts.at(-1) : "";
+    const snapshot = {
+      profile: nationality ? { Nationality: nationality } : {},
+      attributes: overall ? { Overall: overall } : {},
+    };
+    const name = searchResult.querySelector("strong")?.textContent?.trim() || "";
+    if (name) snapshot.name = name;
+    if (positions) snapshot.positions = positions;
+    return snapshot;
+  }
+
+  function evaluationPlayerId() {
+    const fromUrl = String(new URLSearchParams(window.location.search).get("player") || "").trim();
+    if (fromUrl) return fromUrl;
+    try {
+      return String(window.eval("typeof state === 'object' ? (state.evaluationPlayerId || '') : ''") || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function rememberNavigationPlayerSnapshot(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
     const playerLink = target.closest("a.playerNameLink[href]");
     if (playerLink instanceof HTMLAnchorElement) {
       const playerId = playerIdFromHref(playerLink.href);
-      const row = playerLink.closest("tr");
-      const position = row?.querySelector?.('.col-positions,[data-column="positions"]')?.textContent || "";
-      storePlayerName(playerId, playerLink.textContent);
-      storePlayerPosition(playerId, position);
+      if (!playerId) return;
+      const liveSnapshot = liveCorePlayerSnapshot(playerId) || {};
+      const domSnapshot = tableRowSnapshot(playerLink.closest("tr"));
+      storePlayerSnapshot(playerId, mergeSnapshots(domSnapshot, liveSnapshot));
       return;
     }
 
     const searchResult = target.closest('.searchResult[data-search-key^="player:"]');
-    if (!(searchResult instanceof HTMLElement)) return;
-    const key = String(searchResult.dataset.searchKey || "");
-    const playerId = key.startsWith("player:") ? key.slice("player:".length).trim() : "";
-    const playerName = searchResult.querySelector("strong")?.textContent || "";
-    storePlayerName(playerId, playerName);
-    storePlayerPosition(playerId, searchResultPosition(searchResult));
+    if (searchResult instanceof HTMLElement) {
+      const key = String(searchResult.dataset.searchKey || "");
+      const playerId = key.startsWith("player:") ? key.slice("player:".length).trim() : "";
+      if (!playerId) return;
+      const liveSnapshot = liveCorePlayerSnapshot(playerId) || {};
+      storePlayerSnapshot(playerId, mergeSnapshots(searchResultSnapshot(searchResult), liveSnapshot));
+      return;
+    }
+
+    if (target.closest("#evaluationPlayerPageButton")) {
+      const playerId = evaluationPlayerId();
+      if (!playerId) return;
+      const liveSnapshot = liveCorePlayerSnapshot(playerId);
+      if (liveSnapshot) storePlayerSnapshot(playerId, liveSnapshot);
+    }
   }
 
   function storedWalletOptIn() {
     return document.documentElement.dataset.storedWalletOptIn === "true";
   }
 
-  function profileCardsMarkup() {
-    return PROFILE_LABELS.map((label) => `
-      <div${label === "Contract" ? ' class="contractDetailCard"' : ""}>
-        <span>${label}</span>
-        <strong class="mflPlayerLoadingEmptyValue" aria-hidden="true">&nbsp;</strong>
-      </div>
-    `).join("");
+  function profileCardsMarkup(snapshot) {
+    const profile = safeObject(snapshot?.profile);
+    const labels = [...PROFILE_LABELS];
+    if (Object.prototype.hasOwnProperty.call(profile, "Rev Share") && profile["Rev Share"]) labels.push("Rev Share");
+    return labels.map((label) => {
+      const value = String(profile[label] ?? "").trim();
+      const emptyClass = value ? "" : ' class="mflPlayerLoadingEmptyValue" aria-hidden="true"';
+      return `
+        <div${label === "Contract" ? ' class="contractDetailCard"' : ""}>
+          <span>${label}</span>
+          <strong${emptyClass}>${value ? escapeHtml(value) : "&nbsp;"}</strong>
+        </div>
+      `;
+    }).join("");
   }
 
-  function attributeCardsMarkup() {
-    return ATTRIBUTE_LABELS.map((label) => `
-      <div class="playerAttributeCard mflPlayerLoadingAttributeCard">
-        <span>${label}</span>
-        <strong class="mflPlayerLoadingEmptyValue" aria-hidden="true">&nbsp;</strong>
-      </div>
-    `).join("");
+  function rarityColorForOverall(overall) {
+    const value = Number.parseFloat(String(overall || "").replace(/[^0-9.-]/g, ""));
+    if (value >= 95) return "#00ffe9";
+    if (value >= 85) return "#fa53ff";
+    if (value >= 75) return "#0077ff";
+    if (value >= 65) return "#71ff30";
+    if (value >= 55) return "#ecd17f";
+    return "#bebebe";
+  }
+
+  function primaryPosition(snapshot) {
+    return String(snapshot?.positions || "").split(",")[0]?.trim().toUpperCase() || "";
+  }
+
+  function attributeCardsMarkup(snapshot) {
+    const attributes = safeObject(snapshot?.attributes);
+    const goalkeeper = primaryPosition(snapshot) === "GK";
+    const labels = goalkeeper ? ["Overall", "Goalkeeping"] : ATTRIBUTE_LABELS;
+    const rarity = rarityColorForOverall(attributes.Overall);
+    return labels.map((label) => {
+      const value = String(attributes[label] ?? "").trim();
+      const featured = label === "Overall" ? " featured" : "";
+      const fullWidth = label === "Overall" || (goalkeeper && label === "Goalkeeping") ? " fullWidth" : "";
+      const style = label === "Overall" ? ` style="--rarity-color: ${rarity}"` : "";
+      const valueClass = value ? "attributeValueText" : "attributeValueText mflPlayerLoadingEmptyValue";
+      return `
+        <div class="playerAttributeCard mflPlayerLoadingAttributeCard${featured}${fullWidth}"${style}>
+          <span>${label}</span>
+          <strong><span class="${valueClass}"${value ? "" : ' aria-hidden="true"'}>${value ? escapeHtml(value) : "&nbsp;"}</span></strong>
+        </div>
+      `;
+    }).join("");
   }
 
   function attributeViewsMarkup() {
@@ -163,9 +530,10 @@
     `).join("");
   }
 
-  function actionControlsMarkup() {
+  function actionControlsMarkup(snapshot) {
+    const inWatchlist = snapshot?.inWatchlist === true;
     const watchlistButton = storedWalletOptIn()
-      ? '<button class="playerWatchlistButton mflPlayerLoadingControl" type="button" aria-disabled="true" tabindex="-1"><span class="watchlistButtonStar" aria-hidden="true">☆</span><span>Add to watchlist</span></button>'
+      ? `<button class="playerWatchlistButton mflPlayerLoadingControl${inWatchlist ? " active" : ""}" type="button" aria-disabled="true" tabindex="-1"><span class="watchlistButtonStar" aria-hidden="true">${inWatchlist ? "★" : "☆"}</span><span>${inWatchlist ? "In watchlist" : "Add to watchlist"}</span></button>`
       : "";
     return `
       <button class="playerEvaluateButton mflPlayerLoadingControl" type="button" aria-disabled="true" tabindex="-1">Evaluate</button>
@@ -174,30 +542,45 @@
     `;
   }
 
-  function pitchMarkup() {
+  function pitchMarkup(snapshot) {
+    if (snapshot?.pitchHtml) return snapshot.pitchHtml;
+    const ratings = safeObject(snapshot?.pitchRatings);
     const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
-    const rows = PITCH_ROW_LENGTHS.map((length) => `
-      <div class="pitchRow pitchRow${length}" style="--pitch-columns: ${length}" aria-hidden="true"></div>
+    const rows = PITCH_ROWS.map((pitchRow) => `
+      <div class="pitchRow pitchRow${pitchRow.length}" style="--pitch-columns: ${pitchRow.length}">
+        ${pitchRow.map((position) => {
+          const entry = safeObject(ratings[position]);
+          const familiarity = String(entry.familiarity || "");
+          const rating = String(entry.rating || "");
+          const content = familiarity && rating
+            ? `<span class="pitchPositionCircle ${escapeHtml(familiarity)}" title="${escapeHtml(`${position} ${rating}`)}"><strong>${escapeHtml(rating)}</strong><small>${position}</small></span>`
+            : '<span class="pitchPositionBlank" aria-hidden="true"></span>';
+          return `<div class="pitchPositionSlot">${content}</div>`;
+        }).join("")}
+      </div>
     `).join("");
     return pitchLines + rows;
   }
 
   function playerLoadingMarkup(playerId) {
     const id = escapeHtml(playerId);
-    const playerName = storedPlayerName(playerId);
-    const playerPosition = storedPlayerPosition(playerId);
+    const snapshot = storedPlayerSnapshot(playerId);
+    const playerName = String(snapshot.name || "").trim();
+    const playerPosition = String(snapshot.positions || "").trim();
     const nameMarkup = playerName
       ? `<span class="playerTitleName">${escapeHtml(playerName)}</span>`
       : '<span class="playerTitleName mflPlayerLoadingEmptyName" aria-hidden="true">&nbsp;</span>';
     const positionMarkup = playerPosition
       ? `<span>${escapeHtml(playerPosition)}</span>`
       : '<span class="mflPlayerLoadingEmptyPosition" aria-hidden="true">&nbsp;</span>';
+    const notes = Object.prototype.hasOwnProperty.call(snapshot, "notes") ? String(snapshot.notes || "") : "";
     const notesMarkup = storedWalletOptIn()
       ? `
         <div class="playerPanel playerNotesPanel">
           <h3>Notes</h3>
           <div class="playerNotesInputWrap">
-            <textarea class="playerNotesInput mflPlayerLoadingNotes" aria-hidden="true" disabled></textarea>
+            <textarea class="playerNotesInput mflPlayerLoadingNotes" aria-hidden="true" disabled>${escapeHtml(notes)}</textarea>
+            <span class="playerNotesCount">${notes.length}/100</span>
           </div>
         </div>
       `
@@ -210,26 +593,26 @@
           <h2 class="playerTitle">${nameMarkup}</h2>
           <p>${positionMarkup}</p>
         </div>
-        <div class="playerHeroActions">${actionControlsMarkup()}</div>
+        <div class="playerHeroActions">${actionControlsMarkup(snapshot)}</div>
       </section>
       <section class="playerGrid" data-mfl-player-loading-grid="true">
         <div class="playerStack">
           <div class="playerPanel playerInfoPanel">
             <h3>Profile</h3>
-            <div class="detailGrid">${profileCardsMarkup()}</div>
+            <div class="detailGrid">${profileCardsMarkup(snapshot)}</div>
           </div>
           <div class="playerPanel attributesPanel">
             <div class="playerPanelHeader">
               <h3>Attributes</h3>
               <div class="playerAttributeViews">${attributeViewsMarkup()}</div>
             </div>
-            <div class="attributeGrid">${attributeCardsMarkup()}</div>
+            <div class="attributeGrid">${attributeCardsMarkup(snapshot)}</div>
           </div>
           ${notesMarkup}
         </div>
         <div class="playerPanel pitchPanel">
           <h3>Positions</h3>
-          <div class="pitch mflPlayerLoadingPitch" aria-hidden="true">${pitchMarkup()}</div>
+          <div class="pitch mflPlayerLoadingPitch" aria-hidden="true">${pitchMarkup(snapshot)}</div>
         </div>
       </section>
     `;
@@ -270,7 +653,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
-      rememberRenderedPlayerIdentity(playerId, detail);
+      rememberRenderedPlayerSnapshot(playerId, detail);
       return false;
     }
 
@@ -278,6 +661,9 @@
     const loadingText = String(detail.textContent || "").trim();
     const loadingPlaceholder = !detail.children.length || loadingText === "Loading player...";
     if (!force && !loadingPlaceholder) return false;
+
+    const liveSnapshot = liveCorePlayerSnapshot(playerId);
+    if (liveSnapshot) storePlayerSnapshot(playerId, liveSnapshot);
 
     renderingSkeleton = true;
     try {
@@ -297,7 +683,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
-      rememberRenderedPlayerIdentity(playerId, detail);
+      rememberRenderedPlayerSnapshot(playerId, detail);
       delete detail.dataset.mflPlayerLoading;
       return;
     }
@@ -307,7 +693,8 @@
     if (!detail.children.length || text === "Loading player...") renderSkeleton();
   }
 
-  document.addEventListener("click", rememberNavigationPlayerIdentity, true);
+  document.addEventListener("pointerdown", rememberNavigationPlayerSnapshot, true);
+  document.addEventListener("click", rememberNavigationPlayerSnapshot, true);
   installStyles();
   renderSkeleton({ force: true });
 
