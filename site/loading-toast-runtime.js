@@ -86,11 +86,17 @@
       visibility: visible !important;
       position: fixed !important;
       inset: 0 !important;
-      z-index: 2147483647 !important;
+      z-index: 2147483646 !important;
       background: transparent !important;
       pointer-events: none !important;
       transition: none !important;
       animation: none !important;
+    }
+
+    /* Toasts are application-level feedback and must remain visible over every
+       modal, backdrop and busy shield. Keep the shield one layer below them. */
+    .toastMessage {
+      z-index: 2147483647 !important;
     }
 
     #${TOAST_ID} {
