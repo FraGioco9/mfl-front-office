@@ -10,7 +10,6 @@
   let observer = null;
   let seededMflPerUsd = false;
   let focusQueued = false;
-  let evaluationBusyToken = "";
   let searchFocusDismissed = false;
 
   function cleanPath() {
@@ -40,10 +39,6 @@
     return evaluationActive()
       && document.documentElement.dataset.mflReady === "true"
       && !appBusy();
-  }
-
-  function evaluationRouteLoading() {
-    return evaluationActive() && Boolean(document.body?.classList.contains("evaluationRouteLoading"));
   }
 
   function setImportant(element, property, value) {
@@ -137,18 +132,6 @@
     setImportant(discountRate, "visibility", "visible");
   }
 
-  function syncEvaluationBusy() {
-    const controller = window.__mflInteractionBusy;
-    if (!controller?.begin || !controller?.end) return;
-    const loading = evaluationRouteLoading();
-    if (loading && !evaluationBusyToken) {
-      evaluationBusyToken = controller.begin("evaluationRouteLoading");
-    } else if (!loading && evaluationBusyToken) {
-      controller.end(evaluationBusyToken);
-      evaluationBusyToken = "";
-    }
-  }
-
   function keepStaticPosition() {
     if (!evaluationActive() || evaluationReady()) return;
     const main = document.querySelector("main");
@@ -240,9 +223,8 @@
       : null;
     if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
 
-    // Keep the Evaluation input from blurring between mousedown and click.
-    // Preventing the mousedown default preserves the original trusted click
-    // handler on the result button instead of forwarding or synthesizing one.
+    // Result clicks must remain trusted even when the Evaluation input is not
+    // focused. Preventing only the mousedown default avoids a focus transfer.
     event.preventDefault();
   }
 
@@ -253,9 +235,25 @@
     ));
   }
 
+  function releaseEvaluationFocus() {
+    searchFocusDismissed = true;
+    const input = document.getElementById("evaluationSearchInput");
+    if (input instanceof HTMLInputElement && document.activeElement === input) {
+      input.blur();
+    }
+  }
+
   function handleEvaluationSearchPointerIntent(event) {
     if (event.button !== 0 || !evaluationActive()) return;
     const target = event.target instanceof Element ? event.target : null;
+
+    // Global search owns all focus while its opener/modal is being used. Do not
+    // render or refocus Evaluation search as a side effect of those pointer events.
+    if (target?.closest("#openSearchButton, #searchModal")) {
+      releaseEvaluationFocus();
+      return;
+    }
+
     if (evaluationSearchInteraction(target)) {
       if (target?.closest("#evaluationSearchInput, #evaluationSearchClearButton")) {
         searchFocusDismissed = false;
@@ -263,16 +261,13 @@
       return;
     }
 
-    searchFocusDismissed = true;
-    const input = document.getElementById("evaluationSearchInput");
-    if (input instanceof HTMLInputElement && document.activeElement === input) {
-      input.blur();
-    }
+    releaseEvaluationFocus();
     queueMicrotask(renderEmptyEvaluationRecents);
   }
 
   function allowKeyboardSearchFocus(event) {
     if (!evaluationActive() || event.key !== "Tab") return;
+    if (globalSearchOpen()) return;
     searchFocusDismissed = false;
   }
 
@@ -283,10 +278,6 @@
       : null;
     if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
 
-    // The legacy Edit button prevents the mousedown default so it does not take
-    // focus itself. If Evaluation search owns focus, release it explicitly before
-    // the trusted click reaches the existing Edit handler. The handler can then
-    // focus/select the MFL/USD input normally.
     const input = document.getElementById("evaluationSearchInput");
     if (input instanceof HTMLInputElement && document.activeElement === input) {
       input.blur();
@@ -350,7 +341,6 @@
 
     syncDiscountRateFallback();
     syncLoadButton();
-    syncEvaluationBusy();
     syncSearchFocusGuard();
     keepStaticPosition();
     focusEmptyEvaluationWhenReady();
@@ -372,9 +362,6 @@
       return;
     }
 
-    // Prime the final Evaluation chrome in this trusted click turn. Do not
-    // prevent or synthesize the click: the existing navigation owner still
-    // updates history and starts any required data work normally.
     showEvaluationPage();
   }
 
@@ -382,10 +369,6 @@
     document.documentElement.classList.remove("mflEvaluationInitialLoadVisible", "mflEvaluationReady");
     document.body?.classList.remove("evaluationStaticChromeReady");
     searchFocusDismissed = false;
-    if (evaluationBusyToken) {
-      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
-      evaluationBusyToken = "";
-    }
     syncSearchFocusGuard();
   }
 
@@ -402,9 +385,6 @@
 
   function onMutation() {
     if (destroyed) return;
-    // Busy ownership is input gating, so mirror the loading class immediately
-    // in the observer microtask instead of waiting for the next animation frame.
-    syncEvaluationBusy();
     schedule();
   }
 
@@ -459,7 +439,6 @@
       min-width: 0 !important;
     }
 
-
     html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
     body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
       visibility: visible !important;
@@ -511,7 +490,6 @@
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("storage", schedule);
     window.removeEventListener("mfl:ready", schedule);
-    if (evaluationBusyToken) window.__mflInteractionBusy?.end?.(evaluationBusyToken);
     const input = document.getElementById("evaluationSearchInput");
     if (input instanceof HTMLInputElement && input.dataset.staticFocusGuard === "true") {
       input.inert = false;
