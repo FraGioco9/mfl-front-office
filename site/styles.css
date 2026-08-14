@@ -1,2 +1,20 @@
 @import url("/scrollbars.css");
 @import url("/styles-base.css");
+
+/* Shared popup state: lock the background and hide the sidebar without
+ * changing the space reserved for it. */
+html:has(body > .modalBackdrop:not([hidden])),
+html:has(body > .modalBackdrop:not([hidden])) body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html:has(body > .modalBackdrop:not([hidden])) body > #appShell > #menuRail {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
