@@ -111,7 +111,7 @@ jobs:
         working-directory: builder
         env:
           MFL_API_TOKEN: ${{ secrets.MFL_API_TOKEN }}
-        run: python run_authenticated_database_rebuild.py
+        run: python rebuild_database_runner.py
 
       - name: Send progression emails
         if: (github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true') && hashFiles('builder/previous-database/mfl_database.db') != ''
