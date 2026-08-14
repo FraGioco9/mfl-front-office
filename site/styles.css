@@ -2,6 +2,24 @@
 @import url("/styles-base.css");
 @import url("/dropdowns.css");
 
+/* Rows uses the final dropdown appearance from first paint. Do not wait for
+ * dropdowns-runtime.js to switch the select from its native chevron. */
+@supports (appearance: base-select) {
+  #pageSizeSelect,
+  #pageSizeSelect::picker(select) {
+    appearance: base-select;
+  }
+
+  #pageSizeSelect::picker-icon,
+  #pageSizeSelect:open::picker-icon {
+    align-self: center;
+    margin: 0;
+    color: var(--text-soft);
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Keep Rows at the same width before and after dropdown enhancement. */
 .controlsBar > .field.compact.rowsField #pageSizeSelect {
   width: auto !important;

@@ -2,7 +2,6 @@
   "use strict";
 
   const enhancedSelects = new WeakSet();
-  const ROWS_CHEVRON_RESERVE = 20;
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -11,24 +10,13 @@
       && select.getClientRects().length > 0;
   }
 
-  function preserveRowsFootprint(select) {
-    if (select.id !== "pageSizeSelect") return;
-    const width = select.getBoundingClientRect().width;
-    if (!Number.isFinite(width) || width <= 0) return;
-
-    const reservedWidth = `${width + ROWS_CHEVRON_RESERVE}px`;
-    select.style.setProperty("--mfl-page-size-select-width", reservedWidth);
-    select.style.width = reservedWidth;
-    select.style.flex = `0 0 ${reservedWidth}`;
-  }
-
   function enhanceSelect(select) {
     if (!(select instanceof HTMLSelectElement)) return null;
     if (enhancedSelects.has(select)) return select;
 
-    /* Preserve the pre-dropdown Rows width and add dedicated room for the
-     * number plus picker chevron before enabling the customizable picker. */
-    preserveRowsFootprint(select);
+    /* Static selects can already have their first-paint dropdown appearance in
+     * CSS. The runtime only marks visible selects so dynamically-created ones
+     * opt into the same dropdown styling without changing their geometry. */
     select.dataset.mflDropdownEnhanced = "true";
     enhancedSelects.add(select);
     return select;
