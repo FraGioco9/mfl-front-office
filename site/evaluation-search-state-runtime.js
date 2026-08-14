@@ -144,6 +144,20 @@
     requestAnimationFrame(() => { syncing = false; });
   }
 
+  function renderEmptySearchFromCore(field) {
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
+    if (typeof window.renderEvaluationSearchResults === "function") {
+      window.renderEvaluationSearchResults();
+      return;
+    }
+
+    // app-core owns the persisted recent Evaluation IDs but keeps its renderer
+    // module-scoped. After a refresh with a selected player there may be no
+    // rendered empty-search list for this runtime to capture. Re-enter the
+    // canonical app-core input path so it renders those persisted recent IDs.
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   function sync() {
     if (destroyed || syncing || !active() || loadingLocked()) return;
     const field = input();
@@ -167,9 +181,10 @@
 
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
-    } else {
-      window.renderEvaluationSearchResults?.();
-      if (!query) captureRenderedRecents(container);
+    } else if (!query) {
+      renderEmptySearchFromCore(field);
+      captureRenderedRecents(container);
+      restoreRecentSearches(container);
     }
 
     requestAnimationFrame(() => { syncing = false; });
