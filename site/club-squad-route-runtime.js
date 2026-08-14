@@ -219,7 +219,11 @@
 
   function clubTitleIdentity(route) {
     const title = document.getElementById("tablePageTitle");
+    const root = document.documentElement;
     if (!(title instanceof HTMLElement) || document.body?.dataset.page !== "club") return;
+    if (root.dataset.mflReady !== "true"
+      || root.classList.contains("mflDataLoading")
+      || document.body?.classList.contains("clubViewSwitching")) return;
     const division = title.querySelector(".clubPageTitleDivision");
     const divisionName = String(division?.textContent || "").trim();
     let name = "";
@@ -300,8 +304,7 @@
     });
   }
 
-  function staticClubShellNeeded() {
-    const route = clubRoute();
+  function staticClubShellNeeded(route = clubRoute()) {
     if (!route) return false;
     return document.documentElement.dataset.mflReady !== "true"
       || document.documentElement.classList.contains("mflDataLoading")
@@ -312,18 +315,18 @@
   function syncStaticClubShell() {
     const route = clubRoute();
     if (!route) return;
-    clubTitleIdentity(route);
     syncStaticClubViews(route);
     hideStaticClubOnlyControls();
-    if (!staticClubShellNeeded()) return;
+    if (!staticClubShellNeeded(route)) return;
 
-    if (document.body) document.body.dataset.page = "club";
     const progressionPage = document.getElementById("progressionPage");
     if (progressionPage instanceof HTMLElement) {
       document.querySelectorAll("main > .pageView").forEach((page) => {
-        if (page instanceof HTMLElement) page.hidden = page !== progressionPage;
+        if (page instanceof HTMLElement && page.hidden !== (page !== progressionPage)) {
+          page.hidden = page !== progressionPage;
+        }
       });
-      progressionPage.hidden = false;
+      if (progressionPage.hidden) progressionPage.hidden = false;
     }
     renderStaticClubTitle(route);
   }
@@ -338,6 +341,12 @@
   function syncUi() {
     rewriteClubLinks();
     syncClubViewLabel();
+    const route = clubRoute();
+    if (route) clubTitleIdentity(route);
+  }
+
+  function syncNavigationUi() {
+    syncUi();
     syncStaticClubShell();
   }
 
@@ -348,13 +357,13 @@
     history.pushState = function(state, title, url) {
       const mapped = mappedRelativeUrl(url, "squad");
       nativePushState(state, title, mapped);
-      queueMicrotask(syncUi);
+      queueMicrotask(syncNavigationUi);
     };
 
     history.replaceState = function(state, title, url) {
       const mapped = mappedRelativeUrl(url, "squad");
       nativeReplaceState(state, title, mapped);
-      queueMicrotask(syncUi);
+      queueMicrotask(syncNavigationUi);
     };
   }
 
@@ -381,10 +390,12 @@
   window.addEventListener("popstate", onPopState, true);
   syncStaticClubShell();
 
+  // Keep the long-lived observer lightweight. Club table rendering can mutate
+  // hundreds of descendants at once, so the static shell must not run here.
   const observer = new MutationObserver(syncUi);
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-page", "href", "class"],
+    attributeFilter: ["data-page", "href"],
     childList: true,
     subtree: true,
   });
@@ -392,6 +403,6 @@
   window.addEventListener("mfl:ready", () => {
     wrapHistory();
     externalizeCurrentClubRoute();
-    syncUi();
+    syncNavigationUi();
   });
 })();
