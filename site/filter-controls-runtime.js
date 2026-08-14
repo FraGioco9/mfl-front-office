@@ -209,7 +209,7 @@
       syncExistingContractOperators();
       return result;
     };
-    Object.defineProperty(wrappedAddFilterDefaults, "__mflFilterDefaults", { value: true });
+    Object.defineProperty(wrappedAddFilterRule, "__mflFilterDefaults", { value: true });
     window.addFilterRule = wrappedAddFilterRule;
     return true;
   }
