@@ -4,6 +4,7 @@
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
+  const RECENT_EVALUATION_SEARCH_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
   const MOBILE_TABLE_MIN_WIDTH = 1240;
   const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
   const version = STATIC_RELEASE_VERSION;
@@ -206,6 +207,43 @@
     });
   }
 
+  function normalizeEvaluationSearchClearButton() {
+    const button = document.getElementById("evaluationSearchClearButton");
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.classList.remove("evaluationSearchClearButton");
+    button.classList.add("playerSearchClearButton");
+  }
+
+  function storedRecentEvaluationIds() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(RECENT_EVALUATION_SEARCH_STORAGE_KEY) || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return [...new Set(parsed.map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 5);
+    } catch {
+      return [];
+    }
+  }
+
+  function prefetchEvaluationRecentSearches() {
+    if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return Promise.resolve(null);
+    const playerIds = storedRecentEvaluationIds();
+    if (!playerIds.length) return Promise.resolve(null);
+
+    const requestUrl = new URL("/api/data", window.location.origin);
+    requestUrl.searchParams.set("mode", "search");
+    requestUrl.searchParams.set("type", "recent");
+    requestUrl.searchParams.set("playerIds", playerIds.join(","));
+
+    return fetch(requestUrl.toString(), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    }).then(async (response) => {
+      if (!response.ok) return null;
+      const payload = await response.json().catch(() => null);
+      return payload?.players || null;
+    }).catch(() => null);
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -248,12 +286,15 @@
   }
 
   function syncBootstrapFirstPaint() {
+    normalizeEvaluationSearchClearButton();
     installEvaluationTableSpacing();
     installPopupContentCentering();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
   }
+
+  window.__mflEvaluationRecentSearchPrefetch = prefetchEvaluationRecentSearches();
 
   function loadBootstrapRuntime(path) {
     if (document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`)) return;
