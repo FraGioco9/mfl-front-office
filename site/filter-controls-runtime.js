@@ -223,17 +223,26 @@
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      const host = document.body || document.documentElement;
+      let openedCount = 0;
       playerIds.forEach((playerId) => {
-        const link = document.createElement("a");
-        link.href = `https://app.playmfl.com/players/${encodeURIComponent(playerId)}`;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.hidden = true;
-        host.appendChild(link);
-        link.click();
-        link.remove();
+        const playerUrl = `https://app.playmfl.com/players/${encodeURIComponent(playerId)}`;
+        const playerWindow = window.open(playerUrl, "_blank");
+        if (!playerWindow) return;
+        openedCount += 1;
+        try {
+          playerWindow.opener = null;
+        } catch {
+          // The link is already open; opener isolation is best-effort across browsers.
+        }
       });
+
+      if (openedCount < playerIds.length) {
+        try {
+          showToast("Allow pop-ups for this site, then click Open links again.");
+        } catch {
+          // The successful links stay open even if the toast owner is unavailable.
+        }
+      }
     }, true);
     return true;
   }
