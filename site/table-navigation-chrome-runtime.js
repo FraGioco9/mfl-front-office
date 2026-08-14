@@ -2,12 +2,38 @@
   "use strict";
 
   const TABLE_PAGES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers"]);
+  const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const STYLE_ID = "mflPageSizeLoadingRuntimeStyles";
+  const VIEW_BY_SLUG = Object.freeze({
+    attributes: "attributes",
+    stats: "stats",
+    contracts: "contracts",
+    "next-overall": "next",
+    "current-season": "current",
+    "all-time": "all",
+  });
+  const DEFAULT_VIEW = Object.freeze({
+    database: "attributes",
+    mfl: "attributes",
+    progression: "current",
+    agents: "attributes",
+    watchlist: "current",
+    myplayers: "attributes",
+  });
+  const ALLOWED_VIEWS = Object.freeze({
+    database: new Set(["attributes", "contracts", "stats"]),
+    mfl: new Set(["attributes", "stats"]),
+    progression: new Set(["current", "all"]),
+    agents: new Set(["attributes", "next", "contracts"]),
+    watchlist: new Set(["attributes", "next", "contracts", "current", "all"]),
+    myplayers: new Set(["attributes", "next", "contracts", "current", "all"]),
+  });
   const previous = window.__mflTableNavigationChromeRuntime;
   previous?.destroy?.();
 
   let pendingPage = "";
+  let pendingView = "";
   let repairFrame = 0;
   let pageSizeEscapeFrame = 0;
   let pageSizeEscapeTimer = 0;
@@ -56,37 +82,199 @@
     return page;
   }
 
-  function tablePageFromTarget(target) {
-    if (!(target instanceof Element)) return "";
+  function navFromTarget(target) {
+    if (!(target instanceof Element)) return null;
     const nav = target.closest("#sidebar .navButton[data-page]");
-    if (!(nav instanceof HTMLElement)) return "";
+    return nav instanceof HTMLAnchorElement ? nav : null;
+  }
+
+  function tablePageFromTarget(target) {
+    const nav = navFromTarget(target);
+    if (!nav) return "";
     const page = normalizePage(nav.dataset.page);
     return TABLE_PAGES.has(page) ? page : "";
   }
 
-  function primeDestination(page) {
-    if (!TABLE_PAGES.has(page)) return;
-    window.__mflSharedTableUiRuntime?.prime?.(page);
-  }
-
-  function showDestinationChrome(page) {
-    pendingPage = page;
-    if (document.body && document.body.dataset.page !== page) {
-      document.body.dataset.page = page;
+  function cachedPageState(page) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+      const state = saved?.pages?.[page];
+      return state && typeof state === "object" ? state : null;
+    } catch {
+      return null;
     }
-    primeDestination(page);
   }
 
-  function finishDestinationChrome(page) {
+  function normalizeDestinationView(page, view) {
+    const normalized = String(view || "").toLowerCase();
+    return ALLOWED_VIEWS[page]?.has(normalized) ? normalized : DEFAULT_VIEW[page] || "attributes";
+  }
+
+  function viewFromNav(nav, page) {
+    if (!(nav instanceof HTMLAnchorElement)) return normalizeDestinationView(page, cachedPageState(page)?.view);
+    let routeView = "";
+    try {
+      const path = new URL(nav.href, window.location.origin).pathname;
+      const slug = String(path.split("/").filter(Boolean).at(-1) || "").toLowerCase();
+      routeView = VIEW_BY_SLUG[slug] || "";
+    } catch {
+      routeView = "";
+    }
+    return normalizeDestinationView(page, routeView || cachedPageState(page)?.view);
+  }
+
+  function activeSavedFilterCount(page) {
+    const rules = cachedPageState(page)?.rules;
+    if (!Array.isArray(rules)) return 0;
+    return rules.filter((rule) => {
+      const operator = String(rule?.operator || "");
+      const value = String(rule?.value || "").trim();
+      const valueTo = String(rule?.valueTo || "").trim();
+      return operator === "between" || operator === "during"
+        ? Boolean(value && valueTo)
+        : Boolean(value);
+    }).length;
+  }
+
+  function destinationTitle(page) {
+    if (page === "database") return "Database";
+    if (page === "mfl") return "MFL Wallet";
+    if (page === "myplayers") return "My Players";
+    if (page === "progression") return "Progression";
+    if (page === "watchlist") {
+      const name = String(document.getElementById("watchlistButtonText")?.textContent || "Default").trim() || "Default";
+      return `Watchlist - ${name}`;
+    }
+    if (page === "agents") {
+      const navLabel = document.querySelector('#sidebar .navButton[data-page="agents"] .navText');
+      return String(navLabel?.textContent || "Agents").trim() || "Agents";
+    }
+    return "";
+  }
+
+  function hideOtherPageViews(activePage) {
+    document.querySelectorAll("main > .pageView").forEach((page) => {
+      if (!(page instanceof HTMLElement)) return;
+      page.hidden = page !== activePage;
+    });
+  }
+
+  function revealLockedDestination(page) {
+    if (!["watchlist", "myplayers"].includes(page)) return false;
+    if (document.documentElement.dataset.storedWalletOptIn === "true") return false;
+    const lockedPage = document.getElementById("myPlayersLockedPage");
+    if (!(lockedPage instanceof HTMLElement)) return false;
+    hideOtherPageViews(lockedPage);
+    const title = document.getElementById("optInLockedTitle");
+    const message = document.getElementById("optInLockedMessage");
+    if (title) title.textContent = page === "watchlist" ? "Watchlist" : "My Players";
+    if (message) {
+      message.textContent = page === "watchlist"
+        ? "In order to use the watchlist, you need to opt in."
+        : "In order to see your players, you need to opt in.";
+    }
+    return true;
+  }
+
+  function revealStatsDestination(page) {
+    const statsPage = document.getElementById(page === "database" ? "databaseStatsPage" : "mflStatsPage");
+    if (!(statsPage instanceof HTMLElement)) return false;
+    hideOtherPageViews(statsPage);
+    if (page === "mfl") window.__mflSharedTableUiRuntime?.primeMflStatsOverallFilters?.();
+    if (page === "database") window.__mflDatabaseStatsStateRuntime?.sync?.();
+    return true;
+  }
+
+  function revealTableDestination(page) {
+    const progressionPage = document.getElementById("progressionPage");
+    if (!(progressionPage instanceof HTMLElement)) return false;
+    hideOtherPageViews(progressionPage);
+    return true;
+  }
+
+  function syncDestinationStaticControls(page, view) {
+    const title = document.getElementById("tablePageTitle");
+    const titleText = destinationTitle(page);
+    if (title instanceof HTMLElement && titleText) title.textContent = titleText;
+
+    const newMintsLabel = document.getElementById("newMintsLabel");
+    if (newMintsLabel instanceof HTMLElement) {
+      newMintsLabel.textContent = page === "mfl" ? "Only aged players" : "Only new mints";
+    }
+
+    const filterSummary = document.getElementById("filterSummary");
+    if (filterSummary instanceof HTMLElement) {
+      filterSummary.textContent = `${activeSavedFilterCount(page)} active`;
+    }
+
+    const pageState = cachedPageState(page);
+    const pageSizeSelect = document.getElementById("pageSizeSelect");
+    const pageSize = Number(pageState?.pageSize || 100);
+    if (pageSizeSelect instanceof HTMLSelectElement
+      && Array.from(pageSizeSelect.options).some((option) => Number(option.value) === pageSize)) {
+      pageSizeSelect.value = String(pageSize);
+    }
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    if (switcher instanceof HTMLElement) switcher.hidden = page !== "watchlist";
+    const watchlistCount = document.getElementById("watchlistPlayerCount");
+    if (watchlistCount instanceof HTMLElement && page !== "watchlist") watchlistCount.hidden = true;
+
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement) || button.hidden) return;
+      const active = String(button.dataset.view || "") === view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function primeDestination(page, view) {
+    if (!TABLE_PAGES.has(page)) return;
+    if (revealLockedDestination(page)) return;
+
+    const statsDestination = ["database", "mfl"].includes(page) && view === "stats";
+    if (statsDestination) {
+      revealStatsDestination(page);
+      return;
+    }
+
+    revealTableDestination(page);
+    window.__mflSharedTableUiRuntime?.prime?.(page);
+    syncDestinationStaticControls(page, view);
+    window.__mflTableLoadingRuntime?.primeRoute?.({ pageName: page, view });
+    window.__mflFilterControlsRuntime?.sync?.();
+  }
+
+  function bodyPageForDestination(page, view) {
+    if (page === "database" && view === "stats") return "databasestats";
+    if (page === "mfl" && view === "stats") return "mflstats";
+    return page;
+  }
+
+  function showDestinationChrome(page, nav = null) {
+    const view = viewFromNav(nav, page);
+    pendingPage = page;
+    pendingView = view;
+    const bodyPage = bodyPageForDestination(page, view);
+    if (document.body && document.body.dataset.page !== bodyPage) {
+      document.body.dataset.page = bodyPage;
+    }
+    primeDestination(page, view);
+  }
+
+  function finishDestinationChrome(page, nav = null) {
+    const view = viewFromNav(nav, page);
     queueMicrotask(() => {
       if (pendingPage !== page) return;
-      primeDestination(page);
+      pendingView = view;
+      primeDestination(page, view);
       if (repairFrame) cancelAnimationFrame(repairFrame);
       repairFrame = requestAnimationFrame(() => {
         repairFrame = 0;
         if (pendingPage !== page) return;
-        primeDestination(page);
+        primeDestination(page, pendingView || view);
         pendingPage = "";
+        pendingView = "";
       });
     });
   }
@@ -135,25 +323,29 @@
   }
 
   function onPointerDown(event) {
+    const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (page) {
-      showDestinationChrome(page);
+      showDestinationChrome(page, nav);
       return;
     }
-    if (event.target instanceof Element && event.target.closest("#sidebar .navButton[data-page]")) {
+    if (nav) {
       pendingPage = "";
+      pendingView = "";
     }
   }
 
   function onClick(event) {
+    const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (!page) return;
-    if (pendingPage !== page) showDestinationChrome(page);
-    finishDestinationChrome(page);
+    if (pendingPage !== page) showDestinationChrome(page, nav);
+    finishDestinationChrome(page, nav);
   }
 
   function onPopState() {
     pendingPage = "";
+    pendingView = "";
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
   }
@@ -173,6 +365,7 @@
     pageSizeEscapeTimer = 0;
     pageSizeEscapeSelect = null;
     pendingPage = "";
+    pendingView = "";
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", clearPageSizeHighlightOnEscape, true);
