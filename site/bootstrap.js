@@ -104,6 +104,20 @@
     });
   }
 
+  function installEvaluationTableSpacing() {
+    const styleId = "mflEvaluationTableSpacing";
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      .evaluationTableShell .evaluationTable th:first-child,
+      .evaluationTableShell .evaluationTable td:first-child {
+        padding-left: 24px;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -129,6 +143,7 @@
   }
 
   function syncBootstrapFirstPaint() {
+    installEvaluationTableSpacing();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
