@@ -38,6 +38,41 @@
     });
   }
 
+  function installImmediateUiInteractions() {
+    if (window.__mflImmediateUiInteractionsInstalled) return;
+    window.__mflImmediateUiInteractionsInstalled = true;
+
+    /* Sidebar selection is visual navigation feedback and must happen on the
+     * click itself, before cached or uncached route work starts. */
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target?.closest?.("#sidebar .navButton[data-page]");
+      if (!(button instanceof HTMLElement)) return;
+
+      document.querySelectorAll("#sidebar .navButton[data-page]").forEach((link) => {
+        if (!(link instanceof HTMLElement)) return;
+        const active = link === button;
+        link.classList.toggle("active", active);
+        if (active) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+    }, true);
+
+    /* app-core historically focuses the first Filters field. Clear that focus
+     * after its synchronous open handler completes so the popup starts neutral. */
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const trigger = target?.closest?.("#openFiltersButton");
+      if (!(trigger instanceof HTMLButtonElement)) return;
+
+      queueMicrotask(() => {
+        if (!document.body.classList.contains("filtersOpen")) return;
+        const active = document.activeElement;
+        if (active instanceof HTMLElement) active.blur();
+      });
+    }, true);
+  }
+
   function storedQuickFilters(pageName) {
     const defaults = {
       hideRetired: true,
@@ -273,6 +308,7 @@
   }
 
   function syncBootstrapFirstPaint() {
+    installImmediateUiInteractions();
     syncSidebarFirstPaint();
     normalizeEvaluationSearchClearButton();
     installEvaluationTableSpacing();
