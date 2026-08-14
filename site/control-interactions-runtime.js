@@ -21,7 +21,7 @@
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
   let destroyed = false;
   let pointerFocusedControl = null;
-  let gestureControl = null;
+  let gestureStartControl = null;
   let gesturePointerId = null;
   let gestureStartX = 0;
   let gestureStartY = 0;
@@ -134,7 +134,7 @@
   }
 
   function clearGesture() {
-    gestureControl = null;
+    gestureStartControl = null;
     gesturePointerId = null;
     gestureStartX = 0;
     gestureStartY = 0;
@@ -239,16 +239,14 @@
     clearClickSuppression();
     if (event.isPrimary === false || event.button !== 0) return;
 
-    const control = buttonGestureFromTarget(event.target);
-    if (!control) return;
-    gestureControl = control;
+    gestureStartControl = buttonGestureFromTarget(event.target);
     gesturePointerId = event.pointerId;
     gestureStartX = event.clientX;
     gestureStartY = event.clientY;
   }
 
   function onPointerMove(event) {
-    if (!gestureControl || gestureDragged || event.pointerId !== gesturePointerId) return;
+    if (gesturePointerId === null || gestureDragged || event.pointerId !== gesturePointerId) return;
     const dx = event.clientX - gestureStartX;
     const dy = event.clientY - gestureStartY;
     if ((dx * dx) + (dy * dy) >= DRAG_ACTIVATION_THRESHOLD_PX * DRAG_ACTIVATION_THRESHOLD_PX) {
@@ -257,20 +255,21 @@
   }
 
   function onPointerUp(event) {
-    if (!gestureControl || event.pointerId !== gesturePointerId) return;
+    if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
 
-    const control = gestureControl;
+    const startControl = gestureStartControl;
     const dragged = gestureDragged;
-    const target = event.target;
-    const releasedOnControl = target instanceof Node && (target === control || control.contains(target));
+    const releaseControl = buttonGestureFromTarget(event.target);
+    const invalidButtonRelease = Boolean(releaseControl && (dragged || releaseControl !== startControl));
     clearGesture();
 
-    if (!dragged || !releasedOnControl) return;
+    if (!invalidButtonRelease) return;
 
-    // Some controls (notably table view buttons) commit on pointerup instead of
-    // waiting for click. Stop only a dragged release from reaching those target
-    // handlers, then suppress the browser click generated immediately after it.
-    suppressClickControl = control;
+    // A pointer release can land on a button even when the press began somewhere
+    // else. Some controls (notably table view buttons) activate directly on
+    // pointerup, so require the press and release to belong to the same control
+    // and reject any gesture that crossed the drag threshold.
+    suppressClickControl = releaseControl;
     event.preventDefault();
     event.stopPropagation();
     scheduleClickSuppressionClear();
