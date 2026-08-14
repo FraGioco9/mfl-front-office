@@ -22,8 +22,9 @@
       cursor: default !important;
     }
 
-    /* Controls remain completely non-targetable while loading, which prevents
-       both clicks and hover states without freezing the page's scroll surfaces. */
+    /* Controls remain completely non-targetable while loading. The fixed busy
+       shield below becomes the only pointer target, so controls cannot retain
+       hover states while their loading state changes. */
     html.mflInteractionBusy body *,
     html.mflInteractionBusy body *::before,
     html.mflInteractionBusy body *::after {
@@ -63,7 +64,8 @@
     }
 
     /* Keep native scrolling available while descendants remain non-targetable.
-       Wheel input lands on the nearest scroll surface rather than a control. */
+       The busy shield still owns pointer hover, so these scroll surfaces cannot
+       expose hover animation on the controls they contain. */
     html.mflInteractionBusy body main,
     html.mflInteractionBusy body .tableScroller,
     html.mflInteractionBusy body .evaluationLoadList,
@@ -78,9 +80,9 @@
       pointer-events: auto !important;
     }
 
-    /* Older route-specific CSS hides body::after on Evaluation and Stats.
-       Keep the layer present for consistent busy styling, but do not let it
-       swallow wheel input now that scrolling remains available during loading. */
+    /* The fixed shield is the sole pointer target during loading. This clears
+       any stationary :hover state immediately (notably Evaluation's Load button)
+       while still sitting below application toasts. */
     html.mflInteractionBusy body::after {
       content: "" !important;
       display: block !important;
@@ -89,7 +91,8 @@
       inset: 0 !important;
       z-index: 2147483646 !important;
       background: transparent !important;
-      pointer-events: none !important;
+      pointer-events: auto !important;
+      cursor: wait !important;
       transition: none !important;
       animation: none !important;
     }
