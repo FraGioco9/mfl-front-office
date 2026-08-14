@@ -42,6 +42,29 @@
         justify-self: end;
       }
 
+      .watchlistSwitcher > select.watchlistButtonNativeChevron {
+        position: absolute;
+        top: 50%;
+        right: 4px;
+        z-index: 2;
+        width: 24px;
+        min-width: 24px;
+        max-width: 24px;
+        height: 24px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background-color: transparent;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        opacity: 1;
+        -webkit-appearance: menulist;
+        appearance: auto;
+        pointer-events: none;
+        transform: translateY(-50%);
+      }
+
       .field.rowsField .pageSizeSelectGrid {
         position: relative;
         z-index: 1;
@@ -161,6 +184,25 @@
     return true;
   }
 
+  function installNativeWatchlistChevron() {
+    const switcher = document.getElementById("watchlistSwitcher");
+    const button = document.getElementById("watchlistButton");
+    if (!(switcher instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return false;
+
+    button.querySelector(":scope > .watchlistButtonChevron")?.remove();
+
+    let nativeChevron = switcher.querySelector(":scope > .watchlistButtonNativeChevron");
+    if (!(nativeChevron instanceof HTMLSelectElement)) {
+      nativeChevron = document.createElement("select");
+      nativeChevron.className = "watchlistButtonNativeChevron";
+      nativeChevron.tabIndex = -1;
+      nativeChevron.setAttribute("aria-hidden", "true");
+      nativeChevron.appendChild(new Option("", ""));
+      switcher.appendChild(nativeChevron);
+    }
+    return true;
+  }
+
   function restorePageSizeSelectInteraction() {
     if (document.documentElement.dataset.mflReady !== "true") return;
     const select = document.getElementById("pageSizeSelect");
@@ -259,6 +301,7 @@
   function sync() {
     installStyles();
     rebuildPageSizeSelectGrid();
+    installNativeWatchlistChevron();
     restorePageSizeSelectInteraction();
     installAddFilterDefaults();
     installCoreBridge();
