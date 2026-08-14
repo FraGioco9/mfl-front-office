@@ -14,11 +14,35 @@
         grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
       }
 
+      .filtersDialog select,
+      #pageSizeSelect {
+        border-right-width: 6px;
+        border-right-color: transparent;
+        outline: 1px solid var(--border-strong);
+        outline-offset: -1px;
+      }
+
+      .filtersDialog select:hover:not(:disabled),
+      .filtersDialog select:focus:not(:disabled),
+      .filtersDialog select:focus-visible:not(:disabled),
+      #pageSizeSelect:hover:not(:disabled),
+      #pageSizeSelect:focus:not(:disabled),
+      #pageSizeSelect:focus-visible:not(:disabled) {
+        border-right-color: transparent;
+        outline: 1px solid var(--primary-hover);
+        outline-offset: -1px;
+      }
+
       .filtersDialog select[data-filter-connector],
       .filtersDialog select[data-filter-operator] {
         padding-top: 0;
         padding-bottom: 0;
         line-height: 38px;
+      }
+
+      #pageSizeSelect {
+        padding-left: 14px;
+        padding-right: 34px;
       }
 
       .filtersDialog .filterRule > .iconButton.popupCloseButton {
