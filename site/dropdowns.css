@@ -14,8 +14,7 @@ select[data-mfl-dropdown-enhanced="true"] {
 
 select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
 select[data-mfl-dropdown-enhanced="true"]:focus:not(:disabled),
-select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled),
-select[data-mfl-dropdown-enhanced="true"]:open {
+select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled) {
   outline: 0;
   border-color: var(--primary-hover);
   background-color: var(--row-hover);
@@ -36,17 +35,13 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     appearance: base-select;
   }
 
-  select[data-mfl-dropdown-enhanced="true"]::picker-icon {
+  select[data-mfl-dropdown-enhanced="true"]::picker-icon,
+  select[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
     align-self: center;
     margin-block: 0;
     color: var(--text-soft);
-    transform: rotate(0deg);
+    transform: none;
     transition: none;
-  }
-
-  select[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
-    color: var(--primary);
-    transform: rotate(180deg);
   }
 
   select[data-mfl-dropdown-enhanced="true"]::picker(select) {
@@ -113,9 +108,11 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: none;
 }
 
-/* Every non-native dropdown uses the same chevron with no animation. */
+/* All non-native dropdown chevrons stay visually fixed in every state. */
 #accountButton::after,
-.watchlistButtonChevron {
+#accountButton[aria-expanded="true"]::after,
+.watchlistButtonChevron,
+.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
   width: 7px;
   height: 7px;
   border-right: 1.5px solid currentColor;
@@ -123,12 +120,6 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   color: var(--text-soft);
   transform: rotate(45deg);
   transition: none;
-}
-
-#accountButton[aria-expanded="true"]::after,
-.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
-  color: var(--primary);
-  transform: rotate(225deg);
 }
 
 /* Account uses the shared dropdown surface and keeps icon + label centered as
@@ -405,15 +396,30 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   justify-self: end;
 }
 
+/* Rows has a fixed footprint with dedicated room for the value and chevron. */
 #pageSizeSelect {
-  width: var(--mfl-page-size-select-width, 100%);
-  min-width: var(--mfl-page-size-select-width, 0);
+  width: 92px !important;
+  min-width: 92px !important;
+  max-width: 92px !important;
+  flex: 0 0 92px !important;
+  padding-left: 11px;
+  padding-right: 10px;
+  line-height: 1;
 }
 
 @supports (appearance: base-select) {
-  #pageSizeSelect::picker-icon {
+  #pageSizeSelect {
+    align-items: center;
+    gap: 10px;
+  }
+
+  #pageSizeSelect::picker-icon,
+  #pageSizeSelect:open::picker-icon {
     align-self: center;
-    margin-block: 0;
+    margin: 0;
+    color: var(--text-soft);
+    transform: none;
+    transition: none;
   }
 }
 
