@@ -7,8 +7,6 @@ interface Window {
   __mflStaticUiRuntime?: { destroy?: () => void };
   __mflFilterControlsRuntime?: { sync?: () => void };
   __mflEvaluationDiscountRateDisplayRuntime?: { sync?: () => void; destroy?: () => void };
-  __mflEvaluationRecentSearchPrefetch?: Promise<unknown>;
-  __mflEvaluationRecentSearchPrefetchPayload?: unknown;
   __mflSelectionStartupResetRuntime?: { rebind?: () => void; destroy?: () => void };
   __mflDatabaseStatsRuntime?: { sync?: () => void };
 }
