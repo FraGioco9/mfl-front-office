@@ -216,33 +216,52 @@ function installCoreBridges() {
   runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
 }
 
-function installEvaluationCloudRecentPrecedence() {
+function installEvaluationRecentStateBridge() {
   try {
     return Boolean(window.eval(`(() => {
-      if (typeof restoreRecentEvaluationState !== "function") return false;
-      if (restoreRecentEvaluationState.__mflSupabaseAuthoritative) return true;
+      if (typeof restoreRecentEvaluationState !== "function"
+        || typeof persistRecentSearchStates !== "function"
+        || typeof saveTableStateLocally !== "function") return false;
+      if (restoreRecentEvaluationState.__mflRecentStateOnly) return true;
 
-      const originalRestoreRecentEvaluationState = restoreRecentEvaluationState;
-      const cloudAuthoritativeRestoreRecentEvaluationState = function(savedState) {
-        const cloudState = savedState && typeof savedState === "object" && !Array.isArray(savedState)
-          ? savedState
-          : null;
-        if (cloudState && Object.prototype.hasOwnProperty.call(cloudState, "recentEvaluationPlayerIds")) {
-          const savedIds = Array.isArray(cloudState.recentEvaluationPlayerIds)
-            ? normalizeIdList(cloudState.recentEvaluationPlayerIds, 5)
-            : [];
-          state.recentEvaluationPlayerIds = savedIds;
-          saveRecentIdsToStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY, savedIds);
-          return;
-        }
-        return originalRestoreRecentEvaluationState(savedState);
+      // app-core may have restored an old local table-state value synchronously
+      // before this bridge is installed. Do not let that value reach Evaluation.
+      state.recentEvaluationPlayerIds = [];
+
+      const recentStateOnlyRestore = function(savedState) {
+        const incoming = savedState && typeof savedState === "object" && !Array.isArray(savedState)
+          && Array.isArray(savedState.recentEvaluationPlayerIds)
+          ? savedState.recentEvaluationPlayerIds
+          : [];
+        state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
       };
-      Object.defineProperty(cloudAuthoritativeRestoreRecentEvaluationState, "__mflSupabaseAuthoritative", { value: true });
-      restoreRecentEvaluationState = cloudAuthoritativeRestoreRecentEvaluationState;
+      Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
+      restoreRecentEvaluationState = recentStateOnlyRestore;
+
+      // Evaluation recents persist through the account table state (Supabase),
+      // never through the dedicated browser-storage recent-search key.
+      persistRecentSearchStates = function persistSearchStatesWithoutEvaluationLocalStorage() {
+        saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
+        saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
+        saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
+      };
+
+      // Keep recentEvaluationPlayerIds in the cloud payload while stripping it
+      // from every locally saved table-state copy.
+      const originalSaveTableStateLocally = saveTableStateLocally;
+      saveTableStateLocally = function saveTableStateWithoutEvaluationRecents(tableState) {
+        if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
+          return originalSaveTableStateLocally(tableState);
+        }
+        const localState = { ...tableState };
+        delete localState.recentEvaluationPlayerIds;
+        return originalSaveTableStateLocally(localState);
+      };
+
       return true;
     })();`));
   } catch (error) {
-    console.warn("Could not install Supabase-authoritative Evaluation recents.", error);
+    console.warn("Could not install Evaluation recent-state ownership.", error);
     return false;
   }
 }
@@ -262,15 +281,15 @@ async function start() {
   }
 
   await loadClassicScript("/modules/app-core.js");
-  installEvaluationCloudRecentPrecedence();
+  installEvaluationRecentStateBridge();
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
-    // startApp waits for wallet preferences, so the Supabase-backed recent
-    // Evaluation state is authoritative before the late search-state owner loads.
+    // startApp waits for wallet preferences, so recentEvaluationPlayerIds from
+    // Supabase is established before the late Evaluation search owner loads.
     await runtimeWindow.__mflAppStartPromise;
   }
   runtimeWindow.__mflStatsRuntime?.sync?.();
