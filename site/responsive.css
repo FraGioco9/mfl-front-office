@@ -185,11 +185,6 @@ html:not(.mflInitialRouteResolved):is(
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-
-  .sidebar::-webkit-scrollbar {
-    display: none;
   }
 
   .navButton,
@@ -283,11 +278,6 @@ html:not(.mflInitialRouteResolved):is(
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-
-  .views::-webkit-scrollbar {
-    display: none;
   }
 
   .viewButton {
@@ -515,11 +505,6 @@ html:not(.mflInitialRouteResolved):is(
   .playerAttributeViews {
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .playerAttributeViews::-webkit-scrollbar {
-    display: none;
   }
 
   .playerAttributeViewButton {
