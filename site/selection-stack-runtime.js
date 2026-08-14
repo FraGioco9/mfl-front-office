@@ -6,6 +6,15 @@
   const EXIT_MS = 220;
   const TOAST_ANCHOR_MS = 15000;
   const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage, .toast";
+  const TABLE_PAGE_NAMES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
+  const NAVIGATION_STATE_CONTROL_IDS = [
+    "hideRetiredInput",
+    "hideRetiringInput",
+    "hideMflPlayersInput",
+    "packablePlayersInput",
+    "newMintsInput",
+    "pageSizeSelect",
+  ];
 
   window.__mflSelectionStackRuntime?.destroy?.();
 
@@ -19,6 +28,8 @@
   let lastSelectionTop = null;
   let toastAnchorUntil = 0;
   let awaitingSelectionReset = false;
+  let frozenSelectionLabel = "";
+  let navigationSourceControlSnapshot = null;
 
   function setImportant(element, property, value) {
     if (!(element instanceof HTMLElement)) return;
@@ -165,6 +176,71 @@
     }
   }
 
+  function normalizePageName(value) {
+    const page = String(value || "").trim().toLowerCase();
+    if (page === "my-players") return "myplayers";
+    if (page === "databasestats") return "database";
+    if (page === "mflstats") return "mfl";
+    return page;
+  }
+
+  function sidebarNavFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const nav = target.closest("#sidebar .navButton[data-page]");
+    return nav instanceof HTMLElement ? nav : null;
+  }
+
+  function currentSourceTablePage() {
+    const active = document.querySelector("#sidebar .navButton.active[data-page]");
+    const activePage = active instanceof HTMLElement ? normalizePageName(active.dataset.page) : "";
+    if (TABLE_PAGE_NAMES.has(activePage)) return activePage;
+    const bodyPage = normalizePageName(document.body?.dataset.page);
+    return TABLE_PAGE_NAMES.has(bodyPage) ? bodyPage : "";
+  }
+
+  function captureNavigationSourceControls(target) {
+    const nav = sidebarNavFromTarget(target);
+    const sourcePage = currentSourceTablePage();
+    if (!nav || !sourcePage) {
+      navigationSourceControlSnapshot = null;
+      return;
+    }
+
+    const controls = {};
+    NAVIGATION_STATE_CONTROL_IDS.forEach((id) => {
+      const control = document.getElementById(id);
+      if (control instanceof HTMLInputElement) {
+        controls[id] = { kind: "checked", value: control.checked };
+      } else if (control instanceof HTMLSelectElement) {
+        controls[id] = { kind: "value", value: control.value };
+      }
+    });
+
+    navigationSourceControlSnapshot = {
+      sourcePage,
+      destinationPage: normalizePageName(nav.dataset.page),
+      controls,
+    };
+  }
+
+  function restoreNavigationSourceControls(target) {
+    const snapshot = navigationSourceControlSnapshot;
+    navigationSourceControlSnapshot = null;
+    if (!snapshot) return;
+
+    const nav = sidebarNavFromTarget(target);
+    if (!nav || normalizePageName(nav.dataset.page) !== snapshot.destinationPage) return;
+
+    Object.entries(snapshot.controls).forEach(([id, saved]) => {
+      const control = document.getElementById(id);
+      if (saved.kind === "checked" && control instanceof HTMLInputElement) {
+        control.checked = Boolean(saved.value);
+      } else if (saved.kind === "value" && control instanceof HTMLSelectElement) {
+        control.value = String(saved.value);
+      }
+    });
+  }
+
   function rememberBarTop(bar = selectionBar()) {
     const rect = bar?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return;
@@ -182,17 +258,31 @@
     schedule();
   }
 
+  function preserveDismissedSelectionLabel() {
+    if (!frozenSelectionLabel) return;
+    const bar = selectionBar();
+    if (!(bar instanceof HTMLElement) || !bar.classList.contains("mflSelectionActionDismissed")) return;
+    const label = document.getElementById("selectionCount");
+    if (label instanceof HTMLElement && label.textContent !== frozenSelectionLabel) {
+      label.textContent = frozenSelectionLabel;
+    }
+  }
+
   function dismissSelectionBar() {
     const bar = selectionBar();
     if (!bar) return;
 
     rememberBarTop(bar);
+    const selectedCount = applicationSelectionCount();
+    const currentLabel = String(document.getElementById("selectionCount")?.textContent || "").trim();
+    frozenSelectionLabel = selectedCount > 0 ? `${selectedCount} selected` : currentLabel;
     awaitingSelectionReset = true;
     if (exitTimer) clearTimeout(exitTimer);
     bar.hidden = false;
     void bar.offsetWidth;
     bar.classList.add("mflSelectionActionDismissed");
     bar.classList.remove("visible");
+    preserveDismissedSelectionLabel();
 
     exitTimer = window.setTimeout(() => {
       exitTimer = 0;
@@ -201,6 +291,7 @@
         current.hidden = true;
         if (!awaitingSelectionReset) current.classList.remove("mflSelectionActionDismissed");
       }
+      frozenSelectionLabel = "";
       schedule();
     }, EXIT_MS);
   }
@@ -241,6 +332,7 @@
       exitTimer = 0;
     }
     awaitingSelectionReset = false;
+    frozenSelectionLabel = "";
     bar.hidden = false;
     bar.classList.remove("mflSelectionActionDismissed");
     bar.classList.add("visible");
@@ -271,6 +363,7 @@
   function syncSelectionState() {
     const bar = selectionBar();
     if (!(bar instanceof HTMLElement)) return;
+    preserveDismissedSelectionLabel();
     syncDismissalLifecycle();
     if (barIsVisible(bar) && !bar.classList.contains("mflSelectionActionDismissed")) {
       rememberBarTop(bar);
@@ -303,7 +396,10 @@
   function bindObserver() {
     const root = document.documentElement;
     if (!root || observer) return;
-    observer = new MutationObserver(schedule);
+    observer = new MutationObserver(() => {
+      preserveDismissedSelectionLabel();
+      schedule();
+    });
     observer.observe(root, {
       childList: true,
       subtree: true,
@@ -328,11 +424,13 @@
   }
 
   function onPointerDown(event) {
+    captureNavigationSourceControls(event.target);
     if (!actionTarget(event.target)) return;
     prepareToastAnchor();
   }
 
   function onClick(event) {
+    restoreNavigationSourceControls(event.target);
     if (fallbackClearing) return;
     const action = actionTarget(event.target);
     if (!action) return;
@@ -377,6 +475,8 @@
     if (exitTimer) clearTimeout(exitTimer);
     if (toastAnchorTimer) clearTimeout(toastAnchorTimer);
     observer?.disconnect();
+    navigationSourceControlSnapshot = null;
+    frozenSelectionLabel = "";
     window.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", onKeyDown, true);
