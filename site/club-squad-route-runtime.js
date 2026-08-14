@@ -15,9 +15,66 @@
     all: "all",
     "all-time": "all",
   });
+  const CLUB_SKELETON_STYLE_ID = "mflClubStaticSkeletonStyles";
+  const CLUB_SKELETON_ROW_CLASS = "staticTableBlankRow";
+  const CLUB_SKELETON_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
+  const CLUB_BASE_COLUMNS = Object.freeze([
+    "player_id",
+    "nationality_flag",
+    "name",
+    "nationality",
+    "age",
+    "positions",
+    "player_seasons",
+  ]);
+  const CLUB_STAT_COLUMNS = Object.freeze([
+    "overall",
+    "pace",
+    "shooting",
+    "passing",
+    "dribbling",
+    "defense",
+    "physical",
+  ]);
+  const CLUB_VIEW_COLUMNS = Object.freeze({
+    attributes: [...CLUB_BASE_COLUMNS, ...CLUB_STAT_COLUMNS, "wallet_name", "player_link"],
+    current: [...CLUB_BASE_COLUMNS, ...CLUB_STAT_COLUMNS, "wallet_name", "player_link"],
+    all: [...CLUB_BASE_COLUMNS, ...CLUB_STAT_COLUMNS, "wallet_name", "player_link"],
+    contracts: [
+      ...CLUB_BASE_COLUMNS,
+      "overall",
+      "active_contract_revenue_share",
+      "active_contract_club_name",
+      "active_contract_club_division",
+      "wallet_name",
+      "player_link",
+    ],
+  });
+  const CLUB_COLUMN_META = Object.freeze({
+    player_id: ["ID", "col-id"],
+    nationality_flag: ["", "col-flag"],
+    name: ["Name", "col-name"],
+    nationality: ["Nationality", "col-nationality"],
+    age: ["Age", "col-age"],
+    positions: ["Positions", "col-positions"],
+    player_seasons: ["Seasons", "col-seasons"],
+    overall: ["Overall", "col-stat col-overall"],
+    pace: ["Pace", "col-stat"],
+    shooting: ["Shooting", "col-stat"],
+    passing: ["Passing", "col-stat"],
+    dribbling: ["Dribbling", "col-stat"],
+    defense: ["Defense", "col-stat"],
+    physical: ["Physical", "col-stat"],
+    wallet_name: ["Agent", "col-agent"],
+    active_contract_revenue_share: ["Rev. Share", "col-contract-revenue"],
+    active_contract_club_name: ["Club Name", "col-contract-club"],
+    active_contract_club_division: ["Division", "col-contract-division"],
+    player_link: ["", "col-link"],
+  });
   const nativePushState = history.pushState.bind(history);
   const nativeReplaceState = history.replaceState.bind(history);
   let historyWrapped = false;
+  let staticClubId = "";
 
   function currentRelativeUrl() {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -136,6 +193,140 @@
       divisionName: live.divisionName || stored.divisionName,
       divisionColor: live.divisionColor || stored.divisionColor,
     });
+  }
+
+  function installClubSkeletonStyles() {
+    if (document.getElementById(CLUB_SKELETON_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = CLUB_SKELETON_STYLE_ID;
+    style.textContent = `
+      #tableBody > .${CLUB_SKELETON_ROW_CLASS},
+      #tableBody > .${CLUB_SKELETON_ROW_CLASS} > td {
+        pointer-events: none;
+        transition: none;
+        animation: none;
+      }
+
+      #tableBody > .${CLUB_SKELETON_ROW_CLASS} > td {
+        height: 39px;
+        min-height: 39px;
+        padding-top: 0;
+        padding-bottom: 0;
+        background: var(--surface-muted);
+        color: transparent;
+        user-select: none;
+      }
+
+      #tableBody > .${CLUB_SKELETON_ROW_CLASS}:hover > td,
+      #tableBody > .${CLUB_SKELETON_ROW_CLASS} > td:hover {
+        background: var(--surface-muted);
+        background-image: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function primeClubSkeletonHeader(route) {
+    const columns = CLUB_VIEW_COLUMNS[route?.view] || CLUB_VIEW_COLUMNS.attributes;
+    const head = document.getElementById("tableHead");
+    const colGroup = document.getElementById("tableColGroup");
+    if (!(head instanceof HTMLTableSectionElement) || !(colGroup instanceof HTMLTableColElement)) return false;
+
+    const expectedCells = columns.length + 1;
+    if (head.dataset.staticHeaderPage === "club"
+      && head.dataset.staticHeaderView === route.view
+      && head.rows.length === 1
+      && head.rows[0]?.cells.length === expectedCells
+      && colGroup.children.length === expectedCells) {
+      return true;
+    }
+
+    const row = document.createElement("tr");
+    const selectionCell = document.createElement("th");
+    const selectionInput = document.createElement("input");
+    const selectionCol = document.createElement("col");
+    const cols = document.createDocumentFragment();
+
+    selectionCell.className = "selectionCell";
+    selectionInput.id = "selectVisiblePlayersInput";
+    selectionInput.type = "checkbox";
+    selectionInput.setAttribute("aria-label", "Select visible players");
+    selectionCell.appendChild(selectionInput);
+    row.appendChild(selectionCell);
+    selectionCol.className = "col-select";
+    cols.appendChild(selectionCol);
+
+    columns.forEach((column) => {
+      const meta = CLUB_COLUMN_META[column];
+      if (!meta) return;
+      const cell = document.createElement("th");
+      const label = document.createElement("span");
+      const col = document.createElement("col");
+      const classes = String(meta[1] || "").split(/\s+/).filter(Boolean);
+      if (classes.length) {
+        cell.classList.add(...classes);
+        col.classList.add(...classes);
+      }
+      label.textContent = meta[0];
+      cell.appendChild(label);
+      row.appendChild(cell);
+      cols.appendChild(col);
+    });
+
+    head.replaceChildren(row);
+    head.dataset.staticHeader = "true";
+    head.dataset.staticHeaderPage = "club";
+    head.dataset.staticHeaderView = route.view;
+    colGroup.replaceChildren(cols);
+    return true;
+  }
+
+  function clubSkeletonRowsReady(body, columnCount) {
+    const rows = Array.from(body.rows);
+    return rows.length === CLUB_SKELETON_ROW_OPACITIES.length
+      && rows.every((row, index) => (
+        row.classList.contains(CLUB_SKELETON_ROW_CLASS)
+        && row.cells.length === columnCount
+        && row.dataset.loadingRow === String(index + 1)
+      ));
+  }
+
+  function showClubLoadingSkeleton(route) {
+    const runtime = window.__mflTableLoadingRuntime;
+    if (typeof runtime?.primeRoute === "function") {
+      const shown = runtime.primeRoute({ pageName: "club", view: route.view });
+      if (shown) return true;
+    }
+
+    if (!primeClubSkeletonHeader(route)) return false;
+    const body = document.getElementById("tableBody");
+    const empty = document.getElementById("emptyState");
+    const head = document.getElementById("tableHead");
+    if (!(body instanceof HTMLTableSectionElement) || !(head instanceof HTMLTableSectionElement)) return false;
+
+    const columnCount = Math.max(1, head.rows[0]?.cells.length || 1);
+    if (!clubSkeletonRowsReady(body, columnCount)) {
+      const fragment = document.createDocumentFragment();
+      CLUB_SKELETON_ROW_OPACITIES.forEach((opacity, index) => {
+        const row = document.createElement("tr");
+        row.className = CLUB_SKELETON_ROW_CLASS;
+        row.dataset.loadingRow = String(index + 1);
+        row.setAttribute("aria-hidden", "true");
+        row.style.opacity = String(opacity);
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+          row.appendChild(document.createElement("td"));
+        }
+        fragment.appendChild(row);
+      });
+      body.replaceChildren(fragment);
+    }
+
+    body.dataset.staticLoading = "true";
+    if (empty instanceof HTMLElement) {
+      empty.hidden = true;
+      empty.textContent = "";
+    }
+    return true;
   }
 
   function internalizeCurrentSquadRoute() {
@@ -312,23 +503,41 @@
       || document.body?.dataset.page !== "club";
   }
 
+  function staticClubSkeletonNeeded(route) {
+    if (!route) return false;
+    return document.documentElement.dataset.mflReady !== "true"
+      || document.documentElement.classList.contains("mflDataLoading")
+      || document.body?.dataset.page !== "club"
+      || staticClubId !== route.clubId;
+  }
+
   function syncStaticClubShell() {
     const route = clubRoute();
     if (!route) return;
     syncStaticClubViews(route);
     hideStaticClubOnlyControls();
-    if (!staticClubShellNeeded(route)) return;
-
-    const progressionPage = document.getElementById("progressionPage");
-    if (progressionPage instanceof HTMLElement) {
-      document.querySelectorAll("main > .pageView").forEach((page) => {
-        if (page instanceof HTMLElement && page.hidden !== (page !== progressionPage)) {
-          page.hidden = page !== progressionPage;
-        }
-      });
-      if (progressionPage.hidden) progressionPage.hidden = false;
-    }
     renderStaticClubTitle(route);
+
+    const shellNeeded = staticClubShellNeeded(route);
+    const skeletonNeeded = staticClubSkeletonNeeded(route);
+    if (!shellNeeded && !skeletonNeeded) return;
+
+    if (shellNeeded) {
+      const progressionPage = document.getElementById("progressionPage");
+      if (progressionPage instanceof HTMLElement) {
+        document.querySelectorAll("main > .pageView").forEach((page) => {
+          if (page instanceof HTMLElement && page.hidden !== (page !== progressionPage)) {
+            page.hidden = page !== progressionPage;
+          }
+        });
+        if (progressionPage.hidden) progressionPage.hidden = false;
+      }
+    }
+
+    if (skeletonNeeded) {
+      showClubLoadingSkeleton(route);
+      staticClubId = route.clubId;
+    }
   }
 
   function syncClubViewLabel() {
@@ -362,7 +571,7 @@
 
     history.replaceState = function(state, title, url) {
       const mapped = mappedRelativeUrl(url, "squad");
-      nativeReplaceState(state, title, mapped);
+      nativeReplaceState(history.state, title, mapped);
       queueMicrotask(syncNavigationUi);
     };
   }
@@ -384,6 +593,7 @@
     });
   }
 
+  installClubSkeletonStyles();
   internalizeCurrentSquadRoute();
   document.addEventListener("pointerdown", rememberClubIdentityFromEvent, true);
   document.addEventListener("click", rememberClubIdentityFromEvent, true);
