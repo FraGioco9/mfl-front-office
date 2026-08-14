@@ -9,6 +9,12 @@
   --mfl-popup-close-glyph-size: 12px;
 }
 
+/* Player pages are created by the route runtime, so suppress the default Home
+ * shell from first paint until that initial player route has been resolved. */
+html[data-initial-page^="players/"]:not(.mflInitialRouteResolved) #homePage {
+  display: none !important;
+}
+
 /* Rows uses the final dropdown appearance from first paint. Do not wait for
  * dropdowns-runtime.js to switch the select from its native chevron. */
 @supports (appearance: base-select) {
