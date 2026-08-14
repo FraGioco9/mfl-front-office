@@ -75,6 +75,7 @@
   const nativeReplaceState = history.replaceState.bind(history);
   let historyWrapped = false;
   let staticClubId = "";
+  let staticShellSyncQueued = false;
 
   function currentRelativeUrl() {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -543,7 +544,7 @@
   function syncClubViewLabel() {
     const button = document.querySelector('#progressionPage .viewButton[data-view="attributes"]');
     if (!(button instanceof HTMLButtonElement)) return;
-    const label = document.body?.dataset.page === "club" ? "Squad" : "Attributes";
+    const label = clubRoute() || document.body?.dataset.page === "club" ? "Squad" : "Attributes";
     if (button.textContent !== label) button.textContent = label;
   }
 
@@ -557,6 +558,15 @@
   function syncNavigationUi() {
     syncUi();
     syncStaticClubShell();
+  }
+
+  function scheduleStaticClubShell() {
+    if (staticShellSyncQueued) return;
+    staticShellSyncQueued = true;
+    queueMicrotask(() => {
+      staticShellSyncQueued = false;
+      syncStaticClubShell();
+    });
   }
 
   function wrapHistory() {
@@ -600,14 +610,36 @@
   window.addEventListener("popstate", onPopState, true);
   syncStaticClubShell();
 
-  // Keep the long-lived observer lightweight. Club table rendering can mutate
-  // hundreds of descendants at once, so the static shell must not run here.
+  // Keep the long-lived DOM observer lightweight. It never runs the static
+  // shell, so table/header/row mutations cannot create a render loop.
   const observer = new MutationObserver(syncUi);
   observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-page", "href"],
     childList: true,
     subtree: true,
+  });
+
+  // Club startup/navigation can overwrite the early shell when bootstrap or
+  // app-core changes only loading/page state. Watch exactly those state owners,
+  // never table descendants, and reassert title/views/header/skeleton after the
+  // current task has finished mutating the destination page.
+  const shellStateObserver = new MutationObserver(scheduleStaticClubShell);
+  shellStateObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-mfl-ready"],
+  });
+  if (document.body) {
+    shellStateObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-page"],
+    });
+  }
+
+  window.__mflClubStaticShell = Object.freeze({
+    sync: syncStaticClubShell,
+    schedule: scheduleStaticClubShell,
+    showSkeleton: showClubLoadingSkeleton,
   });
 
   window.addEventListener("mfl:ready", () => {
