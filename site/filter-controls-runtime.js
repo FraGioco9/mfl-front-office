@@ -3,6 +3,28 @@
 
   const CONTRACT_COLUMN = "contract_status";
   const AT_MOST_DEFAULT_COLUMNS = new Set(["age", "player_seasons", "player_id"]);
+  const STATIC_PAGE_VIEWS = Object.freeze({
+    database: ["attributes", "contracts", "stats"],
+    mfl: ["attributes", "stats"],
+    progression: ["current", "all"],
+    watchlist: ["attributes", "next", "contracts", "current", "all"],
+    myplayers: ["attributes", "next", "contracts", "current", "all"],
+  });
+  const STATIC_DEFAULT_VIEWS = Object.freeze({
+    database: "attributes",
+    mfl: "attributes",
+    progression: "current",
+    watchlist: "current",
+    myplayers: "attributes",
+  });
+  const STATIC_VIEW_SLUGS = Object.freeze({
+    attributes: "attributes",
+    stats: "stats",
+    contracts: "contracts",
+    "next-overall": "next",
+    "current-season": "current",
+    "all-time": "all",
+  });
 
   function syncDropdowns(root = document) {
     try {
@@ -10,6 +32,93 @@
     } catch {
       // Dropdown enhancement is presentation-only; never block table startup.
     }
+  }
+
+  function staticPageNameFromPath(pathname = window.location.pathname) {
+    const first = String(pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
+    if (first === "my-players") return "myplayers";
+    return Object.prototype.hasOwnProperty.call(STATIC_PAGE_VIEWS, first) ? first : "";
+  }
+
+  function staticViewFromUrl(urlValue, pageName) {
+    const allowedViews = STATIC_PAGE_VIEWS[pageName] || [];
+    const fallback = STATIC_DEFAULT_VIEWS[pageName] || allowedViews[0] || "";
+    try {
+      const url = new URL(String(urlValue || ""), window.location.href);
+      const searchView = String(url.searchParams.get("view") || "").toLowerCase();
+      const normalizedSearchView = STATIC_VIEW_SLUGS[searchView] || searchView;
+      if (allowedViews.includes(normalizedSearchView)) return normalizedSearchView;
+
+      const segments = String(url.pathname || "").split("/").filter(Boolean);
+      for (let index = segments.length - 1; index >= 0; index -= 1) {
+        const segment = String(segments[index] || "").toLowerCase();
+        const view = STATIC_VIEW_SLUGS[segment] || segment;
+        if (allowedViews.includes(view)) return view;
+      }
+    } catch {
+      // Fall back to the page default when a link cannot be parsed.
+    }
+    return fallback;
+  }
+
+  function syncStaticViewButtons(pageName, requestedView = "") {
+    const allowedViews = STATIC_PAGE_VIEWS[pageName];
+    if (!Array.isArray(allowedViews) || !allowedViews.length) return;
+
+    const activeView = allowedViews.includes(requestedView)
+      ? requestedView
+      : (STATIC_DEFAULT_VIEWS[pageName] || allowedViews[0]);
+    const views = document.querySelector("#progressionPage .views");
+    if (views instanceof HTMLElement) {
+      const switcher = document.getElementById("watchlistSwitcher");
+      allowedViews.forEach((viewName) => {
+        const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
+        if (button instanceof HTMLButtonElement) views.insertBefore(button, switcher || null);
+      });
+
+      views.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        const viewName = String(button.dataset.view || "");
+        button.hidden = !allowedViews.includes(viewName);
+        button.classList.toggle("active", viewName === activeView);
+      });
+    }
+
+    const staticStatsViews = pageName === "database"
+      ? document.querySelector("#databaseStatsPage .views")
+      : pageName === "mfl"
+        ? document.querySelector("#mflStatsPage .views")
+        : null;
+    if (staticStatsViews instanceof HTMLElement) {
+      staticStatsViews.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        button.hidden = !allowedViews.includes(String(button.dataset.view || ""));
+        button.classList.toggle("active", String(button.dataset.view || "") === activeView);
+      });
+    }
+  }
+
+  function syncStaticViewButtonsFromLocation() {
+    const pageName = staticPageNameFromPath();
+    if (!pageName) return;
+    syncStaticViewButtons(pageName, staticViewFromUrl(window.location.href, pageName));
+  }
+
+  function installStaticViewShell() {
+    if (window.__mflStaticViewShellInstalled === true) return true;
+    window.__mflStaticViewShellInstalled = true;
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const sidebarButton = target?.closest?.("#sidebar .navButton[data-page]");
+      if (!(sidebarButton instanceof HTMLElement)) return;
+
+      const pageName = String(sidebarButton.dataset.page || "");
+      if (!STATIC_PAGE_VIEWS[pageName]) return;
+      const href = sidebarButton.getAttribute("href") || window.location.href;
+      syncStaticViewButtons(pageName, staticViewFromUrl(href, pageName));
+    }, true);
+    return true;
   }
 
   function installSelectedLinksDirectOpen() {
@@ -173,6 +282,8 @@
   }
 
   function sync() {
+    installStaticViewShell();
+    syncStaticViewButtonsFromLocation();
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
     installAddFilterDefaults();
