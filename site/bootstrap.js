@@ -154,28 +154,43 @@
     }
   }
 
-  const FILTER_OPERATOR_SYMBOLS = Object.freeze({
-    ">=": ">=",
-    "<=": "<=",
-    between: "<= x <=",
-    "=": "=",
+  const FILTER_OPERATOR_LABELS = Object.freeze({
+    ">=": "at least",
+    "<=": "at most",
+    between: "is between",
+    "=": "is",
   });
 
-  function syncFilterOperatorSymbols() {
+  function syncFilterOperatorLabels() {
     document.querySelectorAll("select[data-filter-operator]").forEach((select) => {
       if (!(select instanceof HTMLSelectElement)) return;
       Array.from(select.options).forEach((option) => {
-        const label = FILTER_OPERATOR_SYMBOLS[option.value];
+        const label = FILTER_OPERATOR_LABELS[option.value];
         if (label && option.textContent !== label) option.textContent = label;
       });
     });
+  }
+
+  function installFilterOperatorAlignment() {
+    const styleId = "mflFilterOperatorAlignment";
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      .filtersDialog select[data-filter-operator] {
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 38px;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   function installFilterOperatorDefaults() {
     const addFilterRule = window.addFilterRule;
     if (typeof addFilterRule !== "function") return;
     if (addFilterRule.__mflAtMostDefaults) {
-      syncFilterOperatorSymbols();
+      syncFilterOperatorLabels();
       return;
     }
     const atMostColumns = new Set(["age", "player_seasons", "player_id"]);
@@ -186,12 +201,12 @@
         nextOptions.operator = "<=";
       }
       const result = addFilterRule(column, nextOptions);
-      syncFilterOperatorSymbols();
+      syncFilterOperatorLabels();
       return result;
     };
     Object.defineProperty(wrappedAddFilterRule, "__mflAtMostDefaults", { value: true });
     window.addFilterRule = wrappedAddFilterRule;
-    syncFilterOperatorSymbols();
+    syncFilterOperatorLabels();
   }
 
   function syncEvaluationActionsFirstPaint() {
@@ -221,8 +236,9 @@
   function syncBootstrapFirstPaint() {
     installEvaluationTableSpacing();
     installPopupContentCentering();
+    installFilterOperatorAlignment();
     installFilterOperatorDefaults();
-    syncFilterOperatorSymbols();
+    syncFilterOperatorLabels();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
