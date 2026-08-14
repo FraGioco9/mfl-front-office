@@ -142,8 +142,8 @@
     if (page === "myplayers") return "My Players";
     if (page === "progression") return "Progression";
     if (page === "watchlist") {
-      const name = String(document.getElementById("watchlistButtonText")?.textContent || "Default").trim() || "Default";
-      return `Watchlist - ${name}`;
+      const name = String(window.__mflWatchlistRouteUiRuntime?.currentName?.() || "").trim();
+      return name ? `Watchlist - ${name}` : "Watchlist";
     }
     if (page === "agents") {
       const navLabel = document.querySelector('#sidebar .navButton[data-page="agents"] .navText');
