@@ -185,7 +185,7 @@
     return true;
   }
 
-  function revealTableDestination(page) {
+  function revealTableDestination() {
     const progressionPage = document.getElementById("progressionPage");
     if (!(progressionPage instanceof HTMLElement)) return false;
     hideOtherPageViews(progressionPage);
@@ -238,7 +238,7 @@
       return;
     }
 
-    revealTableDestination(page);
+    revealTableDestination();
     window.__mflSharedTableUiRuntime?.prime?.(page);
     syncDestinationStaticControls(page, view);
     window.__mflTableLoadingRuntime?.primeRoute?.({ pageName: page, view });
