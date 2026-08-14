@@ -155,25 +155,19 @@
   }
 
   function installFilterOperatorDefaults() {
-    if (window.__mflFilterOperatorDefaultsInstalled) return;
-    window.__mflFilterOperatorDefaultsInstalled = true;
+    const addFilterRule = window.addFilterRule;
+    if (typeof addFilterRule !== "function" || addFilterRule.__mflAtMostDefaults) return;
     const atMostColumns = new Set(["age", "player_seasons", "player_id"]);
 
-    document.addEventListener("change", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLSelectElement) || target.id !== "addFilterSelect") return;
-      const column = String(target.value || "");
-      if (!atMostColumns.has(column)) return;
-
-      queueMicrotask(() => {
-        const rules = Array.from(document.querySelectorAll("#filterRules .filterRule"));
-        const rule = rules.reverse().find((candidate) => candidate.dataset.filterColumn === column);
-        const operator = rule?.querySelector("[data-filter-operator]");
-        if (!(operator instanceof HTMLSelectElement) || operator.value === "<=") return;
-        operator.value = "<=";
-        operator.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-    }, true);
+    const wrappedAddFilterRule = function(column, options = {}) {
+      const nextOptions = { ...options };
+      if (atMostColumns.has(String(column || "")) && !nextOptions.operator) {
+        nextOptions.operator = "<=";
+      }
+      return addFilterRule(column, nextOptions);
+    };
+    Object.defineProperty(wrappedAddFilterRule, "__mflAtMostDefaults", { value: true });
+    window.addFilterRule = wrappedAddFilterRule;
   }
 
   function syncEvaluationActionsFirstPaint() {
@@ -210,6 +204,7 @@
   }
 
   syncBootstrapFirstPaint();
+  window.addEventListener("mfl:ready", installFilterOperatorDefaults);
 
   const core = document.createElement("script");
   core.src = "/bootstrap-core.js";
