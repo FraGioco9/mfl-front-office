@@ -120,6 +120,40 @@
     document.head.appendChild(style);
   }
 
+  function installPopupContentCentering() {
+    const styleId = "mflPopupContentCentering";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        .modalBackdrop {
+          padding-left: var(--mfl-popup-sidebar-offset, 0px);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const menuRail = document.getElementById("menuRail");
+    if (!(menuRail instanceof HTMLElement)) {
+      document.documentElement.style.setProperty("--mfl-popup-sidebar-offset", "0px");
+      return;
+    }
+
+    const syncOffset = () => {
+      const rect = menuRail.getBoundingClientRect();
+      const visible = !menuRail.hidden && getComputedStyle(menuRail).display !== "none";
+      const width = visible && rect.width > 0 ? rect.width : 0;
+      document.documentElement.style.setProperty("--mfl-popup-sidebar-offset", `${width}px`);
+    };
+
+    syncOffset();
+    if (!window.__mflPopupCenteringResizeObserver && "ResizeObserver" in window) {
+      const resizeObserver = new ResizeObserver(syncOffset);
+      resizeObserver.observe(menuRail);
+      window.__mflPopupCenteringResizeObserver = resizeObserver;
+    }
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -146,6 +180,7 @@
 
   function syncBootstrapFirstPaint() {
     installEvaluationTableSpacing();
+    installPopupContentCentering();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
