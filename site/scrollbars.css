@@ -19,6 +19,15 @@
   --mfl-scrollbar-arrow-hover: transparent;
 }
 
+/* Do not instantiate scrollbar controls when a page has no scroll range. */
+html:root {
+  overflow-y: auto !important;
+}
+
+html body > #appShell > main {
+  overflow-y: auto !important;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
