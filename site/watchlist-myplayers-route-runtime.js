@@ -9,6 +9,13 @@
   let wrappedSetPage = null;
   let originalSwitchWatchlist = null;
   let wrappedSwitchWatchlist = null;
+  let originalLoadWalletPreferences = null;
+  let wrappedLoadWalletPreferences = null;
+  let originalApplyFilters = null;
+  let wrappedApplyFilters = null;
+  let walletPreferencesLoadPromise = null;
+  let watchlistNavigationDepth = 0;
+  let deferredWatchlistFilter = null;
   let reconciling = false;
   let destroyed = false;
   function statePage() {
@@ -16,6 +23,31 @@
     catch { return ""; }
   }
   function bodyPage() { return String(document.body?.dataset.page || ""); }
+  function walletPreferencesLoading() {
+    try { return Boolean(typeof state === "object" && state?.walletPreferencesLoading); }
+    catch { return false; }
+  }
+  function walletPreferencesSyncActive() {
+    return walletPreferencesLoading() || Boolean(walletPreferencesLoadPromise);
+  }
+  function waitForWalletPreferencesLoad() {
+    if (!walletPreferencesLoading()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const check = () => {
+        if (destroyed || !walletPreferencesLoading()) resolve();
+        else window.setTimeout(check, 16);
+      };
+      check();
+    });
+  }
+  async function waitForWalletPreferencesSettled() {
+    const pending = walletPreferencesLoadPromise;
+    if (pending) {
+      try { await pending; } catch {}
+      return;
+    }
+    await waitForWalletPreferencesLoad();
+  }
   function currentView(pageName) {
     try {
       if (typeof normalizeViewForPage === "function") return normalizeViewForPage(state?.view || "attributes", pageName);
@@ -36,6 +68,76 @@
     } catch (error) {
       console.error("Could not keep the latest Watchlist/My Players route.", error);
     } finally { reconciling = false; }
+  }
+  function installWalletPreferencesSingleFlight() {
+    let candidate = null;
+    try { candidate = loadWalletPreferences; } catch {}
+    if (typeof candidate !== "function") return false;
+    if (candidate === wrappedLoadWalletPreferences) return true;
+
+    originalLoadWalletPreferences = candidate;
+    wrappedLoadWalletPreferences = function loadWalletPreferencesSingleFlight(...args) {
+      if (walletPreferencesLoadPromise) return walletPreferencesLoadPromise;
+
+      if (walletPreferencesLoading()) {
+        const existing = waitForWalletPreferencesLoad();
+        walletPreferencesLoadPromise = existing.finally(() => {
+          if (walletPreferencesLoadPromise === existing || !walletPreferencesLoading()) {
+            walletPreferencesLoadPromise = null;
+          }
+        });
+        return walletPreferencesLoadPromise;
+      }
+
+      let result;
+      try {
+        result = originalLoadWalletPreferences.apply(this, args);
+      } catch (error) {
+        throw error;
+      }
+
+      const pending = Promise.resolve(result);
+      const tracked = pending.finally(() => {
+        if (walletPreferencesLoadPromise === tracked) walletPreferencesLoadPromise = null;
+      });
+      walletPreferencesLoadPromise = tracked;
+      return tracked;
+    };
+
+    window.__mflSingleFlightLoadWalletPreferences = wrappedLoadWalletPreferences;
+    try { window.loadWalletPreferences = wrappedLoadWalletPreferences; } catch {}
+    try { window.eval("loadWalletPreferences = window.__mflSingleFlightLoadWalletPreferences"); } catch {}
+    return true;
+  }
+  function installWatchlistFilterGate() {
+    let candidate = null;
+    try { candidate = applyFilters; } catch {}
+    if (typeof candidate !== "function") return false;
+    if (candidate === wrappedApplyFilters) return true;
+
+    originalApplyFilters = candidate;
+    wrappedApplyFilters = function applyFiltersWithWatchlistSyncGate(...args) {
+      if (watchlistNavigationDepth > 0 && statePage() === "watchlist") {
+        if (walletPreferencesSyncActive()) {
+          deferredWatchlistFilter = { filterThis: this, filterArgs: args };
+          return undefined;
+        }
+        deferredWatchlistFilter = null;
+      }
+      return originalApplyFilters.apply(this, args);
+    };
+
+    window.__mflWatchlistSyncGatedApplyFilters = wrappedApplyFilters;
+    try { window.applyFilters = wrappedApplyFilters; } catch {}
+    try { window.eval("applyFilters = window.__mflWatchlistSyncGatedApplyFilters"); } catch {}
+    return true;
+  }
+  function flushDeferredWatchlistFilter() {
+    if (!deferredWatchlistFilter || typeof originalApplyFilters !== "function") return;
+    if (watchlistNavigationDepth > 0 || walletPreferencesSyncActive() || statePage() !== "watchlist") return;
+    const { filterThis, filterArgs } = deferredWatchlistFilter;
+    deferredWatchlistFilter = null;
+    originalApplyFilters.apply(filterThis, filterArgs);
   }
   function installWatchlistSwitchLoadDedupe() {
     let candidate = null;
@@ -97,6 +199,9 @@
     return true;
   }
   function install() {
+    installWalletPreferencesSingleFlight();
+    installWatchlistFilterGate();
+
     let candidate = null;
     try { candidate = setPage; } catch {}
     if (typeof candidate !== "function") return false;
@@ -108,6 +213,7 @@
     wrappedSetPage = async function setPageWithLatestWatchlistMyPlayersIntent(pageName, updateHash = true, options = {}) {
       const normalizedPage = String(pageName || "");
       const pairNavigation = PAIR.has(normalizedPage);
+      const watchlistNavigation = normalizedPage === "watchlist";
       const requestSequence = pairNavigation ? ++sequence : 0;
       const nextOptions = pairNavigation ? intentOptions(normalizedPage, options) : options;
       if (pairNavigation) {
@@ -116,13 +222,22 @@
         latestIntent = null;
         sequence += 1;
       }
-      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
-      if (pairNavigation && latestIntent?.sequence !== requestSequence) await reconcile(latestIntent);
-      else if (pairNavigation && latestIntent?.sequence === requestSequence) {
-        await Promise.resolve();
-        await reconcile(latestIntent);
+      if (watchlistNavigation) watchlistNavigationDepth += 1;
+      try {
+        const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+        if (watchlistNavigation && walletPreferencesSyncActive()) await waitForWalletPreferencesSettled();
+        if (pairNavigation && latestIntent?.sequence !== requestSequence) await reconcile(latestIntent);
+        else if (pairNavigation && latestIntent?.sequence === requestSequence) {
+          await Promise.resolve();
+          await reconcile(latestIntent);
+        }
+        return result;
+      } finally {
+        if (watchlistNavigation) {
+          watchlistNavigationDepth = Math.max(0, watchlistNavigationDepth - 1);
+          flushDeferredWatchlistFilter();
+        }
       }
-      return result;
     };
     window.__mflLatestPairSetPage = wrappedSetPage;
     try { window.setPage = wrappedSetPage; } catch {}
@@ -134,6 +249,9 @@
     destroyed = true;
     latestIntent = null;
     sequence += 1;
+    watchlistNavigationDepth = 0;
+    deferredWatchlistFilter = null;
+    walletPreferencesLoadPromise = null;
     if (wrappedSwitchWatchlist && originalSwitchWatchlist) {
       try { if (window.switchWatchlist === wrappedSwitchWatchlist) window.switchWatchlist = originalSwitchWatchlist; } catch {}
       try {
@@ -141,6 +259,22 @@
         window.eval("if (switchWatchlist === window.__mflSingleLoadSwitchWatchlist) switchWatchlist = window.__mflPairOriginalSwitchWatchlist");
       } catch {}
       delete window.__mflPairOriginalSwitchWatchlist;
+    }
+    if (wrappedApplyFilters && originalApplyFilters) {
+      try { if (window.applyFilters === wrappedApplyFilters) window.applyFilters = originalApplyFilters; } catch {}
+      try {
+        window.__mflPairOriginalApplyFilters = originalApplyFilters;
+        window.eval("if (applyFilters === window.__mflWatchlistSyncGatedApplyFilters) applyFilters = window.__mflPairOriginalApplyFilters");
+      } catch {}
+      delete window.__mflPairOriginalApplyFilters;
+    }
+    if (wrappedLoadWalletPreferences && originalLoadWalletPreferences) {
+      try { if (window.loadWalletPreferences === wrappedLoadWalletPreferences) window.loadWalletPreferences = originalLoadWalletPreferences; } catch {}
+      try {
+        window.__mflPairOriginalLoadWalletPreferences = originalLoadWalletPreferences;
+        window.eval("if (loadWalletPreferences === window.__mflSingleFlightLoadWalletPreferences) loadWalletPreferences = window.__mflPairOriginalLoadWalletPreferences");
+      } catch {}
+      delete window.__mflPairOriginalLoadWalletPreferences;
     }
     if (wrappedSetPage && originalSetPage) {
       try { if (window.setPage === wrappedSetPage) window.setPage = originalSetPage; } catch {}
@@ -151,6 +285,8 @@
       delete window.__mflPairOriginalSetPage;
     }
     delete window.__mflSingleLoadSwitchWatchlist;
+    delete window.__mflWatchlistSyncGatedApplyFilters;
+    delete window.__mflSingleFlightLoadWalletPreferences;
     delete window.__mflLatestPairSetPage;
   }
   if (!install()) requestAnimationFrame(() => { if (!destroyed) install(); });
