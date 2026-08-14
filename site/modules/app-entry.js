@@ -118,7 +118,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/global-search-runtime.js",
   "/evaluation-discount-rate-runtime.js",
   "/evaluation-discount-rate-ui-runtime.js",
-  "/evaluation-discount-tooltip-pointer-runtime.js",
   "/watchlist-route-ui-runtime.js",
   "/table-width-runtime.js",
   "/table-loading-runtime.js",
