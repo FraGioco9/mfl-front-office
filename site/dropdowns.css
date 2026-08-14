@@ -1,32 +1,23 @@
 /* Canonical dropdown owner for MFL Front Office. */
 
 :root {
-  --mfl-dropdown-gap: 6px;
-  --mfl-dropdown-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  --mfl-dropdown-gap: 8px;
+  --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  --mfl-dropdown-chevron-duration: 160ms;
+  --mfl-dropdown-chevron-easing: ease;
 }
 
-/* Keep every original select in layout so Rows, Filters, Evaluation and future
- * selects retain their pre-dropdown dimensions exactly. Only the opened menu is
- * custom-rendered. */
+/* Keep original controls in layout. The runtime only opts visible selects into
+ * the customizable picker after preserving the native Rows width. */
 select[data-mfl-dropdown-enhanced="true"] {
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
-    linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
-  background-position:
-    calc(100% - 14px) 50%,
-    calc(100% - 10px) 50%;
-  background-size: 4px 4px, 4px 4px;
-  background-repeat: no-repeat;
-  appearance: none;
-  -webkit-appearance: none;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
 select[data-mfl-dropdown-enhanced="true"]:focus:not(:disabled),
 select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled),
-select[data-mfl-dropdown-enhanced="true"][aria-expanded="true"] {
+select[data-mfl-dropdown-enhanced="true"]:open {
   outline: 0;
   border-color: var(--primary-hover);
   background-color: var(--row-hover);
@@ -38,15 +29,81 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   cursor: default;
 }
 
-.mflDropdownMenu {
-  position: fixed;
-  z-index: 2147483000;
+/* Chrome's customizable select keeps the original select box and exposes the
+ * picker and picker icon for styling. Unsupported browsers retain their native
+ * select behavior without any replacement control. */
+@supports (appearance: base-select) {
+  select[data-mfl-dropdown-enhanced="true"],
+  select[data-mfl-dropdown-enhanced="true"]::picker(select) {
+    appearance: base-select;
+  }
+
+  select[data-mfl-dropdown-enhanced="true"]::picker-icon {
+    color: var(--text-soft);
+    transform: rotate(0deg);
+    transition:
+      transform var(--mfl-dropdown-chevron-duration) var(--mfl-dropdown-chevron-easing),
+      color 120ms ease;
+  }
+
+  select[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
+    color: var(--primary);
+    transform: rotate(180deg);
+  }
+
+  select[data-mfl-dropdown-enhanced="true"]::picker(select) {
+    box-sizing: border-box;
+    max-height: min(320px, calc(100vh - 16px));
+    margin: var(--mfl-dropdown-gap) 0 0;
+    padding: 5px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--mfl-dropdown-shadow);
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option {
+    min-height: 34px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option + option {
+    margin-top: 2px;
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option:hover,
+  select[data-mfl-dropdown-enhanced="true"] option:focus-visible {
+    outline: 0;
+    background: var(--row-hover);
+    color: var(--text);
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option:checked {
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    color: var(--primary);
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option::checkmark {
+    display: none;
+  }
+}
+
+/* Shared dropdown surface used by the Account and Watchlist menus too. */
+[data-mfl-dropdown-menu="true"] {
   box-sizing: border-box;
-  max-height: min(320px, calc(100vh - 16px));
   padding: 5px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface);
@@ -54,61 +111,31 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   box-shadow: var(--mfl-dropdown-shadow);
 }
 
-.mflDropdownMenu[hidden] {
-  display: none !important;
+[data-mfl-dropdown-menu="true"][hidden] {
+  display: none;
 }
 
-.mflDropdownOption {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 34px;
-  margin: 0;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: left;
-  cursor: pointer;
-  transition: background 100ms ease, color 100ms ease;
-}
-
-.mflDropdownOption + .mflDropdownOption {
-  margin-top: 2px;
-}
-
-.mflDropdownOption:hover:not(:disabled),
-.mflDropdownOption:focus-visible:not(:disabled) {
-  outline: 0;
-  background: var(--row-hover);
-  color: var(--text);
-}
-
-.mflDropdownOption[aria-selected="true"] {
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
-  color: var(--primary);
-}
-
-.mflDropdownOption:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.mflDropdownGroupLabel {
-  padding: 7px 9px 4px;
+/* Every non-native dropdown uses the same 180-degree chevron animation. */
+#accountButton::after,
+.watchlistButtonChevron {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
   color: var(--text-soft);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  transform: rotate(45deg);
+  transition:
+    transform var(--mfl-dropdown-chevron-duration) var(--mfl-dropdown-chevron-easing),
+    color 120ms ease;
 }
 
-/* Account dropdown. Keep the established 124x50 trigger and 34px rows. */
+#accountButton[aria-expanded="true"]::after,
+.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
+  color: var(--primary);
+  transform: rotate(225deg);
+}
+
+/* Account now uses the same dropdown surface and option language. */
 .accountMenu {
   position: relative;
   width: 124px;
@@ -120,37 +147,29 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 #accountButton {
   position: relative;
-  padding-right: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 29px;
+  text-align: center;
 }
 
 #accountButton::after {
   content: "";
   position: absolute;
-  top: 50%;
+  top: calc(50% - 4px);
   right: 12px;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid var(--text-soft);
-  border-bottom: 1.5px solid var(--text-soft);
-  transform: translateY(-65%) rotate(45deg);
 }
 
-#accountButton[aria-expanded="true"]::after {
-  border-color: var(--primary);
-  transform: translateY(-15%) rotate(225deg);
-}
-
-.accountDropdown {
+#accountDropdown {
   top: calc(100% + var(--mfl-dropdown-gap));
+  right: 0;
   width: 100%;
-  padding: 5px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--mfl-dropdown-shadow);
 }
 
-.accountDropdownItem {
+.accountDropdownItem,
+[data-mfl-dropdown-option="true"] {
   display: flex;
   align-items: center;
   width: 100%;
@@ -162,8 +181,10 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   border-radius: 6px;
   background: transparent;
   color: var(--text);
+  font: inherit;
   font-weight: 700;
   text-align: left;
+  box-shadow: none;
 }
 
 .accountDropdownItem + .accountDropdownItem {
@@ -203,7 +224,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   color: #ff6b6b;
 }
 
-/* Watchlist dropdown. Preserve all established dimensions. */
+/* Watchlist keeps its established dimensions while sharing the same surface and
+ * chevron timing. */
 .watchlistButton {
   position: relative;
   width: 350px;
@@ -223,30 +245,16 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .watchlistButtonChevron {
   display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  color: var(--text-soft);
+  flex: 0 0 auto;
   font-size: 0;
-  transform: translateY(-2px) rotate(45deg);
-}
-
-.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
-  color: var(--primary);
-  transform: translateY(2px) rotate(225deg);
 }
 
 .watchlistDropdown {
   top: calc(100% + var(--mfl-dropdown-gap));
+  right: 0;
   width: 350px;
   min-width: 350px;
   max-width: calc(100vw - 24px);
-  padding: 5px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--mfl-dropdown-shadow);
 }
 
 .watchlistDropdownItem {
@@ -390,7 +398,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   height: 36px;
 }
 
-/* Preserve the Filters popup column widths used immediately before the rebuild. */
+/* Preserve the exact Filters grid used before the dropdown rebuild. */
 .filtersDialog .filterRule {
   grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
 }
@@ -399,6 +407,11 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   position: relative;
   z-index: 1;
   justify-self: end;
+}
+
+#pageSizeSelect {
+  width: var(--mfl-page-size-select-width, 100%);
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
