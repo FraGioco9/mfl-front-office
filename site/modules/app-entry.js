@@ -216,6 +216,37 @@ function installCoreBridges() {
   runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
 }
 
+function installEvaluationCloudRecentPrecedence() {
+  try {
+    return Boolean(window.eval(`(() => {
+      if (typeof restoreRecentEvaluationState !== "function") return false;
+      if (restoreRecentEvaluationState.__mflSupabaseAuthoritative) return true;
+
+      const originalRestoreRecentEvaluationState = restoreRecentEvaluationState;
+      const cloudAuthoritativeRestoreRecentEvaluationState = function(savedState) {
+        const cloudState = savedState && typeof savedState === "object" && !Array.isArray(savedState)
+          ? savedState
+          : null;
+        if (cloudState && Object.prototype.hasOwnProperty.call(cloudState, "recentEvaluationPlayerIds")) {
+          const savedIds = Array.isArray(cloudState.recentEvaluationPlayerIds)
+            ? normalizeIdList(cloudState.recentEvaluationPlayerIds, 5)
+            : [];
+          state.recentEvaluationPlayerIds = savedIds;
+          saveRecentIdsToStorage(RECENT_EVALUATION_SEARCH_STORAGE_KEY, savedIds);
+          return;
+        }
+        return originalRestoreRecentEvaluationState(savedState);
+      };
+      Object.defineProperty(cloudAuthoritativeRestoreRecentEvaluationState, "__mflSupabaseAuthoritative", { value: true });
+      restoreRecentEvaluationState = cloudAuthoritativeRestoreRecentEvaluationState;
+      return true;
+    })();`));
+  } catch (error) {
+    console.warn("Could not install Supabase-authoritative Evaluation recents.", error);
+    return false;
+  }
+}
+
 async function start() {
   const release = entryRelease;
   window.__mflRelease = release;
@@ -231,6 +262,7 @@ async function start() {
   }
 
   await loadClassicScript("/modules/app-core.js");
+  installEvaluationCloudRecentPrecedence();
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
