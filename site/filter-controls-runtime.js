@@ -48,7 +48,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) 6px;
         align-items: center;
-        width: min(150px, 48vw);
+        width: var(--page-size-select-width, auto);
         min-width: 0;
         height: 40px;
         overflow: hidden;
@@ -150,8 +150,12 @@
     if (!(select instanceof HTMLSelectElement)) return false;
     if (select.parentElement?.classList.contains("pageSizeSelectGrid")) return true;
 
+    const originalWidth = select.getBoundingClientRect().width;
     const grid = document.createElement("span");
     grid.className = "pageSizeSelectGrid";
+    if (Number.isFinite(originalWidth) && originalWidth > 0) {
+      grid.style.setProperty("--page-size-select-width", `${originalWidth}px`);
+    }
     select.before(grid);
     grid.appendChild(select);
     return true;
