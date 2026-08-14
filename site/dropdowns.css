@@ -1,22 +1,14 @@
 /* Canonical dropdown owner for MFL Front Office. */
 
 :root {
-  --mfl-dropdown-radius: 7px;
   --mfl-dropdown-gap: 6px;
-  --mfl-dropdown-control-height: 40px;
-  --mfl-dropdown-item-height: 34px;
   --mfl-dropdown-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 }
 
-/* Native selects keep the canonical closed-control appearance until they are
- * enhanced. This also covers selects created dynamically by table/filter code. */
-select:not(.mflDropdownNative) {
-  min-height: var(--mfl-dropdown-control-height);
-  padding: 0 32px 0 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--mfl-dropdown-radius);
-  outline: 0;
-  background-color: var(--surface);
+/* Keep every original select in layout so Rows, Filters, Evaluation and future
+ * selects retain their pre-dropdown dimensions exactly. Only the opened menu is
+ * custom-rendered. */
+select[data-mfl-dropdown-enhanced="true"] {
   background-image:
     linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
     linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
@@ -25,216 +17,83 @@ select:not(.mflDropdownNative) {
     calc(100% - 10px) 50%;
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
-  color: var(--text);
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-select:not(.mflDropdownNative):hover:not(:disabled),
-select:not(.mflDropdownNative):focus:not(:disabled),
-select:not(.mflDropdownNative):focus-visible:not(:disabled) {
+select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
+select[data-mfl-dropdown-enhanced="true"]:focus:not(:disabled),
+select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled),
+select[data-mfl-dropdown-enhanced="true"][aria-expanded="true"] {
+  outline: 0;
   border-color: var(--primary-hover);
   background-color: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
 }
 
-select:not(.mflDropdownNative):focus-visible:not(:disabled) {
-  box-shadow: 0 0 0 1px var(--primary-hover);
-}
-
-select:not(.mflDropdownNative):disabled {
+select[data-mfl-dropdown-enhanced="true"]:disabled {
   cursor: default;
-  opacity: 0.55;
-}
-
-/* Enhanced selects. The original select remains in the DOM as the state owner,
- * but is removed from visual/input interaction. */
-.mflDropdownNative {
-  position: absolute !important;
-  width: 1px !important;
-  min-width: 1px !important;
-  max-width: 1px !important;
-  height: 1px !important;
-  min-height: 1px !important;
-  max-height: 1px !important;
-  margin: -1px !important;
-  padding: 0 !important;
-  border: 0 !important;
-  overflow: hidden !important;
-  clip: rect(0 0 0 0) !important;
-  clip-path: inset(50%) !important;
-  white-space: nowrap !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-.mflSelect {
-  position: relative;
-  display: inline-flex;
-  min-width: 0;
-  vertical-align: middle;
-}
-
-.mflSelect[hidden] {
-  display: none !important;
-}
-
-.mflDropdownTrigger,
-.mflSelectTrigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  height: var(--mfl-dropdown-control-height);
-  margin: 0;
-  padding: 0 11px 0 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--mfl-dropdown-radius);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  line-height: 1;
-  text-align: left;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.mflDropdownTrigger:hover:not(:disabled),
-.mflDropdownTrigger:focus-visible:not(:disabled),
-.mflDropdownTrigger[aria-expanded="true"],
-.mflSelectTrigger:hover:not(:disabled),
-.mflSelectTrigger:focus-visible:not(:disabled),
-.mflSelectTrigger[aria-expanded="true"] {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-  color: var(--text);
-}
-
-.mflDropdownTrigger:focus-visible,
-.mflSelectTrigger:focus-visible {
-  outline: 0;
-  box-shadow: 0 0 0 1px var(--primary-hover);
-}
-
-.mflDropdownTrigger:disabled,
-.mflSelectTrigger:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.mflDropdownLabel {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mflDropdownChevron {
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  color: var(--text-soft);
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 120ms ease, color 120ms ease;
-}
-
-.mflDropdownTrigger[aria-expanded="true"] .mflDropdownChevron,
-.mflSelectTrigger[aria-expanded="true"] .mflDropdownChevron {
-  color: var(--primary);
-  transform: translateY(2px) rotate(225deg);
-}
-
-/* Shared popup surface. Account and Watchlist keep their established DOM IDs
- * while their entire visual language is owned here. */
-.mflDropdownMenu,
-.accountDropdown,
-.watchlistDropdown {
-  box-sizing: border-box;
-  padding: 5px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--mfl-dropdown-shadow);
-  color: var(--text);
-}
-
-.mflDropdownMenu[hidden],
-.accountDropdown[hidden],
-.watchlistDropdown[hidden] {
-  display: none !important;
 }
 
 .mflDropdownMenu {
   position: fixed;
   z-index: 2147483000;
+  box-sizing: border-box;
   max-height: min(320px, calc(100vh - 16px));
+  padding: 5px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.accountDropdown,
-.watchlistDropdown {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
   background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--mfl-dropdown-shadow);
 }
 
-.accountDropdownItem,
-.watchlistDropdownItem,
+.mflDropdownMenu[hidden] {
+  display: none !important;
+}
+
 .mflDropdownOption {
-  box-sizing: border-box;
-  min-height: var(--mfl-dropdown-item-height);
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
   margin: 0;
-  border: 1px solid transparent;
+  padding: 0 9px;
+  border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
   font: inherit;
   font-weight: 600;
   line-height: 1.2;
-  cursor: pointer;
-  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
-}
-
-.accountDropdownItem,
-.mflDropdownOption {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0 9px;
   text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
 }
 
-.accountDropdownItem + .accountDropdownItem,
 .mflDropdownOption + .mflDropdownOption {
   margin-top: 2px;
 }
 
-.accountDropdownItem:hover:not(:disabled),
-.accountDropdownItem:focus-visible:not(:disabled),
-.watchlistDropdownItem:hover,
-.watchlistDropdownItem:focus-within,
 .mflDropdownOption:hover:not(:disabled),
 .mflDropdownOption:focus-visible:not(:disabled) {
-  border-color: var(--primary-hover);
   outline: 0;
   background: var(--row-hover);
   color: var(--text);
 }
 
-.mflDropdownOption[aria-selected="true"],
-.watchlistDropdownItem.active {
-  border-color: var(--primary);
+.mflDropdownOption[aria-selected="true"] {
   background: color-mix(in srgb, var(--primary) 12%, var(--surface));
   color: var(--primary);
 }
 
-.mflDropdownOption:disabled,
-.accountDropdownItem:disabled {
+.mflDropdownOption:disabled {
   cursor: default;
   opacity: 0.5;
 }
@@ -249,9 +108,14 @@ select:not(.mflDropdownNative):disabled {
   letter-spacing: 0.04em;
 }
 
-/* Account dropdown. */
+/* Account dropdown. Keep the established 124x50 trigger and 34px rows. */
 .accountMenu {
   position: relative;
+  width: 124px;
+}
+
+.accountMenu .compactButton {
+  height: 50px;
 }
 
 #accountButton {
@@ -279,11 +143,48 @@ select:not(.mflDropdownNative):disabled {
 .accountDropdown {
   top: calc(100% + var(--mfl-dropdown-gap));
   width: 100%;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--mfl-dropdown-shadow);
 }
 
-.accountUserButton,
-.accountSettingsButton {
+.accountDropdownItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--text);
+  font-weight: 700;
+  text-align: left;
+}
+
+.accountDropdownItem + .accountDropdownItem {
+  margin-top: 2px;
+}
+
+.accountDropdown button.accountDropdownItem:hover:not(:disabled),
+.accountDropdown button.accountDropdownItem:focus-visible:not(:disabled) {
+  border: 0;
+  outline: 0;
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.accountDropdown .accountSettingsButton,
+.accountDropdown .accountSettingsButton:not(:disabled),
+.accountDropdown .accountSettingsButton:hover:not(:disabled),
+.accountDropdown .accountSettingsButton:focus-visible:not(:disabled) {
+  border: 0;
+  box-shadow: none;
 }
 
 #linkWalletButton:not(:disabled) {
@@ -302,9 +203,12 @@ select:not(.mflDropdownNative):disabled {
   color: #ff6b6b;
 }
 
-/* Watchlist dropdown. */
+/* Watchlist dropdown. Preserve all established dimensions. */
 .watchlistButton {
   position: relative;
+  width: 350px;
+  height: 40px;
+  padding: 0 10px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -335,7 +239,14 @@ select:not(.mflDropdownNative):disabled {
 
 .watchlistDropdown {
   top: calc(100% + var(--mfl-dropdown-gap));
-  min-width: 320px;
+  width: 350px;
+  min-width: 350px;
+  max-width: calc(100vw - 24px);
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--mfl-dropdown-shadow);
 }
 
 .watchlistDropdownItem {
@@ -344,11 +255,33 @@ select:not(.mflDropdownNative):disabled {
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-height: 36px;
+  margin: 0;
   padding: 2px 4px 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
 }
 
 .watchlistDropdownItem:not(.watchlistDropdownAdd) + .watchlistDropdownItem:not(.watchlistDropdownAdd) {
   margin-top: 2px;
+}
+
+.watchlistDropdownItem:hover:not(.active),
+.watchlistDropdownItem:focus-within:not(.active),
+.watchlistDropdownAdd:hover:not(:disabled),
+.watchlistDropdownAdd:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--primary-hover);
+}
+
+.watchlistDropdownItem.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
 }
 
 .watchlistDropdownName {
@@ -364,6 +297,7 @@ select:not(.mflDropdownNative):disabled {
   border: 0;
   background: transparent;
   color: inherit;
+  font-weight: 700;
   text-align: left;
 }
 
@@ -385,7 +319,7 @@ select:not(.mflDropdownNative):disabled {
 .watchlistDropdownCount {
   flex: 0 0 auto;
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -393,7 +327,7 @@ select:not(.mflDropdownNative):disabled {
 .watchlistDropdownActions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .watchlistDropdownAction {
@@ -407,7 +341,7 @@ select:not(.mflDropdownNative):disabled {
   margin: 0;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--surface-muted);
   color: var(--text-soft);
 }
@@ -427,6 +361,12 @@ select:not(.mflDropdownNative):disabled {
   color: var(--text);
 }
 
+.watchlistDropdownDelete {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
 .watchlistDropdownDelete:hover:not(:disabled),
 .watchlistDropdownDelete:focus-visible:not(:disabled) {
   border-color: #ff8a8a;
@@ -440,75 +380,25 @@ select:not(.mflDropdownNative):disabled {
 
 .watchlistDropdownSeparator {
   height: 1px;
-  margin: 5px 4px;
+  margin: 2px 4px 5px;
   background: var(--border);
 }
 
 .watchlistDropdownAdd {
   justify-content: flex-start;
+  min-height: 36px;
   height: 36px;
 }
 
-/* Filter and rows integration. */
+/* Preserve the Filters popup column widths used immediately before the rebuild. */
 .filtersDialog .filterRule {
   grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
-}
-
-.filtersDialog select[data-filter-connector],
-.filtersDialog select[data-filter-operator],
-.filtersDialog .mflSelect[data-filter-role="connector"] .mflSelectTrigger,
-.filtersDialog .mflSelect[data-filter-role="operator"] .mflSelectTrigger {
-  line-height: 1;
 }
 
 .controlsBar > .field.compact.rowsField {
   position: relative;
   z-index: 1;
   justify-self: end;
-}
-
-.field.rowsField .mflSelect {
-  width: var(--mfl-select-width, auto);
-}
-
-.field.rowsField .mflSelectTrigger {
-  width: 100%;
-}
-
-.filtersDialog .filterRule > .iconButton.popupCloseButton {
-  align-self: center;
-  justify-self: center;
-  width: 36px;
-  min-width: 36px;
-  max-width: 36px;
-  height: 36px;
-  min-height: 36px;
-  max-height: 36px;
-  margin: 0;
-  padding: 0;
-  font-size: 0;
-}
-
-.filtersDialog .filterRule > .popupCloseButton::before,
-.filtersDialog .filterRule > .popupCloseButton::after {
-  top: 50%;
-  left: 50%;
-  width: 10px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-/* Inline table selects keep their cell footprint. */
-.mflSelect[data-mfl-inline="true"] {
-  width: 100%;
-}
-
-.mflSelect[data-mfl-inline="true"] .mflSelectTrigger {
-  width: 100%;
-  height: 32px;
-  min-height: 32px;
-  padding-inline: 8px;
 }
 
 @media (max-width: 900px) {
@@ -521,9 +411,5 @@ select:not(.mflDropdownNative):disabled {
     width: 100%;
     min-width: 0;
     max-width: 100%;
-  }
-
-  .field.rowsField .mflSelect {
-    width: min(160px, 48vw) !important;
   }
 }
