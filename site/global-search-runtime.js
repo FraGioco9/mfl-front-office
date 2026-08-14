@@ -24,6 +24,9 @@
   let pendingEvaluationQuery = "";
   let pendingEvaluationFlushTimer = 0;
   let pendingEvaluationFlushAttempts = 0;
+  let canonicalSearchCaptured = false;
+  let canonicalSearchArmed = document.documentElement.dataset.mflReady === "true";
+  let canonicalSearchResults = [];
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -114,6 +117,69 @@
     }
   }
 
+  function currentSearchButtons() {
+    const results = searchResults();
+    if (!results) return [];
+    return Array.from(results.querySelectorAll(":scope > .searchResult"))
+      .filter((button) => button instanceof HTMLButtonElement)
+      .slice(0, MAX_RESULT_BOXES);
+  }
+
+  function searchResultKey(button) {
+    if (!(button instanceof HTMLButtonElement)) return "";
+    const key = String(button.dataset.searchKey || "").trim().toLowerCase();
+    return key || normalize(button.textContent);
+  }
+
+  function prependCanonicalSearchResult(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const key = searchResultKey(button);
+    if (!key) return;
+    canonicalSearchResults = [
+      button,
+      ...canonicalSearchResults.filter((candidate) => searchResultKey(candidate) !== key),
+    ].slice(0, MAX_RESULT_BOXES);
+  }
+
+  function syncCanonicalSearchResults() {
+    const input = searchInput();
+    const results = searchResults();
+    if (!input || !results) return;
+
+    if (!canonicalSearchCaptured && canonicalSearchArmed && !input.value.trim()) {
+      const rendered = currentSearchButtons();
+      if (rendered.length) {
+        canonicalSearchResults = rendered;
+        canonicalSearchCaptured = true;
+      }
+      return;
+    }
+
+    if (!canonicalSearchCaptured || input.value.trim()) return;
+
+    queueMicrotask(() => {
+      if (destroyed || input.value.trim() || !canonicalSearchResults.length) return;
+      const current = Array.from(results.children);
+      const alreadyCanonical = current.length === canonicalSearchResults.length
+        && current.every((node, index) => node === canonicalSearchResults[index]);
+      if (alreadyCanonical) return;
+      results.replaceChildren(...canonicalSearchResults);
+      results.classList.toggle("filledSearchResults", canonicalSearchResults.length > 0);
+    });
+  }
+
+  function onSearchResultClick(event) {
+    if (!canonicalSearchCaptured || !(event.target instanceof Element)) return;
+    const button = event.target.closest("#playerSearchResults .searchResult");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    prependCanonicalSearchResult(button);
+  }
+
+  function armCanonicalSearchResults() {
+    canonicalSearchArmed = true;
+    syncCanonicalSearchResults();
+  }
+
   function capResultBoxes() {
     const results = searchResults();
     if (!results) return;
@@ -122,14 +188,19 @@
       .forEach((result) => result.remove());
   }
 
+  function syncResultBoxes() {
+    capResultBoxes();
+    syncCanonicalSearchResults();
+  }
+
   function observeResultBoxes() {
     const results = searchResults();
     if (!results || results === observedResults) return;
     resultsObserver?.disconnect();
     observedResults = results;
-    resultsObserver = new MutationObserver(capResultBoxes);
+    resultsObserver = new MutationObserver(syncResultBoxes);
     resultsObserver.observe(results, { childList: true });
-    capResultBoxes();
+    syncResultBoxes();
   }
 
   function renderCurrentResults() {
@@ -143,7 +214,7 @@
       console.warn("Could not render global search results.", error);
     } finally {
       observeResultBoxes();
-      capResultBoxes();
+      syncResultBoxes();
     }
   }
 
@@ -535,13 +606,16 @@
     });
   }
 
+  document.addEventListener("click", onSearchResultClick, true);
   document.addEventListener("input", onInput, true);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
+  window.addEventListener("mfl:ready", armCanonicalSearchResults);
   window.addEventListener("mfl:ready", flushPendingPayload);
   window.addEventListener("mfl:ready", flushPendingEvaluationPayload);
   observeResultBoxes();
   observeSearchModal();
+  if (canonicalSearchArmed) syncCanonicalSearchResults();
   document.documentElement.dataset.globalSearchAuthoritative = "true";
   document.documentElement.dataset.evaluationSearchAuthoritative = "true";
   window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
@@ -560,6 +634,8 @@
     pendingEvaluationPayload = null;
     pendingEvaluationQuery = "";
     pendingEvaluationFlushAttempts = 0;
+    canonicalSearchCaptured = false;
+    canonicalSearchResults = [];
     if (pendingFlushTimer) window.clearTimeout(pendingFlushTimer);
     pendingFlushTimer = 0;
     if (pendingEvaluationFlushTimer) window.clearTimeout(pendingEvaluationFlushTimer);
@@ -575,9 +651,11 @@
     focusSettleTimer = 0;
     delete document.documentElement.dataset.globalSearchQueryPending;
     delete document.documentElement.dataset.evaluationSearchQueryPending;
+    document.removeEventListener("click", onSearchResultClick, true);
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
+    window.removeEventListener("mfl:ready", armCanonicalSearchResults);
     window.removeEventListener("mfl:ready", flushPendingPayload);
     window.removeEventListener("mfl:ready", flushPendingEvaluationPayload);
   }
