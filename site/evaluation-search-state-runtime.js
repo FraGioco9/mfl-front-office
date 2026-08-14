@@ -240,6 +240,16 @@
     requestAnimationFrame(() => { syncing = false; });
   }
 
+  function restoreEmptyRecentResults(force = false) {
+    const field = input();
+    if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
+    return primeRecentSearchData({ force }).finally(() => queueMicrotask(sync));
+  }
+
+  function onReady() {
+    void restoreEmptyRecentResults(true);
+  }
+
   function onBlur(event) {
     if (event.target !== input()) return;
     const field = input();
@@ -250,7 +260,7 @@
     if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
 
     if (!field.value.trim()) {
-      void primeRecentSearchData().finally(() => queueMicrotask(sync));
+      void restoreEmptyRecentResults();
     }
   }
 
@@ -259,7 +269,7 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncClearButton(field);
     if (field.value.trim()) return;
-    void primeRecentSearchData().finally(() => queueMicrotask(sync));
+    void restoreEmptyRecentResults();
   }
 
   function onClick(event) {
@@ -267,10 +277,7 @@
 
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      void primeRecentSearchData().finally(() => queueMicrotask(() => {
-        syncClearButton();
-        sync();
-      }));
+      void restoreEmptyRecentResults(true);
       return;
     }
 
@@ -310,8 +317,11 @@
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
+  window.addEventListener("mfl:evaluation-ready", onReady);
+  window.addEventListener("mfl:ready", onReady);
+  window.addEventListener("pageshow", onReady);
   installObserver();
-  void primeRecentSearchData().finally(sync);
+  void restoreEmptyRecentResults(true);
   sync();
 
   function destroy() {
@@ -321,6 +331,9 @@
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
+    window.removeEventListener("mfl:evaluation-ready", onReady);
+    window.removeEventListener("mfl:ready", onReady);
+    window.removeEventListener("pageshow", onReady);
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
@@ -329,5 +342,5 @@
     }
   }
 
-  window.__mflEvaluationSearchStateRuntime = Object.freeze({ sync, destroy });
+  window.__mflEvaluationSearchStateRuntime = Object.freeze({ sync, restoreEmptyRecentResults, destroy });
 })();
