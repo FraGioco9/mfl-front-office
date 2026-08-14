@@ -162,6 +162,50 @@
     }
   }
 
+  function storeEvaluationPlayerLabel(playerId, playerName) {
+    const id = String(playerId || "").trim();
+    const name = String(playerName || "").trim();
+    if (!id || !name) return;
+    try {
+      localStorage.setItem(`${EVALUATION_PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
+    } catch {
+      // First paint still uses the resolved name when browser storage is blocked.
+    }
+  }
+
+  function primeEvaluationPlayerLabel(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return;
+    const requestUrl = new URL("/api/data", window.location.origin);
+    requestUrl.searchParams.set("mode", "search");
+    requestUrl.searchParams.set("type", "players");
+    requestUrl.searchParams.set("q", id);
+    requestUrl.searchParams.set("limit", "5");
+
+    void fetch(requestUrl.toString(), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    }).then((response) => response.ok ? response.json() : null).then((payload) => {
+      const columns = Array.isArray(payload?.columns) ? payload.columns : [];
+      const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+      const idIndex = columns.indexOf("player_id");
+      const nameIndex = columns.indexOf("name");
+      if (idIndex < 0 || nameIndex < 0) return;
+      const row = rows.find((candidate) => Array.isArray(candidate) && String(candidate[idIndex]) === id);
+      const playerName = String(row?.[nameIndex] || "").trim();
+      if (!playerName) return;
+      storeEvaluationPlayerLabel(id, playerName);
+      if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
+      if (String(new URLSearchParams(window.location.search).get("player") || "").trim() !== id) return;
+      const input = document.getElementById("evaluationSearchInput");
+      if (!(input instanceof HTMLInputElement)) return;
+      const fallback = `Player #${id}`;
+      if (!input.value.trim() || input.value === fallback) input.value = playerName;
+    }).catch(() => {
+      // The normal Evaluation data load will replace the fallback when available.
+    });
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -191,6 +235,7 @@
         searchInput.value = storedEvaluationPlayerLabel(playerId) || `Player #${playerId}`;
       }
       if (searchClearButton instanceof HTMLButtonElement) searchClearButton.hidden = false;
+      primeEvaluationPlayerLabel(playerId);
       return;
     }
 
