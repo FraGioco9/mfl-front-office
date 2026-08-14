@@ -73,22 +73,34 @@
         border: 0;
         border-radius: 5px 0 0 5px;
         outline: 0;
-        background: transparent;
+        background: var(--surface);
         color: #ffffff;
         -webkit-text-fill-color: #ffffff;
         opacity: 1;
         box-shadow: none;
         font: inherit;
         cursor: pointer;
+        transition: background 120ms ease, color 120ms ease;
       }
 
+      .field.rowsField .pageSizeSelectGrid:hover #pageSizeSelect:not(:disabled),
+      .field.rowsField .pageSizeSelectGrid:focus-within #pageSizeSelect:not(:disabled),
       .field.rowsField .pageSizeSelectGrid #pageSizeSelect:hover:not(:disabled),
       .field.rowsField .pageSizeSelectGrid #pageSizeSelect:focus:not(:disabled),
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:focus-visible:not(:disabled),
+      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:focus-visible:not(:disabled) {
+        border: 0;
+        outline: 0;
+        background: var(--row-hover);
+        color: #ffffff;
+        -webkit-text-fill-color: #ffffff;
+        opacity: 1;
+        box-shadow: none;
+      }
+
       .field.rowsField .pageSizeSelectGrid #pageSizeSelect:disabled {
         border: 0;
         outline: 0;
-        background: transparent;
+        background: var(--surface);
         color: #ffffff;
         -webkit-text-fill-color: #ffffff;
         opacity: 1;
@@ -128,40 +140,10 @@
     document.head.appendChild(style);
   }
 
-  function openPageSizeSelect(select) {
-    if (!(select instanceof HTMLSelectElement) || select.disabled) return;
-    select.focus({ preventScroll: true });
-    if (typeof select.showPicker === "function") {
-      try {
-        select.showPicker();
-        return;
-      } catch {
-        // Fall through to the native click path when showPicker is unavailable.
-      }
-    }
-    select.click();
-  }
-
-  function installPageSizeSelectInteraction(select, grid) {
-    if (!(select instanceof HTMLSelectElement) || !(grid instanceof HTMLElement)) return;
-    if (grid.dataset.pageSizeInteractive === "true") return;
-    grid.dataset.pageSizeInteractive = "true";
-    grid.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || select.disabled) return;
-      if (event.target === select || event.target instanceof HTMLOptionElement) return;
-      event.preventDefault();
-      openPageSizeSelect(select);
-    });
-  }
-
   function rebuildPageSizeSelectGrid() {
     const select = document.getElementById("pageSizeSelect");
     if (!(select instanceof HTMLSelectElement)) return false;
-    const existingGrid = select.parentElement;
-    if (existingGrid?.classList.contains("pageSizeSelectGrid")) {
-      installPageSizeSelectInteraction(select, existingGrid);
-      return true;
-    }
+    if (select.parentElement?.classList.contains("pageSizeSelectGrid")) return true;
 
     const originalWidth = select.getBoundingClientRect().width;
     const grid = document.createElement("span");
@@ -172,7 +154,6 @@
 
     select.before(grid);
     grid.appendChild(select);
-    installPageSizeSelectInteraction(select, grid);
     return true;
   }
 
