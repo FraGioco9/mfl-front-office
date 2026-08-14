@@ -45,8 +45,18 @@ function csvValues(value, maximum = 50) {
     .slice(0, maximum);
 }
 
+function normalizedQueryText(value) {
+  return normalizeSearchText(String(value ?? "").replace(/\+/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function literalLikePattern(value, prefixOnly = false) {
-  const escaped = String(value || "").replace(/[\\%_]/g, "\\$&");
+  const escaped = String(value || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.replace(/[\\%_]/g, "\\$&"))
+    .join("%");
   return prefixOnly ? `${escaped}%` : `%${escaped}%`;
 }
 
@@ -254,7 +264,7 @@ function searchData(request) {
   const type = String(request.query?.type || "players").toLowerCase();
   if (type === "recent") return recentSearchData(request);
 
-  const query = normalizeSearchText(request.query?.q);
+  const query = normalizedQueryText(request.query?.q);
   const limit = Math.max(1, Math.min(50, Math.trunc(Number(request.query?.limit) || 20)));
   if (!query) {
     if (type === "all") {
