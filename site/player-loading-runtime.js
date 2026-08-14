@@ -4,6 +4,7 @@
   const PLAYER_LABEL_STORAGE_PREFIX = "mfl-player-label-v1:";
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const PROFILE_LABELS = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
+  const ATTRIBUTE_LABELS = ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
   const ATTRIBUTE_VIEWS = ["Attributes", "Training", "Next Overall", "Current Season", "All Time"];
   let renderingSkeleton = false;
 
@@ -26,6 +27,28 @@
     }
   }
 
+  function playerIdFromHref(href) {
+    try {
+      const url = new URL(String(href || ""), window.location.origin);
+      if (url.origin !== window.location.origin) return "";
+      const match = url.pathname.match(/^\/players\/([^/]+)\/?$/i);
+      return match ? decodeURIComponent(match[1]).trim() : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function storePlayerName(playerId, playerName) {
+    const id = String(playerId || "").trim();
+    const name = String(playerName || "").trim();
+    if (!id || !name) return;
+    try {
+      localStorage.setItem(`${PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
+    } catch {
+      // First paint still works when browser storage is unavailable.
+    }
+  }
+
   function storedPlayerName(playerId) {
     const id = String(playerId || "").trim();
     if (!id) return "";
@@ -41,14 +64,26 @@
   }
 
   function rememberRenderedPlayerName(playerId, detail) {
-    const id = String(playerId || "").trim();
     const name = detail?.querySelector?.(".playerTitleName")?.textContent?.trim() || "";
-    if (!id || !name) return;
-    try {
-      localStorage.setItem(`${PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
-    } catch {
-      // Loading still works when browser storage is unavailable.
+    storePlayerName(playerId, name);
+  }
+
+  function rememberNavigationPlayerName(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const playerLink = target.closest("a.playerNameLink[href]");
+    if (playerLink instanceof HTMLAnchorElement) {
+      storePlayerName(playerIdFromHref(playerLink.href), playerLink.textContent);
+      return;
     }
+
+    const searchResult = target.closest('.searchResult[data-search-key^="player:"]');
+    if (!(searchResult instanceof HTMLElement)) return;
+    const key = String(searchResult.dataset.searchKey || "");
+    const playerId = key.startsWith("player:") ? key.slice("player:".length).trim() : "";
+    const playerName = searchResult.querySelector("strong")?.textContent || "";
+    storePlayerName(playerId, playerName);
   }
 
   function storedWalletOptIn() {
@@ -59,16 +94,16 @@
     return PROFILE_LABELS.map((label) => `
       <div${label === "Contract" ? ' class="contractDetailCard"' : ""}>
         <span>${label}</span>
-        <strong><span class="mflPlayerLoadingValue" aria-hidden="true"></span></strong>
+        <strong class="mflPlayerLoadingEmptyValue" aria-hidden="true">&nbsp;</strong>
       </div>
     `).join("");
   }
 
   function attributeCardsMarkup() {
-    return Array.from({ length: 7 }, () => `
-      <div class="playerAttributeCard mflPlayerLoadingAttributeCard" aria-hidden="true">
-        <span class="mflPlayerLoadingAttributeLabel"></span>
-        <strong class="mflPlayerLoadingAttributeValue"></strong>
+    return ATTRIBUTE_LABELS.map((label) => `
+      <div class="playerAttributeCard mflPlayerLoadingAttributeCard">
+        <span>${label}</span>
+        <strong class="mflPlayerLoadingEmptyValue" aria-hidden="true">&nbsp;</strong>
       </div>
     `).join("");
   }
@@ -87,22 +122,24 @@
     const playerName = storedPlayerName(playerId);
     const nameMarkup = playerName
       ? `<span class="playerTitleName">${escapeHtml(playerName)}</span>`
-      : '<span class="mflPlayerLoadingLine mflPlayerLoadingName" aria-hidden="true"></span>';
+      : '<span class="playerTitleName mflPlayerLoadingEmptyName" aria-hidden="true">&nbsp;</span>';
     const notesMarkup = storedWalletOptIn()
       ? `
         <div class="playerPanel playerNotesPanel">
           <h3>Notes</h3>
-          <div class="mflPlayerLoadingNotes" aria-hidden="true"></div>
+          <div class="playerNotesInputWrap">
+            <textarea class="playerNotesInput mflPlayerLoadingNotes" aria-hidden="true" disabled></textarea>
+          </div>
         </div>
       `
       : "";
 
     return `
       <section class="playerHero" data-mfl-player-loading-shell="true" aria-busy="true">
-        <div class="mflPlayerLoadingIdentity">
+        <div>
           <span class="playerEyebrow playerIdText">ID #${id}</span>
           <h2 class="playerTitle">${nameMarkup}</h2>
-          <p><span class="mflPlayerLoadingLine mflPlayerLoadingPositions" aria-hidden="true"></span></p>
+          <p><span class="mflPlayerLoadingEmptyPosition" aria-hidden="true">&nbsp;</span></p>
         </div>
         <div class="playerHeroActions">${actionBoxesMarkup()}</div>
       </section>
@@ -134,44 +171,20 @@
     const style = document.createElement("style");
     style.id = "mflPlayerLoadingStyles";
     style.textContent = `
-      #playerDetail [data-mfl-player-loading-shell="true"] .mflPlayerLoadingLine,
-      #playerDetail [data-mfl-player-loading-grid="true"] .mflPlayerLoadingValue,
-      #playerDetail [data-mfl-player-loading-grid="true"] .mflPlayerLoadingAttributeLabel,
-      #playerDetail [data-mfl-player-loading-grid="true"] .mflPlayerLoadingAttributeValue,
-      #playerDetail [data-mfl-player-loading-grid="true"] .mflPlayerLoadingNotes,
-      #playerDetail [data-mfl-player-loading-shell="true"] .mflPlayerLoadingAction {
-        display: block;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--surface-muted);
-      }
-
-      #playerDetail .mflPlayerLoadingIdentity {
-        min-width: 220px;
-      }
-
-      #playerDetail .mflPlayerLoadingName {
-        width: 190px;
-        height: 24px;
-        margin-top: 2px;
-      }
-
-      #playerDetail .mflPlayerLoadingPositions {
-        width: 92px;
-        height: 14px;
+      #playerDetail .mflPlayerLoadingEmptyValue,
+      #playerDetail .mflPlayerLoadingEmptyName,
+      #playerDetail .mflPlayerLoadingEmptyPosition {
+        visibility: hidden;
       }
 
       #playerDetail .mflPlayerLoadingAction {
+        display: block;
         width: 172px;
         min-width: 172px;
         height: 40px;
-        border-color: var(--border-strong);
+        border: 1px solid var(--border-strong);
         border-radius: 6px;
-      }
-
-      #playerDetail .mflPlayerLoadingValue {
-        width: min(112px, 78%);
-        height: 14px;
+        background: var(--surface-muted);
       }
 
       #playerDetail .mflPlayerLoadingView {
@@ -182,22 +195,12 @@
       }
 
       #playerDetail .mflPlayerLoadingAttributeCard {
-        min-height: 42px;
-      }
-
-      #playerDetail .mflPlayerLoadingAttributeLabel {
-        width: 48%;
-        height: 9px;
-      }
-
-      #playerDetail .mflPlayerLoadingAttributeValue {
-        width: 66%;
-        height: 15px;
+        cursor: default;
       }
 
       #playerDetail .mflPlayerLoadingNotes {
-        width: 100%;
-        height: 58px;
+        pointer-events: none;
+        resize: none;
       }
 
       #playerDetail .mflPlayerLoadingPitch {
@@ -254,6 +257,7 @@
     if (!detail.children.length || text === "Loading player...") renderSkeleton();
   }
 
+  document.addEventListener("click", rememberNavigationPlayerName, true);
   installStyles();
   renderSkeleton({ force: true });
 
