@@ -89,6 +89,31 @@
       #selectionBar.mflSelectionActionDismissed * {
         pointer-events: none !important;
       }
+
+      #addWatchlistNameInput:focus,
+      #addWatchlistNameInput:focus-visible {
+        outline: none;
+        border-color: var(--primary-hover);
+        background: var(--row-hover);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      #sidebar .navButton:focus,
+      #sidebar .navButton:focus-visible {
+        outline: none;
+        border-color: var(--primary-hover);
+        background: var(--row-hover);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      #sidebar .navButton.active:focus,
+      #sidebar .navButton.active:focus-visible {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
     `;
     if (style && style.textContent !== css) style.textContent = css;
   }
@@ -123,6 +148,21 @@
 
   function applicationOwnsSelectionLifecycle(action) {
     return action?.id === "addToWatchlistButton" || action?.id === "moveToWatchlistButton";
+  }
+
+  function modalIsOpen(id) {
+    const modal = document.getElementById(id);
+    return modal instanceof HTMLElement && !modal.hidden;
+  }
+
+  function selectionActionModalOpen() {
+    if (modalIsOpen("watchlistChoiceModal")) return true;
+    if (!modalIsOpen("addWatchlistModal")) return false;
+    try {
+      return ["add-selected", "move-selected"].includes(String(state?.pendingAddWatchlistContext || ""));
+    } catch {
+      return true;
+    }
   }
 
   function rememberBarTop(bar = selectionBar()) {
@@ -194,6 +234,18 @@
     schedule();
   }
 
+  function restoreSelectionBar(bar) {
+    if (!(bar instanceof HTMLElement)) return;
+    if (exitTimer) {
+      clearTimeout(exitTimer);
+      exitTimer = 0;
+    }
+    awaitingSelectionReset = false;
+    bar.hidden = false;
+    bar.classList.remove("mflSelectionActionDismissed");
+    bar.classList.add("visible");
+  }
+
   function syncDismissalLifecycle() {
     const bar = selectionBar();
     if (!bar) return;
@@ -202,6 +254,11 @@
     if (awaitingSelectionReset && selectedCount === 0) {
       awaitingSelectionReset = false;
       if (!exitTimer) bar.classList.remove("mflSelectionActionDismissed");
+      return;
+    }
+
+    if (awaitingSelectionReset && selectedCount > 0 && !selectionActionModalOpen()) {
+      restoreSelectionBar(bar);
       return;
     }
 
@@ -293,6 +350,15 @@
     queueMicrotask(() => completeActionClick(action, sequence));
   }
 
+  function onKeyDown(event) {
+    if (event.key !== "Escape" || !modalIsOpen("addWatchlistModal")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const closeButton = document.getElementById("closeAddWatchlistButton");
+    if (closeButton instanceof HTMLButtonElement) closeButton.click();
+    schedule();
+  }
+
   function rebind() {
     if (destroyed) return;
     schedule();
@@ -300,6 +366,7 @@
 
   window.addEventListener("pointerdown", onPointerDown, true);
   window.addEventListener("click", onClick, true);
+  document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);
   rebind();
@@ -312,6 +379,7 @@
     observer?.disconnect();
     window.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("click", onClick, true);
+    document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
     document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
