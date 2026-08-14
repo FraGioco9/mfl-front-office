@@ -20,6 +20,24 @@
     return "";
   }
 
+  function initialSidebarPage() {
+    const first = String(window.location.pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
+    if (first === "my-players") return "myplayers";
+    if (["database", "mfl", "progression", "evaluation", "watchlist", "settings"].includes(first)) return first;
+    return "";
+  }
+
+  function syncSidebarFirstPaint() {
+    const pageName = initialSidebarPage();
+    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      const active = Boolean(pageName) && String(button.dataset.page || "") === pageName;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+  }
+
   function storedQuickFilters(pageName) {
     const defaults = {
       hideRetired: true,
@@ -255,6 +273,7 @@
   }
 
   function syncBootstrapFirstPaint() {
+    syncSidebarFirstPaint();
     normalizeEvaluationSearchClearButton();
     installEvaluationTableSpacing();
     installPopupContentCentering();
