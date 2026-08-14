@@ -4,6 +4,7 @@
   const RESET_WINDOW_MS = 1000;
   const STYLE_ID = "mflSelectionStartupResetStyles";
   const PENDING_CLASS = "mflSelectionStartupResetPending";
+  const TABLE_PAGE_NAMES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
 
   window.__mflSelectionStartupResetRuntime?.destroy?.();
 
@@ -73,12 +74,68 @@
     return true;
   }
 
+  function normalizePage(value) {
+    const page = String(value || "").trim().toLowerCase();
+    if (page === "my-players") return "myplayers";
+    if (page === "databasestats") return "database";
+    if (page === "mflstats") return "mfl";
+    return page;
+  }
+
+  function clearSelectionForPageChange(pageName) {
+    const appState = applicationState();
+    if (!appState || !(appState.selectedPlayerIds instanceof Set)) return false;
+
+    const sourcePage = normalizePage(appState.currentPage);
+    const destinationPage = normalizePage(pageName);
+    if (!TABLE_PAGE_NAMES.has(sourcePage) || !destinationPage || destinationPage === sourcePage) return false;
+
+    const hadSelection = appState.selectedPlayerIds.size > 0 || appState.selectionAnchorPlayerId != null;
+    appState.selectedPlayerIds.clear();
+    appState.selectionAnchorPlayerId = null;
+    clearSelectionFromPageStates(appState);
+
+    const bar = document.getElementById("selectionBar");
+    if (bar instanceof HTMLElement) {
+      bar.classList.remove("visible", "mflSelectionActionDismissed");
+      bar.hidden = true;
+    }
+
+    if (hadSelection) {
+      try {
+        if (typeof updateSelectionBar === "function") updateSelectionBar();
+      } catch {
+        // The router will render the destination with an empty selection.
+      }
+    }
+    return hadSelection;
+  }
+
+  function installNavigationSelectionBridge() {
+    try {
+      if (typeof setPage !== "function") return false;
+      if (setPage.__mflClearsSelectionOnPageChange) return true;
+
+      const originalSetPage = setPage;
+      const setPageWithSelectionReset = async function(pageName, updateHash = true, options = {}) {
+        clearSelectionForPageChange(pageName);
+        return originalSetPage.call(this, pageName, updateHash, options);
+      };
+      Object.defineProperty(setPageWithSelectionReset, "__mflClearsSelectionOnPageChange", { value: true });
+      setPage = setPageWithSelectionReset;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function finishResetWindow() {
     if (resetTimer) clearTimeout(resetTimer);
     resetTimer = 0;
     resetObserver?.disconnect();
     resetObserver = null;
     clearCurrentSelection();
+    installNavigationSelectionBridge();
     document.documentElement.classList.remove(PENDING_CLASS);
     document.getElementById(STYLE_ID)?.remove();
   }
@@ -86,6 +143,7 @@
   function runResetPass() {
     if (destroyed) return;
     clearCurrentSelection();
+    installNavigationSelectionBridge();
     if (Date.now() - startedAt >= RESET_WINDOW_MS) finishResetWindow();
   }
 
@@ -108,7 +166,9 @@
   }
 
   function rebind() {
-    if (!destroyed) runResetPass();
+    if (destroyed) return;
+    installNavigationSelectionBridge();
+    runResetPass();
   }
 
   ensurePendingStyle();
@@ -120,6 +180,7 @@
     attributeFilter: ["class", "hidden", "data-page", "data-mfl-ready"],
   });
   resetTimer = window.setTimeout(finishResetWindow, RESET_WINDOW_MS);
+  installNavigationSelectionBridge();
   runResetPass();
 
   function destroy() {
