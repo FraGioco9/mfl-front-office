@@ -2,6 +2,7 @@
   "use strict";
 
   const PLAYER_LABEL_STORAGE_PREFIX = "mfl-player-label-v1:";
+  const PLAYER_POSITION_STORAGE_PREFIX = "mfl-player-position-v1:";
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const PROFILE_LABELS = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
   const ATTRIBUTE_LABELS = ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
@@ -56,6 +57,17 @@
     }
   }
 
+  function storePlayerPosition(playerId, playerPosition) {
+    const id = String(playerId || "").trim();
+    const position = String(playerPosition || "").trim();
+    if (!id || !position) return;
+    try {
+      localStorage.setItem(`${PLAYER_POSITION_STORAGE_PREFIX}${id}`, position);
+    } catch {
+      // First paint still works when browser storage is unavailable.
+    }
+  }
+
   function storedPlayerName(playerId) {
     const id = String(playerId || "").trim();
     if (!id) return "";
@@ -70,18 +82,40 @@
     }
   }
 
-  function rememberRenderedPlayerName(playerId, detail) {
-    const name = detail?.querySelector?.(".playerTitleName")?.textContent?.trim() || "";
-    storePlayerName(playerId, name);
+  function storedPlayerPosition(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return "";
+    try {
+      return String(localStorage.getItem(`${PLAYER_POSITION_STORAGE_PREFIX}${id}`) || "").trim();
+    } catch {
+      return "";
+    }
   }
 
-  function rememberNavigationPlayerName(event) {
+  function rememberRenderedPlayerIdentity(playerId, detail) {
+    const name = detail?.querySelector?.(".playerTitleName")?.textContent?.trim() || "";
+    const position = detail?.querySelector?.(".playerHero p")?.textContent?.trim() || "";
+    storePlayerName(playerId, name);
+    storePlayerPosition(playerId, position);
+  }
+
+  function searchResultPosition(searchResult) {
+    const summary = searchResult?.querySelector?.("span")?.textContent || "";
+    const parts = String(summary).split("·").map((part) => part.trim()).filter(Boolean);
+    return parts.length >= 4 ? String(parts.at(-1) || "").trim() : "";
+  }
+
+  function rememberNavigationPlayerIdentity(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
     const playerLink = target.closest("a.playerNameLink[href]");
     if (playerLink instanceof HTMLAnchorElement) {
-      storePlayerName(playerIdFromHref(playerLink.href), playerLink.textContent);
+      const playerId = playerIdFromHref(playerLink.href);
+      const row = playerLink.closest("tr");
+      const position = row?.querySelector?.('.col-positions,[data-column="positions"]')?.textContent || "";
+      storePlayerName(playerId, playerLink.textContent);
+      storePlayerPosition(playerId, position);
       return;
     }
 
@@ -91,6 +125,7 @@
     const playerId = key.startsWith("player:") ? key.slice("player:".length).trim() : "";
     const playerName = searchResult.querySelector("strong")?.textContent || "";
     storePlayerName(playerId, playerName);
+    storePlayerPosition(playerId, searchResultPosition(searchResult));
   }
 
   function storedWalletOptIn() {
@@ -150,9 +185,13 @@
   function playerLoadingMarkup(playerId) {
     const id = escapeHtml(playerId);
     const playerName = storedPlayerName(playerId);
+    const playerPosition = storedPlayerPosition(playerId);
     const nameMarkup = playerName
       ? `<span class="playerTitleName">${escapeHtml(playerName)}</span>`
       : '<span class="playerTitleName mflPlayerLoadingEmptyName" aria-hidden="true">&nbsp;</span>';
+    const positionMarkup = playerPosition
+      ? `<span>${escapeHtml(playerPosition)}</span>`
+      : '<span class="mflPlayerLoadingEmptyPosition" aria-hidden="true">&nbsp;</span>';
     const notesMarkup = storedWalletOptIn()
       ? `
         <div class="playerPanel playerNotesPanel">
@@ -169,7 +208,7 @@
         <div>
           <span class="playerEyebrow playerIdText">ID #${id}</span>
           <h2 class="playerTitle">${nameMarkup}</h2>
-          <p><span class="mflPlayerLoadingEmptyPosition" aria-hidden="true">&nbsp;</span></p>
+          <p>${positionMarkup}</p>
         </div>
         <div class="playerHeroActions">${actionControlsMarkup()}</div>
       </section>
@@ -231,7 +270,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
-      rememberRenderedPlayerName(playerId, detail);
+      rememberRenderedPlayerIdentity(playerId, detail);
       return false;
     }
 
@@ -258,7 +297,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
-      rememberRenderedPlayerName(playerId, detail);
+      rememberRenderedPlayerIdentity(playerId, detail);
       delete detail.dataset.mflPlayerLoading;
       return;
     }
@@ -268,7 +307,7 @@
     if (!detail.children.length || text === "Loading player...") renderSkeleton();
   }
 
-  document.addEventListener("click", rememberNavigationPlayerName, true);
+  document.addEventListener("click", rememberNavigationPlayerIdentity, true);
   installStyles();
   renderSkeleton({ force: true });
 
