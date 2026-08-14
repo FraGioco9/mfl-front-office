@@ -5,6 +5,9 @@
 :root {
   --mfl-dropdown-chevron-inset: 10px;
   --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
+  --mfl-popup-close-size: 36px;
+  --mfl-popup-close-glyph-width: 10px;
+  --mfl-popup-close-glyph-height: 2px;
 }
 
 /* Rows uses the final dropdown appearance from first paint. Do not wait for
@@ -212,6 +215,64 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   .filtersDialog select option::checkmark {
     display: none;
   }
+}
+
+/* Canonical close control for every popup header. Keep the geometry and X glyph
+ * in one place so page-specific popup styles cannot shift it inside its box. */
+.modalBackdrop .filtersHeader > .popupCloseButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--mfl-popup-close-size);
+  width: var(--mfl-popup-close-size);
+  min-width: var(--mfl-popup-close-size);
+  max-width: var(--mfl-popup-close-size);
+  height: var(--mfl-popup-close-size);
+  min-height: var(--mfl-popup-close-size);
+  max-height: var(--mfl-popup-close-size);
+  margin: 0;
+  padding: 0;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0;
+  line-height: 0;
+  text-align: center;
+  box-shadow: none;
+}
+
+.modalBackdrop .filtersHeader > .popupCloseButton::before,
+.modalBackdrop .filtersHeader > .popupCloseButton::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--mfl-popup-close-glyph-width);
+  height: var(--mfl-popup-close-glyph-height);
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.modalBackdrop .filtersHeader > .popupCloseButton::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.modalBackdrop .filtersHeader > .popupCloseButton::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.modalBackdrop .filtersHeader > .popupCloseButton:hover:not(:disabled),
+.modalBackdrop .filtersHeader > .popupCloseButton:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
 }
 
 /* Shared popup state: lock background scrolling while a popup is open. */
