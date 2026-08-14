@@ -228,44 +228,7 @@
     });
   }
 
-  function restorePrimedPager() {
-    document.querySelectorAll("#progressionPage nav.pager").forEach((pager) => {
-      if (!(pager instanceof HTMLElement) || pager.dataset.staticLoadingPager !== "true") return;
-      const previouslyHidden = pager.dataset.staticLoadingPreviousHidden === "true";
-      const previousDisplay = pager.dataset.staticLoadingPreviousDisplay || "";
-      const previousDisplayPriority = pager.dataset.staticLoadingPreviousDisplayPriority || "";
-      delete pager.dataset.staticLoadingPager;
-      delete pager.dataset.staticLoadingPreviousHidden;
-      delete pager.dataset.staticLoadingPreviousDisplay;
-      delete pager.dataset.staticLoadingPreviousDisplayPriority;
-      pager.hidden = previouslyHidden;
-      if (previousDisplay) {
-        pager.style.setProperty("display", previousDisplay, previousDisplayPriority);
-      } else {
-        pager.style.removeProperty("display");
-      }
-    });
-  }
-
-  function settlePrimedTableLoading() {
-    if (document.documentElement.classList.contains("mflDataLoading")) return false;
-    const body = document.getElementById("tableBody");
-    if (!(body instanceof HTMLTableSectionElement) || body.dataset.staticLoading !== "true") return false;
-
-    const rows = Array.from(body.rows);
-    const hasResolvedRows = rows.some((row) => !row.classList.contains("staticTableBlankRow"));
-    const empty = document.getElementById("emptyState");
-    const emptyResolved = empty instanceof HTMLElement && !empty.hidden;
-    if (!hasResolvedRows && !emptyResolved) return false;
-
-    delete body.dataset.staticLoading;
-    body.querySelectorAll(":scope > .staticTableBlankRow").forEach((row) => row.remove());
-    restorePrimedPager();
-    window.__mflTableLoadingRuntime?.sync?.();
-    return true;
-  }
-
-  function primeDestination(page, view, options = {}) {
+  function primeDestination(page, view) {
     if (!TABLE_PAGES.has(page)) return;
     if (revealLockedDestination(page)) return;
 
@@ -278,9 +241,14 @@
     revealTableDestination();
     window.__mflSharedTableUiRuntime?.prime?.(page);
     syncDestinationStaticControls(page, view);
-    if (options.loading !== false) {
-      window.__mflTableLoadingRuntime?.primeRoute?.({ pageName: page, view });
-    }
+
+    // Navigation owns static first paint only. The data router owns whether a
+    // route is actually loading: cached incremental payloads render directly,
+    // while uncached routes call showTableBusyState() themselves. Priming just
+    // the header preserves immediate static chrome without creating fake
+    // loading rows for a route that is already in memory.
+    window.__mflTableLoadingRuntime?.syncSharedViewButtonPage?.(page);
+    window.__mflTableLoadingRuntime?.primeHeader?.(page, view);
     window.__mflFilterControlsRuntime?.sync?.();
   }
 
@@ -306,14 +274,12 @@
     queueMicrotask(() => {
       if (pendingPage !== page) return;
       pendingView = view;
-      primeDestination(page, view, { loading: false });
-      settlePrimedTableLoading();
+      primeDestination(page, view);
       if (repairFrame) cancelAnimationFrame(repairFrame);
       repairFrame = requestAnimationFrame(() => {
         repairFrame = 0;
         if (pendingPage !== page) return;
-        primeDestination(page, pendingView || view, { loading: false });
-        settlePrimedTableLoading();
+        primeDestination(page, pendingView || view);
         pendingPage = "";
         pendingView = "";
       });
