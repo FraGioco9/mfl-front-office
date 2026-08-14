@@ -6,23 +6,47 @@
 
   const NEUTRAL_ATTRIBUTE = "data-mfl-initial-filter-neutral";
   const STYLE_ID = "mflFilterAddFocusRuntimeStyles";
-  const POINTER_ESCAPE_CONTROL_SELECTOR = [
+  const BUTTON_GESTURE_SELECTOR = [
     "button",
     'input[type="button"]',
     'input[type="submit"]',
     'input[type="reset"]',
-    'input[type="checkbox"]',
-    'input[type="radio"]',
     '[role="button"]',
   ].join(", ");
+  const POINTER_ESCAPE_CONTROL_SELECTOR = [
+    BUTTON_GESTURE_SELECTOR,
+    'input[type="checkbox"]',
+    'input[type="radio"]',
+  ].join(", ");
+  const DRAG_ACTIVATION_THRESHOLD_PX = 6;
   let destroyed = false;
   let pointerFocusedControl = null;
+  let gestureControl = null;
+  let gesturePointerId = null;
+  let gestureStartX = 0;
+  let gestureStartY = 0;
+  let gestureDragged = false;
+  let suppressClickControl = null;
+  let suppressClickTimer = 0;
 
   function installStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
+      button,
+      button *,
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"],
+      [role="button"],
+      [role="button"] *,
+      #sidebar .navButton,
+      #sidebar .navButton * {
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"],
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"]:hover,
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"]:focus,
@@ -109,7 +133,53 @@
     return button instanceof HTMLButtonElement ? button : null;
   }
 
+  function clearGesture() {
+    gestureControl = null;
+    gesturePointerId = null;
+    gestureStartX = 0;
+    gestureStartY = 0;
+    gestureDragged = false;
+  }
+
+  function clearClickSuppression() {
+    suppressClickControl = null;
+    if (suppressClickTimer) {
+      window.clearTimeout(suppressClickTimer);
+      suppressClickTimer = 0;
+    }
+  }
+
+  function scheduleClickSuppressionClear() {
+    if (suppressClickTimer) window.clearTimeout(suppressClickTimer);
+    suppressClickTimer = window.setTimeout(() => {
+      suppressClickTimer = 0;
+      suppressClickControl = null;
+    }, 0);
+  }
+
+  function buttonGestureFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const control = target.closest(BUTTON_GESTURE_SELECTOR);
+    return control instanceof HTMLElement ? control : null;
+  }
+
+  function draggedActivationMatches(event) {
+    if (!(suppressClickControl instanceof HTMLElement)) return false;
+    const target = event.target;
+    return target instanceof Node && (target === suppressClickControl || suppressClickControl.contains(target));
+  }
+
+  function suppressDraggedClick(event) {
+    if (!draggedActivationMatches(event)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    clearClickSuppression();
+    return true;
+  }
+
   function onClick(event) {
+    if (suppressDraggedClick(event)) return;
+
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#showAddFilterButton")) return;
 
@@ -164,6 +234,52 @@
   function onPointerDown(event) {
     clearInitialNeutral(neutralControlFromTarget(event.target));
     pointerFocusedControl = pointerControlFromTarget(event.target);
+
+    clearGesture();
+    clearClickSuppression();
+    if (event.isPrimary === false || event.button !== 0) return;
+
+    const control = buttonGestureFromTarget(event.target);
+    if (!control) return;
+    gestureControl = control;
+    gesturePointerId = event.pointerId;
+    gestureStartX = event.clientX;
+    gestureStartY = event.clientY;
+  }
+
+  function onPointerMove(event) {
+    if (!gestureControl || gestureDragged || event.pointerId !== gesturePointerId) return;
+    const dx = event.clientX - gestureStartX;
+    const dy = event.clientY - gestureStartY;
+    if ((dx * dx) + (dy * dy) >= DRAG_ACTIVATION_THRESHOLD_PX * DRAG_ACTIVATION_THRESHOLD_PX) {
+      gestureDragged = true;
+    }
+  }
+
+  function onPointerUp(event) {
+    if (!gestureControl || event.pointerId !== gesturePointerId) return;
+
+    const control = gestureControl;
+    const dragged = gestureDragged;
+    const target = event.target;
+    const releasedOnControl = target instanceof Node && (target === control || control.contains(target));
+    clearGesture();
+
+    if (!dragged || !releasedOnControl) return;
+
+    // Some controls (notably table view buttons) commit on pointerup instead of
+    // waiting for click. Stop only a dragged release from reaching those target
+    // handlers, then suppress the browser click generated immediately after it.
+    suppressClickControl = control;
+    event.preventDefault();
+    event.stopPropagation();
+    scheduleClickSuppressionClear();
+  }
+
+  function onPointerCancel(event) {
+    if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
+    clearGesture();
+    clearClickSuppression();
   }
 
   function onPointerOut(event) {
@@ -204,6 +320,9 @@
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
   document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("pointermove", onPointerMove, true);
+  document.addEventListener("pointerup", onPointerUp, true);
+  document.addEventListener("pointercancel", onPointerCancel, true);
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn, true);
@@ -211,9 +330,14 @@
   function destroy() {
     destroyed = true;
     pointerFocusedControl = null;
+    clearGesture();
+    clearClickSuppression();
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
+    document.removeEventListener("pointercancel", onPointerCancel, true);
     document.removeEventListener("pointerout", onPointerOut, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("focusin", onFocusIn, true);
