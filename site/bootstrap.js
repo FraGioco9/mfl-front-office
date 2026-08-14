@@ -187,6 +187,28 @@
         padding-bottom: 0;
         line-height: 38px;
       }
+      .filtersDialog .filterRule > .iconButton.popupCloseButton {
+        align-self: center;
+        justify-self: center;
+        width: 36px;
+        min-width: 36px;
+        max-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        max-height: 36px;
+        margin: 0;
+        padding: 0;
+        font-size: 0;
+      }
+      .filtersDialog .filterRule > .popupCloseButton::before,
+      .filtersDialog .filterRule > .popupCloseButton::after {
+        top: 50%;
+        left: 50%;
+        width: 10px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+      }
     `;
     document.head.appendChild(style);
   }
