@@ -1,20 +1,12 @@
 (() => {
   "use strict";
 
-  const CLASS = "mflEvaluationResultLoading";
-  const STYLE_ID = "mflEvaluationSearchStateRuntimeStyles";
   const PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
   let destroyed = false;
   let syncing = false;
   let resultsObserver = null;
-  let busyObserver = null;
-  let releaseFrame = 0;
-  let settleFrame = 0;
-  let probeTimer = 0;
-  let safetyTimer = 0;
-  let sawBusy = false;
   let recentSearchNodes = [];
   let recentSearchCaptured = false;
   let recentPrimePromise = null;
@@ -23,43 +15,15 @@
     ? window.shouldShowEvaluationRecentResults
     : null;
 
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    html.${CLASS} body *,
-    html.${CLASS} body *::before,
-    html.${CLASS} body *::after {
-      transition: none !important;
-      animation: none !important;
-    }
-
-    html.${CLASS} #evaluationSearchResults {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    html.${CLASS} body::after {
-      content: "" !important;
-      display: block !important;
-      position: fixed !important;
-      inset: 0 !important;
-      z-index: 2147483647 !important;
-      background: transparent !important;
-      pointer-events: auto !important;
-    }
-  `;
-  document.head.appendChild(style);
-
   const input = () => document.getElementById("evaluationSearchInput");
   const results = () => document.getElementById("evaluationSearchResults");
+  const clearButton = () => document.getElementById("evaluationSearchClearButton");
   const normalize = (value) => String(value || "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
-  const loadingLocked = () => document.documentElement.classList.contains(CLASS);
 
   function selectedPlayerIdFromUrl() {
     if (!/^\/evaluation\/?$/i.test(location.pathname)) return "";
@@ -71,6 +35,13 @@
     if (panel instanceof HTMLElement && !panel.hidden) return true;
     const params = new URLSearchParams(window.location.search);
     return Boolean(params.get("player") || params.get("saved") || params.get("share"));
+  }
+
+  function syncClearButton(field = input()) {
+    const button = clearButton();
+    if (!(field instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+    const visible = playerSelected() || Boolean(field.value.trim());
+    if (button.hidden === visible) button.hidden = !visible;
   }
 
   const recentRule = () => {
@@ -104,7 +75,7 @@
     try {
       localStorage.setItem(`${PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
     } catch {
-      // The runtime still works when browser storage is unavailable.
+      // Evaluation continues normally when browser storage is unavailable.
     }
   }
 
@@ -201,7 +172,7 @@
   }
 
   function sync() {
-    if (destroyed || syncing || !active() || loadingLocked()) return;
+    if (destroyed || syncing || !active()) return;
     const field = input();
     const container = results();
     if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
@@ -209,6 +180,7 @@
     syncing = true;
     installRecentRule();
     syncSelectedPlayerLabel(field);
+    syncClearButton(field);
 
     if (playerSelected() && document.activeElement !== field) {
       container.hidden = true;
@@ -235,8 +207,8 @@
 
   function onBlur(event) {
     if (event.target !== input()) return;
-    event.stopImmediatePropagation();
-    if (loadingLocked()) return;
+    const field = input();
+    syncClearButton(field);
 
     const container = results();
     if (!(container instanceof HTMLElement)) return;
@@ -252,23 +224,40 @@
 
   function onKeyUp(event) {
     const field = input();
-    if (!(field instanceof HTMLInputElement) || event.target !== field || field.value.trim()) return;
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    syncClearButton(field);
+    if (field.value.trim()) return;
     void primeRecentSearchData().finally(() => queueMicrotask(sync));
   }
 
-  function onPointerUp(event) {
-    const target = event.target instanceof Element ? event.target.closest("#evaluationSearchClearButton") : null;
-    if (!(target instanceof HTMLButtonElement)) return;
-    void primeRecentSearchData().finally(() => window.setTimeout(sync, 0));
+  function onClick(event) {
+    if (!(event.target instanceof Element)) return;
+
+    const clear = event.target.closest("#evaluationSearchClearButton");
+    if (clear instanceof HTMLButtonElement) {
+      void primeRecentSearchData().finally(() => queueMicrotask(() => {
+        syncClearButton();
+        sync();
+      }));
+      return;
+    }
+
+    const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");
+    if (!(result instanceof HTMLButtonElement) || result.disabled) return;
+    rememberClickedSearch(result);
   }
 
   function installObserver() {
     const container = results();
+    const button = clearButton();
     if (!(container instanceof HTMLElement)) return;
+
     resultsObserver = new MutationObserver(() => {
-      if (syncing || loadingLocked()) return;
+      if (destroyed || syncing) return;
       const field = input();
       if (!(field instanceof HTMLInputElement)) return;
+
+      syncClearButton(field);
 
       if (playerSelected() && document.activeElement !== field) {
         hideSuggestions(container);
@@ -288,81 +277,17 @@
       if (document.activeElement !== field) sync();
     });
     resultsObserver.observe(container, { childList: true, attributes: true, attributeFilter: ["hidden"] });
-  }
-
-  function loadingBusy() {
-    const root = document.documentElement;
-    const body = document.body;
-    return root.classList.contains("mflInteractionBusy") || root.dataset.interactionBusy === "true"
-      || root.classList.contains("mflDataLoading") || body?.classList.contains("evaluationRouteLoading")
-      || body?.classList.contains("loading") || body?.getAttribute("aria-busy") === "true";
-  }
-
-  function stopLock() {
-    if (releaseFrame) cancelAnimationFrame(releaseFrame);
-    if (settleFrame) cancelAnimationFrame(settleFrame);
-    releaseFrame = settleFrame = 0;
-    clearTimeout(probeTimer);
-    clearTimeout(safetyTimer);
-    probeTimer = safetyTimer = 0;
-    sawBusy = false;
-    busyObserver?.disconnect();
-    busyObserver = null;
-    document.documentElement.classList.remove(CLASS);
-    queueMicrotask(sync);
-  }
-
-  function checkLock() {
-    if (!loadingLocked()) return;
-    if (loadingBusy()) {
-      sawBusy = true;
-      if (releaseFrame) cancelAnimationFrame(releaseFrame);
-      if (settleFrame) cancelAnimationFrame(settleFrame);
-      releaseFrame = settleFrame = 0;
-      return;
+    if (button instanceof HTMLButtonElement) {
+      resultsObserver.observe(button, { attributes: true, attributeFilter: ["hidden"] });
     }
-    if (!sawBusy || releaseFrame) return;
-    releaseFrame = requestAnimationFrame(() => {
-      releaseFrame = 0;
-      if (loadingBusy()) return checkLock();
-      settleFrame = requestAnimationFrame(() => {
-        settleFrame = 0;
-        if (loadingBusy()) return checkLock();
-        stopLock();
-      });
-    });
-  }
-
-  function startLock() {
-    const container = results();
-    if (!loadingLocked()) {
-      document.documentElement.classList.add(CLASS);
-      if (container instanceof HTMLElement) container.hidden = true;
-      busyObserver = new MutationObserver(checkLock);
-      busyObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-interaction-busy"] });
-      if (document.body) busyObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "aria-busy"] });
-      probeTimer = setTimeout(() => { if (!sawBusy && !loadingBusy()) stopLock(); }, 750);
-      safetyTimer = setTimeout(stopLock, 65000);
-    }
-    if (loadingBusy()) sawBusy = true;
-    checkLock();
-  }
-
-  function onClick(event) {
-    const target = event.target instanceof Element
-      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
-      : null;
-    if (!(target instanceof HTMLButtonElement) || target.disabled) return;
-    rememberClickedSearch(target);
-    startLock();
   }
 
   installRecentRule();
   captureRenderedRecents(results());
+  syncClearButton();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
-  document.addEventListener("pointerup", onPointerUp, true);
   installObserver();
   void primeRecentSearchData().finally(sync);
   sync();
@@ -374,12 +299,9 @@
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
-    document.removeEventListener("pointerup", onPointerUp, true);
-    stopLock();
     recentSearchNodes = [];
     recentSearchCaptured = false;
     recentPrimePromise = null;
-    style.remove();
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
     }
