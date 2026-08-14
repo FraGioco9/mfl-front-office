@@ -98,7 +98,7 @@
             });
             return results
               .sort((a, b) => b.overall - a.overall || a.nameDisplay.localeCompare(b.nameDisplay))
-              .slice(0, 20);
+              .slice(0, 5);
           };
           Object.defineProperty(tokenAwareEvaluationSearchMatches, "__mflTokenAware", { value: true });
           evaluationSearchMatches = tokenAwareEvaluationSearchMatches;
