@@ -144,8 +144,6 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsRuntime?: { sync?: () => void, installCoreBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
- * __mflEvaluationRecentSearchPrefetch?: Promise<unknown>,
- * __mflEvaluationRecentSearchPrefetchPayload?: unknown,
  * __mflAppStartPromise?: Promise<void>,
  * }} */
 const runtimeWindow = window;
@@ -218,27 +216,6 @@ function installCoreBridges() {
   runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
 }
 
-async function applyEvaluationRecentSearchPrefetch() {
-  const promise = runtimeWindow.__mflEvaluationRecentSearchPrefetch;
-  if (!promise) return false;
-  const payload = await promise.catch(() => null);
-  if (!payload) return false;
-
-  runtimeWindow.__mflEvaluationRecentSearchPrefetchPayload = payload;
-  try {
-    return Boolean(window.eval(`(() => {
-      if (typeof applyDatabaseSearchPayload !== "function") return false;
-      applyDatabaseSearchPayload(window.__mflEvaluationRecentSearchPrefetchPayload, "players");
-      return true;
-    })();`));
-  } catch (error) {
-    console.warn("Could not apply prefetched Evaluation recent searches.", error);
-    return false;
-  } finally {
-    delete runtimeWindow.__mflEvaluationRecentSearchPrefetchPayload;
-  }
-}
-
 async function start() {
   const release = entryRelease;
   window.__mflRelease = release;
@@ -259,11 +236,10 @@ async function start() {
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
-  const evaluationRecentSearchReady = evaluationStartup
-    ? applyEvaluationRecentSearchPrefetch()
-    : Promise.resolve(false);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
-    await Promise.all([runtimeWindow.__mflAppStartPromise, evaluationRecentSearchReady]);
+    // startApp waits for wallet preferences, so the Supabase-backed recent
+    // Evaluation state is authoritative before the late search-state owner loads.
+    await runtimeWindow.__mflAppStartPromise;
   }
   runtimeWindow.__mflStatsRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
