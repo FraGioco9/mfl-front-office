@@ -82,18 +82,17 @@
     return true;
   }
 
-  /* A second click on any open dropdown closes it and removes focus from the
-   * trigger instead of allowing that same click to reopen or leave it selected. */
+  /* A second click directly on an open select closes it and removes focus.
+   * Option pointer/click events are deliberately left untouched so selections
+   * inside customizable pickers continue to work normally. */
   document.addEventListener("pointerdown", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
-    const select = target.closest("select");
-    if (select instanceof HTMLSelectElement && isSelectOpen(select)) {
-      suppressNextClick.add(select);
+    if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      select.blur();
+      target.blur();
       return;
     }
 
@@ -106,14 +105,16 @@
     event.stopImmediatePropagation();
   }, true);
 
+  /* Only static button dropdowns need the follow-up click suppressed; native
+   * select option clicks must never be intercepted here. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
-    const control = target.closest('select, [data-mfl-dropdown-trigger="true"]');
-    if (!(control instanceof HTMLElement) || !suppressNextClick.has(control)) return;
+    const trigger = target.closest('[data-mfl-dropdown-trigger="true"]');
+    if (!(trigger instanceof HTMLButtonElement) || !suppressNextClick.has(trigger)) return;
 
-    suppressNextClick.delete(control);
+    suppressNextClick.delete(trigger);
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);

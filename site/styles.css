@@ -4,6 +4,7 @@
 
 :root {
   --mfl-dropdown-chevron-inset: 10px;
+  --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
 }
 
 /* Rows uses the final dropdown appearance from first paint. Do not wait for
@@ -35,6 +36,24 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   background: var(--row-hover);
   color: var(--text);
   box-shadow: none;
+}
+
+/* Give every dropdown a bounded height. Long menus scroll inside their own
+ * surface instead of extending beyond the viewport. */
+[data-mfl-dropdown-menu="true"] {
+  max-height: var(--mfl-dropdown-max-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@supports (appearance: base-select) {
+  select[data-mfl-dropdown-enhanced="true"]::picker(select),
+  #pageSizeSelect::picker(select),
+  .filtersDialog select::picker(select) {
+    max-height: var(--mfl-dropdown-max-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 /* Every select chevron uses the same fixed shape and right-edge spacing. */
@@ -115,7 +134,7 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 
   .filtersDialog select::picker(select) {
     box-sizing: border-box;
-    max-height: min(320px, calc(100vh - 16px));
+    max-height: var(--mfl-dropdown-max-height);
     margin: var(--mfl-dropdown-gap) 0 0;
     padding: 5px;
     overflow-x: hidden;
