@@ -34,6 +34,84 @@
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  function installCoreSearchMatching() {
+    try {
+      return Boolean(window.eval(`(() => {
+        if (typeof normalizeSearchText !== "function") return false;
+
+        const searchTokens = (value) => String(value || "")
+          .normalize("NFD")
+          .replace(/[\\u0300-\\u036f]/g, "")
+          .toLowerCase()
+          .trim()
+          .split(/\\s+/)
+          .filter(Boolean);
+
+        const orderedTokensMatch = (text, query) => {
+          const haystack = searchTokens(text).join(" ");
+          const tokens = searchTokens(query);
+          if (!tokens.length) return false;
+          let cursor = 0;
+          for (const token of tokens) {
+            const index = haystack.indexOf(token, cursor);
+            if (index < 0) return false;
+            cursor = index + token.length;
+          }
+          return true;
+        };
+
+        if (!normalizeSearchText.__mflWhitespaceAware) {
+          const originalNormalizeSearchText = normalizeSearchText;
+          const whitespaceAwareNormalizeSearchText = function(value) {
+            return originalNormalizeSearchText(value).replace(/\\s+/g, " ").trim();
+          };
+          Object.defineProperty(whitespaceAwareNormalizeSearchText, "__mflWhitespaceAware", { value: true });
+          normalizeSearchText = whitespaceAwareNormalizeSearchText;
+        }
+
+        if (typeof searchMatchScore === "function" && !searchMatchScore.__mflTokenAware) {
+          const tokenAwareSearchMatchScore = function(query, primaryText, secondaryText = "") {
+            const normalizedQuery = normalizeSearchText(query);
+            const primary = normalizeSearchText(primaryText);
+            const secondary = normalizeSearchText(secondaryText);
+
+            if (primary === normalizedQuery || secondary === normalizedQuery) return 100;
+            if (primary.startsWith(normalizedQuery)) return 80;
+            if (secondary.startsWith(normalizedQuery)) return 70;
+            if (primary.includes(normalizedQuery)) return 50;
+            if (secondary.includes(normalizedQuery)) return 40;
+            if (orderedTokensMatch(primary, normalizedQuery)) return 45;
+            if (orderedTokensMatch(secondary, normalizedQuery)) return 35;
+            return 0;
+          };
+          Object.defineProperty(tokenAwareSearchMatchScore, "__mflTokenAware", { value: true });
+          searchMatchScore = tokenAwareSearchMatchScore;
+        }
+
+        if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflTokenAware) {
+          const tokenAwareEvaluationSearchMatches = function(query) {
+            if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
+            const results = [];
+            state.evaluationSearchIndex.forEach((entry) => {
+              if (entry.retired || (!orderedTokensMatch(entry.id, query) && !orderedTokensMatch(entry.name, query))) return;
+              results.push(entry);
+            });
+            return results
+              .sort((a, b) => b.overall - a.overall || a.nameDisplay.localeCompare(b.nameDisplay))
+              .slice(0, 20);
+          };
+          Object.defineProperty(tokenAwareEvaluationSearchMatches, "__mflTokenAware", { value: true });
+          evaluationSearchMatches = tokenAwareEvaluationSearchMatches;
+        }
+
+        return true;
+      })();`));
+    } catch (error) {
+      console.warn("Could not install space-aware search matching.", error);
+      return false;
+    }
+  }
+
   function searchInput() {
     const input = document.getElementById("playerSearchInput");
     return input instanceof HTMLInputElement ? input : null;
@@ -271,6 +349,7 @@
   }
 
   function applyPayload(payload, normalizedQuery = "") {
+    installCoreSearchMatching();
     if (!legacyPayloadApplierReady()) {
       pendingPayload = payload;
       pendingQuery = normalizedQuery;
@@ -300,6 +379,7 @@
   }
 
   function applyEvaluationPayload(payload, normalizedQuery = "") {
+    installCoreSearchMatching();
     if (!legacyPayloadApplierReady()) {
       pendingEvaluationPayload = payload;
       pendingEvaluationQuery = normalizedQuery;
@@ -388,6 +468,7 @@
   }
 
   async function searchDatabase(rawQuery) {
+    installCoreSearchMatching();
     const query = String(rawQuery || "").trim();
     const normalizedQuery = normalize(query);
     const input = searchInput();
@@ -439,6 +520,7 @@
   }
 
   async function searchEvaluationDatabase(rawQuery) {
+    installCoreSearchMatching();
     const query = String(rawQuery || "").trim();
     const normalizedQuery = normalize(query);
     const input = evaluationInput();
@@ -610,12 +692,16 @@
   document.addEventListener("input", onInput, true);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
+  window.addEventListener("mfl:ready", installCoreSearchMatching);
   window.addEventListener("mfl:ready", armCanonicalSearchResults);
   window.addEventListener("mfl:ready", flushPendingPayload);
   window.addEventListener("mfl:ready", flushPendingEvaluationPayload);
   observeResultBoxes();
   observeSearchModal();
-  if (canonicalSearchArmed) syncCanonicalSearchResults();
+  if (canonicalSearchArmed) {
+    installCoreSearchMatching();
+    syncCanonicalSearchResults();
+  }
   document.documentElement.dataset.globalSearchAuthoritative = "true";
   document.documentElement.dataset.evaluationSearchAuthoritative = "true";
   window.__mflGlobalSearchReadyPromise = Promise.resolve(true);
@@ -655,6 +741,7 @@
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
+    window.removeEventListener("mfl:ready", installCoreSearchMatching);
     window.removeEventListener("mfl:ready", armCanonicalSearchResults);
     window.removeEventListener("mfl:ready", flushPendingPayload);
     window.removeEventListener("mfl:ready", flushPendingEvaluationPayload);
