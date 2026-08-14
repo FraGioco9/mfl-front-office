@@ -154,6 +154,28 @@
     }
   }
 
+  function installFilterOperatorDefaults() {
+    if (window.__mflFilterOperatorDefaultsInstalled) return;
+    window.__mflFilterOperatorDefaultsInstalled = true;
+    const atMostColumns = new Set(["age", "player_seasons", "player_id"]);
+
+    document.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement) || target.id !== "addFilterSelect") return;
+      const column = String(target.value || "");
+      if (!atMostColumns.has(column)) return;
+
+      queueMicrotask(() => {
+        const rules = Array.from(document.querySelectorAll("#filterRules .filterRule"));
+        const rule = rules.reverse().find((candidate) => candidate.dataset.filterColumn === column);
+        const operator = rule?.querySelector("[data-filter-operator]");
+        if (!(operator instanceof HTMLSelectElement) || operator.value === "<=") return;
+        operator.value = "<=";
+        operator.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    }, true);
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -181,6 +203,7 @@
   function syncBootstrapFirstPaint() {
     installEvaluationTableSpacing();
     installPopupContentCentering();
+    installFilterOperatorDefaults();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
