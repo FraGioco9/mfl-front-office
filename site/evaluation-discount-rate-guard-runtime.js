@@ -102,6 +102,13 @@
     canonical = [button, ...canonical.filter((candidate) => playerId(candidate) !== id)].slice(0, 5);
   }
 
+  function onResultClick(event) {
+    if (!captured || !(event.target instanceof Element)) return;
+    const button = event.target.closest("#evaluationSearchResults .evaluationSearchResult");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    prepend(button);
+  }
+
   function syncCanonical() {
     const field = input();
     const container = results();
@@ -116,27 +123,20 @@
       return;
     }
 
-    if (!captured) return;
+    if (!captured || field.value.trim()) return;
 
-    if (!field.value.trim()) {
-      queueMicrotask(() => {
-        if (field.value.trim() || !canonical.length) return;
-        const current = Array.from(container.children);
-        const alreadyCanonical = current.length === canonical.length
-          && current.every((node, index) => node === canonical[index]);
-        if (alreadyCanonical && !container.hidden) return;
-        container.replaceChildren(...canonical);
-        container.hidden = false;
-      });
-      return;
-    }
-
-    if (container.hidden && document.activeElement instanceof HTMLButtonElement
-      && document.activeElement.classList.contains("evaluationSearchResult")) {
-      prepend(document.activeElement);
-    }
+    queueMicrotask(() => {
+      if (field.value.trim() || !canonical.length) return;
+      const current = Array.from(container.children);
+      const alreadyCanonical = current.length === canonical.length
+        && current.every((node, index) => node === canonical[index]);
+      if (alreadyCanonical && !container.hidden) return;
+      container.replaceChildren(...canonical);
+      container.hidden = false;
+    });
   }
 
+  document.addEventListener("click", onResultClick, true);
   window.addEventListener("mfl:ready", () => { armed = true; });
   const container = results();
   if (container instanceof HTMLElement) {
