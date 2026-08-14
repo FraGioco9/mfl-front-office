@@ -154,9 +154,30 @@
     }
   }
 
+  const FILTER_OPERATOR_SYMBOLS = Object.freeze({
+    ">=": ">=",
+    "<=": "<=",
+    between: "<= x <=",
+    "=": "=",
+  });
+
+  function syncFilterOperatorSymbols() {
+    document.querySelectorAll("select[data-filter-operator]").forEach((select) => {
+      if (!(select instanceof HTMLSelectElement)) return;
+      Array.from(select.options).forEach((option) => {
+        const label = FILTER_OPERATOR_SYMBOLS[option.value];
+        if (label && option.textContent !== label) option.textContent = label;
+      });
+    });
+  }
+
   function installFilterOperatorDefaults() {
     const addFilterRule = window.addFilterRule;
-    if (typeof addFilterRule !== "function" || addFilterRule.__mflAtMostDefaults) return;
+    if (typeof addFilterRule !== "function") return;
+    if (addFilterRule.__mflAtMostDefaults) {
+      syncFilterOperatorSymbols();
+      return;
+    }
     const atMostColumns = new Set(["age", "player_seasons", "player_id"]);
 
     const wrappedAddFilterRule = function(column, options = {}) {
@@ -164,10 +185,13 @@
       if (atMostColumns.has(String(column || "")) && !nextOptions.operator) {
         nextOptions.operator = "<=";
       }
-      return addFilterRule(column, nextOptions);
+      const result = addFilterRule(column, nextOptions);
+      syncFilterOperatorSymbols();
+      return result;
     };
     Object.defineProperty(wrappedAddFilterRule, "__mflAtMostDefaults", { value: true });
     window.addFilterRule = wrappedAddFilterRule;
+    syncFilterOperatorSymbols();
   }
 
   function syncEvaluationActionsFirstPaint() {
@@ -198,6 +222,7 @@
     installEvaluationTableSpacing();
     installPopupContentCentering();
     installFilterOperatorDefaults();
+    syncFilterOperatorSymbols();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
