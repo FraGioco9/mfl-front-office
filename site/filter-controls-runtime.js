@@ -3,204 +3,13 @@
 
   const CONTRACT_COLUMN = "contract_status";
   const AT_MOST_DEFAULT_COLUMNS = new Set(["age", "player_seasons", "player_id"]);
-  const STYLE_ID = "mflFilterControlStyles";
 
-  function installStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      .filtersDialog .filterRule {
-        grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
-      }
-
-      .filtersDialog select {
-        border-right-width: 6px;
-        border-right-color: var(--surface);
-        outline: 1px solid var(--border-strong);
-        outline-offset: -1px;
-      }
-
-      .filtersDialog select:hover:not(:disabled),
-      .filtersDialog select:focus:not(:disabled),
-      .filtersDialog select:focus-visible:not(:disabled) {
-        border-right-color: var(--row-hover);
-        outline: 1px solid var(--primary-hover);
-        outline-offset: -1px;
-      }
-
-      .filtersDialog select[data-filter-connector],
-      .filtersDialog select[data-filter-operator] {
-        padding-top: 0;
-        padding-bottom: 0;
-        line-height: 38px;
-      }
-
-      .controlsBar > .field.compact.rowsField {
-        position: relative;
-        z-index: 1;
-        justify-self: end;
-      }
-
-      .watchlistSwitcher > select.watchlistButtonNativeChevron {
-        position: absolute;
-        top: 50%;
-        right: 8px;
-        z-index: 2;
-        width: 38px;
-        min-width: 38px;
-        max-width: 38px;
-        height: 38px;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        outline: 0;
-        background-color: transparent;
-        color: #ffffff;
-        -webkit-text-fill-color: #ffffff;
-        opacity: 1;
-        -webkit-appearance: menulist;
-        appearance: auto;
-        pointer-events: none;
-        transform: translateY(-50%);
-      }
-
-      .field.rowsField .pageSizeSelectGrid {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 6px;
-        align-items: center;
-        width: var(--page-size-select-width, auto);
-        min-width: 0;
-        height: 40px;
-        overflow: hidden;
-        border: 1px solid var(--border-strong);
-        border-radius: 6px;
-        background: var(--surface);
-        color: #ffffff;
-        font: inherit;
-        cursor: pointer;
-        pointer-events: auto;
-        transition: background 120ms ease, border-color 120ms ease;
-      }
-
-      .field.rowsField .pageSizeSelectGrid:hover,
-      .field.rowsField .pageSizeSelectGrid:focus-within {
-        border-color: var(--primary-hover);
-        background: var(--row-hover);
-        color: #ffffff;
-      }
-
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect {
-        position: relative;
-        z-index: 2;
-        grid-column: 1;
-        align-self: stretch;
-        display: block;
-        width: 100%;
-        min-width: 0;
-        height: 38px;
-        margin: 0;
-        padding: 0 26px 0 13px;
-        border: 0;
-        border-radius: 5px 0 0 5px;
-        outline: 0;
-        background: var(--surface);
-        color: #ffffff;
-        -webkit-text-fill-color: #ffffff;
-        opacity: 1;
-        box-shadow: none;
-        font: inherit;
-        cursor: pointer;
-        pointer-events: auto;
-        transition: background 120ms ease, color 120ms ease;
-      }
-
-      .field.rowsField .pageSizeSelectGrid:hover #pageSizeSelect:not(:disabled),
-      .field.rowsField .pageSizeSelectGrid:focus-within #pageSizeSelect:not(:disabled),
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:hover:not(:disabled),
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:focus:not(:disabled),
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:focus-visible:not(:disabled) {
-        border: 0;
-        outline: 0;
-        background: var(--row-hover);
-        color: #ffffff;
-        -webkit-text-fill-color: #ffffff;
-        opacity: 1;
-        box-shadow: none;
-      }
-
-      .field.rowsField .pageSizeSelectGrid #pageSizeSelect:disabled {
-        border: 0;
-        outline: 0;
-        background: var(--surface);
-        color: #ffffff;
-        -webkit-text-fill-color: #ffffff;
-        opacity: 1;
-        box-shadow: none;
-      }
-
-      .filtersDialog .filterRule > .iconButton.popupCloseButton {
-        align-self: center;
-        justify-self: center;
-        width: 36px;
-        min-width: 36px;
-        max-width: 36px;
-        height: 36px;
-        min-height: 36px;
-        max-height: 36px;
-        margin: 0;
-        padding: 0;
-        font-size: 0;
-      }
-
-      .filtersDialog .filterRule > .popupCloseButton::before,
-      .filtersDialog .filterRule > .popupCloseButton::after {
-        top: 50%;
-        left: 50%;
-        width: 10px;
-        height: 2px;
-        border-radius: 999px;
-        background: currentColor;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function rebuildPageSizeSelectGrid() {
-    const select = document.getElementById("pageSizeSelect");
-    if (!(select instanceof HTMLSelectElement)) return false;
-    if (select.parentElement?.classList.contains("pageSizeSelectGrid")) return true;
-
-    const originalWidth = select.getBoundingClientRect().width;
-    const grid = document.createElement("span");
-    grid.className = "pageSizeSelectGrid";
-    if (Number.isFinite(originalWidth) && originalWidth > 0) {
-      grid.style.setProperty("--page-size-select-width", `${originalWidth}px`);
+  function syncDropdowns(root = document) {
+    try {
+      window.__mflDropdowns?.enhanceVisible(root);
+    } catch {
+      // Dropdown enhancement is presentation-only; never block table startup.
     }
-    select.before(grid);
-    grid.appendChild(select);
-    return true;
-  }
-
-  function installNativeWatchlistChevron() {
-    const switcher = document.getElementById("watchlistSwitcher");
-    const button = document.getElementById("watchlistButton");
-    if (!(switcher instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return false;
-
-    button.querySelector(":scope > .watchlistButtonChevron")?.remove();
-
-    let nativeChevron = switcher.querySelector(":scope > .watchlistButtonNativeChevron");
-    if (!(nativeChevron instanceof HTMLSelectElement)) {
-      nativeChevron = document.createElement("select");
-      nativeChevron.className = "watchlistButtonNativeChevron";
-      nativeChevron.tabIndex = -1;
-      nativeChevron.setAttribute("aria-hidden", "true");
-      nativeChevron.appendChild(new Option("", ""));
-      switcher.appendChild(nativeChevron);
-    }
-    return true;
   }
 
   function installSelectedLinksDirectOpen() {
@@ -237,7 +46,7 @@
         try {
           playerWindow.opener = null;
         } catch {
-          // The link is already open; opener isolation is best-effort across browsers.
+          // Best-effort opener isolation.
         }
       });
 
@@ -266,6 +75,7 @@
     select.disabled = false;
     select.inert = false;
     select.removeAttribute("aria-disabled");
+    window.__mflDropdowns?.syncSelect(select);
   }
 
   function syncExistingContractOperators() {
@@ -285,6 +95,7 @@
         );
       }
       select.value = selected;
+      window.__mflDropdowns?.syncSelect(select);
     });
   }
 
@@ -299,6 +110,7 @@
       }
       const result = addFilterRule(column, nextOptions);
       syncExistingContractOperators();
+      queueMicrotask(() => syncDropdowns(document.getElementById("filtersModal") || document));
       return result;
     };
     Object.defineProperty(wrappedAddFilterRule, "__mflFilterDefaults", { value: true });
@@ -323,6 +135,11 @@
                 new Option("is not", "!="),
               );
             }
+            queueMicrotask(() => {
+              try {
+                window.__mflDropdowns?.enhanceVisible(document.getElementById("filtersModal") || document);
+              } catch {}
+            });
             return select;
           };
           Object.defineProperty(contractAwareBuildOperatorSelect, "__mflContractOperators", { value: true });
@@ -346,6 +163,7 @@
       if (installed) {
         installAddFilterDefaults();
         syncExistingContractOperators();
+        syncDropdowns(document.getElementById("filtersModal") || document);
       }
       return installed;
     } catch (error) {
@@ -355,17 +173,14 @@
   }
 
   function sync() {
-    installStyles();
-    rebuildPageSizeSelectGrid();
-    installNativeWatchlistChevron();
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
     installAddFilterDefaults();
     installCoreBridge();
     syncExistingContractOperators();
+    syncDropdowns(document);
   }
 
-  installStyles();
   sync();
 
   const headObserver = new MutationObserver((mutations) => {

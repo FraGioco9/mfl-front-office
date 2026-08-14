@@ -1,5 +1,6 @@
 @import url("/scrollbars.css");
 @import url("/styles-base.css");
+@import url("/dropdowns.css");
 
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
