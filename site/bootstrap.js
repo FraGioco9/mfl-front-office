@@ -159,6 +159,7 @@
     "<=": "at most",
     between: "is between",
     "=": "is",
+    "!=": "is not",
   });
 
   function syncFilterOperatorLabels() {
@@ -177,6 +178,10 @@
     const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
+      .filtersDialog .filterRule {
+        grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
+      }
+      .filtersDialog select[data-filter-connector],
       .filtersDialog select[data-filter-operator] {
         padding-top: 0;
         padding-bottom: 0;
@@ -244,8 +249,20 @@
     syncEvaluationActionsFirstPaint();
   }
 
+  function loadBootstrapRuntime(path) {
+    if (document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`)) return;
+    const script = document.createElement("script");
+    script.src = path;
+    script.async = false;
+    script.dataset.mflBootstrapRuntime = path;
+    document.head.appendChild(script);
+  }
+
   syncBootstrapFirstPaint();
   window.addEventListener("mfl:ready", installFilterOperatorDefaults);
+
+  loadBootstrapRuntime("/club-squad-route-runtime.js");
+  loadBootstrapRuntime("/filter-contract-operator-runtime.js");
 
   const core = document.createElement("script");
   core.src = "/bootstrap-core.js";
