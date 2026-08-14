@@ -121,6 +121,40 @@
     return true;
   }
 
+  function currentStatsPageName() {
+    const segments = String(window.location.pathname || "/").split("/").filter(Boolean);
+    const pageName = String(segments[0] || "").toLowerCase();
+    const viewName = String(segments[1] || "").toLowerCase();
+    return viewName === "stats" && (pageName === "database" || pageName === "mfl") ? pageName : "";
+  }
+
+  function consumeActiveStatsViewEvent(event) {
+    if (event.type === "pointerdown" && (event.isPrimary === false || event.button !== 0)) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest?.('.viewButton[data-view="stats"]');
+    if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return;
+
+    const currentPage = currentStatsPageName();
+    if (!currentPage) return;
+
+    const ownerPage = String(button.dataset.page || "")
+      || (button.closest("#databaseStatsPage") ? "database" : "")
+      || (button.closest("#mflStatsPage") ? "mfl" : "");
+    if (ownerPage !== currentPage) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  function installActiveStatsViewNoop() {
+    if (window.__mflActiveStatsViewNoopInstalled === true) return true;
+    window.__mflActiveStatsViewNoopInstalled = true;
+    document.addEventListener("pointerdown", consumeActiveStatsViewEvent, true);
+    document.addEventListener("click", consumeActiveStatsViewEvent, true);
+    return true;
+  }
+
   function installSelectedLinksDirectOpen() {
     const button = document.getElementById("openSelectedLinksButton");
     if (!(button instanceof HTMLButtonElement)) return false;
@@ -282,6 +316,7 @@
   }
 
   function sync() {
+    installActiveStatsViewNoop();
     installStaticViewShell();
     syncStaticViewButtonsFromLocation();
     installSelectedLinksDirectOpen();
