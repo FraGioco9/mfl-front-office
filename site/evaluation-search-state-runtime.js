@@ -45,7 +45,7 @@
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
     if (field.value.trim()) return originalRecentRule?.() || false;
-    return document.activeElement === field || !playerSelected();
+    return active();
   };
 
   function installRecentRule() {
@@ -101,13 +101,6 @@
     container.hidden = false;
   }
 
-  function hideSuggestions(container) {
-    if (!(container instanceof HTMLElement) || container.hidden) return;
-    syncing = true;
-    container.hidden = true;
-    requestAnimationFrame(() => { syncing = false; });
-  }
-
   function renderEmptySearchFromCore() {
     try {
       if (typeof window.renderEvaluationSearchResults === "function") {
@@ -147,18 +140,12 @@
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
 
-    if (playerSelected() && document.activeElement !== field) {
-      container.hidden = true;
-      requestAnimationFrame(() => { syncing = false; });
-      return;
-    }
-
     const query = normalize(field.value);
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else if (!query) {
-      // Core owns the recent IDs loaded from wallet preferences/Supabase. Never
-      // restore a DOM snapshot from the current section here.
+      // Core owns recentEvaluationPlayerIds. Blur/focus state never substitutes
+      // another recent-results source and never hides those canonical results.
       renderEmptySearchFromCore();
     }
 
@@ -174,12 +161,11 @@
     if (!(container instanceof HTMLElement)) return;
     if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
 
-    if (playerSelected()) {
-      hideSuggestions(container);
-      return;
+    // Results remain interactive after the input loses focus. For an empty
+    // search, refresh only from recentEvaluationPlayerIds once its rows are ready.
+    if (!field.value.trim()) {
+      void primeRecentSearchData().finally(() => queueMicrotask(sync));
     }
-
-    void primeRecentSearchData().finally(() => queueMicrotask(sync));
   }
 
   function onKeyUp(event) {
@@ -219,18 +205,12 @@
 
       syncClearButton(field);
 
-      if (playerSelected() && document.activeElement !== field) {
-        hideSuggestions(container);
-        return;
-      }
-
       if (!field.value.trim()) {
         queueMicrotask(sync);
         return;
       }
 
       syncSelectedPlayerLabel(field);
-      if (document.activeElement !== field) sync();
     });
     resultsObserver.observe(container, { childList: true, attributes: true, attributeFilter: ["hidden"] });
     if (button instanceof HTMLButtonElement) {
