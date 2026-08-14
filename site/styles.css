@@ -216,8 +216,8 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   }
 }
 
-/* Canonical close control for every popup header. The X is one symmetric shape
- * instead of two overlapping rotated bars, so both diagonals are identical. */
+/* Canonical close control for every popup header. The X is rendered from one
+ * centered SVG mask with two identical mirrored strokes. */
 .modalBackdrop .filtersHeader > .popupCloseButton {
   position: relative;
   display: inline-flex;
@@ -251,20 +251,14 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   margin: 0;
   border: 0;
   background: currentColor;
-  clip-path: polygon(
-    0 2px,
-    2px 0,
-    6px 4px,
-    10px 0,
-    12px 2px,
-    8px 6px,
-    12px 10px,
-    10px 12px,
-    6px 8px,
-    2px 12px,
-    0 10px,
-    4px 6px
-  );
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2L10 10M10 2L2 10' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2L10 10M10 2L2 10' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
