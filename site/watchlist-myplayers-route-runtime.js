@@ -7,6 +7,8 @@
   let latestIntent = null;
   let originalSetPage = null;
   let wrappedSetPage = null;
+  let originalSwitchWatchlist = null;
+  let wrappedSwitchWatchlist = null;
   let reconciling = false;
   let destroyed = false;
   function statePage() {
@@ -35,11 +37,73 @@
       console.error("Could not keep the latest Watchlist/My Players route.", error);
     } finally { reconciling = false; }
   }
+  function installWatchlistSwitchLoadDedupe() {
+    let candidate = null;
+    try { candidate = switchWatchlist; } catch {}
+    if (typeof candidate !== "function") return false;
+    if (candidate === wrappedSwitchWatchlist) return true;
+
+    originalSwitchWatchlist = candidate;
+    wrappedSwitchWatchlist = function switchWatchlistWithSingleLoad(...args) {
+      let filterCandidate = null;
+      try { filterCandidate = applyFilters; } catch {}
+      if (typeof filterCandidate !== "function") {
+        return originalSwitchWatchlist.apply(this, args);
+      }
+
+      let filterRequested = false;
+      let filterThis = this;
+      let filterArgs = [];
+      const deferredApplyFilters = function (...nextArgs) {
+        filterRequested = true;
+        filterThis = this;
+        filterArgs = nextArgs;
+      };
+
+      window.__mflWatchlistApplyFiltersOriginal = filterCandidate;
+      window.__mflWatchlistApplyFiltersDeferred = deferredApplyFilters;
+      let deferredInstalled = false;
+      try {
+        window.eval("applyFilters = window.__mflWatchlistApplyFiltersDeferred");
+        deferredInstalled = true;
+      } catch {}
+
+      if (!deferredInstalled) {
+        delete window.__mflWatchlistApplyFiltersOriginal;
+        delete window.__mflWatchlistApplyFiltersDeferred;
+        return originalSwitchWatchlist.apply(this, args);
+      }
+
+      let result;
+      try {
+        // app-core's Watchlist view-memory wrapper currently calls applyFilters
+        // once inside the base switch, then again after restoring that list's
+        // saved view. Defer both synchronous calls and execute only the final
+        // one, after the saved view has already been applied.
+        result = originalSwitchWatchlist.apply(this, args);
+      } finally {
+        try { window.eval("applyFilters = window.__mflWatchlistApplyFiltersOriginal"); } catch {}
+        delete window.__mflWatchlistApplyFiltersOriginal;
+        delete window.__mflWatchlistApplyFiltersDeferred;
+      }
+
+      if (filterRequested) filterCandidate.apply(filterThis, filterArgs);
+      return result;
+    };
+
+    window.__mflSingleLoadSwitchWatchlist = wrappedSwitchWatchlist;
+    try { window.switchWatchlist = wrappedSwitchWatchlist; } catch {}
+    try { window.eval("switchWatchlist = window.__mflSingleLoadSwitchWatchlist"); } catch {}
+    return true;
+  }
   function install() {
     let candidate = null;
     try { candidate = setPage; } catch {}
     if (typeof candidate !== "function") return false;
-    if (candidate === wrappedSetPage) return true;
+    if (candidate === wrappedSetPage) {
+      installWatchlistSwitchLoadDedupe();
+      return true;
+    }
     originalSetPage = candidate;
     wrappedSetPage = async function setPageWithLatestWatchlistMyPlayersIntent(pageName, updateHash = true, options = {}) {
       const normalizedPage = String(pageName || "");
@@ -63,12 +127,21 @@
     window.__mflLatestPairSetPage = wrappedSetPage;
     try { window.setPage = wrappedSetPage; } catch {}
     try { window.eval("setPage = window.__mflLatestPairSetPage"); } catch {}
+    installWatchlistSwitchLoadDedupe();
     return true;
   }
   function destroy() {
     destroyed = true;
     latestIntent = null;
     sequence += 1;
+    if (wrappedSwitchWatchlist && originalSwitchWatchlist) {
+      try { if (window.switchWatchlist === wrappedSwitchWatchlist) window.switchWatchlist = originalSwitchWatchlist; } catch {}
+      try {
+        window.__mflPairOriginalSwitchWatchlist = originalSwitchWatchlist;
+        window.eval("if (switchWatchlist === window.__mflSingleLoadSwitchWatchlist) switchWatchlist = window.__mflPairOriginalSwitchWatchlist");
+      } catch {}
+      delete window.__mflPairOriginalSwitchWatchlist;
+    }
     if (wrappedSetPage && originalSetPage) {
       try { if (window.setPage === wrappedSetPage) window.setPage = originalSetPage; } catch {}
       try {
@@ -77,6 +150,7 @@
       } catch {}
       delete window.__mflPairOriginalSetPage;
     }
+    delete window.__mflSingleLoadSwitchWatchlist;
     delete window.__mflLatestPairSetPage;
   }
   if (!install()) requestAnimationFrame(() => { if (!destroyed) install(); });
