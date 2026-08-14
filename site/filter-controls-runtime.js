@@ -36,9 +36,58 @@
         line-height: 38px;
       }
 
-      #pageSizeSelect {
-        padding-left: 14px;
-        padding-right: 34px;
+      .pageSizeSelectGrid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 6px;
+        align-items: center;
+        width: var(--page-size-select-width, auto);
+        height: 40px;
+        overflow: hidden;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+      }
+
+      .pageSizeSelectGrid:hover,
+      .pageSizeSelectGrid:focus-within {
+        border-color: var(--primary-hover);
+        background: var(--row-hover);
+        color: var(--text);
+      }
+
+      .pageSizeSelectGrid #pageSizeSelect {
+        grid-column: 1;
+        align-self: stretch;
+        width: 100%;
+        height: 38px;
+        margin: 0;
+        padding: 0 26px 0 13px;
+        border: 0;
+        border-radius: 5px 0 0 5px;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        box-shadow: none;
+        font: inherit;
+      }
+
+      .pageSizeSelectGrid #pageSizeSelect:hover:not(:disabled),
+      .pageSizeSelectGrid #pageSizeSelect:focus:not(:disabled),
+      .pageSizeSelectGrid #pageSizeSelect:focus-visible:not(:disabled) {
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        box-shadow: none;
+      }
+
+      @media (max-width: 900px) {
+        .field.compact.rowsField .pageSizeSelectGrid {
+          width: min(160px, 48vw);
+        }
       }
 
       .filtersDialog .filterRule > .iconButton.popupCloseButton {
@@ -66,6 +115,23 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function rebuildPageSizeSelectGrid() {
+    const select = document.getElementById("pageSizeSelect");
+    if (!(select instanceof HTMLSelectElement)) return false;
+    if (select.parentElement?.classList.contains("pageSizeSelectGrid")) return true;
+
+    const originalWidth = select.getBoundingClientRect().width;
+    const grid = document.createElement("span");
+    grid.className = "pageSizeSelectGrid";
+    if (Number.isFinite(originalWidth) && originalWidth > 0) {
+      grid.style.setProperty("--page-size-select-width", `${originalWidth}px`);
+    }
+
+    select.before(grid);
+    grid.appendChild(select);
+    return true;
   }
 
   function syncExistingContractOperators() {
@@ -156,6 +222,7 @@
 
   function sync() {
     installStyles();
+    rebuildPageSizeSelectGrid();
     installAddFilterDefaults();
     installCoreBridge();
     syncExistingContractOperators();
