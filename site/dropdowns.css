@@ -3,12 +3,10 @@
 :root {
   --mfl-dropdown-gap: 8px;
   --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
-  --mfl-dropdown-chevron-duration: 160ms;
-  --mfl-dropdown-chevron-easing: ease;
 }
 
-/* Keep original controls in layout. The runtime only opts visible selects into
- * the customizable picker after preserving the native Rows width. */
+/* Keep original controls in layout. The runtime opts visible selects into the
+ * customizable picker after preserving the Rows footprint and chevron room. */
 select[data-mfl-dropdown-enhanced="true"] {
   box-sizing: border-box;
   cursor: pointer;
@@ -39,11 +37,11 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   }
 
   select[data-mfl-dropdown-enhanced="true"]::picker-icon {
+    align-self: center;
+    margin-block: 0;
     color: var(--text-soft);
     transform: rotate(0deg);
-    transition:
-      transform var(--mfl-dropdown-chevron-duration) var(--mfl-dropdown-chevron-easing),
-      color 120ms ease;
+    transition: none;
   }
 
   select[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
@@ -115,7 +113,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: none;
 }
 
-/* Every non-native dropdown uses the same 180-degree chevron animation. */
+/* Every non-native dropdown uses the same chevron with no animation. */
 #accountButton::after,
 .watchlistButtonChevron {
   width: 7px;
@@ -124,9 +122,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   border-bottom: 1.5px solid currentColor;
   color: var(--text-soft);
   transform: rotate(45deg);
-  transition:
-    transform var(--mfl-dropdown-chevron-duration) var(--mfl-dropdown-chevron-easing),
-    color 120ms ease;
+  transition: none;
 }
 
 #accountButton[aria-expanded="true"]::after,
@@ -135,7 +131,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   transform: rotate(225deg);
 }
 
-/* Account now uses the same dropdown surface and option language. */
+/* Account uses the shared dropdown surface and keeps icon + label centered as
+ * one content group; the chevron is positioned independently on the right. */
 .accountMenu {
   position: relative;
   width: 124px;
@@ -147,12 +144,12 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 #accountButton {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   width: 100%;
-  padding: 0 29px;
+  padding: 0;
   text-align: center;
+  line-height: 1;
 }
 
 #accountButton::after {
@@ -224,8 +221,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   color: #ff6b6b;
 }
 
-/* Watchlist keeps its established dimensions while sharing the same surface and
- * chevron timing. */
+/* Watchlist keeps its established dimensions while sharing the same surface. */
 .watchlistButton {
   position: relative;
   width: 350px;
@@ -411,7 +407,14 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 #pageSizeSelect {
   width: var(--mfl-page-size-select-width, 100%);
-  min-width: 0;
+  min-width: var(--mfl-page-size-select-width, 0);
+}
+
+@supports (appearance: base-select) {
+  #pageSizeSelect::picker-icon {
+    align-self: center;
+    margin-block: 0;
+  }
 }
 
 @media (max-width: 900px) {

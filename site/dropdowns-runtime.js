@@ -2,6 +2,7 @@
   "use strict";
 
   const enhancedSelects = new WeakSet();
+  const ROWS_CHEVRON_RESERVE = 20;
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -15,18 +16,18 @@
     const width = select.getBoundingClientRect().width;
     if (!Number.isFinite(width) || width <= 0) return;
 
-    const measuredWidth = `${width}px`;
-    select.style.setProperty("--mfl-page-size-select-width", measuredWidth);
-    select.style.width = measuredWidth;
-    select.style.flex = `0 0 ${measuredWidth}`;
+    const reservedWidth = `${width + ROWS_CHEVRON_RESERVE}px`;
+    select.style.setProperty("--mfl-page-size-select-width", reservedWidth);
+    select.style.width = reservedWidth;
+    select.style.flex = `0 0 ${reservedWidth}`;
   }
 
   function enhanceSelect(select) {
     if (!(select instanceof HTMLSelectElement)) return null;
     if (enhancedSelects.has(select)) return select;
 
-    /* Measure before opting into the customizable picker. This preserves the
-     * exact native Rows footprint that existed before the dropdown rebuild. */
+    /* Preserve the pre-dropdown Rows width and add dedicated room for the
+     * number plus picker chevron before enabling the customizable picker. */
     preserveRowsFootprint(select);
     select.dataset.mflDropdownEnhanced = "true";
     enhancedSelects.add(select);
