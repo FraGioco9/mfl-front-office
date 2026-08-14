@@ -15,6 +15,7 @@
   let safetyTimer = 0;
   let sawBusy = false;
   let recentSearchNodes = [];
+  let recentSearchCaptured = false;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -85,7 +86,7 @@
   }
 
   function rememberClickedSearch(button) {
-    if (!(button instanceof HTMLButtonElement)) return;
+    if (!(button instanceof HTMLButtonElement) || !recentSearchCaptured) return;
     const id = resultId(button);
     recentSearchNodes = [button, ...recentSearchNodes.filter((candidate) => {
       if (!(candidate instanceof HTMLButtonElement)) return false;
@@ -94,15 +95,26 @@
   }
 
   function captureRenderedRecents(container) {
-    if (!(container instanceof HTMLElement)) return;
+    if (recentSearchCaptured || !(container instanceof HTMLElement) || !active()) return false;
+    const field = input();
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) return false;
+
     const buttons = Array.from(container.querySelectorAll(":scope > .evaluationSearchResult"))
       .filter((button) => button instanceof HTMLButtonElement)
       .slice(0, 5);
-    if (buttons.length) recentSearchNodes = buttons;
+    if (!buttons.length) return false;
+
+    // This is the canonical empty-search list for the current app session. On
+    // Evaluation startup app-core has already restored wallet/table state before
+    // this late runtime loads, so these are the same suggestions the user sees
+    // immediately after loading. Do not recapture typed-query or later rerenders.
+    recentSearchNodes = buttons;
+    recentSearchCaptured = true;
+    return true;
   }
 
   function restoreRecentSearches(container) {
-    if (!(container instanceof HTMLElement)) return false;
+    if (!recentSearchCaptured || !(container instanceof HTMLElement)) return false;
     const nodes = recentSearchNodes
       .filter((button) => button instanceof HTMLButtonElement)
       .slice(0, 5);
@@ -205,8 +217,12 @@
         return;
       }
 
-      if (document.activeElement === field && !field.value.trim()) {
-        captureRenderedRecents(container);
+      if (!field.value.trim()) {
+        if (!recentSearchCaptured) {
+          captureRenderedRecents(container);
+        } else {
+          queueMicrotask(sync);
+        }
         return;
       }
 
@@ -301,6 +317,7 @@
     document.removeEventListener("pointerup", onPointerUp, true);
     stopLock();
     recentSearchNodes = [];
+    recentSearchCaptured = false;
     style.remove();
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
