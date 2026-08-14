@@ -28,6 +28,19 @@
   flex: 1 1 auto !important;
 }
 
+/* Keep the control highlight active for the entire time its dropdown is open.
+ * Chevron styling remains independent and static. */
+select[data-mfl-dropdown-enhanced="true"]:open,
+#pageSizeSelect:open,
+#accountButton[aria-expanded="true"],
+.watchlistButton[aria-expanded="true"] {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
 html:has(body > .modalBackdrop:not([hidden])) body {
