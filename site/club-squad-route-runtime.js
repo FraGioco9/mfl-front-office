@@ -571,7 +571,7 @@
 
     history.replaceState = function(state, title, url) {
       const mapped = mappedRelativeUrl(url, "squad");
-      nativeReplaceState(history.state, title, mapped);
+      nativeReplaceState(state, title, mapped);
       queueMicrotask(syncNavigationUi);
     };
   }
