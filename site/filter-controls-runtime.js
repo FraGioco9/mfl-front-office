@@ -36,6 +36,10 @@
         line-height: 38px;
       }
 
+      .controlsBar > .field.compact.rowsField {
+        justify-self: end;
+      }
+
       .field.rowsField .pageSizeSelectGrid {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 6px;
@@ -144,6 +148,7 @@
     grid.dataset.pageSizeInteractive = "true";
     grid.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 || select.disabled) return;
+      if (event.target === select || event.target instanceof HTMLOptionElement) return;
       event.preventDefault();
       openPageSizeSelect(select);
     });
@@ -204,7 +209,7 @@
       syncExistingContractOperators();
       return result;
     };
-    Object.defineProperty(wrappedAddFilterRule, "__mflFilterDefaults", { value: true });
+    Object.defineProperty(wrappedAddFilterDefaults, "__mflFilterDefaults", { value: true });
     window.addFilterRule = wrappedAddFilterRule;
     return true;
   }
