@@ -45,19 +45,19 @@
       .watchlistSwitcher > select.watchlistButtonNativeChevron {
         position: absolute;
         top: 50%;
-        right: 4px;
+        right: 2px;
         z-index: 2;
-        width: 24px;
-        min-width: 24px;
-        max-width: 24px;
-        height: 24px;
+        width: 38px;
+        min-width: 38px;
+        max-width: 38px;
+        height: 38px;
         margin: 0;
         padding: 0;
         border: 0;
         outline: 0;
         background-color: transparent;
-        color: transparent;
-        -webkit-text-fill-color: transparent;
+        color: var(--text-soft);
+        -webkit-text-fill-color: var(--text-soft);
         opacity: 1;
         -webkit-appearance: menulist;
         appearance: auto;
