@@ -8,6 +8,7 @@
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   let destroyed = false;
   let observer = null;
+  let layerObserver = null;
 
   const style = document.createElement("style");
   style.id = STYLE_ID;
@@ -106,6 +107,22 @@
   `;
   document.head.appendChild(style);
 
+  function openModalHost() {
+    const modals = Array.from(document.querySelectorAll(".modalBackdrop:not([hidden])"))
+      .filter((modal) => modal instanceof HTMLElement);
+    return modals.at(-1) || null;
+  }
+
+  function syncToastHosts() {
+    if (destroyed || !document.body) return;
+    const host = openModalHost() || document.body;
+    document.querySelectorAll(".toastMessage").forEach((toast) => {
+      if (!(toast instanceof HTMLElement)) return;
+      if (toast.parentElement !== host) host.appendChild(toast);
+      toast.style.setProperty("z-index", "2147483647", "important");
+    });
+  }
+
   function ensureToast() {
     let toast = document.getElementById(TOAST_ID);
     if (toast instanceof HTMLElement) return toast;
@@ -119,6 +136,7 @@
     toast.textContent = "Loading...";
     toast.hidden = true;
     document.body.appendChild(toast);
+    syncToastHosts();
     return toast;
   }
 
@@ -187,6 +205,7 @@
     if (destroyed || !document.body) return;
     syncFooterLock();
     const toast = ensureToast();
+    syncToastHosts();
     positionToast(toast);
     const busy = interactionBusy();
 
@@ -210,6 +229,14 @@
       attributes: true,
       attributeFilter: ["class", "aria-busy"],
     });
+
+    layerObserver = new MutationObserver(syncToastHosts);
+    layerObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden"],
+    });
   }
 
   window.addEventListener("mfl:ready", sync);
@@ -221,10 +248,18 @@
   function destroy() {
     destroyed = true;
     observer?.disconnect();
+    layerObserver?.disconnect();
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("scroll", sync);
+    if (document.body) {
+      document.querySelectorAll(".toastMessage").forEach((toast) => {
+        if (toast instanceof HTMLElement && toast.id !== TOAST_ID && toast.parentElement !== document.body) {
+          document.body.appendChild(toast);
+        }
+      });
+    }
     document.getElementById(TOAST_ID)?.remove();
     const footer = document.querySelector(".siteFooter");
     if (footer instanceof HTMLElement) {
