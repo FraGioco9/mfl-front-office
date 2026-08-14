@@ -110,9 +110,11 @@
     const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
+      .evaluationSummaryShell .evaluationTable th:first-child,
+      .evaluationSummaryShell .evaluationTable td:first-child,
       .evaluationTableShell .evaluationTable th:first-child,
       .evaluationTableShell .evaluationTable td:first-child {
-        padding-left: 24px;
+        padding-left: 12px;
       }
     `;
     document.head.appendChild(style);
