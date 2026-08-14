@@ -11,9 +11,15 @@
   let wrappedSwitchWatchlist = null;
   let originalLoadWalletPreferences = null;
   let wrappedLoadWalletPreferences = null;
+  let originalSaveWalletPreferencesNow = null;
+  let wrappedSaveWalletPreferencesNow = null;
+  let originalApplyWatchlists = null;
+  let wrappedApplyWatchlists = null;
   let originalApplyFilters = null;
   let wrappedApplyFilters = null;
   let walletPreferencesLoadPromise = null;
+  let walletPreferencesSaveDepth = 0;
+  let skipNextNoopWatchlistSaveFilter = false;
   let watchlistNavigationDepth = 0;
   let deferredWatchlistFilter = null;
   let reconciling = false;
@@ -56,6 +62,26 @@
   }
   function intentOptions(pageName, options = {}) {
     return { ...options, view: String(options?.view || currentView(pageName) || "attributes") };
+  }
+  function watchlistSnapshot() {
+    try {
+      const lists = Array.isArray(state?.watchlists) ? state.watchlists : [];
+      return JSON.stringify({
+        currentWatchlistId: String(state?.currentWatchlistId || ""),
+        watchlists: lists.map((watchlist) => {
+          const ids = Array.isArray(watchlist?.playerIds)
+            ? watchlist.playerIds.map((playerId) => String(playerId)).sort()
+            : [];
+          return {
+            id: String(watchlist?.id || ""),
+            name: String(watchlist?.name || ""),
+            playerIds: ids,
+          };
+        }),
+      });
+    } catch {
+      return "";
+    }
   }
   async function reconcile(intent) {
     if (destroyed || reconciling || !intent || latestIntent?.sequence !== intent.sequence) return;
@@ -109,6 +135,46 @@
     try { window.eval("loadWalletPreferences = window.__mflSingleFlightLoadWalletPreferences"); } catch {}
     return true;
   }
+  function installWatchlistSaveResponseDedupe() {
+    let watchlistsCandidate = null;
+    try { watchlistsCandidate = applyWatchlists; } catch {}
+    if (typeof watchlistsCandidate === "function" && watchlistsCandidate !== wrappedApplyWatchlists) {
+      originalApplyWatchlists = watchlistsCandidate;
+      wrappedApplyWatchlists = function applyWatchlistsWithSaveNoopTracking(...args) {
+        const trackSaveResponse = walletPreferencesSaveDepth > 0 && statePage() === "watchlist";
+        const before = trackSaveResponse ? watchlistSnapshot() : "";
+        const result = originalApplyWatchlists.apply(this, args);
+        if (trackSaveResponse) {
+          const after = watchlistSnapshot();
+          skipNextNoopWatchlistSaveFilter = Boolean(before && before === after);
+        }
+        return result;
+      };
+      window.__mflSaveTrackedApplyWatchlists = wrappedApplyWatchlists;
+      try { window.applyWatchlists = wrappedApplyWatchlists; } catch {}
+      try { window.eval("applyWatchlists = window.__mflSaveTrackedApplyWatchlists"); } catch {}
+    }
+
+    let saveCandidate = null;
+    try { saveCandidate = saveWalletPreferencesNow; } catch {}
+    if (typeof saveCandidate === "function" && saveCandidate !== wrappedSaveWalletPreferencesNow) {
+      originalSaveWalletPreferencesNow = saveCandidate;
+      wrappedSaveWalletPreferencesNow = async function saveWalletPreferencesWithoutNoopWatchlistReload(...args) {
+        walletPreferencesSaveDepth += 1;
+        try {
+          return await originalSaveWalletPreferencesNow.apply(this, args);
+        } finally {
+          walletPreferencesSaveDepth = Math.max(0, walletPreferencesSaveDepth - 1);
+          if (!walletPreferencesSaveDepth) skipNextNoopWatchlistSaveFilter = false;
+        }
+      };
+      window.__mflDedupeSaveWalletPreferencesNow = wrappedSaveWalletPreferencesNow;
+      try { window.saveWalletPreferencesNow = wrappedSaveWalletPreferencesNow; } catch {}
+      try { window.eval("saveWalletPreferencesNow = window.__mflDedupeSaveWalletPreferencesNow"); } catch {}
+    }
+
+    return typeof wrappedApplyWatchlists === "function" && typeof wrappedSaveWalletPreferencesNow === "function";
+  }
   function installWatchlistFilterGate() {
     let candidate = null;
     try { candidate = applyFilters; } catch {}
@@ -117,6 +183,10 @@
 
     originalApplyFilters = candidate;
     wrappedApplyFilters = function applyFiltersWithWatchlistSyncGate(...args) {
+      if (walletPreferencesSaveDepth > 0 && skipNextNoopWatchlistSaveFilter && statePage() === "watchlist") {
+        skipNextNoopWatchlistSaveFilter = false;
+        return undefined;
+      }
       if (watchlistNavigationDepth > 0 && statePage() === "watchlist") {
         if (walletPreferencesSyncActive()) {
           deferredWatchlistFilter = { filterThis: this, filterArgs: args };
@@ -200,6 +270,7 @@
   }
   function install() {
     installWalletPreferencesSingleFlight();
+    installWatchlistSaveResponseDedupe();
     installWatchlistFilterGate();
 
     let candidate = null;
@@ -252,6 +323,8 @@
     watchlistNavigationDepth = 0;
     deferredWatchlistFilter = null;
     walletPreferencesLoadPromise = null;
+    walletPreferencesSaveDepth = 0;
+    skipNextNoopWatchlistSaveFilter = false;
     if (wrappedSwitchWatchlist && originalSwitchWatchlist) {
       try { if (window.switchWatchlist === wrappedSwitchWatchlist) window.switchWatchlist = originalSwitchWatchlist; } catch {}
       try {
@@ -267,6 +340,22 @@
         window.eval("if (applyFilters === window.__mflWatchlistSyncGatedApplyFilters) applyFilters = window.__mflPairOriginalApplyFilters");
       } catch {}
       delete window.__mflPairOriginalApplyFilters;
+    }
+    if (wrappedApplyWatchlists && originalApplyWatchlists) {
+      try { if (window.applyWatchlists === wrappedApplyWatchlists) window.applyWatchlists = originalApplyWatchlists; } catch {}
+      try {
+        window.__mflPairOriginalApplyWatchlists = originalApplyWatchlists;
+        window.eval("if (applyWatchlists === window.__mflSaveTrackedApplyWatchlists) applyWatchlists = window.__mflPairOriginalApplyWatchlists");
+      } catch {}
+      delete window.__mflPairOriginalApplyWatchlists;
+    }
+    if (wrappedSaveWalletPreferencesNow && originalSaveWalletPreferencesNow) {
+      try { if (window.saveWalletPreferencesNow === wrappedSaveWalletPreferencesNow) window.saveWalletPreferencesNow = originalSaveWalletPreferencesNow; } catch {}
+      try {
+        window.__mflPairOriginalSaveWalletPreferencesNow = originalSaveWalletPreferencesNow;
+        window.eval("if (saveWalletPreferencesNow === window.__mflDedupeSaveWalletPreferencesNow) saveWalletPreferencesNow = window.__mflPairOriginalSaveWalletPreferencesNow");
+      } catch {}
+      delete window.__mflPairOriginalSaveWalletPreferencesNow;
     }
     if (wrappedLoadWalletPreferences && originalLoadWalletPreferences) {
       try { if (window.loadWalletPreferences === wrappedLoadWalletPreferences) window.loadWalletPreferences = originalLoadWalletPreferences; } catch {}
@@ -286,6 +375,8 @@
     }
     delete window.__mflSingleLoadSwitchWatchlist;
     delete window.__mflWatchlistSyncGatedApplyFilters;
+    delete window.__mflSaveTrackedApplyWatchlists;
+    delete window.__mflDedupeSaveWalletPreferencesNow;
     delete window.__mflSingleFlightLoadWalletPreferences;
     delete window.__mflLatestPairSetPage;
   }
