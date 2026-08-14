@@ -62,11 +62,11 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   }
 }
 
-/* Account and Watchlist use the exact same chevron geometry as selects. */
+/* Account and Watchlist use the exact same global chevron geometry as selects. */
 #accountButton::after,
 #accountButton[aria-expanded="true"]::after,
-.watchlistButtonChevron,
-.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
+#watchlistButton::after,
+#watchlistButton[aria-expanded="true"]::after {
   box-sizing: border-box;
   width: 7px;
   height: 7px;
@@ -80,12 +80,22 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 }
 
 #accountButton::after,
-#accountButton[aria-expanded="true"]::after {
+#accountButton[aria-expanded="true"]::after,
+#watchlistButton::after,
+#watchlistButton[aria-expanded="true"]::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 4px);
   right: var(--mfl-dropdown-chevron-inset);
 }
 
+/* The old Watchlist chevron element is superseded by the shared global one. */
+.watchlistButtonChevron {
+  display: none;
+}
+
 .watchlistButton {
-  padding-right: var(--mfl-dropdown-chevron-inset);
+  padding-right: calc(var(--mfl-dropdown-chevron-inset) + 16px);
 }
 
 /* Filters: preserve existing box sizes, vertically center their content, keep
