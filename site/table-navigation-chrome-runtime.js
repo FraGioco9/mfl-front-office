@@ -88,38 +88,6 @@
     return nav instanceof HTMLAnchorElement ? nav : null;
   }
 
-  function currentSidebarPage() {
-    const active = document.querySelector("#sidebar .navButton.active[data-page]");
-    if (active instanceof HTMLElement) {
-      return normalizePage(active.dataset.page);
-    }
-    const page = normalizePage(document.body?.dataset.page);
-    if (page === "databasestats") return "database";
-    if (page === "mflstats") return "mfl";
-    return page;
-  }
-
-  function isCurrentSidebarNav(nav) {
-    if (!(nav instanceof HTMLAnchorElement)) return false;
-    const targetPage = normalizePage(nav.dataset.page);
-    return Boolean(targetPage && targetPage === currentSidebarPage());
-  }
-
-  function clearPendingDestination() {
-    pendingPage = "";
-    pendingView = "";
-    if (repairFrame) cancelAnimationFrame(repairFrame);
-    repairFrame = 0;
-  }
-
-  function suppressCurrentSidebarClick(event, nav) {
-    if (!isCurrentSidebarNav(nav)) return false;
-    clearPendingDestination();
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return true;
-  }
-
   function tablePageFromTarget(target) {
     const nav = navFromTarget(target);
     if (!nav) return "";
@@ -356,21 +324,19 @@
 
   function onPointerDown(event) {
     const nav = navFromTarget(event.target);
-    if (isCurrentSidebarNav(nav)) {
-      clearPendingDestination();
-      return;
-    }
     const page = tablePageFromTarget(event.target);
     if (page) {
       showDestinationChrome(page, nav);
       return;
     }
-    if (nav) clearPendingDestination();
+    if (nav) {
+      pendingPage = "";
+      pendingView = "";
+    }
   }
 
   function onClick(event) {
     const nav = navFromTarget(event.target);
-    if (suppressCurrentSidebarClick(event, nav)) return;
     const page = tablePageFromTarget(event.target);
     if (!page) return;
     if (pendingPage !== page) showDestinationChrome(page, nav);
@@ -378,7 +344,10 @@
   }
 
   function onPopState() {
-    clearPendingDestination();
+    pendingPage = "";
+    pendingView = "";
+    if (repairFrame) cancelAnimationFrame(repairFrame);
+    repairFrame = 0;
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -388,12 +357,15 @@
   window.addEventListener("popstate", onPopState);
 
   function destroy() {
-    clearPendingDestination();
+    if (repairFrame) cancelAnimationFrame(repairFrame);
+    repairFrame = 0;
     if (pageSizeEscapeFrame) cancelAnimationFrame(pageSizeEscapeFrame);
     pageSizeEscapeFrame = 0;
     if (pageSizeEscapeTimer) window.clearTimeout(pageSizeEscapeTimer);
     pageSizeEscapeTimer = 0;
     pageSizeEscapeSelect = null;
+    pendingPage = "";
+    pendingView = "";
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", clearPageSizeHighlightOnEscape, true);
