@@ -37,14 +37,19 @@
       }
 
       .controlsBar > .field.compact.rowsField {
+        position: relative;
+        z-index: 1;
         justify-self: end;
       }
 
       .field.rowsField .pageSizeSelectGrid {
+        position: relative;
+        z-index: 1;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 6px;
         align-items: center;
-        width: var(--page-size-select-width, auto);
+        width: min(150px, 48vw);
+        min-width: 0;
         height: 40px;
         overflow: hidden;
         border: 1px solid var(--border-strong);
@@ -53,6 +58,7 @@
         color: #ffffff;
         font: inherit;
         cursor: pointer;
+        pointer-events: auto;
         transition: background 120ms ease, border-color 120ms ease;
       }
 
@@ -64,9 +70,13 @@
       }
 
       .field.rowsField .pageSizeSelectGrid #pageSizeSelect {
+        position: relative;
+        z-index: 2;
         grid-column: 1;
         align-self: stretch;
+        display: block;
         width: 100%;
+        min-width: 0;
         height: 38px;
         margin: 0;
         padding: 0 26px 0 13px;
@@ -80,6 +90,7 @@
         box-shadow: none;
         font: inherit;
         cursor: pointer;
+        pointer-events: auto;
         transition: background 120ms ease, color 120ms ease;
       }
 
@@ -105,12 +116,6 @@
         -webkit-text-fill-color: #ffffff;
         opacity: 1;
         box-shadow: none;
-      }
-
-      @media (max-width: 900px) {
-        .field.compact.rowsField .pageSizeSelectGrid {
-          width: min(160px, 48vw);
-        }
       }
 
       .filtersDialog .filterRule > .iconButton.popupCloseButton {
@@ -145,16 +150,20 @@
     if (!(select instanceof HTMLSelectElement)) return false;
     if (select.parentElement?.classList.contains("pageSizeSelectGrid")) return true;
 
-    const originalWidth = select.getBoundingClientRect().width;
     const grid = document.createElement("span");
     grid.className = "pageSizeSelectGrid";
-    if (Number.isFinite(originalWidth) && originalWidth > 0) {
-      grid.style.setProperty("--page-size-select-width", `${originalWidth}px`);
-    }
-
     select.before(grid);
     grid.appendChild(select);
     return true;
+  }
+
+  function restorePageSizeSelectInteraction() {
+    if (document.documentElement.dataset.mflReady !== "true") return;
+    const select = document.getElementById("pageSizeSelect");
+    if (!(select instanceof HTMLSelectElement)) return;
+    select.disabled = false;
+    select.inert = false;
+    select.removeAttribute("aria-disabled");
   }
 
   function syncExistingContractOperators() {
@@ -246,6 +255,7 @@
   function sync() {
     installStyles();
     rebuildPageSizeSelectGrid();
+    restorePageSizeSelectInteraction();
     installAddFilterDefaults();
     installCoreBridge();
     syncExistingContractOperators();
