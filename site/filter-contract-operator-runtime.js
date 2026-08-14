@@ -8,10 +8,17 @@
       if (!(select instanceof HTMLSelectElement)) return;
       const selected = select.value === "!=" ? "!=" : "=";
       select.hidden = false;
-      select.replaceChildren(
-        new Option("is", "="),
-        new Option("is not", "!="),
-      );
+      const alreadyCorrect = select.options.length === 2
+        && select.options[0]?.value === "="
+        && select.options[0]?.textContent === "is"
+        && select.options[1]?.value === "!="
+        && select.options[1]?.textContent === "is not";
+      if (!alreadyCorrect) {
+        select.replaceChildren(
+          new Option("is", "="),
+          new Option("is not", "!="),
+        );
+      }
       select.value = selected;
     });
   }
@@ -62,9 +69,22 @@
   }
 
   installCoreBridge();
+
+  const headObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof HTMLScriptElement)) continue;
+        if (!/\/modules\/app-core\.js(?:$|\?)/.test(node.src)) continue;
+        node.addEventListener("load", () => installCoreBridge(), { once: true });
+      }
+    }
+  });
+  headObserver.observe(document.head, { childList: true });
+
   window.addEventListener("mfl:ready", () => {
     installCoreBridge();
     syncExistingContractOperators();
+    headObserver.disconnect();
   });
 
   const observer = new MutationObserver(() => syncExistingContractOperators());
