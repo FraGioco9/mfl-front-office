@@ -27,16 +27,18 @@
   }
 
   function internalizeCurrentSquadRoute() {
-    const internal = mappedRelativeUrl(currentRelativeUrl(), "attributes");
-    if (internal === currentRelativeUrl()) return false;
-    window.__mflInitialClubSquadUrl = currentRelativeUrl();
+    const current = currentRelativeUrl();
+    const internal = mappedRelativeUrl(current, "attributes");
+    if (internal === current) return false;
+    window.__mflInitialClubSquadUrl = current;
     nativeReplaceState(history.state, "", internal);
     return true;
   }
 
   function externalizeCurrentClubRoute() {
-    const external = mappedRelativeUrl(currentRelativeUrl(), "squad");
-    if (external !== currentRelativeUrl()) {
+    const current = currentRelativeUrl();
+    const external = mappedRelativeUrl(current, "squad");
+    if (external !== current) {
       nativeReplaceState(history.state, "", external);
     }
   }
@@ -44,8 +46,9 @@
   function rewriteClubLinks() {
     document.querySelectorAll("a[href]").forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) return;
-      const external = mappedRelativeUrl(link.href, "squad");
-      if (external !== link.href && external !== null && external !== undefined) {
+      const current = link.href;
+      const external = mappedRelativeUrl(current, "squad");
+      if (external !== current && external !== null && external !== undefined) {
         link.href = external;
       }
     });
@@ -54,7 +57,8 @@
   function syncClubViewLabel() {
     const button = document.querySelector('#progressionPage .viewButton[data-view="attributes"]');
     if (!(button instanceof HTMLButtonElement)) return;
-    button.textContent = document.body?.dataset.page === "club" ? "Squad" : "Attributes";
+    const label = document.body?.dataset.page === "club" ? "Squad" : "Attributes";
+    if (button.textContent !== label) button.textContent = label;
   }
 
   function syncUi() {
@@ -96,7 +100,7 @@
   const observer = new MutationObserver(syncUi);
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-page"],
+    attributeFilter: ["data-page", "href"],
     childList: true,
     subtree: true,
   });
