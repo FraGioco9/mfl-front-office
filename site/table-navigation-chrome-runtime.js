@@ -42,6 +42,11 @@
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
+    #sidebar .navButton.active {
+      pointer-events: none;
+      cursor: default;
+    }
+
     html.mflInteractionBusy #pageSizeSelect,
     html.mflInteractionBusy #pageSizeSelect:hover,
     html.mflInteractionBusy #pageSizeSelect:focus,
