@@ -307,8 +307,85 @@
     buttons.hidden = true;
   }
 
+  const PLAYER_NATIONALITY_CODES = Object.freeze({
+    ALBANIA: "AL", ALGERIA: "DZ", ARGENTINA: "AR", AUSTRALIA: "AU", AUSTRIA: "AT",
+    BELGIUM: "BE", BOSNIA_AND_HERZEGOVINA: "BA", BRAZIL: "BR", CAMEROON: "CM",
+    CANADA: "CA", CAPE_VERDE_ISLANDS: "CV", CHILE: "CL", COLOMBIA: "CO", CONGO_DR: "CD",
+    COSTA_RICA: "CR", COTE_D_IVOIRE: "CI", CROATIA: "HR", CURACAO: "CW", CZECH_REPUBLIC: "CZ",
+    CZECHIA: "CZ", DENMARK: "DK", ECUADOR: "EC", EGYPT: "EG",
+    ENGLAND: "1f3f4-e0067-e0062-e0065-e006e-e0067-e007f", FINLAND: "FI", FRANCE: "FR",
+    GEORGIA: "GE", GERMANY: "DE", GHANA: "GH", HAITI: "HT", HUNGARY: "HU", IRAN: "IR",
+    IRAQ: "IQ", ITALY: "IT", IVORY_COAST: "CI", JAPAN: "JP", JORDAN: "JO",
+    KOREA_REPUBLIC: "KR", MEXICO: "MX", MOROCCO: "MA", NETHERLANDS: "NL", NEW_ZEALAND: "NZ",
+    NIGERIA: "NG", NORWAY: "NO", PANAMA: "PA", PARAGUAY: "PY", PERU: "PE", POLAND: "PL",
+    PORTUGAL: "PT", QATAR: "QA", REPUBLIC_OF_IRELAND: "IE", ROMANIA: "RO", RUSSIA: "RU",
+    SAUDI_ARABIA: "SA", SCOTLAND: "1f3f4-e0067-e0062-e0073-e0063-e0074-e007f", SENEGAL: "SN",
+    SERBIA: "RS", SLOVAKIA: "SK", SLOVENIA: "SI", SOUTH_AFRICA: "ZA", SOUTH_KOREA: "KR",
+    SPAIN: "ES", SWEDEN: "SE", SWITZERLAND: "CH", TUNISIA: "TN", TURKEY: "TR", UKRAINE: "UA",
+    UNITED_KINGDOM: "GB", UNITED_STATES: "US", UNITED_STATES_OF_AMERICA: "US", URUGUAY: "UY",
+    USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e007f",
+  });
+
+  function playerNationalityFlagCodepoints(nationality) {
+    const countryKey = String(nationality || "")
+      .toUpperCase()
+      .replaceAll("&", "AND")
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    const code = PLAYER_NATIONALITY_CODES[countryKey] || "";
+    if (!code) return "";
+    return code.includes("-")
+      ? code.toLowerCase()
+      : code.toUpperCase().split("").map((character) => (127397 + character.charCodeAt(0)).toString(16)).join("-");
+  }
+
+  function syncKnownPlayerNationalityFlag() {
+    const detail = document.getElementById("playerDetail");
+    const loadingGrid = detail?.querySelector?.('[data-mfl-player-loading-grid="true"]');
+    if (!(loadingGrid instanceof HTMLElement)) return;
+
+    const nationalityCard = Array.from(loadingGrid.querySelectorAll(".playerInfoPanel .detailGrid > div"))
+      .find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Nationality");
+    const value = nationalityCard?.querySelector(":scope > strong");
+    if (!(value instanceof HTMLElement) || value.querySelector("img.flagImage")) return;
+
+    const textClone = value.cloneNode(true);
+    textClone.querySelectorAll(".flagText, .flagImage").forEach((node) => node.remove());
+    const nationality = String(textClone.textContent || "").trim();
+    if (!nationality) return;
+
+    const codepoints = playerNationalityFlagCodepoints(nationality);
+    if (!codepoints) return;
+
+    const image = document.createElement("img");
+    image.className = "flagImage";
+    image.src = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`;
+    image.alt = "";
+    const placeholder = value.querySelector(".flagText");
+    if (placeholder) {
+      placeholder.replaceWith(image);
+      return;
+    }
+    value.prepend(document.createTextNode(" "));
+    value.prepend(image);
+  }
+
+  function installPlayerNationalityFirstPaint() {
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return;
+    if (window.__mflPlayerNationalityFirstPaintInstalled) {
+      syncKnownPlayerNationalityFlag();
+      return;
+    }
+    window.__mflPlayerNationalityFirstPaintInstalled = true;
+    const observer = new MutationObserver(syncKnownPlayerNationalityFlag);
+    observer.observe(detail, { childList: true, subtree: true, characterData: true });
+    syncKnownPlayerNationalityFlag();
+  }
+
   function syncBootstrapFirstPaint() {
     installImmediateUiInteractions();
+    installPlayerNationalityFirstPaint();
     syncSidebarFirstPaint();
     normalizeEvaluationSearchClearButton();
     installEvaluationTableSpacing();
