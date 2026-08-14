@@ -25,15 +25,29 @@
   padding-right: var(--mfl-dropdown-chevron-inset);
 }
 
-/* Keep the control highlight active for the entire time its dropdown is open.
- * Chevron styling remains independent and static. */
+/* Keep select/Watchlist controls highlighted for the entire time their menu is
+ * open. Select filter is explicit so its open state never depends on runtime
+ * enhancement timing. */
 select[data-mfl-dropdown-enhanced="true"]:open,
 #pageSizeSelect:open,
-#accountButton[aria-expanded="true"],
+#addFilterSelect:open,
 .watchlistButton[aria-expanded="true"] {
   outline: 0;
   border-color: var(--primary-hover);
   background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+/* Account follows the Filters button interaction: opening it marks the border
+ * without changing the button background. */
+#accountButton[aria-expanded="true"],
+#accountButton[aria-expanded="true"]:hover,
+#accountButton[aria-expanded="true"]:focus,
+#accountButton[aria-expanded="true"]:focus-visible {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--surface);
   color: var(--text);
   box-shadow: none;
 }
@@ -81,9 +95,7 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   }
 }
 
-/* Account and Watchlist use the exact same global chevron geometry as selects. */
-#accountButton::after,
-#accountButton[aria-expanded="true"]::after,
+/* Watchlist uses the same global chevron geometry as selects. */
 #watchlistButton::after,
 #watchlistButton[aria-expanded="true"]::after {
   box-sizing: border-box;
@@ -95,17 +107,18 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   color: var(--text-soft);
   font-size: 0;
   transition: none;
-}
-
-#accountButton::after,
-#accountButton[aria-expanded="true"]::after,
-#watchlistButton::after,
-#watchlistButton[aria-expanded="true"]::after {
   content: "";
   position: absolute;
   top: 50%;
   right: var(--mfl-dropdown-chevron-inset);
   transform: translateY(-50%) rotate(45deg);
+}
+
+/* Account intentionally has no dropdown chevron. */
+#accountButton::after,
+#accountButton[aria-expanded="true"]::after {
+  content: none;
+  display: none;
 }
 
 /* The old Watchlist chevron element is superseded by the shared global one. */
