@@ -2,6 +2,9 @@
   "use strict";
 
   const PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
+  const LEGACY_RECENT_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
+  const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
+  const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
   let destroyed = false;
@@ -103,6 +106,28 @@
     container.hidden = false;
   }
 
+  function purgeLegacyLocalRecentState() {
+    try {
+      localStorage.removeItem(LEGACY_RECENT_STORAGE_KEY);
+      const savedState = JSON.parse(localStorage.getItem(TABLE_STATE_STORAGE_KEY) || "null");
+      if (!savedState || typeof savedState !== "object" || Array.isArray(savedState)
+        || !("recentEvaluationPlayerIds" in savedState)) return;
+      delete savedState.recentEvaluationPlayerIds;
+      localStorage.setItem(TABLE_STATE_STORAGE_KEY, JSON.stringify(savedState));
+    } catch {
+      // Supabase remains authoritative even when browser storage cannot be cleaned.
+    }
+  }
+
+  function onLegacyRecentStorage(event) {
+    if (event.key !== LEGACY_RECENT_STORAGE_KEY) return;
+    try {
+      localStorage.removeItem(LEGACY_RECENT_STORAGE_KEY);
+    } catch {
+      // The core bridge already ignores this key when storage is unavailable.
+    }
+  }
+
   function recentEvaluationPlayerIds() {
     try {
       const ids = window.eval(
@@ -116,19 +141,73 @@
     }
   }
 
-  function applyRecentPayload(payload) {
-    window.__mflEvaluationRecentSearchPayload = payload;
+  function buildRecentEntries(payload) {
+    window.__mflEvaluationSupabaseRecentPayload = payload;
     try {
-      if (typeof window.applyDatabaseSearchPayload === "function") {
-        window.applyDatabaseSearchPayload(payload, "players");
-      } else {
-        window.eval(
-          "if (typeof applyDatabaseSearchPayload === 'function') applyDatabaseSearchPayload(window.__mflEvaluationRecentSearchPayload, 'players');",
-        );
-      }
+      const entries = window.eval(`(() => {
+        const payload = window.__mflEvaluationSupabaseRecentPayload || {};
+        const columns = Array.isArray(payload.columns) ? payload.columns : [];
+        const rows = Array.isArray(payload.rows) ? payload.rows : [];
+        if (typeof buildPlayerSearchEntryFromCompactRow !== "function") return [];
+        return rows
+          .map((row) => buildPlayerSearchEntryFromCompactRow(row, columns))
+          .filter((entry) => entry && !entry.retired);
+      })()`);
+      return Array.isArray(entries) ? entries : [];
+    } catch (error) {
+      console.warn("Could not build Supabase Evaluation recent entries.", error);
+      return [];
     } finally {
-      delete window.__mflEvaluationRecentSearchPayload;
+      delete window.__mflEvaluationSupabaseRecentPayload;
     }
+  }
+
+  function installCoreRecentRowsBridge() {
+    try {
+      window.eval(`(() => {
+        if (typeof recentEvaluationRows !== "function") return false;
+        if (recentEvaluationRows.__mflSupabaseOnly) return true;
+        const supabaseRecentRows = function() {
+          const entries = window.${RECENT_ENTRIES_KEY};
+          return Array.isArray(entries) ? entries.slice(0, 5) : [];
+        };
+        Object.defineProperty(supabaseRecentRows, "__mflSupabaseOnly", { value: true });
+        recentEvaluationRows = supabaseRecentRows;
+        return true;
+      })()`);
+    } catch (error) {
+      console.warn("Could not isolate Supabase Evaluation recent rows.", error);
+    }
+  }
+
+  function installEmptyPlayerSearchBridge() {
+    try {
+      window.eval(`(() => {
+        if (typeof requestDatabaseSearch !== "function") return false;
+        if (requestDatabaseSearch.__mflEvaluationSupabaseOnly) return true;
+        const originalRequestDatabaseSearch = requestDatabaseSearch;
+        const supabaseOnlyRequestDatabaseSearch = function(rawQuery = "", type = "all", options = {}) {
+          if (type === "players" && !String(rawQuery || "").trim()) {
+            const restore = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+            return typeof restore === "function"
+              ? restore(Boolean(options?.force))
+              : Promise.resolve(false);
+          }
+          return originalRequestDatabaseSearch.apply(this, arguments);
+        };
+        Object.defineProperty(supabaseOnlyRequestDatabaseSearch, "__mflEvaluationSupabaseOnly", { value: true });
+        requestDatabaseSearch = supabaseOnlyRequestDatabaseSearch;
+        return true;
+      })()`);
+    } catch (error) {
+      console.warn("Could not isolate empty Evaluation searches from generic recents.", error);
+    }
+  }
+
+  function publishRecentPayload(payload) {
+    const entries = buildRecentEntries(payload);
+    window[RECENT_ENTRIES_KEY] = entries;
+    installCoreRecentRowsBridge();
   }
 
   function renderEmptySearchFromCore() {
@@ -187,7 +266,7 @@
     const signature = ids.join(",");
 
     if (!force && recentPayload && recentPayloadSignature === signature) {
-      applyRecentPayload(recentPayload);
+      publishRecentPayload(recentPayload);
       renderEmptySearchFromCore();
       return Promise.resolve(true);
     }
@@ -198,7 +277,7 @@
       .then((payload) => {
         if (destroyed || recentPayloadSignature !== signature) return false;
         recentPayload = payload;
-        applyRecentPayload(payload);
+        publishRecentPayload(payload);
         renderEmptySearchFromCore();
         return true;
       })
@@ -220,6 +299,8 @@
 
     syncing = true;
     installRecentRule();
+    installCoreRecentRowsBridge();
+    installEmptyPlayerSearchBridge();
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
 
@@ -230,7 +311,7 @@
       const ids = recentEvaluationPlayerIds();
       const signature = ids.join(",");
       if (recentPayload && recentPayloadSignature === signature) {
-        applyRecentPayload(recentPayload);
+        publishRecentPayload(recentPayload);
         renderEmptySearchFromCore();
       } else {
         void primeRecentSearchData();
@@ -312,11 +393,15 @@
     }
   }
 
+  purgeLegacyLocalRecentState();
   installRecentRule();
+  installCoreRecentRowsBridge();
+  installEmptyPlayerSearchBridge();
   syncClearButton();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
+  window.addEventListener("storage", onLegacyRecentStorage, true);
   window.addEventListener("mfl:evaluation-ready", onReady);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
@@ -331,12 +416,14 @@
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
+    window.removeEventListener("storage", onLegacyRecentStorage, true);
     window.removeEventListener("mfl:evaluation-ready", onReady);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
+    delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
     }
