@@ -75,7 +75,6 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   border-bottom: 1.5px solid currentColor;
   color: var(--text-soft);
   font-size: 0;
-  transform: rotate(45deg);
   transition: none;
 }
 
@@ -85,8 +84,9 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 #watchlistButton[aria-expanded="true"]::after {
   content: "";
   position: absolute;
-  top: calc(50% - 4px);
+  top: 50%;
   right: var(--mfl-dropdown-chevron-inset);
+  transform: translateY(-50%) rotate(45deg);
 }
 
 /* The old Watchlist chevron element is superseded by the shared global one. */
