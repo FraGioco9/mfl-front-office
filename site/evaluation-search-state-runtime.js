@@ -8,6 +8,8 @@
   let syncing = false;
   let resultsObserver = null;
   let recentPrimePromise = null;
+  let recentPayload = null;
+  let recentPayloadSignature = "";
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -101,6 +103,34 @@
     container.hidden = false;
   }
 
+  function recentEvaluationPlayerIds() {
+    try {
+      const ids = window.eval(
+        "typeof state === 'object' && Array.isArray(state.recentEvaluationPlayerIds) ? [...state.recentEvaluationPlayerIds] : []",
+      );
+      return Array.isArray(ids)
+        ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function applyRecentPayload(payload) {
+    window.__mflEvaluationRecentSearchPayload = payload;
+    try {
+      if (typeof window.applyDatabaseSearchPayload === "function") {
+        window.applyDatabaseSearchPayload(payload, "players");
+      } else {
+        window.eval(
+          "if (typeof applyDatabaseSearchPayload === 'function') applyDatabaseSearchPayload(window.__mflEvaluationRecentSearchPayload, 'players');",
+        );
+      }
+    } finally {
+      delete window.__mflEvaluationRecentSearchPayload;
+    }
+  }
+
   function renderEmptySearchFromCore() {
     try {
       if (typeof window.renderEvaluationSearchResults === "function") {
@@ -113,19 +143,72 @@
     }
   }
 
-  function primeRecentSearchData() {
-    if (recentPrimePromise) return recentPrimePromise;
-    recentPrimePromise = Promise.resolve().then(() => {
-      if (typeof window.primeEmptyEvaluationSearch === "function") {
-        return window.primeEmptyEvaluationSearch();
+  async function fetchRecentEvaluationPayload(ids) {
+    if (!ids.length) return { columns: [], rows: [] };
+
+    const payloads = await Promise.all(ids.map(async (id) => {
+      const url = new URL("/api/data", window.location.origin);
+      url.searchParams.set("mode", "search");
+      url.searchParams.set("type", "players");
+      url.searchParams.set("q", id);
+      url.searchParams.set("limit", "5");
+      try {
+        const response = await fetch(url.toString(), {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        return response.ok ? response.json() : null;
+      } catch {
+        return null;
       }
-      return window.eval("typeof primeEmptyEvaluationSearch === 'function' ? primeEmptyEvaluationSearch() : false");
-    }).catch((error) => {
-      console.warn("Could not prime recent Evaluation searches.", error);
-      return false;
-    }).finally(() => {
-      recentPrimePromise = null;
+    }));
+
+    let columns = [];
+    const rowsById = new Map();
+    payloads.forEach((payload, index) => {
+      const payloadColumns = Array.isArray(payload?.columns) ? payload.columns : [];
+      const payloadRows = Array.isArray(payload?.rows) ? payload.rows : [];
+      const idIndex = payloadColumns.indexOf("player_id");
+      if (idIndex < 0) return;
+      if (!columns.length) columns = payloadColumns;
+      const expectedId = ids[index];
+      const exact = payloadRows.find((row) => Array.isArray(row) && String(row[idIndex]) === expectedId);
+      if (exact) rowsById.set(expectedId, exact);
     });
+
+    return {
+      columns,
+      rows: ids.map((id) => rowsById.get(id)).filter(Boolean),
+    };
+  }
+
+  function primeRecentSearchData({ force = false } = {}) {
+    const ids = recentEvaluationPlayerIds();
+    const signature = ids.join(",");
+
+    if (!force && recentPayload && recentPayloadSignature === signature) {
+      applyRecentPayload(recentPayload);
+      renderEmptySearchFromCore();
+      return Promise.resolve(true);
+    }
+    if (recentPrimePromise && recentPayloadSignature === signature) return recentPrimePromise;
+
+    recentPayloadSignature = signature;
+    recentPrimePromise = fetchRecentEvaluationPayload(ids)
+      .then((payload) => {
+        if (destroyed || recentPayloadSignature !== signature) return false;
+        recentPayload = payload;
+        applyRecentPayload(payload);
+        renderEmptySearchFromCore();
+        return true;
+      })
+      .catch((error) => {
+        console.warn("Could not prime recent Evaluation searches.", error);
+        return false;
+      })
+      .finally(() => {
+        recentPrimePromise = null;
+      });
     return recentPrimePromise;
   }
 
@@ -144,9 +227,14 @@
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else if (!query) {
-      // Core owns recentEvaluationPlayerIds. Blur/focus state never substitutes
-      // another recent-results source and never hides those canonical results.
-      renderEmptySearchFromCore();
+      const ids = recentEvaluationPlayerIds();
+      const signature = ids.join(",");
+      if (recentPayload && recentPayloadSignature === signature) {
+        applyRecentPayload(recentPayload);
+        renderEmptySearchFromCore();
+      } else {
+        void primeRecentSearchData();
+      }
     }
 
     requestAnimationFrame(() => { syncing = false; });
@@ -161,8 +249,6 @@
     if (!(container instanceof HTMLElement)) return;
     if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
 
-    // Results remain interactive after the input loses focus. For an empty
-    // search, refresh only from recentEvaluationPlayerIds once its rows are ready.
     if (!field.value.trim()) {
       void primeRecentSearchData().finally(() => queueMicrotask(sync));
     }
@@ -191,6 +277,7 @@
     const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");
     if (!(result instanceof HTMLButtonElement) || result.disabled) return;
     rememberClickedSearch(result);
+    queueMicrotask(() => { void primeRecentSearchData({ force: true }); });
   }
 
   function installObserver() {
@@ -235,6 +322,8 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
     recentPrimePromise = null;
+    recentPayload = null;
+    recentPayloadSignature = "";
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
     }
