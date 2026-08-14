@@ -7,8 +7,6 @@
   let destroyed = false;
   let syncing = false;
   let resultsObserver = null;
-  let recentSearchNodes = [];
-  let recentSearchCaptured = false;
   let recentPrimePromise = null;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
@@ -40,8 +38,7 @@
   function syncClearButton(field = input()) {
     const button = clearButton();
     if (!(field instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
-    const visible = playerSelected() || Boolean(field.value.trim());
-    if (button.hidden === visible) button.hidden = !visible;
+    button.hidden = !(playerSelected() || field.value.trim());
   }
 
   const recentRule = () => {
@@ -88,39 +85,7 @@
 
   function rememberClickedSearch(button) {
     if (!(button instanceof HTMLButtonElement)) return;
-    const id = resultId(button);
-    storePlayerLabel(id, resultName(button));
-    if (!recentSearchCaptured) return;
-    recentSearchNodes = [button, ...recentSearchNodes.filter((candidate) => {
-      if (!(candidate instanceof HTMLButtonElement)) return false;
-      return !id || resultId(candidate) !== id;
-    })].slice(0, 5);
-  }
-
-  function captureRenderedRecents(container) {
-    if (recentSearchCaptured || !(container instanceof HTMLElement) || !active()) return false;
-    const field = input();
-    if (!(field instanceof HTMLInputElement) || field.value.trim()) return false;
-
-    const buttons = Array.from(container.querySelectorAll(":scope > .evaluationSearchResult"))
-      .filter((button) => button instanceof HTMLButtonElement)
-      .slice(0, 5);
-    if (!buttons.length) return false;
-
-    recentSearchNodes = buttons;
-    recentSearchCaptured = true;
-    return true;
-  }
-
-  function restoreRecentSearches(container) {
-    if (!recentSearchCaptured || !(container instanceof HTMLElement)) return false;
-    const nodes = recentSearchNodes
-      .filter((button) => button instanceof HTMLButtonElement)
-      .slice(0, 5);
-    if (!nodes.length) return false;
-    container.replaceChildren(...nodes);
-    container.hidden = false;
-    return true;
+    storePlayerLabel(resultId(button), resultName(button));
   }
 
   function showSearching(container) {
@@ -189,17 +154,12 @@
     }
 
     const query = normalize(field.value);
-    if (!query && restoreRecentSearches(container)) {
-      requestAnimationFrame(() => { syncing = false; });
-      return;
-    }
-
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else if (!query) {
+      // Core owns the recent IDs loaded from wallet preferences/Supabase. Never
+      // restore a DOM snapshot from the current section here.
       renderEmptySearchFromCore();
-      captureRenderedRecents(container);
-      restoreRecentSearches(container);
     }
 
     requestAnimationFrame(() => { syncing = false; });
@@ -265,11 +225,7 @@
       }
 
       if (!field.value.trim()) {
-        if (!recentSearchCaptured) {
-          captureRenderedRecents(container);
-        } else {
-          queueMicrotask(sync);
-        }
+        queueMicrotask(sync);
         return;
       }
 
@@ -283,7 +239,6 @@
   }
 
   installRecentRule();
-  captureRenderedRecents(results());
   syncClearButton();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -299,8 +254,6 @@
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
-    recentSearchNodes = [];
-    recentSearchCaptured = false;
     recentPrimePromise = null;
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
