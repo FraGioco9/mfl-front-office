@@ -89,3 +89,27 @@
   width: var(--mfl-scrollbar-compact-size);
   height: var(--mfl-scrollbar-compact-size);
 }
+
+html.mflDataLoading,
+html.mflDataLoading * {
+  scrollbar-color: transparent transparent;
+}
+
+html.mflDataLoading::-webkit-scrollbar-thumb,
+html.mflDataLoading::-webkit-scrollbar-thumb:hover,
+html.mflDataLoading::-webkit-scrollbar-thumb:active,
+html.mflDataLoading *::-webkit-scrollbar-thumb,
+html.mflDataLoading *::-webkit-scrollbar-thumb:hover,
+html.mflDataLoading *::-webkit-scrollbar-thumb:active {
+  border-color: transparent;
+  background: transparent;
+}
+
+html.mflDataLoading::-webkit-scrollbar-button:single-button,
+html.mflDataLoading::-webkit-scrollbar-button:single-button:hover,
+html.mflDataLoading *::-webkit-scrollbar-button:single-button,
+html.mflDataLoading *::-webkit-scrollbar-button:single-button:hover {
+  background-color: transparent;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
