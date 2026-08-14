@@ -10,6 +10,15 @@
   --mfl-scrollbar-arrow-hover: var(--primary);
 }
 
+:root:not([data-mfl-ready="true"]),
+:root.mflDataLoading {
+  --mfl-scrollbar-thumb: transparent;
+  --mfl-scrollbar-thumb-hover: transparent;
+  --mfl-scrollbar-thumb-active: transparent;
+  --mfl-scrollbar-arrow: transparent;
+  --mfl-scrollbar-arrow-hover: transparent;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
@@ -88,28 +97,4 @@
 .playerAttributeViews::-webkit-scrollbar {
   width: var(--mfl-scrollbar-compact-size);
   height: var(--mfl-scrollbar-compact-size);
-}
-
-html.mflDataLoading,
-html.mflDataLoading * {
-  scrollbar-color: transparent transparent;
-}
-
-html.mflDataLoading::-webkit-scrollbar-thumb,
-html.mflDataLoading::-webkit-scrollbar-thumb:hover,
-html.mflDataLoading::-webkit-scrollbar-thumb:active,
-html.mflDataLoading *::-webkit-scrollbar-thumb,
-html.mflDataLoading *::-webkit-scrollbar-thumb:hover,
-html.mflDataLoading *::-webkit-scrollbar-thumb:active {
-  border-color: transparent;
-  background: transparent;
-}
-
-html.mflDataLoading::-webkit-scrollbar-button:single-button,
-html.mflDataLoading::-webkit-scrollbar-button:single-button:hover,
-html.mflDataLoading *::-webkit-scrollbar-button:single-button,
-html.mflDataLoading *::-webkit-scrollbar-button:single-button:hover {
-  background-color: transparent;
-  -webkit-mask-image: none;
-  mask-image: none;
 }
