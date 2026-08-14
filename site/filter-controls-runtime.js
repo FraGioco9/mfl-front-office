@@ -206,10 +206,15 @@
   function installSelectedLinksDirectOpen() {
     const button = document.getElementById("openSelectedLinksButton");
     if (!(button instanceof HTMLButtonElement)) return false;
-    if (button.dataset.mflSelectedLinksDirectOpen === "true") return true;
+    if (window.__mflSelectedLinksCaptureInstalled === true) return true;
 
-    button.dataset.mflSelectedLinksDirectOpen = "true";
-    button.addEventListener("click", (event) => {
+    window.__mflSelectedLinksCaptureInstalled = true;
+    window.addEventListener("click", (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest("#openSelectedLinksButton")
+        : null;
+      if (!(target instanceof HTMLButtonElement)) return;
+
       let playerIds = [];
       try {
         playerIds = Array.from(state?.selectedPlayerIds || [])
@@ -240,8 +245,15 @@
         try {
           showToast("Allow pop-ups for this site, then click Open links again.");
         } catch {
-          // The successful links stay open even if the toast owner is unavailable.
+          // Keep any successfully opened tabs even if the toast owner is unavailable.
         }
+      }
+
+      try {
+        clearSelection();
+      } catch {
+        const clearButton = document.getElementById("clearSelectionButton");
+        if (clearButton instanceof HTMLButtonElement) clearButton.click();
       }
     }, true);
     return true;
