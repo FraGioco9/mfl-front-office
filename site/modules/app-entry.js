@@ -262,7 +262,7 @@ function installEvaluationRecentStateBridge() {
         return originalSaveTableStateLocally(localState);
       };
 
-      // Empty Evaluation search priming is exact recentEvaluationPlayerIds only.
+      // Evaluation empty search priming is exact recentEvaluationPlayerIds only.
       // The dedicated runtime starts this while wallet preferences are still loading.
       if (typeof primeEmptyEvaluationSearch === "function"
         && !primeEmptyEvaluationSearch.__mflDataOnly) {
@@ -321,6 +321,7 @@ async function start() {
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
+  const playerStartup = /^\/players\/[^/]+\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
@@ -337,7 +338,7 @@ async function start() {
   runtimeWindow.__mflStatsRuntime?.sync?.();
   promoteResponsiveStylesheet();
 
-  if ((homeStartup || tableStartup) && runtimeWindow.__mflAppStartPromise) {
+  if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
 
