@@ -6,8 +6,7 @@
   --mfl-dropdown-chevron-inset: 10px;
   --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
   --mfl-popup-close-size: 36px;
-  --mfl-popup-close-glyph-width: 10px;
-  --mfl-popup-close-glyph-height: 2px;
+  --mfl-popup-close-glyph-size: 12px;
 }
 
 /* Rows uses the final dropdown appearance from first paint. Do not wait for
@@ -217,8 +216,8 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   }
 }
 
-/* Canonical close control for every popup header. Keep the geometry and X glyph
- * in one place so page-specific popup styles cannot shift it inside its box. */
+/* Canonical close control for every popup header. The X is one symmetric shape
+ * instead of two overlapping rotated bars, so both diagonals are identical. */
 .modalBackdrop .filtersHeader > .popupCloseButton {
   position: relative;
   display: inline-flex;
@@ -242,28 +241,37 @@ html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
   box-shadow: none;
 }
 
-.modalBackdrop .filtersHeader > .popupCloseButton::before,
-.modalBackdrop .filtersHeader > .popupCloseButton::after {
+.modalBackdrop .filtersHeader > .popupCloseButton::before {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
-  width: var(--mfl-popup-close-glyph-width);
-  height: var(--mfl-popup-close-glyph-height);
+  width: var(--mfl-popup-close-glyph-size);
+  height: var(--mfl-popup-close-glyph-size);
   margin: 0;
   border: 0;
-  border-radius: 999px;
   background: currentColor;
-  transform-origin: center;
+  clip-path: polygon(
+    0 2px,
+    2px 0,
+    6px 4px,
+    10px 0,
+    12px 2px,
+    8px 6px,
+    12px 10px,
+    10px 12px,
+    6px 8px,
+    2px 12px,
+    0 10px,
+    4px 6px
+  );
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-.modalBackdrop .filtersHeader > .popupCloseButton::before {
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
 .modalBackdrop .filtersHeader > .popupCloseButton::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+  content: none;
+  display: none;
 }
 
 .modalBackdrop .filtersHeader > .popupCloseButton:hover:not(:disabled),
