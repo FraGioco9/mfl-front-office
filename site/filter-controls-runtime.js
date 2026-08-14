@@ -203,6 +203,41 @@
     return true;
   }
 
+  function installSelectedLinksDirectOpen() {
+    const button = document.getElementById("openSelectedLinksButton");
+    if (!(button instanceof HTMLButtonElement)) return false;
+    if (button.dataset.mflSelectedLinksDirectOpen === "true") return true;
+
+    button.dataset.mflSelectedLinksDirectOpen = "true";
+    button.addEventListener("click", (event) => {
+      let playerIds = [];
+      try {
+        playerIds = Array.from(state?.selectedPlayerIds || [])
+          .map((playerId) => String(playerId || "").trim())
+          .filter(Boolean);
+      } catch {
+        return;
+      }
+      if (!playerIds.length) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const host = document.body || document.documentElement;
+      playerIds.forEach((playerId) => {
+        const link = document.createElement("a");
+        link.href = `https://app.playmfl.com/players/${encodeURIComponent(playerId)}`;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.hidden = true;
+        host.appendChild(link);
+        link.click();
+        link.remove();
+      });
+    }, true);
+    return true;
+  }
+
   function restorePageSizeSelectInteraction() {
     if (document.documentElement.dataset.mflReady !== "true") return;
     const select = document.getElementById("pageSizeSelect");
@@ -302,6 +337,7 @@
     installStyles();
     rebuildPageSizeSelectGrid();
     installNativeWatchlistChevron();
+    installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
     installAddFilterDefaults();
     installCoreBridge();
