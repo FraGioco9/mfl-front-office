@@ -3,6 +3,7 @@
 
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+  const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const MOBILE_TABLE_MIN_WIDTH = 1240;
   const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
   const version = STATIC_RELEASE_VERSION;
@@ -151,6 +152,16 @@
     }
   }
 
+  function storedEvaluationPlayerLabel(playerId) {
+    const id = String(playerId || "").trim();
+    if (!id) return "";
+    try {
+      return String(localStorage.getItem(`${EVALUATION_PLAYER_LABEL_STORAGE_PREFIX}${id}`) || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -159,6 +170,10 @@
     const resetButton = document.getElementById("evaluationResetButton");
     const loadButton = document.getElementById("evaluationLoadButton");
     const playerPageButton = document.getElementById("evaluationPlayerPageButton");
+    const searchInput = document.getElementById("evaluationSearchInput");
+    const searchClearButton = document.getElementById("evaluationSearchClearButton");
+    const params = new URLSearchParams(window.location.search);
+    const playerId = String(params.get("player") || "").trim();
     const storedWalletOptIn = root.dataset.storedWalletOptIn === "true";
     const hasInitialSelection = root.dataset.initialEvaluationSelection === "true";
 
@@ -167,6 +182,18 @@
     if (playerPageButton instanceof HTMLButtonElement) playerPageButton.hidden = true;
 
     if (!(buttons instanceof HTMLElement)) return;
+
+    if (playerId) {
+      buttons.hidden = false;
+      if (resetButton instanceof HTMLButtonElement) resetButton.hidden = false;
+      if (playerPageButton instanceof HTMLButtonElement) playerPageButton.hidden = false;
+      if (searchInput instanceof HTMLInputElement && !searchInput.value.trim()) {
+        searchInput.value = storedEvaluationPlayerLabel(playerId) || `Player #${playerId}`;
+      }
+      if (searchClearButton instanceof HTMLButtonElement) searchClearButton.hidden = false;
+      return;
+    }
+
     if (!hasInitialSelection && storedWalletOptIn) {
       buttons.hidden = false;
       if (loadButton instanceof HTMLButtonElement) loadButton.hidden = false;
