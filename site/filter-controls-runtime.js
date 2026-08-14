@@ -155,6 +155,59 @@
     return true;
   }
 
+  function playerLoadingOverallValue(value) {
+    const normalized = String(value ?? "").trim().replace(",", ".");
+    if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+    const overall = Number(normalized);
+    return Number.isFinite(overall) ? overall : null;
+  }
+
+  function playerLoadingOverallRarityColor(overall) {
+    if (overall >= 95) return "#00ffe9";
+    if (overall >= 85) return "#fa53ff";
+    if (overall >= 75) return "#0077ff";
+    if (overall >= 65) return "#71ff30";
+    if (overall >= 55) return "#ecd17f";
+    return "#bebebe";
+  }
+
+  function syncPlayerLoadingOverallCard() {
+    const detail = document.getElementById("playerDetail");
+    const loadingGrid = detail?.querySelector?.('[data-mfl-player-loading-grid="true"]');
+    if (!(loadingGrid instanceof HTMLElement)) return;
+
+    const overallCard = Array.from(loadingGrid.querySelectorAll(".attributeGrid .playerAttributeCard"))
+      .find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Overall");
+    if (!(overallCard instanceof HTMLElement)) return;
+
+    overallCard.classList.add("fullWidth");
+    const overallText = overallCard.querySelector(".attributeValueText")?.textContent || "";
+    const overall = playerLoadingOverallValue(overallText);
+    if (overall === null) {
+      overallCard.classList.remove("featured");
+      overallCard.style.removeProperty("--rarity-color");
+      return;
+    }
+
+    overallCard.classList.add("featured");
+    overallCard.style.setProperty("--rarity-color", playerLoadingOverallRarityColor(overall));
+  }
+
+  function installPlayerLoadingOverallGuard() {
+    const detail = document.getElementById("playerDetail");
+    if (!(detail instanceof HTMLElement)) return false;
+    if (window.__mflPlayerLoadingOverallGuardInstalled === true) {
+      syncPlayerLoadingOverallCard();
+      return true;
+    }
+
+    window.__mflPlayerLoadingOverallGuardInstalled = true;
+    const observer = new MutationObserver(() => syncPlayerLoadingOverallCard());
+    observer.observe(detail, { childList: true, subtree: true, characterData: true });
+    syncPlayerLoadingOverallCard();
+    return true;
+  }
+
   function installSelectedLinksDirectOpen() {
     const button = document.getElementById("openSelectedLinksButton");
     if (!(button instanceof HTMLButtonElement)) return false;
@@ -318,6 +371,8 @@
   function sync() {
     installActiveStatsViewNoop();
     installStaticViewShell();
+    installPlayerLoadingOverallGuard();
+    syncPlayerLoadingOverallCard();
     syncStaticViewButtonsFromLocation();
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
