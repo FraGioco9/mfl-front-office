@@ -121,6 +121,10 @@
     if (!field.value.trim()) {
       queueMicrotask(() => {
         if (field.value.trim() || !canonical.length) return;
+        const current = Array.from(container.children);
+        const alreadyCanonical = current.length === canonical.length
+          && current.every((node, index) => node === canonical[index]);
+        if (alreadyCanonical && !container.hidden) return;
         container.replaceChildren(...canonical);
         container.hidden = false;
       });
