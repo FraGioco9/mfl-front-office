@@ -132,7 +132,6 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/selection-startup-reset-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
-  "/evaluation-search-state-runtime.js",
 ]);
 
 /** @type {Window & {
@@ -144,6 +143,7 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflStatsRuntime?: { sync?: () => void, installCoreBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
+ * __mflEvaluationSearchStateRuntime?: { sync?: () => void, restoreEmptyRecentResults?: (force?: boolean) => Promise<boolean>, destroy?: () => void },
  * __mflAppStartPromise?: Promise<void>,
  * }} */
 const runtimeWindow = window;
@@ -182,6 +182,7 @@ function promoteResponsiveStylesheet() {
 const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
 preloadClassicScript("/modules/app-core.js");
+preloadClassicScript("/evaluation-search-state-runtime.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
   if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
@@ -234,6 +235,9 @@ function installEvaluationRecentStateBridge() {
           ? savedState.recentEvaluationPlayerIds
           : [];
         state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
+        if (/^\\/evaluation\\/?$/i.test(window.location.pathname)) {
+          void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
+        }
       };
       Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
       restoreRecentEvaluationState = recentStateOnlyRestore;
@@ -258,36 +262,33 @@ function installEvaluationRecentStateBridge() {
         return originalSaveTableStateLocally(localState);
       };
 
-      // Recent-player priming is a data concern only. Evaluation layout owns the
-      // one intended automatic focus, so loading recentEvaluationPlayerIds must
-      // never schedule a second focus that can steal it from the global-search modal.
+      // Empty Evaluation search priming is exact recentEvaluationPlayerIds only.
+      // The dedicated runtime starts this while wallet preferences are still loading.
       if (typeof primeEmptyEvaluationSearch === "function"
         && !primeEmptyEvaluationSearch.__mflDataOnly) {
         const dataOnlyPrimeEmptyEvaluationSearch = function() {
-          if (evaluationRecentSearchPrimed || evaluationRecentSearchPrimePromise) {
-            return evaluationRecentSearchPrimePromise;
-          }
-
-          databaseSearchResponseCache.delete("players:");
-          evaluationRecentSearchPrimePromise = requestDatabaseSearch("", "players")
-            .then((loaded) => {
-              if (loaded) {
-                evaluationRecentSearchPrimed = true;
-                if (isPlainEvaluationUrl() && !state.evaluationPlayerId) renderEvaluationSearchResults();
-              }
-              return loaded;
-            })
-            .catch((error) => {
-              console.error(error?.message || "Could not load recent Evaluation searches.");
-              return false;
-            })
-            .finally(() => {
-              evaluationRecentSearchPrimePromise = null;
-            });
-          return evaluationRecentSearchPrimePromise;
+          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+          if (typeof prime === "function") return prime(true);
+          return Promise.resolve(true);
         };
         Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
         primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
+      }
+
+      // Evaluation cannot leave its loading/readiness phase before the exact
+      // Supabase recent players have been hydrated and rendered for an empty field.
+      if (typeof finishEvaluationReadiness === "function"
+        && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
+        const originalFinishEvaluationReadiness = finishEvaluationReadiness;
+        const finishEvaluationReadinessWithRecents = async function() {
+          if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
+            const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+            if (typeof prime === "function") await prime(false);
+          }
+          return originalFinishEvaluationReadiness.apply(this, arguments);
+        };
+        Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
+        finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
       }
 
       return true;
@@ -314,15 +315,17 @@ async function start() {
 
   await loadClassicScript("/modules/app-core.js");
   installEvaluationRecentStateBridge();
+  // This owner must exist before startApp reaches Evaluation readiness. Supabase
+  // can then trigger exact recent-player hydration while the page is still loading.
+  await loadClassicScript("/evaluation-search-state-runtime.js");
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
   const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(window.location.pathname)
     && !/^\/(?:database|mfl)\/stats\/?$/i.test(window.location.pathname);
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
-    // startApp waits for wallet preferences, so recentEvaluationPlayerIds from
-    // Supabase is established before the late Evaluation search owner loads.
     await runtimeWindow.__mflAppStartPromise;
+    await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
   runtimeWindow.__mflStatsRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
