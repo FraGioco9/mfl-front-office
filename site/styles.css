@@ -41,6 +41,34 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   box-shadow: none;
 }
 
+/* Filters: preserve every existing box size while centering the control content
+ * vertically and keeping every select chevron against the right edge. */
+.filtersDialog select {
+  align-items: center;
+  align-content: center;
+  line-height: 1;
+}
+
+@supports (appearance: base-select) {
+  .filtersDialog select,
+  .filtersDialog select::picker(select) {
+    appearance: base-select;
+  }
+
+  .filtersDialog select::picker-icon,
+  .filtersDialog select:open::picker-icon {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: auto;
+    color: var(--text-soft);
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
 html:has(body > .modalBackdrop:not([hidden])) body {
