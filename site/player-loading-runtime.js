@@ -5,7 +5,14 @@
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const PROFILE_LABELS = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
   const ATTRIBUTE_LABELS = ["Overall", "Pace", "Dribbling", "Shooting", "Defense", "Passing", "Physical"];
-  const ATTRIBUTE_VIEWS = ["Attributes", "Training", "Next Overall", "Current Season", "All Time"];
+  const ATTRIBUTE_VIEWS = [
+    ["attributes", "Attributes"],
+    ["training", "Training"],
+    ["next", "Next Overall"],
+    ["current", "Current Season"],
+    ["all", "All Time"],
+  ];
+  const PITCH_ROW_LENGTHS = [1, 3, 1, 3, 3, 3, 1];
   let renderingSkeleton = false;
 
   function escapeHtml(value) {
@@ -109,12 +116,35 @@
   }
 
   function attributeViewsMarkup() {
-    return ATTRIBUTE_VIEWS.map((label) => `<span class="playerAttributeViewButton mflPlayerLoadingView">${label}</span>`).join("");
+    return ATTRIBUTE_VIEWS.map(([view, label], index) => `
+      <button
+        class="playerAttributeViewButton mflPlayerLoadingControl${index === 0 ? " active" : ""}"
+        type="button"
+        data-player-attribute-view="${view}"
+        aria-pressed="${index === 0 ? "true" : "false"}"
+        aria-disabled="true"
+        tabindex="-1"
+      >${label}</button>
+    `).join("");
   }
 
-  function actionBoxesMarkup() {
-    const count = storedWalletOptIn() ? 3 : 2;
-    return Array.from({ length: count }, () => '<span class="mflPlayerLoadingAction" aria-hidden="true"></span>').join("");
+  function actionControlsMarkup() {
+    const watchlistButton = storedWalletOptIn()
+      ? '<button class="playerWatchlistButton mflPlayerLoadingControl" type="button" aria-disabled="true" tabindex="-1"><span class="watchlistButtonStar" aria-hidden="true">☆</span><span>Add to watchlist</span></button>'
+      : "";
+    return `
+      <button class="playerEvaluateButton mflPlayerLoadingControl" type="button" aria-disabled="true" tabindex="-1">Evaluate</button>
+      ${watchlistButton}
+      <a class="playerExternalButton mflPlayerLoadingControl" aria-disabled="true" tabindex="-1">Open link</a>
+    `;
+  }
+
+  function pitchMarkup() {
+    const pitchLines = '<span class="pitchLine pitchBoxTop"></span><span class="pitchLine pitchGoalTop"></span><span class="pitchLine pitchArcTop"></span><span class="pitchLine pitchBoxBottom"></span><span class="pitchLine pitchGoalBottom"></span><span class="pitchLine pitchArcBottom"></span>';
+    const rows = PITCH_ROW_LENGTHS.map((length) => `
+      <div class="pitchRow pitchRow${length}" style="--pitch-columns: ${length}" aria-hidden="true"></div>
+    `).join("");
+    return pitchLines + rows;
   }
 
   function playerLoadingMarkup(playerId) {
@@ -141,7 +171,7 @@
           <h2 class="playerTitle">${nameMarkup}</h2>
           <p><span class="mflPlayerLoadingEmptyPosition" aria-hidden="true">&nbsp;</span></p>
         </div>
-        <div class="playerHeroActions">${actionBoxesMarkup()}</div>
+        <div class="playerHeroActions">${actionControlsMarkup()}</div>
       </section>
       <section class="playerGrid" data-mfl-player-loading-grid="true">
         <div class="playerStack">
@@ -160,7 +190,7 @@
         </div>
         <div class="playerPanel pitchPanel">
           <h3>Positions</h3>
-          <div class="pitch mflPlayerLoadingPitch" aria-hidden="true"></div>
+          <div class="pitch mflPlayerLoadingPitch" aria-hidden="true">${pitchMarkup()}</div>
         </div>
       </section>
     `;
@@ -177,20 +207,7 @@
         visibility: hidden;
       }
 
-      #playerDetail .mflPlayerLoadingAction {
-        display: block;
-        width: 172px;
-        min-width: 172px;
-        height: 40px;
-        border: 1px solid var(--border-strong);
-        border-radius: 6px;
-        background: var(--surface-muted);
-      }
-
-      #playerDetail .mflPlayerLoadingView {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+      #playerDetail .mflPlayerLoadingControl {
         pointer-events: none;
       }
 
@@ -201,12 +218,6 @@
       #playerDetail .mflPlayerLoadingNotes {
         pointer-events: none;
         resize: none;
-      }
-
-      #playerDetail .mflPlayerLoadingPitch {
-        background: var(--surface-muted);
-        border-color: var(--border);
-        box-shadow: none;
       }
     `;
     document.head.appendChild(style);
