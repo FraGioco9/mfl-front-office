@@ -1,9 +1,9 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.13");
+  const VERSION = String(window.__mflReleaseVersion || "dev");
   function installStaticStyles() {
-    document.getElementById("mflEvaluationReleaseStyles")?.remove();
+    document.getElementById("mflEvaluationDiscountRateUiStyles")?.remove();
     const style = document.createElement("style");
-    style.id = "mflEvaluationReleaseStyles";
+    style.id = "mflEvaluationDiscountRateUiStyles";
     style.textContent = `
       #evaluationPage .evaluationTitleRow {
         align-items: flex-start !important;
