@@ -17,7 +17,7 @@
       .filtersDialog select,
       #pageSizeSelect {
         border-right-width: 6px;
-        border-right-color: transparent;
+        border-right-color: var(--surface);
         outline: 1px solid var(--border-strong);
         outline-offset: -1px;
       }
@@ -28,7 +28,7 @@
       #pageSizeSelect:hover:not(:disabled),
       #pageSizeSelect:focus:not(:disabled),
       #pageSizeSelect:focus-visible:not(:disabled) {
-        border-right-color: transparent;
+        border-right-color: var(--row-hover);
         outline: 1px solid var(--primary-hover);
         outline-offset: -1px;
       }
