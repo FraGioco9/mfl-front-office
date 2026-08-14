@@ -75,10 +75,43 @@
     return normalized;
   }
 
+  function cleanCssColor(value) {
+    const color = String(value || "").trim();
+    if (!color) return "";
+    try {
+      return CSS.supports("color", color) ? color : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function cleanProfileMeta(value) {
+    const source = safeObject(value);
+    const normalized = {};
+
+    const nationality = safeObject(source.nationality);
+    const flagCodepoints = String(nationality.flagCodepoints || "").trim().toLowerCase();
+    if (/^[0-9a-f]+(?:-[0-9a-f]+)*$/.test(flagCodepoints)) {
+      normalized.nationality = { flagCodepoints };
+    }
+
+    const contract = safeObject(source.contract);
+    const teamName = String(contract.teamName || "").trim();
+    const clubId = String(contract.clubId || "").trim();
+    const divisionName = String(contract.divisionName || "").trim();
+    const divisionColor = cleanCssColor(contract.divisionColor);
+    if (teamName || clubId || divisionName || divisionColor) {
+      normalized.contract = { teamName, clubId, divisionName, divisionColor };
+    }
+
+    return normalized;
+  }
+
   function normalizedSnapshot(snapshot) {
     const source = safeObject(snapshot);
     const normalized = {
       profile: cleanTextMap(source.profile),
+      profileMeta: cleanProfileMeta(source.profileMeta),
       attributes: cleanTextMap(source.attributes),
       pitchRatings: cleanPitchRatings(source.pitchRatings),
     };
@@ -98,6 +131,7 @@
     const merged = {
       ...first,
       profile: { ...first.profile, ...second.profile },
+      profileMeta: { ...first.profileMeta, ...second.profileMeta },
       attributes: { ...first.attributes, ...second.attributes },
       pitchRatings: { ...first.pitchRatings, ...second.pitchRatings },
     };
@@ -209,6 +243,27 @@
     return profile;
   }
 
+  function profileMetaFromRenderedPage(detail) {
+    const meta = {};
+    const cards = Array.from(detail?.querySelectorAll?.(".playerInfoPanel .detailGrid > div") || []);
+    const nationalityCard = cards.find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Nationality");
+    const flagSrc = String(nationalityCard?.querySelector("img.flagImage")?.getAttribute("src") || "");
+    const flagMatch = flagSrc.match(/\/([0-9a-f]+(?:-[0-9a-f]+)*)\.svg(?:$|[?#])/i);
+    if (flagMatch) meta.nationality = { flagCodepoints: flagMatch[1].toLowerCase() };
+
+    const contractCard = cards.find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Contract");
+    const team = contractCard?.querySelector(".playerContractTeam");
+    const division = contractCard?.querySelector(".playerContractDivision");
+    const teamName = String(team?.textContent || "").trim();
+    const clubId = String(team?.getAttribute?.("data-club-id") || "").trim();
+    const divisionName = String(division?.textContent || "").trim();
+    const divisionColor = String(division?.style?.color || "").trim();
+    if (teamName || clubId || divisionName || divisionColor) {
+      meta.contract = { teamName, clubId, divisionName, divisionColor };
+    }
+    return meta;
+  }
+
   function attributeSnapshotFromRenderedPage(detail) {
     const attributes = {};
     detail?.querySelectorAll?.(".attributeGrid .playerAttributeCard").forEach((card) => {
@@ -243,6 +298,7 @@
       name: detail.querySelector(".playerTitleName")?.textContent?.trim() || "",
       positions: detail.querySelector(".playerHero p")?.textContent?.trim() || "",
       profile: profileSnapshotFromRenderedPage(detail),
+      profileMeta: profileMetaFromRenderedPage(detail),
       attributes: attributeSnapshotFromRenderedPage(detail),
       pitchRatings: pitchRatingsFromRenderedPage(detail),
       externalHref: detail.querySelector("#openPlayerExternalButton")?.getAttribute("href") || "",
@@ -279,7 +335,19 @@
             : plain("positions");
           const primaryPosition = positions.split(",")[0]?.trim().toUpperCase() || "";
           const profile = {};
-          if (loaded("nationality")) profile.Nationality = plain("nationality");
+          const profileMeta = {};
+          if (loaded("nationality")) {
+            profile.Nationality = plain("nationality");
+            const nationalityCode = typeof countryCodeForNationality === "function"
+              ? String(countryCodeForNationality(raw("nationality")) || "").trim()
+              : "";
+            const flagCodepoints = nationalityCode
+              ? (nationalityCode.includes("-")
+                ? nationalityCode.toLowerCase()
+                : nationalityCode.toUpperCase().split("").map((character) => (127397 + character.charCodeAt(0)).toString(16)).join("-"))
+              : "";
+            if (flagCodepoints) profileMeta.nationality = { flagCodepoints };
+          }
           if (loaded("age")) profile.Age = plain("age");
           if (loaded("height")) {
             const height = plain("height");
@@ -302,12 +370,21 @@
               ? String(formatContractClubName(row) ?? "").trim()
               : plain("active_contract_club_name");
             let division = "";
+            let divisionColor = "";
             if (active && loaded("active_contract_club_division")) {
-              division = typeof formatContractDivision === "function"
-                ? String(formatContractDivision(raw("active_contract_club_division")) ?? "").trim()
-                : plain("active_contract_club_division");
+              const divisionInfo = typeof contractDivisionInfo === "function"
+                ? contractDivisionInfo(raw("active_contract_club_division"))
+                : null;
+              division = divisionInfo?.name
+                ? String(divisionInfo.name).trim()
+                : (typeof formatContractDivision === "function"
+                  ? String(formatContractDivision(raw("active_contract_club_division")) ?? "").trim()
+                  : plain("active_contract_club_division"));
+              divisionColor = String(divisionInfo?.color || "").trim();
             }
+            const clubId = active && loaded("active_contract_club_id") ? String(raw("active_contract_club_id") || "").trim() : "";
             profile.Contract = [team, division].filter(Boolean).join(" · ");
+            profileMeta.contract = { teamName: team, clubId, divisionName: division, divisionColor };
             if (active && loaded("active_contract_revenue_share") && typeof formatContractRevenueShare === "function") {
               const share = String(formatContractRevenueShare(raw("active_contract_revenue_share")) ?? "").trim();
               if (share) profile["Rev Share"] = share;
@@ -348,6 +425,7 @@
 
           const snapshot = {
             profile,
+            profileMeta,
             attributes,
             pitchRatings,
             externalHref: "https://app.playmfl.com/players/" + encodeURIComponent(id),
@@ -371,6 +449,12 @@
     }
   }
 
+  function flagCodepointsFromImage(image) {
+    const src = String(image?.getAttribute?.("src") || "");
+    const match = src.match(/\/([0-9a-f]+(?:-[0-9a-f]+)*)\.svg(?:$|[?#])/i);
+    return match ? match[1].toLowerCase() : "";
+  }
+
   function tableRowSnapshot(row) {
     if (!(row instanceof HTMLTableRowElement)) return {};
     const table = row.closest("table");
@@ -383,19 +467,33 @@
       values[label] = String(cells[index].textContent || "").trim();
     });
     const profile = {};
+    const profileMeta = {};
     const attributes = {};
-    if (values.Nationality) profile.Nationality = values.Nationality;
+    if (values.Nationality) {
+      profile.Nationality = values.Nationality;
+      const flagCodepoints = flagCodepointsFromImage(row.querySelector("img.flagImage"));
+      if (flagCodepoints) profileMeta.nationality = { flagCodepoints };
+    }
     if (values.Age) profile.Age = values.Age;
     if (values.Seasons) profile.Seasons = values.Seasons;
     if (values.Agent) profile.Agent = values.Agent;
     const clubName = values["Club Name"] || "";
     const division = values.Division || "";
-    if (clubName || division) profile.Contract = [clubName, division].filter(Boolean).join(" · ");
+    if (clubName || division) {
+      profile.Contract = [clubName, division].filter(Boolean).join(" · ");
+      const divisionElement = row.querySelector(".contractDivisionLabel");
+      profileMeta.contract = {
+        teamName: clubName,
+        clubId: "",
+        divisionName: division,
+        divisionColor: String(divisionElement?.style?.color || "").trim(),
+      };
+    }
     if (values["Rev. Share"]) profile["Rev Share"] = values["Rev. Share"];
     ATTRIBUTE_LABELS.forEach((label) => {
       if (values[label]) attributes[label] = values[label].split(" (")[0].trim();
     });
-    const snapshot = { profile, attributes };
+    const snapshot = { profile, profileMeta, attributes };
     const name = values.Name || row.querySelector(".playerNameLink")?.textContent?.trim() || "";
     const positions = values.Positions || row.querySelector(".col-positions")?.textContent?.trim() || "";
     if (name) snapshot.name = name;
@@ -411,8 +509,10 @@
     const overall = overallPart.replace(/^OVR\s+/i, "").trim();
     const nationality = parts.length >= 3 ? parts.at(-2) : "";
     const positions = parts.length >= 4 ? parts.at(-1) : "";
+    const flagCodepoints = flagCodepointsFromImage(searchResult.querySelector("img.flagImage"));
     const snapshot = {
       profile: nationality ? { Nationality: nationality } : {},
+      profileMeta: flagCodepoints ? { nationality: { flagCodepoints } } : {},
       attributes: overall ? { Overall: overall } : {},
     };
     const name = searchResult.querySelector("strong")?.textContent?.trim() || "";
@@ -467,6 +567,32 @@
     return document.documentElement.dataset.storedWalletOptIn === "true";
   }
 
+  function nationalityMarkup(value, snapshot) {
+    if (!value) return "";
+    const nationality = safeObject(safeObject(snapshot?.profileMeta).nationality);
+    const flagCodepoints = String(nationality.flagCodepoints || "").trim().toLowerCase();
+    const flag = /^[0-9a-f]+(?:-[0-9a-f]+)*$/.test(flagCodepoints)
+      ? `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${flagCodepoints}.svg" alt="">`
+      : '<span class="flagText" aria-hidden="true">-</span>';
+    return `${flag} ${escapeHtml(value)}`;
+  }
+
+  function contractMarkup(value, snapshot) {
+    if (!value) return "";
+    const contract = safeObject(safeObject(snapshot?.profileMeta).contract);
+    const fallbackParts = String(value).split(" · ").map((part) => part.trim()).filter(Boolean);
+    const teamName = String(contract.teamName || fallbackParts[0] || "").trim();
+    const clubId = String(contract.clubId || "").trim();
+    const divisionName = String(contract.divisionName || fallbackParts.slice(1).join(" · ") || "").trim();
+    const divisionColor = cleanCssColor(contract.divisionColor);
+    const teamHtml = clubId
+      ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(clubId)}/attributes" data-club-id="${escapeHtml(clubId)}">${escapeHtml(teamName)}</a>`
+      : `<span class="playerContractTeam">${escapeHtml(teamName)}</span>`;
+    const divisionStyle = divisionColor ? ` style="color: ${escapeHtml(divisionColor)}"` : "";
+    const divisionHtml = divisionName ? `<span class="playerContractDivision"${divisionStyle}>${escapeHtml(divisionName)}</span>` : "";
+    return `<span class="playerContractLine">${teamHtml}${divisionHtml}</span>`;
+  }
+
   function profileCardsMarkup(snapshot) {
     const profile = safeObject(snapshot?.profile);
     const labels = [...PROFILE_LABELS];
@@ -474,10 +600,13 @@
     return labels.map((label) => {
       const value = String(profile[label] ?? "").trim();
       const emptyClass = value ? "" : ' class="mflPlayerLoadingEmptyValue" aria-hidden="true"';
+      let valueMarkup = value ? escapeHtml(value) : "&nbsp;";
+      if (value && label === "Nationality") valueMarkup = nationalityMarkup(value, snapshot);
+      if (value && label === "Contract") valueMarkup = contractMarkup(value, snapshot);
       return `
         <div${label === "Contract" ? ' class="contractDetailCard"' : ""}>
           <span>${label}</span>
-          <strong${emptyClass}>${value ? escapeHtml(value) : "&nbsp;"}</strong>
+          <strong${emptyClass}>${valueMarkup}</strong>
         </div>
       `;
     }).join("");
@@ -504,9 +633,9 @@
     const rarity = rarityColorForOverall(attributes.Overall);
     return labels.map((label) => {
       const value = String(attributes[label] ?? "").trim();
-      const featured = label === "Overall" ? " featured" : "";
+      const featured = label === "Overall" && value ? " featured" : "";
       const fullWidth = label === "Overall" || (goalkeeper && label === "Goalkeeping") ? " fullWidth" : "";
-      const style = label === "Overall" ? ` style="--rarity-color: ${rarity}"` : "";
+      const style = label === "Overall" && value ? ` style="--rarity-color: ${rarity}"` : "";
       const valueClass = value ? "attributeValueText" : "attributeValueText mflPlayerLoadingEmptyValue";
       return `
         <div class="playerAttributeCard mflPlayerLoadingAttributeCard${featured}${fullWidth}"${style}>
