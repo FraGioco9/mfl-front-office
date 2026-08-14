@@ -39,16 +39,15 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   box-shadow: none;
 }
 
-/* Account follows the Filters button interaction: opening it marks the border
- * without changing the button background. */
+/* Keep Account visually identical to its resting button while its menu is open. */
 #accountButton[aria-expanded="true"],
 #accountButton[aria-expanded="true"]:hover,
 #accountButton[aria-expanded="true"]:focus,
 #accountButton[aria-expanded="true"]:focus-visible {
   outline: 0;
-  border-color: var(--primary-hover);
-  background: var(--surface);
-  color: var(--text);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
   box-shadow: none;
 }
 
