@@ -14,8 +14,7 @@
         grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
       }
 
-      .filtersDialog select,
-      #pageSizeSelect {
+      .filtersDialog select {
         border-right-width: 6px;
         border-right-color: var(--surface);
         outline: 1px solid var(--border-strong);
@@ -24,10 +23,7 @@
 
       .filtersDialog select:hover:not(:disabled),
       .filtersDialog select:focus:not(:disabled),
-      .filtersDialog select:focus-visible:not(:disabled),
-      #pageSizeSelect:hover:not(:disabled),
-      #pageSizeSelect:focus:not(:disabled),
-      #pageSizeSelect:focus-visible:not(:disabled) {
+      .filtersDialog select:focus-visible:not(:disabled) {
         border-right-color: var(--row-hover);
         outline: 1px solid var(--primary-hover);
         outline-offset: -1px;
