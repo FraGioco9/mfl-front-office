@@ -29,6 +29,7 @@
   let toastAnchorUntil = 0;
   let awaitingSelectionReset = false;
   let frozenSelectionLabel = "";
+  let lastKnownSelectionCount = 0;
   let navigationSourceControlSnapshot = null;
 
   function setImportant(element, property, value) {
@@ -166,6 +167,12 @@
     return modal instanceof HTMLElement && !modal.hidden;
   }
 
+  function anyModalIsOpen() {
+    return Array.from(document.querySelectorAll('[id$="Modal"]')).some((modal) => (
+      modal instanceof HTMLElement && !modal.hidden
+    ));
+  }
+
   function selectionActionModalOpen() {
     if (modalIsOpen("watchlistChoiceModal")) return true;
     if (!modalIsOpen("addWatchlistModal")) return false;
@@ -268,14 +275,18 @@
     }
   }
 
-  function dismissSelectionBar() {
+  function dismissSelectionBar(selectionCount = null) {
     const bar = selectionBar();
     if (!bar) return;
 
     rememberBarTop(bar);
-    const selectedCount = applicationSelectionCount();
+    const requestedCount = Number(selectionCount);
+    const selectedCount = Number.isFinite(requestedCount) && requestedCount > 0
+      ? requestedCount
+      : applicationSelectionCount();
     const currentLabel = String(document.getElementById("selectionCount")?.textContent || "").trim();
     frozenSelectionLabel = selectedCount > 0 ? `${selectedCount} selected` : currentLabel;
+    if (selectedCount > 0) lastKnownSelectionCount = selectedCount;
     awaitingSelectionReset = true;
     if (exitTimer) clearTimeout(exitTimer);
     bar.hidden = false;
@@ -338,23 +349,25 @@
     bar.classList.add("visible");
   }
 
-  function syncDismissalLifecycle() {
+  function syncDismissalLifecycle(selectedCount = applicationSelectionCount()) {
     const bar = selectionBar();
     if (!bar) return;
-    const selectedCount = applicationSelectionCount();
 
     if (awaitingSelectionReset && selectedCount === 0) {
       awaitingSelectionReset = false;
+      lastKnownSelectionCount = 0;
       if (!exitTimer) bar.classList.remove("mflSelectionActionDismissed");
       return;
     }
 
     if (awaitingSelectionReset && selectedCount > 0 && !selectionActionModalOpen()) {
       restoreSelectionBar(bar);
+      lastKnownSelectionCount = selectedCount;
       return;
     }
 
     if (!awaitingSelectionReset && selectedCount > 0) {
+      lastKnownSelectionCount = selectedCount;
       bar.hidden = false;
       bar.classList.remove("mflSelectionActionDismissed");
     }
@@ -363,8 +376,19 @@
   function syncSelectionState() {
     const bar = selectionBar();
     if (!(bar instanceof HTMLElement)) return;
+    const selectedCount = applicationSelectionCount();
+
+    if (selectedCount > 0) {
+      lastKnownSelectionCount = selectedCount;
+    } else if (lastKnownSelectionCount > 0 && !awaitingSelectionReset) {
+      const clearedCount = lastKnownSelectionCount;
+      lastKnownSelectionCount = 0;
+      prepareToastAnchor();
+      dismissSelectionBar(clearedCount);
+    }
+
     preserveDismissedSelectionLabel();
-    syncDismissalLifecycle();
+    syncDismissalLifecycle(selectedCount);
     if (barIsVisible(bar) && !bar.classList.contains("mflSelectionActionDismissed")) {
       rememberBarTop(bar);
     }
@@ -449,11 +473,27 @@
   }
 
   function onKeyDown(event) {
-    if (event.key !== "Escape" || !modalIsOpen("addWatchlistModal")) return;
+    if (event.key !== "Escape") return;
+
+    if (modalIsOpen("addWatchlistModal")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const closeButton = document.getElementById("closeAddWatchlistButton");
+      if (closeButton instanceof HTMLButtonElement) closeButton.click();
+      schedule();
+      return;
+    }
+
+    if (anyModalIsOpen()) return;
+
+    const selectedCount = applicationSelectionCount();
+    if (selectedCount <= 0) return;
+
     event.preventDefault();
     event.stopImmediatePropagation();
-    const closeButton = document.getElementById("closeAddWatchlistButton");
-    if (closeButton instanceof HTMLButtonElement) closeButton.click();
+    prepareToastAnchor();
+    dismissSelectionBar(selectedCount);
+    clearApplicationSelection(null);
     schedule();
   }
 
@@ -477,6 +517,7 @@
     observer?.disconnect();
     navigationSourceControlSnapshot = null;
     frozenSelectionLabel = "";
+    lastKnownSelectionCount = 0;
     window.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", onKeyDown, true);
