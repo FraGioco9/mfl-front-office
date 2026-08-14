@@ -2,6 +2,14 @@
 @import url("/styles-base.css");
 @import url("/dropdowns.css");
 
+/* Keep Rows at the same width before and after dropdown enhancement. */
+.controlsBar > .field.compact.rowsField #pageSizeSelect {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+}
+
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
 html:has(body > .modalBackdrop:not([hidden])) body {
