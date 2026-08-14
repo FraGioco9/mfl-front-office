@@ -85,6 +85,18 @@
     }
   }
 
+  function cleanAgeMarkers(value) {
+    if (!Array.isArray(value)) return [];
+    return value.map((entry) => {
+      const marker = safeObject(entry);
+      const type = String(marker.type || "").trim();
+      const emoji = String(marker.emoji || "").trim();
+      const label = String(marker.label || "").trim();
+      if (!["retirement", "newMint"].includes(type) || !emoji || !label) return null;
+      return { type, emoji, label };
+    }).filter(Boolean);
+  }
+
   function cleanProfileMeta(value) {
     const source = safeObject(value);
     const normalized = {};
@@ -102,6 +114,10 @@
     const divisionColor = cleanCssColor(contract.divisionColor);
     if (teamName || clubId || divisionName || divisionColor) {
       normalized.contract = { teamName, clubId, divisionName, divisionColor };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(source, "ageMarkers")) {
+      normalized.ageMarkers = cleanAgeMarkers(source.ageMarkers);
     }
 
     return normalized;
@@ -243,6 +259,15 @@
     return profile;
   }
 
+  function ageMarkersFromContainer(container) {
+    return Array.from(container?.querySelectorAll?.(".retirementMarker, .newMintMarker") || []).map((element) => {
+      const type = element.classList.contains("newMintMarker") ? "newMint" : "retirement";
+      const emoji = String(element.textContent || "").trim();
+      const label = String(element.dataset.tooltip || element.getAttribute("aria-label") || "").trim();
+      return emoji && label ? { type, emoji, label } : null;
+    }).filter(Boolean);
+  }
+
   function profileMetaFromRenderedPage(detail) {
     const meta = {};
     const cards = Array.from(detail?.querySelectorAll?.(".playerInfoPanel .detailGrid > div") || []);
@@ -250,6 +275,9 @@
     const flagSrc = String(nationalityCard?.querySelector("img.flagImage")?.getAttribute("src") || "");
     const flagMatch = flagSrc.match(/\/([0-9a-f]+(?:-[0-9a-f]+)*)\.svg(?:$|[?#])/i);
     if (flagMatch) meta.nationality = { flagCodepoints: flagMatch[1].toLowerCase() };
+
+    const ageCard = cards.find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Age");
+    meta.ageMarkers = ageMarkersFromContainer(ageCard);
 
     const contractCard = cards.find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Contract");
     const team = contractCard?.querySelector(".playerContractTeam");
@@ -265,6 +293,8 @@
   }
 
   function attributeSnapshotFromRenderedPage(detail) {
+    const activeView = String(detail?.querySelector?.(".playerAttributeViewButton.active")?.dataset?.playerAttributeView || "attributes");
+    if (activeView !== "attributes") return {};
     const attributes = {};
     detail?.querySelectorAll?.(".attributeGrid .playerAttributeCard").forEach((card) => {
       const label = String(card.querySelector(":scope > span")?.textContent || "").trim();
@@ -306,7 +336,8 @@
     };
     if (watchButton instanceof HTMLElement) snapshot.inWatchlist = watchButton.classList.contains("active");
     if (notesInput instanceof HTMLTextAreaElement) snapshot.notes = notesInput.value;
-    storePlayerSnapshot(id, snapshot);
+    const liveSnapshot = liveCorePlayerSnapshot(id) || {};
+    storePlayerSnapshot(id, mergeSnapshots(snapshot, liveSnapshot));
   }
 
   function liveCorePlayerSnapshot(playerId) {
@@ -359,6 +390,18 @@
               : plain("preferred_foot");
           }
           if (loaded("player_seasons")) profile.Seasons = plain("player_seasons");
+          if (loaded("retirement_years") && loaded("player_seasons")) {
+            const ageMarkers = [];
+            if (typeof retirementMarker === "function") {
+              const marker = retirementMarker(row);
+              if (marker?.emoji && marker?.label) ageMarkers.push({ type: "retirement", emoji: marker.emoji, label: marker.label });
+            }
+            if (typeof newMintMarker === "function") {
+              const marker = newMintMarker(row);
+              if (marker?.emoji && marker?.label) ageMarkers.push({ type: "newMint", emoji: marker.emoji, label: marker.label });
+            }
+            profileMeta.ageMarkers = ageMarkers;
+          }
           if (loaded("wallet_name") || loaded("wallet_address")) {
             profile.Agent = typeof formatCellValue === "function"
               ? String(formatCellValue(row, "wallet_name") ?? "").trim()
@@ -467,7 +510,7 @@
       values[label] = String(cells[index].textContent || "").trim();
     });
     const profile = {};
-    const profileMeta = {};
+    const profileMeta = { ageMarkers: ageMarkersFromContainer(row) };
     const attributes = {};
     if (values.Nationality) {
       profile.Nationality = values.Nationality;
@@ -593,6 +636,14 @@
     return `<span class="playerContractLine">${teamHtml}${divisionHtml}</span>`;
   }
 
+  function ageMarkersMarkup(snapshot) {
+    const markers = cleanAgeMarkers(safeObject(snapshot?.profileMeta).ageMarkers);
+    return markers.map((marker) => {
+      const markerClass = marker.type === "newMint" ? "newMintMarker" : "retirementMarker";
+      return ` <span class="${markerClass} playerAgeMarker" data-tooltip="${escapeHtml(marker.label)}" aria-label="${escapeHtml(marker.label)}">${escapeHtml(marker.emoji)}</span>`;
+    }).join("");
+  }
+
   function profileCardsMarkup(snapshot) {
     const profile = safeObject(snapshot?.profile);
     const labels = [...PROFILE_LABELS];
@@ -602,6 +653,7 @@
       const emptyClass = value ? "" : ' class="mflPlayerLoadingEmptyValue" aria-hidden="true"';
       let valueMarkup = value ? escapeHtml(value) : "&nbsp;";
       if (value && label === "Nationality") valueMarkup = nationalityMarkup(value, snapshot);
+      if (value && label === "Age") valueMarkup += ageMarkersMarkup(snapshot);
       if (value && label === "Contract") valueMarkup = contractMarkup(value, snapshot);
       return `
         <div${label === "Contract" ? ' class="contractDetailCard"' : ""}>
@@ -647,12 +699,12 @@
   }
 
   function attributeViewsMarkup() {
-    return ATTRIBUTE_VIEWS.map(([view, label], index) => `
+    return ATTRIBUTE_VIEWS.map(([view, label]) => `
       <button
-        class="playerAttributeViewButton mflPlayerLoadingControl${index === 0 ? " active" : ""}"
+        class="playerAttributeViewButton mflPlayerLoadingControl"
         type="button"
         data-player-attribute-view="${view}"
-        aria-pressed="${index === 0 ? "true" : "false"}"
+        aria-pressed="false"
         aria-disabled="true"
         tabindex="-1"
       >${label}</button>
@@ -747,6 +799,44 @@
     `;
   }
 
+  function markerSelector(type) {
+    return type === "newMint" ? ".newMintMarker" : ".retirementMarker";
+  }
+
+  function syncRenderedAgeMarkers(playerId, detail) {
+    if (!(detail instanceof HTMLElement)) return;
+    const liveSnapshot = liveCorePlayerSnapshot(playerId);
+    const profileMeta = safeObject(liveSnapshot?.profileMeta);
+    if (!Object.prototype.hasOwnProperty.call(profileMeta, "ageMarkers")) return;
+    const markers = cleanAgeMarkers(profileMeta.ageMarkers);
+    const ageCard = Array.from(detail.querySelectorAll(".playerInfoPanel .detailGrid > div"))
+      .find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Age");
+    const strong = ageCard?.querySelector(":scope > strong");
+    if (!(strong instanceof HTMLElement)) return;
+
+    ["retirement", "newMint"].forEach((type) => {
+      const marker = markers.find((entry) => entry.type === type) || null;
+      const existing = strong.querySelector(markerSelector(type));
+      if (!marker) {
+        existing?.remove();
+        return;
+      }
+      if (existing instanceof HTMLElement) {
+        existing.classList.add("playerAgeMarker");
+        if (existing.textContent !== marker.emoji) existing.textContent = marker.emoji;
+        if (existing.dataset.tooltip !== marker.label) existing.dataset.tooltip = marker.label;
+        if (existing.getAttribute("aria-label") !== marker.label) existing.setAttribute("aria-label", marker.label);
+        return;
+      }
+      const span = document.createElement("span");
+      span.className = `${type === "newMint" ? "newMintMarker" : "retirementMarker"} playerAgeMarker`;
+      span.textContent = marker.emoji;
+      span.dataset.tooltip = marker.label;
+      span.setAttribute("aria-label", marker.label);
+      strong.appendChild(span);
+    });
+  }
+
   function installStyles() {
     if (document.getElementById("mflPlayerLoadingStyles")) return;
     const style = document.createElement("style");
@@ -766,6 +856,10 @@
         cursor: default;
       }
 
+      #playerDetail .playerAgeMarker {
+        font-size: 14px;
+      }
+
       #playerDetail .mflPlayerLoadingNotes {
         pointer-events: none;
         resize: none;
@@ -782,6 +876,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
+      syncRenderedAgeMarkers(playerId, detail);
       rememberRenderedPlayerSnapshot(playerId, detail);
       return false;
     }
@@ -812,6 +907,7 @@
 
     const realHero = detail.querySelector(".playerHero:not([data-mfl-player-loading-shell])");
     if (realHero) {
+      syncRenderedAgeMarkers(playerId, detail);
       rememberRenderedPlayerSnapshot(playerId, detail);
       delete detail.dataset.mflPlayerLoading;
       return;
@@ -830,7 +926,7 @@
   const playerDetail = document.getElementById("playerDetail");
   if (playerDetail instanceof HTMLElement) {
     const observer = new MutationObserver(() => queueMicrotask(syncPlayerLoadingState));
-    observer.observe(playerDetail, { childList: true });
+    observer.observe(playerDetail, { childList: true, subtree: true });
   }
 
   window.addEventListener("popstate", () => queueMicrotask(() => renderSkeleton({ force: true })));
