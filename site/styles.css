@@ -2,6 +2,118 @@
 @import url("/styles-base.css");
 @import url("/dropdowns.css");
 
+/* Preserve the established control footprints while using the rebuilt dropdown menus. */
+select:not(.mflDropdownNative),
+.mflSelectTrigger {
+  height: 40px;
+  min-height: 40px;
+  border-radius: 6px;
+  padding-left: 11px;
+}
+
+.mflSelect[data-mfl-select-for="addFilterSelect"] .mflSelectTrigger {
+  height: 44px;
+  min-height: 44px;
+}
+
+.mflSelect[data-mfl-inline="true"] {
+  width: 52px;
+  min-width: 0;
+}
+
+.mflSelect[data-mfl-inline="true"] .mflSelectTrigger {
+  width: 52px;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0 12px 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  line-height: inherit;
+}
+
+.mflSelect[data-mfl-inline="true"] .mflSelectTrigger:hover:not(:disabled),
+.mflSelect[data-mfl-inline="true"] .mflSelectTrigger:focus-visible:not(:disabled),
+.mflSelect[data-mfl-inline="true"] .mflSelectTrigger[aria-expanded="true"] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.accountMenu {
+  width: 124px;
+}
+
+.accountMenu .compactButton {
+  height: 50px;
+}
+
+.accountDropdownItem {
+  height: 34px;
+  min-height: 34px;
+}
+
+.watchlistButton {
+  width: 350px;
+  height: 40px;
+  padding: 0 10px;
+}
+
+.watchlistDropdown {
+  width: 350px;
+  min-width: 350px;
+  max-width: calc(100vw - 24px);
+}
+
+.watchlistDropdownItem {
+  min-height: 36px;
+}
+
+.watchlistDropdownCount {
+  font-size: 12px;
+}
+
+.watchlistDropdownActions {
+  gap: 6px;
+}
+
+.watchlistDropdownAction {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+}
+
+.watchlistDropdownDelete {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: #e06b6b;
+}
+
+.watchlistDropdownDelete:hover:not(:disabled),
+.watchlistDropdownDelete:focus-visible:not(:disabled) {
+  border-color: #ff8a8a;
+  background: #c92a2a;
+  color: #fff7f7;
+}
+
+.watchlistDropdownSeparator {
+  margin: 2px 4px 5px;
+}
+
+@media (max-width: 900px) {
+  .watchlistDropdown {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 /* Shared popup state: lock background scrolling while a popup is open. */
 html:has(body > .modalBackdrop:not([hidden])),
 html:has(body > .modalBackdrop:not([hidden])) body {
