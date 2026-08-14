@@ -126,6 +126,26 @@ select[data-mfl-dropdown-enhanced="true"]:open,
   line-height: 1;
 }
 
+/* Filters open in a neutral state: programmatic focus must not paint a selected
+ * or highlighted box before the user actually interacts with the popup. */
+html.mflFiltersOpeningNeutral .filtersDialog input:focus,
+html.mflFiltersOpeningNeutral .filtersDialog input:focus-visible,
+html.mflFiltersOpeningNeutral .filtersDialog select:focus,
+html.mflFiltersOpeningNeutral .filtersDialog select:focus-visible {
+  outline: 0;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+}
+
+#showAddFilterButton,
+#showAddFilterButton:hover,
+#addFilterSelect,
+#addFilterSelect:hover {
+  cursor: pointer;
+}
+
 @supports (appearance: base-select) {
   .filtersDialog select,
   .filtersDialog select::picker(select) {

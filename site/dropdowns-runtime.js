@@ -82,12 +82,34 @@
     return true;
   }
 
+  function clearInitialFilterFocus() {
+    const filtersModal = document.getElementById("filtersModal");
+    const active = document.activeElement;
+    if (!(filtersModal instanceof HTMLElement) || !(active instanceof HTMLElement)) return;
+    if (filtersModal.contains(active)) active.blur();
+  }
+
+  function beginNeutralFiltersOpen() {
+    document.documentElement.classList.add("mflFiltersOpeningNeutral");
+    queueMicrotask(clearInitialFilterFocus);
+    requestAnimationFrame(clearInitialFilterFocus);
+  }
+
+  function endNeutralFiltersOpen(target) {
+    if (!document.documentElement.classList.contains("mflFiltersOpeningNeutral")) return;
+    const filtersModal = document.getElementById("filtersModal");
+    if (!(filtersModal instanceof HTMLElement) || !(target instanceof Node) || !filtersModal.contains(target)) return;
+    document.documentElement.classList.remove("mflFiltersOpeningNeutral");
+  }
+
   /* A second click directly on an open select closes it and removes focus.
    * Option pointer/click events are deliberately left untouched so selections
    * inside customizable pickers continue to work normally. */
   document.addEventListener("pointerdown", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
+    endNeutralFiltersOpen(target);
 
     if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
       event.preventDefault();
@@ -105,11 +127,17 @@
     event.stopImmediatePropagation();
   }, true);
 
+  document.addEventListener("keydown", (event) => {
+    endNeutralFiltersOpen(event.target);
+  }, true);
+
   /* Only static button dropdowns need the follow-up click suppressed; native
    * select option clicks must never be intercepted here. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
+    if (target.closest("#openFiltersButton")) beginNeutralFiltersOpen();
 
     const trigger = target.closest('[data-mfl-dropdown-trigger="true"]');
     if (!(trigger instanceof HTMLButtonElement) || !suppressNextClick.has(trigger)) return;
