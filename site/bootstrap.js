@@ -11,15 +11,6 @@
   void MOBILE_TABLE_MIN_WIDTH;
   void eventTargetsBusyScrollSurface;
 
-  function ensureScrollbarTheme() {
-    if (document.querySelector('link[data-mfl-scrollbar-theme="true"]')) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/scrollbars.css";
-    link.dataset.mflScrollbarTheme = "true";
-    document.head.appendChild(link);
-  }
-
   function initialTablePage() {
     const parts = String(window.location.pathname || "/").split("/").filter(Boolean);
     const first = String(parts[0] || "").toLowerCase();
@@ -300,7 +291,6 @@
     document.head.appendChild(script);
   }
 
-  ensureScrollbarTheme();
   syncBootstrapFirstPaint();
   loadBootstrapRuntime("/club-squad-route-runtime.js");
   loadBootstrapRuntime("/filter-controls-runtime.js");
