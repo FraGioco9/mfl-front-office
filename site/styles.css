@@ -1,5 +1,6 @@
 @import url("/scrollbars.css");
 @import url("/styles-base.css");
+@import url("/dropdowns.css");
 
 /* Shared popup state: lock the background and hide the sidebar without
  * changing the space reserved for it. */
