@@ -101,12 +101,12 @@ function preloadClassicScript(path) {
 const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/loading-toast-runtime.js",
   "/mobile-ui-runtime.js",
-  "/desktop-table-observer-guard-runtime.js",
+  "/desktop-table-style-runtime.js",
   "/database-stats-tooltip-portal-runtime.js",
-  "/release-ui-runtime.js",
+  "/static-ui-runtime.js",
   "/changelog-history-runtime.js",
   "/evaluation-layout-runtime.js",
-  "/evaluation-discount-rate-guard-runtime.js",
+  "/evaluation-discount-rate-display-runtime.js",
   "/evaluation-load-intent-runtime.js",
   "/mfl-stats-runtime.js",
   "/view-button-visibility-runtime.js",
@@ -130,7 +130,7 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-custom-filter-runtime.js",
-  "/selection-refresh-reset-runtime.js",
+  "/selection-startup-reset-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
   "/evaluation-search-state-runtime.js",
@@ -146,7 +146,6 @@ const LATE_RUNTIME_SCRIPTS = Object.freeze([
  * __mflStatsRuntime?: { sync?: () => void, installCoreBridge?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
  * __mflAppStartPromise?: Promise<void>,
- * __mflRestoreNativeMutationObserver?: () => void,
  * }} */
 const runtimeWindow = window;
 
@@ -178,8 +177,6 @@ function installResponsiveStylesheet() {
 function promoteResponsiveStylesheet() {
   const link = document.querySelector('link[data-mfl-responsive-layout="true"]');
   if (!(link instanceof HTMLLinkElement) || link.parentElement !== document.head) return;
-  // responsive.css is render-blocking for first paint, then moved behind all
-  // runtime-owned styles so viewport adaptations remain the final CSS authority.
   document.head.appendChild(link);
 }
 
@@ -235,7 +232,6 @@ async function start() {
   }
 
   await loadClassicScript("/modules/app-core.js");
-  runtimeWindow.__mflRestoreNativeMutationObserver?.();
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
   const homeStartup = /^\/(?:home)?\/?$/i.test(window.location.pathname);
@@ -248,25 +244,16 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS);
-  // Late route and selection runtimes can replace core functions. Reinstall the
-  // bridges after they load so loading/cursor ownership and table chrome keep
-  // wrapping the functions that are actually active in the page.
   installCoreBridges();
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
   runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   runtimeWindow.__mflStatsRuntime?.sync?.();
   promoteResponsiveStylesheet();
 
-  // Keep late runtimes such as selection bridges available as early as possible,
-  // but do not release the startup loading state on the homepage or player-table
-  // routes until application startup has actually settled. Dedicated Stats
-  // pages own their own readiness and therefore must not wait here.
   if ((homeStartup || tableStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
 
-  // Core startup can add route-specific style owners asynchronously. Reassert
-  // responsive.css once more immediately before the application is released.
   promoteResponsiveStylesheet();
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));

@@ -1,14 +1,11 @@
 (() => {
-  const FEATURE_VERSION = "1.120.25";
-  const RELEASE_VERSION = String(window.__mflReleaseVersion || "dev");
-  const RESET_WINDOW_MS = 1000;
+  "use strict";
 
-  const existing = window.__mflSelectionRefreshResetRuntime;
-  if (existing?.version === FEATURE_VERSION) {
-    existing.rebind?.();
-    return;
-  }
-  existing?.destroy?.();
+  const RESET_WINDOW_MS = 1000;
+  const STYLE_ID = "mflSelectionStartupResetStyles";
+  const PENDING_CLASS = "mflSelectionStartupResetPending";
+
+  window.__mflSelectionStartupResetRuntime?.destroy?.();
 
   let resetTimer = 0;
   let resetObserver = null;
@@ -58,7 +55,7 @@
     try {
       if (typeof updateSelectionBar === "function") updateSelectionBar();
     } catch {
-      // Selection is still cleared in application state.
+      // Selection is already cleared in application state.
     }
 
     try {
@@ -70,7 +67,7 @@
     try {
       if (typeof saveTableState === "function") saveTableState();
     } catch {
-      // Refresh behavior remains correct for this page load.
+      // The current page still starts with an empty selection.
     }
 
     return true;
@@ -82,8 +79,8 @@
     resetObserver?.disconnect();
     resetObserver = null;
     clearCurrentSelection();
-    document.documentElement.classList.remove("mflSelectionRefreshResetPending");
-    document.getElementById("mflSelectionRefreshResetStyles")?.remove();
+    document.documentElement.classList.remove(PENDING_CLASS);
+    document.getElementById(STYLE_ID)?.remove();
   }
 
   function runResetPass() {
@@ -93,16 +90,16 @@
   }
 
   function ensurePendingStyle() {
-    document.documentElement.classList.add("mflSelectionRefreshResetPending");
-    let style = document.getElementById("mflSelectionRefreshResetStyles");
+    document.documentElement.classList.add(PENDING_CLASS);
+    let style = document.getElementById(STYLE_ID);
     if (!style) {
       style = document.createElement("style");
-      style.id = "mflSelectionRefreshResetStyles";
+      style.id = STYLE_ID;
       document.head?.appendChild(style);
     }
     if (style) {
       style.textContent = `
-        html.mflSelectionRefreshResetPending #selectionBar {
+        html.${PENDING_CLASS} #selectionBar {
           opacity: 0 !important;
           pointer-events: none !important;
         }
@@ -129,14 +126,12 @@
     destroyed = true;
     if (resetTimer) clearTimeout(resetTimer);
     resetObserver?.disconnect();
-    document.documentElement.classList.remove("mflSelectionRefreshResetPending");
-    document.getElementById("mflSelectionRefreshResetStyles")?.remove();
+    document.documentElement.classList.remove(PENDING_CLASS);
+    document.getElementById(STYLE_ID)?.remove();
   }
 
-  window.__mflSelectionRefreshResetRuntime = {
-    version: FEATURE_VERSION,
-    releaseVersion: RELEASE_VERSION,
+  window.__mflSelectionStartupResetRuntime = Object.freeze({
     rebind,
     destroy,
-  };
+  });
 })();

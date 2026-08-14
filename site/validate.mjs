@@ -41,19 +41,36 @@ invariant(
 const dataAuth = await readSite("api/_data-auth.js");
 matches(dataAuth, /require\(["']@onflow\/fcl["']\)/, "The data API must verify Dapper proofs with @onflow/fcl.");
 
-const bridge = await readSite("bootstrap.js");
-const staticVersion = bridge.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
+const bootstrap = await readSite("bootstrap.js");
+const staticVersion = bootstrap.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
 invariant(staticVersion === release.version, `bootstrap.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
-matches(bridge, /window\.__mflReleaseVersion\s*=\s*version;/, "bootstrap.js must remain the release-version owner.");
-excludes(bridge, /searchParams\.set\(["'](?:v|dev|rev)["']/, "bootstrap.js must keep runtime asset URLs queryless.");
+matches(bootstrap, /window\.__mflReleaseVersion\s*=\s*version;/, "bootstrap.js must remain the release-version owner.");
+matches(bootstrap, /loadBootstrapRuntime\(["']\/filter-controls-runtime\.js["']\)/, "bootstrap.js must load the canonical filter-controls runtime.");
+excludes(bootstrap, /FILTER_OPERATOR_LABELS|installFilterOperatorDefaults|installFilterOperatorAlignment/, "Filter behavior must stay out of bootstrap.js.");
+excludes(bootstrap, /searchParams\.set\(["'](?:v|dev|rev)["']/, "bootstrap.js must keep runtime asset URLs queryless.");
 
 const entry = await readSite("modules/app-entry.js");
 matches(entry, /loadClassicScript\(["']\/modules\/app-core\.js["']\)/, "app-entry.js must load the canonical application core directly.");
 matches(entry, /link\.href\s*=\s*["']\/responsive\.css["'];/, "app-entry.js must load responsive.css from the site root.");
+matches(entry, /["']\/desktop-table-style-runtime\.js["']/, "app-entry.js must load the desktop table stylesheet owner.");
+matches(entry, /["']\/evaluation-discount-rate-display-runtime\.js["']/, "app-entry.js must load the discount-rate display owner.");
+matches(entry, /["']\/selection-startup-reset-runtime\.js["']/, "app-entry.js must load the selection startup reset owner.");
+excludes(entry, /__mflRestoreNativeMutationObserver|desktop-table-observer-guard-runtime|evaluation-discount-rate-guard-runtime|selection-refresh-reset-runtime/, "app-entry.js must not restore removed compatibility runtimes.");
 excludes(entry, /\?(?:v|dev|rev)=|searchParams\.set\(["'](?:v|dev|rev)["']/, "app-entry.js must keep runtime asset URLs queryless.");
 excludes(entry, /window\.__mflReleaseVersion\s*=/, "app-entry.js must not overwrite the bootstrap-owned release version.");
 excludes(entry, /loadPreparedClassicScript|executeClassicSource|loadPartitionedClassicScript/, "app-entry.js must not restore deprecated runtime loaders.");
 
+const desktopTableStyle = await readSite("desktop-table-style-runtime.js");
+matches(desktopTableStyle, /desktop-table-layout\.css/, "Desktop table layout runtime must load desktop-table-layout.css.");
+excludes(desktopTableStyle, /MutationObserver|RestoreNativeMutationObserver/, "Desktop table stylesheet loading must not include obsolete MutationObserver compatibility logic.");
+
+const filterControls = await readSite("filter-controls-runtime.js");
+matches(filterControls, /AT_MOST_DEFAULT_COLUMNS/, "Filter controls must own numeric default operators.");
+matches(filterControls, /contractStatusFilterColumn/, "Filter controls must own Contracts Is/Is not behavior.");
+matches(filterControls, /grid-template-columns:\s*104px/, "Filter controls must preserve the full And/Or selector width.");
+
+const discountRateDisplay = await readSite("evaluation-discount-rate-display-runtime.js");
+excludes(discountRateDisplay, /evaluationSearch|recentSearch|Changelog/, "Discount-rate display runtime must not own unrelated UI state.");
 
 const responsive = await readSite("responsive.css");
 const indexHtml = await readSite("index.html");
@@ -63,8 +80,8 @@ invariant(indexHtml.includes(`MFL Front Office v${release.version}`), "The stati
 matches(responsive, /\/\* Mobile parity contract\./, "responsive.css must keep the mobile parity contract.");
 matches(responsive, /#mflLoadingToast[\s\S]*--mfl-visual-viewport-bottom/, "Mobile loading toast must account for the visual viewport.");
 matches(responsive, /#progressionPage \.tableScroller[\s\S]*touch-action:\s*pan-x pan-y/, "Mobile player tables must remain touch-scrollable.");
-matches(bridge, /MOBILE_TABLE_MIN_WIDTH\s*=\s*1240/, "Static first paint must preserve a horizontally scrollable mobile table width.");
-matches(bridge, /eventTargetsBusyScrollSurface/, "Busy interaction blocking must preserve native scrolling.");
+matches(bootstrap, /MOBILE_TABLE_MIN_WIDTH\s*=\s*1240/, "Static first paint must preserve a horizontally scrollable mobile table width.");
+matches(bootstrap, /eventTargetsBusyScrollSurface/, "Busy interaction blocking must preserve native scrolling.");
 
 const viewportMediaPattern = /@media\s*\(\s*(?:max|min)-width/i;
 const responsiveOwnerCandidates = [];
@@ -83,8 +100,8 @@ for (const path of responsiveOwnerCandidates) {
 for (const path of [
   "evaluation-layout-runtime.js",
   "global-search-runtime.js",
-  "release-ui-runtime.js",
-  "selection-refresh-reset-runtime.js",
+  "static-ui-runtime.js",
+  "selection-startup-reset-runtime.js",
   "selection-stack-runtime.js",
   "watchlist-myplayers-route-runtime.js",
 ]) {
@@ -103,13 +120,16 @@ for (const source of ["/(.*\\.js)", "/(.*\\.css)", "/release.json"]) {
   invariant(cacheHeaders.get(source) === "no-store, max-age=0", `${source} must use the no-store cache policy.`);
 }
 
-const rewritten = JSON.parse(await readSite("releases-rewritten.json"));
-invariant(Array.isArray(rewritten) && rewritten.length > 0, "releases-rewritten.json must contain release history.");
-invariant(rewritten[0]?.[0] === `v${release.version}`, "Release history must start with the current release.");
-invariant(new Set(rewritten.map(([version]) => version)).size === rewritten.length, "Release history must not contain duplicate versions.");
+const historyOverrides = JSON.parse(await readSite("release-history-overrides.json"));
+invariant(Array.isArray(historyOverrides) && historyOverrides.length > 0, "release-history-overrides.json must contain release-history corrections.");
+invariant(historyOverrides[0]?.[0] === `v${release.version}`, "Release history overrides must start with the current release.");
+invariant(new Set(historyOverrides.map(([version]) => version)).size === historyOverrides.length, "Release history overrides must not contain duplicate versions.");
 const releaseApi = await readSite("api/releases.js");
-matches(releaseApi, /require\(["']\.\.\/releases-rewritten\.json["']\)/, "The releases API must serve rewritten release history.");
-excludes(releaseApi, /releases-recent\.json/, "The releases API must not serve the development release history.");
+matches(releaseApi, /require\(["']\.\.\/release-history-overrides\.json["']\)/, "The releases API must serve canonical history overrides.");
+excludes(releaseApi, /releases-recent\.json|releases-rewritten\.json/, "The releases API must not depend on removed development or legacy history files.");
+
+const changelogHistory = await readSite("changelog-history-runtime.js");
+excludes(changelogHistory, /rewrittenReleaseVersion|rewrittenHistoryKey|\?v=/, "Changelog state must not retain rewritten-history or cache-busting legacy names.");
 
 const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
 matches(databaseRefresh, /--workflow\s+vercel-site-update\.yml/, "Database refreshes must resolve the last explicit site release.");
@@ -129,6 +149,14 @@ matches(databaseRuntime, /runtime_metadata/, "SQLite runtime must read runtime_m
 matches(databaseRuntime, /\.get\(["']generated_at["']\)/, "SQLite runtime must expose generated_at freshness.");
 
 for (const path of [
+  "desktop-table-observer-guard-runtime.js",
+  "desktop-table-width.css",
+  "evaluation-discount-rate-guard-runtime.js",
+  "filter-contract-operator-runtime.js",
+  "release-ui-runtime.js",
+  "releases-recent.json",
+  "releases-rewritten.json",
+  "selection-refresh-reset-runtime.js",
   "modules/core-runtime.js",
   "modules/http.js",
   "modules/release.js",

@@ -1,5 +1,5 @@
 const release = require("../release.json");
-const rewrittenHistory = require("../releases-rewritten.json");
+const historyOverrides = require("../release-history-overrides.json");
 const history = require("./_data/releases-history.json");
 
 module.exports = function handler(request, response) {
@@ -13,7 +13,7 @@ module.exports = function handler(request, response) {
   const currentLabel = `v${release.version}`;
   const merged = new Map([[currentLabel, release.description]]);
 
-  [...rewrittenHistory, ...history].forEach((entry) => {
+  [...historyOverrides, ...history].forEach((entry) => {
     if (!Array.isArray(entry) || entry.length !== 2) return;
     const [version, description] = entry;
     if (merged.has(version)) return;

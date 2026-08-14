@@ -3,9 +3,6 @@
 
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
-  // The unchanged bootstrap core owns the implementations for these startup
-  // contracts; keep them mirrored here because bootstrap.js is the validated
-  // entry point for static first-paint behavior.
   const MOBILE_TABLE_MIN_WIDTH = 1240;
   const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
   const version = STATIC_RELEASE_VERSION;
@@ -154,88 +151,6 @@
     }
   }
 
-  const FILTER_OPERATOR_LABELS = Object.freeze({
-    ">=": "at least",
-    "<=": "at most",
-    between: "is between",
-    "=": "is",
-    "!=": "is not",
-  });
-
-  function syncFilterOperatorLabels() {
-    document.querySelectorAll("select[data-filter-operator]").forEach((select) => {
-      if (!(select instanceof HTMLSelectElement)) return;
-      Array.from(select.options).forEach((option) => {
-        const label = FILTER_OPERATOR_LABELS[option.value];
-        if (label && option.textContent !== label) option.textContent = label;
-      });
-    });
-  }
-
-  function installFilterOperatorAlignment() {
-    const styleId = "mflFilterOperatorAlignment";
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      .filtersDialog .filterRule {
-        grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
-      }
-      .filtersDialog select[data-filter-connector],
-      .filtersDialog select[data-filter-operator] {
-        padding-top: 0;
-        padding-bottom: 0;
-        line-height: 38px;
-      }
-      .filtersDialog .filterRule > .iconButton.popupCloseButton {
-        align-self: center;
-        justify-self: center;
-        width: 36px;
-        min-width: 36px;
-        max-width: 36px;
-        height: 36px;
-        min-height: 36px;
-        max-height: 36px;
-        margin: 0;
-        padding: 0;
-        font-size: 0;
-      }
-      .filtersDialog .filterRule > .popupCloseButton::before,
-      .filtersDialog .filterRule > .popupCloseButton::after {
-        top: 50%;
-        left: 50%;
-        width: 10px;
-        height: 2px;
-        border-radius: 999px;
-        background: currentColor;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function installFilterOperatorDefaults() {
-    const addFilterRule = window.addFilterRule;
-    if (typeof addFilterRule !== "function") return;
-    if (addFilterRule.__mflAtMostDefaults) {
-      syncFilterOperatorLabels();
-      return;
-    }
-    const atMostColumns = new Set(["age", "player_seasons", "player_id"]);
-
-    const wrappedAddFilterRule = function(column, options = {}) {
-      const nextOptions = { ...options };
-      if (atMostColumns.has(String(column || "")) && !nextOptions.operator) {
-        nextOptions.operator = "<=";
-      }
-      const result = addFilterRule(column, nextOptions);
-      syncFilterOperatorLabels();
-      return result;
-    };
-    Object.defineProperty(wrappedAddFilterRule, "__mflAtMostDefaults", { value: true });
-    window.addFilterRule = wrappedAddFilterRule;
-    syncFilterOperatorLabels();
-  }
-
   function syncEvaluationActionsFirstPaint() {
     if (!/^\/evaluation\/?$/i.test(window.location.pathname)) return;
 
@@ -263,9 +178,6 @@
   function syncBootstrapFirstPaint() {
     installEvaluationTableSpacing();
     installPopupContentCentering();
-    installFilterOperatorAlignment();
-    installFilterOperatorDefaults();
-    syncFilterOperatorLabels();
     syncQuickFilterFirstPaint();
     syncDatabaseViewButtonsFirstPaint();
     syncEvaluationActionsFirstPaint();
@@ -281,10 +193,8 @@
   }
 
   syncBootstrapFirstPaint();
-  window.addEventListener("mfl:ready", installFilterOperatorDefaults);
-
   loadBootstrapRuntime("/club-squad-route-runtime.js");
-  loadBootstrapRuntime("/filter-contract-operator-runtime.js");
+  loadBootstrapRuntime("/filter-controls-runtime.js");
 
   const core = document.createElement("script");
   core.src = "/bootstrap-core.js";

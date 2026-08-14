@@ -1,9 +1,11 @@
 (() => {
+  "use strict";
+
   const VERSION = String(window.__mflRelease?.version || window.__mflReleaseVersion || "dev");
   const assetUrl = typeof window.__mflAssetUrl === "function"
     ? window.__mflAssetUrl
     : (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
-  const RELEASES_URL = `${assetUrl("releases.json")}?v=${encodeURIComponent(VERSION)}`;
+  const RELEASES_URL = assetUrl("releases.json");
   const initialList = document.querySelector(".changelogList");
 
   if (initialList instanceof HTMLElement) {
@@ -162,14 +164,14 @@
     list.replaceChildren(fragment);
     list.dataset.sectioned = "true";
     list.dataset.completeReleaseVersion = VERSION;
-    list.dataset.rewrittenReleaseVersion = VERSION;
-    list.dataset.rewrittenHistoryKey = releaseKey;
+    list.dataset.releaseHistoryVersion = VERSION;
+    list.dataset.releaseHistoryKey = releaseKey;
     delete list.dataset.historyLoading;
     list.hidden = false;
   }
 
   function listMatches(list) {
-    if (list.dataset.rewrittenHistoryKey !== releaseKey) return false;
+    if (list.dataset.releaseHistoryKey !== releaseKey) return false;
     const items = Array.from(list.querySelectorAll(".changelogPatchList > li"));
     if (items.length !== releases.length) return false;
     return items.every((item, index) => {

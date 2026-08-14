@@ -3,16 +3,17 @@
 
   const VERSION = String(window.__mflRelease?.version || window.__mflReleaseVersion || "dev");
   const STATS_PATH = /^\/database\/stats\/?$/i;
+  const STYLE_ID = "mflStaticUiGuards";
 
-  window.__mflReleaseUiRuntime?.destroy?.();
+  window.__mflStaticUiRuntime?.destroy?.();
 
   let frame = 0;
   let observer = null;
 
   function installFirstPaintGuards() {
-    if (document.getElementById("mflReleaseFirstPaintGuards")) return;
+    if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
-    style.id = "mflReleaseFirstPaintGuards";
+    style.id = STYLE_ID;
     style.textContent = `
       html[data-stored-progression-access="true"] #homeOptInButton,
       html[data-stored-progression-access="true"] #myPlayersOptInButton {
@@ -32,9 +33,6 @@
         border: 0 !important;
       }
 
-      /* Loading rows fade through their actual paint colors instead of element
-         opacity. This keeps cell backgrounds and collapsed row separators in
-         the same fade and makes every successive row visibly more transparent. */
       #tableBody > .staticTableBlankRow,
       #tableBody > .staticTableBlankRow > td {
         opacity: 1 !important;
@@ -109,7 +107,7 @@
     setImportant(link, "opacity", "1");
   }
 
-  function syncStatsChrome() {
+  function syncDatabaseStatsPage() {
     if (!STATS_PATH.test(location.pathname)) return;
     if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
     document.querySelectorAll("#progressionPage .viewButton[data-view]").forEach((button) => {
@@ -137,7 +135,7 @@
     frame = 0;
     installFirstPaintGuards();
     syncFooter();
-    syncStatsChrome();
+    syncDatabaseStatsPage();
   }
 
   function schedule() {
@@ -160,10 +158,10 @@
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
     window.removeEventListener("popstate", schedule);
-    document.getElementById("mflReleaseFirstPaintGuards")?.remove();
+    document.getElementById(STYLE_ID)?.remove();
   }
 
-  window.__mflReleaseUiRuntime = Object.freeze({
+  window.__mflStaticUiRuntime = Object.freeze({
     version: VERSION,
     sync: schedule,
     destroy,
