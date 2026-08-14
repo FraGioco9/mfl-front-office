@@ -6,9 +6,11 @@
   const TOAST_ID = "mflLoadingToast";
   const STYLE_ID = "mflLoadingToastRuntimeStyles";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
+  const TABLE_SCROLL_CLASS = "mflTableScrolling";
   let destroyed = false;
   let observer = null;
   let layerObserver = null;
+  let tableScrollTimer = 0;
 
   const style = document.createElement("style");
   style.id = STYLE_ID;
@@ -39,6 +41,13 @@
     html.mflInteractionBusy body [role="button"] * {
       transition: none !important;
       animation: none !important;
+    }
+
+    /* Drop the browser's stationary row hover target while the table moves
+       under the pointer. Removing this class after scrolling ends lets the row
+       currently under the pointer become the hover target normally. */
+    html.${TABLE_SCROLL_CLASS} #progressionPage .tableScroller tbody {
+      pointer-events: none;
     }
 
     /* The footer is never an interactive loading surface. Keep its normal
@@ -222,6 +231,19 @@
     toast.hidden = true;
   }
 
+  function clearTableScrollHover() {
+    tableScrollTimer = 0;
+    document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
+  }
+
+  function onScroll() {
+    const tablePage = document.getElementById("progressionPage");
+    if (!(tablePage instanceof HTMLElement) || tablePage.hidden) return;
+    document.documentElement.classList.add(TABLE_SCROLL_CLASS);
+    if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
+    tableScrollTimer = window.setTimeout(clearTableScrollHover, 80);
+  }
+
   observer = new MutationObserver(sync);
   observer.observe(document.documentElement, {
     attributes: true,
@@ -244,6 +266,7 @@
 
   window.addEventListener("mfl:ready", sync);
   window.addEventListener("resize", sync);
+  document.addEventListener("scroll", onScroll, true);
   window.visualViewport?.addEventListener("resize", sync, { passive: true });
   window.visualViewport?.addEventListener("scroll", sync, { passive: true });
   sync();
@@ -252,8 +275,12 @@
     destroyed = true;
     observer?.disconnect();
     layerObserver?.disconnect();
+    if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
+    tableScrollTimer = 0;
+    document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
     window.removeEventListener("mfl:ready", sync);
     window.removeEventListener("resize", sync);
+    document.removeEventListener("scroll", onScroll, true);
     window.visualViewport?.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("scroll", sync);
     if (document.body) {
