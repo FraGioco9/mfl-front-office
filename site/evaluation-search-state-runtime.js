@@ -3,6 +3,7 @@
 
   const CLASS = "mflEvaluationResultLoading";
   const STYLE_ID = "mflEvaluationSearchStateRuntimeStyles";
+  const PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
   let destroyed = false;
@@ -16,6 +17,7 @@
   let sawBusy = false;
   let recentSearchNodes = [];
   let recentSearchCaptured = false;
+  let recentPrimePromise = null;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -59,6 +61,11 @@
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
   const loadingLocked = () => document.documentElement.classList.contains(CLASS);
 
+  function selectedPlayerIdFromUrl() {
+    if (!/^\/evaluation\/?$/i.test(location.pathname)) return "";
+    return String(new URLSearchParams(location.search).get("player") || "").trim();
+  }
+
   function playerSelected() {
     const panel = document.getElementById("evaluationPanel");
     if (panel instanceof HTMLElement && !panel.hidden) return true;
@@ -85,9 +92,34 @@
     return match?.[1] || "";
   }
 
+  function resultName(button) {
+    if (!(button instanceof HTMLButtonElement)) return "";
+    return String(button.querySelector("strong")?.textContent || "").trim();
+  }
+
+  function storePlayerLabel(playerId, playerName) {
+    const id = String(playerId || "").trim();
+    const name = String(playerName || "").trim();
+    if (!id || !name || name === `Player #${id}`) return;
+    try {
+      localStorage.setItem(`${PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
+    } catch {
+      // The runtime still works when browser storage is unavailable.
+    }
+  }
+
+  function syncSelectedPlayerLabel(field = input()) {
+    if (!(field instanceof HTMLInputElement)) return;
+    const playerId = selectedPlayerIdFromUrl();
+    if (!playerId) return;
+    storePlayerLabel(playerId, field.value);
+  }
+
   function rememberClickedSearch(button) {
-    if (!(button instanceof HTMLButtonElement) || !recentSearchCaptured) return;
+    if (!(button instanceof HTMLButtonElement)) return;
     const id = resultId(button);
+    storePlayerLabel(id, resultName(button));
+    if (!recentSearchCaptured) return;
     recentSearchNodes = [button, ...recentSearchNodes.filter((candidate) => {
       if (!(candidate instanceof HTMLButtonElement)) return false;
       return !id || resultId(candidate) !== id;
@@ -104,10 +136,6 @@
       .slice(0, 5);
     if (!buttons.length) return false;
 
-    // This is the canonical empty-search list for the current app session. On
-    // Evaluation startup app-core has already restored wallet/table state before
-    // this late runtime loads, so these are the same suggestions the user sees
-    // immediately after loading. Do not recapture typed-query or later rerenders.
     recentSearchNodes = buttons;
     recentSearchCaptured = true;
     return true;
@@ -144,18 +172,32 @@
     requestAnimationFrame(() => { syncing = false; });
   }
 
-  function renderEmptySearchFromCore(field) {
-    if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
-    if (typeof window.renderEvaluationSearchResults === "function") {
-      window.renderEvaluationSearchResults();
-      return;
+  function renderEmptySearchFromCore() {
+    try {
+      if (typeof window.renderEvaluationSearchResults === "function") {
+        window.renderEvaluationSearchResults();
+        return;
+      }
+      window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
+    } catch (error) {
+      console.warn("Could not render recent Evaluation searches.", error);
     }
+  }
 
-    // app-core owns the persisted recent Evaluation IDs but keeps its renderer
-    // module-scoped. After a refresh with a selected player there may be no
-    // rendered empty-search list for this runtime to capture. Re-enter the
-    // canonical app-core input path so it renders those persisted recent IDs.
-    field.dispatchEvent(new Event("input", { bubbles: true }));
+  function primeRecentSearchData() {
+    if (recentPrimePromise) return recentPrimePromise;
+    recentPrimePromise = Promise.resolve().then(() => {
+      if (typeof window.primeEmptyEvaluationSearch === "function") {
+        return window.primeEmptyEvaluationSearch();
+      }
+      return window.eval("typeof primeEmptyEvaluationSearch === 'function' ? primeEmptyEvaluationSearch() : false");
+    }).catch((error) => {
+      console.warn("Could not prime recent Evaluation searches.", error);
+      return false;
+    }).finally(() => {
+      recentPrimePromise = null;
+    });
+    return recentPrimePromise;
   }
 
   function sync() {
@@ -166,6 +208,7 @@
 
     syncing = true;
     installRecentRule();
+    syncSelectedPlayerLabel(field);
 
     if (playerSelected() && document.activeElement !== field) {
       container.hidden = true;
@@ -182,7 +225,7 @@
     if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
       showSearching(container);
     } else if (!query) {
-      renderEmptySearchFromCore(field);
+      renderEmptySearchFromCore();
       captureRenderedRecents(container);
       restoreRecentSearches(container);
     }
@@ -204,19 +247,19 @@
       return;
     }
 
-    queueMicrotask(sync);
+    void primeRecentSearchData().finally(() => queueMicrotask(sync));
   }
 
   function onKeyUp(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field || field.value.trim()) return;
-    queueMicrotask(sync);
+    void primeRecentSearchData().finally(() => queueMicrotask(sync));
   }
 
   function onPointerUp(event) {
     const target = event.target instanceof Element ? event.target.closest("#evaluationSearchClearButton") : null;
     if (!(target instanceof HTMLButtonElement)) return;
-    window.setTimeout(sync, 0);
+    void primeRecentSearchData().finally(() => window.setTimeout(sync, 0));
   }
 
   function installObserver() {
@@ -241,6 +284,7 @@
         return;
       }
 
+      syncSelectedPlayerLabel(field);
       if (document.activeElement !== field) sync();
     });
     resultsObserver.observe(container, { childList: true, attributes: true, attributeFilter: ["hidden"] });
@@ -320,6 +364,7 @@
   document.addEventListener("keyup", onKeyUp, true);
   document.addEventListener("pointerup", onPointerUp, true);
   installObserver();
+  void primeRecentSearchData().finally(sync);
   sync();
 
   function destroy() {
@@ -333,6 +378,7 @@
     stopLock();
     recentSearchNodes = [];
     recentSearchCaptured = false;
+    recentPrimePromise = null;
     style.remove();
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
