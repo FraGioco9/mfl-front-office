@@ -34,15 +34,13 @@
     ["50-54", "50-54"],
     ["common", "Common"],
   ]);
-  const VIEW_ORDER = Object.freeze({
-    database: ["attributes", "contracts", "stats"],
-    mfl: ["attributes", "stats"],
-    progression: ["current", "all"],
-    agents: ["attributes", "contracts", "next", "current", "all"],
-    watchlist: ["attributes", "next", "contracts", "current", "all"],
-    myplayers: ["attributes", "next", "contracts", "current", "all"],
-    club: ["attributes", "contracts", "current", "all"],
-  });
+  const TABLE_VIEW_CONFIG = window.__mflTableViewConfig || Object.freeze({});
+  const VIEW_ORDER = Object.freeze(Object.fromEntries(
+    Object.entries(TABLE_VIEW_CONFIG).map(([pageName, config]) => [
+      pageName,
+      Array.isArray(config?.order) ? [...config.order] : [],
+    ]),
+  ));
 
   const previous = window.__mflSharedTableUiRuntime;
   previous?.destroy?.();
