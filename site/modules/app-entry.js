@@ -257,6 +257,27 @@ function normalizeWatchlistViewAuthority(source) {
   nextSource = replaceCoreSourceIfPresent(
     nextSource,
     [
+      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
+      '    state.currentPage = pageName;',
+      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
+      '    await ensureWatchlistRoute(options);',
+      '  }',
+    ],
+    [
+      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
+      '    state.currentPage = pageName;',
+      '    const requestedWatchlistView = normalizeViewForPage(options.view || watchlistTargetFromUrl().view || state.view, "watchlist");',
+      '    state.view = requestedWatchlistView;',
+      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
+      '    await ensureWatchlistRoute({ ...options, view: requestedWatchlistView });',
+      '  }',
+    ],
+    "watchlist view ownership before route resolution",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
       '    setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {',
       '      const routeView = pageName === "watchlist" ? routeViewFromPath() : "";',
       '      const nextOptions = routeView ? { ...options, view: routeView } : options;',
