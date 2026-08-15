@@ -6,6 +6,10 @@
   const AGENT_PATH = /^\/agents\/([^/?#]+)(?:\/|$)/i;
   const CLUB_PATH = /^\/(?:clubs|club)\/[^/?#]+(?:\/|$)/i;
   const STYLE_ID = "mflStaticUiGuards";
+  const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
+  const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
+  const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
+  const AGENT_PAGE_NAME_STORAGE_PREFIX = "mfl-agent-page-name-v1:";
   const AGENT_VIEWS = Object.freeze(["attributes", "contracts", "next", "current", "all"]);
   const CLUB_VIEWS = Object.freeze(["attributes", "contracts", "current", "all"]);
 
@@ -132,6 +136,118 @@
     setImportant(link, "opacity", "1");
   }
 
+  function normalizeAgentAddress(value) {
+    const address = String(value || "").trim().toLowerCase();
+    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+  }
+
+  function normalizedAgentName(value, address = "") {
+    const name = String(value || "").trim().replace(/\s+/g, " ");
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!name || name.toUpperCase() === "NULL") return "";
+    return normalizedAddress && name.toLowerCase() === normalizedAddress ? "" : name;
+  }
+
+  function storedLinkedWalletAddress() {
+    try {
+      const address = normalizeAgentAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
+      if (!address) return "";
+      const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
+      const proofAddress = normalizeAgentAddress(proof?.address);
+      return proofAddress === address
+        && Boolean(proof?.message)
+        && Array.isArray(proof?.signatures)
+        && proof.signatures.length
+        ? address
+        : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function liveLinkedWalletAddress() {
+    try {
+      const address = String(window.eval(`(() => {
+        try {
+          return typeof state === "object" ? String(state.linkedWalletAddress || "") : "";
+        } catch {
+          return "";
+        }
+      })()` ) || "").trim();
+      if (address) return normalizeAgentAddress(address);
+    } catch {
+      // Fall through to the storage-backed linked wallet during startup.
+    }
+    return storedLinkedWalletAddress();
+  }
+
+  function storedAccountAgentName(address) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!normalizedAddress) return "";
+    try {
+      const linkedDisplay = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
+      if (normalizeAgentAddress(linkedDisplay?.address) === normalizedAddress) {
+        const linkedName = normalizedAgentName(linkedDisplay?.name, normalizedAddress);
+        if (linkedName) return linkedName;
+      }
+      return normalizedAgentName(
+        localStorage.getItem(`${AGENT_PAGE_NAME_STORAGE_PREFIX}${normalizedAddress}`),
+        normalizedAddress,
+      );
+    } catch {
+      return "";
+    }
+  }
+
+  function cacheAccountAgentName(address, name) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    const agentName = normalizedAgentName(name, normalizedAddress);
+    if (!normalizedAddress || !agentName) return;
+    try {
+      localStorage.setItem(
+        LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY,
+        JSON.stringify({ address: normalizedAddress, name: agentName }),
+      );
+      localStorage.setItem(`${AGENT_PAGE_NAME_STORAGE_PREFIX}${normalizedAddress}`, agentName);
+    } catch {
+      // The live name is still used for the current session if storage is blocked.
+    }
+  }
+
+  function liveAgentName(address) {
+    if (!address) return "";
+    window.__mflStaticAgentAddress = address;
+    try {
+      return String(window.eval(`(() => {
+        try {
+          const address = String(window.__mflStaticAgentAddress || "");
+          return typeof agentNameForWallet === "function" ? agentNameForWallet(address) : "";
+        } catch {
+          return "";
+        }
+      })()` ) || "").trim();
+    } catch {
+      return "";
+    } finally {
+      delete window.__mflStaticAgentAddress;
+    }
+  }
+
+  function syncAccountIdentity() {
+    const accountUser = document.getElementById("accountEmail");
+    if (!(accountUser instanceof HTMLButtonElement)) return;
+    const address = liveLinkedWalletAddress();
+    if (!address) {
+      if (String(accountUser.textContent || "").trim() !== "Guest") accountUser.textContent = "Guest";
+      return;
+    }
+
+    const liveName = normalizedAgentName(liveAgentName(address), address);
+    if (liveName) cacheAccountAgentName(address, liveName);
+    const display = liveName || storedAccountAgentName(address) || address;
+    if (String(accountUser.textContent || "").trim() !== display) accountUser.textContent = display;
+  }
+
   function syncDatabaseStatsPage() {
     if (!STATS_PATH.test(location.pathname)) return;
     if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
@@ -167,27 +283,7 @@
   function normalizedAgentAddressFromPath() {
     const match = String(location.pathname || "").match(AGENT_PATH);
     const rawAddress = decodedPathSegment(match?.[1] || "");
-    if (!rawAddress) return "";
-    return (rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`).toLowerCase();
-  }
-
-  function liveAgentName(address) {
-    if (!address) return "";
-    window.__mflStaticAgentAddress = address;
-    try {
-      return String(window.eval(`(() => {
-        try {
-          const address = String(window.__mflStaticAgentAddress || "");
-          return typeof agentNameForWallet === "function" ? agentNameForWallet(address) : "";
-        } catch {
-          return "";
-        }
-      })()` ) || "").trim();
-    } catch {
-      return "";
-    } finally {
-      delete window.__mflStaticAgentAddress;
-    }
+    return normalizeAgentAddress(rawAddress);
   }
 
   function syncViewSet(order, labels = {}) {
@@ -253,6 +349,7 @@
     frame = 0;
     installFirstPaintGuards();
     syncFooter();
+    syncAccountIdentity();
     syncDatabaseStatsPage();
     syncAgentPage();
     syncClubPage();
@@ -272,12 +369,14 @@
     attributeFilter: ["class", "hidden", "data-page", "aria-hidden"],
   });
   window.addEventListener("popstate", schedule);
+  window.addEventListener("mfl:ready", schedule);
   sync();
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
     window.removeEventListener("popstate", schedule);
+    window.removeEventListener("mfl:ready", schedule);
     document.getElementById(STYLE_ID)?.remove();
   }
 
