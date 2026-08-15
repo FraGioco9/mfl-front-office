@@ -322,6 +322,22 @@
     return true;
   }
 
+  function clearStaleSharedTableSurface() {
+    const tableBody = document.getElementById("tableBody");
+    if (tableBody instanceof HTMLTableSectionElement) {
+      tableBody.replaceChildren();
+      delete tableBody.dataset.staticLoading;
+    }
+    const emptyState = document.getElementById("emptyState");
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = true;
+      emptyState.textContent = "";
+    }
+    document.querySelectorAll("#progressionPage nav.pager").forEach((pager) => {
+      if (pager instanceof HTMLElement) pager.hidden = true;
+    });
+  }
+
   function syncDestinationStaticControls(page, view) {
     const title = document.getElementById("tablePageTitle");
     const titleText = destinationTitle(page);
@@ -393,6 +409,7 @@
     pendingPage = page;
     pendingView = view;
     const bodyPage = bodyPageForDestination(page, view);
+    clearStaleSharedTableSurface();
     if (document.body && document.body.dataset.page !== bodyPage) {
       document.body.dataset.page = bodyPage;
     }
