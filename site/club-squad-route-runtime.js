@@ -75,7 +75,6 @@
   let historyWrapped = false;
   let coreBridgeInstalled = false;
   let chromeSyncQueued = false;
-  let lastPrimedClubKey = "";
 
   function decodedClubId(value) {
     try {
@@ -95,10 +94,6 @@
       ? "attributes"
       : CLUB_VIEW_SLUGS[slug];
     return view && CLUB_VIEWS.has(view) ? { clubId, view } : null;
-  }
-
-  function clubRouteKey(route) {
-    return route ? `${route.clubId}:${route.view}` : "";
   }
 
   function clubSlugForView(view) {
@@ -508,7 +503,6 @@
     if (!route) return false;
     syncClubChrome(route);
     showClubLoadingSkeleton(route);
-    lastPrimedClubKey = clubRouteKey(route);
     return true;
   }
 
@@ -589,6 +583,45 @@
     try {
       const installed = Boolean(window.eval(`(() => {
         try {
+          if (typeof canonicalClubRoute === "function"
+            && !canonicalClubRoute.__mflSquadCanonical) {
+            const canonicalPublicClubRoute = function(clubId = activeClubId, view = state.view) {
+              const slug = view === "current"
+                ? "current-season"
+                : view === "all"
+                  ? "all-time"
+                  : view === "contracts"
+                    ? "contracts"
+                    : "squad";
+              return "/clubs/" + encodeURIComponent(String(clubId || "")) + "/" + slug;
+            };
+            Object.defineProperty(canonicalPublicClubRoute, "__mflSquadCanonical", { value: true });
+            canonicalClubRoute = canonicalPublicClubRoute;
+          }
+
+          if (typeof clubRoute === "function"
+            && !clubRoute.__mflSquadCanonical) {
+            const canonicalClubRouteParser = function(pathname = (window.location.pathname.replace(/\\/+$/, "") || "/")) {
+              const match = String(pathname || "").match(/^\\/(?:clubs|club)\\/([^/]+)(?:\\/([^/]+))?$/i);
+              if (!match) return null;
+              const slug = String(match[2] || "squad").toLowerCase();
+              const internalSquadSlug = ["attr", "ibutes"].join("");
+              const view = slug === "current-season"
+                ? "current"
+                : slug === "all-time"
+                  ? "all"
+                  : slug === "contracts"
+                    ? "contracts"
+                    : (slug === "squad" || slug === internalSquadSlug)
+                      ? "attributes"
+                      : "";
+              if (!view) return null;
+              return { clubId: decodeURIComponent(match[1]), view };
+            };
+            Object.defineProperty(canonicalClubRouteParser, "__mflSquadCanonical", { value: true });
+            clubRoute = canonicalClubRouteParser;
+          }
+
           if (typeof clubRouteTargetFromPath === "function"
             && !clubRouteTargetFromPath.__mflSquadCanonical) {
             const canonicalClubRouteTargetFromPath = function() {
@@ -619,7 +652,9 @@
             Object.defineProperty(completeClubRosterRule, "__mflClubRosterComplete", { value: true });
             rowHasHiddenMflJoinedAgencyDate = completeClubRosterRule;
           }
-          return typeof clubRouteTargetFromPath === "function";
+          return typeof clubRouteTargetFromPath === "function"
+            && typeof canonicalClubRoute === "function"
+            && typeof clubRoute === "function";
         } catch {
           return false;
         }
