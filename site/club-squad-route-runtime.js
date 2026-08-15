@@ -30,8 +30,6 @@
   let guardTimer = 0;
   let guardKey = "";
   let guardStartedAt = 0;
-  let pointerHandledClubViewButton = null;
-  let pointerHandledClubViewTimer = 0;
 
   function decodedClubId(value) {
     try {
@@ -389,8 +387,15 @@
     const links = [];
     if (root instanceof HTMLAnchorElement && root.matches("a.clubPageLink[href]")) links.push(root);
     root.querySelectorAll?.("a.clubPageLink[href]").forEach((link) => links.push(link));
+    const currentRoute = parseClubRoute(window.location.pathname, true);
     links.forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) return;
+      if (currentRoute?.view === "contracts" && link.closest("#tableBody td.col-contract-club")) {
+        const text = document.createElement("span");
+        text.textContent = String(link.textContent || "");
+        link.replaceWith(text);
+        return;
+      }
       const route = parseClubRoute(new URL(link.href, window.location.href).pathname, true);
       if (!route) return;
       const canonical = canonicalClubPath(route.clubId, route.view);
@@ -478,6 +483,37 @@
             Object.defineProperty(completeClubRosterRule, "__mflClubRosterComplete", { value: true });
             rowHasHiddenMflJoinedAgencyDate = completeClubRosterRule;
           }
+
+          if (typeof activateViewButton === "function"
+            && !activateViewButton.__mflSharedClubViewBehavior) {
+            const originalActivateViewButton = activateViewButton;
+            const sharedClubActivateViewButton = function(button) {
+              if (button instanceof HTMLButtonElement && !button.disabled && !button.hidden) {
+                const match = window.location.pathname.match(/^\\/(?:clubs|club)\\/([^/]+)(?:\\/(squad|attributes|contracts|current-season|all-time))?\\/?$/i);
+                const viewName = String(button.dataset.view || "");
+                if (match && ["attributes", "contracts", "current", "all"].includes(viewName)
+                  && typeof window.mflOpenClubPage === "function") {
+                  const slug = String(match[2] || "squad").toLowerCase();
+                  const currentView = slug === "current-season"
+                    ? "current"
+                    : slug === "all-time"
+                      ? "all"
+                      : slug === "contracts"
+                        ? "contracts"
+                        : "attributes";
+                  if (currentView === viewName) return;
+                  state.view = viewName;
+                  state.page = 1;
+                  if (typeof updateViewButtons === "function") updateViewButtons();
+                  window.mflOpenClubPage(decodeURIComponent(match[1]), viewName);
+                  return;
+                }
+              }
+              return originalActivateViewButton.apply(this, arguments);
+            };
+            Object.defineProperty(sharedClubActivateViewButton, "__mflSharedClubViewBehavior", { value: true });
+            activateViewButton = sharedClubActivateViewButton;
+          }
           return true;
         } catch {
           return false;
@@ -530,73 +566,6 @@
     requestAnimationFrame(pollForCoreBridge);
   }
 
-  function clubViewButtonFromEvent(event) {
-    if (!(event.target instanceof Element)) return null;
-    const button = event.target.closest("#progressionPage .views > .viewButton[data-view]");
-    return button instanceof HTMLButtonElement ? button : null;
-  }
-
-  function clearPointerHandledClubView() {
-    pointerHandledClubViewButton = null;
-    if (pointerHandledClubViewTimer) window.clearTimeout(pointerHandledClubViewTimer);
-    pointerHandledClubViewTimer = 0;
-  }
-
-  function navigateClubView(route, nextView) {
-    if (!route || !CLUB_VIEWS.has(nextView) || nextView === route.view) return false;
-    const nextRoute = { clubId: route.clubId, view: nextView };
-    nativeReplaceState(
-      history.state,
-      "",
-      `${canonicalClubPath(route.clubId, nextView)}${window.location.search}${window.location.hash}`,
-    );
-    primeClubRoute(nextRoute);
-    window.mflOpenClubPage?.(route.clubId, nextView);
-    return true;
-  }
-
-  // The shared view buttons commit on pointerup before their click event. Own only
-  // club pointer releases here so the generic table handler cannot switch the
-  // shared table away from the club before the club-specific click handler runs.
-  function handleClubViewPointerUp(event) {
-    if (event.isPrimary === false || event.button !== 0) return;
-    const route = parseClubRoute(window.location.pathname, true);
-    const button = clubViewButtonFromEvent(event);
-    if (!route || !button) return;
-    const nextView = String(button.dataset.view || "");
-    if (!CLUB_VIEWS.has(nextView)) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    pointerHandledClubViewButton = button;
-    if (pointerHandledClubViewTimer) window.clearTimeout(pointerHandledClubViewTimer);
-    pointerHandledClubViewTimer = window.setTimeout(clearPointerHandledClubView, 0);
-    navigateClubView(route, nextView);
-  }
-
-  function handleClubViewClick(event) {
-    const route = parseClubRoute(window.location.pathname, true);
-    const button = clubViewButtonFromEvent(event);
-    if (!route || !button) return;
-
-    if (pointerHandledClubViewButton === button) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      clearPointerHandledClubView();
-      return;
-    }
-
-    // Keyboard/programmatic activation has no pointerup, so handle it before the
-    // shared button listener for the same reason. Normal pointer clicks are owned
-    // by handleClubViewPointerUp above.
-    if (event.detail !== 0) return;
-    const nextView = String(button.dataset.view || "");
-    if (!CLUB_VIEWS.has(nextView)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    navigateClubView(route, nextView);
-  }
-
   function handlePopState() {
     const route = parseClubRoute(window.location.pathname, true);
     if (!route) {
@@ -630,8 +599,6 @@
 
   document.addEventListener("pointerdown", rememberClubIdentityFromEvent, true);
   document.addEventListener("click", rememberClubIdentityFromEvent, true);
-  document.addEventListener("pointerup", handleClubViewPointerUp, true);
-  document.addEventListener("click", handleClubViewClick, true);
   window.addEventListener("popstate", handlePopState);
   window.addEventListener("mfl:ready", () => {
     installCoreBridge();
