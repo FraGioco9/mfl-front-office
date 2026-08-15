@@ -36,15 +36,13 @@
     "current-season": "current",
     "all-time": "all",
   });
-  const ALLOWED_TABLE_VIEWS = Object.freeze({
-    database: ["attributes", "contracts", "stats"],
-    mfl: ["attributes", "stats"],
-    progression: ["current", "all"],
-    agents: ["attributes", "next", "contracts", "current", "all"],
-    watchlist: ["attributes", "next", "contracts", "current", "all"],
-    myplayers: ["attributes", "next", "contracts", "current", "all"],
-    club: ["attributes", "next", "contracts", "current", "all"],
-  });
+  const TABLE_VIEW_CONFIG = window.__mflTableViewConfig || Object.freeze({});
+  const ALLOWED_TABLE_VIEWS = Object.freeze(Object.fromEntries(
+    Object.entries(TABLE_VIEW_CONFIG).map(([pageName, config]) => [
+      pageName,
+      Array.isArray(config?.order) ? [...config.order] : [],
+    ]),
+  ));
 
   const STATIC_TABLE_BASE_COLUMNS = Object.freeze([
     "player_id",
@@ -345,12 +343,17 @@
     }
 
     if (TABLE_PAGE_IDS.has(pageName)) {
-      const fallbackView = pageName === "progression" || pageName === "watchlist" ? "current" : "attributes";
+      const config = TABLE_VIEW_CONFIG[pageName];
+      const fallbackView = String(config?.fallback || "attributes");
+      const requestedView = VIEW_BY_SLUG[last] || fallbackView;
+      const view = Array.isArray(config?.order) && config.order.includes(requestedView)
+        ? requestedView
+        : fallbackView;
       return {
         pageName,
         pageId: "progressionPage",
         title,
-        view: VIEW_BY_SLUG[last] || fallbackView,
+        view,
         navPage: pageName,
       };
     }
