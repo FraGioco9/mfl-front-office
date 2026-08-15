@@ -17,7 +17,7 @@
     "current-season": "current",
     "all-time": "all",
   });
-  const FIRST_PAINT_TABLE_VIEWS = Object.freeze({
+  const TABLE_VIEW_CONFIG = window.__mflTableViewConfig || Object.freeze({
     database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
     mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
     progression: Object.freeze({ order: ["current", "all"], fallback: "current" }),
@@ -26,6 +26,7 @@
     myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
     club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
   });
+  window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
   window.__mflReleaseVersion = version;
   void MOBILE_TABLE_MIN_WIDTH;
   void eventTargetsBusyScrollSurface;
@@ -44,7 +45,7 @@
   }
 
   function initialTableView(pageName = initialTablePage()) {
-    const config = FIRST_PAINT_TABLE_VIEWS[pageName];
+    const config = TABLE_VIEW_CONFIG[pageName];
     if (!config) return "";
     const parts = initialPathParts();
     const last = String(parts.at(-1) || "").toLowerCase();
@@ -170,7 +171,7 @@
 
   function syncViewButtonsFirstPaint() {
     const pageName = initialTablePage();
-    const config = FIRST_PAINT_TABLE_VIEWS[pageName];
+    const config = TABLE_VIEW_CONFIG[pageName];
     if (!config) return;
     const views = document.querySelector("#progressionPage .views");
     if (!(views instanceof HTMLElement)) return;
