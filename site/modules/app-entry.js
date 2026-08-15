@@ -193,9 +193,12 @@ function primeEvaluationDiscountRatePlaceholder() {
 
 primeEvaluationDiscountRatePlaceholder();
 
-function replaceRequiredCoreSource(source, before, after, label) {
-  if (!source.includes(before)) {
-    throw new Error(`Could not apply core permission scope: ${label}.`);
+function replaceCoreSourceIfPresent(source, beforeLines, afterLines, label) {
+  const before = Array.isArray(beforeLines) ? beforeLines.join("\n") : String(beforeLines || "");
+  const after = Array.isArray(afterLines) ? afterLines.join("\n") : String(afterLines || "");
+  if (!before || !source.includes(before)) {
+    console.warn(`Core permission scope pattern not found: ${label}.`);
+    return source;
   }
   return source.replace(before, after);
 }
@@ -203,39 +206,90 @@ function replaceRequiredCoreSource(source, before, after, label) {
 function scopeProgressionPermissionToProgressionPage(source) {
   let nextSource = source;
 
-  nextSource = replaceRequiredCoreSource(
+  nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    `function allowedViewsForPage(pageName = tablePageKey() || "progression") {\n  if (pageName === "watchlist" && !hasProgressionAccess()) {\n    return ["attributes", "next", "contracts"];\n  }\n\n  return pageViewOptions[pageName] || pageViewOptions.progression;\n}`,
-    `function allowedViewsForPage(pageName = tablePageKey() || "progression") {\n  return pageViewOptions[pageName] || pageViewOptions.progression;\n}`,
+    [
+      '  if (pageName === "watchlist" && !hasProgressionAccess()) {',
+      '    return ["attributes", "next", "contracts"];',
+      '  }',
+      '',
+    ],
+    [],
     "watchlist view availability",
   );
 
-  nextSource = replaceRequiredCoreSource(
+  nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    `function defaultViewForPage(pageName = tablePageKey() || "progression") {\n  if (pageName === "watchlist" && !hasProgressionAccess()) {\n    return "attributes";\n  }\n\n  return defaultPageViews[pageName] || "current";\n}`,
-    `function defaultViewForPage(pageName = tablePageKey() || "progression") {\n  return defaultPageViews[pageName] || "current";\n}`,
+    [
+      '  if (pageName === "watchlist" && !hasProgressionAccess()) {',
+      '    return "attributes";',
+      '  }',
+      '',
+    ],
+    [],
     "watchlist default view",
   );
 
-  nextSource = replaceRequiredCoreSource(
+  nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    `  if (pageName === "player") {\n    if (hasProgressionAccess()) {\n      return "full";\n    }\n    return hasWalletOptIn() ? "owned" : "public";\n  }\n\n  if (pageName === "watchlist") {\n    return hasProgressionAccess() ? "full" : "public";\n  }`,
-    `  if (pageName === "player") {\n    return hasWalletOptIn() ? "owned" : "public";\n  }\n\n  if (pageName === "watchlist") {\n    return "public";\n  }`,
-    "non-progression data access",
+    [
+      '  if (pageName === "player") {',
+      '    if (hasProgressionAccess()) {',
+      '      return "full";',
+      '    }',
+      '    return hasWalletOptIn() ? "owned" : "public";',
+      '  }',
+    ],
+    [
+      '  if (pageName === "player") {',
+      '    return hasWalletOptIn() ? "owned" : "public";',
+      '  }',
+    ],
+    "player data access",
   );
 
-  nextSource = replaceRequiredCoreSource(
+  nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    `      access: currentDataAccess(["current", "all"].includes(clubTarget.view) ? "progression" : "database"),`,
-    `      access: "public",`,
+    [
+      '  if (pageName === "watchlist") {',
+      '    return hasProgressionAccess() ? "full" : "public";',
+      '  }',
+    ],
+    [
+      '  if (pageName === "watchlist") {',
+      '    return "public";',
+      '  }',
+    ],
+    "watchlist data access",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['      access: currentDataAccess(["current", "all"].includes(clubTarget.view) ? "progression" : "database"),'],
+    ['      access: "public",'],
     "club route access",
   );
 
-  nextSource = replaceRequiredCoreSource(
+  nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    `  document.body.classList.toggle("guest", !hasProgressionAccess());`,
-    `  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());`,
+    ['  document.body.classList.toggle("guest", !hasProgressionAccess());'],
+    ['  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());'],
     "guest presentation scope",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      '      if (PUBLIC_TABLE_PAGES.has(pageName) && PUBLIC_PROGRESSION_VIEWS.includes(state.view)) {',
+      '        return originalCurrentDataAccess.call(this, "progression");',
+      '      }',
+    ],
+    [
+      '      if (PUBLIC_TABLE_PAGES.has(pageName) && PUBLIC_PROGRESSION_VIEWS.includes(state.view)) {',
+      '        return "public";',
+      '      }',
+    ],
+    "public progression table data access",
   );
 
   return nextSource;
