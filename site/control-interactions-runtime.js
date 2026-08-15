@@ -58,6 +58,25 @@
         animation: none !important;
       }
 
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:not(.active),
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:not(.active):hover,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:not(.active):active,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:not(.active):focus,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:not(.active):focus-visible {
+        outline: 0;
+        border-color: var(--border-strong);
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      @supports (appearance: base-select) {
+        select[data-mfl-dropdown-enhanced="true"]::picker(select),
+        #pageSizeSelect::picker(select) {
+          margin: var(--mfl-dropdown-gap) 0 0;
+        }
+      }
+
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"],
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"]:hover,
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"]:focus,
@@ -194,6 +213,25 @@
     if (button instanceof HTMLElement) button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
   }
 
+  function isSelectOpen(select) {
+    if (!(select instanceof HTMLSelectElement)) return false;
+    try {
+      return select.matches(":open");
+    } catch {
+      return false;
+    }
+  }
+
+  function openEnhancedSelect() {
+    return Array.from(document.querySelectorAll('select[data-mfl-dropdown-enhanced="true"]'))
+      .find((select) => isSelectOpen(select)) || null;
+  }
+
+  function visibleModalBackdrop() {
+    return Array.from(document.querySelectorAll("body > .modalBackdrop:not([hidden])"))
+      .find((modal) => modal instanceof HTMLElement && modal.getClientRects().length > 0) || null;
+  }
+
   function draggedActivationMatches(event) {
     if (!(suppressClickControl instanceof HTMLElement)) return false;
     const target = event.target;
@@ -239,6 +277,16 @@
     // from processing the same click a second time. My Players and clubs now use
     // the same pointerup/click activation path.
     event.stopPropagation();
+  }
+
+  function onEnterBubble(event) {
+    if (event.key !== "Enter") return;
+    if (!openEnhancedSelect()) return;
+
+    // The native select has already received the key by the time this document
+    // bubble listener runs. Keep its default Enter action so the highlighted
+    // option is committed, but do not let legacy popup-level Enter shortcuts run.
+    event.stopImmediatePropagation();
   }
 
   function onChange(event) {
@@ -287,6 +335,9 @@
     gesturePointerId = event.pointerId;
     gestureStartX = event.clientX;
     gestureStartY = event.clientY;
+
+    const pressedViewButton = viewButtonFromControl(gestureStartControl);
+    if (pressedViewButton) markViewButtonClicked(pressedViewButton);
   }
 
   function onPointerMove(event) {
@@ -302,6 +353,7 @@
     if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
 
     const startControl = gestureStartControl;
+    const pressedViewButton = viewButtonFromControl(startControl);
     const dragged = gestureDragged;
     const releaseControl = buttonGestureFromTarget(event.target);
     const validViewButton = !dragged && releaseControl === startControl
@@ -311,6 +363,7 @@
     clearGesture();
 
     if (validViewButton) markViewButtonClicked(validViewButton);
+    else if (pressedViewButton) clearViewButtonClicked(pressedViewButton);
     if (!invalidButtonRelease) return;
 
     // A pointer release can land on a button even when the press began somewhere
@@ -325,8 +378,10 @@
 
   function onPointerCancel(event) {
     if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
+    const pressedViewButton = viewButtonFromControl(gestureStartControl);
     clearGesture();
     clearClickSuppression();
+    if (pressedViewButton) clearViewButtonClicked(pressedViewButton);
   }
 
   function onPointerOut(event) {
@@ -347,6 +402,15 @@
   }
 
   function onKeyDown(event) {
+    if (event.key === "Enter" && visibleModalBackdrop() && !openEnhancedSelect()) {
+      // Enter inside any popup is intentionally inert. Dropdowns are the one
+      // exception and are allowed to receive Enter so the highlighted option can
+      // be committed by the native select before onEnterBubble stops old handlers.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     if (event.key === "Escape") {
       const active = document.activeElement;
       if (pointerFocusedControl && active === pointerFocusedControl) {
@@ -381,6 +445,7 @@
   document.addEventListener("pointercancel", onPointerCancel, true);
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener("keydown", onEnterBubble);
   document.addEventListener("focusin", onFocusIn, true);
   viewButtonsContainer?.addEventListener("click", onSharedViewButtonClick);
 
@@ -397,6 +462,7 @@
     document.removeEventListener("pointercancel", onPointerCancel, true);
     document.removeEventListener("pointerout", onPointerOut, true);
     document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("keydown", onEnterBubble);
     document.removeEventListener("focusin", onFocusIn, true);
     viewButtonsContainer?.removeEventListener("click", onSharedViewButtonClick);
     document.querySelectorAll(`[${NEUTRAL_ATTRIBUTE}="true"]`).forEach(clearInitialNeutral);
