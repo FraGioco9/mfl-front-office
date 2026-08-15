@@ -202,7 +202,7 @@ async function loadApplicationCore() {
 
   let source = await response.text();
   const legacyStartMarker = '\n(() => {\n  const removedAgentViews = new Set(["current", "all"]);';
-  const legacyEndMarker = '\n  requestAnimationFrame(() => enforceAllowedAgentView(true));\n})();';
+  const legacyEndMarker = '\n  window.addEventListener("pageshow", () => requestAnimationFrame(() => enforceAllowedAgentView(true)));\n})();';
   const legacyStart = source.indexOf(legacyStartMarker);
   if (legacyStart >= 0) {
     const legacyEnd = source.indexOf(legacyEndMarker, legacyStart);
