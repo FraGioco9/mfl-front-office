@@ -10,9 +10,6 @@
   let destroyed = false;
   let observer = null;
   let layerObserver = null;
-  let applicationToastObserver = null;
-  let applicationToastTarget = null;
-  let applicationToastSnapshot = null;
   let tableScrollTimer = 0;
 
   const style = document.createElement("style");
@@ -175,10 +172,8 @@
     retiringToast.style.setProperty("z-index", "2147483647", "important");
     positionToast(retiringToast);
 
-    // Busy/loading deliberately disables CSS transitions across the page, so
-    // drive the retiring toast directly. This preserves the same 180 ms
-    // fade/slide-out even when a replacement toast is produced before the
-    // interaction busy state has been released.
+    /* Busy/loading disables CSS transitions globally, so the retiring copy
+       uses WAAPI and cannot be cancelled by that cascade. */
     const removeRetiringToast = () => {
       if (retiringToast.isConnected) retiringToast.remove();
     };
@@ -195,48 +190,18 @@
     window.setTimeout(removeRetiringToast, 240);
   }
 
-  function syncApplicationToastObserver() {
-    const toast = document.getElementById("toastMessage");
-    if (toast === applicationToastTarget) return;
+  function retireVisibleApplicationToast() {
+    const liveToast = document.getElementById("toastMessage");
+    if (!(liveToast instanceof HTMLElement)
+      || liveToast.hidden
+      || !liveToast.classList.contains("visible")) return;
 
-    applicationToastObserver?.disconnect();
-    applicationToastObserver = null;
-    applicationToastTarget = toast instanceof HTMLElement ? toast : null;
-    applicationToastSnapshot = null;
+    const snapshot = liveToast.cloneNode(true);
+    retireApplicationToast(snapshot, liveToast);
 
-    if (!(applicationToastTarget instanceof HTMLElement)) return;
-
-    const visible = applicationToastTarget.classList.contains("visible") && !applicationToastTarget.hidden;
-    if (visible) applicationToastSnapshot = applicationToastTarget.cloneNode(true);
-
-    applicationToastObserver = new MutationObserver((records) => {
-      if (!(applicationToastTarget instanceof HTMLElement)) return;
-
-      const contentChanged = records.some((record) =>
-        (record.type === "childList" || record.type === "characterData")
-        && (record.target === applicationToastTarget || applicationToastTarget.contains(record.target))
-      );
-      const wasVisible = applicationToastSnapshot instanceof HTMLElement
-        && applicationToastSnapshot.classList.contains("visible")
-        && !applicationToastSnapshot.hidden;
-      const isVisible = applicationToastTarget.classList.contains("visible")
-        && !applicationToastTarget.hidden;
-
-      if (contentChanged && wasVisible && isVisible) {
-        retireApplicationToast(applicationToastSnapshot, applicationToastTarget);
-      }
-
-      applicationToastSnapshot = isVisible
-        ? applicationToastTarget.cloneNode(true)
-        : null;
-    });
-    applicationToastObserver.observe(applicationToastTarget, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["class", "hidden"],
-    });
+    // The live application toast must stop painting immediately; its retiring
+    // copy owns the exit animation while the Loading toast takes its place.
+    liveToast.classList.remove("visible");
   }
 
   function syncToastHosts() {
@@ -247,7 +212,6 @@
       if (toast.parentElement !== host) host.appendChild(toast);
       toast.style.setProperty("z-index", "2147483647", "important");
     });
-    syncApplicationToastObserver();
   }
 
   function ensureToast() {
@@ -311,8 +275,10 @@
     syncToastHosts();
     positionToast(toast);
     const busy = interactionBusy();
+    const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
     if (busy && !toastSuppressed()) {
+      if (!loadingToastVisible) retireVisibleApplicationToast();
       toast.hidden = false;
       toast.classList.add("visible");
       return;
@@ -366,10 +332,6 @@
     destroyed = true;
     observer?.disconnect();
     layerObserver?.disconnect();
-    applicationToastObserver?.disconnect();
-    applicationToastObserver = null;
-    applicationToastTarget = null;
-    applicationToastSnapshot = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
