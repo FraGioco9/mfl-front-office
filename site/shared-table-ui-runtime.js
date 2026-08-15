@@ -79,11 +79,6 @@
     return routePage;
   }
 
-  function entityTablePageFromPath() {
-    const pageName = tablePageFromPath();
-    return pageName === "agents" || pageName === "club" ? pageName : "";
-  }
-
   function keepEntityPresentationPage(pageName) {
     if (!pageName || !document.body || document.body.dataset.page === pageName) return;
     document.body.dataset.page = pageName;
@@ -180,7 +175,8 @@
     const allowed = new Set(order);
     views.querySelectorAll(".viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
-      button.hidden = !allowed.has(String(button.dataset.view || ""));
+      const shouldHide = !allowed.has(String(button.dataset.view || ""));
+      if (button.hidden !== shouldHide) button.hidden = shouldHide;
     });
 
     const switcher = document.getElementById("watchlistSwitcher");
@@ -461,17 +457,7 @@
   window.addEventListener("popstate", onPopState);
   window.addEventListener("mfl:ready", onReady);
 
-  observer = new MutationObserver((records) => {
-    if (destroyed) return;
-    const entityPage = entityTablePageFromPath();
-    const entityPresentationChanged = Boolean(entityPage) && records.some((record) => (
-      (record.target === document.body && record.attributeName === "data-page")
-      || (record.target instanceof HTMLButtonElement && record.attributeName === "hidden")
-    ));
-    if (entityPresentationChanged) {
-      syncTableChrome();
-      return;
-    }
+  observer = new MutationObserver(() => {
     scheduleTableChrome();
   });
   observer.observe(document.documentElement, {
@@ -482,14 +468,6 @@
     observer.observe(document.body, {
       attributes: true,
       attributeFilter: ["class", "style", "data-page"],
-    });
-  }
-  const views = document.querySelector("#progressionPage .views");
-  if (views instanceof HTMLElement) {
-    observer.observe(views, {
-      attributes: true,
-      subtree: true,
-      attributeFilter: ["hidden"],
     });
   }
 
