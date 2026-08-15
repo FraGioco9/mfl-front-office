@@ -32,12 +32,34 @@
     watchlist: new Set(["attributes", "next", "contracts", "current", "all"]),
     myplayers: new Set(["attributes", "next", "contracts", "current", "all"]),
   });
+  const ENTITY_VIEW_ORDER = Object.freeze({
+    agents: Object.freeze(["attributes", "contracts", "next", "current", "all"]),
+    club: Object.freeze(["attributes", "contracts", "current", "all"]),
+  });
+  const ENTITY_VIEW_LABELS = Object.freeze({
+    agents: Object.freeze({
+      attributes: "Attributes",
+      contracts: "Contracts",
+      next: "Next Overall",
+      current: "Current Season",
+      all: "All Time",
+    }),
+    club: Object.freeze({
+      attributes: "Squad",
+      contracts: "Contracts",
+      current: "Current Season",
+      all: "All Time",
+    }),
+  });
   const previous = window.__mflTableNavigationChromeRuntime;
   previous?.destroy?.();
 
   let pendingPage = "";
   let pendingView = "";
   let repairFrame = 0;
+  let entityRepairFrame = 0;
+  let entityRepairTimer = 0;
+  let entityObserver = null;
   let pageSizeEscapeFrame = 0;
   let pageSizeEscapeTimer = 0;
   let pageSizeEscapeSelect = null;
@@ -103,6 +125,131 @@
     return TABLE_PAGES.has(page) ? page : "";
   }
 
+  function normalizeDestinationView(page, view) {
+    const normalized = String(view || "").toLowerCase();
+    return ALLOWED_VIEWS[page]?.has(normalized) ? normalized : DEFAULT_VIEW[page] || "attributes";
+  }
+
+  function entityRouteFromPath(pathname = window.location.pathname) {
+    const path = String(pathname || "").replace(/\/+$/, "") || "/";
+    const agentMatch = path.match(/^\/agents\/[^/]+(?:\/([^/]+))?$/i);
+    if (agentMatch) {
+      const view = normalizeDestinationView("agents", VIEW_BY_SLUG[String(agentMatch[1] || "attributes").toLowerCase()]);
+      return { page: "agents", view };
+    }
+
+    const clubMatch = path.match(/^\/(?:clubs|club)\/[^/]+(?:\/([^/]+))?$/i);
+    if (clubMatch) {
+      const slug = String(clubMatch[1] || "squad").toLowerCase();
+      const view = normalizeDestinationView("club", VIEW_BY_SLUG[slug]);
+      return { page: "club", view };
+    }
+    return null;
+  }
+
+  function entityDestinationFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+
+    const link = target.closest("a[href]");
+    if (link instanceof HTMLAnchorElement) {
+      try {
+        const url = new URL(link.href, window.location.origin);
+        if (url.origin === window.location.origin) {
+          const route = entityRouteFromPath(url.pathname);
+          if (route) return route;
+        }
+      } catch {
+        // Fall through to button-backed search results.
+      }
+    }
+
+    if (target.closest(".clubSearchResult[data-club-id]")) {
+      return { page: "club", view: "attributes" };
+    }
+
+    if (target.closest('[data-search-key^="agent:"], .agentSearchResult[data-wallet-address], .agentSearchResult[data-agent-address]')) {
+      return { page: "agents", view: "attributes" };
+    }
+
+    return null;
+  }
+
+  function syncEntityViewButtons(route) {
+    if (!route || !ENTITY_VIEW_ORDER[route.page]) return;
+    const views = document.querySelector("#progressionPage .views");
+    if (!(views instanceof HTMLElement)) return;
+
+    const order = ENTITY_VIEW_ORDER[route.page];
+    const labels = ENTITY_VIEW_LABELS[route.page];
+    const allowed = new Set(order);
+    const switcher = document.getElementById("watchlistSwitcher");
+
+    views.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const view = String(button.dataset.view || "");
+      const visible = allowed.has(view);
+      if (button.hidden === visible) button.hidden = !visible;
+      if (visible && button.dataset.page !== route.page) button.dataset.page = route.page;
+      const expectedLabel = labels[view];
+      if (expectedLabel && button.textContent !== expectedLabel) button.textContent = expectedLabel;
+      const active = visible && view === route.view;
+      if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
+      if (button.getAttribute("aria-pressed") !== String(active)) {
+        button.setAttribute("aria-pressed", String(active));
+      }
+    });
+
+    order.forEach((viewName) => {
+      const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
+      if (button) views.insertBefore(button, switcher || null);
+    });
+    if (switcher instanceof HTMLElement) switcher.hidden = true;
+  }
+
+  function revealEntityDestination(route) {
+    if (!route) return;
+    const progressionPage = document.getElementById("progressionPage");
+    if (progressionPage instanceof HTMLElement) {
+      document.querySelectorAll("main > .pageView").forEach((candidate) => {
+        if (candidate instanceof HTMLElement) candidate.hidden = candidate !== progressionPage;
+      });
+      progressionPage.hidden = false;
+    }
+    if (document.body && document.body.dataset.page !== route.page) {
+      document.body.dataset.page = route.page;
+    }
+    syncEntityViewButtons(route);
+    window.__mflTableLoadingRuntime?.syncSharedViewButtonPage?.(route.page);
+    window.__mflTableLoadingRuntime?.primeHeader?.(route.page, route.view);
+  }
+
+  function currentOrFallbackEntityRoute(fallback = null) {
+    return entityRouteFromPath() || fallback;
+  }
+
+  function repairEntityDestination(fallback = null) {
+    const route = currentOrFallbackEntityRoute(fallback);
+    if (route) revealEntityDestination(route);
+  }
+
+  function scheduleEntityRepair(fallback = null) {
+    queueMicrotask(() => repairEntityDestination(fallback));
+
+    if (entityRepairFrame) cancelAnimationFrame(entityRepairFrame);
+    entityRepairFrame = requestAnimationFrame(() => {
+      entityRepairFrame = requestAnimationFrame(() => {
+        entityRepairFrame = 0;
+        repairEntityDestination(fallback);
+      });
+    });
+
+    if (entityRepairTimer) window.clearTimeout(entityRepairTimer);
+    entityRepairTimer = window.setTimeout(() => {
+      entityRepairTimer = 0;
+      repairEntityDestination(fallback);
+    }, 80);
+  }
+
   function cachedPageState(page) {
     try {
       const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
@@ -111,11 +258,6 @@
     } catch {
       return null;
     }
-  }
-
-  function normalizeDestinationView(page, view) {
-    const normalized = String(view || "").toLowerCase();
-    return ALLOWED_VIEWS[page]?.has(normalized) ? normalized : DEFAULT_VIEW[page] || "attributes";
   }
 
   function viewFromNav(nav, page) {
@@ -338,6 +480,13 @@
   }
 
   function onPointerDown(event) {
+    const entityDestination = entityDestinationFromTarget(event.target);
+    if (entityDestination) {
+      revealEntityDestination(entityDestination);
+      scheduleEntityRepair(entityDestination);
+      return;
+    }
+
     const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (page) {
@@ -351,6 +500,12 @@
   }
 
   function onClick(event) {
+    const entityDestination = entityDestinationFromTarget(event.target);
+    if (entityDestination) {
+      scheduleEntityRepair(entityDestination);
+      return;
+    }
+
     const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (!page) return;
@@ -363,6 +518,29 @@
     pendingView = "";
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
+    const entityRoute = entityRouteFromPath();
+    if (entityRoute) scheduleEntityRepair(entityRoute);
+  }
+
+  function installEntityObserver() {
+    entityObserver = new MutationObserver(() => {
+      const route = entityRouteFromPath();
+      if (route) syncEntityViewButtons(route);
+    });
+    if (document.body) {
+      entityObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-page"],
+      });
+    }
+    const views = document.querySelector("#progressionPage .views");
+    if (views instanceof HTMLElement) {
+      entityObserver.observe(views, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ["hidden"],
+      });
+    }
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -370,10 +548,19 @@
   document.addEventListener("keydown", clearPageSizeHighlightOnEscape, true);
   document.addEventListener("keyup", finishPageSizeEscape, true);
   window.addEventListener("popstate", onPopState);
+  installEntityObserver();
+  const initialEntityRoute = entityRouteFromPath();
+  if (initialEntityRoute) syncEntityViewButtons(initialEntityRoute);
 
   function destroy() {
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
+    if (entityRepairFrame) cancelAnimationFrame(entityRepairFrame);
+    entityRepairFrame = 0;
+    if (entityRepairTimer) window.clearTimeout(entityRepairTimer);
+    entityRepairTimer = 0;
+    entityObserver?.disconnect();
+    entityObserver = null;
     if (pageSizeEscapeFrame) cancelAnimationFrame(pageSizeEscapeFrame);
     pageSizeEscapeFrame = 0;
     if (pageSizeEscapeTimer) window.clearTimeout(pageSizeEscapeTimer);
