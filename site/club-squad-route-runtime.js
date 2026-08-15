@@ -94,7 +94,7 @@
     const clubId = decodedClubId(match[1]);
     if (!clubId) return null;
     const slug = String(match[2] || "squad").toLowerCase();
-    const view = CLUB_VIEW_SLUGS[slug];
+    const view = slug === coreSquadSlug ? "attributes" : CLUB_VIEW_SLUGS[slug];
     return view && CLUB_VIEWS.has(view) ? { clubId, view } : null;
   }
 
@@ -712,8 +712,12 @@
   document.addEventListener("pointerdown", rememberClubIdentityFromEvent, true);
   document.addEventListener("click", rememberClubIdentityFromEvent, true);
   window.addEventListener("popstate", onPopState, true);
-  if (initialSquadInternalized) externalizeWhenCoreIsInitialized();
-  else syncStaticClubShell();
+  if (initialSquadInternalized) {
+    syncStaticClubShell();
+    externalizeWhenCoreIsInitialized();
+  } else {
+    syncStaticClubShell();
+  }
 
   const observer = new MutationObserver(syncUi);
   observer.observe(document.documentElement, {
