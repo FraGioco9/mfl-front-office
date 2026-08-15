@@ -79,6 +79,16 @@
     return routePage;
   }
 
+  function entityTablePageFromPath() {
+    const pageName = tablePageFromPath();
+    return pageName === "agents" || pageName === "club" ? pageName : "";
+  }
+
+  function keepEntityPresentationPage(pageName) {
+    if (!pageName || !document.body || document.body.dataset.page === pageName) return;
+    document.body.dataset.page = pageName;
+  }
+
   function defaultQuickFilters(pageName) {
     return {
       hideRetired: true,
@@ -183,6 +193,7 @@
   function primeTableChrome(pageName) {
     const normalized = normalizePageName(pageName);
     if (!VIEW_ORDER[normalized]) return;
+    if (normalized === "agents" || normalized === "club") keepEntityPresentationPage(normalized);
     primeMflStatsOverallFilters();
     syncQuickFilterLabels(normalized);
     applyCachedQuickFilters(normalized);
@@ -196,6 +207,7 @@
     primeMflStatsOverallFilters();
     const pageName = currentTablePage();
     if (!pageName) return;
+    if (pageName === "agents" || pageName === "club") keepEntityPresentationPage(pageName);
     syncQuickFilterLabels(pageName);
     syncViewButtons(pageName);
     if (pageName !== lastTablePage) {
@@ -449,7 +461,17 @@
   window.addEventListener("popstate", onPopState);
   window.addEventListener("mfl:ready", onReady);
 
-  observer = new MutationObserver(() => {
+  observer = new MutationObserver((records) => {
+    if (destroyed) return;
+    const entityPage = entityTablePageFromPath();
+    const entityPresentationChanged = Boolean(entityPage) && records.some((record) => (
+      (record.target === document.body && record.attributeName === "data-page")
+      || (record.target instanceof HTMLButtonElement && record.attributeName === "hidden")
+    ));
+    if (entityPresentationChanged) {
+      syncTableChrome();
+      return;
+    }
     scheduleTableChrome();
   });
   observer.observe(document.documentElement, {
@@ -460,6 +482,14 @@
     observer.observe(document.body, {
       attributes: true,
       attributeFilter: ["class", "style", "data-page"],
+    });
+  }
+  const views = document.querySelector("#progressionPage .views");
+  if (views instanceof HTMLElement) {
+    observer.observe(views, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ["hidden"],
     });
   }
 
