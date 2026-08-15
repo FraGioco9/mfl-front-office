@@ -221,6 +221,26 @@ function removeObsoleteAgentViewRestriction(source) {
   return `${before}${normalized.slice(blockEnd)}`;
 }
 
+function normalizeContextualAgentNavigation(source) {
+  let nextSource = source;
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['  return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: preferredViewForPage("agents") }) : "#";'],
+    ['  return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: "attributes" }) : "#";'],
+    "contextual agent link default view",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['  setPage("agents", true, { walletAddress: normalizedWalletAddress });'],
+    ['  setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes" });'],
+    "contextual agent click default view",
+  );
+
+  return nextSource;
+}
+
 function scopeProgressionPermissionToProgressionPage(source) {
   let nextSource = source;
 
@@ -260,7 +280,7 @@ function scopeProgressionPermissionToProgressionPage(source) {
     ],
     [
       '  if (pageName === "player") {',
-      '    return hasWalletOptIn() ? "owned" : "public";',
+      '    return "public";',
       '  }',
     ],
     "player data access",
@@ -342,6 +362,7 @@ async function loadApplicationCore() {
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
   );
+  source = normalizeContextualAgentNavigation(source);
   source = scopeProgressionPermissionToProgressionPage(source);
 
   const script = document.createElement("script");
