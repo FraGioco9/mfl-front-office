@@ -253,6 +253,16 @@
     return /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname);
   }
 
+  function clubRouteView() {
+    const match = window.location.pathname.match(/^\/(?:clubs|club)\/[^/]+(?:\/(squad|attributes|contracts|current-season|all-time))?\/?$/i);
+    if (!match) return "";
+    const slug = String(match[1] || "squad").toLowerCase();
+    if (slug === "current-season") return "current";
+    if (slug === "all-time") return "all";
+    if (slug === "contracts") return "contracts";
+    return "attributes";
+  }
+
   function clubViewSwitchActive() {
     return Boolean(document.body?.classList.contains("clubViewSwitching"))
       || document.documentElement.classList.contains("mflDataLoading");
@@ -263,6 +273,14 @@
     return Array.from(document.querySelectorAll("#progressionPage .views .viewButton[data-view]"))
       .find((button) => button instanceof HTMLButtonElement
         && String(button.dataset.view || "") === clubClickedView) || null;
+  }
+
+  function clubClickedSelectionSettled(button = liveClubClickedButton()) {
+    return button instanceof HTMLButtonElement
+      && document.body?.dataset.page === "club"
+      && !clubViewSwitchActive()
+      && clubRouteView() === clubClickedView
+      && button.classList.contains("active");
   }
 
   function clearClubClickedView() {
@@ -293,7 +311,10 @@
     button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
     button.setAttribute(CLUB_VIEW_CLICKED_ATTRIBUTE, "true");
 
-    if (!clubViewSwitchActive() && !button.matches(":hover")) {
+    // Keep the clicked club selection authoritative until the destination route,
+    // page state and real active class all agree. Clearing it any earlier exposes
+    // the generic inactive :hover paint during the club loading handoff.
+    if (clubClickedSelectionSettled(button) && !button.matches(":hover")) {
       clearClubClickedView();
     }
   }
@@ -502,12 +523,13 @@
     if (clickedViewButton instanceof HTMLElement) {
       const next = event.relatedTarget;
       if (!(next instanceof Node && clickedViewButton.contains(next))) {
-        if (clubClickedView
+        const clickedClubSelectionPending = clubClickedView
           && String(clickedViewButton.dataset.view || "") === clubClickedView
-          && clubViewSwitchActive()) {
-          // clubViewSwitching disables pointer events on the page, which can emit
-          // a synthetic pointerout. Keep the clicked visual state through loading;
-          // syncClubClickedView clears it after loading only if the pointer is away.
+          && !clubClickedSelectionSettled(clickedViewButton);
+        if (clickedClubSelectionPending) {
+          // Loading can remove pointer targeting before its busy classes are
+          // observable. Keep the selected marker until the destination route,
+          // page and active class have all settled instead of exposing :hover.
         } else {
           clearViewButtonClicked(clickedViewButton);
         }
@@ -583,7 +605,12 @@
 
   if (viewButtonsContainer) {
     clubViewButtonsObserver = new MutationObserver(syncClubClickedView);
-    clubViewButtonsObserver.observe(viewButtonsContainer, { childList: true, subtree: true });
+    clubViewButtonsObserver.observe(viewButtonsContainer, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 
   function destroy() {
