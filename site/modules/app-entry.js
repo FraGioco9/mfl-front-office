@@ -241,21 +241,6 @@ function scopeProgressionPermissionToProgressionPage(source) {
   return nextSource;
 }
 
-function installProgressionPermissionScopeStyles() {
-  if (document.getElementById("mflProgressionPermissionScopeStyles")) return;
-  const style = document.createElement("style");
-  style.id = "mflProgressionPermissionScopeStyles";
-  style.textContent = `
-    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"]
-      #progressionPage .viewButton[data-view="current"],
-    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"]
-      #progressionPage .viewButton[data-view="all"] {
-      display: inline-flex !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
 async function loadApplicationCore() {
   const path = "/modules/app-core.js";
   const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
@@ -401,7 +386,6 @@ async function start() {
   await responsiveStylesReady;
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS);
-  installProgressionPermissionScopeStyles();
 
   if (/^\/changelog\/?$/i.test(window.location.pathname)) {
     const changelogWindow = /** @type {Window & { __mflChangelogHistoryReady?: Promise<boolean> }} */ (window);
