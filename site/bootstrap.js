@@ -4,20 +4,52 @@
   const STATIC_RELEASE_VERSION = "1.124.1";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
+  const AGENT_PAGE_NAME_STORAGE_PREFIX = "mfl-agent-page-name-v1:";
+  const LEGACY_AGENT_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
   const MOBILE_TABLE_MIN_WIDTH = 1240;
   const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
   const version = STATIC_RELEASE_VERSION;
+  const VIEW_BY_SLUG = Object.freeze({
+    attributes: "attributes",
+    stats: "stats",
+    "next-overall": "next",
+    contracts: "contracts",
+    "current-season": "current",
+    "all-time": "all",
+  });
+  const FIRST_PAINT_TABLE_VIEWS = Object.freeze({
+    database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
+    mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
+    progression: Object.freeze({ order: ["current", "all"], fallback: "current" }),
+    agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
+    watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
+    myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
+    club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
+  });
   window.__mflReleaseVersion = version;
   void MOBILE_TABLE_MIN_WIDTH;
   void eventTargetsBusyScrollSurface;
 
+  function initialPathParts() {
+    return String(window.location.pathname || "/").split("/").filter(Boolean);
+  }
+
   function initialTablePage() {
-    const parts = String(window.location.pathname || "/").split("/").filter(Boolean);
+    const parts = initialPathParts();
     const first = String(parts[0] || "").toLowerCase();
     if (first === "my-players") return "myplayers";
     if (first === "clubs" || first === "club") return "club";
     if (["database", "mfl", "progression", "watchlist", "agents"].includes(first)) return first;
     return "";
+  }
+
+  function initialTableView(pageName = initialTablePage()) {
+    const config = FIRST_PAINT_TABLE_VIEWS[pageName];
+    if (!config) return "";
+    const parts = initialPathParts();
+    const last = String(parts.at(-1) || "").toLowerCase();
+    const requested = VIEW_BY_SLUG[last] || "";
+    return config.order.includes(requested) ? requested : config.fallback;
   }
 
   function initialSidebarPage() {
@@ -136,23 +168,124 @@
     }
   }
 
-  function syncDatabaseViewButtonsFirstPaint() {
-    if (initialTablePage() !== "database") return;
+  function syncViewButtonsFirstPaint() {
+    const pageName = initialTablePage();
+    const config = FIRST_PAINT_TABLE_VIEWS[pageName];
+    if (!config) return;
     const views = document.querySelector("#progressionPage .views");
     if (!(views instanceof HTMLElement)) return;
 
-    const order = ["attributes", "contracts", "stats"];
-    const allowed = new Set(order);
-    views.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+    if (document.body?.dataset.page !== pageName) document.body.dataset.page = pageName;
+    const activeView = initialTableView(pageName);
+    const allowed = new Set(config.order);
+    views.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
-      button.hidden = !allowed.has(String(button.dataset.view || ""));
+      const viewName = String(button.dataset.view || "");
+      const visible = allowed.has(viewName);
+      button.hidden = !visible;
+      button.classList.toggle("active", visible && viewName === activeView);
+      button.setAttribute("aria-pressed", String(visible && viewName === activeView));
+      if (viewName === "attributes") {
+        const label = pageName === "club" ? "Squad" : "Attributes";
+        if (button.textContent !== label) button.textContent = label;
+      }
     });
 
     const switcher = document.getElementById("watchlistSwitcher");
-    order.forEach((viewName) => {
-      const button = views.querySelector(`.viewButton[data-view="${viewName}"]`);
+    config.order.forEach((viewName) => {
+      const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
       if (button) views.insertBefore(button, switcher || null);
     });
+  }
+
+  function normalizeAgentAddress(value) {
+    const address = String(value || "").trim().toLowerCase();
+    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+  }
+
+  function initialAgentAddress() {
+    if (initialTablePage() !== "agents") return "";
+    const parts = initialPathParts();
+    try {
+      return normalizeAgentAddress(decodeURIComponent(parts[1] || ""));
+    } catch {
+      return normalizeAgentAddress(parts[1] || "");
+    }
+  }
+
+  function storedAgentPageName(address) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!normalizedAddress) return "";
+    try {
+      const stored = String(localStorage.getItem(`${AGENT_PAGE_NAME_STORAGE_PREFIX}${normalizedAddress}`) || "").trim();
+      if (stored) return stored;
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_AGENT_NAME_STORAGE_KEY) || "null");
+      return normalizeAgentAddress(legacy?.address) === normalizedAddress
+        ? String(legacy?.name || "").trim()
+        : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function storeAgentPageName(address, name) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    const normalizedName = String(name || "").trim().replace(/\s+/g, " ");
+    if (!normalizedAddress || !normalizedName || normalizedName.toLowerCase() === normalizedAddress) return;
+    try {
+      localStorage.setItem(`${AGENT_PAGE_NAME_STORAGE_PREFIX}${normalizedAddress}`, normalizedName);
+    } catch {
+      // The resolved title remains correct for this page even if storage is unavailable.
+    }
+  }
+
+  function agentNameFromRenderedTitle(value, address) {
+    const text = String(value || "").trim().replace(/\s+/g, " ");
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!text || !normalizedAddress) return "";
+    const lower = text.toLowerCase();
+    if (["agent", "progression", normalizedAddress].includes(lower)) return "";
+    const suffix = ` - ${normalizedAddress}`;
+    if (lower.endsWith(suffix)) return text.slice(0, -suffix.length).trim();
+    return text;
+  }
+
+  function syncAgentTitleFirstPaint() {
+    const address = initialAgentAddress();
+    if (!address) return;
+    const title = document.getElementById("tablePageTitle");
+    if (!(title instanceof HTMLElement)) return;
+    const cachedName = storedAgentPageName(address);
+    if (cachedName && cachedName.toLowerCase() !== address) {
+      const expected = `${cachedName} - ${address}`;
+      if (String(title.textContent || "").trim() !== expected) title.textContent = expected;
+    } else if (["", "Agent", "Progression"].includes(String(title.textContent || "").trim())) {
+      title.textContent = `Agent - ${address}`;
+    }
+  }
+
+  function installAgentTitleCache() {
+    const title = document.getElementById("tablePageTitle");
+    if (!(title instanceof HTMLElement)) return;
+    if (window.__mflAgentTitleCacheObserver) {
+      syncAgentTitleFirstPaint();
+      return;
+    }
+    const sync = () => {
+      const address = initialAgentAddress();
+      if (!address) return;
+      const name = agentNameFromRenderedTitle(title.textContent, address);
+      if (name) storeAgentPageName(address, name);
+      const cached = storedAgentPageName(address);
+      if (cached && cached.toLowerCase() !== address) {
+        const expected = `${cached} - ${address}`;
+        if (String(title.textContent || "").trim() !== expected) title.textContent = expected;
+      }
+    };
+    const observer = new MutationObserver(sync);
+    observer.observe(title, { childList: true, subtree: true, characterData: true });
+    window.__mflAgentTitleCacheObserver = observer;
+    syncAgentTitleFirstPaint();
   }
 
   function installEvaluationTableSpacing() {
@@ -386,12 +519,14 @@
   function syncBootstrapFirstPaint() {
     installImmediateUiInteractions();
     installPlayerNationalityFirstPaint();
+    installAgentTitleCache();
     syncSidebarFirstPaint();
     normalizeEvaluationSearchClearButton();
     installEvaluationTableSpacing();
     installPopupContentCentering();
     syncQuickFilterFirstPaint();
-    syncDatabaseViewButtonsFirstPaint();
+    syncViewButtonsFirstPaint();
+    syncAgentTitleFirstPaint();
     syncEvaluationActionsFirstPaint();
   }
 
