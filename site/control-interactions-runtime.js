@@ -30,6 +30,9 @@
   let gestureDragged = false;
   let suppressClickControl = null;
   let suppressClickTimer = 0;
+  let clubClickedView = "";
+  let clubViewStateObserver = null;
+  let clubViewButtonsObserver = null;
 
   function installStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -80,6 +83,41 @@
         background: var(--primary);
         color: #ffffff;
         box-shadow: none;
+        transition: none !important;
+        animation: none !important;
+      }
+
+      /* Club presses have one visual owner. The clicked marker is painted as the
+         selected state both before loading and while clubViewSwitching temporarily
+         changes data-page, so generic hover styles can never take over mid-switch. */
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
+        outline: 0;
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: none;
+        transition: none !important;
+        animation: none !important;
+      }
+
+      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) {
+        border-color: var(--border-strong);
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: none;
+        transition: none !important;
+        animation: none !important;
+      }
+
+      body.clubViewSwitching #progressionPage .viewButton.active,
+      body.clubViewSwitching #progressionPage .viewButton.active:hover,
+      body.clubViewSwitching #progressionPage .viewButton.active:active,
+      body.clubViewSwitching #progressionPage .viewButton.active:focus,
+      body.clubViewSwitching #progressionPage .viewButton.active:focus-visible {
         transition: none !important;
         animation: none !important;
       }
@@ -214,6 +252,48 @@
       : null;
   }
 
+  function clubRouteActive() {
+    return /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname);
+  }
+
+  function clubViewSwitchActive() {
+    return Boolean(document.body?.classList.contains("clubViewSwitching"))
+      || document.documentElement.classList.contains("mflDataLoading");
+  }
+
+  function liveClubClickedButton() {
+    if (!clubClickedView) return null;
+    return Array.from(document.querySelectorAll("#progressionPage .views .viewButton[data-view]"))
+      .find((button) => button instanceof HTMLButtonElement
+        && String(button.dataset.view || "") === clubClickedView) || null;
+  }
+
+  function clearClubClickedView() {
+    clubClickedView = "";
+    document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
+      .forEach((button) => button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE));
+  }
+
+  function syncClubClickedView() {
+    if (!clubClickedView) return;
+    if (!clubRouteActive()) {
+      clearClubClickedView();
+      return;
+    }
+
+    const button = liveClubClickedButton();
+    if (!(button instanceof HTMLButtonElement)) return;
+    document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
+      .forEach((candidate) => {
+        if (candidate !== button) candidate.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+      });
+    button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
+
+    if (!clubViewSwitchActive() && !button.matches(":hover")) {
+      clearClubClickedView();
+    }
+  }
+
   function markViewButtonClicked(button) {
     if (!(button instanceof HTMLButtonElement)) return;
     document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
@@ -221,10 +301,13 @@
         if (candidate !== button) candidate.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
       });
     button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
+    if (clubRouteActive()) clubClickedView = String(button.dataset.view || "");
   }
 
   function clearViewButtonClicked(button) {
-    if (button instanceof HTMLElement) button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+    if (!(button instanceof HTMLElement)) return;
+    button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+    if (clubClickedView && String(button.dataset.view || "") === clubClickedView) clubClickedView = "";
   }
 
   function isSelectOpen(select) {
@@ -283,7 +366,7 @@
   }
 
   function onSharedViewButtonClick(event) {
-    if (!/^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname)) return;
+    if (!clubRouteActive()) return;
     const target = event.target instanceof Element ? event.target : null;
     const button = target?.closest?.(".viewButton[data-view]");
     if (!(button instanceof HTMLButtonElement)) return;
@@ -406,7 +489,15 @@
     if (clickedViewButton instanceof HTMLElement) {
       const next = event.relatedTarget;
       if (!(next instanceof Node && clickedViewButton.contains(next))) {
-        clearViewButtonClicked(clickedViewButton);
+        if (clubClickedView
+          && String(clickedViewButton.dataset.view || "") === clubClickedView
+          && clubViewSwitchActive()) {
+          // clubViewSwitching disables pointer events on the page, which can emit
+          // a synthetic pointerout. Keep the clicked visual state through loading;
+          // syncClubClickedView clears it after loading only if the pointer is away.
+        } else {
+          clearViewButtonClicked(clickedViewButton);
+        }
       }
     }
 
@@ -465,11 +556,33 @@
   document.addEventListener("focusin", onFocusIn, true);
   viewButtonsContainer?.addEventListener("click", onSharedViewButtonClick);
 
+  clubViewStateObserver = new MutationObserver(syncClubClickedView);
+  clubViewStateObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  if (document.body) {
+    clubViewStateObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-page"],
+    });
+  }
+
+  if (viewButtonsContainer) {
+    clubViewButtonsObserver = new MutationObserver(syncClubClickedView);
+    clubViewButtonsObserver.observe(viewButtonsContainer, { childList: true, subtree: true });
+  }
+
   function destroy() {
     destroyed = true;
     pointerFocusedControl = null;
     clearGesture();
     clearClickSuppression();
+    clubViewStateObserver?.disconnect();
+    clubViewStateObserver = null;
+    clubViewButtonsObserver?.disconnect();
+    clubViewButtonsObserver = null;
+    clearClubClickedView();
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
