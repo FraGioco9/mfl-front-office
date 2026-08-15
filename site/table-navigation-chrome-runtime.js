@@ -123,6 +123,16 @@
     return ALLOWED_VIEWS[page]?.has(normalized) ? normalized : DEFAULT_VIEW[page] || "attributes";
   }
 
+  function tableRouteFromPath(pathname = window.location.pathname) {
+    const parts = String(pathname || "/").split("/").filter(Boolean);
+    const first = String(parts[0] || "").toLowerCase();
+    const page = first === "my-players" ? "myplayers" : first;
+    if (!TABLE_PAGES.has(page) || page === "agents" || page === "club") return null;
+    const slug = String(parts.at(-1) || "").toLowerCase();
+    const view = normalizeDestinationView(page, VIEW_BY_SLUG[slug]);
+    return { page, view };
+  }
+
   function entityRouteFromPath(pathname = window.location.pathname) {
     const path = String(pathname || "").replace(/\/+$/, "") || "/";
     const agentMatch = path.match(/^\/agents\/[^/]+(?:\/([^/]+))?$/i);
@@ -238,19 +248,6 @@
     } catch {
       return null;
     }
-  }
-
-  function viewFromNav(nav, page) {
-    if (!(nav instanceof HTMLAnchorElement)) return normalizeDestinationView(page, cachedPageState(page)?.view);
-    let routeView = "";
-    try {
-      const path = new URL(nav.href, window.location.origin).pathname;
-      const slug = String(path.split("/").filter(Boolean).at(-1) || "").toLowerCase();
-      routeView = VIEW_BY_SLUG[slug] || "";
-    } catch {
-      routeView = "";
-    }
-    return normalizeDestinationView(page, routeView || cachedPageState(page)?.view);
   }
 
   function activeSavedFilterCount(page) {
@@ -404,29 +401,35 @@
     return page;
   }
 
-  function showDestinationChrome(page, nav = null) {
-    const view = viewFromNav(nav, page);
-    pendingPage = page;
-    pendingView = view;
-    const bodyPage = bodyPageForDestination(page, view);
-    clearStaleSharedTableSurface();
+  function showCommittedDestinationChrome(route) {
+    if (!route || !TABLE_PAGES.has(route.page)) return;
+    pendingPage = route.page;
+    pendingView = route.view;
+    const bodyPage = bodyPageForDestination(route.page, route.view);
     if (document.body && document.body.dataset.page !== bodyPage) {
       document.body.dataset.page = bodyPage;
     }
-    primeDestination(page, view);
+    primeDestination(route.page, route.view);
   }
 
-  function finishDestinationChrome(page, nav = null) {
-    const view = viewFromNav(nav, page);
+  function finishDestinationChrome(page) {
     queueMicrotask(() => {
-      if (pendingPage !== page) return;
-      pendingView = view;
-      primeDestination(page, view);
+      if (pendingPage && pendingPage !== page) return;
+      const committedRoute = tableRouteFromPath();
+      if (!committedRoute || committedRoute.page !== page) {
+        pendingPage = "";
+        pendingView = "";
+        return;
+      }
+
+      showCommittedDestinationChrome(committedRoute);
       if (repairFrame) cancelAnimationFrame(repairFrame);
       repairFrame = requestAnimationFrame(() => {
         repairFrame = 0;
-        if (pendingPage !== page) return;
-        primeDestination(page, pendingView || view);
+        const latestRoute = tableRouteFromPath();
+        if (latestRoute?.page === page) {
+          showCommittedDestinationChrome(latestRoute);
+        }
         pendingPage = "";
         pendingView = "";
       });
@@ -488,7 +491,12 @@
     const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (page) {
-      showDestinationChrome(page, nav);
+      // Keep the source page's chrome intact until the actual click commits the
+      // destination route. Only discard source rows here so they cannot leak into
+      // the next page while its cached/loading payload is being resolved.
+      pendingPage = page;
+      pendingView = "";
+      clearStaleSharedTableSurface();
       return;
     }
     if (nav) {
@@ -514,8 +522,15 @@
     const nav = navFromTarget(event.target);
     const page = tablePageFromTarget(event.target);
     if (!page) return;
-    if (pendingPage !== page) showDestinationChrome(page, nav);
-    finishDestinationChrome(page, nav);
+    if (pendingPage !== page) {
+      pendingPage = page;
+      pendingView = "";
+      clearStaleSharedTableSurface();
+    }
+    // Capture phase must not guess the destination view from the sidebar href or
+    // cached state. The app router runs later in this click and commits the exact
+    // route (for example /watchlist/<id>/contracts); read that route afterward.
+    finishDestinationChrome(page);
   }
 
   function onPopState() {
