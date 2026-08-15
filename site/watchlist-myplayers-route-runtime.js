@@ -76,6 +76,24 @@
     const preferredView = preferredIntentView(pageName);
     return preferredView ? { ...options, view: preferredView } : { ...options };
   }
+  function resolveWatchlistNavigationOptions(options = {}) {
+    const nextOptions = intentOptions("watchlist", options);
+    if (String(nextOptions.watchlistId || "").trim()) return nextOptions;
+
+    let watchlistId = "";
+    try {
+      watchlistId = String(state?.currentWatchlistId || "").trim();
+      if (!watchlistId && typeof watchlistIdFromUrl === "function") {
+        watchlistId = String(watchlistIdFromUrl() || "").trim();
+      }
+      if (!watchlistId && typeof ensureDefaultWatchlist === "function") {
+        ensureDefaultWatchlist();
+        watchlistId = String(state?.currentWatchlistId || state?.watchlists?.[0]?.id || "").trim();
+      }
+    } catch {}
+
+    return watchlistId ? { ...nextOptions, watchlistId } : nextOptions;
+  }
   function stateView(pageName) {
     try {
       if (typeof normalizeViewForPage === "function") {
@@ -337,7 +355,9 @@
       const pairNavigation = PAIR.has(normalizedPage);
       const watchlistNavigation = normalizedPage === "watchlist";
       const requestSequence = pairNavigation ? ++sequence : 0;
-      const nextOptions = tableNavigation ? intentOptions(normalizedPage, options) : options;
+      const nextOptions = tableNavigation
+        ? (watchlistNavigation ? resolveWatchlistNavigationOptions(options) : intentOptions(normalizedPage, options))
+        : options;
       if (pairNavigation) {
         latestIntent = { sequence: requestSequence, pageName: normalizedPage, options: { ...nextOptions } };
       } else {
