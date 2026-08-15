@@ -3,10 +3,7 @@
 
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
-  const VIEW_BUTTON_CLICKED_ATTRIBUTE = "data-mfl-view-clicked";
   const RUNTIME_STYLE_ID = "mflDropdownRuntimeAdjustments";
-  let clubClickedView = "";
-  let clubClickedFrame = 0;
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
 
@@ -110,68 +107,11 @@
     return button instanceof HTMLButtonElement ? button : null;
   }
 
-  function clubViewSwitchActive() {
-    return document.documentElement.classList.contains("mflDataLoading")
-      || Boolean(document.body?.classList.contains("clubViewSwitching"));
-  }
-
-  function clubViewButton(viewName = clubClickedView) {
-    if (!viewName) return null;
-    return Array.from(document.querySelectorAll("#progressionPage .views .viewButton[data-view]"))
-      .find((button) => button instanceof HTMLButtonElement && String(button.dataset.view || "") === viewName) || null;
-  }
-
-  function syncClubViewSelection(selectedButton) {
-    if (!(selectedButton instanceof HTMLButtonElement)) return;
-    const selectedView = String(selectedButton.dataset.view || "");
-    if (!selectedView) return;
-    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
-      if (!(button instanceof HTMLButtonElement)) return;
-      button.classList.toggle("active", String(button.dataset.view || "") === selectedView);
-    });
-  }
-
-  function stopClubViewClickPersistence() {
-    clubClickedView = "";
-    if (clubClickedFrame) {
-      window.cancelAnimationFrame(clubClickedFrame);
-      clubClickedFrame = 0;
-    }
-  }
-
-  function syncClubViewClickPersistence() {
-    clubClickedFrame = 0;
-    if (!clubClickedView || !clubRouteActive()) {
-      stopClubViewClickPersistence();
-      return;
-    }
-
-    const button = clubViewButton();
-    if (button) {
-      /* The club loader temporarily reuses Database/Progression state and can
-       * replace or restyle these controls. Keep the clicked target as the real
-       * active view for the entire handoff. A freshly-replaced button can report
-       * :hover=false for a frame, so never release this state while loading. */
-      syncClubViewSelection(button);
-      button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
-      if (!clubViewSwitchActive() && !button.matches(":hover")) {
-        button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
-        stopClubViewClickPersistence();
-        return;
-      }
-    }
-
-    clubClickedFrame = window.requestAnimationFrame(syncClubViewClickPersistence);
-  }
-
-  function persistClubViewClick(button) {
-    if (!(button instanceof HTMLButtonElement) || !clubRouteActive()) return;
-    clubClickedView = String(button.dataset.view || "");
-    if (!clubClickedView) return;
-    syncClubViewSelection(button);
-    button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
-    if (clubClickedFrame) window.cancelAnimationFrame(clubClickedFrame);
-    clubClickedFrame = window.requestAnimationFrame(syncClubViewClickPersistence);
+  function syncAttributesViewLabel() {
+    const button = document.querySelector("#progressionPage .views .viewButton[data-view='attributes']");
+    if (!(button instanceof HTMLButtonElement)) return;
+    const label = clubRouteActive() ? "Squad" : "Attributes";
+    if (button.textContent !== label) button.textContent = label;
   }
 
   function closeStaticDropdown(button) {
@@ -217,14 +157,8 @@
 
     if (event.isPrimary !== false && event.button === 0) {
       const viewButton = clubViewButtonFromTarget(target);
-      if (viewButton) {
-        clubPointerPressedView = String(viewButton.dataset.view || "");
-        clubPointerCommittedView = "";
-        persistClubViewClick(viewButton);
-      } else {
-        clubPointerPressedView = "";
-        clubPointerCommittedView = "";
-      }
+      clubPointerPressedView = String(viewButton?.dataset.view || "");
+      clubPointerCommittedView = "";
     }
 
     if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
@@ -293,22 +227,10 @@
   }, true);
 
   /* Only static button dropdowns need the follow-up click suppressed; native
-   * select option clicks must never be intercepted here. The club fallback below
-   * is retained for synthetic/document-level click paths, but normal mouse clicks
-   * are already stopped above at window capture. */
+   * select option clicks must never be intercepted here. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-
-    const clubViewButton = clubViewButtonFromTarget(target);
-    if (clubViewButton && clubPointerCommittedView
-      && String(clubViewButton.dataset.view || "") === clubPointerCommittedView) {
-      clubPointerCommittedView = "";
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
-    clubPointerCommittedView = "";
 
     if (target.closest("#openFiltersButton")) beginNeutralFiltersOpen();
 
@@ -322,7 +244,21 @@
 
   installRuntimeStyles();
   enhanceVisible(document);
-  window.addEventListener("mfl:ready", () => enhanceVisible(document));
+  syncAttributesViewLabel();
+
+  const labelObserver = new MutationObserver(syncAttributesViewLabel);
+  if (document.body) {
+    labelObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-page"],
+    });
+  }
+
+  window.addEventListener("popstate", syncAttributesViewLabel);
+  window.addEventListener("mfl:ready", () => {
+    enhanceVisible(document);
+    syncAttributesViewLabel();
+  });
 
   window.__mflDropdowns = Object.freeze({
     enhanceSelect,
