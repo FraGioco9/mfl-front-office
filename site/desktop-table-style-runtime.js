@@ -12,6 +12,8 @@
 
   const COPY_SELECTOR = "[data-agent-wallet-copy]";
   let suppressClickUntil = 0;
+  let titleObserver = null;
+  let syncFrame = 0;
 
   function normalizeAgentAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -28,7 +30,31 @@
     }
   }
 
+  function showCopyTooltip(target) {
+    if (!(target instanceof HTMLElement)) return;
+    try {
+      if (typeof showPlayerNoteTooltip === "function") showPlayerNoteTooltip(target);
+    } catch {
+      // The core tooltip owner may not be ready during the earliest startup paint.
+    }
+  }
+
+  function hideCopyTooltip(immediate = false) {
+    try {
+      if (typeof hidePlayerNoteTooltip === "function") hidePlayerNoteTooltip({ immediate });
+    } catch {
+      // The core tooltip owner may not be ready during the earliest startup paint.
+    }
+  }
+
+  function attachCopyTargetEvents(target) {
+    target.addEventListener("mouseenter", () => showCopyTooltip(target));
+    target.addEventListener("mouseleave", () => hideCopyTooltip());
+    target.addEventListener("blur", () => hideCopyTooltip());
+  }
+
   function syncAgentWalletCopyTarget() {
+    syncFrame = 0;
     const title = document.getElementById("tablePageTitle");
     if (!(title instanceof HTMLElement)) return;
 
@@ -47,15 +73,32 @@
     const prefix = text.slice(0, addressIndex);
     const visibleAddress = text.slice(addressIndex);
     const target = document.createElement("span");
-    target.className = "agentWalletCopyTarget playerIdText";
+    target.className = "agentWalletCopyTarget";
     target.dataset.agentWalletCopy = address;
     target.dataset.tooltip = "Click to copy";
     target.setAttribute("role", "button");
     target.setAttribute("tabindex", "0");
     target.setAttribute("aria-label", "Click to copy wallet address");
     target.textContent = visibleAddress;
+    attachCopyTargetEvents(target);
 
     title.replaceChildren(document.createTextNode(prefix), target);
+  }
+
+  function scheduleCopyTargetSync() {
+    if (syncFrame) cancelAnimationFrame(syncFrame);
+    syncFrame = requestAnimationFrame(syncAgentWalletCopyTarget);
+  }
+
+  function installTitleObserver() {
+    const title = document.getElementById("tablePageTitle");
+    if (!(title instanceof HTMLElement) || titleObserver) return;
+    titleObserver = new MutationObserver(scheduleCopyTargetSync);
+    titleObserver.observe(title, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
   }
 
   async function copyWalletAddress(target, event) {
@@ -65,6 +108,7 @@
     event?.preventDefault?.();
     event?.stopPropagation?.();
     suppressClickUntil = Date.now() + 350;
+    hideCopyTooltip(true);
     target.blur?.();
 
     try {
@@ -79,11 +123,6 @@
     const target = event.target instanceof Element ? event.target.closest(COPY_SELECTOR) : null;
     return target instanceof HTMLElement ? target : null;
   }
-
-  document.addEventListener("pointerover", (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest?.("#tablePageTitle")) syncAgentWalletCopyTarget();
-  }, true);
 
   document.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
@@ -108,11 +147,15 @@
     if (target) void copyWalletAddress(target, event);
   }, true);
 
-  const syncAfterRoute = () => requestAnimationFrame(syncAgentWalletCopyTarget);
+  const syncAfterRoute = () => {
+    installTitleObserver();
+    scheduleCopyTargetSync();
+  };
   window.addEventListener("mfl:ready", syncAfterRoute);
   window.addEventListener("pageshow", syncAfterRoute);
   window.addEventListener("popstate", syncAfterRoute);
-  syncAfterRoute();
+  installTitleObserver();
+  scheduleCopyTargetSync();
 
   if (!document.getElementById("mflAgentWalletCopyStyles")) {
     const style = document.createElement("style");
@@ -121,11 +164,19 @@
       .agentWalletCopyTarget {
         position: relative;
         display: inline-block;
-        color: inherit;
+        color: var(--text);
         font: inherit;
         font-weight: inherit;
         line-height: inherit;
+        text-decoration: none;
         cursor: pointer;
+      }
+
+      .agentWalletCopyTarget:hover,
+      .agentWalletCopyTarget:focus-visible {
+        color: var(--primary);
+        text-decoration: none;
+        outline: 0;
       }
     `;
     document.head.appendChild(style);
