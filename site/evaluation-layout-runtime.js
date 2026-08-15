@@ -35,10 +35,19 @@
       || document.documentElement.dataset.interactionBusy === "true";
   }
 
+  function evaluationSaveShareBusy() {
+    const saveButton = document.getElementById("evaluationSaveButton");
+    const shareButton = document.getElementById("evaluationShareButton");
+    return Boolean(
+      (saveButton instanceof HTMLButtonElement && saveButton.disabled)
+      || (shareButton instanceof HTMLButtonElement && shareButton.disabled),
+    );
+  }
+
   function evaluationReady() {
     return evaluationActive()
       && document.documentElement.dataset.mflReady === "true"
-      && !appBusy();
+      && (!appBusy() || evaluationSaveShareBusy());
   }
 
   function setImportant(element, property, value) {
