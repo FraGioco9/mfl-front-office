@@ -21,20 +21,6 @@
           margin-inline: 0;
         }
       }
-
-      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
-      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
-      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
-      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
-      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
-        outline: 0;
-        border-color: var(--primary);
-        background: var(--primary);
-        color: #ffffff;
-        box-shadow: none;
-        transition: none !important;
-        animation: none !important;
-      }
     `;
     document.head.appendChild(style);
   }
@@ -122,6 +108,16 @@
       .find((button) => button instanceof HTMLButtonElement && String(button.dataset.view || "") === viewName) || null;
   }
 
+  function syncClubViewSelection(selectedButton) {
+    if (!(selectedButton instanceof HTMLButtonElement)) return;
+    const selectedView = String(selectedButton.dataset.view || "");
+    if (!selectedView) return;
+    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.classList.toggle("active", String(button.dataset.view || "") === selectedView);
+    });
+  }
+
   function stopClubViewClickPersistence() {
     clubClickedView = "";
     if (clubClickedFrame) {
@@ -139,6 +135,11 @@
 
     const button = clubViewButton();
     if (button) {
+      // Club loading temporarily reuses Database/Progression state and can replace
+      // or restyle the view controls. Keep the clicked view genuinely selected on
+      // the live button until the pointer leaves, rather than masking hover with a
+      // route-scoped CSS rule that disappears during that handoff.
+      syncClubViewSelection(button);
       button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
       if (!button.matches(":hover")) {
         button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
@@ -154,6 +155,7 @@
     if (!(button instanceof HTMLButtonElement) || !clubRouteActive()) return;
     clubClickedView = String(button.dataset.view || "");
     if (!clubClickedView) return;
+    syncClubViewSelection(button);
     button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
     if (clubClickedFrame) window.cancelAnimationFrame(clubClickedFrame);
     clubClickedFrame = window.requestAnimationFrame(syncClubViewClickPersistence);
