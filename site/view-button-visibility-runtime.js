@@ -169,10 +169,6 @@
     html[data-mfl-table-route-page="club"] #progressionPage .viewButton:is(
       [data-view="stats"],
       [data-view="next"]
-    ),
-    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"] #progressionPage .viewButton:is(
-      [data-view="current"],
-      [data-view="all"]
     ) {
       display: none;
     }
