@@ -175,17 +175,24 @@
     retiringToast.style.setProperty("z-index", "2147483647", "important");
     positionToast(retiringToast);
 
-    // Commit the visible start state before removing it so the existing
-    // toast exit transition always runs, even when the replacement happens
-    // in the same browser task.
-    retiringToast.getBoundingClientRect();
-
-    const removeRetiringToast = () => retiringToast.remove();
-    retiringToast.addEventListener("transitionend", removeRetiringToast, { once: true });
-    window.setTimeout(removeRetiringToast, 240);
-    window.requestAnimationFrame(() => {
-      if (retiringToast.isConnected) retiringToast.classList.remove("visible");
+    // Busy/loading deliberately disables CSS transitions across the page, so
+    // drive the retiring toast directly. This preserves the same 180 ms
+    // fade/slide-out even when a replacement toast is produced before the
+    // interaction busy state has been released.
+    const removeRetiringToast = () => {
+      if (retiringToast.isConnected) retiringToast.remove();
+    };
+    const exitAnimation = retiringToast.animate([
+      { opacity: 1, transform: "translate(-50%, 0)" },
+      { opacity: 0, transform: "translate(-50%, 14px)" },
+    ], {
+      duration: 180,
+      easing: "ease",
+      fill: "forwards",
     });
+    exitAnimation.addEventListener("finish", removeRetiringToast, { once: true });
+    exitAnimation.addEventListener("cancel", removeRetiringToast, { once: true });
+    window.setTimeout(removeRetiringToast, 240);
   }
 
   function syncApplicationToastObserver() {
