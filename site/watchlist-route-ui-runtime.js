@@ -257,14 +257,15 @@
   }
 
   function performHistoryChange(method, stateValue, title, value) {
-    const currentIsWatchlist = isWatchlistPath();
+    const currentIsExactWatchlistRoute = EXACT_PATH.test(location.pathname);
     const next = asUrl(value);
     const nextRoute = `${next.pathname}${next.search}${next.hash}`;
 
-    // The first exact Watchlist URL committed by the real router owns the
-    // navigation transaction. Later hydration/history helpers must not replace
-    // it with an intermediate default view while the destination is loading.
-    if (!protectedRoute && !currentIsWatchlist && EXACT_PATH.test(next.pathname)) {
+    // The first fully resolved Watchlist URL owns the loading transaction,
+    // including the normal /watchlist -> /watchlist/<id>/<view> handoff.
+    // Existing exact routes are not recaptured, so intentional view/list changes
+    // can continue to navigate normally after beginNavigation clears protection.
+    if (!protectedRoute && !currentIsExactWatchlistRoute && EXACT_PATH.test(next.pathname)) {
       protectedRoute = nextRoute;
     }
 
