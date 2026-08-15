@@ -343,3 +343,30 @@ body.clubViewSwitching #progressionPage {
   transform: none !important;
   pointer-events: none !important;
 }
+
+/* A selected club view is visually final as soon as it is clicked. Keep the
+ * selected appearance transition-free both on the settled club page and during
+ * the temporary Database/Progression handoff used while the next view loads. */
+body[data-page="club"] #progressionPage .views .viewButton.active,
+body[data-page="club"] #progressionPage .views .viewButton.active:hover,
+body[data-page="club"] #progressionPage .views .viewButton.active:active,
+body[data-page="club"] #progressionPage .views .viewButton.active:focus,
+body[data-page="club"] #progressionPage .views .viewButton.active:focus-visible,
+body.clubViewSwitching #progressionPage .views .viewButton.active,
+body.clubViewSwitching #progressionPage .views .viewButton.active:hover,
+body.clubViewSwitching #progressionPage .views .viewButton.active:active,
+body.clubViewSwitching #progressionPage .views .viewButton.active:focus,
+body.clubViewSwitching #progressionPage .views .viewButton.active:focus-visible,
+#progressionPage .views .viewButton[data-mfl-club-view-clicked="true"],
+#progressionPage .views .viewButton[data-mfl-club-view-clicked="true"]:hover,
+#progressionPage .views .viewButton[data-mfl-club-view-clicked="true"]:active,
+#progressionPage .views .viewButton[data-mfl-club-view-clicked="true"]:focus,
+#progressionPage .views .viewButton[data-mfl-club-view-clicked="true"]:focus-visible {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+  transition: none !important;
+  animation: none !important;
+}
