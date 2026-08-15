@@ -102,6 +102,32 @@
       animation: mflStatsBarRise 220ms ease-out !important;
     }
 
+    body[data-page="agents"] #progressionPage .viewButton:is(
+      [data-view="attributes"],
+      [data-view="contracts"],
+      [data-view="next"],
+      [data-view="current"],
+      [data-view="all"]
+    ),
+    body[data-page="club"] #progressionPage .viewButton:is(
+      [data-view="attributes"],
+      [data-view="contracts"],
+      [data-view="current"],
+      [data-view="all"]
+    ) {
+      display: inline-flex !important;
+    }
+
+    body[data-page="agents"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
+    body[data-page="agents"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
+    body[data-page="agents"] #progressionPage .viewButton[data-view="next"] { order: 3; }
+    body[data-page="agents"] #progressionPage .viewButton[data-view="current"] { order: 4; }
+    body[data-page="agents"] #progressionPage .viewButton[data-view="all"] { order: 5; }
+    body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
+    body[data-page="club"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
+    body[data-page="club"] #progressionPage .viewButton[data-view="current"] { order: 3; }
+    body[data-page="club"] #progressionPage .viewButton[data-view="all"] { order: 4; }
+
     body[data-page="database"] #progressionPage .viewButton:is(
       [data-view="next"],
       [data-view="current"],
@@ -125,11 +151,7 @@
       [data-view="next"],
       [data-view="contracts"]
     ),
-    body[data-page="agents"] #progressionPage .viewButton:is(
-      [data-view="stats"],
-      [data-view="current"],
-      [data-view="all"]
-    ),
+    body[data-page="agents"] #progressionPage .viewButton[data-view="stats"],
     body[data-page="watchlist"] #progressionPage .viewButton[data-view="stats"],
     body[data-page="myplayers"] #progressionPage .viewButton[data-view="stats"],
     body[data-page="club"] #progressionPage .viewButton:is(
