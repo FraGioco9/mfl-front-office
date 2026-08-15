@@ -333,3 +333,13 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   overflow: hidden !important;
   overscroll-behavior: none;
 }
+
+/* Club loading keeps its static shell visible. styles-base.css intentionally
+ * fades generic table-layout transitions, but clubViewSwitching spans the full
+ * club request and must not hide the mounted title, views, headers or skeleton. */
+body.clubViewSwitching #progressionPage {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
