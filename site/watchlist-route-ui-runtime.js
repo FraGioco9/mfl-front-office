@@ -2,6 +2,13 @@
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
+  const WATCHLIST_VIEW_SLUGS = Object.freeze({
+    attributes: "attributes",
+    next: "next-overall",
+    contracts: "contracts",
+    current: "current-season",
+    all: "all-time",
+  });
   const previous = window.__mflWatchlistRouteUiRuntime;
   previous?.destroy?.();
 
@@ -35,6 +42,83 @@
     }
   }
 
+  function cachedWatchlists() {
+    try {
+      const wallet = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim().toLowerCase();
+      if (!wallet) return [];
+      const saved = JSON.parse(localStorage.getItem(`mfl-wallet-watchlist-v1:${wallet}`) || "[]");
+      return Array.isArray(saved)
+        ? saved.filter((item) => item && typeof item === "object" && !Array.isArray(item))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function cachedWatchlistId() {
+    return String(cachedWatchlists()[0]?.id || "").trim();
+  }
+
+  function preferredWatchlistView() {
+    try {
+      if (typeof preferredViewForPage === "function") {
+        const preferred = String(preferredViewForPage("watchlist") || "").trim();
+        if (WATCHLIST_VIEW_SLUGS[preferred]) return preferred;
+      }
+      const savedView = String(state?.tablePageStates?.watchlist?.view || "").trim();
+      if (WATCHLIST_VIEW_SLUGS[savedView]) return savedView;
+    } catch {}
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("mfl-table-filters-v1") || "null");
+      const savedView = String(saved?.pages?.watchlist?.view || "").trim();
+      if (WATCHLIST_VIEW_SLUGS[savedView]) return savedView;
+    } catch {}
+
+    return "current";
+  }
+
+  function resolvedWatchlistId(allowCreate = false) {
+    let watchlistId = stateWatchlistId() || routeWatchlistId() || cachedWatchlistId();
+    if (watchlistId || !allowCreate) return watchlistId;
+
+    try {
+      if (typeof ensureDefaultWatchlist === "function") {
+        ensureDefaultWatchlist();
+        watchlistId = stateWatchlistId();
+      }
+    } catch {}
+    return watchlistId;
+  }
+
+  function resolvedWatchlistNavigationPath(allowCreate = false) {
+    const watchlistId = resolvedWatchlistId(allowCreate);
+    if (!watchlistId) return "";
+    const view = preferredWatchlistView();
+    const slug = WATCHLIST_VIEW_SLUGS[view] || WATCHLIST_VIEW_SLUGS.current;
+    return `/watchlist/${encodeURIComponent(watchlistId)}/${slug}`;
+  }
+
+  function syncWatchlistNavigationLink(allowCreate = false) {
+    const link = document.querySelector('#sidebar .navButton[data-page="watchlist"]');
+    if (!(link instanceof HTMLAnchorElement)) return "";
+
+    const path = resolvedWatchlistNavigationPath(allowCreate);
+    if (path) {
+      if (link.getAttribute("href") !== path) link.setAttribute("href", path);
+      return path;
+    }
+
+    // Never leave an opted-in Watchlist navigation target pointing at the
+    // intermediate /watchlist route. The click router can create the first list
+    // synchronously and this capture-phase owner will replace the placeholder.
+    if (document.documentElement.dataset.storedWalletOptIn === "true"
+      && link.getAttribute("href") === "/watchlist") {
+      link.setAttribute("href", "#");
+    }
+    return "";
+  }
+
   function rememberVisibleWatchlistTitle() {
     if (!isWatchlistPath()) return;
     const visibleTitle = String(document.getElementById("tablePageTitle")?.textContent || "").trim();
@@ -59,11 +143,7 @@
 
   function cachedWatchlistName(watchlistId) {
     try {
-      const wallet = String(localStorage.getItem("mfl-linked-wallet-v1") || "").trim().toLowerCase();
-      if (!wallet) return "";
-      const saved = JSON.parse(localStorage.getItem(`mfl-wallet-watchlist-v1:${wallet}`) || "[]");
-      if (!Array.isArray(saved)) return "";
-      const watchlists = saved.filter((item) => item && typeof item === "object" && !Array.isArray(item));
+      const watchlists = cachedWatchlists();
       const selected = watchlistId
         ? watchlists.find((watchlist) => String(watchlist.id || "") === watchlistId)
         : watchlists[0];
@@ -155,16 +235,8 @@
     hideTooltip(true);
   }
 
-  function loadingActive() {
-    const root = document.documentElement;
-    return root.classList.contains("mflInteractionBusy")
-      || root.dataset.interactionBusy === "true"
-      || root.classList.contains("mflDataLoading")
-      || document.body?.getAttribute("aria-busy") === "true";
-  }
-
   function stateReady() {
-    if (!protectedRoute || document.body?.dataset.page !== "watchlist" || loadingActive()) return false;
+    if (!protectedRoute || document.body?.dataset.page !== "watchlist") return false;
     try {
       return typeof state === "object"
         && state?.currentPage === "watchlist"
@@ -237,6 +309,7 @@
   function sync() {
     frame = 0;
     normalizeRenameButtons();
+    syncWatchlistNavigationLink();
     releaseInitialRoute();
     syncWatchlistSwitcher();
     syncWatchlistTitle();
@@ -257,18 +330,8 @@
   }
 
   function performHistoryChange(method, stateValue, title, value) {
-    const currentIsExactWatchlistRoute = EXACT_PATH.test(location.pathname);
     const next = asUrl(value);
     const nextRoute = `${next.pathname}${next.search}${next.hash}`;
-
-    // The first fully resolved Watchlist URL owns the loading transaction,
-    // including the normal /watchlist -> /watchlist/<id>/<view> handoff.
-    // Existing exact routes are not recaptured, so intentional view/list changes
-    // can continue to navigate normally after beginNavigation clears protection.
-    if (!protectedRoute && !currentIsExactWatchlistRoute && EXACT_PATH.test(next.pathname)) {
-      protectedRoute = nextRoute;
-    }
-
     if (protectedRoute && isWatchlistPath(next.pathname) && nextRoute !== protectedRoute) {
       const result = originalReplaceState(stateValue, title, protectedRoute);
       syncWatchlistTitle();
@@ -297,12 +360,15 @@
       if (url.origin === location.origin) return url.pathname;
     }
     const page = target?.closest("[data-page]")?.dataset.page;
-    return page ? (page === "watchlist" ? "/watchlist" : `/${page}`) : "";
+    if (page === "watchlist") return resolvedWatchlistNavigationPath(true) || "/watchlist";
+    return page ? `/${page}` : "";
   }
 
   function beginNavigation(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    const watchlistNav = target.closest('#sidebar .navButton[data-page="watchlist"]');
+    if (watchlistNav) syncWatchlistNavigationLink(true);
     if (isWatchlistPath() && target.closest(".viewButton")) rememberVisibleWatchlistTitle();
     const route = routeFromEvent(event);
     if (route && !isWatchlistPath(route)) {
@@ -371,6 +437,11 @@
       opacity: 0;
       transform: translateY(2px);
       transition: opacity 140ms ease, transform 140ms ease;
+    }
+    .watchlistDropdownRename::before,
+    .watchlistDropdownRename::after {
+      display: none !important;
+      content: none !important;
     }
     .watchlistRenameStableTooltip.visible {
       opacity: 1;
