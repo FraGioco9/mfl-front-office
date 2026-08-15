@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const TABLE_PAGES = new Set(["database", "mfl", "progression", "agents", "club", "watchlist", "myplayers"]);
+  const TABLE_VIEW_CONFIG = window.__mflTableViewConfig || Object.freeze({});
+  const TABLE_PAGES = new Set(Object.keys(TABLE_VIEW_CONFIG));
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const STYLE_ID = "mflPageSizeLoadingRuntimeStyles";
@@ -14,27 +15,21 @@
     "current-season": "current",
     "all-time": "all",
   });
-  const DEFAULT_VIEW = Object.freeze({
-    database: "attributes",
-    mfl: "attributes",
-    progression: "current",
-    agents: "attributes",
-    club: "attributes",
-    watchlist: "current",
-    myplayers: "attributes",
-  });
-  const ALLOWED_VIEWS = Object.freeze({
-    database: new Set(["attributes", "contracts", "stats"]),
-    mfl: new Set(["attributes", "stats"]),
-    progression: new Set(["current", "all"]),
-    agents: new Set(["attributes", "contracts", "next", "current", "all"]),
-    club: new Set(["attributes", "contracts", "current", "all"]),
-    watchlist: new Set(["attributes", "next", "contracts", "current", "all"]),
-    myplayers: new Set(["attributes", "next", "contracts", "current", "all"]),
-  });
+  const DEFAULT_VIEW = Object.freeze(Object.fromEntries(
+    Object.entries(TABLE_VIEW_CONFIG).map(([pageName, config]) => [
+      pageName,
+      String(config?.fallback || "attributes"),
+    ]),
+  ));
+  const ALLOWED_VIEWS = Object.freeze(Object.fromEntries(
+    Object.entries(TABLE_VIEW_CONFIG).map(([pageName, config]) => [
+      pageName,
+      new Set(Array.isArray(config?.order) ? config.order : []),
+    ]),
+  ));
   const ENTITY_VIEW_ORDER = Object.freeze({
-    agents: Object.freeze(["attributes", "contracts", "next", "current", "all"]),
-    club: Object.freeze(["attributes", "contracts", "current", "all"]),
+    agents: Object.freeze([...(TABLE_VIEW_CONFIG.agents?.order || [])]),
+    club: Object.freeze([...(TABLE_VIEW_CONFIG.club?.order || [])]),
   });
   const ENTITY_VIEW_LABELS = Object.freeze({
     agents: Object.freeze({
