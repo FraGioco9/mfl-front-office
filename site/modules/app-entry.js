@@ -203,6 +203,24 @@ function replaceCoreSourceIfPresent(source, beforeLines, afterLines, label) {
   return source.replace(before, after);
 }
 
+function removeObsoleteAgentViewRestriction(source) {
+  const normalized = String(source || "").replace(/\r\n?/g, "\n");
+  const signature = 'const removedAgentViews = new Set(["current", "all"]);';
+  const signatureIndex = normalized.indexOf(signature);
+  if (signatureIndex < 0) return normalized;
+
+  const blockStart = normalized.lastIndexOf("(() => {", signatureIndex);
+  const nextSectionMarker = "/* Public progression table views */";
+  const blockEnd = normalized.indexOf(nextSectionMarker, signatureIndex);
+  if (blockStart < 0 || blockEnd < 0 || blockEnd <= blockStart) {
+    console.warn("Could not remove the obsolete Agent view restriction from app-core.");
+    return normalized;
+  }
+
+  const before = normalized.slice(0, blockStart).replace(/\n+$/, "\n\n");
+  return `${before}${normalized.slice(blockEnd)}`;
+}
+
 function scopeProgressionPermissionToProgressionPage(source) {
   let nextSource = source;
 
@@ -319,18 +337,7 @@ async function loadApplicationCore() {
     throw new Error(`Could not load ${path}.`);
   }
 
-  let source = await response.text();
-  const legacyStartMarker = '\n(() => {\n  const removedAgentViews = new Set(["current", "all"]);';
-  const legacyEndMarker = '\n  window.addEventListener("pageshow", () => requestAnimationFrame(() => enforceAllowedAgentView(true)));\n})();';
-  const legacyStart = source.indexOf(legacyStartMarker);
-  if (legacyStart >= 0) {
-    const legacyEnd = source.indexOf(legacyEndMarker, legacyStart);
-    if (legacyEnd < 0) {
-      throw new Error("Could not isolate the obsolete agent-view restriction in app-core.");
-    }
-    source = `${source.slice(0, legacyStart)}${source.slice(legacyEnd + legacyEndMarker.length)}`;
-  }
-
+  let source = removeObsoleteAgentViewRestriction(await response.text());
   source = source.replaceAll(
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
