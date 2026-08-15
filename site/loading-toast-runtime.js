@@ -10,6 +10,9 @@
   let destroyed = false;
   let observer = null;
   let layerObserver = null;
+  let applicationToastObserver = null;
+  let applicationToastTarget = null;
+  let applicationToastSnapshot = null;
   let tableScrollTimer = 0;
 
   const style = document.createElement("style");
@@ -116,6 +119,11 @@
       pointer-events: none !important;
       user-select: none;
     }
+
+    .toastMessage[data-mfl-retiring-toast="true"] {
+      pointer-events: none !important;
+      user-select: none;
+    }
   `;
   document.head.appendChild(style);
 
@@ -123,33 +131,6 @@
     const modals = Array.from(document.querySelectorAll(".modalBackdrop:not([hidden])"))
       .filter((modal) => modal instanceof HTMLElement);
     return modals.at(-1) || null;
-  }
-
-  function syncToastHosts() {
-    if (destroyed || !document.body) return;
-    const host = openModalHost() || document.body;
-    document.querySelectorAll(".toastMessage").forEach((toast) => {
-      if (!(toast instanceof HTMLElement)) return;
-      if (toast.parentElement !== host) host.appendChild(toast);
-      toast.style.setProperty("z-index", "2147483647", "important");
-    });
-  }
-
-  function ensureToast() {
-    let toast = document.getElementById(TOAST_ID);
-    if (toast instanceof HTMLElement) return toast;
-
-    toast = document.createElement("div");
-    toast.id = TOAST_ID;
-    toast.className = "toastMessage mflLoadingToast";
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-    toast.setAttribute("aria-atomic", "true");
-    toast.textContent = "Loading...";
-    toast.hidden = true;
-    document.body.appendChild(toast);
-    syncToastHosts();
-    return toast;
   }
 
   function positionToast(toast) {
@@ -174,6 +155,109 @@
     const rect = main.getBoundingClientRect();
     if (!(rect.width > 0)) return;
     toast.style.setProperty("left", `${rect.left + rect.width / 2}px`, "important");
+  }
+
+  function retireApplicationToast(snapshot, liveToast) {
+    if (!(snapshot instanceof HTMLElement) || !(liveToast instanceof HTMLElement) || !document.body) return;
+
+    const retiringToast = snapshot;
+    retiringToast.removeAttribute("id");
+    retiringToast.dataset.mflRetiringToast = "true";
+    retiringToast.hidden = false;
+    retiringToast.classList.add("visible");
+    retiringToast.removeAttribute("role");
+    retiringToast.removeAttribute("aria-live");
+    retiringToast.removeAttribute("aria-atomic");
+    retiringToast.setAttribute("aria-hidden", "true");
+
+    const host = liveToast.parentElement || openModalHost() || document.body;
+    host.appendChild(retiringToast);
+    retiringToast.style.setProperty("z-index", "2147483647", "important");
+    positionToast(retiringToast);
+
+    // Commit the visible start state before removing it so the existing
+    // toast exit transition always runs, even when the replacement happens
+    // in the same browser task.
+    retiringToast.getBoundingClientRect();
+
+    const removeRetiringToast = () => retiringToast.remove();
+    retiringToast.addEventListener("transitionend", removeRetiringToast, { once: true });
+    window.setTimeout(removeRetiringToast, 240);
+    window.requestAnimationFrame(() => {
+      if (retiringToast.isConnected) retiringToast.classList.remove("visible");
+    });
+  }
+
+  function syncApplicationToastObserver() {
+    const toast = document.getElementById("toastMessage");
+    if (toast === applicationToastTarget) return;
+
+    applicationToastObserver?.disconnect();
+    applicationToastObserver = null;
+    applicationToastTarget = toast instanceof HTMLElement ? toast : null;
+    applicationToastSnapshot = null;
+
+    if (!(applicationToastTarget instanceof HTMLElement)) return;
+
+    const visible = applicationToastTarget.classList.contains("visible") && !applicationToastTarget.hidden;
+    if (visible) applicationToastSnapshot = applicationToastTarget.cloneNode(true);
+
+    applicationToastObserver = new MutationObserver((records) => {
+      if (!(applicationToastTarget instanceof HTMLElement)) return;
+
+      const contentChanged = records.some((record) =>
+        (record.type === "childList" || record.type === "characterData")
+        && (record.target === applicationToastTarget || applicationToastTarget.contains(record.target))
+      );
+      const wasVisible = applicationToastSnapshot instanceof HTMLElement
+        && applicationToastSnapshot.classList.contains("visible")
+        && !applicationToastSnapshot.hidden;
+      const isVisible = applicationToastTarget.classList.contains("visible")
+        && !applicationToastTarget.hidden;
+
+      if (contentChanged && wasVisible && isVisible) {
+        retireApplicationToast(applicationToastSnapshot, applicationToastTarget);
+      }
+
+      applicationToastSnapshot = isVisible
+        ? applicationToastTarget.cloneNode(true)
+        : null;
+    });
+    applicationToastObserver.observe(applicationToastTarget, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["class", "hidden"],
+    });
+  }
+
+  function syncToastHosts() {
+    if (destroyed || !document.body) return;
+    const host = openModalHost() || document.body;
+    document.querySelectorAll(".toastMessage").forEach((toast) => {
+      if (!(toast instanceof HTMLElement)) return;
+      if (toast.parentElement !== host) host.appendChild(toast);
+      toast.style.setProperty("z-index", "2147483647", "important");
+    });
+    syncApplicationToastObserver();
+  }
+
+  function ensureToast() {
+    let toast = document.getElementById(TOAST_ID);
+    if (toast instanceof HTMLElement) return toast;
+
+    toast = document.createElement("div");
+    toast.id = TOAST_ID;
+    toast.className = "toastMessage mflLoadingToast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.setAttribute("aria-atomic", "true");
+    toast.textContent = "Loading...";
+    toast.hidden = true;
+    document.body.appendChild(toast);
+    syncToastHosts();
+    return toast;
   }
 
   function interactionBusy() {
@@ -275,6 +359,10 @@
     destroyed = true;
     observer?.disconnect();
     layerObserver?.disconnect();
+    applicationToastObserver?.disconnect();
+    applicationToastObserver = null;
+    applicationToastTarget = null;
+    applicationToastSnapshot = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
@@ -283,6 +371,7 @@
     document.removeEventListener("scroll", onScroll, true);
     window.visualViewport?.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("scroll", sync);
+    document.querySelectorAll('.toastMessage[data-mfl-retiring-toast="true"]').forEach((toast) => toast.remove());
     if (document.body) {
       document.querySelectorAll(".toastMessage").forEach((toast) => {
         if (toast instanceof HTMLElement && toast.id !== TOAST_ID && toast.parentElement !== document.body) {
