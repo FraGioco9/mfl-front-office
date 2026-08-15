@@ -31,6 +31,13 @@
   void MOBILE_TABLE_MIN_WIDTH;
   void eventTargetsBusyScrollSurface;
 
+  if (!document.getElementById("mflTableViewHiddenGuard")) {
+    const style = document.createElement("style");
+    style.id = "mflTableViewHiddenGuard";
+    style.textContent = "#progressionPage .views > .viewButton[hidden] { display: none !important; }";
+    document.head.appendChild(style);
+  }
+
   function initialPathParts() {
     return String(window.location.pathname || "/").split("/").filter(Boolean);
   }
