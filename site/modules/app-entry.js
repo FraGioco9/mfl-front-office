@@ -217,27 +217,6 @@ async function loadApplicationCore() {
     'agents: ["attributes", "contracts", "next", "current", "all"]',
   );
 
-  const legacyClubProgressionRoute = `      if (typeof setPage === "function") {
-        const sourcePage = ["current", "all"].includes(nextView) ? "progression" : "database";
-        await setPage(sourcePage, false, { view: nextView, skipNavigationLoading: false });
-      }`;
-  const publicClubProgressionRoute = `      if (["current", "all"].includes(nextView)) {
-        if (typeof incrementalRouteTarget !== "function" || typeof requestIncrementalRoute !== "function") {
-          throw new Error("Could not initialize the public club progression route.");
-        }
-        const publicClubRoute = incrementalRouteTarget("club", { view: nextView });
-        if (!publicClubRoute) {
-          throw new Error("Could not resolve the public club progression route.");
-        }
-        await requestIncrementalRoute(publicClubRoute, 1);
-      } else if (typeof setPage === "function") {
-        await setPage("database", false, { view: nextView, skipNavigationLoading: false });
-      }`;
-  if (!source.includes(legacyClubProgressionRoute)) {
-    throw new Error("Could not isolate the legacy club progression route in app-core.");
-  }
-  source = source.replace(legacyClubProgressionRoute, publicClubProgressionRoute);
-
   const script = document.createElement("script");
   script.dataset.mflRuntime = path;
   script.textContent = `${source}\n//# sourceURL=${path}`;
