@@ -1,12 +1,13 @@
 (() => {
   "use strict";
 
-  const TABLE_PAGES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers"]);
+  const TABLE_PAGES = new Set(["database", "mfl", "progression", "agents", "club", "watchlist", "myplayers"]);
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
   const STYLE_ID = "mflPageSizeLoadingRuntimeStyles";
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
+    squad: "attributes",
     stats: "stats",
     contracts: "contracts",
     "next-overall": "next",
@@ -18,6 +19,7 @@
     mfl: "attributes",
     progression: "current",
     agents: "attributes",
+    club: "attributes",
     watchlist: "current",
     myplayers: "attributes",
   });
@@ -25,7 +27,8 @@
     database: new Set(["attributes", "contracts", "stats"]),
     mfl: new Set(["attributes", "stats"]),
     progression: new Set(["current", "all"]),
-    agents: new Set(["attributes", "next", "contracts"]),
+    agents: new Set(["attributes", "contracts", "next", "current", "all"]),
+    club: new Set(["attributes", "contracts", "current", "all"]),
     watchlist: new Set(["attributes", "next", "contracts", "current", "all"]),
     myplayers: new Set(["attributes", "next", "contracts", "current", "all"]),
   });
