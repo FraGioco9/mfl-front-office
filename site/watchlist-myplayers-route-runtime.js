@@ -2,6 +2,7 @@
   "use strict";
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const PAIR = new Set(["watchlist", "myplayers"]);
+  const TABLE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
   window.__mflWatchlistMyPlayersRouteRuntime?.destroy?.();
   let sequence = 0;
   let latestIntent = null;
@@ -54,14 +55,60 @@
     }
     await waitForWalletPreferencesLoad();
   }
-  function currentView(pageName) {
+  function preferredIntentView(pageName) {
     try {
-      if (typeof normalizeViewForPage === "function") return normalizeViewForPage(state?.view || "attributes", pageName);
-      return String(state?.view || "attributes");
-    } catch { return "attributes"; }
+      if (typeof preferredViewForPage === "function") {
+        const preferred = String(preferredViewForPage(pageName) || "");
+        if (preferred) return preferred;
+      }
+      const savedView = state?.tablePageStates?.[pageName]?.view;
+      if (typeof normalizeViewForPage === "function") {
+        return String(normalizeViewForPage(savedView, pageName) || "");
+      }
+      return String(savedView || "");
+    } catch {
+      return "";
+    }
   }
   function intentOptions(pageName, options = {}) {
-    return { ...options, view: String(options?.view || currentView(pageName) || "attributes") };
+    const requestedView = String(options?.view || "").trim();
+    if (requestedView) return { ...options, view: requestedView };
+    const preferredView = preferredIntentView(pageName);
+    return preferredView ? { ...options, view: preferredView } : { ...options };
+  }
+  function stateView(pageName) {
+    try {
+      if (typeof normalizeViewForPage === "function") {
+        return String(normalizeViewForPage(state?.view, pageName) || "");
+      }
+      return String(state?.view || "");
+    } catch {
+      return "";
+    }
+  }
+  function intentPath(intent) {
+    try {
+      if (typeof pagePath !== "function" || !intent) return "";
+      return String(pagePath(intent.pageName, intent.options || {}) || "");
+    } catch {
+      return "";
+    }
+  }
+  function intentSatisfied(intent) {
+    if (!intent || statePage() !== intent.pageName || bodyPage() !== intent.pageName) return false;
+    const requestedView = String(intent.options?.view || "").trim();
+    if (requestedView) {
+      let normalizedRequestedView = requestedView;
+      try {
+        if (typeof normalizeViewForPage === "function") {
+          normalizedRequestedView = String(normalizeViewForPage(requestedView, intent.pageName) || requestedView);
+        }
+      } catch {}
+      if (stateView(intent.pageName) !== normalizedRequestedView) return false;
+    }
+    const expectedPath = intentPath(intent);
+    if (expectedPath && `${window.location.pathname}${window.location.search}` !== expectedPath) return false;
+    return true;
   }
   function watchlistSnapshot() {
     try {
@@ -85,11 +132,14 @@
   }
   async function reconcile(intent) {
     if (destroyed || reconciling || !intent || latestIntent?.sequence !== intent.sequence) return;
-    if (statePage() === intent.pageName && bodyPage() === intent.pageName) return;
+    if (intentSatisfied(intent)) return;
     reconciling = true;
     try {
+      const expectedPath = intentPath(intent);
       await originalSetPage.call(window, intent.pageName, false, {
-        ...intent.options, replaceUrl: "", skipNavigationLoading: true,
+        ...intent.options,
+        ...(expectedPath ? { replaceUrl: expectedPath } : {}),
+        skipNavigationLoading: true,
       });
     } catch (error) {
       console.error("Could not keep the latest Watchlist/My Players route.", error);
@@ -283,10 +333,11 @@
     originalSetPage = candidate;
     wrappedSetPage = async function setPageWithLatestWatchlistMyPlayersIntent(pageName, updateHash = true, options = {}) {
       const normalizedPage = String(pageName || "");
+      const tableNavigation = TABLE_PAGES.has(normalizedPage);
       const pairNavigation = PAIR.has(normalizedPage);
       const watchlistNavigation = normalizedPage === "watchlist";
       const requestSequence = pairNavigation ? ++sequence : 0;
-      const nextOptions = pairNavigation ? intentOptions(normalizedPage, options) : options;
+      const nextOptions = tableNavigation ? intentOptions(normalizedPage, options) : options;
       if (pairNavigation) {
         latestIntent = { sequence: requestSequence, pageName: normalizedPage, options: { ...nextOptions } };
       } else {
