@@ -6,6 +6,7 @@
 
   const NEUTRAL_ATTRIBUTE = "data-mfl-initial-filter-neutral";
   const VIEW_BUTTON_CLICKED_ATTRIBUTE = "data-mfl-view-clicked";
+  const CLUB_VIEW_PRESS_CLASS = "mflClubViewPressed";
   const STYLE_ID = "mflFilterAddFocusRuntimeStyles";
   const BUTTON_GESTURE_SELECTOR = [
     "button",
@@ -87,14 +88,14 @@
         animation: none !important;
       }
 
-      /* Club presses have one visual owner. The clicked marker is painted as the
-         selected state both before loading and while clubViewSwitching temporarily
-         changes data-page, so generic hover styles can never take over mid-switch. */
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
+      /* Club presses are keyed to a root state set synchronously on pointer-down.
+         It survives every body/data-page/loading handoff, so the pressed destination
+         remains visually selected and never falls back to the generic hover state. */
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
         outline: 0;
         border-color: var(--primary);
         background: var(--primary);
@@ -104,20 +105,16 @@
         animation: none !important;
       }
 
-      :is(body[data-page="club"], body.clubViewSwitching) #progressionPage .views:has(.viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]) {
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]),
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]):hover,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]):active,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]):focus,
+      html.${CLUB_VIEW_PRESS_CLASS} #progressionPage .views .viewButton.active:not([${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]):focus-visible {
+        outline: 0;
         border-color: var(--border-strong);
         background: var(--surface);
         color: var(--text);
         box-shadow: none;
-        transition: none !important;
-        animation: none !important;
-      }
-
-      body.clubViewSwitching #progressionPage .viewButton.active,
-      body.clubViewSwitching #progressionPage .viewButton.active:hover,
-      body.clubViewSwitching #progressionPage .viewButton.active:active,
-      body.clubViewSwitching #progressionPage .viewButton.active:focus,
-      body.clubViewSwitching #progressionPage .viewButton.active:focus-visible {
         transition: none !important;
         animation: none !important;
       }
@@ -270,6 +267,7 @@
 
   function clearClubClickedView() {
     clubClickedView = "";
+    document.documentElement.classList.remove(CLUB_VIEW_PRESS_CLASS);
     document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
       .forEach((button) => button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE));
   }
@@ -281,6 +279,7 @@
       return;
     }
 
+    document.documentElement.classList.add(CLUB_VIEW_PRESS_CLASS);
     const button = liveClubClickedButton();
     if (!(button instanceof HTMLButtonElement)) return;
     document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
@@ -301,13 +300,19 @@
         if (candidate !== button) candidate.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
       });
     button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
-    if (clubRouteActive()) clubClickedView = String(button.dataset.view || "");
+    if (clubRouteActive()) {
+      clubClickedView = String(button.dataset.view || "");
+      document.documentElement.classList.add(CLUB_VIEW_PRESS_CLASS);
+    }
   }
 
   function clearViewButtonClicked(button) {
     if (!(button instanceof HTMLElement)) return;
+    if (clubClickedView && String(button.dataset.view || "") === clubClickedView) {
+      clearClubClickedView();
+      return;
+    }
     button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
-    if (clubClickedView && String(button.dataset.view || "") === clubClickedView) clubClickedView = "";
   }
 
   function isSelectOpen(select) {
