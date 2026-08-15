@@ -335,6 +335,25 @@ function normalizeWatchlistViewAuthority(source) {
     "watchlist explicit view precedence",
   );
 
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      'async function startApp() {',
+      '  loadTheme();',
+      '  setupChangelogSections();',
+      '  const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);',
+      '  loadSavedTableState();',
+    ],
+    [
+      'async function startApp() {',
+      '  loadTheme();',
+      '  setupChangelogSections();',
+      '  loadSavedTableState();',
+      '  const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);',
+    ],
+    "startup route resolves after saved wallet state",
+  );
+
   return nextSource;
 }
 
