@@ -19,9 +19,24 @@
   text-align: center;
 }
 
-/* Keep entity-page view chrome correct from first paint. Later route runtimes
- * may reconcile DOM order, but these visual orders prevent any intermediate
- * wrong arrangement from being painted while the application initializes. */
+/* Keep entity-page view chrome correct from first paint and through runtime
+ * initialization. These are the final visible sets, so later visibility guards
+ * cannot temporarily hide a valid button or reveal an invalid one. */
+body[data-page="agents"] #progressionPage .viewButton:is(
+  [data-view="attributes"],
+  [data-view="contracts"],
+  [data-view="next"],
+  [data-view="current"],
+  [data-view="all"]
+),
+body[data-page="club"] #progressionPage .viewButton:is(
+  [data-view="attributes"],
+  [data-view="contracts"],
+  [data-view="current"],
+  [data-view="all"]
+) {
+  display: inline-flex !important;
+}
 body[data-page="agents"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
 body[data-page="agents"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
 body[data-page="agents"] #progressionPage .viewButton[data-view="next"] { order: 3; }
@@ -29,7 +44,7 @@ body[data-page="agents"] #progressionPage .viewButton[data-view="current"] { ord
 body[data-page="agents"] #progressionPage .viewButton[data-view="all"] { order: 5; }
 body[data-page="agents"] #progressionPage .viewButton[data-view="stats"],
 body[data-page="club"] #progressionPage .viewButton:is([data-view="stats"], [data-view="next"]) {
-  display: none;
+  display: none !important;
 }
 body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
 body[data-page="club"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
