@@ -57,9 +57,7 @@
   let pendingPage = "";
   let pendingView = "";
   let repairFrame = 0;
-  let entityRepairFrame = 0;
-  let entityRepairTimer = 0;
-  let entityObserver = null;
+  let entityButtonRepairFrame = 0;
   let pageSizeEscapeFrame = 0;
   let pageSizeEscapeTimer = 0;
   let pageSizeEscapeSelect = null;
@@ -223,31 +221,18 @@
     window.__mflTableLoadingRuntime?.primeHeader?.(route.page, route.view);
   }
 
-  function currentOrFallbackEntityRoute(fallback = null) {
-    return entityRouteFromPath() || fallback;
+  function repairEntityButtons(fallback = null) {
+    const route = entityRouteFromPath() || fallback;
+    if (route) syncEntityViewButtons(route);
   }
 
-  function repairEntityDestination(fallback = null) {
-    const route = currentOrFallbackEntityRoute(fallback);
-    if (route) revealEntityDestination(route);
-  }
-
-  function scheduleEntityRepair(fallback = null) {
-    queueMicrotask(() => repairEntityDestination(fallback));
-
-    if (entityRepairFrame) cancelAnimationFrame(entityRepairFrame);
-    entityRepairFrame = requestAnimationFrame(() => {
-      entityRepairFrame = requestAnimationFrame(() => {
-        entityRepairFrame = 0;
-        repairEntityDestination(fallback);
-      });
+  function scheduleEntityButtonRepair(fallback = null) {
+    queueMicrotask(() => repairEntityButtons(fallback));
+    if (entityButtonRepairFrame) cancelAnimationFrame(entityButtonRepairFrame);
+    entityButtonRepairFrame = requestAnimationFrame(() => {
+      entityButtonRepairFrame = 0;
+      repairEntityButtons(fallback);
     });
-
-    if (entityRepairTimer) window.clearTimeout(entityRepairTimer);
-    entityRepairTimer = window.setTimeout(() => {
-      entityRepairTimer = 0;
-      repairEntityDestination(fallback);
-    }, 80);
   }
 
   function cachedPageState(page) {
@@ -483,7 +468,6 @@
     const entityDestination = entityDestinationFromTarget(event.target);
     if (entityDestination) {
       revealEntityDestination(entityDestination);
-      scheduleEntityRepair(entityDestination);
       return;
     }
 
@@ -502,7 +486,7 @@
   function onClick(event) {
     const entityDestination = entityDestinationFromTarget(event.target);
     if (entityDestination) {
-      scheduleEntityRepair(entityDestination);
+      scheduleEntityButtonRepair(entityDestination);
       return;
     }
 
@@ -519,28 +503,7 @@
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
     const entityRoute = entityRouteFromPath();
-    if (entityRoute) scheduleEntityRepair(entityRoute);
-  }
-
-  function installEntityObserver() {
-    entityObserver = new MutationObserver(() => {
-      const route = entityRouteFromPath();
-      if (route) syncEntityViewButtons(route);
-    });
-    if (document.body) {
-      entityObserver.observe(document.body, {
-        attributes: true,
-        attributeFilter: ["data-page"],
-      });
-    }
-    const views = document.querySelector("#progressionPage .views");
-    if (views instanceof HTMLElement) {
-      entityObserver.observe(views, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: ["hidden"],
-      });
-    }
+    if (entityRoute) scheduleEntityButtonRepair(entityRoute);
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
@@ -548,19 +511,14 @@
   document.addEventListener("keydown", clearPageSizeHighlightOnEscape, true);
   document.addEventListener("keyup", finishPageSizeEscape, true);
   window.addEventListener("popstate", onPopState);
-  installEntityObserver();
   const initialEntityRoute = entityRouteFromPath();
   if (initialEntityRoute) syncEntityViewButtons(initialEntityRoute);
 
   function destroy() {
     if (repairFrame) cancelAnimationFrame(repairFrame);
     repairFrame = 0;
-    if (entityRepairFrame) cancelAnimationFrame(entityRepairFrame);
-    entityRepairFrame = 0;
-    if (entityRepairTimer) window.clearTimeout(entityRepairTimer);
-    entityRepairTimer = 0;
-    entityObserver?.disconnect();
-    entityObserver = null;
+    if (entityButtonRepairFrame) cancelAnimationFrame(entityButtonRepairFrame);
+    entityButtonRepairFrame = 0;
     if (pageSizeEscapeFrame) cancelAnimationFrame(pageSizeEscapeFrame);
     pageSizeEscapeFrame = 0;
     if (pageSizeEscapeTimer) window.clearTimeout(pageSizeEscapeTimer);
