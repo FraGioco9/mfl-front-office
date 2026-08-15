@@ -38,10 +38,10 @@
     database: ["attributes", "contracts", "stats"],
     mfl: ["attributes", "stats"],
     progression: ["current", "all"],
-    agents: ["attributes", "next", "contracts", "current", "all"],
+    agents: ["attributes", "contracts", "next", "current", "all"],
     watchlist: ["attributes", "next", "contracts", "current", "all"],
     myplayers: ["attributes", "next", "contracts", "current", "all"],
-    club: ["attributes", "next", "contracts", "current", "all"],
+    club: ["attributes", "contracts", "current", "all"],
   });
 
   const previous = window.__mflSharedTableUiRuntime;
@@ -74,9 +74,11 @@
   }
 
   function currentTablePage() {
+    const routePage = tablePageFromPath();
+    if (routePage === "agents" || routePage === "club") return routePage;
     const bodyPage = normalizePageName(document.body?.dataset.page);
     if (VIEW_ORDER[bodyPage]) return bodyPage;
-    return tablePageFromPath();
+    return routePage;
   }
 
   function defaultQuickFilters(pageName) {
@@ -432,6 +434,10 @@
     primeTableChrome(tablePageFromPath());
   }
 
+  function onReady() {
+    scheduleTableChrome();
+  }
+
   installStyles();
   primeMflStatsOverallFilters();
   primeTableChrome(currentTablePage());
@@ -443,6 +449,7 @@
   document.addEventListener("pointerover", onPointerActivity, true);
   document.addEventListener("pointermove", onPointerActivity, true);
   window.addEventListener("popstate", onPopState);
+  window.addEventListener("mfl:ready", onReady);
 
   observer = new MutationObserver(() => {
     scheduleTableChrome();
@@ -474,6 +481,7 @@
     document.removeEventListener("pointerover", onPointerActivity, true);
     document.removeEventListener("pointermove", onPointerActivity, true);
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", onReady);
     document.documentElement.classList.remove(FILTER_ESCAPE_CLASS);
   }
 
