@@ -30,6 +30,8 @@
   let guardTimer = 0;
   let guardKey = "";
   let guardStartedAt = 0;
+  let pointerHandledClubViewButton = null;
+  let pointerHandledClubViewTimer = 0;
 
   function decodedClubId(value) {
     try {
@@ -322,8 +324,17 @@
       && String(empty.textContent || "").trim().length > 0;
   }
 
+  function loadingSurfaceNeedsRepair() {
+    const body = document.getElementById("tableBody");
+    if (!(body instanceof HTMLTableSectionElement)) return false;
+    const rows = Array.from(body.rows);
+    if (!rows.length) return true;
+    return rows.every((row) => row.classList.contains(BLANK_ROW_CLASS));
+  }
+
   function primeLoadingSurface(route) {
     syncClubChrome(route);
+    if (!loadingSurfaceNeedsRepair()) return;
     window.__mflTableLoadingRuntime?.primeRoute?.({ pageName: "club", view: route.view });
   }
 
@@ -519,20 +530,20 @@
     requestAnimationFrame(pollForCoreBridge);
   }
 
-  // app-core handles club view buttons in capture phase once its club state is ready.
-  // If that state was not established, this bubble fallback makes the visible buttons
-  // functional without competing with the normal handler.
-  function handleClubViewFallback(event) {
-    if (event.defaultPrevented || !(event.target instanceof Element)) return;
-    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-    const route = parseClubRoute(window.location.pathname, true);
-    if (!route) return;
+  function clubViewButtonFromEvent(event) {
+    if (!(event.target instanceof Element)) return null;
     const button = event.target.closest("#progressionPage .views > .viewButton[data-view]");
-    if (!(button instanceof HTMLButtonElement)) return;
-    const nextView = String(button.dataset.view || "");
-    if (!CLUB_VIEWS.has(nextView) || nextView === route.view) return;
+    return button instanceof HTMLButtonElement ? button : null;
+  }
 
-    event.preventDefault();
+  function clearPointerHandledClubView() {
+    pointerHandledClubViewButton = null;
+    if (pointerHandledClubViewTimer) window.clearTimeout(pointerHandledClubViewTimer);
+    pointerHandledClubViewTimer = 0;
+  }
+
+  function navigateClubView(route, nextView) {
+    if (!route || !CLUB_VIEWS.has(nextView) || nextView === route.view) return false;
     const nextRoute = { clubId: route.clubId, view: nextView };
     nativeReplaceState(
       history.state,
@@ -541,6 +552,49 @@
     );
     primeClubRoute(nextRoute);
     window.mflOpenClubPage?.(route.clubId, nextView);
+    return true;
+  }
+
+  // The shared view buttons commit on pointerup before their click event. Own only
+  // club pointer releases here so the generic table handler cannot switch the
+  // shared table away from the club before the club-specific click handler runs.
+  function handleClubViewPointerUp(event) {
+    if (event.isPrimary === false || event.button !== 0) return;
+    const route = parseClubRoute(window.location.pathname, true);
+    const button = clubViewButtonFromEvent(event);
+    if (!route || !button) return;
+    const nextView = String(button.dataset.view || "");
+    if (!CLUB_VIEWS.has(nextView)) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    pointerHandledClubViewButton = button;
+    if (pointerHandledClubViewTimer) window.clearTimeout(pointerHandledClubViewTimer);
+    pointerHandledClubViewTimer = window.setTimeout(clearPointerHandledClubView, 0);
+    navigateClubView(route, nextView);
+  }
+
+  function handleClubViewClick(event) {
+    const route = parseClubRoute(window.location.pathname, true);
+    const button = clubViewButtonFromEvent(event);
+    if (!route || !button) return;
+
+    if (pointerHandledClubViewButton === button) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      clearPointerHandledClubView();
+      return;
+    }
+
+    // Keyboard/programmatic activation has no pointerup, so handle it before the
+    // shared button listener for the same reason. Normal pointer clicks are owned
+    // by handleClubViewPointerUp above.
+    if (event.detail !== 0) return;
+    const nextView = String(button.dataset.view || "");
+    if (!CLUB_VIEWS.has(nextView)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    navigateClubView(route, nextView);
   }
 
   function handlePopState() {
@@ -576,7 +630,8 @@
 
   document.addEventListener("pointerdown", rememberClubIdentityFromEvent, true);
   document.addEventListener("click", rememberClubIdentityFromEvent, true);
-  document.addEventListener("click", handleClubViewFallback, false);
+  document.addEventListener("pointerup", handleClubViewPointerUp, true);
+  document.addEventListener("click", handleClubViewClick, true);
   window.addEventListener("popstate", handlePopState);
   window.addEventListener("mfl:ready", () => {
     installCoreBridge();
