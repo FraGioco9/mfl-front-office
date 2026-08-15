@@ -246,33 +246,67 @@ function normalizeWatchlistViewAuthority(source) {
 
   nextSource = replaceCoreSourceIfPresent(
     nextSource,
-    ['  state.view = normalizeViewForPage(options.view || savedState.view, pageName);'],
+    ['function updateWatchlistUrl(replace = false, force = false) {'],
+    ['function updateWatchlistUrl(replace = false, force = false, view = "") {'],
+    "watchlist URL explicit view parameter",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['  const targetPath = pagePath("watchlist", { watchlistId: state.currentWatchlistId });'],
     [
-      '  const routeView = pageName === "watchlist" ? watchlistTargetFromUrl().view : "";',
-      '  state.view = normalizeViewForPage(options.view || routeView || savedState.view, pageName);',
+      '  const targetPath = pagePath("watchlist", {',
+      '    watchlistId: state.currentWatchlistId,',
+      '    ...(view ? { view } : {}),',
+      '  });',
     ],
-    "watchlist saved-state route precedence",
+    "watchlist URL explicit view ownership",
   );
 
   nextSource = replaceCoreSourceIfPresent(
     nextSource,
     [
-      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
-      '    state.currentPage = pageName;',
-      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
-      '    await ensureWatchlistRoute(options);',
+      '    renderWatchlistSwitcher();',
+      '    showToast("Watchlist not found.");',
+      '    updateWatchlistUrl(true, true);',
+      '    return;',
       '  }',
+      '',
+      '  const nextWatchlist = found || state.watchlists[0] || ensureDefaultWatchlist();',
+      '  state.currentWatchlistId = nextWatchlist?.id || "";',
+      '  setActiveWatchlistIds(nextWatchlist?.playerIds || []);',
+      '  renderWatchlistSwitcher();',
+      '  updateWatchlistUrl(!routeId, true);',
+      '  queueCloudTableStateSave();',
     ],
     [
-      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
-      '    state.currentPage = pageName;',
-      '    const requestedWatchlistView = normalizeViewForPage(options.view || watchlistTargetFromUrl().view || state.view, "watchlist");',
-      '    state.view = requestedWatchlistView;',
-      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
-      '    await ensureWatchlistRoute({ ...options, view: requestedWatchlistView });',
+      '    renderWatchlistSwitcher();',
+      '    showToast("Watchlist not found.");',
+      '    updateWatchlistUrl(true, true, options.view);',
+      '    return;',
       '  }',
+      '',
+      '  const nextWatchlist = found || state.watchlists[0] || ensureDefaultWatchlist();',
+      '  state.currentWatchlistId = nextWatchlist?.id || "";',
+      '  setActiveWatchlistIds(nextWatchlist?.playerIds || []);',
+      '  renderWatchlistSwitcher();',
+      '  updateWatchlistUrl(!routeId, true, options.view);',
+      '  queueCloudTableStateSave();',
     ],
-    "watchlist view ownership before route resolution",
+    "watchlist route resolution keeps requested view",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      '    restoreSavedTableState = function restoreSavedTableStateWithRoute(pageName, options = {}) {',
+      '      const routeView = routeViewFromPath();',
+    ],
+    [
+      '    restoreSavedTableState = function restoreSavedTableStateWithRoute(pageName, options = {}) {',
+      '      const routeView = pageName === "watchlist" && !options.view ? routeViewFromPath() : "";',
+    ],
+    "watchlist explicit view precedence during saved-state restore",
   );
 
   nextSource = replaceCoreSourceIfPresent(
