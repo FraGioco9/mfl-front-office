@@ -3,6 +3,27 @@
 
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
+  const VIEW_BUTTON_CLICKED_ATTRIBUTE = "data-mfl-view-clicked";
+  const RUNTIME_STYLE_ID = "mflDropdownRuntimeAdjustments";
+  let clubClickedView = "";
+  let clubClickedFrame = 0;
+
+  function installRuntimeStyles() {
+    if (document.getElementById(RUNTIME_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = RUNTIME_STYLE_ID;
+    style.textContent = `
+      @supports (appearance: base-select) {
+        html body select[data-mfl-dropdown-enhanced="true"]::picker(select),
+        html body #pageSizeSelect::picker(select),
+        html body .filtersDialog select::picker(select) {
+          margin-block: var(--mfl-dropdown-gap);
+          margin-inline: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -70,6 +91,60 @@
     }
   }
 
+  function openSelect() {
+    const active = document.activeElement;
+    if (active instanceof HTMLSelectElement && isSelectOpen(active)) return active;
+    return Array.from(document.querySelectorAll("select"))
+      .find((select) => isSelectOpen(select)) || null;
+  }
+
+  function clubRouteActive() {
+    return /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname);
+  }
+
+  function clubViewButton(viewName = clubClickedView) {
+    if (!viewName) return null;
+    return Array.from(document.querySelectorAll("#progressionPage .views .viewButton[data-view]"))
+      .find((button) => button instanceof HTMLButtonElement && String(button.dataset.view || "") === viewName) || null;
+  }
+
+  function stopClubViewClickPersistence() {
+    clubClickedView = "";
+    if (clubClickedFrame) {
+      window.cancelAnimationFrame(clubClickedFrame);
+      clubClickedFrame = 0;
+    }
+  }
+
+  function syncClubViewClickPersistence() {
+    clubClickedFrame = 0;
+    if (!clubClickedView || !clubRouteActive()) {
+      stopClubViewClickPersistence();
+      return;
+    }
+
+    const button = clubViewButton();
+    if (button) {
+      button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
+      if (!button.matches(":hover")) {
+        button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+        stopClubViewClickPersistence();
+        return;
+      }
+    }
+
+    clubClickedFrame = window.requestAnimationFrame(syncClubViewClickPersistence);
+  }
+
+  function persistClubViewClick(button) {
+    if (!(button instanceof HTMLButtonElement) || !clubRouteActive()) return;
+    clubClickedView = String(button.dataset.view || "");
+    if (!clubClickedView) return;
+    button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
+    if (clubClickedFrame) window.cancelAnimationFrame(clubClickedFrame);
+    clubClickedFrame = window.requestAnimationFrame(syncClubViewClickPersistence);
+  }
+
   function closeStaticDropdown(button) {
     if (!(button instanceof HTMLButtonElement)) return false;
     if (button.getAttribute("aria-expanded") !== "true") return false;
@@ -111,6 +186,11 @@
 
     endNeutralFiltersOpen(target);
 
+    if (event.isPrimary !== false && event.button === 0 && clubRouteActive()) {
+      const viewButton = target.closest("#progressionPage .views .viewButton[data-view]");
+      if (viewButton instanceof HTMLButtonElement) persistClubViewClick(viewButton);
+    }
+
     if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -131,6 +211,20 @@
     endNeutralFiltersOpen(event.target);
   }, true);
 
+  /* Enter confirms the highlighted value of any open select, including inside
+   * a popup. The select keeps its native default Enter behavior, then loses focus
+   * after that default action has committed the value. */
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const select = openSelect();
+    if (!(select instanceof HTMLSelectElement)) return;
+
+    event.stopImmediatePropagation();
+    window.setTimeout(() => {
+      if (select.isConnected) select.blur();
+    }, 0);
+  });
+
   /* Only static button dropdowns need the follow-up click suppressed; native
    * select option clicks must never be intercepted here. */
   document.addEventListener("click", (event) => {
@@ -147,6 +241,7 @@
     event.stopImmediatePropagation();
   }, true);
 
+  installRuntimeStyles();
   enhanceVisible(document);
   window.addEventListener("mfl:ready", () => enhanceVisible(document));
 
