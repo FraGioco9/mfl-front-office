@@ -274,11 +274,28 @@
     }, 0);
   });
 
-  /* The shared view-button path already commits a mouse gesture on pointerup.
-   * app-core still has an older document capture click handler for club views;
-   * suppress only the follow-up click from that same pointer gesture so it cannot
-   * re-run club state and briefly restore the previous selected view. Keyboard
-   * clicks are untouched because they have no committed pointer gesture here. */
+  /* The shared view-button path already commits mouse activation on pointerup.
+   * Intercept its follow-up click at window capture, before app-core's older
+   * document-capture club handler can observe it and run a second state change. */
+  window.addEventListener("click", (event) => {
+    if (!clubPointerCommittedView) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const button = clubViewButtonFromTarget(target);
+    if (!(button instanceof HTMLButtonElement)
+      || String(button.dataset.view || "") !== clubPointerCommittedView) {
+      clubPointerCommittedView = "";
+      return;
+    }
+
+    clubPointerCommittedView = "";
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  /* Only static button dropdowns need the follow-up click suppressed; native
+   * select option clicks must never be intercepted here. The club fallback below
+   * is retained for synthetic/document-level click paths, but normal mouse clicks
+   * are already stopped above at window capture. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
