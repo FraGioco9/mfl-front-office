@@ -343,3 +343,19 @@ body.clubViewSwitching #progressionPage {
   transform: none !important;
   pointer-events: none !important;
 }
+
+/* Club view switching temporarily reuses Database/Progression page state. Keep
+ * the already-selected view button visually final during that handoff, so the
+ * generic hover transition cannot reappear before body[data-page="club"] returns. */
+body.clubViewSwitching #progressionPage .viewButton.active,
+body.clubViewSwitching #progressionPage .viewButton.active:hover,
+body.clubViewSwitching #progressionPage .viewButton.active:active,
+body.clubViewSwitching #progressionPage .viewButton.active:focus,
+body.clubViewSwitching #progressionPage .viewButton.active:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+  transition: none !important;
+  animation: none !important;
+}
