@@ -343,3 +343,36 @@ body.clubViewSwitching #progressionPage {
   transform: none !important;
   pointer-events: none !important;
 }
+
+/* A club view click should release its visual pressed/selected state while the
+ * destination view is loading. The final active view is painted again when the
+ * club switch finishes. */
+body.clubViewSwitching #progressionPage .viewButton,
+body.clubViewSwitching #progressionPage .viewButton.active,
+body.clubViewSwitching #progressionPage .viewButton:hover,
+body.clubViewSwitching #progressionPage .viewButton:active,
+body.clubViewSwitching #progressionPage .viewButton:focus,
+body.clubViewSwitching #progressionPage .viewButton:focus-visible {
+  outline: 0 !important;
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+/* On a club page the Contracts club column is informational only. Keep the
+ * existing cell text but remove link interaction/hover presentation. */
+body[data-page="club"] #progressionPage td.col-contract-club a.clubPageLink {
+  pointer-events: none !important;
+  cursor: default !important;
+  color: var(--text) !important;
+  text-decoration: none !important;
+}
+
+body[data-page="club"] #progressionPage td.col-contract-club a.clubPageLink:hover,
+body[data-page="club"] #progressionPage td.col-contract-club a.clubPageLink:focus,
+body[data-page="club"] #progressionPage td.col-contract-club a.clubPageLink:focus-visible {
+  outline: 0 !important;
+  color: var(--text) !important;
+  text-decoration: none !important;
+}
