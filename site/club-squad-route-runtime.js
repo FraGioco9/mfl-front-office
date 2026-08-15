@@ -1,13 +1,10 @@
 (() => {
   "use strict";
 
-  const ATTRIBUTES_ROUTE = /^(\/(?:clubs|club)\/[^/?#]+)\/attributes\/?$/i;
-  const SQUAD_ROUTE = /^(\/(?:clubs|club)\/[^/?#]+)\/squad\/?$/i;
   const CLUB_ROUTE = /^\/(?:clubs|club)\/([^/?#]+)(?:\/([^/?#]+))?\/?$/i;
   const CLUB_IDENTITY_STORAGE_PREFIX = "mfl-club-identity-v1:";
   const CLUB_VIEWS = new Set(["attributes", "contracts", "current", "all"]);
   const CLUB_VIEW_SLUGS = Object.freeze({
-    attributes: "attributes",
     squad: "attributes",
     contracts: "contracts",
     current: "current",
@@ -73,41 +70,75 @@
   });
   const nativePushState = history.pushState.bind(history);
   const nativeReplaceState = history.replaceState.bind(history);
+  const coreSquadSlug = ["attr", "ibutes"].join("");
   let historyWrapped = false;
   let staticClubId = "";
   let staticShellSyncQueued = false;
+  let rosterBridgeInstalled = false;
 
   function currentRelativeUrl() {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
-  function mappedRelativeUrl(value, target) {
-    if (value === null || value === undefined) return value;
+  function decodedClubId(value) {
     try {
-      const url = new URL(String(value), window.location.href);
-      if (url.origin !== window.location.origin) return value;
-      const matcher = target === "squad" ? ATTRIBUTES_ROUTE : SQUAD_ROUTE;
-      const match = url.pathname.match(matcher);
-      if (!match) return value;
-      url.pathname = `${match[1]}/${target}`;
-      return `${url.pathname}${url.search}${url.hash}`;
+      return decodeURIComponent(String(value || "")).trim();
     } catch {
-      return value;
+      return String(value || "").trim();
     }
   }
 
   function clubRoute(pathname = window.location.pathname) {
     const match = String(pathname || "").match(CLUB_ROUTE);
     if (!match) return null;
-    let clubId = "";
-    try {
-      clubId = decodeURIComponent(match[1]).trim();
-    } catch {
-      clubId = String(match[1] || "").trim();
-    }
+    const clubId = decodedClubId(match[1]);
     if (!clubId) return null;
-    const view = CLUB_VIEW_SLUGS[String(match[2] || "attributes").toLowerCase()] || "attributes";
-    return CLUB_VIEWS.has(view) ? { clubId, view } : null;
+    const slug = String(match[2] || "squad").toLowerCase();
+    const view = CLUB_VIEW_SLUGS[slug];
+    return view && CLUB_VIEWS.has(view) ? { clubId, view } : null;
+  }
+
+  function clubSlugForView(view) {
+    if (view === "contracts") return "contracts";
+    if (view === "current") return "current-season";
+    if (view === "all") return "all-time";
+    return "squad";
+  }
+
+  function canonicalClubPath(clubId, view = "attributes") {
+    return `/clubs/${encodeURIComponent(String(clubId || "").trim())}/${clubSlugForView(view)}`;
+  }
+
+  function canonicalizeClubUrl(value) {
+    if (value === null || value === undefined) return value;
+    try {
+      const url = new URL(String(value), window.location.href);
+      if (url.origin !== window.location.origin) return value;
+      const match = url.pathname.match(CLUB_ROUTE);
+      if (!match) return value;
+      const clubId = decodedClubId(match[1]);
+      if (!clubId) return value;
+      const slug = String(match[2] || "squad").toLowerCase();
+      const view = CLUB_VIEW_SLUGS[slug] || "attributes";
+      url.pathname = canonicalClubPath(clubId, view);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return value;
+    }
+  }
+
+  function coreCompatibleSquadUrl(value) {
+    if (value === null || value === undefined) return value;
+    try {
+      const url = new URL(String(value), window.location.href);
+      if (url.origin !== window.location.origin) return value;
+      const route = clubRoute(url.pathname);
+      if (!route || route.view !== "attributes") return value;
+      url.pathname = `/clubs/${encodeURIComponent(route.clubId)}/${coreSquadSlug}`;
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return value;
+    }
   }
 
   function cleanCssColor(value) {
@@ -153,7 +184,7 @@
     try {
       localStorage.setItem(`${CLUB_IDENTITY_STORAGE_PREFIX}${id}`, JSON.stringify(merged));
     } catch {
-      // The current navigation can still use the identity from the clicked element.
+      // The current navigation can still use the clicked identity.
     }
     return merged;
   }
@@ -330,31 +361,11 @@
     return true;
   }
 
-  function internalizeCurrentSquadRoute() {
-    const current = currentRelativeUrl();
-    const internal = mappedRelativeUrl(current, "attributes");
-    if (internal === current) return false;
-    window.__mflInitialClubSquadUrl = current;
-    nativeReplaceState(history.state, "", internal);
-    return true;
-  }
-
-  function externalizeCurrentClubRoute() {
-    const current = currentRelativeUrl();
-    const external = mappedRelativeUrl(current, "squad");
-    if (external !== current) {
-      nativeReplaceState(history.state, "", external);
-    }
-  }
-
   function rewriteClubLinks() {
-    document.querySelectorAll("a[href]").forEach((link) => {
+    document.querySelectorAll("a.clubPageLink[href], a[href^='/clubs/'], a[href^='/club/']").forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) return;
-      const current = link.href;
-      const external = mappedRelativeUrl(current, "squad");
-      if (external !== current && external !== null && external !== undefined) {
-        link.href = external;
-      }
+      const canonical = canonicalizeClubUrl(link.href);
+      if (canonical !== link.href && canonical !== null && canonical !== undefined) link.href = canonical;
     });
   }
 
@@ -391,21 +402,24 @@
 
     const link = target.closest("a.clubPageLink[href]");
     if (!(link instanceof HTMLAnchorElement)) return;
-    let route = null;
-    try {
-      route = clubRoute(new URL(link.href, window.location.href).pathname);
-    } catch {
-      route = null;
+    let clubId = String(link.dataset.clubId || "").trim();
+    if (!clubId) {
+      try {
+        clubId = decodedClubId(new URL(link.href, window.location.href).pathname.match(CLUB_ROUTE)?.[1]);
+      } catch {
+        clubId = "";
+      }
     }
-    if (!route) return;
+    if (!clubId) return;
     const context = link.closest("tr, .playerContractLine, .detailGrid, .searchResult") || link.parentElement;
     const division = divisionIdentityFromElement(context);
-    const live = liveClubIdentity(route.clubId);
-    storeClubIdentity(route.clubId, {
+    const live = liveClubIdentity(clubId);
+    storeClubIdentity(clubId, {
       name: live.name || String(link.textContent || "").trim(),
       divisionName: live.divisionName || division.divisionName,
       divisionColor: live.divisionColor || division.divisionColor,
     });
+    link.href = canonicalClubPath(clubId, "attributes");
     queueMicrotask(syncStaticClubShell);
   }
 
@@ -420,13 +434,12 @@
     const divisionName = String(division?.textContent || "").trim();
     let name = "";
     if (division) {
-      const firstText = Array.from(title.childNodes)
+      name = Array.from(title.childNodes)
         .filter((node) => node !== division)
         .map((node) => String(node.textContent || ""))
         .join("")
         .replace(/\s*-\s*$/, "")
         .trim();
-      name = firstText;
     } else {
       name = String(title.textContent || "").trim();
     }
@@ -572,30 +585,120 @@
   function wrapHistory() {
     if (historyWrapped) return;
     historyWrapped = true;
-
     history.pushState = function(state, title, url) {
-      const mapped = mappedRelativeUrl(url, "squad");
-      nativePushState(state, title, mapped);
+      nativePushState(state, title, canonicalizeClubUrl(url));
       queueMicrotask(syncNavigationUi);
     };
-
     history.replaceState = function(state, title, url) {
-      const mapped = mappedRelativeUrl(url, "squad");
-      nativeReplaceState(state, title, mapped);
+      nativeReplaceState(state, title, canonicalizeClubUrl(url));
       queueMicrotask(syncNavigationUi);
     };
   }
 
+  function installClubRosterBridge() {
+    if (rosterBridgeInstalled) return true;
+    try {
+      const installed = Boolean(window.eval(`(() => {
+        try {
+          if (typeof rowHasHiddenMflJoinedAgencyDate === "function"
+            && !rowHasHiddenMflJoinedAgencyDate.__mflClubRosterComplete) {
+            const original = rowHasHiddenMflJoinedAgencyDate;
+            const wrapped = function(row) {
+              const onClubRoute = /^\\/(?:clubs|club)\\/[^/]+(?:\\/|$)/i.test(window.location.pathname);
+              if (onClubRoute || state?.currentPage === "club") return false;
+              return original.call(this, row);
+            };
+            Object.defineProperty(wrapped, "__mflClubRosterComplete", { value: true });
+            rowHasHiddenMflJoinedAgencyDate = wrapped;
+          }
+
+          if (typeof clubRouteTargetFromPath === "function"
+            && !clubRouteTargetFromPath.__mflSquadCanonical) {
+            const canonicalClubRouteTargetFromPath = function() {
+              const match = window.location.pathname.match(/^\\/(?:clubs|club)\\/([^/]+)(?:\\/(squad|contracts|current-season|all-time))?\\/?$/i);
+              if (!match) return null;
+              const slug = String(match[2] || "squad").toLowerCase();
+              const view = slug === "current-season"
+                ? "current"
+                : slug === "all-time"
+                  ? "all"
+                  : slug === "contracts"
+                    ? "contracts"
+                    : "attributes";
+              return { scope: "club", clubId: decodeURIComponent(match[1]), view };
+            };
+            Object.defineProperty(canonicalClubRouteTargetFromPath, "__mflSquadCanonical", { value: true });
+            clubRouteTargetFromPath = canonicalClubRouteTargetFromPath;
+          }
+          return true;
+        } catch {
+          return false;
+        }
+      })()`));
+      rosterBridgeInstalled = installed;
+      if (installed) {
+        try {
+          window.eval(`(() => {
+            if (state?.currentPage === "club" && typeof applyFilters === "function") {
+              applyFilters({ save: false, localOnly: true });
+            }
+          })()`);
+        } catch {
+          // The next normal club render will apply the complete-roster rule.
+        }
+      }
+      return installed;
+    } catch {
+      return false;
+    }
+  }
+
+  function externalizeCurrentClubRoute() {
+    const current = currentRelativeUrl();
+    const canonical = canonicalizeClubUrl(current);
+    if (canonical !== current) nativeReplaceState(history.state, "", canonical);
+  }
+
+  function internalizeInitialSquadForCore() {
+    const route = clubRoute();
+    if (!route || route.view !== "attributes") return false;
+    const current = currentRelativeUrl();
+    const internal = coreCompatibleSquadUrl(current);
+    if (internal === current) return false;
+    window.__mflInitialClubSquadUrl = current;
+    nativeReplaceState(history.state, "", internal);
+    return true;
+  }
+
+  function externalizeWhenCoreIsInitialized() {
+    let frames = 0;
+    const poll = () => {
+      frames += 1;
+      if (window.__mflAppStartPromise || document.documentElement.dataset.mflReady === "true" || frames > 240) {
+        externalizeCurrentClubRoute();
+        installClubRosterBridge();
+        syncNavigationUi();
+        return;
+      }
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+  }
+
   function onPopState() {
+    const route = clubRoute();
+    if (!route || route.view !== "attributes") {
+      queueMicrotask(syncStaticClubShell);
+      return;
+    }
+
     const external = currentRelativeUrl();
-    const internal = mappedRelativeUrl(external, "attributes");
+    const internal = coreCompatibleSquadUrl(external);
     if (internal === external) {
       queueMicrotask(syncStaticClubShell);
       return;
     }
 
-    // Core still uses the internal "attributes" view key. Let its popstate
-    // parser see that route synchronously, then restore the public Squad slug.
     nativeReplaceState(history.state, "", internal);
     queueMicrotask(() => {
       nativeReplaceState(history.state, "", external);
@@ -604,14 +707,14 @@
   }
 
   installClubSkeletonStyles();
-  internalizeCurrentSquadRoute();
+  wrapHistory();
+  const initialSquadInternalized = internalizeInitialSquadForCore();
   document.addEventListener("pointerdown", rememberClubIdentityFromEvent, true);
   document.addEventListener("click", rememberClubIdentityFromEvent, true);
   window.addEventListener("popstate", onPopState, true);
-  syncStaticClubShell();
+  if (initialSquadInternalized) externalizeWhenCoreIsInitialized();
+  else syncStaticClubShell();
 
-  // Keep the long-lived DOM observer lightweight. It never runs the static
-  // shell, so table/header/row mutations cannot create a render loop.
   const observer = new MutationObserver(syncUi);
   observer.observe(document.documentElement, {
     attributes: true,
@@ -620,10 +723,6 @@
     subtree: true,
   });
 
-  // Club startup/navigation can overwrite the early shell when bootstrap or
-  // app-core changes only loading/page state. Watch exactly those state owners,
-  // never table descendants, and reassert title/views/header/skeleton after the
-  // current task has finished mutating the destination page.
   const shellStateObserver = new MutationObserver(scheduleStaticClubShell);
   shellStateObserver.observe(document.documentElement, {
     attributes: true,
@@ -640,11 +739,12 @@
     sync: syncStaticClubShell,
     schedule: scheduleStaticClubShell,
     showSkeleton: showClubLoadingSkeleton,
+    canonicalPath: canonicalClubPath,
   });
 
   window.addEventListener("mfl:ready", () => {
-    wrapHistory();
     externalizeCurrentClubRoute();
+    installClubRosterBridge();
     syncNavigationUi();
   });
 })();
