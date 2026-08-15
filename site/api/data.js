@@ -27,10 +27,16 @@ module.exports = async function handler(request, response) {
     const query = request.query || {};
     const mode = String(query.mode || "");
     const accessMode = String(query.access || "");
+    const scope = String(query.scope || "").toLowerCase();
+    const view = String(query.view || "").toLowerCase();
+    const publicEntityProgression = ["agent", "club"].includes(scope)
+      && ["current", "all"].includes(view);
     const signedWallet = await signedWalletFromRequest(request);
-    const fullAccess = accessMode === "full-progression"
+    const fullAccess = publicEntityProgression || (
+      accessMode === "full-progression"
       && Boolean(signedWallet)
-      && await walletAllowed(signedWallet);
+      && await walletAllowed(signedWallet)
+    );
     const ownedProgression = accessMode === "owned-progression" && Boolean(signedWallet);
 
     let data;
