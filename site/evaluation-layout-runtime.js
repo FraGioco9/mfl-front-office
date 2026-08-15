@@ -20,6 +20,12 @@
     return cleanPath() === "/evaluation";
   }
 
+  function storedEvaluationRouteActive() {
+    if (!evaluationActive()) return false;
+    const params = new URLSearchParams(location.search);
+    return Boolean(params.get("saved") || params.get("share"));
+  }
+
   function globalSearchOpen() {
     const modal = document.getElementById("searchModal");
     return modal instanceof HTMLElement && !modal.hidden;
@@ -101,6 +107,12 @@
     }
     const panel = document.getElementById("evaluationPanel");
     return panel instanceof HTMLElement && !panel.hidden;
+  }
+
+  function syncStoredEvaluationActions() {
+    const loading = storedEvaluationRouteActive()
+      && !document.documentElement.classList.contains("mflEvaluationReady");
+    document.documentElement.classList.toggle("mflEvaluationStoredSelectionLoading", loading);
   }
 
   function syncLoadButton() {
@@ -348,6 +360,7 @@
       seededMflPerUsd = true;
     }
 
+    syncStoredEvaluationActions();
     syncDiscountRateFallback();
     syncLoadButton();
     syncSearchFocusGuard();
@@ -375,7 +388,11 @@
   }
 
   function clearRouteState() {
-    document.documentElement.classList.remove("mflEvaluationInitialLoadVisible", "mflEvaluationReady");
+    document.documentElement.classList.remove(
+      "mflEvaluationInitialLoadVisible",
+      "mflEvaluationReady",
+      "mflEvaluationStoredSelectionLoading",
+    );
     document.body?.classList.remove("evaluationStaticChromeReady");
     searchFocusDismissed = false;
     syncSearchFocusGuard();
@@ -451,6 +468,21 @@
     html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
     body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
       visibility: visible !important;
+    }
+
+    html.mflEvaluationStoredSelectionLoading #evaluationButtons,
+    html.mflEvaluationStoredSelectionLoading #evaluationButtons[hidden] {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    html.mflEvaluationStoredSelectionLoading #evaluationResetButton,
+    html.mflEvaluationStoredSelectionLoading #evaluationResetButton[hidden],
+    html.mflEvaluationStoredSelectionLoading #evaluationPlayerPageButton,
+    html.mflEvaluationStoredSelectionLoading #evaluationPlayerPageButton[hidden] {
+      display: inline-flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationButtons,
