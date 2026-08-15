@@ -21,6 +21,20 @@
           margin-inline: 0;
         }
       }
+
+      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
+      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
+      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
+      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
+      body[data-page="club"] #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
+        outline: 0;
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: none;
+        transition: none !important;
+        animation: none !important;
+      }
     `;
     document.head.appendChild(style);
   }
