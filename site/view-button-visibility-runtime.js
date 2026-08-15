@@ -398,6 +398,7 @@
       || button.disabled
       || button.hidden
       || button.classList.contains("active")
+      || button.dataset.mflViewClicked === "true"
       || root.classList.contains("mflInteractionBusy");
 
     if (unavailable) {
