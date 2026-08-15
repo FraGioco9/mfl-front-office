@@ -290,10 +290,34 @@ function normalizeWatchlistViewAuthority(source) {
       '  state.currentWatchlistId = nextWatchlist?.id || "";',
       '  setActiveWatchlistIds(nextWatchlist?.playerIds || []);',
       '  renderWatchlistSwitcher();',
-      '  updateWatchlistUrl(!routeId, true, options.view);',
+      '  if (!options.preserveUrl) {',
+      '    updateWatchlistUrl(!routeId, true, options.view);',
+      '  }',
       '  queueCloudTableStateSave();',
     ],
     "watchlist route resolution keeps requested view",
+  );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
+      '    state.currentPage = pageName;',
+      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
+      '    await ensureWatchlistRoute(options);',
+      '  }',
+    ],
+    [
+      '  if (pageName === "watchlist" && hasWalletOptIn()) {',
+      '    state.currentPage = pageName;',
+      '    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";',
+      '    await ensureWatchlistRoute({',
+      '      ...options,',
+      '      preserveUrl: Boolean(options.skipNavigationLoading),',
+      '    });',
+      '  }',
+    ],
+    "watchlist nested route preserves committed URL",
   );
 
   nextSource = replaceCoreSourceIfPresent(
