@@ -155,8 +155,16 @@
     hideTooltip(true);
   }
 
+  function loadingActive() {
+    const root = document.documentElement;
+    return root.classList.contains("mflInteractionBusy")
+      || root.dataset.interactionBusy === "true"
+      || root.classList.contains("mflDataLoading")
+      || document.body?.getAttribute("aria-busy") === "true";
+  }
+
   function stateReady() {
-    if (!protectedRoute || document.body?.dataset.page !== "watchlist") return false;
+    if (!protectedRoute || document.body?.dataset.page !== "watchlist" || loadingActive()) return false;
     try {
       return typeof state === "object"
         && state?.currentPage === "watchlist"
@@ -249,8 +257,17 @@
   }
 
   function performHistoryChange(method, stateValue, title, value) {
+    const currentIsWatchlist = isWatchlistPath();
     const next = asUrl(value);
     const nextRoute = `${next.pathname}${next.search}${next.hash}`;
+
+    // The first exact Watchlist URL committed by the real router owns the
+    // navigation transaction. Later hydration/history helpers must not replace
+    // it with an intermediate default view while the destination is loading.
+    if (!protectedRoute && !currentIsWatchlist && EXACT_PATH.test(next.pathname)) {
+      protectedRoute = nextRoute;
+    }
+
     if (protectedRoute && isWatchlistPath(next.pathname) && nextRoute !== protectedRoute) {
       const result = originalReplaceState(stateValue, title, protectedRoute);
       syncWatchlistTitle();
