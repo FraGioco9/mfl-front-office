@@ -360,7 +360,11 @@
       if (url.origin === location.origin) return url.pathname;
     }
     const page = target?.closest("[data-page]")?.dataset.page;
-    if (page === "watchlist") return resolvedWatchlistNavigationPath(true) || "/watchlist";
+    if (page === "watchlist") {
+      const resolved = resolvedWatchlistNavigationPath(true);
+      if (resolved) return resolved;
+      return document.documentElement.dataset.storedWalletOptIn === "true" ? "" : "/watchlist";
+    }
     return page ? `/${page}` : "";
   }
 
@@ -437,11 +441,6 @@
       opacity: 0;
       transform: translateY(2px);
       transition: opacity 140ms ease, transform 140ms ease;
-    }
-    .watchlistDropdownRename::before,
-    .watchlistDropdownRename::after {
-      display: none !important;
-      content: none !important;
     }
     .watchlistRenameStableTooltip.visible {
       opacity: 1;
