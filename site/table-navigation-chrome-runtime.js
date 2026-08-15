@@ -462,7 +462,9 @@
   function onPointerDown(event) {
     const entityDestination = entityDestinationFromTarget(event.target);
     if (entityDestination) {
-      revealEntityDestination(entityDestination);
+      // Do not replace or hide the current page before the anchor's click event.
+      // The entity router needs the original link to remain connected long enough
+      // to commit the Agent/Club route.
       return;
     }
 
@@ -481,7 +483,14 @@
   function onClick(event) {
     const entityDestination = entityDestinationFromTarget(event.target);
     if (entityDestination) {
-      scheduleEntityButtonRepair(entityDestination);
+      // This listener runs in capture phase. Let the target's real navigation
+      // handler run first, then prime entity chrome only if the URL committed.
+      queueMicrotask(() => {
+        const committedRoute = entityRouteFromPath();
+        if (!committedRoute) return;
+        revealEntityDestination(committedRoute);
+        scheduleEntityButtonRepair(committedRoute);
+      });
       return;
     }
 
