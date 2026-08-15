@@ -7,6 +7,8 @@
   const RUNTIME_STYLE_ID = "mflDropdownRuntimeAdjustments";
   let clubClickedView = "";
   let clubClickedFrame = 0;
+  let clubPointerPressedView = "";
+  let clubPointerCommittedView = "";
 
   function installRuntimeStyles() {
     if (document.getElementById(RUNTIME_STYLE_ID)) return;
@@ -102,6 +104,17 @@
     return /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname);
   }
 
+  function clubViewButtonFromTarget(target) {
+    if (!(target instanceof Element) || !clubRouteActive()) return null;
+    const button = target.closest("#progressionPage .views .viewButton[data-view]");
+    return button instanceof HTMLButtonElement ? button : null;
+  }
+
+  function clubViewSwitchActive() {
+    return document.documentElement.classList.contains("mflDataLoading")
+      || Boolean(document.body?.classList.contains("clubViewSwitching"));
+  }
+
   function clubViewButton(viewName = clubClickedView) {
     if (!viewName) return null;
     return Array.from(document.querySelectorAll("#progressionPage .views .viewButton[data-view]"))
@@ -135,13 +148,13 @@
 
     const button = clubViewButton();
     if (button) {
-      // Club loading temporarily reuses Database/Progression state and can replace
-      // or restyle the view controls. Keep the clicked view genuinely selected on
-      // the live button until the pointer leaves, rather than masking hover with a
-      // route-scoped CSS rule that disappears during that handoff.
+      /* The club loader temporarily reuses Database/Progression state and can
+       * replace or restyle these controls. Keep the clicked target as the real
+       * active view for the entire handoff. A freshly-replaced button can report
+       * :hover=false for a frame, so never release this state while loading. */
       syncClubViewSelection(button);
       button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
-      if (!button.matches(":hover")) {
+      if (!clubViewSwitchActive() && !button.matches(":hover")) {
         button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
         stopClubViewClickPersistence();
         return;
@@ -202,9 +215,16 @@
 
     endNeutralFiltersOpen(target);
 
-    if (event.isPrimary !== false && event.button === 0 && clubRouteActive()) {
-      const viewButton = target.closest("#progressionPage .views .viewButton[data-view]");
-      if (viewButton instanceof HTMLButtonElement) persistClubViewClick(viewButton);
+    if (event.isPrimary !== false && event.button === 0) {
+      const viewButton = clubViewButtonFromTarget(target);
+      if (viewButton) {
+        clubPointerPressedView = String(viewButton.dataset.view || "");
+        clubPointerCommittedView = "";
+        persistClubViewClick(viewButton);
+      } else {
+        clubPointerPressedView = "";
+        clubPointerCommittedView = "";
+      }
     }
 
     if (target instanceof HTMLSelectElement && isSelectOpen(target)) {
@@ -221,6 +241,19 @@
     suppressNextClick.add(trigger);
     event.preventDefault();
     event.stopImmediatePropagation();
+  }, true);
+
+  document.addEventListener("pointerup", (event) => {
+    if (event.isPrimary === false || event.button !== 0) return;
+    const viewButton = clubViewButtonFromTarget(event.target);
+    const releasedView = String(viewButton?.dataset.view || "");
+    clubPointerCommittedView = releasedView && releasedView === clubPointerPressedView ? releasedView : "";
+    clubPointerPressedView = "";
+  }, true);
+
+  document.addEventListener("pointercancel", () => {
+    clubPointerPressedView = "";
+    clubPointerCommittedView = "";
   }, true);
 
   document.addEventListener("keydown", (event) => {
@@ -241,11 +274,24 @@
     }, 0);
   });
 
-  /* Only static button dropdowns need the follow-up click suppressed; native
-   * select option clicks must never be intercepted here. */
+  /* The shared view-button path already commits a mouse gesture on pointerup.
+   * app-core still has an older document capture click handler for club views;
+   * suppress only the follow-up click from that same pointer gesture so it cannot
+   * re-run club state and briefly restore the previous selected view. Keyboard
+   * clicks are untouched because they have no committed pointer gesture here. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
+    const clubViewButton = clubViewButtonFromTarget(target);
+    if (clubViewButton && clubPointerCommittedView
+      && String(clubViewButton.dataset.view || "") === clubPointerCommittedView) {
+      clubPointerCommittedView = "";
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    clubPointerCommittedView = "";
 
     if (target.closest("#openFiltersButton")) beginNeutralFiltersOpen();
 
