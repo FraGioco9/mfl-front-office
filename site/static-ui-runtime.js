@@ -17,6 +17,9 @@
 
   let frame = 0;
   let observer = null;
+  let accountIdentityRequestAddress = "";
+  let accountIdentityRequestPromise = null;
+  let accountIdentityAttemptedAddress = "";
 
   function installFirstPaintGuards() {
     if (document.getElementById(STYLE_ID)) return;
@@ -233,19 +236,109 @@
     }
   }
 
-  function syncAccountIdentity() {
+  function compactPayloadValue(row, columns, key) {
+    if (Array.isArray(row)) {
+      const index = columns.indexOf(key);
+      return index >= 0 ? row[index] : "";
+    }
+    return row && typeof row === "object" ? row[key] : "";
+  }
+
+  async function fetchAccountAgentName(address) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!normalizedAddress) return "";
+
+    const parameters = new URLSearchParams({
+      mode: "search",
+      type: "recent",
+      walletAddresses: normalizedAddress,
+    });
+    const response = await fetch(`/api/data?${parameters}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return "";
+
+    const agents = payload?.agents || {};
+    const columns = Array.isArray(agents.columns) ? agents.columns : [];
+    const rows = Array.isArray(agents.rows) ? agents.rows : [];
+    const row = rows.find((candidate) => (
+      normalizeAgentAddress(compactPayloadValue(candidate, columns, "wallet_address")) === normalizedAddress
+    ));
+    const name = normalizedAgentName(
+      compactPayloadValue(row, columns, "wallet_name"),
+      normalizedAddress,
+    );
+    if (name) cacheAccountAgentName(normalizedAddress, name);
+    return name;
+  }
+
+  function paintAccountIdentity(address, preferredName = "") {
     const accountUser = document.getElementById("accountEmail");
     if (!(accountUser instanceof HTMLButtonElement)) return;
-    const address = liveLinkedWalletAddress();
-    if (!address) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!normalizedAddress) {
       if (String(accountUser.textContent || "").trim() !== "Guest") accountUser.textContent = "Guest";
       return;
     }
 
-    const liveName = normalizedAgentName(liveAgentName(address), address);
-    if (liveName) cacheAccountAgentName(address, liveName);
-    const display = liveName || storedAccountAgentName(address) || address;
+    const name = normalizedAgentName(preferredName, normalizedAddress)
+      || normalizedAgentName(liveAgentName(normalizedAddress), normalizedAddress)
+      || storedAccountAgentName(normalizedAddress);
+    if (name) cacheAccountAgentName(normalizedAddress, name);
+    const display = name || normalizedAddress;
     if (String(accountUser.textContent || "").trim() !== display) accountUser.textContent = display;
+  }
+
+  function resolveAccountIdentity(address = liveLinkedWalletAddress(), force = false) {
+    const normalizedAddress = normalizeAgentAddress(address);
+    if (!normalizedAddress) return Promise.resolve("");
+
+    const knownName = normalizedAgentName(liveAgentName(normalizedAddress), normalizedAddress)
+      || storedAccountAgentName(normalizedAddress);
+    if (knownName) {
+      cacheAccountAgentName(normalizedAddress, knownName);
+      paintAccountIdentity(normalizedAddress, knownName);
+      return Promise.resolve(knownName);
+    }
+
+    if (accountIdentityRequestPromise && accountIdentityRequestAddress === normalizedAddress) {
+      return accountIdentityRequestPromise;
+    }
+    if (!force && accountIdentityAttemptedAddress === normalizedAddress) {
+      paintAccountIdentity(normalizedAddress);
+      return Promise.resolve("");
+    }
+
+    accountIdentityRequestAddress = normalizedAddress;
+    accountIdentityAttemptedAddress = normalizedAddress;
+    accountIdentityRequestPromise = fetchAccountAgentName(normalizedAddress)
+      .catch(() => "")
+      .then((name) => {
+        paintAccountIdentity(normalizedAddress, name);
+        return name;
+      })
+      .finally(() => {
+        accountIdentityRequestPromise = null;
+        accountIdentityRequestAddress = "";
+      });
+    return accountIdentityRequestPromise;
+  }
+
+  function syncAccountIdentity() {
+    const address = liveLinkedWalletAddress();
+    if (!address) {
+      accountIdentityAttemptedAddress = "";
+      paintAccountIdentity("");
+      return;
+    }
+
+    paintAccountIdentity(address);
+    if (!storedAccountAgentName(address)
+        && !normalizedAgentName(liveAgentName(address), address)) {
+      void resolveAccountIdentity(address);
+    }
   }
 
   function syncDatabaseStatsPage() {
@@ -359,6 +452,12 @@
     if (!frame) frame = requestAnimationFrame(sync);
   }
 
+  function onAccountButtonClick(event) {
+    const target = event.target instanceof Element ? event.target.closest("#accountButton") : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    void resolveAccountIdentity(liveLinkedWalletAddress(), true);
+  }
+
   installFirstPaintGuards();
   observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, {
@@ -368,6 +467,7 @@
     characterData: true,
     attributeFilter: ["class", "hidden", "data-page", "aria-hidden"],
   });
+  document.addEventListener("click", onAccountButtonClick, true);
   window.addEventListener("popstate", schedule);
   window.addEventListener("mfl:ready", schedule);
   sync();
@@ -375,6 +475,7 @@
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();
+    document.removeEventListener("click", onAccountButtonClick, true);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("mfl:ready", schedule);
     document.getElementById(STYLE_ID)?.remove();
