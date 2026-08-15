@@ -5,6 +5,7 @@
   previous?.destroy?.();
 
   const NEUTRAL_ATTRIBUTE = "data-mfl-initial-filter-neutral";
+  const VIEW_BUTTON_CLICKED_ATTRIBUTE = "data-mfl-view-clicked";
   const STYLE_ID = "mflFilterAddFocusRuntimeStyles";
   const BUTTON_GESTURE_SELECTOR = [
     "button",
@@ -46,6 +47,15 @@
       #sidebar .navButton * {
         -webkit-user-select: none;
         user-select: none;
+      }
+
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"],
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:hover,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:active,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]:focus-visible {
+        transition: none !important;
+        animation: none !important;
       }
 
       #filtersModal [${NEUTRAL_ATTRIBUTE}="true"],
@@ -164,6 +174,26 @@
     return control instanceof HTMLElement ? control : null;
   }
 
+  function viewButtonFromControl(control) {
+    return control instanceof HTMLButtonElement
+      && control.matches("#progressionPage .views .viewButton[data-view]")
+      ? control
+      : null;
+  }
+
+  function markViewButtonClicked(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    document.querySelectorAll(`#progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`)
+      .forEach((candidate) => {
+        if (candidate !== button) candidate.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+      });
+    button.setAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE, "true");
+  }
+
+  function clearViewButtonClicked(button) {
+    if (button instanceof HTMLElement) button.removeAttribute(VIEW_BUTTON_CLICKED_ATTRIBUTE);
+  }
+
   function draggedActivationMatches(event) {
     if (!(suppressClickControl instanceof HTMLElement)) return false;
     const target = event.target;
@@ -274,9 +304,13 @@
     const startControl = gestureStartControl;
     const dragged = gestureDragged;
     const releaseControl = buttonGestureFromTarget(event.target);
+    const validViewButton = !dragged && releaseControl === startControl
+      ? viewButtonFromControl(releaseControl)
+      : null;
     const invalidButtonRelease = Boolean(releaseControl && (dragged || releaseControl !== startControl));
     clearGesture();
 
+    if (validViewButton) markViewButtonClicked(validViewButton);
     if (!invalidButtonRelease) return;
 
     // A pointer release can land on a button even when the press began somewhere
@@ -296,6 +330,15 @@
   }
 
   function onPointerOut(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const clickedViewButton = target?.closest?.(`[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`);
+    if (clickedViewButton instanceof HTMLElement) {
+      const next = event.relatedTarget;
+      if (!(next instanceof Node && clickedViewButton.contains(next))) {
+        clearViewButtonClicked(clickedViewButton);
+      }
+    }
+
     const control = neutralControlFromTarget(event.target);
     if (!control) return;
     const next = event.relatedTarget;
@@ -357,6 +400,7 @@
     document.removeEventListener("focusin", onFocusIn, true);
     viewButtonsContainer?.removeEventListener("click", onSharedViewButtonClick);
     document.querySelectorAll(`[${NEUTRAL_ATTRIBUTE}="true"]`).forEach(clearInitialNeutral);
+    document.querySelectorAll(`[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"]`).forEach(clearViewButtonClicked);
     document.getElementById(STYLE_ID)?.remove();
   }
 
