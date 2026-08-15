@@ -425,6 +425,8 @@ function installEvaluationRecentStateBridge() {
         || typeof saveTableStateLocally !== "function") return false;
       if (restoreRecentEvaluationState.__mflRecentStateOnly) return true;
 
+      // app-core may have restored an old local table-state value synchronously
+      // before this bridge is installed. Do not let that value reach Evaluation.
       state.recentEvaluationPlayerIds = [];
 
       const recentStateOnlyRestore = function(savedState) {
@@ -440,12 +442,16 @@ function installEvaluationRecentStateBridge() {
       Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
       restoreRecentEvaluationState = recentStateOnlyRestore;
 
+      // Evaluation recents persist through the account table state (Supabase),
+      // never through the dedicated browser-storage recent-search key.
       persistRecentSearchStates = function persistSearchStatesWithoutEvaluationLocalStorage() {
         saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
         saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
         saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
       };
 
+      // Keep recentEvaluationPlayerIds in the cloud payload while stripping it
+      // from every locally saved table-state copy.
       const originalSaveTableStateLocally = saveTableStateLocally;
       saveTableStateLocally = function saveTableStateWithoutEvaluationRecents(tableState) {
         if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
@@ -456,6 +462,8 @@ function installEvaluationRecentStateBridge() {
         return originalSaveTableStateLocally(localState);
       };
 
+      // Evaluation empty search priming is exact recentEvaluationPlayerIds only.
+      // The dedicated runtime starts this while wallet preferences are still loading.
       if (typeof primeEmptyEvaluationSearch === "function"
         && !primeEmptyEvaluationSearch.__mflDataOnly) {
         const dataOnlyPrimeEmptyEvaluationSearch = function() {
@@ -467,6 +475,8 @@ function installEvaluationRecentStateBridge() {
         primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
       }
 
+      // Evaluation cannot leave its loading/readiness phase before the exact
+      // Supabase recent players have been hydrated and rendered for an empty field.
       if (typeof finishEvaluationReadiness === "function"
         && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
         const originalFinishEvaluationReadiness = finishEvaluationReadiness;
@@ -505,6 +515,8 @@ async function start() {
 
   await loadApplicationCore();
   installEvaluationRecentStateBridge();
+  // This owner must exist before startApp reaches Evaluation readiness. Supabase
+  // can then trigger exact recent-player hydration while the page is still loading.
   await loadClassicScript("/evaluation-search-state-runtime.js");
   installCoreBridges();
   const evaluationStartup = /^\/evaluation\/?$/i.test(window.location.pathname);
