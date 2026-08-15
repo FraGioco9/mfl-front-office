@@ -344,6 +344,34 @@ body.clubViewSwitching #progressionPage {
   pointer-events: none !important;
 }
 
+/* A club view is visually selected on pointer-down, using the shared clicked
+ * marker without changing the real .active state before pointer-up. This gives
+ * immediate feedback without reintroducing the old view-state rollback. */
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton[data-mfl-view-clicked="true"],
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton[data-mfl-view-clicked="true"]:hover,
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton[data-mfl-view-clicked="true"]:active,
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton[data-mfl-view-clicked="true"]:focus,
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton[data-mfl-view-clicked="true"]:focus-visible {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* While the new club view is being pressed, make the previously active button
+ * look unselected immediately. Its real state is left untouched until pointer-up. */
+body[data-page="club"] #progressionPage .views:has(.viewButton[data-mfl-view-clicked="true"]) .viewButton.active:not([data-mfl-view-clicked="true"]) {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Club view switching temporarily reuses Database/Progression page state. Keep
  * the already-selected view button visually final during that handoff, so the
  * generic hover transition cannot reappear before body[data-page="club"] returns. */
