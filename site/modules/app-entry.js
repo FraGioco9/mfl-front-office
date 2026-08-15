@@ -241,25 +241,46 @@ function normalizeContextualAgentNavigation(source) {
   return nextSource;
 }
 
-function preserveWatchlistRouteViewDuringPreferenceHydration(source) {
-  return replaceCoreSourceIfPresent(
-    source,
+function normalizeWatchlistViewAuthority(source) {
+  let nextSource = source;
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['  state.view = normalizeViewForPage(options.view || savedState.view, pageName);'],
     [
-      '      if (tableStateChanged && tablePageKey()) {',
-      '        restoreSavedTableState(tablePageKey());',
-      '        applyFilters({ save: false });',
-      '      }',
+      '  const routeView = pageName === "watchlist" ? watchlistTargetFromUrl().view : "";',
+      '  state.view = normalizeViewForPage(options.view || routeView || savedState.view, pageName);',
     ],
-    [
-      '      if (tableStateChanged && tablePageKey()) {',
-      '        const pageKey = tablePageKey();',
-      '        const routeView = pageKey === "watchlist" ? watchlistTargetFromUrl().view : "";',
-      '        restoreSavedTableState(pageKey, routeView ? { view: routeView } : {});',
-      '        applyFilters({ save: false });',
-      '      }',
-    ],
-    "watchlist route view during preference hydration",
+    "watchlist saved-state route precedence",
   );
+
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      '    setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {',
+      '      const routeView = pageName === "watchlist" ? routeViewFromPath() : "";',
+      '      const nextOptions = routeView ? { ...options, view: routeView } : options;',
+      '      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);',
+      '      keepSidebarExpanded();',
+      '      if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);',
+      '      return result;',
+      '    };',
+    ],
+    [
+      '    setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {',
+      '      const requestedView = pageName === "watchlist" ? String(options?.view || "") : "";',
+      '      const routeView = pageName === "watchlist" && !requestedView ? routeViewFromPath() : "";',
+      '      const nextOptions = routeView ? { ...options, view: routeView } : options;',
+      '      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);',
+      '      keepSidebarExpanded();',
+      '      if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);',
+      '      return result;',
+      '    };',
+    ],
+    "watchlist explicit view precedence",
+  );
+
+  return nextSource;
 }
 
 function scopeProgressionPermissionToProgressionPage(source) {
@@ -384,7 +405,7 @@ async function loadApplicationCore() {
     'agents: ["attributes", "contracts", "next", "current", "all"]',
   );
   source = normalizeContextualAgentNavigation(source);
-  source = preserveWatchlistRouteViewDuringPreferenceHydration(source);
+  source = normalizeWatchlistViewAuthority(source);
   source = scopeProgressionPermissionToProgressionPage(source);
 
   const script = document.createElement("script");
