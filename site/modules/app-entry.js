@@ -193,6 +193,69 @@ function primeEvaluationDiscountRatePlaceholder() {
 
 primeEvaluationDiscountRatePlaceholder();
 
+function replaceRequiredCoreSource(source, before, after, label) {
+  if (!source.includes(before)) {
+    throw new Error(`Could not apply core permission scope: ${label}.`);
+  }
+  return source.replace(before, after);
+}
+
+function scopeProgressionPermissionToProgressionPage(source) {
+  let nextSource = source;
+
+  nextSource = replaceRequiredCoreSource(
+    nextSource,
+    `function allowedViewsForPage(pageName = tablePageKey() || "progression") {\n  if (pageName === "watchlist" && !hasProgressionAccess()) {\n    return ["attributes", "next", "contracts"];\n  }\n\n  return pageViewOptions[pageName] || pageViewOptions.progression;\n}`,
+    `function allowedViewsForPage(pageName = tablePageKey() || "progression") {\n  return pageViewOptions[pageName] || pageViewOptions.progression;\n}`,
+    "watchlist view availability",
+  );
+
+  nextSource = replaceRequiredCoreSource(
+    nextSource,
+    `function defaultViewForPage(pageName = tablePageKey() || "progression") {\n  if (pageName === "watchlist" && !hasProgressionAccess()) {\n    return "attributes";\n  }\n\n  return defaultPageViews[pageName] || "current";\n}`,
+    `function defaultViewForPage(pageName = tablePageKey() || "progression") {\n  return defaultPageViews[pageName] || "current";\n}`,
+    "watchlist default view",
+  );
+
+  nextSource = replaceRequiredCoreSource(
+    nextSource,
+    `  if (pageName === "player") {\n    if (hasProgressionAccess()) {\n      return "full";\n    }\n    return hasWalletOptIn() ? "owned" : "public";\n  }\n\n  if (pageName === "watchlist") {\n    return hasProgressionAccess() ? "full" : "public";\n  }`,
+    `  if (pageName === "player") {\n    return hasWalletOptIn() ? "owned" : "public";\n  }\n\n  if (pageName === "watchlist") {\n    return "public";\n  }`,
+    "non-progression data access",
+  );
+
+  nextSource = replaceRequiredCoreSource(
+    nextSource,
+    `      access: currentDataAccess(["current", "all"].includes(clubTarget.view) ? "progression" : "database"),`,
+    `      access: "public",`,
+    "club route access",
+  );
+
+  nextSource = replaceRequiredCoreSource(
+    nextSource,
+    `  document.body.classList.toggle("guest", !hasProgressionAccess());`,
+    `  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());`,
+    "guest presentation scope",
+  );
+
+  return nextSource;
+}
+
+function installProgressionPermissionScopeStyles() {
+  if (document.getElementById("mflProgressionPermissionScopeStyles")) return;
+  const style = document.createElement("style");
+  style.id = "mflProgressionPermissionScopeStyles";
+  style.textContent = `
+    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"]
+      #progressionPage .viewButton[data-view="current"],
+    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"]
+      #progressionPage .viewButton[data-view="all"] {
+      display: inline-flex !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 async function loadApplicationCore() {
   const path = "/modules/app-core.js";
   const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
@@ -216,6 +279,7 @@ async function loadApplicationCore() {
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
   );
+  source = scopeProgressionPermissionToProgressionPage(source);
 
   const script = document.createElement("script");
   script.dataset.mflRuntime = path;
@@ -337,6 +401,7 @@ async function start() {
   await responsiveStylesReady;
   installApiFetchPolicy();
   await loadScriptGroup(EARLY_RUNTIME_SCRIPTS);
+  installProgressionPermissionScopeStyles();
 
   if (/^\/changelog\/?$/i.test(window.location.pathname)) {
     const changelogWindow = /** @type {Window & { __mflChangelogHistoryReady?: Promise<boolean> }} */ (window);
