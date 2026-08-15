@@ -19,6 +19,7 @@
     'input[type="radio"]',
   ].join(", ");
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
+  const viewButtonsContainer = document.querySelector("#progressionPage .views");
   let destroyed = false;
   let pointerFocusedControl = null;
   let gestureStartControl = null;
@@ -197,6 +198,19 @@
     if (button && document.activeElement === button) button.blur();
   }
 
+  function onSharedViewButtonClick(event) {
+    if (!/^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname)) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest?.(".viewButton[data-view]");
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    // The shared button listener on the button itself has already run by the time
+    // this bubble listener fires. Stop only the obsolete club document listener
+    // from processing the same click a second time. My Players and clubs now use
+    // the same pointerup/click activation path.
+    event.stopPropagation();
+  }
+
   function onChange(event) {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement) || target.id !== "addFilterSelect" || !target.value) return;
@@ -325,6 +339,7 @@
   document.addEventListener("pointerout", onPointerOut, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn, true);
+  viewButtonsContainer?.addEventListener("click", onSharedViewButtonClick);
 
   function destroy() {
     destroyed = true;
@@ -340,6 +355,7 @@
     document.removeEventListener("pointerout", onPointerOut, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("focusin", onFocusIn, true);
+    viewButtonsContainer?.removeEventListener("click", onSharedViewButtonClick);
     document.querySelectorAll(`[${NEUTRAL_ATTRIBUTE}="true"]`).forEach(clearInitialNeutral);
     document.getElementById(STYLE_ID)?.remove();
   }
