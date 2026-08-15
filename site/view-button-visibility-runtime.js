@@ -50,6 +50,24 @@
   let pendingStatsTableNavigation = null;
   let pendingStatsTableTimer = 0;
 
+  function tableRoutePageFromPath(pathname = window.location.pathname) {
+    const first = String(pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
+    if (first === "my-players") return "myplayers";
+    if (first === "clubs" || first === "club") return "club";
+    if (["database", "mfl", "progression", "watchlist", "agents"].includes(first)) return first;
+    return "";
+  }
+
+  function syncTableRoutePage() {
+    const pageName = tableRoutePageFromPath();
+    const root = document.documentElement;
+    if (pageName) root.dataset.mflTableRoutePage = pageName;
+    else delete root.dataset.mflTableRoutePage;
+    return pageName;
+  }
+
+  syncTableRoutePage();
+
   const style = document.createElement("style");
   style.id = "mflViewButtonVisibilityGuard";
   style.textContent = `
@@ -102,14 +120,14 @@
       animation: mflStatsBarRise 220ms ease-out !important;
     }
 
-    body[data-page="agents"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton:is(
       [data-view="attributes"],
       [data-view="contracts"],
       [data-view="next"],
       [data-view="current"],
       [data-view="all"]
     ),
-    body[data-page="club"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton:is(
       [data-view="attributes"],
       [data-view="contracts"],
       [data-view="current"],
@@ -118,47 +136,41 @@
       display: inline-flex !important;
     }
 
-    body[data-page="agents"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
-    body[data-page="agents"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
-    body[data-page="agents"] #progressionPage .viewButton[data-view="next"] { order: 3; }
-    body[data-page="agents"] #progressionPage .viewButton[data-view="current"] { order: 4; }
-    body[data-page="agents"] #progressionPage .viewButton[data-view="all"] { order: 5; }
-    body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
-    body[data-page="club"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
-    body[data-page="club"] #progressionPage .viewButton[data-view="current"] { order: 3; }
-    body[data-page="club"] #progressionPage .viewButton[data-view="all"] { order: 4; }
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="next"] { order: 3; }
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="current"] { order: 4; }
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="all"] { order: 5; }
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="current"] { order: 3; }
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="all"] { order: 4; }
 
-    body[data-page="database"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="database"] #progressionPage .viewButton:is(
       [data-view="next"],
       [data-view="current"],
       [data-view="all"]
     ),
-    body[data-page="mfl"] #progressionPage .viewButton:is(
-      [data-view="next"],
-      [data-view="contracts"],
-      [data-view="current"],
-      [data-view="all"]
-    ),
-    body[data-page="mflstats"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="mfl"] #progressionPage .viewButton:is(
       [data-view="next"],
       [data-view="contracts"],
       [data-view="current"],
       [data-view="all"]
     ),
-    body[data-page="progression"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="progression"] #progressionPage .viewButton:is(
       [data-view="attributes"],
       [data-view="stats"],
       [data-view="next"],
       [data-view="contracts"]
     ),
-    body[data-page="agents"] #progressionPage .viewButton[data-view="stats"],
-    body[data-page="watchlist"] #progressionPage .viewButton[data-view="stats"],
-    body[data-page="myplayers"] #progressionPage .viewButton[data-view="stats"],
-    body[data-page="club"] #progressionPage .viewButton:is(
+    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="stats"],
+    html[data-mfl-table-route-page="watchlist"] #progressionPage .viewButton[data-view="stats"],
+    html[data-mfl-table-route-page="myplayers"] #progressionPage .viewButton[data-view="stats"],
+    html[data-mfl-table-route-page="club"] #progressionPage .viewButton:is(
       [data-view="stats"],
       [data-view="next"]
     ),
-    html[data-stored-progression-access="false"] body[data-page="watchlist"] #progressionPage .viewButton:is(
+    html[data-stored-progression-access="false"][data-mfl-table-route-page="watchlist"] #progressionPage .viewButton:is(
       [data-view="current"],
       [data-view="all"]
     ) {
@@ -221,7 +233,7 @@
   }
 
   function syncDatabaseViewButtons() {
-    if (document.body?.dataset.page !== "database") return;
+    if (document.documentElement.dataset.mflTableRoutePage !== "database") return;
     document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
       const shouldHide = !DATABASE_VIEWS.has(String(button.dataset.view || ""));
@@ -230,6 +242,7 @@
   }
 
   function syncTableRouteChrome() {
+    syncTableRoutePage();
     primeStatsFilterBars();
     syncTablePageQuickFilterVisibility();
     syncDatabaseViewButtons();
@@ -449,6 +462,7 @@
     }
     document.documentElement.classList.remove("mflStatsFirstPaintGuard");
     if (document.body?.dataset.page !== pageName) document.body.dataset.page = pageName;
+    document.documentElement.dataset.mflTableRoutePage = pageName;
     document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
       const active = String(button.dataset.view || "") === viewName;
@@ -575,6 +589,8 @@
   document.addEventListener("click", onClick, true);
   document.addEventListener("pointerout", onPointerOut, true);
   window.addEventListener("blur", onWindowBlur);
+  window.addEventListener("popstate", syncTableRoutePage);
+  window.addEventListener("pageshow", syncTableRoutePage);
 
   function destroy() {
     databaseVisibilityObserver?.disconnect();
@@ -591,6 +607,8 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("pointerout", onPointerOut, true);
     window.removeEventListener("blur", onWindowBlur);
+    window.removeEventListener("popstate", syncTableRoutePage);
+    window.removeEventListener("pageshow", syncTableRoutePage);
     document.querySelectorAll(`#progressionPage .viewButton[${POINTER_HOVER_ATTRIBUTE}="true"]`).forEach((button) => {
       clearPointerHover(button);
     });
