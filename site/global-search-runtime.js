@@ -69,11 +69,27 @@
           normalizeSearchText = whitespaceAwareNormalizeSearchText;
         }
 
-        if (typeof searchMatchScore === "function" && !searchMatchScore.__mflTokenAware) {
-          const tokenAwareSearchMatchScore = function(query, primaryText, secondaryText = "") {
+        if (typeof searchMatchScore === "function" && !searchMatchScore.__mflSurnameFirst) {
+          const surnameFirstSearchMatchScore = function(query, primaryText, secondaryText = "") {
             const normalizedQuery = normalizeSearchText(query);
             const primary = normalizeSearchText(primaryText);
             const secondary = normalizeSearchText(secondaryText);
+            const primaryIsPlayerName = /^\\d+$/.test(secondary) && primary && !/^\\d+$/.test(primary);
+
+            if (primaryIsPlayerName) {
+              const surname = searchTokens(primary).at(-1) || "";
+              if (secondary === normalizedQuery) return 120;
+              if (surname === normalizedQuery) return 110;
+              if (surname.startsWith(normalizedQuery)) return 95;
+              if (primary === normalizedQuery) return 90;
+              if (secondary.startsWith(normalizedQuery)) return 85;
+              if (primary.startsWith(normalizedQuery)) return 75;
+              if (surname.includes(normalizedQuery)) return 65;
+              if (primary.includes(normalizedQuery)) return 50;
+              if (orderedTokensMatch(primary, normalizedQuery)) return 45;
+              if (secondary.includes(normalizedQuery)) return 40;
+              return 0;
+            }
 
             if (primary === normalizedQuery || secondary === normalizedQuery) return 100;
             if (primary.startsWith(normalizedQuery)) return 80;
@@ -84,24 +100,29 @@
             if (orderedTokensMatch(secondary, normalizedQuery)) return 35;
             return 0;
           };
-          Object.defineProperty(tokenAwareSearchMatchScore, "__mflTokenAware", { value: true });
-          searchMatchScore = tokenAwareSearchMatchScore;
+          Object.defineProperty(surnameFirstSearchMatchScore, "__mflSurnameFirst", { value: true });
+          searchMatchScore = surnameFirstSearchMatchScore;
         }
 
-        if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflTokenAware) {
-          const tokenAwareEvaluationSearchMatches = function(query) {
+        if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflSurnameFirst) {
+          const surnameFirstEvaluationSearchMatches = function(query) {
             if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
             const results = [];
             state.evaluationSearchIndex.forEach((entry) => {
-              if (entry.retired || (!orderedTokensMatch(entry.id, query) && !orderedTokensMatch(entry.name, query))) return;
-              results.push(entry);
+              if (entry.retired) return;
+              const score = searchMatchScore(query, entry.name, entry.id);
+              if (score <= 0) return;
+              results.push({ entry, score });
             });
             return results
-              .sort((a, b) => b.overall - a.overall || a.nameDisplay.localeCompare(b.nameDisplay))
-              .slice(0, 5);
+              .sort((a, b) => b.score - a.score
+                || b.entry.overall - a.entry.overall
+                || a.entry.nameDisplay.localeCompare(b.entry.nameDisplay))
+              .slice(0, 5)
+              .map((result) => result.entry);
           };
-          Object.defineProperty(tokenAwareEvaluationSearchMatches, "__mflTokenAware", { value: true });
-          evaluationSearchMatches = tokenAwareEvaluationSearchMatches;
+          Object.defineProperty(surnameFirstEvaluationSearchMatches, "__mflSurnameFirst", { value: true });
+          evaluationSearchMatches = surnameFirstEvaluationSearchMatches;
         }
 
         return true;

@@ -67,6 +67,8 @@ function playerSearchRows(query, limit, options = {}) {
     : "";
   const contains = literalLikePattern(query);
   const prefix = literalLikePattern(query, true);
+  const surnamePrefix = `% ${prefix}`;
+  const surnameExact = surnamePrefix.slice(0, -1);
   const useRuntimeSearch = tableExists("runtime_player_search");
   const fromSql = useRuntimeSearch
     ? "runtime_player_search s JOIN players p ON p.player_id = s.player_id"
@@ -79,15 +81,17 @@ function playerSearchRows(query, limit, options = {}) {
         OR ${normalizedName} LIKE ? ESCAPE '\\')
        ${activeCondition}
      ORDER BY CASE
-       WHEN CAST(p.player_id AS TEXT) = ? OR ${normalizedName} = ? THEN 0
-       WHEN CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\' THEN 1
+       WHEN CAST(p.player_id AS TEXT) = ? THEN 0
+       WHEN ${normalizedName} = ? OR ${normalizedName} LIKE ? ESCAPE '\\' THEN 1
        WHEN ${normalizedName} LIKE ? ESCAPE '\\' THEN 2
-       ELSE 3
+       WHEN CAST(p.player_id AS TEXT) LIKE ? ESCAPE '\\' THEN 3
+       WHEN ${normalizedName} LIKE ? ESCAPE '\\' THEN 4
+       ELSE 5
      END,
      p.overall DESC,
      p.player_id DESC
      LIMIT ?`,
-    [contains, contains, query, query, prefix, prefix, limit],
+    [contains, contains, query, query, surnameExact, surnamePrefix, prefix, prefix, limit],
   );
   return { columns, rows: rowsAsArrays(rows, columns) };
 }
