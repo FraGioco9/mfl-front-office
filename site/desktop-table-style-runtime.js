@@ -164,7 +164,7 @@
       .agentWalletCopyTarget {
         position: relative;
         display: inline-block;
-        color: var(--text);
+        color: inherit;
         font: inherit;
         font-weight: inherit;
         line-height: inherit;
@@ -173,9 +173,10 @@
       }
 
       .agentWalletCopyTarget:hover,
-      .agentWalletCopyTarget:focus-visible {
-        color: var(--primary);
-        text-decoration: none;
+      .agentWalletCopyTarget:focus-visible,
+      .agentWalletCopyTarget:active {
+        color: inherit;
+        text-decoration: underline;
         outline: 0;
       }
     `;
