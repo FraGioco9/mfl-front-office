@@ -70,6 +70,20 @@
         box-shadow: none;
       }
 
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"].active,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"].active:hover,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"].active:active,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"].active:focus,
+      #progressionPage .views .viewButton[${VIEW_BUTTON_CLICKED_ATTRIBUTE}="true"].active:focus-visible {
+        outline: 0;
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: none;
+        transition: none !important;
+        animation: none !important;
+      }
+
       @supports (appearance: base-select) {
         select[data-mfl-dropdown-enhanced="true"]::picker(select),
         #pageSizeSelect::picker(select) {
@@ -222,8 +236,10 @@
     }
   }
 
-  function openEnhancedSelect() {
-    return Array.from(document.querySelectorAll('select[data-mfl-dropdown-enhanced="true"]'))
+  function openSelect() {
+    const active = document.activeElement;
+    if (active instanceof HTMLSelectElement && isSelectOpen(active)) return active;
+    return Array.from(document.querySelectorAll("select"))
       .find((select) => isSelectOpen(select)) || null;
   }
 
@@ -281,11 +297,11 @@
 
   function onEnterBubble(event) {
     if (event.key !== "Enter") return;
-    if (!openEnhancedSelect()) return;
+    if (!openSelect()) return;
 
-    // The native select has already received the key by the time this document
-    // bubble listener runs. Keep its default Enter action so the highlighted
-    // option is committed, but do not let legacy popup-level Enter shortcuts run.
+    // Let the open select keep its native Enter default action so the highlighted
+    // option is committed. Stop only later popup-level Enter shortcuts from also
+    // treating the same key press as Apply/Save/Confirm.
     event.stopImmediatePropagation();
   }
 
@@ -402,10 +418,10 @@
   }
 
   function onKeyDown(event) {
-    if (event.key === "Enter" && visibleModalBackdrop() && !openEnhancedSelect()) {
-      // Enter inside any popup is intentionally inert. Dropdowns are the one
-      // exception and are allowed to receive Enter so the highlighted option can
-      // be committed by the native select before onEnterBubble stops old handlers.
+    if (event.key === "Enter" && visibleModalBackdrop() && !openSelect()) {
+      // Enter inside any popup is intentionally inert. An actually open select is
+      // the exception: it receives Enter normally so its highlighted option can
+      // be committed, including when that dropdown lives inside the popup.
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
