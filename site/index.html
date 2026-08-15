@@ -8,6 +8,64 @@
       (() => {
         const root = document.documentElement;
         root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+
+        const TABLE_VIEW_CONFIG = Object.freeze({
+          database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
+          mfl: Object.freeze({ order: ["attributes", "stats"], fallback: "attributes" }),
+          progression: Object.freeze({ order: ["current", "all"], fallback: "current" }),
+          agents: Object.freeze({ order: ["attributes", "contracts", "next", "current", "all"], fallback: "attributes" }),
+          watchlist: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "current" }),
+          myplayers: Object.freeze({ order: ["attributes", "next", "contracts", "current", "all"], fallback: "attributes" }),
+          club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
+        });
+        const VIEW_BY_SLUG = Object.freeze({
+          attributes: "attributes",
+          squad: "attributes",
+          stats: "stats",
+          "next-overall": "next",
+          contracts: "contracts",
+          "current-season": "current",
+          "all-time": "all",
+        });
+        window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
+
+        const pathParts = String(window.location.pathname || "/").split("/").filter(Boolean);
+        const firstPart = String(pathParts[0] || "").toLowerCase();
+        const tablePage = firstPart === "my-players"
+          ? "myplayers"
+          : firstPart === "clubs" || firstPart === "club"
+            ? "club"
+            : ["database", "mfl", "progression", "watchlist", "agents"].includes(firstPart)
+              ? firstPart
+              : "";
+        const tableConfig = TABLE_VIEW_CONFIG[tablePage];
+        if (tableConfig) {
+          const lastPart = String(pathParts.at(-1) || "").toLowerCase();
+          const requestedView = VIEW_BY_SLUG[lastPart] || "";
+          const activeView = tableConfig.order.includes(requestedView) ? requestedView : tableConfig.fallback;
+          root.dataset.initialTablePage = tablePage;
+          root.dataset.initialTableView = activeView;
+
+          const routeSelector = `html:not(.mflInitialRouteResolved)[data-initial-table-page="${tablePage}"]`;
+          const buttonSelector = (viewName) => `${routeSelector} #progressionPage .views > .viewButton[data-view="${viewName}"]`;
+          const firstPaintStyle = document.createElement("style");
+          const rules = [
+            `${routeSelector} #progressionPage .views > .viewButton { display: none !important; border-color: var(--border-strong) !important; background: var(--surface) !important; color: var(--text) !important; }`,
+            `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex !important; }`,
+            ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
+            `${buttonSelector(activeView)} { border-color: var(--primary) !important; background: var(--primary) !important; color: #ffffff !important; }`,
+          ];
+          if (tablePage === "club") {
+            rules.push(
+              `${buttonSelector("attributes")} { font-size: 0 !important; }`,
+              `${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`,
+            );
+          }
+          firstPaintStyle.id = "mflInitialTableViewFirstPaint";
+          firstPaintStyle.textContent = rules.join("\n");
+          document.head.appendChild(firstPaintStyle);
+        }
+
         const evaluationParams = new URLSearchParams(window.location.search);
         root.dataset.initialEvaluationSelection = evaluationParams.get("player") || evaluationParams.get("saved") || evaluationParams.get("share") ? "true" : "false";
         try {
@@ -352,6 +410,7 @@
             <article>
               <span>Packable players</span>
               <strong id="mflStatsPackablePlayers">-</strong>
+              <small>available in packs</small>
             </article>
             <article>
               <span>Aged players</span>
@@ -591,7 +650,7 @@
       <section class="addWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="addWatchlistTitle">
         <header class="filtersHeader">
           <h2 id="addWatchlistTitle">Add a watchlist</h2>
-          <button id="closeAddWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close add watchlist"></button>
+          <button id="closeAddWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close add watchlist chooser"></button>
         </header>
         <section class="addWatchlistBody">
           <label class="field">
