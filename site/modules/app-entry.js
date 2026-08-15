@@ -194,6 +194,144 @@ function primeEvaluationDiscountRatePlaceholder() {
 
 primeEvaluationDiscountRatePlaceholder();
 
+const ENTITY_ROUTE_VIEWS = Object.freeze({
+  agents: Object.freeze({
+    views: Object.freeze(["attributes", "contracts", "next", "current", "all"]),
+    labels: Object.freeze({
+      attributes: "Attributes",
+      contracts: "Contracts",
+      next: "Next Overall",
+      current: "Current Season",
+      all: "All Time",
+    }),
+    slugs: Object.freeze({
+      attributes: "attributes",
+      contracts: "contracts",
+      "next-overall": "next",
+      "current-season": "current",
+      "all-time": "all",
+    }),
+  }),
+  club: Object.freeze({
+    views: Object.freeze(["attributes", "contracts", "current", "all"]),
+    labels: Object.freeze({
+      attributes: "Squad",
+      contracts: "Contracts",
+      current: "Current Season",
+      all: "All Time",
+    }),
+    slugs: Object.freeze({
+      squad: "attributes",
+      attributes: "attributes",
+      contracts: "contracts",
+      "current-season": "current",
+      "all-time": "all",
+    }),
+  }),
+});
+
+function currentEntityRouteView() {
+  const parts = String(window.location.pathname || "").split("/").filter(Boolean);
+  const root = String(parts[0] || "").toLowerCase();
+  if (root === "agents" && parts[1]) {
+    const config = ENTITY_ROUTE_VIEWS.agents;
+    const slug = String(parts[2] || "attributes").toLowerCase();
+    return { page: "agents", config, view: config.slugs[slug] || "attributes" };
+  }
+  if ((root === "clubs" || root === "club") && parts[1]) {
+    const config = ENTITY_ROUTE_VIEWS.club;
+    const slug = String(parts[2] || "squad").toLowerCase();
+    return { page: "club", config, view: config.slugs[slug] || "attributes" };
+  }
+  return null;
+}
+
+function syncEntityRouteViews() {
+  const route = currentEntityRouteView();
+  if (!route) return;
+
+  if (document.body?.dataset.page !== route.page) document.body.dataset.page = route.page;
+  const views = document.querySelector("#progressionPage .views");
+  if (!(views instanceof HTMLElement)) return;
+
+  const allowed = new Set(route.config.views);
+  const buttons = Array.from(views.querySelectorAll(":scope > .viewButton[data-view]"));
+  buttons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const viewName = String(button.dataset.view || "");
+    const visible = allowed.has(viewName);
+    if (button.hidden === visible) button.hidden = !visible;
+    if (button.hasAttribute("aria-hidden")) button.removeAttribute("aria-hidden");
+    const label = route.config.labels[viewName];
+    if (label && button.textContent !== label) button.textContent = label;
+    const active = visible && viewName === route.view;
+    if (button.classList.contains("active") !== active) button.classList.toggle("active", active);
+    if (button.getAttribute("aria-pressed") !== String(active)) {
+      button.setAttribute("aria-pressed", String(active));
+    }
+  });
+
+  const switcher = document.getElementById("watchlistSwitcher");
+  route.config.views.forEach((viewName) => {
+    const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
+    if (button) views.insertBefore(button, switcher || null);
+  });
+}
+
+function installEntityRouteViewSync() {
+  if (window.__mflEntityRouteViewSyncInstalled) return;
+  window.__mflEntityRouteViewSyncInstalled = true;
+
+  let frame = 0;
+  const schedule = () => {
+    syncEntityRouteViews();
+    queueMicrotask(syncEntityRouteViews);
+    if (frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      syncEntityRouteViews();
+    });
+  };
+
+  const nativePushState = history.pushState;
+  const nativeReplaceState = history.replaceState;
+  history.pushState = function pushStateWithEntityViews(...args) {
+    const result = nativePushState.apply(this, args);
+    schedule();
+    return result;
+  };
+  history.replaceState = function replaceStateWithEntityViews(...args) {
+    const result = nativeReplaceState.apply(this, args);
+    schedule();
+    return result;
+  };
+
+  window.addEventListener("popstate", schedule);
+  window.addEventListener("mfl:ready", schedule);
+
+  const observer = new MutationObserver(() => {
+    if (currentEntityRouteView()) schedule();
+  });
+  if (document.body) {
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-page"],
+    });
+  }
+  const views = document.querySelector("#progressionPage .views");
+  if (views instanceof HTMLElement) {
+    observer.observe(views, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ["hidden", "class", "aria-pressed"],
+    });
+  }
+
+  schedule();
+}
+
+installEntityRouteViewSync();
+
 function showStartupError(error) {
   console.error(error);
   document.documentElement.dataset.mflReady = "error";
