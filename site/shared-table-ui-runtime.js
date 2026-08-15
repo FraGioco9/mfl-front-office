@@ -367,11 +367,6 @@
       pageSizePointerStartedFocused = false;
     }
     pointerBlurControl = controlFromTarget(target, POINTER_BLUR_SELECTOR);
-    const nav = target.closest("#sidebar .navButton[data-page]");
-    if (nav instanceof HTMLElement) {
-      const destination = normalizePageName(nav.dataset.page);
-      if (VIEW_ORDER[destination]) primeTableChrome(destination);
-    }
   }
 
   function onClick(event) {
