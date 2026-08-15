@@ -3,7 +3,11 @@
 
   const VERSION = String(window.__mflRelease?.version || window.__mflReleaseVersion || "dev");
   const STATS_PATH = /^\/database\/stats\/?$/i;
+  const AGENT_PATH = /^\/agents\/([^/?#]+)(?:\/|$)/i;
+  const CLUB_PATH = /^\/(?:clubs|club)\/[^/?#]+(?:\/|$)/i;
   const STYLE_ID = "mflStaticUiGuards";
+  const AGENT_VIEWS = Object.freeze(["attributes", "contracts", "next", "current", "all"]);
+  const CLUB_VIEWS = Object.freeze(["attributes", "contracts", "current", "all"]);
 
   window.__mflStaticUiRuntime?.destroy?.();
 
@@ -31,6 +35,27 @@
       button::-moz-focus-inner,
       [role="button"]::-moz-focus-inner {
         border: 0 !important;
+      }
+
+      body[data-page="agents"] #progressionPage .views > .viewButton[data-view="stats"],
+      body[data-page="club"] #progressionPage .views > .viewButton:is([data-view="stats"], [data-view="next"]) {
+        display: none !important;
+      }
+
+      html body[data-page="agents"] #progressionPage .views > .viewButton:is(
+        [data-view="attributes"],
+        [data-view="contracts"],
+        [data-view="next"],
+        [data-view="current"],
+        [data-view="all"]
+      ),
+      html body[data-page="club"] #progressionPage .views > .viewButton:is(
+        [data-view="attributes"],
+        [data-view="contracts"],
+        [data-view="current"],
+        [data-view="all"]
+      ) {
+        display: inline-flex !important;
       }
 
       #tableBody > .staticTableBlankRow,
@@ -131,11 +156,106 @@
     if (page.hasAttribute("aria-hidden")) page.removeAttribute("aria-hidden");
   }
 
+  function decodedPathSegment(value) {
+    try {
+      return decodeURIComponent(String(value || "")).trim();
+    } catch {
+      return String(value || "").trim();
+    }
+  }
+
+  function normalizedAgentAddressFromPath() {
+    const match = String(location.pathname || "").match(AGENT_PATH);
+    const rawAddress = decodedPathSegment(match?.[1] || "");
+    if (!rawAddress) return "";
+    return (rawAddress.startsWith("0x") ? rawAddress : `0x${rawAddress}`).toLowerCase();
+  }
+
+  function liveAgentName(address) {
+    if (!address) return "";
+    window.__mflStaticAgentAddress = address;
+    try {
+      return String(window.eval(`(() => {
+        try {
+          const address = String(window.__mflStaticAgentAddress || "");
+          return typeof agentNameForWallet === "function" ? agentNameForWallet(address) : "";
+        } catch {
+          return "";
+        }
+      })()` ) || "").trim();
+    } catch {
+      return "";
+    } finally {
+      delete window.__mflStaticAgentAddress;
+    }
+  }
+
+  function syncViewSet(order, labels = {}) {
+    const views = document.querySelector("#progressionPage .views");
+    if (!(views instanceof HTMLElement)) return;
+    const allowed = new Set(order);
+    const buttons = Array.from(views.querySelectorAll(":scope > .viewButton[data-view]"));
+
+    buttons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const view = String(button.dataset.view || "");
+      const shouldHide = !allowed.has(view);
+      if (button.hidden !== shouldHide) button.hidden = shouldHide;
+      const expectedLabel = labels[view];
+      if (expectedLabel && button.textContent !== expectedLabel) button.textContent = expectedLabel;
+    });
+
+    const currentVisibleOrder = buttons
+      .filter((button) => button instanceof HTMLButtonElement && allowed.has(String(button.dataset.view || "")))
+      .map((button) => String(button.dataset.view || ""));
+    if (currentVisibleOrder.join("|") === order.join("|")) return;
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    order.forEach((viewName) => {
+      const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
+      if (button) views.insertBefore(button, switcher || null);
+    });
+  }
+
+  function syncAgentPage() {
+    if (document.body?.dataset.page !== "agents" && !AGENT_PATH.test(location.pathname)) return;
+    const address = normalizedAgentAddressFromPath();
+    if (!address) return;
+
+    syncViewSet(AGENT_VIEWS, {
+      attributes: "Attributes",
+      contracts: "Contracts",
+      next: "Next Overall",
+      current: "Current Season",
+      all: "All Time",
+    });
+
+    const title = document.getElementById("tablePageTitle");
+    if (!(title instanceof HTMLElement)) return;
+    const name = liveAgentName(address);
+    const displayName = name && name.toLowerCase() !== address.toLowerCase()
+      ? `${name} - ${address}`
+      : address;
+    if (String(title.textContent || "").trim() !== displayName) title.textContent = displayName;
+  }
+
+  function syncClubPage() {
+    if (document.body?.dataset.page !== "club" && !CLUB_PATH.test(location.pathname)) return;
+    syncViewSet(CLUB_VIEWS, {
+      attributes: "Squad",
+      contracts: "Contracts",
+      current: "Current Season",
+      all: "All Time",
+    });
+  }
+
   function sync() {
     frame = 0;
     installFirstPaintGuards();
     syncFooter();
     syncDatabaseStatsPage();
+    syncAgentPage();
+    syncClubPage();
   }
 
   function schedule() {
