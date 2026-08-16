@@ -1,4 +1,4 @@
 {
-  "version": "1.124.7",
-  "description": "Build the canonical application core before deploy and prefer the prebuilt runtime at startup"
+  "version": "1.124.8",
+  "description": "Delegate player table interactions in the prebuilt application core"
 }
