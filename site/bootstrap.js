@@ -4,6 +4,14 @@
   const STATIC_RELEASE_VERSION = "1.124.2";
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
+  document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
+  if (!document.getElementById("mflSingleRenderPendingStyles")) {
+    const style = document.createElement("style");
+    style.id = "mflSingleRenderPendingStyles";
+    style.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
+    document.head.appendChild(style);
+  }
+
   function loadRuntime(path) {
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`);
@@ -32,6 +40,8 @@
       await loadRuntime("/bootstrap-core.js");
     } catch (error) {
       document.documentElement.dataset.mflReady = "error";
+      document.documentElement.classList.remove("mflSingleRenderPending");
+      document.getElementById("mflSingleRenderPendingStyles")?.remove();
       console.error("Could not initialize MFL Front Office.", error);
     }
   })();
