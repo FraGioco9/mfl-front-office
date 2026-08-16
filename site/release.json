@@ -1,4 +1,4 @@
 {
-  "version": "1.124.21",
-  "description": "Load Dapper opt-in authentication only when Opt In is requested"
+  "version": "1.124.22",
+  "description": "Fix bootstrap-core startup parsing and stored-wallet restoration, and lint bootstrap-core releases"
 }
