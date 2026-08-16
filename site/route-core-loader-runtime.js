@@ -10,11 +10,13 @@
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
    * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
    * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
+   * __mflLoadFallbackApplicationCoreArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    *   normalizePageName?: (pageName: string) => string,
    *   normalizeView?: (options?: Record<string, unknown>) => string,
    *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
+   *   loadFallbackArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
@@ -30,6 +32,9 @@
     }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest === "function") {
       runtimeWindow.__mflInitialRouteRuntimeRequest = runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest;
+    }
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.loadFallbackArtifacts === "function") {
+      runtimeWindow.__mflLoadFallbackApplicationCoreArtifacts = runtimeWindow.__mflRouteCoreRuntime.loadFallbackArtifacts;
     }
     return;
   }
@@ -224,12 +229,14 @@
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
   runtimeWindow.__mflNormalizeRouteView = routeView;
   runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
+  runtimeWindow.__mflLoadFallbackApplicationCoreArtifacts = loadFallbackApplicationCoreArtifacts;
   runtimeWindow.__mflEnsureRouteCore = ensure;
   runtimeWindow.__mflRouteCoreRuntime = Object.freeze({
     ensure,
     normalizePageName: normalizeRoutePageName,
     normalizeView: routeView,
     initialRouteRequest: initialRouteRuntimeRequest,
+    loadFallbackArtifacts: loadFallbackApplicationCoreArtifacts,
   });
   installClubRouteGate();
 
