@@ -1,4 +1,4 @@
 {
-  "version": "1.124.16",
-  "description": "Split Club route, cache, and table behavior out of the shared application core"
+  "version": "1.124.17",
+  "description": "Load Settings UI rendering only when the Settings route needs it"
 }
