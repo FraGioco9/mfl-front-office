@@ -231,6 +231,42 @@
       "Club view pre-render chrome",
     );
 
+    const twoFrameClubFinish = `  function finishClubSwitch() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        if (typeof buildTableColGroup === "function") buildTableColGroup();
+        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+        applyClubPresentation();
+
+        requestAnimationFrame(() => {
+          if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+          applyClubPresentation();
+          document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+          setClubSwitching(false);
+          resolve();
+        });
+      });
+    });
+  }`;
+    const singleFrameClubFinish = `  function finishClubSwitch() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        if (typeof buildTableColGroup === "function") buildTableColGroup();
+        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
+        applyClubPresentation();
+        document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+        setClubSwitching(false);
+        resolve();
+      });
+    });
+  }`;
+    nextSource = replaceRequired(
+      nextSource,
+      twoFrameClubFinish,
+      singleFrameClubFinish,
+      "two-frame Club finalization",
+    );
+
     const manualRouteRender = [
       "      state.incrementalApplying = true;",
       "      try {",
