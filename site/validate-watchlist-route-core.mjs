@@ -36,14 +36,12 @@ includes(sharedCore, "let __mflWatchlistRenderSwitcherOwner = null;", "Shared co
 includes(sharedCore, "function renderWatchlistSwitcher() {", "Shared core must retain the Watchlist switcher facade name.");
 includes(sharedCore, "function closeWatchlistDropdown() {", "Shared core must retain a safe dropdown-close facade for global Escape/pointer handling.");
 includes(sharedCore, "function toggleWatchlistDropdown() {", "Shared core must retain the switcher-button facade.");
+includes(sharedCore, "async function ensureWatchlistRoute(", "Watchlist route selection must remain shared for setPage orchestration.");
+includes(sharedCore, "function switchWatchlist(", "Watchlist switching must retain its existing shared API for post-core wrappers.");
 includes(sharedCore, "function playerIsInAnyWatchlist(playerId) {", "Cross-route Player watchlist state must remain shared.");
 includes(sharedCore, "function normalizeWatchlists(watchlists, legacyIds = []) {", "Watchlist persistence normalization must remain shared.");
 excludes(sharedCore, "watchlistDropdown.replaceChildren();", "Watchlist dropdown DOM construction must not remain universal.");
-excludes(sharedCore, "function watchlistRenderSwitcherOwner() {", "Watchlist route owner must not remain shared.");
-
-includes(tableCore, "async function ensureWatchlistRoute(", "Watchlist route selection must remain with the Table core.");
-includes(tableCore, "function switchWatchlist(", "Watchlist switching must remain with the Table core.");
-includes(tableCore, "function selectedPlayerIdsArray() {", "Table selection actions must remain with the Table core.");
+excludes(sharedCore, "function watchlistRenderSwitcherOwner() {", "Watchlist route UI owner must not remain shared.");
 
 includes(watchlistCore, "function watchlistRenderSwitcherOwner() {", "Watchlist chunk must own switcher rendering.");
 includes(watchlistCore, "function openWatchlistDropdown() {", "Watchlist chunk must own dropdown opening.");
@@ -51,7 +49,8 @@ includes(watchlistCore, "function watchlistCloseDropdownOwner() {", "Watchlist c
 includes(watchlistCore, "function watchlistToggleDropdownOwner() {", "Watchlist chunk must own dropdown toggling.");
 includes(watchlistCore, "watchlistDropdown.replaceChildren();", "Watchlist chunk must own dropdown DOM construction.");
 includes(watchlistCore, "__mflWatchlistToggleDropdownOwner = watchlistToggleDropdownOwner;", "Watchlist chunk must publish the shared UI facade owners.");
-excludes(watchlistCore, "function switchWatchlist(", "Watchlist route switching must not be duplicated outside Table core.");
+excludes(watchlistCore, "async function ensureWatchlistRoute(", "Watchlist route selection must not be duplicated in the UI chunk.");
+excludes(watchlistCore, "function switchWatchlist(", "Watchlist switching must not be duplicated in the UI chunk.");
 excludes(watchlistCore, "function selectedPlayerIdsArray() {", "Cross-route selection actions must not become Watchlist-only.");
 excludes(watchlistCore, "function normalizeWatchlists(watchlists, legacyIds = []) {", "Watchlist persistence normalization must not become route-only.");
 
