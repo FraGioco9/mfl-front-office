@@ -35,7 +35,6 @@ const ROUTE_AWARE_START_APP = `async function startApp() {
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
   showAppShell();
-  void ensureFlowWallet();
 
   const startupDependencies = [earlyGlobalSearch];
   if (initialTarget.pageName === "home") startupDependencies.push(startupSummaryPromise);
