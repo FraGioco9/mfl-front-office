@@ -42,19 +42,26 @@ const dataAuth = await readSite("api/_data-auth.js");
 matches(dataAuth, /require\(["']@onflow\/fcl["']\)/, "The data API must verify Dapper proofs with @onflow/fcl.");
 
 const bootstrap = await readSite("bootstrap.js");
+const bootstrapCore = await readSite("bootstrap-core.js");
 const staticVersion = bootstrap.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
 invariant(staticVersion === release.version, `bootstrap.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
-matches(bootstrap, /window\.__mflReleaseVersion\s*=\s*version;/, "bootstrap.js must remain the release-version owner.");
+matches(bootstrap, /window\.__mflReleaseVersion\s*=\s*STATIC_RELEASE_VERSION;/, "bootstrap.js must remain the release-version owner without a redundant alias.");
 matches(bootstrap, /loadBootstrapRuntime\(["']\/filter-controls-runtime\.js["']\)/, "bootstrap.js must load the canonical filter-controls runtime.");
 excludes(bootstrap, /FILTER_OPERATOR_LABELS|installFilterOperatorDefaults|installFilterOperatorAlignment/, "Filter behavior must stay out of bootstrap.js.");
 excludes(bootstrap, /searchParams\.set\(["'](?:v|dev|rev)["']/, "bootstrap.js must keep runtime asset URLs queryless.");
+excludes(bootstrap, /bootstrap-core-owned|void\s+MOBILE_TABLE_MIN_WIDTH|void\s+eventTargetsBusyScrollSurface/, "bootstrap.js must not keep validation-only compatibility markers.");
+matches(bootstrapCore, /MOBILE_TABLE_MIN_WIDTH\s*=\s*1240/, "Static first paint must preserve a horizontally scrollable mobile table width.");
+matches(bootstrapCore, /function\s+eventTargetsBusyScrollSurface/, "Busy interaction blocking must preserve native scrolling in its actual owner.");
 
 const entry = await readSite("modules/app-entry.js");
-matches(entry, /loadClassicScript\(["']\/modules\/app-core\.js["']\)/, "app-entry.js must load the canonical application core directly.");
+matches(entry, /const\s+path\s*=\s*["']\/modules\/app-core\.js["'];[\s\S]*nativeFetch\(assetUrl\(path\)/, "app-entry.js must fetch and execute the canonical application core directly.");
 matches(entry, /link\.href\s*=\s*["']\/responsive\.css["'];/, "app-entry.js must load responsive.css from the site root.");
 matches(entry, /["']\/desktop-table-style-runtime\.js["']/, "app-entry.js must load the desktop table stylesheet owner.");
 matches(entry, /["']\/evaluation-discount-rate-display-runtime\.js["']/, "app-entry.js must load the discount-rate display owner.");
 matches(entry, /["']\/selection-startup-reset-runtime\.js["']/, "app-entry.js must load the selection startup reset owner.");
+matches(entry, /["']\/table-view-runtime\.js["']/, "app-entry.js must load the canonical table-view interaction owner.");
+matches(entry, /["']\/watchlist-ui-runtime\.js["']/, "app-entry.js must load the canonical Watchlist UI owner.");
+excludes(entry, /view-button-visibility-runtime|watchlist-route-ui-runtime/, "app-entry.js must not load renamed runtime owners.");
 excludes(entry, /__mflRestoreNativeMutationObserver|desktop-table-observer-guard-runtime|evaluation-discount-rate-guard-runtime|selection-refresh-reset-runtime/, "app-entry.js must not restore removed compatibility runtimes.");
 excludes(entry, /\?(?:v|dev|rev)=|searchParams\.set\(["'](?:v|dev|rev)["']/, "app-entry.js must keep runtime asset URLs queryless.");
 excludes(entry, /window\.__mflReleaseVersion\s*=/, "app-entry.js must not overwrite the bootstrap-owned release version.");
@@ -69,19 +76,34 @@ matches(filterControls, /AT_MOST_DEFAULT_COLUMNS/, "Filter controls must own num
 matches(filterControls, /contractStatusFilterColumn/, "Filter controls must own Contracts Is/Is not behavior.");
 matches(filterControls, /grid-template-columns:\s*104px/, "Filter controls must preserve the full And/Or selector width.");
 
+const sharedTableUi = await readSite("shared-table-ui-runtime.js");
+matches(sharedTableUi, /syncQuickFilterLabels/, "Shared table UI must own quick-filter visibility.");
+matches(sharedTableUi, /syncViewButtons/, "Shared table UI must own shared table view visibility and order.");
+matches(sharedTableUi, /primeMflStatsOverallFilters/, "Shared table UI must own the MFL stats filter bar.");
+
+const tableView = await readSite("table-view-runtime.js");
+excludes(tableView, /MFL_STATS_FILTERS|hideMflPlayersFilter|packablePlayersFilter|syncDatabaseViewButtons/, "Table view interactions must not duplicate shared table chrome ownership.");
+matches(tableView, /DATABASE_STATS_FILTERS/, "Table view runtime must preserve Database Stats filter priming.");
+matches(tableView, /installInitialWatchlistActiveGuard/, "Table view runtime must preserve Watchlist first-paint active-view stability.");
+
+const watchlistUi = await readSite("watchlist-ui-runtime.js");
+excludes(watchlistUi, /syncWatchlistNavigationLink|resolvedWatchlistNavigationPath|setTimeout\(schedule|watchlistRenameStableTooltip/, "Watchlist UI must not retain obsolete navigation repair, timer polling, or stale object names.");
+matches(watchlistUi, /watchlistRenameTooltip/, "Watchlist UI must use the canonical rename tooltip object.");
+
 const discountRateDisplay = await readSite("evaluation-discount-rate-display-runtime.js");
 excludes(discountRateDisplay, /evaluationSearch|recentSearch|Changelog/, "Discount-rate display runtime must not own unrelated UI state.");
 
 const responsive = await readSite("responsive.css");
+const styles = await readSite("styles.css");
 const indexHtml = await readSite("index.html");
 matches(indexHtml, /<meta[^>]+name=["']viewport["'][^>]+viewport-fit=cover/i, "Mobile first paint must enable safe-area viewport fitting.");
 matches(indexHtml, /<link[^>]+href=["']\/responsive\.css["'][^>]+data-mfl-responsive-layout=["']true["']/i, "responsive.css must be render-blocking on first paint.");
 invariant(indexHtml.includes(`MFL Front Office v${release.version}`), "The static footer version must match release.json before runtime startup.");
+matches(indexHtml, /TABLE_VIEW_CONFIG[\s\S]*mflInitialTableViewFirstPaint/, "index.html must generate table-view first paint from the canonical view config.");
+excludes(styles, /data-initial-page\^=["']database/, "styles.css must not duplicate the generated table-view first-paint matrix.");
 matches(responsive, /\/\* Mobile parity contract\./, "responsive.css must keep the mobile parity contract.");
 matches(responsive, /#mflLoadingToast[\s\S]*--mfl-visual-viewport-bottom/, "Mobile loading toast must account for the visual viewport.");
 matches(responsive, /#progressionPage \.tableScroller[\s\S]*touch-action:\s*pan-x pan-y/, "Mobile player tables must remain touch-scrollable.");
-matches(bootstrap, /MOBILE_TABLE_MIN_WIDTH\s*=\s*1240/, "Static first paint must preserve a horizontally scrollable mobile table width.");
-matches(bootstrap, /eventTargetsBusyScrollSurface/, "Busy interaction blocking must preserve native scrolling.");
 
 const viewportMediaPattern = /@media\s*\(\s*(?:max|min)-width/i;
 const responsiveOwnerCandidates = [];
@@ -103,6 +125,8 @@ for (const path of [
   "static-ui-runtime.js",
   "selection-startup-reset-runtime.js",
   "selection-stack-runtime.js",
+  "table-view-runtime.js",
+  "watchlist-ui-runtime.js",
   "watchlist-myplayers-route-runtime.js",
 ]) {
   const source = await readSite(path);
@@ -166,6 +190,8 @@ for (const path of [
   "selection-stack-source-v1.120.26.js",
   "v1-120-10-runtime.js",
   "v1-123-31-runtime.js",
+  "view-button-visibility-runtime.js",
+  "watchlist-route-ui-runtime.js",
 ]) {
   await mustNotExist(resolve(siteRoot, path), `${path} is deprecated and must stay removed.`);
 }

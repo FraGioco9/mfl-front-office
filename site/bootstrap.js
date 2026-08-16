@@ -6,9 +6,6 @@
   const EVALUATION_PLAYER_LABEL_STORAGE_PREFIX = "mfl-evaluation-player-label-v1:";
   const AGENT_PAGE_NAME_STORAGE_PREFIX = "mfl-agent-page-name-v1:";
   const LEGACY_AGENT_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
-  const MOBILE_TABLE_MIN_WIDTH = 1240;
-  const eventTargetsBusyScrollSurface = "bootstrap-core-owned";
-  const version = STATIC_RELEASE_VERSION;
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     stats: "stats",
@@ -27,9 +24,7 @@
     club: Object.freeze({ order: ["attributes", "contracts", "current", "all"], fallback: "attributes" }),
   });
   window.__mflTableViewConfig = TABLE_VIEW_CONFIG;
-  window.__mflReleaseVersion = version;
-  void MOBILE_TABLE_MIN_WIDTH;
-  void eventTargetsBusyScrollSurface;
+  window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   if (!document.getElementById("mflTableViewHiddenGuard")) {
     const style = document.createElement("style");
@@ -82,8 +77,6 @@
     if (window.__mflImmediateUiInteractionsInstalled) return;
     window.__mflImmediateUiInteractionsInstalled = true;
 
-    /* Sidebar selection is visual navigation feedback and must happen on the
-     * click itself, before cached or uncached route work starts. */
     document.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest?.("#sidebar .navButton[data-page]");
@@ -98,8 +91,6 @@
       });
     }, true);
 
-    /* app-core historically focuses the first Filters field. Clear that focus
-     * after its synchronous open handler completes so the popup starts neutral. */
     document.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const trigger = target?.closest?.("#openFiltersButton");
@@ -242,9 +233,7 @@
     if (!normalizedAddress || !normalizedName || normalizedName.toLowerCase() === normalizedAddress) return;
     try {
       localStorage.setItem(`${AGENT_PAGE_NAME_STORAGE_PREFIX}${normalizedAddress}`, normalizedName);
-    } catch {
-      // The resolved title remains correct for this page even if storage is unavailable.
-    }
+    } catch {}
   }
 
   function agentNameFromRenderedTitle(value, address) {
@@ -362,9 +351,7 @@
     if (!id || !name) return;
     try {
       localStorage.setItem(`${EVALUATION_PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
-    } catch {
-      // First paint still uses the resolved name when browser storage is blocked.
-    }
+    } catch {}
   }
 
   function primeEvaluationPlayerLabel(playerId) {
@@ -395,9 +382,7 @@
       if (!(input instanceof HTMLInputElement)) return;
       const fallback = `Player #${id}`;
       if (!input.value.trim() || input.value === fallback) input.value = playerName;
-    }).catch(() => {
-      // The normal Evaluation data load will replace the fallback when available.
-    });
+    }).catch(() => {});
   }
 
   function normalizeEvaluationSearchClearButton() {

@@ -1,16 +1,11 @@
 (() => {
+  "use strict";
+
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/;
   const EXACT_PATH = /^\/watchlist\/[^/]+\/(?:attributes|next-overall|contracts|current-season|all-time)\/?$/;
-  const WATCHLIST_VIEW_SLUGS = Object.freeze({
-    attributes: "attributes",
-    next: "next-overall",
-    contracts: "contracts",
-    current: "current-season",
-    all: "all-time",
-  });
-  const previous = window.__mflWatchlistRouteUiRuntime;
-  previous?.destroy?.();
+
+  window.__mflWatchlistUiRuntime?.destroy?.();
 
   const originalPushState = history.pushState.bind(history);
   const originalReplaceState = history.replaceState.bind(history);
@@ -30,7 +25,11 @@
   const viewSlugs = new Set(["attributes", "next-overall", "contracts", "current-season", "all-time"]);
 
   function routeWatchlistId(pathname = location.pathname) {
-    const segment = decodeURIComponent(String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/)?.[1] || "");
+    const raw = String(pathname || "").match(/^\/watchlist(?:\/([^/]+))?/)?.[1] || "";
+    let segment = raw;
+    try {
+      segment = decodeURIComponent(raw);
+    } catch {}
     return viewSlugs.has(segment) ? "" : segment;
   }
 
@@ -53,70 +52,6 @@
     } catch {
       return [];
     }
-  }
-
-  function cachedWatchlistId() {
-    return String(cachedWatchlists()[0]?.id || "").trim();
-  }
-
-  function preferredWatchlistView() {
-    try {
-      if (typeof preferredViewForPage === "function") {
-        const preferred = String(preferredViewForPage("watchlist") || "").trim();
-        if (WATCHLIST_VIEW_SLUGS[preferred]) return preferred;
-      }
-      const savedView = String(state?.tablePageStates?.watchlist?.view || "").trim();
-      if (WATCHLIST_VIEW_SLUGS[savedView]) return savedView;
-    } catch {}
-
-    try {
-      const saved = JSON.parse(localStorage.getItem("mfl-table-filters-v1") || "null");
-      const savedView = String(saved?.pages?.watchlist?.view || "").trim();
-      if (WATCHLIST_VIEW_SLUGS[savedView]) return savedView;
-    } catch {}
-
-    return "current";
-  }
-
-  function resolvedWatchlistId(allowCreate = false) {
-    let watchlistId = stateWatchlistId() || routeWatchlistId() || cachedWatchlistId();
-    if (watchlistId || !allowCreate) return watchlistId;
-
-    try {
-      if (typeof ensureDefaultWatchlist === "function") {
-        ensureDefaultWatchlist();
-        watchlistId = stateWatchlistId();
-      }
-    } catch {}
-    return watchlistId;
-  }
-
-  function resolvedWatchlistNavigationPath(allowCreate = false) {
-    const watchlistId = resolvedWatchlistId(allowCreate);
-    if (!watchlistId) return "";
-    const view = preferredWatchlistView();
-    const slug = WATCHLIST_VIEW_SLUGS[view] || WATCHLIST_VIEW_SLUGS.current;
-    return `/watchlist/${encodeURIComponent(watchlistId)}/${slug}`;
-  }
-
-  function syncWatchlistNavigationLink(allowCreate = false) {
-    const link = document.querySelector('#sidebar .navButton[data-page="watchlist"]');
-    if (!(link instanceof HTMLAnchorElement)) return "";
-
-    const path = resolvedWatchlistNavigationPath(allowCreate);
-    if (path) {
-      if (link.getAttribute("href") !== path) link.setAttribute("href", path);
-      return path;
-    }
-
-    // Never leave an opted-in Watchlist navigation target pointing at the
-    // intermediate /watchlist route. The click router can create the first list
-    // synchronously and this capture-phase owner will replace the placeholder.
-    if (document.documentElement.dataset.storedWalletOptIn === "true"
-      && link.getAttribute("href") === "/watchlist") {
-      link.setAttribute("href", "#");
-    }
-    return "";
   }
 
   function rememberVisibleWatchlistTitle() {
@@ -142,15 +77,11 @@
   }
 
   function cachedWatchlistName(watchlistId) {
-    try {
-      const watchlists = cachedWatchlists();
-      const selected = watchlistId
-        ? watchlists.find((watchlist) => String(watchlist.id || "") === watchlistId)
-        : watchlists[0];
-      return String(selected?.name || "").trim();
-    } catch {
-      return "";
-    }
+    const watchlists = cachedWatchlists();
+    const selected = watchlistId
+      ? watchlists.find((watchlist) => String(watchlist.id || "") === watchlistId)
+      : watchlists[0];
+    return String(selected?.name || "").trim();
   }
 
   function currentWatchlistIdentity() {
@@ -185,7 +116,7 @@
   function syncWatchlistTitle() {
     if (!isWatchlistPath()) return;
     const title = document.getElementById("tablePageTitle");
-    if (!title) return;
+    if (!(title instanceof HTMLElement)) return;
 
     const { name: resolvedName } = currentWatchlistIdentity();
     const switcherText = String(document.getElementById("watchlistButtonText")?.textContent || "").trim();
@@ -210,7 +141,7 @@
       clearTimeout(tooltipTimer);
       tooltipTimer = 0;
     }
-    const tooltip = document.getElementById("watchlistRenameStableTooltip");
+    const tooltip = document.getElementById("watchlistRenameTooltip");
     if (!tooltip) {
       tooltipTarget = null;
       return;
@@ -220,9 +151,12 @@
       tooltipTarget = null;
       tooltipTimer = 0;
     };
-    if (immediate) return remove();
+    if (immediate) {
+      remove();
+      return;
+    }
     tooltip.classList.remove("visible");
-    tooltipTimer = setTimeout(remove, 150);
+    tooltipTimer = window.setTimeout(remove, 150);
   }
 
   function hideSwitcher() {
@@ -279,11 +213,11 @@
     document.querySelectorAll(".evaluationLoadFloatingTooltip").forEach((item) => {
       if (String(item.textContent || "").trim() === "Rename") item.remove();
     });
-    let tooltip = document.getElementById("watchlistRenameStableTooltip");
+    let tooltip = document.getElementById("watchlistRenameTooltip");
     if (!tooltip) {
       tooltip = document.createElement("div");
-      tooltip.id = "watchlistRenameStableTooltip";
-      tooltip.className = "watchlistRenameStableTooltip";
+      tooltip.id = "watchlistRenameTooltip";
+      tooltip.className = "watchlistRenameTooltip";
       tooltip.setAttribute("role", "tooltip");
       tooltip.textContent = "Rename";
       document.body.appendChild(tooltip);
@@ -309,7 +243,6 @@
   function sync() {
     frame = 0;
     normalizeRenameButtons();
-    syncWatchlistNavigationLink();
     releaseInitialRoute();
     syncWatchlistSwitcher();
     syncWatchlistTitle();
@@ -321,11 +254,7 @@
   }
 
   function onMutation() {
-    if (isWatchlistPath()) {
-      // Title identity is first-paint chrome. Re-pin it in the mutation microtask
-      // so legacy hydration cannot expose a fallback title for one rendered frame.
-      syncWatchlistTitle();
-    }
+    if (isWatchlistPath()) syncWatchlistTitle();
     schedule();
   }
 
@@ -352,32 +281,31 @@
   history.pushState = (stateValue, title, value) => performHistoryChange(originalPushState, stateValue, title, value);
   history.replaceState = (stateValue, title, value) => performHistoryChange(originalReplaceState, stateValue, title, value);
 
-  function routeFromEvent(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    const link = target?.closest("a[href]");
-    if (link) {
-      const url = asUrl(link.href);
-      if (url.origin === location.origin) return url.pathname;
-    }
-    const page = target?.closest("[data-page]")?.dataset.page;
-    if (page === "watchlist") return resolvedWatchlistNavigationPath(true) || "/watchlist";
-    return page ? `/${page}` : "";
+  function eventLeavesWatchlist(target) {
+    const page = target?.closest?.("[data-page]")?.dataset.page;
+    if (page) return page !== "watchlist";
+    const link = target?.closest?.("a[href]");
+    if (!(link instanceof HTMLAnchorElement)) return false;
+    const url = asUrl(link.href);
+    return url.origin === location.origin && !isWatchlistPath(url.pathname);
   }
 
   function beginNavigation(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    const watchlistNav = target.closest('#sidebar .navButton[data-page="watchlist"]');
-    if (watchlistNav) syncWatchlistNavigationLink(true);
     if (isWatchlistPath() && target.closest(".viewButton")) rememberVisibleWatchlistTitle();
-    const route = routeFromEvent(event);
-    if (route && !isWatchlistPath(route)) {
+    if (eventLeavesWatchlist(target)) {
       protectedRoute = "";
       hideSwitcher();
     } else if (target.closest("#watchlistSwitcher, .viewButton")) {
       protectedRoute = "";
     }
     if (target.closest(".watchlistDropdownRename")) hideTooltip(true);
+  }
+
+  function onPointerMove(event) {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
   }
 
   function onPointerOver(event) {
@@ -393,7 +321,7 @@
       : null;
     if (!button || button.contains(event.relatedTarget)) return;
     if (tooltipTimer) clearTimeout(tooltipTimer);
-    tooltipTimer = setTimeout(() => {
+    tooltipTimer = window.setTimeout(() => {
       tooltipTimer = 0;
       const replacement = renameAtPointer();
       if (replacement) showTooltip(replacement);
@@ -401,28 +329,38 @@
     }, 90);
   }
 
+  function onFocusIn(event) {
+    const button = event.target instanceof Element
+      ? event.target.closest(".watchlistDropdownRename")
+      : null;
+    if (button) showTooltip(button);
+  }
+
+  function onFocusOut(event) {
+    if (event.target instanceof Element && event.target.closest(".watchlistDropdownRename")) hideTooltip();
+  }
+
+  function onPopState() {
+    protectedRoute = "";
+    if (!isWatchlistPath()) hideSwitcher();
+    else syncWatchlistTitle();
+    schedule();
+  }
+
   function repositionTooltip() {
-    const tooltip = document.getElementById("watchlistRenameStableTooltip");
+    const tooltip = document.getElementById("watchlistRenameTooltip");
     if (tooltip && tooltipTarget) positionTooltip(tooltipTarget, tooltip);
   }
 
   const style = document.createElement("style");
-  style.id = "watchlistRouteUiRuntimeStyles";
+  style.id = "mflWatchlistUiRuntimeStyles";
   style.textContent = `
-    body[data-page="watchlist"] #progressionPage .viewButton {
-      transition: background 120ms ease, border-color 120ms ease, color 120ms ease !important;
-    }
-    body[data-page="watchlist"] #progressionPage .viewButton:not(.active):hover:not(:disabled) {
-      border-color: var(--primary-hover) !important;
-      background: var(--row-hover) !important;
-      color: var(--text) !important;
-    }
     .watchlistDropdownRename::before,
     .watchlistDropdownRename::after {
       display: none !important;
       content: none !important;
     }
-    .watchlistRenameStableTooltip {
+    .watchlistRenameTooltip {
       position: fixed;
       z-index: 2147483000;
       max-width: min(240px, calc(100vw - 16px));
@@ -438,12 +376,7 @@
       transform: translateY(2px);
       transition: opacity 140ms ease, transform 140ms ease;
     }
-    .watchlistDropdownRename::before,
-    .watchlistDropdownRename::after {
-      display: none !important;
-      content: none !important;
-    }
-    .watchlistRenameStableTooltip.visible {
+    .watchlistRenameTooltip.visible {
       opacity: 1;
       transform: translateY(0);
     }
@@ -452,55 +385,56 @@
 
   document.addEventListener("pointerdown", beginNavigation, true);
   document.addEventListener("click", beginNavigation, true);
-  document.addEventListener("pointermove", (event) => {
-    pointerX = event.clientX;
-    pointerY = event.clientY;
-  }, true);
+  document.addEventListener("pointermove", onPointerMove, true);
   document.addEventListener("pointerover", onPointerOver, true);
   document.addEventListener("pointerout", onPointerOut, true);
-  document.addEventListener("focusin", (event) => {
-    const button = event.target instanceof Element
-      ? event.target.closest(".watchlistDropdownRename")
-      : null;
-    if (button) showTooltip(button);
-  }, true);
-  document.addEventListener("focusout", (event) => {
-    if (event.target instanceof Element && event.target.closest(".watchlistDropdownRename")) hideTooltip();
-  }, true);
-  window.addEventListener("popstate", () => {
-    protectedRoute = "";
-    if (!isWatchlistPath()) hideSwitcher();
-    else syncWatchlistTitle();
-    schedule();
-  });
+  document.addEventListener("focusin", onFocusIn, true);
+  document.addEventListener("focusout", onFocusOut, true);
+  window.addEventListener("popstate", onPopState);
   window.addEventListener("resize", repositionTooltip);
   window.addEventListener("scroll", repositionTooltip, true);
+  window.addEventListener("mfl:ready", sync);
 
   observer = new MutationObserver(onMutation);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["hidden", "data-page", "data-tooltip", "data-stored-wallet-opt-in"],
-  });
+  const title = document.getElementById("tablePageTitle");
+  const switcher = document.getElementById("watchlistSwitcher");
+  const dropdown = document.getElementById("watchlistDropdown");
+  if (title) observer.observe(title, { childList: true, subtree: true, characterData: true });
+  if (switcher) observer.observe(switcher, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+  if (dropdown) observer.observe(dropdown, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "data-tooltip"] });
+  if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ["data-page"] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-stored-wallet-opt-in", "data-mfl-ready"] });
 
   function destroy() {
     if (frame) cancelAnimationFrame(frame);
+    frame = 0;
     if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltipTimer = 0;
     observer?.disconnect();
+    observer = null;
     history.pushState = originalPushState;
     history.replaceState = originalReplaceState;
+    document.removeEventListener("pointerdown", beginNavigation, true);
+    document.removeEventListener("click", beginNavigation, true);
+    document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointerover", onPointerOver, true);
+    document.removeEventListener("pointerout", onPointerOut, true);
+    document.removeEventListener("focusin", onFocusIn, true);
+    document.removeEventListener("focusout", onFocusOut, true);
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("resize", repositionTooltip);
+    window.removeEventListener("scroll", repositionTooltip, true);
+    window.removeEventListener("mfl:ready", sync);
     hideTooltip(true);
     style.remove();
   }
 
-  window.__mflWatchlistRouteUiRuntime = {
+  window.__mflWatchlistUiRuntime = Object.freeze({
     version: VERSION,
     currentName: () => currentWatchlistIdentity().name,
     sync,
     destroy,
-  };
+  });
   rememberVisibleWatchlistTitle();
   sync();
-  [0, 50, 150, 400, 1000, 2000, 5000].forEach((delay) => setTimeout(schedule, delay));
 })();

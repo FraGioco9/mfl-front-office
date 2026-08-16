@@ -1,10 +1,10 @@
 (() => {
   "use strict";
 
+  const VERSION = String(window.__mflReleaseVersion || "dev");
   const POINTER_HOVER_ATTRIBUTE = "data-mfl-view-button-pointer-hover";
   const COLUMN_HOVER_ATTRIBUTE = "data-mfl-column-hover";
   const WATCHLIST_PATH = /^\/watchlist(?:\/|$)/i;
-  const DATABASE_VIEWS = new Set(["attributes", "contracts", "stats"]);
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     "next-overall": "next",
@@ -12,23 +12,6 @@
     "current-season": "current",
     "all-time": "all",
   });
-  const MFL_STATS_FILTERS = Object.freeze([
-    ["all", "All"],
-    ["90-94", "90-94"],
-    ["legendary", "Legendary"],
-    ["85-89", "85-89"],
-    ["80-84", "80-84"],
-    ["rare", "Rare"],
-    ["75-79", "75-79"],
-    ["70-74", "70-74"],
-    ["uncommon", "Uncommon"],
-    ["65-69", "65-69"],
-    ["60-64", "60-64"],
-    ["limited", "Limited"],
-    ["55-59", "55-59"],
-    ["50-54", "50-54"],
-    ["common", "Common"],
-  ]);
   const DATABASE_STATS_FILTERS = Object.freeze([
     ["all", "All"],
     ["ultimate", "Ultimate"],
@@ -39,42 +22,20 @@
     ["common", "Common"],
     ["custom", "Custom"],
   ]);
-  const previous = window.__mflViewButtonVisibilityRuntime;
-  previous?.destroy?.();
+
+  window.__mflTableViewRuntime?.destroy?.();
 
   let pointerHoverButton = null;
   let statsTooltipBar = null;
   let initialActiveObserver = null;
-  let databaseVisibilityObserver = null;
   let statsHistogramObserver = null;
+  let databaseStatsFilterObserver = null;
   let pendingStatsTableNavigation = null;
   let pendingStatsTableTimer = 0;
 
-  function tableRoutePageFromPath(pathname = window.location.pathname) {
-    const first = String(pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
-    if (first === "my-players") return "myplayers";
-    if (first === "clubs" || first === "club") return "club";
-    if (["database", "mfl", "progression", "watchlist", "agents"].includes(first)) return first;
-    return "";
-  }
-
-  function syncTableRoutePage() {
-    const pageName = tableRoutePageFromPath();
-    const root = document.documentElement;
-    if (pageName) root.dataset.mflTableRoutePage = pageName;
-    else delete root.dataset.mflTableRoutePage;
-    return pageName;
-  }
-
-  syncTableRoutePage();
-
   const style = document.createElement("style");
-  style.id = "mflViewButtonVisibilityGuard";
+  style.id = "mflTableViewRuntimeStyles";
   style.textContent = `
-    #progressionPage .viewButton[hidden] {
-      display: none;
-    }
-
     #progressionPage .viewButton {
       transition: background 120ms ease, border-color 120ms ease, color 120ms ease !important;
     }
@@ -119,148 +80,46 @@
     html #databaseStatsPage .mflStatsHistogram[data-mfl-column-transition="true"] .mflStatsHistogramBar::after {
       animation: mflStatsBarRise 220ms ease-out !important;
     }
-
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton:is(
-      [data-view="attributes"],
-      [data-view="contracts"],
-      [data-view="next"],
-      [data-view="current"],
-      [data-view="all"]
-    ),
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton:is(
-      [data-view="attributes"],
-      [data-view="contracts"],
-      [data-view="current"],
-      [data-view="all"]
-    ) {
-      display: inline-flex !important;
-    }
-
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="next"] { order: 3; }
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="current"] { order: 4; }
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="all"] { order: 5; }
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="attributes"] { order: 1; }
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="contracts"] { order: 2; }
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="current"] { order: 3; }
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton[data-view="all"] { order: 4; }
-
-    html[data-mfl-table-route-page="database"] #progressionPage .viewButton:is(
-      [data-view="next"],
-      [data-view="current"],
-      [data-view="all"]
-    ),
-    html[data-mfl-table-route-page="mfl"] #progressionPage .viewButton:is(
-      [data-view="next"],
-      [data-view="contracts"],
-      [data-view="current"],
-      [data-view="all"]
-    ),
-    html[data-mfl-table-route-page="progression"] #progressionPage .viewButton:is(
-      [data-view="attributes"],
-      [data-view="stats"],
-      [data-view="next"],
-      [data-view="contracts"]
-    ),
-    html[data-mfl-table-route-page="agents"] #progressionPage .viewButton[data-view="stats"],
-    html[data-mfl-table-route-page="watchlist"] #progressionPage .viewButton[data-view="stats"],
-    html[data-mfl-table-route-page="myplayers"] #progressionPage .viewButton[data-view="stats"],
-    html[data-mfl-table-route-page="club"] #progressionPage .viewButton:is(
-      [data-view="stats"],
-      [data-view="next"]
-    ) {
-      display: none;
-    }
   `;
   document.head.appendChild(style);
 
-  function primeStatsFilterBar(containerId, filters) {
-    const container = document.getElementById(containerId);
+  function primeDatabaseStatsFilters() {
+    const container = document.getElementById("databaseStatsOverallFilters");
     if (!(container instanceof HTMLElement)) return;
     const current = Array.from(container.querySelectorAll(".mflStatsFilterButton"));
-    const matchesFilters = current.length === filters.length
-      && current.every((button, index) => String(button.textContent || "").trim() === filters[index][1]);
-
-    if (matchesFilters) {
-      current.forEach((button, index) => {
-        const [id] = filters[index];
-        if (button.dataset.filter !== id) button.dataset.filter = id;
+    const valid = current.length === DATABASE_STATS_FILTERS.length
+      && current.every((button, index) => (
+        String(button.dataset.filter || "") === DATABASE_STATS_FILTERS[index][0]
+        && String(button.textContent || "").trim() === DATABASE_STATS_FILTERS[index][1]
+      ));
+    if (valid) {
+      current.forEach((button) => {
         button.setAttribute("aria-pressed", String(button.classList.contains("active")));
       });
-    } else {
-      const fragment = document.createDocumentFragment();
-      filters.forEach(([id, label], index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `mflStatsFilterButton${index === 0 ? " active" : ""}`;
-        button.dataset.filter = id;
-        button.dataset.mflStatsStatic = "true";
-        button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
-        button.textContent = label;
-        fragment.appendChild(button);
-      });
-      container.replaceChildren(fragment);
+      container.dataset.staticOverallFilters = "true";
+      return;
     }
+
+    const fragment = document.createDocumentFragment();
+    DATABASE_STATS_FILTERS.forEach(([id, label], index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `mflStatsFilterButton${index === 0 ? " active" : ""}`;
+      button.dataset.filter = id;
+      button.dataset.mflStatsStatic = "true";
+      button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      button.textContent = label;
+      fragment.appendChild(button);
+    });
+    container.replaceChildren(fragment);
     container.dataset.staticOverallFilters = "true";
   }
 
-  function primeStatsFilterBars() {
-    primeStatsFilterBar("mflStatsOverallFilters", MFL_STATS_FILTERS);
-    primeStatsFilterBar("databaseStatsOverallFilters", DATABASE_STATS_FILTERS);
-  }
-
-  function syncTablePageQuickFilterVisibility() {
-    const pageName = String(document.body?.dataset.page || "").toLowerCase();
-    const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
-    const packablePlayersFilter = document.getElementById("packablePlayersFilter");
-    const newMintsLabel = document.getElementById("newMintsLabel");
-
-    if (hideMflPlayersFilter instanceof HTMLElement) {
-      hideMflPlayersFilter.hidden = pageName !== "database";
-    }
-    if (packablePlayersFilter instanceof HTMLElement) {
-      packablePlayersFilter.hidden = pageName !== "mfl";
-    }
-    if (newMintsLabel instanceof HTMLElement) {
-      const label = pageName === "mfl" ? "Only aged players" : "Only new mints";
-      if (newMintsLabel.textContent !== label) newMintsLabel.textContent = label;
-    }
-  }
-
-  function syncDatabaseViewButtons() {
-    if (document.documentElement.dataset.mflTableRoutePage !== "database") return;
-    document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
-      if (!(button instanceof HTMLButtonElement)) return;
-      const shouldHide = !DATABASE_VIEWS.has(String(button.dataset.view || ""));
-      if (button.hidden !== shouldHide) button.hidden = shouldHide;
-    });
-  }
-
-  function syncTableRouteChrome() {
-    syncTableRoutePage();
-    primeStatsFilterBars();
-    syncTablePageQuickFilterVisibility();
-    syncDatabaseViewButtons();
-  }
-
-  function installDatabaseViewGuard() {
-    syncTableRouteChrome();
-    databaseVisibilityObserver = new MutationObserver(syncTableRouteChrome);
-    if (document.body) {
-      databaseVisibilityObserver.observe(document.body, {
-        attributes: true,
-        attributeFilter: ["data-page"],
-      });
-    }
-    const views = document.querySelector("#progressionPage .views");
-    if (views instanceof HTMLElement) {
-      databaseVisibilityObserver.observe(views, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: ["hidden"],
-      });
-    }
+  function observeDatabaseStatsFilters() {
+    const container = document.getElementById("databaseStatsOverallFilters");
+    if (!(container instanceof HTMLElement)) return;
+    databaseStatsFilterObserver = new MutationObserver(primeDatabaseStatsFilters);
+    databaseStatsFilterObserver.observe(container, { childList: true });
   }
 
   function initialWatchlistView() {
@@ -306,7 +165,6 @@
 
   function animateStatsHistogram(histogram) {
     if (!(histogram instanceof HTMLElement)) return;
-    if (!histogram.closest("#mflStatsPage, #databaseStatsPage")) return;
     histogram.removeAttribute("data-mfl-column-transition");
     void histogram.offsetWidth;
     histogram.setAttribute("data-mfl-column-transition", "true");
@@ -322,14 +180,16 @@
   }
 
   function installStatsHistogramTransitions() {
-    const main = document.querySelector("main");
-    if (!(main instanceof HTMLElement)) return;
+    const pages = [
+      document.getElementById("mflStatsPage"),
+      document.getElementById("databaseStatsPage"),
+    ].filter((page) => page instanceof HTMLElement);
+    if (!pages.length) return;
+
     statsHistogramObserver = new MutationObserver((records) => {
-      records.forEach((record) => {
-        record.addedNodes.forEach(animateStatsHistogramsFromNode);
-      });
+      records.forEach((record) => record.addedNodes.forEach(animateStatsHistogramsFromNode));
     });
-    statsHistogramObserver.observe(main, { childList: true, subtree: true });
+    pages.forEach((page) => statsHistogramObserver.observe(page, { childList: true, subtree: true }));
     document.querySelectorAll("#mflStatsPage .mflStatsHistogram, #databaseStatsPage .mflStatsHistogram")
       .forEach(animateStatsHistogram);
   }
@@ -459,7 +319,6 @@
     }
     document.documentElement.classList.remove("mflStatsFirstPaintGuard");
     if (document.body?.dataset.page !== pageName) document.body.dataset.page = pageName;
-    document.documentElement.dataset.mflTableRoutePage = pageName;
     document.querySelectorAll("#progressionPage .views .viewButton[data-view]").forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) return;
       const active = String(button.dataset.view || "") === viewName;
@@ -467,7 +326,7 @@
       button.setAttribute("aria-pressed", String(active));
       if (pageName === "database" || pageName === "mfl") button.dataset.page = pageName;
     });
-    const loading = /** @type {any} */ (window).__mflTableLoadingRuntime;
+    const loading = window.__mflTableLoadingRuntime;
     loading?.primeHeader?.(pageName, viewName);
     loading?.show?.();
   }
@@ -515,12 +374,12 @@
   function openDatabaseStatsImmediately(button) {
     if (!(button instanceof HTMLButtonElement)) return false;
     activateViewButtonImmediately(button);
-    const runtime = /** @type {any} */ (window).__mflDatabaseStatsStateRuntime;
+    const runtime = window.__mflDatabaseStatsStateRuntime;
     if (typeof runtime?.render === "function") {
       void runtime.render(true);
       return true;
     }
-    const render = /** @type {any} */ (window).renderDatabaseStatsPage;
+    const render = window.renderDatabaseStatsPage;
     if (typeof render === "function") {
       void render(true);
       return true;
@@ -557,8 +416,7 @@
     }
 
     const button = databaseStatsSourceButton(event.target);
-    if (!button) return;
-    if (!openDatabaseStatsImmediately(button)) return;
+    if (!button || !openDatabaseStatsImmediately(button)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
   }
@@ -577,7 +435,8 @@
     clearPointerHover();
   }
 
-  installDatabaseViewGuard();
+  primeDatabaseStatsFilters();
+  observeDatabaseStatsFilters();
   installInitialWatchlistActiveGuard();
   installStatsHistogramTransitions();
   document.addEventListener("pointerover", syncPointerHover, true);
@@ -586,16 +445,15 @@
   document.addEventListener("click", onClick, true);
   document.addEventListener("pointerout", onPointerOut, true);
   window.addEventListener("blur", onWindowBlur);
-  window.addEventListener("popstate", syncTableRoutePage);
-  window.addEventListener("pageshow", syncTableRoutePage);
+  window.addEventListener("mfl:ready", primeDatabaseStatsFilters);
 
   function destroy() {
-    databaseVisibilityObserver?.disconnect();
-    databaseVisibilityObserver = null;
     initialActiveObserver?.disconnect();
     initialActiveObserver = null;
     statsHistogramObserver?.disconnect();
     statsHistogramObserver = null;
+    databaseStatsFilterObserver?.disconnect();
+    databaseStatsFilterObserver = null;
     clearPendingStatsTableNavigation();
     clearStatsColumnHover();
     document.removeEventListener("pointerover", syncPointerHover, true);
@@ -604,8 +462,7 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("pointerout", onPointerOut, true);
     window.removeEventListener("blur", onWindowBlur);
-    window.removeEventListener("popstate", syncTableRoutePage);
-    window.removeEventListener("pageshow", syncTableRoutePage);
+    window.removeEventListener("mfl:ready", primeDatabaseStatsFilters);
     document.querySelectorAll(`#progressionPage .viewButton[${POINTER_HOVER_ATTRIBUTE}="true"]`).forEach((button) => {
       clearPointerHover(button);
     });
@@ -613,5 +470,5 @@
     style.remove();
   }
 
-  window.__mflViewButtonVisibilityRuntime = Object.freeze({ destroy });
+  window.__mflTableViewRuntime = Object.freeze({ version: VERSION, destroy });
 })();

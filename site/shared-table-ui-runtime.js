@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.123.29");
+  const VERSION = String(window.__mflReleaseVersion || "dev");
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const FILTER_ESCAPE_CLASS = "mflEscapeClosingFilters";
   const PAGE_SIZE_ESCAPE_CLASS = "mflPageSizeEscapeSuppressed";
@@ -110,6 +110,7 @@
   function syncQuickFilterLabels(pageName) {
     const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
     const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+    const newMintsLabel = document.getElementById("newMintsLabel");
     if (hideMflPlayersFilter instanceof HTMLElement) {
       hideMflPlayersFilter.hidden = pageName !== "database";
       hideMflPlayersFilter.toggleAttribute("aria-hidden", pageName !== "database");
@@ -117,6 +118,10 @@
     if (packablePlayersFilter instanceof HTMLElement) {
       packablePlayersFilter.hidden = pageName !== "mfl";
       packablePlayersFilter.toggleAttribute("aria-hidden", pageName !== "mfl");
+    }
+    if (newMintsLabel instanceof HTMLElement) {
+      const label = pageName === "mfl" ? "Only aged players" : "Only new mints";
+      if (newMintsLabel.textContent !== label) newMintsLabel.textContent = label;
     }
   }
 
@@ -357,11 +362,11 @@
   function onPointerDown(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    const pageSizeSelect = pageSizeSelectFromTarget(target);
-    if (pageSizeSelect) {
+    const select = pageSizeSelectFromTarget(target);
+    if (select) {
       clearPageSizeEscapeSuppression();
       pageSizePointerActive = true;
-      pageSizePointerStartedFocused = document.activeElement === pageSizeSelect;
+      pageSizePointerStartedFocused = document.activeElement === select;
     } else {
       pageSizePointerActive = false;
       pageSizePointerStartedFocused = false;
@@ -452,17 +457,15 @@
   window.addEventListener("popstate", onPopState);
   window.addEventListener("mfl:ready", onReady);
 
-  observer = new MutationObserver(() => {
-    scheduleTableChrome();
-  });
+  observer = new MutationObserver(scheduleTableChrome);
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "style", "data-initial-page"],
+    attributeFilter: ["data-initial-page"],
   });
   if (document.body) {
     observer.observe(document.body, {
       attributes: true,
-      attributeFilter: ["class", "style", "data-page"],
+      attributeFilter: ["data-page"],
     });
   }
 
