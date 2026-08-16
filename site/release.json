@@ -1,4 +1,4 @@
 {
-  "version": "1.124.11",
-  "description": "Load route-specific runtime owners only when their destination requires them"
+  "version": "1.124.12",
+  "description": "Cancel obsolete route data requests and prevent stale incremental commits"
 }
