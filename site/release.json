@@ -1,4 +1,4 @@
 {
-  "version": "1.124.39",
-  "description": "Keep the footer and complete Changelog history aligned with the newest release"
+  "version": "1.124.40",
+  "description": "Synchronize route chrome, focus cleanup, and non-fatal startup recovery"
 }
