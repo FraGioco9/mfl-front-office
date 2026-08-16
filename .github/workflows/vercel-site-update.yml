@@ -83,6 +83,13 @@ jobs:
           fi
           ls -lh site/api/data-files/mfl_database.db
 
+      - name: Build canonical application core
+        shell: bash
+        run: |
+          set -euo pipefail
+          node site/build-app-core.mjs
+          test -s site/modules/app-core-runtime.js
+
       - name: Show released site commit
         shell: bash
         run: |
