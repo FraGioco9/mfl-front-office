@@ -11,7 +11,7 @@ const entry = await read("./modules/app-entry.js");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
 
 const loaderNormalizeStart = routeCoreLoader.indexOf("function normalizeRoutePageName(pageName) {");
-const loaderNormalizeEnd = routeCoreLoader.indexOf("function initialRouteRuntimeRequest(", loaderNormalizeStart);
+const loaderNormalizeEnd = routeCoreLoader.indexOf("function viewOptionsFromSegments(", loaderNormalizeStart);
 invariant(loaderNormalizeStart >= 0 && loaderNormalizeEnd > loaderNormalizeStart, "Route-core loader must own route page-name normalization.");
 const loaderNormalizeSection = routeCoreLoader.slice(loaderNormalizeStart, loaderNormalizeEnd);
 
@@ -29,11 +29,18 @@ includes(
   "The route-core loader must expose its page-name normalizer to route runtimes.",
 );
 
+const loaderViewMapStart = routeCoreLoader.indexOf("const VIEW_BY_SLUG = Object.freeze({");
+const loaderViewMapEnd = routeCoreLoader.indexOf("const routeCorePromises", loaderViewMapStart);
+const loaderViewHelperStart = routeCoreLoader.indexOf("function viewOptionsFromSegments(segments) {");
 const loaderInitialStart = routeCoreLoader.indexOf("function initialRouteRuntimeRequest(pathname = location.pathname) {");
 const loaderInitialEnd = routeCoreLoader.indexOf("function routeView(options = {})", loaderInitialStart);
+invariant(loaderViewMapStart >= 0 && loaderViewMapEnd > loaderViewMapStart, "Route-core loader must own route slug-to-view mapping.");
+invariant(loaderViewHelperStart >= 0 && loaderInitialStart > loaderViewHelperStart, "Route-core loader must preserve view options before startup classification.");
 invariant(loaderInitialStart >= 0 && loaderInitialEnd > loaderInitialStart, "Route-core loader must own initial route runtime classification.");
+const loaderViewMapSection = routeCoreLoader.slice(loaderViewMapStart, loaderViewMapEnd);
+const loaderViewHelperSection = routeCoreLoader.slice(loaderViewHelperStart, loaderInitialStart);
 const loaderInitialSection = routeCoreLoader.slice(loaderInitialStart, loaderInitialEnd);
-const classifyInitialRoute = new Function(`${loaderInitialSection}\nreturn initialRouteRuntimeRequest;`)();
+const classifyInitialRoute = new Function(`${loaderViewMapSection}\n${loaderViewHelperSection}\n${loaderInitialSection}\nreturn initialRouteRuntimeRequest;`)();
 
 const routeCases = [
   ["/", "home", ""],
@@ -41,18 +48,20 @@ const routeCases = [
   ["/evaluation/", "evaluation", ""],
   ["/evaluation/player", "home", ""],
   ["/database", "database", ""],
-  ["/database/contracts", "database", ""],
+  ["/database/contracts", "database", "contracts"],
   ["/database/stats", "database", "stats"],
   ["/DATABASE/STATS", "database", "stats"],
   ["/database/stats/more", "database", ""],
-  ["/database//stats", "database", ""],
-  ["/mfl/stats", "mfl", ""],
-  ["/progression/all-time", "progression", ""],
-  ["/watchlist/example/current-season", "watchlist", ""],
-  ["/my-players/all-time", "myplayers", ""],
-  ["/agents/0xabc/all-time", "agents", ""],
-  ["/clubs/123/current-season", "club", ""],
-  ["/club/123/contracts", "club", ""],
+  ["/database//stats", "database", "stats"],
+  ["/mfl/attributes", "mfl", "attributes"],
+  ["/mfl/stats", "mfl", "stats"],
+  ["/progression/all-time", "progression", "all"],
+  ["/watchlist/example/current-season", "watchlist", "current"],
+  ["/my-players/all-time", "myplayers", "all"],
+  ["/agents/0xabc/next-overall", "agents", "next"],
+  ["/agents/0xabc/all-time", "agents", "all"],
+  ["/clubs/123/current-season", "club", "current"],
+  ["/club/123/contracts", "club", "contracts"],
   ["/players/42", "player", ""],
   ["/players/42/contracts", "home", ""],
   ["/settings", "settings", ""],
