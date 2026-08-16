@@ -1,4 +1,4 @@
 {
-  "version": "1.124.34",
-  "description": "Load the Watchlist rename-tooltip runtime only on Watchlist pages"
+  "version": "1.124.35",
+  "description": "Restore the Table action facade required for refresh startup"
 }
