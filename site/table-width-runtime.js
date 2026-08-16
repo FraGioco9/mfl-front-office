@@ -3,56 +3,41 @@
 
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/|$)|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const MOBILE_LAYOUT = "(max-width: 900px)";
-  const MOBILE_TABLE_MIN_WIDTH = 1240;
-  const DESKTOP_COLUMN_PERCENTAGES = Object.freeze({
-    "col-select": 3,
-    "col-id": 3,
-    "col-flag": 3,
-    "col-name": 13,
-    "col-nationality": 7,
-    "col-age": 6,
-    "col-positions": 6,
-    "col-seasons": 5,
-    "col-stat": 6,
-    "col-contract-revenue": 8,
-    "col-contract-club": 19,
-    "col-contract-division": 9,
-    "col-agent": 10,
-    "col-joined-agency": 10,
-    "col-owned-since": 10,
-    "col-link": 2,
-  });
-  const MOBILE_COLUMN_WIDTHS = Object.freeze({
-    "col-select": 51.09,
-    "col-id": 68.13,
-    "col-flag": 45.41,
-    "col-name": 212.89,
-    "col-nationality": 141.92,
-    "col-age": 65.28,
-    "col-positions": 119.22,
-    "col-seasons": 82.31,
-    "col-stat": 107.86,
-    "col-contract-revenue": 140,
-    "col-contract-club": 227.16,
-    "col-contract-division": 280,
-    "col-agent": 187.34,
-    "col-joined-agency": 187.34,
-    "col-owned-since": 187.34,
-    "col-link": 48.39,
-  });
+  const MOBILE_TABLE_WIDTH = 1560;
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
-  const TABLE_STRUCTURE_SELECTOR = "table, colgroup, col, thead";
+  const TABLE_STRUCTURE_SELECTOR = "table, colgroup, col, thead, tbody";
+  const WIDTH_STYLE_SELECTOR = "#progressionPage .tableShell, #progressionPage .tableScroller, #progressionPage .tableScroller table, #progressionPage .tableScroller col, #progressionPage .tableScroller th, #progressionPage .tableScroller td";
+  const COLUMN_GEOMETRY_PROPERTIES = ["width", "min-width", "max-width"];
 
-  const sixStatsWidth = DESKTOP_COLUMN_PERCENTAGES["col-stat"] * 6;
-  const contractsWidth = DESKTOP_COLUMN_PERCENTAGES["col-contract-revenue"]
-    + DESKTOP_COLUMN_PERCENTAGES["col-contract-club"]
-    + DESKTOP_COLUMN_PERCENTAGES["col-contract-division"];
-  if (sixStatsWidth !== contractsWidth) {
-    throw new Error("Contract columns must equal the combined width of the six attribute stats.");
-  }
-  if (DESKTOP_COLUMN_PERCENTAGES["col-agent"] !== DESKTOP_COLUMN_PERCENTAGES["col-joined-agency"]
-    || DESKTOP_COLUMN_PERCENTAGES["col-agent"] !== DESKTOP_COLUMN_PERCENTAGES["col-owned-since"]) {
-    throw new Error("Agent and Joined Agency columns must have the same width.");
+  // One canonical layout for every player table. Specific classes must precede
+  // their generic class (Overall before the other stat columns).
+  const COLUMN_LAYOUT = Object.freeze([
+    Object.freeze(["col-overall", 5.5]),
+    Object.freeze(["col-select", 2.75]),
+    Object.freeze(["col-id", 3.75]),
+    Object.freeze(["col-flag", 2.5]),
+    Object.freeze(["col-name", 15]),
+    Object.freeze(["col-nationality", 8.5]),
+    Object.freeze(["col-age", 4.5]),
+    Object.freeze(["col-positions", 7]),
+    Object.freeze(["col-seasons", 5.5]),
+    Object.freeze(["col-stat", 32 / 6]),
+    Object.freeze(["col-contract-revenue", 7.5]),
+    Object.freeze(["col-contract-club", 16]),
+    Object.freeze(["col-contract-division", 8.5]),
+    Object.freeze(["col-agent", 10.5]),
+    Object.freeze(["col-joined-agency", 10.5]),
+    Object.freeze(["col-owned-since", 10.5]),
+    Object.freeze(["col-link", 2.5]),
+  ]);
+
+  const SHARED_WIDTH = 68;
+  const SIX_STATS_WIDTH = 32;
+  const CONTRACTS_WIDTH = 7.5 + 16 + 8.5;
+  if (Math.abs(SHARED_WIDTH + SIX_STATS_WIDTH - 100) > 0.0001
+    || Math.abs(SHARED_WIDTH + CONTRACTS_WIDTH - 100) > 0.0001
+    || Math.abs(SIX_STATS_WIDTH - CONTRACTS_WIDTH) > 0.0001) {
+    throw new Error("Player table width contract is invalid.");
   }
 
   window.__mflTableWidthRuntime?.destroy?.();
@@ -60,6 +45,7 @@
   let observer = null;
   let frame = 0;
   let destroyed = false;
+  let widthHookInstalled = false;
 
   function isTableRoute() {
     const page = String(document.body?.dataset.page || "").toLowerCase();
@@ -75,10 +61,10 @@
     document.documentElement.dataset.mflMobileLayout = mobile ? "true" : "false";
   }
 
-  function valueForColumn(column, widths) {
+  function percentageForColumn(column) {
     if (!(column instanceof Element)) return null;
-    const className = Object.keys(widths).find((name) => column.classList.contains(name));
-    return className ? widths[className] : null;
+    const match = COLUMN_LAYOUT.find(([className]) => column.classList.contains(className));
+    return match ? Number(match[1]) : null;
   }
 
   function tableElements() {
@@ -86,55 +72,60 @@
     const shell = page?.querySelector(".tableShell");
     const scroller = page?.querySelector(".tableScroller");
     const table = scroller?.querySelector("table");
-    if (!(shell instanceof HTMLElement)
+    if (!(page instanceof HTMLElement)
+      || !(shell instanceof HTMLElement)
       || !(scroller instanceof HTMLElement)
       || !(table instanceof HTMLTableElement)) return null;
     return { page, shell, scroller, table };
   }
 
-  function mobileTableGeometry(table) {
-    const columns = Array.from(table.querySelectorAll("col"));
-    const widths = columns.map((column) => valueForColumn(column, MOBILE_COLUMN_WIDTHS))
-      .filter((width) => Number.isFinite(width));
-    return {
-      columns,
-      widths,
-      tableWidth: Math.max(MOBILE_TABLE_MIN_WIDTH, widths.reduce((sum, width) => sum + Number(width), 0)),
-    };
-  }
-
-  function removeInlineGeometry(element, properties) {
+  function removeProperties(element, properties) {
     if (!element?.style) return;
     properties.forEach((property) => element.style.removeProperty(property));
   }
 
-  function applyDesktopContract() {
-    const elements = tableElements();
-    if (!elements) return false;
+  function discardLegacyGeometry(elements) {
     const { shell, scroller, table } = elements;
-
     table.querySelectorAll(FILLER_SELECTOR).forEach((element) => element.remove());
 
-    [shell, scroller].forEach((element) => removeInlineGeometry(element, [
+    [shell, scroller].forEach((element) => removeProperties(element, [
       "width", "min-width", "max-width", "box-sizing", "overflow", "overflow-x", "overflow-y",
       "overscroll-behavior-x", "touch-action", "-webkit-overflow-scrolling",
     ]));
-    removeInlineGeometry(table, [
+    removeProperties(table, [
       "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
     ]);
+    table.querySelectorAll("col, th, td").forEach((element) => {
+      removeProperties(element, COLUMN_GEOMETRY_PROPERTIES);
+    });
+  }
 
-    let validColumns = 0;
-    table.querySelectorAll("col").forEach((column) => {
-      const percentage = valueForColumn(column, DESKTOP_COLUMN_PERCENTAGES);
-      if (!Number.isFinite(percentage)) return;
-      validColumns += 1;
-      column.style.setProperty("width", `${Number(percentage)}%`, "important");
+  function canonicalColumns(table) {
+    const columns = Array.from(table.querySelectorAll("col"));
+    const percentages = columns.map(percentageForColumn);
+    if (!columns.length || percentages.some((value) => !Number.isFinite(value))) return null;
+    const total = percentages.reduce((sum, value) => sum + Number(value), 0);
+    if (Math.abs(total - 100) > 0.02) return null;
+    return { columns, percentages };
+  }
+
+  function applyDesktopLayout(elements, geometry) {
+    const { shell, scroller, table } = elements;
+    const { columns, percentages } = geometry;
+
+    [shell, scroller].forEach((element) => {
+      element.style.setProperty("width", "100%", "important");
+      element.style.setProperty("min-width", "0", "important");
+      element.style.setProperty("max-width", "100%", "important");
+      element.style.setProperty("box-sizing", "border-box", "important");
+    });
+
+    columns.forEach((column, index) => {
+      column.style.setProperty("width", `${percentages[index]}%`, "important");
       column.style.setProperty("min-width", "0", "important");
       column.style.setProperty("max-width", "none", "important");
       column.style.setProperty("transition", "none", "important");
     });
-
-    if (!validColumns) return false;
 
     table.style.setProperty("table-layout", "fixed", "important");
     table.style.setProperty("width", "100%", "important");
@@ -143,47 +134,38 @@
     table.style.setProperty("box-sizing", "border-box", "important");
     table.style.setProperty("border-spacing", "0", "important");
     scroller.style.setProperty("overflow-x", "hidden", "important");
+    scroller.style.setProperty("overflow-y", "hidden", "important");
     delete scroller.dataset.mobileTableScroll;
     scroller.classList.add("tableWidthsReady");
     return true;
   }
 
-  function applyMobileContract() {
-    const elements = tableElements();
-    if (!elements) return false;
+  function applyMobileLayout(elements, geometry) {
     const { shell, scroller, table } = elements;
+    const { columns, percentages } = geometry;
 
-    table.querySelectorAll(FILLER_SELECTOR).forEach((element) => element.remove());
+    [shell, scroller].forEach((element) => {
+      element.style.setProperty("width", "100%", "important");
+      element.style.setProperty("min-width", "0", "important");
+      element.style.setProperty("max-width", "100%", "important");
+      element.style.setProperty("box-sizing", "border-box", "important");
+    });
 
-    [shell, scroller].forEach((element) => removeInlineGeometry(element, [
-      "width", "min-width", "max-width", "box-sizing", "overflow", "overflow-x", "overflow-y",
-      "overscroll-behavior-x", "touch-action", "-webkit-overflow-scrolling",
-    ]));
-    removeInlineGeometry(table, [
-      "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
-    ]);
-
-    const { columns, tableWidth } = mobileTableGeometry(table);
-    let validColumns = 0;
-    columns.forEach((column) => {
-      const widthValue = valueForColumn(column, MOBILE_COLUMN_WIDTHS);
-      if (!Number.isFinite(widthValue)) return;
-      const width = `${Number(widthValue).toFixed(2)}px`;
-      validColumns += 1;
-      ["width", "min-width", "max-width"].forEach((property) => column.style.setProperty(property, width, "important"));
+    columns.forEach((column, index) => {
+      const width = `${(MOBILE_TABLE_WIDTH * percentages[index] / 100).toFixed(2)}px`;
+      column.style.setProperty("width", width, "important");
+      column.style.setProperty("min-width", width, "important");
+      column.style.setProperty("max-width", width, "important");
       column.style.setProperty("transition", "none", "important");
     });
 
-    if (validColumns > 0) {
-      const width = `${tableWidth.toFixed(2)}px`;
-      table.style.setProperty("table-layout", "fixed", "important");
-      table.style.setProperty("width", width, "important");
-      table.style.setProperty("min-width", width, "important");
-      table.style.setProperty("max-width", width, "important");
-      table.style.setProperty("box-sizing", "border-box", "important");
-      table.style.setProperty("border-spacing", "0", "important");
-    }
-
+    const tableWidth = `${MOBILE_TABLE_WIDTH}px`;
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", tableWidth, "important");
+    table.style.setProperty("min-width", tableWidth, "important");
+    table.style.setProperty("max-width", tableWidth, "important");
+    table.style.setProperty("box-sizing", "border-box", "important");
+    table.style.setProperty("border-spacing", "0", "important");
     scroller.style.setProperty("overflow-x", "auto", "important");
     scroller.style.setProperty("overflow-y", "hidden", "important");
     scroller.style.setProperty("overscroll-behavior-x", "contain", "important");
@@ -195,48 +177,72 @@
   }
 
   function closeEnough(actual, expected) {
-    return Number.isFinite(actual) && Math.abs(actual - expected) < 0.2;
+    return Number.isFinite(actual) && Math.abs(actual - expected) < 0.03;
   }
 
-  function mobileLayoutIntact() {
+  function cellHasLegacyGeometry(table) {
+    return Array.from(table.querySelectorAll("th, td")).some((cell) =>
+      COLUMN_GEOMETRY_PROPERTIES.some((property) => Boolean(cell.style.getPropertyValue(property))));
+  }
+
+  function layoutIntact() {
     const elements = tableElements();
     if (!elements || elements.page.hidden) return true;
-    const { scroller, table } = elements;
-    const { columns, widths, tableWidth } = mobileTableGeometry(table);
-    if (!widths.length) return true;
+    const geometry = canonicalColumns(elements.table);
+    if (!geometry || cellHasLegacyGeometry(elements.table)) return false;
 
-    let widthIndex = 0;
-    for (const column of columns) {
-      const expected = valueForColumn(column, MOBILE_COLUMN_WIDTHS);
-      if (!Number.isFinite(expected)) continue;
-      const actual = Number.parseFloat(column.style.width);
-      if (!closeEnough(actual, Number(expected))) return false;
-      widthIndex += 1;
+    const mobile = isMobile();
+    const { scroller, table } = elements;
+    for (let index = 0; index < geometry.columns.length; index += 1) {
+      const actual = Number.parseFloat(geometry.columns[index].style.width);
+      const expected = mobile
+        ? MOBILE_TABLE_WIDTH * geometry.percentages[index] / 100
+        : geometry.percentages[index];
+      if (!closeEnough(actual, expected)) return false;
     }
-    if (widthIndex !== widths.length) return false;
 
     const actualTableWidth = Number.parseFloat(table.style.width);
-    if (!closeEnough(actualTableWidth, tableWidth)) return false;
+    const expectedTableWidth = mobile ? MOBILE_TABLE_WIDTH : 100;
+    if (!closeEnough(actualTableWidth, expectedTableWidth)) return false;
+
     const overflowX = window.getComputedStyle(scroller).overflowX;
-    return ["auto", "scroll"].includes(overflowX)
-      && scroller.scrollWidth > scroller.clientWidth + 1;
+    return mobile ? ["auto", "scroll"].includes(overflowX) : overflowX === "hidden";
   }
 
   function apply() {
-    const mobile = isMobile();
-    syncMobileFlag(mobile);
+    syncMobileFlag();
     if (destroyed || !isTableRoute()) return false;
-    return mobile ? applyMobileContract() : applyDesktopContract();
+    const elements = tableElements();
+    if (!elements || elements.page.hidden) return false;
+
+    discardLegacyGeometry(elements);
+    const geometry = canonicalColumns(elements.table);
+    if (!geometry) return false;
+    return isMobile()
+      ? applyMobileLayout(elements, geometry)
+      : applyDesktopLayout(elements, geometry);
+  }
+
+  function installWidthHook() {
+    if (destroyed) return false;
+    Object.defineProperty(window, "applyExactPlayerTableWidths", {
+      configurable: true,
+      enumerable: true,
+      get: () => apply,
+      set: () => {},
+    });
+    widthHookInstalled = true;
+    return true;
   }
 
   function takeOwnership() {
     if (destroyed) return false;
-    window.applyExactPlayerTableWidths = apply;
+    installWidthHook();
     return apply();
   }
 
   function schedule() {
-    window.cancelAnimationFrame(frame);
+    if (destroyed || frame) return;
     frame = window.requestAnimationFrame(() => {
       frame = 0;
       apply();
@@ -248,19 +254,13 @@
     return node.matches(TABLE_STRUCTURE_SELECTOR) || Boolean(node.querySelector(TABLE_STRUCTURE_SELECTOR));
   }
 
-  function styleMutationNeedsRepair(record) {
-    if (record.type !== "attributes" || record.attributeName !== "style" || !isMobile()) return false;
-    const target = record.target;
-    if (!(target instanceof Element)) return false;
-    const relevant = target.matches("#progressionPage .tableShell, #progressionPage .tableScroller, #progressionPage .tableScroller table, #progressionPage .tableScroller col");
-    return relevant && !mobileLayoutIntact();
-  }
-
   function shouldApplyForMutation(records) {
     return records.some((record) => {
       if (record.type === "attributes") {
         if (record.attributeName === "hidden" || record.attributeName === "data-page") return true;
-        return styleMutationNeedsRepair(record);
+        if (record.attributeName !== "style") return false;
+        const target = record.target;
+        return target instanceof Element && target.matches(WIDTH_STYLE_SELECTOR) && !layoutIntact();
       }
       return [...record.addedNodes, ...record.removedNodes].some(nodeChangesTableStructure);
     });
@@ -270,10 +270,6 @@
     observer?.disconnect();
     observer = new MutationObserver((records) => {
       if (!isTableRoute() || !shouldApplyForMutation(records)) return;
-      if (isMobile()) {
-        if (!mobileLayoutIntact()) applyMobileContract();
-        return;
-      }
       schedule();
     });
     observer.observe(document.documentElement, {
@@ -292,21 +288,26 @@
 
   function destroy() {
     destroyed = true;
-    window.cancelAnimationFrame(frame);
+    if (frame) window.cancelAnimationFrame(frame);
+    frame = 0;
     observer?.disconnect();
     observer = null;
     window.removeEventListener("resize", schedule);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("mfl:ready", schedule);
-    if (window.applyExactPlayerTableWidths === apply) delete window.applyExactPlayerTableWidths;
+    if (widthHookInstalled) {
+      try {
+        delete window.applyExactPlayerTableWidths;
+      } catch {}
+    }
   }
 
+  installWidthHook();
   observe();
   bind();
   window.__mflTableWidthRuntime = Object.freeze({
-    desktopColumnPercentages: DESKTOP_COLUMN_PERCENTAGES,
-    mobileColumnWidths: MOBILE_COLUMN_WIDTHS,
-    mobileTableMinWidth: MOBILE_TABLE_MIN_WIDTH,
+    columnLayout: COLUMN_LAYOUT,
+    mobileTableWidth: MOBILE_TABLE_WIDTH,
     apply,
     takeOwnership,
     destroy,
