@@ -1,12 +1,20 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.41";
+  const STATIC_RELEASE_VERSION = "1.124.42";
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   root.classList.add("mflSingleRenderPending");
   root.classList.remove("mflInitialRouteResolved");
+
+  function routeParts(urlLike = window.location.href) {
+    try {
+      return new URL(String(urlLike || window.location.href), window.location.href).pathname.split("/").filter(Boolean);
+    } catch {
+      return window.location.pathname.split("/").filter(Boolean);
+    }
+  }
 
   function initialShellTarget() {
     const initialPage = String(root.dataset.initialPage || "home").toLowerCase();
@@ -26,6 +34,60 @@
     if (initialPage === "changelog") return document.getElementById("changelogPage");
     return document.getElementById("homePage");
   }
+
+  function firstPaintTableTitle(page, urlLike = window.location.href) {
+    const currentTitle = document.getElementById("tablePageTitle");
+    const currentBodyPage = String(document.body?.dataset.page || "").toLowerCase();
+    const currentText = String(currentTitle?.textContent || "").trim();
+    if (["watchlist", "agents", "club"].includes(page) && currentBodyPage === page && currentText && currentText !== "Progression") {
+      return currentText;
+    }
+
+    if (page === "database") return "Database";
+    if (page === "mfl") return "MFL Wallet";
+    if (page === "progression") return "Progression";
+    if (page === "myplayers") return "My Players";
+    if (page === "watchlist") {
+      const watchlistName = String(document.getElementById("watchlistButtonText")?.textContent || "Default").trim() || "Default";
+      return `Watchlist - ${watchlistName}`;
+    }
+    const parts = routeParts(urlLike);
+    if (page === "agents") {
+      const wallet = String(parts[1] || "").trim();
+      try { return wallet ? decodeURIComponent(wallet) : "Agents"; } catch { return wallet || "Agents"; }
+    }
+    if (page === "club") return "Club";
+    return "Progression";
+  }
+
+  function primeInitialTableChrome(page, urlLike = window.location.href) {
+    const normalizedPage = String(page || "").toLowerCase();
+    if (!normalizedPage) return;
+
+    const title = document.getElementById("tablePageTitle");
+    if (title instanceof HTMLElement) title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
+
+    const quickFilters = document.querySelector("#progressionPage .quickFilters");
+    if (quickFilters instanceof HTMLElement) quickFilters.hidden = normalizedPage === "club";
+
+    const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
+    if (hideMflPlayersFilter instanceof HTMLElement) hideMflPlayersFilter.hidden = normalizedPage !== "database";
+
+    const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+    if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = normalizedPage !== "mfl";
+
+    const newMintsLabel = document.getElementById("newMintsLabel");
+    if (newMintsLabel instanceof HTMLElement) {
+      newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
+    }
+
+    const pager = document.querySelector("#progressionPage nav.pager");
+    if (pager instanceof HTMLElement) pager.hidden = true;
+    const watchlistCount = document.getElementById("watchlistPlayerCount");
+    if (watchlistCount instanceof HTMLElement) watchlistCount.hidden = true;
+  }
+
+  window.__mflPrimeTableChrome = primeInitialTableChrome;
 
   function primeInitialTableRows() {
     const body = document.getElementById("tableBody");
@@ -51,10 +113,14 @@
   function primeInitialShell() {
     const target = initialShellTarget();
     if (!(target instanceof HTMLElement)) return;
+    const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
+    if (target.id === "progressionPage" && tablePage) {
+      primeInitialTableChrome(tablePage, window.location.href);
+      primeInitialTableRows();
+    }
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    if (target.id === "progressionPage") primeInitialTableRows();
   }
 
   if (!document.getElementById("mflSingleRenderPendingStyles")) {

@@ -1,4 +1,4 @@
 {
-  "version": "1.124.41",
-  "description": "Restore visible loading shells and remove stale release ownership"
+  "version": "1.124.42",
+  "description": "Prime page titles, quickfilters, and pager state before first paint"
 }

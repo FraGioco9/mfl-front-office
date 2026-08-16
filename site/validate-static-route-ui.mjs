@@ -37,6 +37,10 @@ includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view
 includes(staticUi, 'document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, state.page);', "Pending page chrome must preserve the destination view set while data loads.");
 includes(staticUi, 'button.style.order = String(config.order.indexOf(buttonView) + 1);', "Runtime view ordering must follow the first-paint configuration.");
 includes(staticUi, "function showRouteShell(state, { loading = false } = {}) {", "Static route chrome must own the immediate destination shell.");
+includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Destination table chrome must be synchronized before the page is revealed.");
+includes(staticUi, "function hideDestinationPager() {", "Static route chrome must synchronously own pager hiding during navigation.");
+includes(staticUi, "if (pager instanceof HTMLElement) pager.hidden = true;", "Pager hiding must happen before route runtimes or data loading can begin.");
+includes(staticUi, 'if (typeof prime === "function") prime(state.page, state.url || window.location.href);', "Page switches must reuse the bootstrap title and quickfilter first-paint owner.");
 includes(staticUi, 'page.hidden = page !== target;', "A newly selected page shell must replace the previous page immediately.");
 includes(staticUi, 'window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });', "Explicit table destinations must show five loading rows even before the URL changes.");
 includes(staticUi, 'if (event.key !== "Escape") return;', "Escape must have a global focus cleanup owner.");
@@ -53,4 +57,4 @@ includes(tableLoading, "if (realRowsPresent && !replaceExisting) return false;",
 includes(tableLoading, "if (dataLoading()) show({ replaceExisting: true });", "Every active table data-loading transition must prime the five-row shell.");
 includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The loading shell must retain its fixed five-row structure.");
 
-console.log("Static route shell, five-row loading, active-state, footer, and Escape validation passed.");
+console.log("Static route shell, first-paint title/quickfilters, pager hiding, five-row loading, active-state, footer, and Escape validation passed.");

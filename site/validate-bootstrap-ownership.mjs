@@ -39,6 +39,41 @@ includes(
 );
 includes(
   bootstrap,
+  "function primeInitialTableChrome(page, urlLike = window.location.href) {",
+  "bootstrap.js must synchronously prime table title, quickfilters, and pager before first paint.",
+);
+includes(
+  bootstrap,
+  "window.__mflPrimeTableChrome = primeInitialTableChrome;",
+  "Runtime navigation must reuse the bootstrap-owned destination table chrome primer.",
+);
+includes(
+  bootstrap,
+  'title.textContent = firstPaintTableTitle(normalizedPage, urlLike);',
+  "The destination table title must be correct before its shell is revealed.",
+);
+includes(
+  bootstrap,
+  'hideMflPlayersFilter.hidden = normalizedPage !== "database";',
+  "Database-only quickfilters must be correct before first paint.",
+);
+includes(
+  bootstrap,
+  'packablePlayersFilter.hidden = normalizedPage !== "mfl";',
+  "MFL-only quickfilters must be correct before first paint.",
+);
+includes(
+  bootstrap,
+  'newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";',
+  "The MFL quickfilter label must be correct before first paint.",
+);
+includes(
+  bootstrap,
+  "if (pager instanceof HTMLElement) pager.hidden = true;",
+  "The table pager must be hidden before the first loading shell is revealed.",
+);
+includes(
+  bootstrap,
   "function primeInitialTableRows() {",
   "bootstrap.js must seed table routes with static blank rows before the core loads.",
 );
@@ -119,4 +154,4 @@ includes(
   "Failures before the application-core handshake must still have a real fatal message owner.",
 );
 
-console.log("Bootstrap visible-shell and startup-error ownership validation passed.");
+console.log("Bootstrap visible-shell, first-paint table chrome, and startup-error ownership validation passed.");
