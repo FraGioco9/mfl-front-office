@@ -7,13 +7,20 @@
    * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
-   * __mflRouteCoreRuntime?: { ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void> },
+   * __mflNormalizeRoutePageName?: (pageName: string) => string,
+   * __mflRouteCoreRuntime?: {
+   *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+   *   normalizePageName?: (pageName: string) => string,
+   * },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
   const runtimeWindow = window;
 
   if (typeof runtimeWindow.__mflRouteCoreRuntime?.ensure === "function") {
     runtimeWindow.__mflEnsureRouteCore = runtimeWindow.__mflRouteCoreRuntime.ensure;
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizePageName === "function") {
+      runtimeWindow.__mflNormalizeRoutePageName = runtimeWindow.__mflRouteCoreRuntime.normalizePageName;
+    }
     return;
   }
 
@@ -121,11 +128,12 @@
     return pending;
   }
 
-  function normalizedPageName(pageName) {
+  function normalizeRoutePageName(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
     if (page === "my-players") return "myplayers";
+    if (page === "databasestats") return "database";
     if (page === "clubs") return "club";
-    return page;
+    return page || "home";
   }
 
   function routeView(options = {}) {
@@ -133,7 +141,7 @@
   }
 
   function routeCoreDependencies(pageName, options = {}) {
-    const page = normalizedPageName(pageName);
+    const page = normalizeRoutePageName(pageName);
     const view = routeView(options);
     if (page === "database" && view === "stats") return [];
     if (page === "mfl" && view === "stats") return ["mflstats"];
@@ -178,8 +186,9 @@
     runtimeWindow.mflOpenClubPage = gated;
   }
 
+  runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
   runtimeWindow.__mflEnsureRouteCore = ensure;
-  runtimeWindow.__mflRouteCoreRuntime = Object.freeze({ ensure });
+  runtimeWindow.__mflRouteCoreRuntime = Object.freeze({ ensure, normalizePageName: normalizeRoutePageName });
   installClubRouteGate();
 
   if (/^\/evaluation\/?$/i.test(location.pathname)) {
