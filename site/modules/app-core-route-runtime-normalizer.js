@@ -13,6 +13,7 @@ const ROUTE_RUNTIME_GATE = `;(() => {
       ? window.__mflInteractionBusy.begin("route-runtime")
       : "";
     try {
+      if (!runtimeReady) window.__mflCancelIncrementalRouteRequest?.();
       if (!runtimeReady && typeof window.__mflEnsureRouteRuntime === "function") {
         await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
         if (setPage !== ownerBeforeRuntime) {
