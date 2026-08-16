@@ -48,7 +48,7 @@ export default [
     rules: js.configs.recommended.rules,
   },
   {
-    files: ["validate.mjs"],
+    files: ["build-app-core.mjs", "validate.mjs"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
