@@ -11,6 +11,7 @@ import { normalizeStartupDataDependencies } from "./app-core-startup-data-normal
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 import { normalizePureTableStateRestoration } from "./app-core-table-state-normalizer.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
+import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
 function normalizeCompleteApplicationCore(source) {
   const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
@@ -25,7 +26,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(routeArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
-  return splitWalletApplicationCoreRuntime(tableArtifacts);
+  const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
+  return splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

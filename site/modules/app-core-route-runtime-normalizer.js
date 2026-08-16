@@ -47,13 +47,17 @@ window.__mflMarkApplicationCoreLoaded?.();
 
 window.__mflAppStartPromise = (async () => {
   const initialRoutePath = window.location.pathname.replace(/\\/+$/, "") || "/";
+  const directWatchlistRoute = /^\\/watchlist(?:\\/|$)/i.test(initialRoutePath);
   const directTableRoute = (
     (/^\\/database(?:\\/|$)/i.test(initialRoutePath) && !/^\\/database\\/stats$/i.test(initialRoutePath))
     || (/^\\/mfl(?:\\/|$)/i.test(initialRoutePath) && !/^\\/mfl\\/stats$/i.test(initialRoutePath))
-    || /^\\/(?:agents|progression|watchlist|my-players)(?:\\/|$)/i.test(initialRoutePath)
+    || /^\\/(?:agents|progression|my-players)(?:\\/|$)/i.test(initialRoutePath)
   );
   if (directTableRoute && typeof window.__mflEnsureRouteCore === "function") {
     await window.__mflEnsureRouteCore("table");
+  }
+  if (directWatchlistRoute && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("watchlist");
   }
   if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(window.location.pathname)
     && typeof window.__mflEnsureRouteCore === "function") {

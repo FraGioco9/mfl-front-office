@@ -25,6 +25,7 @@
     player: "/modules/app-core-player-runtime.js",
     table: "/modules/app-core-table-runtime.js",
     wallet: "/modules/app-core-wallet-runtime.js",
+    watchlist: "/modules/app-core-watchlist-runtime.js",
   });
   const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
   const routeCorePromises = new Map();
@@ -123,6 +124,7 @@
     if (page === "database" && view === "stats") return [];
     if (page === "mfl" && view === "stats") return ["mflstats"];
     if (page === "club") return ["table", "club"];
+    if (page === "watchlist") return ["table", "watchlist"];
     if (TABLE_CORE_PAGES.has(page)) return ["table"];
     return ROUTE_CORE_PATHS[page] ? [page] : [];
   }
