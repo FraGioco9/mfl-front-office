@@ -87,7 +87,7 @@
     if (watchlistCount instanceof HTMLElement) watchlistCount.hidden = true;
   }
 
-  window.__mflPrimeTableChrome = primeInitialTableChrome;
+  Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);
 
   function primeInitialTableRows() {
     const body = document.getElementById("tableBody");

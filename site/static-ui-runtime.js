@@ -149,7 +149,7 @@
 
   function syncDestinationTableChrome(state) {
     hideDestinationPager();
-    const prime = window.__mflPrimeTableChrome;
+    const prime = Reflect.get(window, "__mflPrimeTableChrome");
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
   }
 

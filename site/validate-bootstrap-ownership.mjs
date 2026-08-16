@@ -44,7 +44,7 @@ includes(
 );
 includes(
   bootstrap,
-  "window.__mflPrimeTableChrome = primeInitialTableChrome;",
+  'Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);',
   "Runtime navigation must reuse the bootstrap-owned destination table chrome primer.",
 );
 includes(
