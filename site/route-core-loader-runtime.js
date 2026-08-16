@@ -24,6 +24,7 @@
     settings: "/modules/app-core-settings-runtime.js",
     player: "/modules/app-core-player-runtime.js",
     table: "/modules/app-core-table-runtime.js",
+    wallet: "/modules/app-core-wallet-runtime.js",
   });
   const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
   const routeCorePromises = new Map();

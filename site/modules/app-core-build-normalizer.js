@@ -10,6 +10,7 @@ import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { normalizeStartupDataDependencies } from "./app-core-startup-data-normalizer.js";
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 import { normalizePureTableStateRestoration } from "./app-core-table-state-normalizer.js";
+import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 
 function normalizeCompleteApplicationCore(source) {
   const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
@@ -23,7 +24,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const routeArtifacts = splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(routeArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
-  return splitTableApplicationCoreRuntime(playerArtifacts);
+  const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
+  return splitWalletApplicationCoreRuntime(tableArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

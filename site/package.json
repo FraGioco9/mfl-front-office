@@ -6,9 +6,9 @@
   "scripts": {
     "build:core": "node build-app-core.mjs",
     "build": "npm run build:core",
-    "lint": "eslint bootstrap.js build-app-core.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate.mjs validate-route-runtime.mjs validate-club-route-core.mjs validate-settings-route-core.mjs validate-player-route-core.mjs validate-table-route-core.mjs",
+    "lint": "eslint bootstrap.js build-app-core.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate.mjs validate-route-runtime.mjs validate-club-route-core.mjs validate-settings-route-core.mjs validate-player-route-core.mjs validate-table-route-core.mjs validate-wallet-core.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
-    "validate": "node validate.mjs && node validate-route-runtime.mjs && node validate-club-route-core.mjs && node validate-settings-route-core.mjs && node validate-player-route-core.mjs && node validate-table-route-core.mjs",
+    "validate": "node validate.mjs && node validate-route-runtime.mjs && node validate-club-route-core.mjs && node validate-settings-route-core.mjs && node validate-player-route-core.mjs && node validate-table-route-core.mjs && node validate-wallet-core.mjs",
     "check": "npm run lint && npm run typecheck && npm run build:core && npm run validate"
   },
   "dependencies": {
