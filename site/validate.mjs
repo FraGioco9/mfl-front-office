@@ -116,9 +116,16 @@ if (generatedCore !== null) {
 const entry = await readSite("modules/app-entry.js");
 includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must prefer the build-time application core.");
 includes(entry, "const SOURCE_CORE_PATH = \"/modules/app-core.js\"", "app-entry.js must retain a source fallback for unprepared local environments.");
-includes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "app-entry.js must request the prebuilt core before normalization fallback.");
-includes(entry, "import(assetUrl(\"/modules/app-core-normalizer.js\"))", "app-entry.js must keep base normalization only as a fallback.");
-includes(entry, "mfl-app-core-runtime:${entryRelease.version}:2", "The prebuilt core transition must use the current session-cache generation.");
+includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \"mfl_core\"", "The prebuilt core must use its dedicated cache-key query parameter.");
+includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading before critical runtime execution completes.");
+includes(entry, "await loadClassicScript(prebuiltPath);", "The production core must execute as an external classic script.");
+includes(entry, "fetchApplicationCoreSource(SOURCE_CORE_PATH)", "Unprepared local environments must retain the raw source fallback.");
+includes(entry, "import(assetUrl(\"/modules/app-core-build-normalizer.js\"))", "The source fallback must use the complete build-time normalizer.");
+includes(entry, "normalizer.normalizeBuiltApplicationCore(rawSource)", "The source fallback must match the deployed build transform.");
+excludes(entry, "CORE_RUNTIME_CACHE_KEY", "The prebuilt core must not be copied into sessionStorage.");
+excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser HTTP caching instead of a duplicate string cache.");
+excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
+excludes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "The production prebuilt core must not be fetched as text.");
 includes(entry, "\"/table-loading-runtime.js\"", "app-entry.js must load the canonical table-loading owner.");
 excludes(entry, "view-button-visibility-runtime", "app-entry.js must not restore deprecated view repair owners.");
 excludes(entry, "club-squad-route-runtime", "app-entry.js must not restore deprecated Club route repair owners.");
@@ -198,9 +205,13 @@ includes(indexHtml, "id=\"evaluationDiscountRate\"", "Evaluation must keep a per
 
 const vercel = JSON.parse(await readSite("vercel.json"));
 const cacheHeaders = new Map((vercel.headers || []).map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]));
-for (const source of ["/(.*\\.js)", "/(.*\\.css)", "/release.json"]) {
+for (const source of ["/(.*\\.css)", "/release.json"]) {
   invariant(cacheHeaders.get(source) === "no-store, max-age=0", `${source} must use the no-store cache policy.`);
 }
+const jsNoStoreRule = (vercel.headers || []).find((rule) => rule.source === "/(.*\\.js)" && rule.missing?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
+invariant(jsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Unversioned JavaScript must retain the no-store cache policy.");
+const coreCacheRule = (vercel.headers || []).find((rule) => rule.source === "/modules/app-core-runtime.js" && rule.has?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
+invariant(coreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "The versioned prebuilt application core must use immutable browser caching.");
 
 const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
