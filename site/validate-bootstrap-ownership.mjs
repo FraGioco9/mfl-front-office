@@ -49,6 +49,11 @@ includes(
 );
 includes(
   bootstrap,
+  'Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);',
+  "Non-table route chunks must retain access to the bootstrap-safe table-title fallback.",
+);
+includes(
+  bootstrap,
   'title.textContent = firstPaintTableTitle(normalizedPage, urlLike);',
   "The destination table title must be correct before its shell is revealed.",
 );
@@ -69,13 +74,78 @@ includes(
 );
 includes(
   bootstrap,
+  "function storedTablePageState(page) {",
+  "First-paint quickfilter state must come from the locally persisted page state.",
+);
+includes(
+  bootstrap,
+  'localStorage.getItem(FILTER_STORAGE_KEY)',
+  "First-paint quickfilters must read the same local table-state storage as the application core.",
+);
+includes(
+  bootstrap,
+  "hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;",
+  "Hide-retired selection must be correct before first paint.",
+);
+includes(
+  bootstrap,
+  "hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);",
+  "Hide-retiring selection must be correct before first paint.",
+);
+includes(
+  bootstrap,
+  "savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true",
+  "Database MFL-player selection must restore before first paint.",
+);
+includes(
+  bootstrap,
+  "savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true",
+  "MFL packable-player selection must restore before first paint.",
+);
+includes(
+  bootstrap,
+  "newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);",
+  "New-mint or aged-player selection must restore before first paint.",
+);
+includes(
+  bootstrap,
+  'attributesView.textContent = normalizedPage === "club" ? "Squad" : "Attributes";',
+  "Squad must use real button text instead of a generated pseudo-element label.",
+);
+includes(
+  bootstrap,
   "if (pager instanceof HTMLElement) pager.hidden = true;",
   "The table pager must be hidden before the first loading shell is revealed.",
 );
 includes(
   bootstrap,
-  "function primeInitialTableRows() {",
-  "bootstrap.js must seed table routes with static blank rows before the core loads.",
+  "function primeInitialTableRows(replaceExisting = false) {",
+  "bootstrap.js must seed and replace table loading rows before route work starts.",
+);
+includes(
+  bootstrap,
+  'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);',
+  "Runtime navigation must be able to show the table skeleton synchronously.",
+);
+includes(
+  bootstrap,
+  "function primeRouteSkeleton(target) {",
+  "Bootstrap must own immediate non-table destination skeletons.",
+);
+includes(
+  bootstrap,
+  'playerDetail.innerHTML = \'<div class="emptyState">Loading player...</div>\';',
+  "Player direct refresh must show its loading shell immediately.",
+);
+includes(
+  bootstrap,
+  'html.mflSingleRenderPending[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow { align-items: center !important; }',
+  "Evaluation title alignment must match its final layout during first paint.",
+);
+includes(
+  bootstrap,
+  'html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after { content: none !important; display: none !important; }',
+  "The legacy Squad pseudo-element must stay suppressed during first paint.",
 );
 includes(
   bootstrap,
@@ -154,4 +224,4 @@ includes(
   "Failures before the application-core handshake must still have a real fatal message owner.",
 );
 
-console.log("Bootstrap visible-shell, first-paint table chrome, and startup-error ownership validation passed.");
+console.log("Bootstrap visible-shell, saved first-paint table chrome, route skeletons, and startup-error ownership validation passed.");
