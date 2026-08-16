@@ -1,4 +1,4 @@
 {
-  "version": "1.124.22",
-  "description": "Fix bootstrap-core startup parsing and stored-wallet restoration, and lint bootstrap-core releases"
+  "version": "1.124.23",
+  "description": "Load Watchlist switcher and dropdown rendering only on Watchlist routes"
 }
