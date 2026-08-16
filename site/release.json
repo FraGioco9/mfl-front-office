@@ -1,4 +1,4 @@
 {
-  "version": "1.124.18",
-  "description": "Load Player detail helpers only when the Player route needs them"
+  "version": "1.124.19",
+  "description": "Load Player page rendering only when the Player route needs it"
 }
