@@ -36,7 +36,7 @@ function collectTopLevelDeclarations(text, filename) {
   return { file, names };
 }
 
-function identifierIsDeclaration(node) {
+function identifierIsNonReference(node) {
   const parent = node.parent;
   if (!parent) return false;
   if ((ts.isFunctionDeclaration(parent)
@@ -46,19 +46,6 @@ function identifierIsDeclaration(node) {
       || ts.isVariableDeclaration(parent)
       || ts.isParameter(parent)
       || ts.isBindingElement(parent)) && parent.name === node) return true;
-  if ((ts.isMethodDeclaration(parent)
-      || ts.isPropertyDeclaration(parent)
-      || ts.isPropertySignature(parent)
-      || ts.isMethodSignature(parent)
-      || ts.isGetAccessorDeclaration(parent)
-      || ts.isSetAccessorDeclaration(parent)) && parent.name === node) return true;
-  return false;
-}
-
-function identifierIsNonReference(node) {
-  const parent = node.parent;
-  if (!parent) return false;
-  if (identifierIsDeclaration(node)) return true;
   if (ts.isPropertyAccessExpression(parent) && parent.name === node) return true;
   if (ts.isPropertyAssignment(parent) && parent.name === node && !ts.isShorthandPropertyAssignment(parent)) return true;
   if (ts.isMethodDeclaration(parent) && parent.name === node) return true;
@@ -67,20 +54,24 @@ function identifierIsNonReference(node) {
   return false;
 }
 
-function collectReferences(file) {
+function collectReferences(node) {
   const names = new Set();
-  const visit = (node) => {
-    if (ts.isIdentifier(node) && !identifierIsNonReference(node)) {
-      if (!(ts.isTypeOfExpression(node.parent))) names.add(node.text);
+  const visit = (current) => {
+    if (ts.isIdentifier(current) && !identifierIsNonReference(current) && !ts.isTypeOfExpression(current.parent)) {
+      names.add(current.text);
     }
-    ts.forEachChild(node, visit);
+    ts.forEachChild(current, visit);
   };
-  visit(file);
+  visit(node);
   return names;
 }
 
 const coreInfo = collectTopLevelDeclarations(artifacts.core, "app-core-runtime.js");
-const coreReferences = collectReferences(coreInfo.file);
+const startApp = coreInfo.file.statements.find((statement) => (
+  ts.isFunctionDeclaration(statement) && statement.name?.text === "startApp"
+));
+if (!startApp) throw new Error("Generated shared application core is missing startApp().");
+const startupReferences = collectReferences(startApp);
 const routeOwnedNames = new Map();
 
 for (const [chunkName, chunkSource] of Object.entries(artifacts.routeChunks || {})) {
@@ -93,12 +84,12 @@ for (const [chunkName, chunkSource] of Object.entries(artifacts.routeChunks || {
 
 const unresolved = [];
 for (const [name, owners] of routeOwnedNames) {
-  if (!coreReferences.has(name) || coreInfo.names.has(name)) continue;
+  if (!startupReferences.has(name) || coreInfo.names.has(name)) continue;
   unresolved.push(`${name} [${owners.join(", ")}]`);
 }
 
 if (unresolved.length) {
-  throw new Error(`Shared application core still references route-owned identifiers without a facade: ${unresolved.sort().join("; ")}`);
+  throw new Error(`Application startup directly references lazy route-owned identifiers without a facade: ${unresolved.sort().join("; ")}`);
 }
 
-console.log("Generated application-core route binding audit passed.");
+console.log("Generated application-core startup binding audit passed.");
