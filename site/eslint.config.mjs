@@ -6,7 +6,7 @@ export default [
     ignores: ["node_modules/**", ".vercel/**"],
   },
   {
-    files: ["bootstrap.js", "modules/app-entry.js"],
+    files: ["bootstrap.js", "modules/app-entry.js", "modules/*-normalizer.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
