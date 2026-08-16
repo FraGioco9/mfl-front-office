@@ -153,11 +153,14 @@ const EVALUATION_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-search-state-runtime.js",
 ]);
 
+const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object.freeze([
+  "/database-stats-state-runtime.js",
+]);
+
 const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-tooltip-portal-runtime.js",
   "/database-stats-reload-bootstrap-runtime.js",
   "/database-stats-runtime.js",
-  "/database-stats-state-runtime.js",
   "/database-stats-custom-filter-runtime.js",
 ]);
 
@@ -194,8 +197,13 @@ function routeNeedsWatchlist(pageName) {
 }
 
 /** @param {string} pageName */
-function routeNeedsDatabaseStats(pageName) {
+function routeNeedsDatabaseStatsBridge(pageName) {
   return normalizeRoutePageName(pageName) === "database";
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function routeNeedsDatabaseStats(pageName, options = {}) {
+  return normalizeRoutePageName(pageName) === "database" && routeView(options) === "stats";
 }
 
 /** @param {readonly string[]} paths */
@@ -208,7 +216,8 @@ function preCoreScriptsForRoute(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const scripts = [];
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_PRE_CORE_RUNTIME_SCRIPTS);
-  if (routeNeedsDatabaseStats(page)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
+  if (routeNeedsDatabaseStatsBridge(page)) scripts.push(...DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS);
+  if (routeNeedsDatabaseStats(page, options)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_PRE_CORE_RUNTIME_SCRIPTS);
   if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
   return uniqueScripts(scripts);
@@ -535,8 +544,10 @@ async function ensureRouteRuntimeNow(pageName, options = {}) {
   if (routeNeedsWatchlist(page)) {
     runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
   }
-  if (routeNeedsDatabaseStats(page)) {
+  if (routeNeedsDatabaseStatsBridge(page)) {
     runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+  }
+  if (routeNeedsDatabaseStats(page, options)) {
     runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
     runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   }
