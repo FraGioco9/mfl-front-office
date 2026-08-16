@@ -65,6 +65,45 @@
   function normalizeSingleRenderCore(source) {
     let nextSource = String(source || "").replace(/\r\n?/g, "\n");
 
+    const clubRouteAlternatives = "contracts|attributes|current-season|all-time";
+    const canonicalClubRouteAlternatives = "squad|contracts|attributes|current-season|all-time";
+    const clubRoutePatternCount = nextSource.split(clubRouteAlternatives).length - 1;
+    if (clubRoutePatternCount < 2) {
+      throw new Error("Could not normalize Club public route parsing.");
+    }
+    nextSource = nextSource.replaceAll(clubRouteAlternatives, canonicalClubRouteAlternatives);
+
+    nextSource = replaceRequired(
+      nextSource,
+      '          ? "contracts"\n          : "attributes";\n    return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;',
+      '          ? "contracts"\n          : "squad";\n    return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;',
+      "Club Squad canonical route",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      'href="/clubs/${encodeURIComponent(contractClubId)}/attributes" data-club-id=',
+      'href="/clubs/${encodeURIComponent(contractClubId)}/squad" data-club-id=',
+      "player Contract Club route",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      'const href = "/clubs/" + encodeURIComponent(clubId) + "/attributes";',
+      'const href = "/clubs/" + encodeURIComponent(clubId) + "/squad";',
+      "player Contract Club link refresh",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      "function rowHasHiddenMflJoinedAgencyDate(row) {",
+      'function rowHasHiddenMflJoinedAgencyDate(row) {\n  if (state?.currentPage === "club" || /^\\/(?:clubs|club)\\/[^/]+(?:\\/|$)/i.test(window.location.pathname)) return false;',
+      "complete Club roster",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      "function updateViewButtons() {\n  viewButtons.forEach((button) => {",
+      'function updateViewButtons() {\n  const attributesButton = document.querySelector(\'#progressionPage .viewButton[data-view="attributes"]\');\n  if (attributesButton instanceof HTMLButtonElement) {\n    const label = state.currentPage === "club" ? "Squad" : "Attributes";\n    if (attributesButton.textContent !== label) attributesButton.textContent = label;\n  }\n  viewButtons.forEach((button) => {',
+      "Club Squad view label",
+    );
+
     const shellFirstOwner = '  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);';
     nextSource = replaceRequired(
       nextSource,
@@ -93,14 +132,10 @@
       "    return loadAndRender();",
       "  });",
     ].join("\n");
-    const singleReloadPhase = [
-      "  state.page = page;",
-      "  return withInteractionBusy(loadAndRender);",
-    ].join("\n");
     nextSource = replaceRequired(
       nextSource,
       reloadLoadingPhase,
-      singleReloadPhase,
+      ["  state.page = page;", "  return withInteractionBusy(loadAndRender);"].join("\n"),
       "incremental pagination and filter reload",
     );
 
@@ -111,18 +146,14 @@
 
     const pageName = state.currentPage;
     const nextView = normalizeViewForPage(viewName, pageName);
-    if (!allowedViewsForPage(pageName).includes(nextView)) {
-      return;
-    }
+    if (!allowedViewsForPage(pageName).includes(nextView)) return;
 
     const route = incrementalRouteTarget(pageName, {
       view: nextView,
       walletAddress: state.currentAgentWalletAddress,
       watchlistId: state.currentWatchlistId,
     });
-    if (!route) {
-      return originalSetView.call(this, nextView);
-    }
+    if (!route) return originalSetView.call(this, nextView);
 
     const loadAndRender = async () => {
       try {
@@ -138,10 +169,7 @@
       }
     };
 
-    if (incrementalRouteIsCached(route, 1)) {
-      return loadAndRender();
-    }
-
+    if (incrementalRouteIsCached(route, 1)) return loadAndRender();
     return withInteractionBusy(loadAndRender);
   };
 
@@ -170,12 +198,7 @@
       "      }",
       "",
     ].join("\n");
-    nextSource = replaceRequired(
-      nextSource,
-      stagedClubLoad,
-      singlePhaseClubLoad,
-      "staged Club page load",
-    );
+    nextSource = replaceRequired(nextSource, stagedClubLoad, singlePhaseClubLoad, "staged Club page load");
 
     const clubStateStart = [
       "      state.currentPage = CLUB_PAGE;",
@@ -197,37 +220,26 @@
       "      changelogPage.hidden = true;",
       "      state.page = 1;",
     ].join("\n");
-    nextSource = replaceRequired(
-      nextSource,
-      clubStateStart,
-      singlePhaseClubStateStart,
-      "atomic Club final render",
-    );
+    nextSource = replaceRequired(nextSource, clubStateStart, singlePhaseClubStateStart, "atomic Club final render");
 
-    const stagedInitialClub = [
-      '        await originalShowHomeShell.call(this, "database", false, { view: initialClubRoute.view });',
-      "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
-    ].join("\n");
     nextSource = replaceRequired(
       nextSource,
-      stagedInitialClub,
+      [
+        '        await originalShowHomeShell.call(this, "database", false, { view: initialClubRoute.view });',
+        "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
+      ].join("\n"),
       "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
       "initial Club route",
     );
 
-    const earlyClubViewChrome = [
-      "    setClubSwitching(true);",
-      '    if (typeof updateViewButtons === "function") updateViewButtons();',
-      "    void (async () => {",
-    ].join("\n");
-    const deferredClubViewChrome = [
-      "    setClubSwitching(true);",
-      "    void (async () => {",
-    ].join("\n");
     nextSource = replaceRequired(
       nextSource,
-      earlyClubViewChrome,
-      deferredClubViewChrome,
+      [
+        "    setClubSwitching(true);",
+        '    if (typeof updateViewButtons === "function") updateViewButtons();',
+        "    void (async () => {",
+      ].join("\n"),
+      ["    setClubSwitching(true);", "    void (async () => {"].join("\n"),
       "Club view pre-render chrome",
     );
 
@@ -260,12 +272,7 @@
       });
     });
   }`;
-    nextSource = replaceRequired(
-      nextSource,
-      twoFrameClubFinish,
-      singleFrameClubFinish,
-      "two-frame Club finalization",
-    );
+    nextSource = replaceRequired(nextSource, twoFrameClubFinish, singleFrameClubFinish, "two-frame Club finalization");
 
     const manualRouteRender = [
       "      state.incrementalApplying = true;",
@@ -273,6 +280,10 @@
       "        buildHeader();",
       "        originalApplyFilters.call(this, { save: false });",
     ].join("\n");
+    const lastManualRouteRender = nextSource.lastIndexOf(manualRouteRender);
+    if (lastManualRouteRender < 0) {
+      throw new Error("Could not normalize the final incremental route render.");
+    }
     const manualRouteFinalRender = [
       "      state.incrementalApplying = true;",
       "      try {",
@@ -280,10 +291,6 @@
       "        buildHeader();",
       "        originalApplyFilters.call(this, { save: false });",
     ].join("\n");
-    const lastManualRouteRender = nextSource.lastIndexOf(manualRouteRender);
-    if (lastManualRouteRender < 0) {
-      throw new Error("Could not normalize the final incremental route render.");
-    }
     nextSource = `${nextSource.slice(0, lastManualRouteRender)}${manualRouteFinalRender}${nextSource.slice(lastManualRouteRender + manualRouteRender.length)}`;
 
     return nextSource;
@@ -303,9 +310,7 @@
       } catch {
         return response;
       }
-      if (url.origin !== window.location.origin || url.pathname !== "/modules/app-core.js" || !response.ok) {
-        return response;
-      }
+      if (url.origin !== window.location.origin || url.pathname !== "/modules/app-core.js" || !response.ok) return response;
 
       const transformed = normalizeSingleRenderCore(await response.text());
       return new Response(transformed, {
@@ -451,9 +456,7 @@
   const startupToken = window.__mflInteractionBusy.begin("startup");
   const finishStartup = async () => {
     try {
-      if (window.__mflAppStartPromise) {
-        await window.__mflAppStartPromise;
-      }
+      if (window.__mflAppStartPromise) await window.__mflAppStartPromise;
     } catch {}
     window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");

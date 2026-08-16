@@ -36,7 +36,6 @@
       await Promise.all([
         loadRuntime("/table-width-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
-        loadRuntime("/club-squad-route-runtime.js"),
         loadRuntime("/filter-controls-runtime.js"),
       ]);
       await loadRuntime("/bootstrap-core.js");

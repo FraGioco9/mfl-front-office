@@ -40,23 +40,31 @@ const bootstrapCore = await readSite("bootstrap-core.js");
 const staticVersion = bootstrap.match(/const\s+STATIC_RELEASE_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']/)?.[1];
 invariant(staticVersion === release.version, `bootstrap.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
 matches(bootstrap, /window\.__mflReleaseVersion\s*=\s*STATIC_RELEASE_VERSION/, "bootstrap.js must own the release version.");
+matches(bootstrap, /footerVersion\.textContent\s*=\s*`MFL Front Office v\$\{STATIC_RELEASE_VERSION\}`/, "bootstrap.js must synchronously own the release footer label.");
+matches(bootstrap, /mflSingleRenderPending/, "bootstrap.js must keep page content hidden until the canonical startup render completes.");
 matches(bootstrap, /loadRuntime\(["']\/table-width-runtime\.js["']\)/, "bootstrap.js must load the canonical table width owner before app startup.");
-matches(bootstrap, /loadRuntime\(["']\/filter-controls-runtime\.js["']\)/, "bootstrap.js must load the filter-controls owner.");
-excludes(bootstrap, /player-loading-runtime|syncBootstrapFirstPaint|syncViewButtonsFirstPaint|syncQuickFilterFirstPaint|ensureContractsFirstPaintColumnOrder|normalizeBootstrapCoreWidthOwnership/, "bootstrap.js must not render or repair page content before canonical owners load.");
+matches(bootstrap, /loadRuntime\(["']\/filter-controls-runtime\.js["']\)/, "bootstrap.js must load filter behavior before app startup.");
+excludes(bootstrap, /club-squad-route-runtime|player-loading-runtime|syncBootstrapFirstPaint|syncViewButtonsFirstPaint|syncQuickFilterFirstPaint|primeStatic/, "bootstrap.js must not load page-specific pre-render or repair owners.");
 
-matches(bootstrapCore, /function\s+applyRouteShell/, "bootstrap-core must resolve only the route shell before app startup.");
+matches(bootstrapCore, /function\s+normalizeSingleRenderCore/, "bootstrap-core must normalize legacy multi-phase core rendering into one final render.");
+matches(bootstrapCore, /function\s+installSingleRenderCoreTransform/, "bootstrap-core must install the single-render core transform before app startup.");
+matches(bootstrapCore, /shellFirstTablePages\s*=\s*new Set\(\);/, "The transformed core must not use destination shell-first table rendering.");
+matches(bootstrapCore, /squad\|contracts\|attributes\|current-season\|all-time/, "Club /squad parsing must be folded into the canonical core transform.");
+matches(bootstrapCore, /:\s*["']squad["'];\n\s*return `\/clubs\//, "Club Attributes must canonicalize to /squad in app-core.");
+matches(bootstrapCore, /state\.currentPage === ["']club["'] \? ["']Squad["'] : ["']Attributes["']/, "Club Squad label must be set by the canonical view renderer.");
+matches(bootstrapCore, /mflSingleRenderPending/, "bootstrap-core must reveal page content only after the canonical startup render settles.");
 matches(bootstrapCore, /function\s+createInteractionBusyController/, "bootstrap-core must own global startup interaction blocking.");
-excludes(bootstrapCore, /STATIC_TABLE_|primeStatic|applyStaticSharedTableWidths|replaceChildren\(|renderEvaluation|primeEvaluation|primeMflStats|filterRules|advancedPlayerTable/, "bootstrap-core must never build page or data-container content.");
+excludes(bootstrapCore, /STATIC_TABLE_|primeStaticTable|primeStaticMfl|applyStaticSharedTableWidths|renderStaticClubTitle|syncClubChrome|primeLoadingSurface|GUARD_INTERVAL_MS/, "bootstrap-core must not contain a second page/data-container renderer.");
 
 const entry = await readSite("modules/app-entry.js");
 matches(entry, /const\s+path\s*=\s*["']\/modules\/app-core\.js["'];[\s\S]*nativeFetch\(assetUrl\(path\)/, "app-entry.js must execute the canonical application core directly.");
 matches(entry, /["']\/table-loading-runtime\.js["']/, "app-entry.js must load the canonical table-loading owner.");
-excludes(entry, /view-button-visibility-runtime|watchlist-route-ui-runtime/, "app-entry.js must not restore renamed runtime owners.");
+excludes(entry, /view-button-visibility-runtime|watchlist-route-ui-runtime|club-squad-route-runtime/, "app-entry.js must not restore deprecated route/view repair owners.");
 excludes(entry, /\?(?:v|dev|rev)=|searchParams\.set\(["'](?:v|dev|rev)["']/, "app-entry.js must keep runtime asset URLs queryless.");
 
 const tableLoading = await readSite("table-loading-runtime.js");
 matches(tableLoading, /buildHeader\.__mflSingleRenderOwner/, "Table loading must make app-core buildHeader the single persistent header owner.");
-matches(tableLoading, /renderTableLoadingShell\.__mflSingleRenderOwner/, "Table loading must render the canonical header before data fetch.");
+matches(tableLoading, /renderTableLoadingShell\.__mflSingleRenderOwner/, "Table loading must invoke the canonical header before data fetch.");
 matches(tableLoading, /function\s+ensureCanonicalHeader/, "Table loading must ask app-core's header owner to build the initial header.");
 matches(tableLoading, /function\s+hasRealRows/, "Loading placeholders must never overwrite real table rows.");
 excludes(tableLoading, /VIEW_COLUMNS|COLUMN_META|primeHeader|active_contract_revenue_share|active_contract_club_name|syncSharedViewButtonPage/, "Table loading must not own table schema, column order, or view chrome.");
@@ -73,49 +81,66 @@ excludes(tableView, /MutationObserver|primeDatabaseStatsFilters|activateSharedTa
 const tableNavigation = await readSite("table-navigation-chrome-runtime.js");
 excludes(tableNavigation, /MutationObserver|replaceChildren|primeHeader|syncEntityViewButtons|revealTableDestination|history\./, "Table navigation chrome must not pre-render destination content.");
 
-const staticUi = await readSite("static-ui-runtime.js");
-excludes(staticUi, /MutationObserver|querySelector|replaceChildren|textContent\s*=|classList\./, "Static UI compatibility must never repair rendered DOM.");
+const desktopTableStyle = await readSite("desktop-table-style-runtime.js");
+excludes(desktopTableStyle, /MutationObserver|replaceChildren|title\.textContent\s*=|title\.innerHTML/, "Desktop table styling must not rewrite Agent or table content after app-core renders it.");
+matches(desktopTableStyle, /agentWalletCopy/, "Agent wallet-copy interaction must remain delegated to the canonical title element.");
 
-const blankRowGuard = await readSite("table-blank-row-guard-runtime.js");
-excludes(blankRowGuard, /MutationObserver|replaceChildren|querySelector/, "Blank-row compatibility must not compete with table-loading-runtime.");
+const selectionStartup = await readSite("selection-startup-reset-runtime.js");
+matches(selectionStartup, /restoreSavedTableState\.__mflStartupSelectionReset/, "Startup selection reset must sanitize restored selection state before canonical table rendering.");
+excludes(selectionStartup, /MutationObserver|renderTable\s*\(/, "Startup selection reset must never watch or rerender the table.");
 
 const evaluationLayout = await readSite("evaluation-layout-runtime.js");
-excludes(evaluationLayout, /MutationObserver|showEvaluationPage|syncLoadButton|syncDiscountRateFallback|storedMflPerUsd|main\s*>\s*\.pageView|replaceChildren/, "Evaluation layout must not pre-render or repair Evaluation content.");
-matches(evaluationLayout, /focusWhenReady/, "Evaluation layout may own only post-readiness focus behavior.");
+excludes(evaluationLayout, /MutationObserver|showEvaluationPage|syncLoadButton|syncDiscountRateFallback|main\s*>\s*\.pageView|replaceChildren/, "Evaluation layout must not pre-render or repair Evaluation content.");
 
 const evaluationDiscountDisplay = await readSite("evaluation-discount-rate-display-runtime.js");
 excludes(evaluationDiscountDisplay, /MutationObserver|setInterval|querySelector|textContent\s*=|classList\./, "Evaluation discount display compatibility must never repair or poll rendered DOM.");
 
 const evaluationDiscountRate = await readSite("evaluation-discount-rate-runtime.js");
 matches(evaluationDiscountRate, /mfl:season-ratios-ready/, "Evaluation discount-rate data must publish one explicit ready event.");
-matches(evaluationDiscountRate, /coreObserver\.observe\(document\.head,\s*\{\s*childList:\s*true\s*\}\)/, "Evaluation discount-rate authority may use only a one-shot app-core insertion bridge.");
 excludes(evaluationDiscountRate, /setInterval|subtree:\s*true/, "Evaluation discount-rate ownership must be event-driven and must not poll or broadly observe the page.");
 
 const evaluationDiscountUi = await readSite("evaluation-discount-rate-ui-runtime.js");
 excludes(evaluationDiscountUi, /MutationObserver|setInterval|evaluationDiscountRate\.textContent|advancedDiscountRateValue\.textContent/, "Evaluation discount-rate UI must remain tooltip-only and event-driven.");
 
+const evaluationSearchState = await readSite("evaluation-search-state-runtime.js");
+matches(evaluationSearchState, /recentEvaluationRows\.__mflSupabaseOnly/, "Evaluation recents must stay Supabase-backed data consumed by the canonical renderer.");
+excludes(evaluationSearchState, /MutationObserver|resultsObserver|\.replaceChildren\(/, "Evaluation recent-state runtime must not watch or rebuild the search results container.");
+
+const globalSearch = await readSite("global-search-runtime.js");
+matches(globalSearch, /installCoreSearchMatching/, "Global Search runtime must remain the authoritative search-data bridge.");
+matches(globalSearch, /__mflSurnameFirst/, "Player search must preserve surname-first matching.");
+excludes(globalSearch, /resultsObserver|canonicalSearchResults|canonicalSearchCaptured|observeResultBoxes|syncCanonicalSearchResults|prependCanonicalSearchResult/, "Global Search must never snapshot or repair rendered result nodes.");
+
 const watchlistUi = await readSite("watchlist-ui-runtime.js");
 excludes(watchlistUi, /MutationObserver|history\.pushState|history\.replaceState|syncWatchlistTitle|syncWatchlistSwitcher|protectedRoute|currentWatchlistIdentity/, "Watchlist UI must not compete with app-core for route, title, or switcher state.");
-matches(watchlistUi, /watchlistRenameTooltip/, "Watchlist UI must retain the unique rename tooltip interaction.");
+
+const filterControls = await readSite("filter-controls-runtime.js");
+matches(filterControls, /buildOperatorSelect\.__mflContractOperators/, "Filter behavior must be installed at canonical control construction time.");
+excludes(filterControls, /syncStaticViewButtons|installStaticViewShell|playerLoading|syncExistingContractOperators|viewButtonsContainer|subtree:\s*true/, "Filter controls must not pre-render view chrome or repair existing filter controls.");
+
+const nationalityFilterOptions = await readSite("nationality-filter-options-runtime.js");
+matches(nationalityFilterOptions, /uniqueNationalityValues\.__mflAuthoritativeFilterOptions/, "Nationality options must feed app-core's canonical filter builder.");
+excludes(nationalityFilterOptions, /filterRulesObserver|select\.replaceChildren|subtree:\s*true/, "Nationality option loading must not rebuild rendered selects behind app-core.");
+
+const changelogHistory = await readSite("changelog-history-runtime.js");
+matches(changelogHistory, /function\s+buildList/, "Changelog history must have one explicit list renderer.");
+excludes(changelogHistory, /MutationObserver|setTimeout\(sync|listMatches\(|footerLabel/, "Changelog must not repeatedly repair or rebuild its rendered history.");
 
 const databaseStats = await readSite("database-stats-runtime.js");
 matches(databaseStats, /bindPermanentControls/, "Database Stats must bind the permanent HTML shell instead of recreating it.");
 excludes(databaseStats, /function\s+createPage|page\.innerHTML|databaseStatsOverallFilters[\s\S]*replaceChildren\(fragment\)/, "Database Stats must not recreate its static page or filter controls.");
 
-const databaseStatsReloadBootstrap = await readSite("database-stats-reload-bootstrap-runtime.js");
-excludes(databaseStatsReloadBootstrap, /history\.|querySelector|classList\.|textContent\s*=|createElement|requestAnimationFrame/, "Database Stats reload compatibility must never compete with bootstrap-core for route or shell visibility.");
+const databaseStatsTooltipPortal = await readSite("database-stats-tooltip-portal-runtime.js");
+matches(databaseStatsTooltipPortal, /databaseStatsCustomFilter/, "Database Stats custom filtering must use the permanent filter element.");
+excludes(databaseStatsTooltipPortal, /databaseStatsCustomTooltipPortal|innerHTML|createElement|MutationObserver|replaceChildren/, "Database Stats must not create a duplicate custom-filter portal/form.");
 
 const mflStats = await readSite("mfl-stats-runtime.js");
 matches(mflStats, /__mflStatsRuntime\s*=\s*Object\.freeze/, "MFL Stats compatibility hooks must remain available to app-entry.");
 excludes(mflStats, /fetch\(|MutationObserver|replaceChildren|innerHTML|renderMflStats|ensureStaticFilters|showStatsShell/, "MFL Stats runtime must not compete with app-core's single MFL Stats renderer.");
 
-const globalSearch = await readSite("global-search-runtime.js");
-matches(globalSearch, /installCoreSearchMatching/, "Global Search runtime must remain the authoritative search-data bridge.");
-
 const indexHtml = await readSite("index.html");
 matches(indexHtml, /<meta[^>]+name=["']viewport["'][^>]+viewport-fit=cover/i, "Mobile first paint must enable safe-area viewport fitting.");
 matches(indexHtml, /<link[^>]+href=["']\/responsive\.css["'][^>]+data-mfl-responsive-layout=["']true["']/i, "responsive.css must be render-blocking.");
-invariant(indexHtml.includes(`MFL Front Office v${release.version}`), "The static footer version must match release.json.");
 matches(indexHtml, /<colgroup id="tableColGroup"><\/colgroup>[\s\S]*<thead id="tableHead"><\/thead>[\s\S]*<tbody id="tableBody"><\/tbody>/, "Shared player table shell must stay permanent in index.html.");
 matches(indexHtml, /id="databaseStatsPage"[\s\S]*id="mflStatsPage"[\s\S]*id="evaluationPage"[\s\S]*id="playerPage"[\s\S]*id="settingsPage"[\s\S]*id="changelogPage"/, "Every major page must keep a permanent HTML shell.");
 matches(indexHtml, /id="evaluationDiscountRate"[^>]*>\s*-\s*<\/strong>/, "Evaluation Discount Rate must start from the permanent HTML placeholder instead of a bootstrap renderer.");
@@ -139,8 +164,9 @@ matches(siteDeploy, /vercel deploy --prod --yes --force/, "Site deployment must 
 const databaseRuntime = await readSite("api/_database.js");
 matches(databaseRuntime, /runtime_metadata/, "SQLite runtime must read runtime_metadata.");
 
-await mustNotExist(resolve(siteRoot, "player-loading-runtime.js"), "player-loading-runtime.js must stay removed; Player has one canonical renderer.");
 for (const path of [
+  "player-loading-runtime.js",
+  "club-squad-route-runtime.js",
   "desktop-table-observer-guard-runtime.js",
   "desktop-table-width.css",
   "evaluation-discount-rate-guard-runtime.js",
