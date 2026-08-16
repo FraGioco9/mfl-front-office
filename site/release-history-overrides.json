@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.40",
+    "Synchronize route chrome, focus cleanup, and non-fatal startup recovery"
+  ],
+  [
     "v1.124.39",
     "Keep the footer and complete Changelog history aligned with the newest release"
   ],
