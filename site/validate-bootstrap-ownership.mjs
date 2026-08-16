@@ -70,8 +70,33 @@ includes(
 );
 includes(
   bootstrapCore,
-  'if (document.documentElement.dataset.mflReady !== "error" && window.__mflAppStartPromise)',
-  "Startup failure cleanup must release immediately without awaiting a failed or stuck application promise.",
+  "const recoverCompletedApplicationStartup = async () => {",
+  "Late startup errors must be classified against the actual application-core startup result.",
+);
+includes(
+  bootstrapCore,
+  "applicationStarted = await Promise.race([",
+  "Non-fatal startup recovery must be bounded instead of waiting indefinitely.",
+);
+includes(
+  bootstrapCore,
+  "window.setTimeout(() => resolve(false), 250)",
+  "Late startup recovery must have a short timeout ceiling.",
+);
+includes(
+  bootstrapCore,
+  'document.getElementById("mflStartupError")?.remove();',
+  "A false fatal startup message must be removed when the application core completed successfully.",
+);
+includes(
+  bootstrapCore,
+  'document.documentElement.dataset.mflReady = "true";',
+  "Recovered application startup must restore the normal ready state.",
+);
+includes(
+  bootstrapCore,
+  "await finishStartup({ skipAppStart: true });",
+  "A real startup failure must release the bootstrap lock without awaiting a failed or stuck app promise.",
 );
 
 console.log("Bootstrap single-render ownership validation passed.");
