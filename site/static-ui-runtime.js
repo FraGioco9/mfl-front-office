@@ -47,7 +47,7 @@
     const view = config && Array.isArray(config.order) && config.order.includes(requestedView)
       ? requestedView
       : String(config?.fallback || requestedView || "");
-    return { page, view };
+    return { page, view, url: url.href };
   }
 
   function installStyles() {
@@ -121,12 +121,8 @@
   }
 
   function syncStatsViews(page, view) {
-    if (page === "database" && view === "stats") {
-      setActiveView(document.querySelector("#databaseStatsPage .views"), "stats");
-    }
-    if (page === "mfl" && view === "stats") {
-      setActiveView(document.querySelector("#mflStatsPage .views"), "stats");
-    }
+    if (page === "database" && view === "stats") setActiveView(document.querySelector("#databaseStatsPage .views"), "stats");
+    if (page === "mfl" && view === "stats") setActiveView(document.querySelector("#mflStatsPage .views"), "stats");
   }
 
   function routeNeedsLockedShell(page) {
@@ -146,9 +142,21 @@
     return document.getElementById("homePage");
   }
 
+  function hideDestinationPager() {
+    const pager = document.querySelector("#progressionPage nav.pager");
+    if (pager instanceof HTMLElement) pager.hidden = true;
+  }
+
+  function syncDestinationTableChrome(state) {
+    hideDestinationPager();
+    const prime = window.__mflPrimeTableChrome;
+    if (typeof prime === "function") prime(state.page, state.url || window.location.href);
+  }
+
   function showRouteShell(state, { loading = false } = {}) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
+    if (target.id === "progressionPage") syncDestinationTableChrome(state);
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
@@ -163,14 +171,9 @@
     setActiveNavigation(state.page);
     syncSharedViewSet(state.page, state.view);
     syncStatsViews(state.page, state.view);
-    if (pending && tableViewConfig()[state.page]) {
-      document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, state.page);
-    } else if (!pending) {
-      document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
-    }
-    showRouteShell(state, {
-      loading: pending || document.documentElement.classList.contains("mflSingleRenderPending"),
-    });
+    if (pending && tableViewConfig()[state.page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, state.page);
+    else if (!pending) document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
+    showRouteShell(state, { loading: pending || document.documentElement.classList.contains("mflSingleRenderPending") });
     return state;
   }
 
@@ -195,12 +198,11 @@
     const view = String(viewButton.dataset.view || "");
     if (container) setActiveView(container, view);
 
-    const page = String(viewButton.dataset.page || routeState().page || "");
-    if (container?.matches("#progressionPage .views")) {
-      syncSharedViewSet(page, view);
-    }
+    const currentState = routeState();
+    const page = String(viewButton.dataset.page || currentState.page || "");
+    if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
     if (tableViewConfig()[page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, page);
-    showRouteShell({ page, view }, { loading: true });
+    showRouteShell({ page, view, url: currentState.url }, { loading: true });
   }
 
   function onKeyDown(event) {
@@ -221,9 +223,7 @@
   function onBodyPageChange() {
     const pendingPage = document.documentElement.getAttribute(PENDING_PAGE_ATTRIBUTE);
     const bodyPage = String(document.body?.dataset.page || "");
-    if (pendingPage && bodyPage === pendingPage) {
-      document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
-    }
+    if (pendingPage && bodyPage === pendingPage) document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
   }
 
   function sync() {
