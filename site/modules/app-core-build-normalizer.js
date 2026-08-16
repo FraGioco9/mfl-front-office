@@ -6,6 +6,7 @@ import { normalizeRouteRequestCancellation } from "./app-core-route-request-norm
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { normalizeRouteRuntimeGate } from "./app-core-route-runtime-normalizer.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
+import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { normalizeStartupDataDependencies } from "./app-core-startup-data-normalizer.js";
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 import { normalizePureTableStateRestoration } from "./app-core-table-state-normalizer.js";
@@ -21,7 +22,8 @@ function normalizeCompleteApplicationCore(source) {
 export function normalizeBuiltApplicationCoreArtifacts(source) {
   const routeArtifacts = splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(routeArtifacts);
-  return splitPlayerApplicationCoreRuntime(settingsArtifacts);
+  const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
+  return splitTableApplicationCoreRuntime(playerArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

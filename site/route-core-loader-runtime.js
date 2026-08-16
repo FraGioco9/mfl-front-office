@@ -6,8 +6,8 @@
    * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
    * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
-   * __mflEnsureRouteCore?: (pageName: string) => Promise<void>,
-   * __mflRouteCoreRuntime?: { ensure?: (pageName: string) => Promise<void> },
+   * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+   * __mflRouteCoreRuntime?: { ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void> },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
   const runtimeWindow = window;
@@ -23,7 +23,9 @@
     club: "/modules/app-core-club-runtime.js",
     settings: "/modules/app-core-settings-runtime.js",
     player: "/modules/app-core-player-runtime.js",
+    table: "/modules/app-core-table-runtime.js",
   });
+  const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
   const routeCorePromises = new Map();
 
   function assetUrl(path) {
@@ -88,7 +90,7 @@
     runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   }
 
-  function ensure(pageName) {
+  function ensureSingle(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
     if (!ROUTE_CORE_PATHS[page]) return Promise.resolve();
 
@@ -103,6 +105,34 @@
     return pending;
   }
 
+  function normalizedPageName(pageName) {
+    const page = String(pageName || "").trim().toLowerCase();
+    if (page === "my-players") return "myplayers";
+    if (page === "clubs") return "club";
+    return page;
+  }
+
+  function routeView(options = {}) {
+    return String(options?.view || "").trim().toLowerCase();
+  }
+
+  function routeCoreDependencies(pageName, options = {}) {
+    const page = normalizedPageName(pageName);
+    const view = routeView(options);
+    if (page === "database" && view === "stats") return [];
+    if (page === "mfl" && view === "stats") return ["mflstats"];
+    if (page === "club") return ["table", "club"];
+    if (TABLE_CORE_PAGES.has(page)) return ["table"];
+    return ROUTE_CORE_PATHS[page] ? [page] : [];
+  }
+
+  async function ensure(pageName, options = {}) {
+    const dependencies = routeCoreDependencies(pageName, options);
+    for (const dependency of dependencies) {
+      await ensureSingle(dependency);
+    }
+  }
+
   function installClubRouteGate() {
     if (runtimeWindow.mflOpenClubPage?.__mflRouteRuntimeGate) return;
 
@@ -112,7 +142,7 @@
 
       const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
       try {
-        const routeCorePromise = ensure("club");
+        const routeCorePromise = ensure("club", { view });
         const routeRuntimePromise = typeof runtimeWindow.__mflEnsureRouteRuntime === "function"
           ? runtimeWindow.__mflEnsureRouteRuntime("club", { view })
           : Promise.resolve();
