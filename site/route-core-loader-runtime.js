@@ -55,6 +55,15 @@
     watchlist: "/modules/app-core-watchlist-runtime.js",
   });
   const TABLE_INFRASTRUCTURE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
+  const VIEW_BY_SLUG = Object.freeze({
+    attributes: "attributes",
+    squad: "attributes",
+    stats: "stats",
+    "next-overall": "next",
+    contracts: "contracts",
+    "current-season": "current",
+    "all-time": "all",
+  });
   const routeCorePromises = new Map();
   let fallbackArtifactsPromise = null;
 
@@ -169,6 +178,12 @@
     return page || "home";
   }
 
+  function viewOptionsFromSegments(segments) {
+    const slug = String(segments.at(-1) || "").toLowerCase();
+    const view = VIEW_BY_SLUG[slug] || "";
+    return view ? { view } : {};
+  }
+
   function initialRouteRuntimeRequest(pathname = location.pathname) {
     const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
     if (!path.startsWith("/")) return { pageName: "home", options: {} };
@@ -177,18 +192,13 @@
     const pageSegment = String(segments[1] || "").toLowerCase();
     if (pageSegment === "evaluation" && segments.length === 2) return { pageName: "evaluation", options: {} };
     if (pageSegment === "changelog" && segments.length === 2) return { pageName: "changelog", options: {} };
-    if (pageSegment === "database") {
-      if (segments.length === 3 && String(segments[2] || "").toLowerCase() === "stats") {
-        return { pageName: "database", options: { view: "stats" } };
-      }
-      return { pageName: "database", options: {} };
-    }
-    if (pageSegment === "mfl") return { pageName: "mfl", options: {} };
-    if (pageSegment === "progression") return { pageName: "progression", options: {} };
-    if (pageSegment === "watchlist") return { pageName: "watchlist", options: {} };
-    if (pageSegment === "my-players") return { pageName: "myplayers", options: {} };
-    if (pageSegment === "agents") return { pageName: "agents", options: {} };
-    if (pageSegment === "clubs" || pageSegment === "club") return { pageName: "club", options: {} };
+    if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "mfl") return { pageName: "mfl", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "progression") return { pageName: "progression", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "watchlist") return { pageName: "watchlist", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "my-players") return { pageName: "myplayers", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "agents") return { pageName: "agents", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "clubs" || pageSegment === "club") return { pageName: "club", options: viewOptionsFromSegments(segments) };
     if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
     if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
     return { pageName: "home", options: {} };
