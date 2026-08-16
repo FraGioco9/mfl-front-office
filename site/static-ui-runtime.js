@@ -71,8 +71,6 @@
 
     rules.push(
       `html[data-stored-progression-access="false"] body[data-page="watchlist"] #progressionPage .views > .viewButton:is([data-view="current"], [data-view="all"]), html[data-stored-progression-access="false"][${PENDING_PAGE_ATTRIBUTE}="watchlist"] #progressionPage .views > .viewButton:is([data-view="current"], [data-view="all"]) { display: none !important; }`,
-      `body[data-page="club"] #progressionPage .views > .viewButton[data-view="attributes"], html[${PENDING_PAGE_ATTRIBUTE}="club"] #progressionPage .views > .viewButton[data-view="attributes"] { font-size: 0 !important; }`,
-      `body[data-page="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after, html[${PENDING_PAGE_ATTRIBUTE}="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after { content: "Squad"; font-size: 14px; }`,
     );
 
     const style = document.createElement("style");
@@ -115,6 +113,9 @@
       const buttonView = String(button.dataset.view || "");
       button.hidden = !allowed.has(buttonView);
       if (allowed.has(buttonView)) button.style.order = String(config.order.indexOf(buttonView) + 1);
+      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
+        button.textContent = page === "club" ? "Squad" : "Attributes";
+      }
     });
     const activeView = allowed.has(view) ? view : String(config.fallback || config.order[0] || "");
     setActiveView(container, activeView);
@@ -147,16 +148,34 @@
     if (pager instanceof HTMLElement) pager.hidden = true;
   }
 
-  function syncDestinationTableChrome(state) {
+  function syncDestinationTableChrome(state, { loading = false } = {}) {
     hideDestinationPager();
     const prime = Reflect.get(window, "__mflPrimeTableChrome");
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
+    if (loading) {
+      const primeRows = Reflect.get(window, "__mflPrimeTableRows");
+      if (typeof primeRows === "function") primeRows(true);
+    }
+  }
+
+  function primeDestinationSkeleton(target, loading) {
+    if (!loading || !(target instanceof HTMLElement)) return;
+    const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");
+    if (typeof prime === "function") prime(target);
+
+    if (target.id === "databaseStatsPage" || target.id === "mflStatsPage") {
+      target.querySelectorAll(".mflStatsCards strong").forEach((value) => {
+        if (value instanceof HTMLElement) value.textContent = "-";
+      });
+      target.querySelectorAll(".mflStatsAgeDistribution").forEach((distribution) => distribution.replaceChildren());
+    }
   }
 
   function showRouteShell(state, { loading = false } = {}) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
-    if (target.id === "progressionPage") syncDestinationTableChrome(state);
+    if (target.id === "progressionPage") syncDestinationTableChrome(state, { loading });
+    else primeDestinationSkeleton(target, loading);
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
@@ -183,6 +202,22 @@
     return href ? new URL(href, window.location.href).href : "";
   }
 
+  function routeLinkFromEvent(event, target) {
+    const link = target?.closest?.("a[href]");
+    if (!(link instanceof HTMLAnchorElement)) return null;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;
+    if (link.target && link.target.toLowerCase() !== "_self") return null;
+    if (link.hasAttribute("download")) return null;
+    const href = routeUrlFromElement(link);
+    if (!href) return null;
+    try {
+      const url = new URL(href, window.location.href);
+      return url.origin === window.location.origin ? link : null;
+    } catch {
+      return null;
+    }
+  }
+
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     const nav = target?.closest?.("#sidebar .navButton[data-page]");
@@ -193,16 +228,24 @@
     }
 
     const viewButton = target?.closest?.("main .views .viewButton[data-view]");
-    if (!(viewButton instanceof HTMLButtonElement)) return;
-    const container = viewButton.closest(".views");
-    const view = String(viewButton.dataset.view || "");
-    if (container) setActiveView(container, view);
+    if (viewButton instanceof HTMLButtonElement) {
+      const container = viewButton.closest(".views");
+      const view = String(viewButton.dataset.view || "");
+      if (container) setActiveView(container, view);
 
-    const currentState = routeState();
-    const page = String(viewButton.dataset.page || currentState.page || "");
-    if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
-    if (tableViewConfig()[page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, page);
-    showRouteShell({ page, view, url: currentState.url }, { loading: true });
+      const currentState = routeState();
+      const page = String(viewButton.dataset.page || currentState.page || "");
+      if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
+      if (tableViewConfig()[page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, page);
+      showRouteShell({ page, view, url: currentState.url }, { loading: true });
+      return;
+    }
+
+    const routeLink = routeLinkFromEvent(event, target);
+    if (routeLink) {
+      const href = routeUrlFromElement(routeLink);
+      if (href) syncRouteChrome(href, { pending: true });
+    }
   }
 
   function onKeyDown(event) {
