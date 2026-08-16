@@ -1,4 +1,4 @@
 {
-  "version": "1.124.36",
-  "description": "Restore refresh startup after the Wallet core split"
+  "version": "1.124.37",
+  "description": "Keep universal Table actions bound safely before the lazy Table core loads"
 }
