@@ -1,5 +1,13 @@
 [
   [
+    "v1.124.43",
+    "Stabilize first-paint route skeletons, quickfilters, and Player refresh"
+  ],
+  [
+    "v1.124.42",
+    "Prime page titles, quickfilters, and pager state before first paint"
+  ],
+  [
     "v1.124.41",
     "Restore visible loading shells and remove stale release ownership"
   ],
