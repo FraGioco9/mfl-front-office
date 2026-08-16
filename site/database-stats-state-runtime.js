@@ -130,20 +130,28 @@
   }
 
   async function renderStatsRoute(updateUrl = false) {
-    ensureStatsAllowedInDatabaseView();
-    saveCurrentTableBeforeStats();
+    const runtimeToken = window.__mflInteractionBusy?.begin?.("route-runtime") || "";
+    try {
+      ensureStatsAllowedInDatabaseView();
+      saveCurrentTableBeforeStats();
 
-    if (!isStatsPath()) {
-      history[updateUrl ? "pushState" : "replaceState"](history.state, "", "/database/stats");
-    }
+      if (!isStatsPath()) {
+        history[updateUrl ? "pushState" : "replaceState"](history.state, "", "/database/stats");
+      }
 
-    rememberStatsView(true);
-    if (typeof window.renderDatabaseStatsPage === "function") {
-      await window.renderDatabaseStatsPage(false);
-    } else {
-      window.setDatabaseStatsPageVisibility?.(true);
+      rememberStatsView(true);
+      if (typeof window.__mflEnsureRouteRuntime === "function") {
+        await window.__mflEnsureRouteRuntime("database", { view: "stats" });
+      }
+      if (typeof window.renderDatabaseStatsPage === "function") {
+        await window.renderDatabaseStatsPage(false);
+      } else {
+        window.setDatabaseStatsPageVisibility?.(true);
+      }
+      rememberStatsView(false);
+    } finally {
+      if (runtimeToken) window.__mflInteractionBusy?.end?.(runtimeToken);
     }
-    rememberStatsView(false);
   }
 
   function cloudDatabaseView(savedState) {
