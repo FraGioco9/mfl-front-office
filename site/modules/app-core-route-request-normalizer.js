@@ -270,10 +270,8 @@ export function normalizeRouteRequestCancellation(source) {
     "Club route data hydration",
   );
 
-  nextSource = replaceInSection(
+  nextSource = replaceRequired(
     nextSource,
-    "  window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage(pageName, options = {}) {",
-    "})();\n\nwindow.__mflAppStartPromise = startApp();",
     "      await requestIncrementalRoute(route, 1);\n      if (tablePages.has(pageName)) {",
     "      const payload = await requestIncrementalRoute(route, 1);\n      if (!payload) return false;\n      if (tablePages.has(pageName)) {",
     "public incremental route loader",
