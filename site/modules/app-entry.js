@@ -191,8 +191,12 @@ function routeView(options = {}) {
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
 function routeNeedsTable(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
-  if (page === "database") return routeView(options) !== "stats";
-  return ["mfl", "agents", "progression", "watchlist", "myplayers", "club"].includes(page);
+  const classifier = Reflect.get(window, "__mflRouteUsesTableInfrastructure");
+  if (typeof classifier !== "function") {
+    throw new Error("Table-route classifier is unavailable.");
+  }
+  if (!classifier(page)) return false;
+  return page !== "database" || routeView(options) !== "stats";
 }
 
 /** @param {string} pageName */
