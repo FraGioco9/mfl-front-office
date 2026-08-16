@@ -42,8 +42,8 @@ export function splitApplicationCoreRuntime(source) {
   extracted = extractRequiredSection(
     core,
     "function normalizeSharedEvaluationPayload(payload) {",
-    "function normalizedPageName(pageName) {",
-    "Evaluation save, share, and load services",
+    "async function openSavedEvaluationsModal() {",
+    "Evaluation save, share, and saved-list services",
   );
   core = extracted.core;
   evaluationParts.push(extracted.chunk);

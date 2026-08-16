@@ -70,7 +70,7 @@ includes(routeNormalizer, "routeCorePromise", "Route-core download must overlap 
 includes(routeNormalizer, "window.__mflMarkApplicationCoreLoaded?.();", "The generated core must mark itself loaded before startApp.");
 
 includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");
-includes(routeChunks, "Evaluation save, share, and load services", "The first split must move Evaluation services out of the universal core.");
+includes(routeChunks, "Evaluation save, share, and saved-list services", "The first split must move Evaluation services out of the universal core.");
 includes(routeCoreLoader, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "The route-core loader must map Evaluation to its generated chunk.");
 includes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Unprepared local environments must be able to build the missing route chunk from source.");
 includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");
@@ -101,10 +101,13 @@ new Function(evaluationCore);
 excludes(normalizedCore, "const advancedPlayerTableTsv = `", "The large Evaluation valuation table must not remain in the shared core.");
 excludes(normalizedCore, "const evaluationContractsTable = (() => {", "Evaluation contract-table construction must not run on unrelated routes.");
 excludes(normalizedCore, "function normalizeSharedEvaluationPayload(payload) {", "Evaluation save/share services must not remain in the shared core.");
+includes(normalizedCore, "async function openSavedEvaluationsModal()", "The shared core must retain the thin saved-evaluation click handler required during universal event binding.");
+includes(normalizedCore, 'evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);', "Universal event binding must never reference an extracted Evaluation function.");
 includes(evaluationCore, "const advancedPlayerTableTsv = `", "The Evaluation chunk must own its advanced valuation table.");
 includes(evaluationCore, "const evaluationContractsTable = (() => {", "The Evaluation chunk must own contract-table construction.");
 includes(evaluationCore, "function normalizeSharedEvaluationPayload(payload) {", "The Evaluation chunk must own save/share payload handling.");
-includes(evaluationCore, "async function openSavedEvaluationsModal()", "The Evaluation chunk must own saved-evaluation modal data work.");
+includes(evaluationCore, "function renderSavedEvaluationList(rows)", "The Evaluation chunk must own saved-evaluation list rendering/data helpers.");
+excludes(evaluationCore, "async function openSavedEvaluationsModal()", "The direct universal event handler must stay in the shared core.");
 
 includes(normalizedCore, "let incrementalRouteRequestGeneration = 0;", "The generated core must track the latest route request intent.");
 includes(normalizedCore, "let activeIncrementalNetworkRequest = null;", "The generated core must track the active abortable route request.");
