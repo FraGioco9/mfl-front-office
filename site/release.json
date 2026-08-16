@@ -1,4 +1,4 @@
 {
-  "version": "1.124.19",
-  "description": "Load Player page rendering only when the Player route needs it"
+  "version": "1.124.20",
+  "description": "Load the shared table engine only for table-based routes"
 }
