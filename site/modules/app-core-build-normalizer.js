@@ -1,10 +1,10 @@
 // @ts-check
 
-import { splitAgentApplicationCoreRuntime } from "./app-core-agent-chunk.js";
 import { normalizeApplicationCore as normalizeBaseApplicationCore } from "./app-core-normalizer.js";
 import { normalizeRouteRequestCancellation } from "./app-core-route-request-normalizer.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { normalizeRouteRuntimeGate } from "./app-core-route-runtime-normalizer.js";
+import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { normalizeStartupDataDependencies } from "./app-core-startup-data-normalizer.js";
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 import { normalizePureTableStateRestoration } from "./app-core-table-state-normalizer.js";
@@ -19,7 +19,7 @@ function normalizeCompleteApplicationCore(source) {
 
 export function normalizeBuiltApplicationCoreArtifacts(source) {
   const routeArtifacts = splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
-  return splitAgentApplicationCoreRuntime(routeArtifacts);
+  return splitSettingsApplicationCoreRuntime(routeArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
