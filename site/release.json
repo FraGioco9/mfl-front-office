@@ -1,4 +1,4 @@
 {
-  "version": "1.124.24",
-  "description": "Remove duplicate startup render-lock ownership from bootstrap-core"
+  "version": "1.124.25",
+  "description": "Load saved Evaluation modal UI only on the Evaluation route"
 }
