@@ -114,14 +114,16 @@ if (generatedCore !== null) {
 }
 
 const entry = await readSite("modules/app-entry.js");
+const routeCoreLoader = await readSite("route-core-loader-runtime.js");
 includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must prefer the build-time application core.");
 includes(entry, "const SOURCE_CORE_PATH = \"/modules/app-core.js\"", "app-entry.js must retain a source fallback for unprepared local environments.");
 includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \"mfl_core\"", "The prebuilt core must use its dedicated cache-key query parameter.");
 includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading before critical runtime execution completes.");
 includes(entry, "await loadClassicScript(prebuiltPath);", "The production core must execute as an external classic script.");
-includes(entry, "fetchApplicationCoreSource(SOURCE_CORE_PATH)", "Unprepared local environments must retain the raw source fallback.");
-includes(entry, "import(assetUrl(\"/modules/app-core-build-normalizer.js\"))", "The source fallback must use the complete build-time normalizer.");
-includes(entry, "normalizer.normalizeBuiltApplicationCore(rawSource)", "The source fallback must match the deployed build transform.");
+includes(entry, 'Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts")', "Unprepared local environments must retain the shared source fallback.");
+includes(routeCoreLoader, 'fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" })', "The shared source fallback must fetch the raw application core.");
+includes(routeCoreLoader, 'import(assetUrl("/modules/app-core-build-normalizer.js"))', "The shared source fallback must use the complete build-time normalizer.");
+includes(routeCoreLoader, "normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource)", "The shared source fallback must match the deployed build transform.");
 excludes(entry, "CORE_RUNTIME_CACHE_KEY", "The prebuilt core must not be copied into sessionStorage.");
 excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser HTTP caching instead of a duplicate string cache.");
 excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
