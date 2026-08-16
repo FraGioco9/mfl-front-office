@@ -11,6 +11,8 @@
     style.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
     document.head.appendChild(style);
   }
+  const footerVersion = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+  if (footerVersion) footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
   function loadRuntime(path) {
     return new Promise((resolve, reject) => {
