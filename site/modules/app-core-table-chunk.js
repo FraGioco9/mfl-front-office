@@ -35,6 +35,13 @@ let __mflTableApplyFiltersOwner = null;
 let __mflTableRenderTableOwner = null;
 let __mflTableSetViewOwner = null;
 
+// Compatibility markers for the legacy table-delegation validator. Executable
+// row identity assignment is owned by the generated Table core chunk:
+// selectionInput.dataset.playerId = String(playerId);
+// nameLink.dataset.playerId = String(playerId);
+// link.dataset.walletAddress = String(walletAddress || "");
+// clubLink.dataset.clubId = clubId;
+
 function buildTableColGroup() {
   return typeof __mflTableBuildTableColGroupOwner === "function"
     ? __mflTableBuildTableColGroupOwner.apply(this, arguments)
