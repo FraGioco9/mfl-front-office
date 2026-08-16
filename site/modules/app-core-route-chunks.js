@@ -21,6 +21,18 @@ function insertBeforeRequiredMarker(source, marker, insertion, label) {
   return `${source.slice(0, index)}${insertion}\n\n${source.slice(index)}`;
 }
 
+const EVALUATION_SAVED_MODAL_FACADE = `let __mflOpenSavedEvaluationsModalOwner = null;
+
+async function openSavedEvaluationsModal() {
+  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("evaluation");
+  }
+  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+    throw new Error("Evaluation route core is not loaded.");
+  }
+  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
+}`;
+
 const CLUB_SEARCH_BRIDGE = `;(() => {
   // Compatibility marker for legacy validation; route ownership lives in the Club chunk:
   // squad|contracts|attributes|current-season|all-time
@@ -49,8 +61,8 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
       const name = String(getValue(row, "active_contract_club_name") || "").trim();
       if (!clubId || !name || clubs.has(clubId)) return;
       const searchable = typeof normalizeSearchText === "function"
-        ? normalizeSearchText(\`\${name} \${clubId}\`)
-        : \`\${name} \${clubId}\`.toLowerCase();
+        ? normalizeSearchText(\`${name} ${clubId}\`)
+        : \`${name} ${clubId}\`.toLowerCase();
       if (!searchable.includes(normalizedQuery)) return;
       const divisionRank = typeof contractDivisionSortValue === "function"
         ? contractDivisionSortValue(getValue(row, "active_contract_club_division"))
@@ -82,7 +94,7 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
       button.dataset.searchKey = recentClubKey(clubId);
       const safeName = typeof escapeHtml === "function" ? escapeHtml(name) : name;
       const safeId = typeof escapeHtml === "function" ? escapeHtml(clubId) : clubId;
-      button.innerHTML = \`<strong>\${safeName}</strong><span>Club &middot; #\${safeId}</span>\`;
+      button.innerHTML = \`<strong>${safeName}</strong><span>Club &middot; #${safeId}</span>\`;
       button.addEventListener("click", () => {
         if (typeof closeSearch === "function") closeSearch();
         if (typeof window.mflOpenClubPage === "function") {
@@ -143,12 +155,25 @@ export function splitApplicationCoreRuntime(source) {
 
   extracted = extractRequiredSection(
     core,
-    "function renderSavedEvaluationList(rows) {",
-    "async function openSavedEvaluationsModal() {",
+    "function showEvaluationLoadActionTooltip(button) {",
+    "function normalizedPageName(pageName) {",
     "Evaluation saved-list renderer",
   );
   core = extracted.core;
-  evaluationParts.push(extracted.chunk);
+  let evaluationSavedModal = extracted.chunk.replace(
+    "async function openSavedEvaluationsModal() {",
+    "async function evaluationOpenSavedEvaluationsModalOwner() {",
+  );
+  if (!evaluationSavedModal.includes("async function evaluationOpenSavedEvaluationsModalOwner() {")) {
+    throw new Error("Could not delegate the Evaluation saved-modal owner.");
+  }
+  evaluationParts.push(`${evaluationSavedModal}\n\n__mflOpenSavedEvaluationsModalOwner = evaluationOpenSavedEvaluationsModalOwner;`);
+  core = insertBeforeRequiredMarker(
+    core,
+    "function normalizedPageName(pageName) {",
+    EVALUATION_SAVED_MODAL_FACADE,
+    "Evaluation saved-modal facade",
+  );
 
   extracted = extractRequiredSection(
     core,
