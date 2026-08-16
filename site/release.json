@@ -1,4 +1,4 @@
 {
-  "version": "1.124.2",
-  "description": "Render routes and views in one canonical phase after their data is ready"
+  "version": "1.124.3",
+  "description": "Reduce table layout repair work and remove bootstrap network waterfalls"
 }
