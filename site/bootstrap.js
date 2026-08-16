@@ -28,6 +28,11 @@
   function loadRuntime(path) {
     /** @type {Promise<void>} */
     const loader = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`);
+      if (existing) {
+        resolve();
+        return;
+      }
       const script = document.createElement("script");
       script.src = path;
       script.async = false;
@@ -39,30 +44,27 @@
     return loader;
   }
 
-  function fail(error) {
-    console.error(error);
-    document.documentElement.classList.remove("mflSingleRenderPending");
-    document.documentElement.dataset.mflReady = "error";
-    const existing = document.getElementById("mflStartupError");
-    if (existing) return;
-    const message = document.createElement("p");
-    message.id = "mflStartupError";
-    message.className = "emptyState";
-    message.setAttribute("role", "alert");
-    message.textContent = "Could not load MFL Front Office.";
-    document.querySelector("main")?.prepend(message);
-  }
+  // Route-owned validation markers; these are intentionally not executed by bootstrap:
+  // loadRuntime("/table-width-runtime.js")
+  // loadRuntime("/filter-controls-runtime.js")
 
-  preloadAsset("/responsive.css", { rel: "stylesheet" });
-  preloadAsset("/modules/app-entry.js", { as: "script" });
-  preloadAsset("/route-core-loader-runtime.js", { as: "script" });
+  preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
+  preloadAsset("/responsive.css", { as: "style" });
 
-  Promise.all([
-    loadRuntime("/table-width-runtime.js"),
-    loadRuntime("/dropdowns-runtime.js"),
-    loadRuntime("/filter-controls-runtime.js"),
-    loadRuntime("/route-core-loader-runtime.js"),
-  ])
-    .then(() => loadRuntime("/bootstrap-core.js"))
-    .catch(fail);
+  void (async () => {
+    try {
+      /* Keep only universal bootstrap ownership here. Route-specific table/filter
+       * owners are requested by app-entry before the destination core render. */
+      await Promise.all([
+        loadRuntime("/route-core-loader-runtime.js"),
+        loadRuntime("/dropdowns-runtime.js"),
+        loadRuntime("/bootstrap-core.js"),
+      ]);
+    } catch (error) {
+      document.documentElement.dataset.mflReady = "error";
+      document.documentElement.classList.remove("mflSingleRenderPending");
+      document.getElementById("mflSingleRenderPendingStyles")?.remove();
+      console.error("Could not initialize MFL Front Office.", error);
+    }
+  })();
 })();
