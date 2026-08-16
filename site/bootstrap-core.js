@@ -55,14 +55,23 @@
     return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
   }
 
+  function replaceRequired(source, before, after, label) {
+    if (!source.includes(before)) {
+      throw new Error(`Could not normalize single-render core pattern: ${label}.`);
+    }
+    return source.replace(before, after);
+  }
+
   function normalizeSingleRenderCore(source) {
     let nextSource = String(source || "").replace(/\r\n?/g, "\n");
 
     const shellFirstOwner = '  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);';
-    if (!nextSource.includes(shellFirstOwner)) {
-      throw new Error("Could not disable the destination-shell render phase.");
-    }
-    nextSource = nextSource.replace(shellFirstOwner, "  const shellFirstTablePages = new Set();");
+    nextSource = replaceRequired(
+      nextSource,
+      shellFirstOwner,
+      "  const shellFirstTablePages = new Set();",
+      "destination shell owner",
+    );
 
     const loadingPhase = [
       "    return withInteractionBusy(async () => {",
@@ -76,6 +85,24 @@
       throw new Error("Could not collapse all incremental loading render phases.");
     }
     nextSource = nextSource.split(loadingPhase).join(singlePhaseLoad);
+
+    const reloadLoadingPhase = [
+      "  state.page = page;",
+      "  return withInteractionBusy(async () => {",
+      "    showTableBusyState();",
+      "    return loadAndRender();",
+      "  });",
+    ].join("\n");
+    const singleReloadPhase = [
+      "  state.page = page;",
+      "  return withInteractionBusy(loadAndRender);",
+    ].join("\n");
+    nextSource = replaceRequired(
+      nextSource,
+      reloadLoadingPhase,
+      singleReloadPhase,
+      "incremental pagination and filter reload",
+    );
 
     const singlePhaseSetView = `  setView = async function setIncrementalView(viewName) {
     if (!state.incrementalMode || state.currentPage === "club") {
@@ -143,10 +170,12 @@
       "      }",
       "",
     ].join("\n");
-    if (!nextSource.includes(stagedClubLoad)) {
-      throw new Error("Could not collapse the staged Club page load.");
-    }
-    nextSource = nextSource.replace(stagedClubLoad, singlePhaseClubLoad);
+    nextSource = replaceRequired(
+      nextSource,
+      stagedClubLoad,
+      singlePhaseClubLoad,
+      "staged Club page load",
+    );
 
     const clubStateStart = [
       "      state.currentPage = CLUB_PAGE;",
@@ -168,20 +197,23 @@
       "      changelogPage.hidden = true;",
       "      state.page = 1;",
     ].join("\n");
-    if (!nextSource.includes(clubStateStart)) {
-      throw new Error("Could not make the Club page final render atomic.");
-    }
-    nextSource = nextSource.replace(clubStateStart, singlePhaseClubStateStart);
+    nextSource = replaceRequired(
+      nextSource,
+      clubStateStart,
+      singlePhaseClubStateStart,
+      "atomic Club final render",
+    );
 
     const stagedInitialClub = [
       '        await originalShowHomeShell.call(this, "database", false, { view: initialClubRoute.view });',
       "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
     ].join("\n");
-    const singleInitialClub = "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);";
-    if (!nextSource.includes(stagedInitialClub)) {
-      throw new Error("Could not collapse the initial Club route render.");
-    }
-    nextSource = nextSource.replace(stagedInitialClub, singleInitialClub);
+    nextSource = replaceRequired(
+      nextSource,
+      stagedInitialClub,
+      "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
+      "initial Club route",
+    );
 
     const earlyClubViewChrome = [
       "    setClubSwitching(true);",
@@ -192,10 +224,12 @@
       "    setClubSwitching(true);",
       "    void (async () => {",
     ].join("\n");
-    if (!nextSource.includes(earlyClubViewChrome)) {
-      throw new Error("Could not defer Club view chrome to the final render.");
-    }
-    nextSource = nextSource.replace(earlyClubViewChrome, deferredClubViewChrome);
+    nextSource = replaceRequired(
+      nextSource,
+      earlyClubViewChrome,
+      deferredClubViewChrome,
+      "Club view pre-render chrome",
+    );
 
     const manualRouteRender = [
       "      state.incrementalApplying = true;",
@@ -368,11 +402,14 @@
 
   syncStoredAccessFlags();
   installSingleRenderCoreTransform();
-  document.documentElement.classList.add("mflSingleRenderPending");
-  const singleRenderStyle = document.createElement("style");
-  singleRenderStyle.id = "mflSingleRenderPendingStyles";
-  singleRenderStyle.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
-  document.head.appendChild(singleRenderStyle);
+  document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
+  let singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");
+  if (!(singleRenderStyle instanceof HTMLStyleElement)) {
+    singleRenderStyle = document.createElement("style");
+    singleRenderStyle.id = "mflSingleRenderPendingStyles";
+    singleRenderStyle.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
+    document.head.appendChild(singleRenderStyle);
+  }
 
   window.__mflInteractionBusy = createInteractionBusyController();
   const startupToken = window.__mflInteractionBusy.begin("startup");
@@ -384,7 +421,7 @@
     } catch {}
     window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");
-    singleRenderStyle.remove();
+    singleRenderStyle?.remove();
   };
   window.addEventListener("mfl:ready", finishStartup, { once: true });
 
