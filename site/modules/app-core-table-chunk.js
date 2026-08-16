@@ -33,6 +33,7 @@ let __mflTableAddFilterRuleOwner = null;
 let __mflTableRestoreSavedTableStateOwner = null;
 let __mflTableApplyFiltersOwner = null;
 let __mflTableRenderTableOwner = null;
+let __mflTableOpenSelectedPlayerLinksOwner = null;
 let __mflTableSetViewOwner = null;
 
 // Compatibility markers for the legacy table-delegation validator. Executable
@@ -90,6 +91,12 @@ function renderTable() {
     : undefined;
 }
 
+function openSelectedPlayerLinks() {
+  return typeof __mflTableOpenSelectedPlayerLinksOwner === "function"
+    ? __mflTableOpenSelectedPlayerLinksOwner.apply(this, arguments)
+    : undefined;
+}
+
 function setView() {
   return typeof __mflTableSetViewOwner === "function"
     ? __mflTableSetViewOwner.apply(this, arguments)
@@ -104,6 +111,7 @@ __mflTableAddFilterRuleOwner = tableAddFilterRuleOwner;
 __mflTableRestoreSavedTableStateOwner = tableRestoreSavedTableStateOwner;
 __mflTableApplyFiltersOwner = tableApplyFiltersOwner;
 __mflTableRenderTableOwner = tableRenderTableOwner;
+__mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;
 __mflTableSetViewOwner = tableSetViewOwner;`;
 
 export function splitTableApplicationCoreRuntime(artifacts) {
@@ -186,6 +194,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   table = renameRequiredTableOwner(table, "restoreSavedTableState", "tableRestoreSavedTableStateOwner");
   table = renameRequiredTableOwner(table, "applyFilters", "tableApplyFiltersOwner");
   table = renameRequiredTableOwner(table, "renderTable", "tableRenderTableOwner");
+  table = renameRequiredTableOwner(table, "openSelectedPlayerLinks", "tableOpenSelectedPlayerLinksOwner");
   table = renameRequiredTableOwner(table, "setView", "tableSetViewOwner");
   table = `${table}\n\n${TABLE_OWNER_ASSIGNMENTS}`;
 
