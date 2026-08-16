@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.2");
+  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.6");
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -65,6 +65,7 @@
     ].join(", ");
     const activeTokens = new Map();
     let sequence = 0;
+    let interactionListenersBound = false;
 
     const style = document.createElement("style");
     style.id = "mflInteractionBusyStyles";
@@ -87,6 +88,8 @@
     function applyState() {
       const busy = activeTokens.size > 0;
       const dataLoading = Array.from(activeTokens.values()).some((reason) => DATA_LOADING_REASONS.has(reason));
+      if (busy) bindInteractionBlockers();
+      else unbindInteractionBlockers();
       document.documentElement.classList.toggle(BUSY_CLASS, busy);
       document.documentElement.classList.toggle(DATA_LOADING_CLASS, dataLoading);
       document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
@@ -125,7 +128,18 @@
       event.preventDefault();
       event.stopImmediatePropagation();
     }
-    blockedEvents.forEach((eventName) => document.addEventListener(eventName, blockInteraction, true));
+
+    function bindInteractionBlockers() {
+      if (interactionListenersBound) return;
+      interactionListenersBound = true;
+      blockedEvents.forEach((eventName) => document.addEventListener(eventName, blockInteraction, true));
+    }
+
+    function unbindInteractionBlockers() {
+      if (!interactionListenersBound) return;
+      interactionListenersBound = false;
+      blockedEvents.forEach((eventName) => document.removeEventListener(eventName, blockInteraction, true));
+    }
 
     function installCoreBridge() {
       window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
@@ -188,22 +202,13 @@
   };
   window.addEventListener("mfl:ready", finishStartup, { once: true });
 
-  void (async () => {
-    let version = STATIC_RELEASE_VERSION;
-    try {
-      const response = await fetch("/release.json", { cache: "no-store" });
-      if (response.ok) version = String((await response.json())?.version || version);
-    } catch {}
-    window.__mflReleaseVersion = version;
-    const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-    if (footer) footer.textContent = `MFL Front Office v${version}`;
+  window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
+  const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
+  if (footer) footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
-    try {
-      await import(new URL("/modules/app-entry.js", location.origin).href);
-    } catch (error) {
-      document.documentElement.dataset.mflReady = "error";
-      void finishStartup();
-      console.error("Could not import MFL Front Office.", error);
-    }
-  })();
+  void import(new URL("/modules/app-entry.js", location.origin).href).catch((error) => {
+    document.documentElement.dataset.mflReady = "error";
+    void finishStartup();
+    console.error("Could not import MFL Front Office.", error);
+  });
 })();
