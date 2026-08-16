@@ -9,6 +9,11 @@
   root.classList.add("mflSingleRenderPending");
   root.classList.remove("mflInitialRouteResolved");
 
+  function tableViewConfig() {
+    const config = Reflect.get(window, "__mflTableViewConfig");
+    return config && typeof config === "object" ? config : {};
+  }
+
   function routeParts(urlLike = window.location.href) {
     try {
       return new URL(String(urlLike || window.location.href), window.location.href).pathname.split("/").filter(Boolean);
@@ -68,18 +73,19 @@
   }
 
   function primeViewButtons(page, view) {
-    const config = window.__mflTableViewConfig?.[page];
+    const config = tableViewConfig()[page];
     if (!config || !Array.isArray(config.order)) return;
     const container = document.querySelector("#progressionPage .views");
     if (!(container instanceof HTMLElement)) return;
 
     const buttons = new Map();
-    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
-      const buttonView = String(button.dataset.view || "");
-      buttons.set(buttonView, button);
-      button.hidden = !config.order.includes(buttonView);
-      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
-        button.textContent = page === "club" ? "Squad" : "Attributes";
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return;
+      const buttonView = String(candidate.dataset.view || "");
+      buttons.set(buttonView, candidate);
+      candidate.hidden = !config.order.includes(buttonView);
+      if (buttonView === "attributes" && candidate instanceof HTMLButtonElement) {
+        candidate.textContent = page === "club" ? "Squad" : "Attributes";
       }
     });
 
@@ -94,8 +100,9 @@
     const activeView = config.order.includes(view)
       ? view
       : String(config.fallback || config.order[0] || "");
-    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
-      button.classList.toggle("active", String(button.dataset.view || "") === activeView);
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return;
+      candidate.classList.toggle("active", String(candidate.dataset.view || "") === activeView);
     });
   }
 
@@ -103,7 +110,7 @@
     const normalizedPage = String(page || "").toLowerCase();
     if (!normalizedPage) return;
 
-    const config = window.__mflTableViewConfig?.[normalizedPage];
+    const config = tableViewConfig()[normalizedPage];
     const requestedView = String(root.dataset.initialTablePage || "") === normalizedPage
       ? String(root.dataset.initialTableView || "")
       : "";
@@ -272,8 +279,9 @@
     });
 
     const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
-    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
-      button.classList.toggle("active", String(button.dataset.page || "") === initialPage);
+    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return;
+      candidate.classList.toggle("active", String(candidate.dataset.page || "") === initialPage);
     });
   }
 
