@@ -135,8 +135,11 @@ const TABLE_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/selection-stack-runtime.js",
 ]);
 
-const WATCHLIST_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
+const WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-ui-runtime.js",
+]);
+
+const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-myplayers-route-runtime.js",
 ]);
 
@@ -236,7 +239,8 @@ function postCoreScriptsForRoute(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const scripts = [];
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_POST_CORE_RUNTIME_SCRIPTS);
-  if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_POST_CORE_RUNTIME_SCRIPTS);
+  if (page === "watchlist") scripts.push(...WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS);
+  if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_POST_CORE_RUNTIME_SCRIPTS);
   return uniqueScripts(scripts);
 }
