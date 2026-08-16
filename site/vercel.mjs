@@ -1,0 +1,70 @@
+const isDevelopment = process.env.VERCEL_ENV === "development";
+
+const javascriptHeaders = isDevelopment
+  ? [
+      {
+        source: "/(.*\\.js)",
+        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+      },
+    ]
+  : [
+      {
+        source: "/(.*\\.js)",
+        missing: [{ type: "query", key: "mfl_core" }],
+        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+      },
+      {
+        source: "/modules/app-core-runtime.js",
+        has: [{ type: "query", key: "mfl_core" }],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
+
+export const config = {
+  outputDirectory: ".",
+  functions: {
+    "api/data.js": {
+      includeFiles: "api/data-files/mfl_database.db",
+      maxDuration: 60,
+    },
+  },
+  headers: [
+    { source: "/", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
+    { source: "/index.html", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
+    { source: "/release.json", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
+    { source: "/releases.json", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
+    ...javascriptHeaders,
+    { source: "/(.*\\.css)", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
+  ],
+  redirects: [
+    { source: "/clubs/:id", destination: "/clubs/:id/contracts", permanent: false },
+    { source: "/club/:id", destination: "/clubs/:id/contracts", permanent: false },
+    { source: "/club/:id/:view", destination: "/clubs/:id/:view", permanent: false },
+    { source: "/club", destination: "/", permanent: false },
+    { source: "/clubs", destination: "/", permanent: false },
+  ],
+  rewrites: [
+    { source: "/releases.json", destination: "/api/releases" },
+    { source: "/home", destination: "/" },
+    { source: "/database", destination: "/" },
+    { source: "/database/:view", destination: "/" },
+    { source: "/mfl", destination: "/" },
+    { source: "/mfl/:view", destination: "/" },
+    { source: "/progression", destination: "/" },
+    { source: "/progression/:view", destination: "/" },
+    { source: "/watchlist", destination: "/" },
+    { source: "/watchlist/:id", destination: "/" },
+    { source: "/watchlist/:id/:view", destination: "/" },
+    { source: "/my-players", destination: "/" },
+    { source: "/my-players/:view", destination: "/" },
+    { source: "/evaluation", destination: "/" },
+    { source: "/settings", destination: "/" },
+    { source: "/changelog", destination: "/" },
+    { source: "/players", destination: "/" },
+    { source: "/players/:id", destination: "/" },
+    { source: "/agents", destination: "/" },
+    { source: "/agents/:wallet", destination: "/" },
+    { source: "/agents/:wallet/:view", destination: "/" },
+    { source: "/clubs/:id/:view", destination: "/" },
+  ],
+};
