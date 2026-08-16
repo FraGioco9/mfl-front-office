@@ -1,4 +1,4 @@
 {
-  "version": "1.124.40",
-  "description": "Synchronize route chrome, focus cleanup, and non-fatal startup recovery"
+  "version": "1.124.41",
+  "description": "Restore visible loading shells and remove stale release ownership"
 }

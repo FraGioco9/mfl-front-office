@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.40");
+  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.41");
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -180,6 +180,16 @@
     return Object.freeze({ begin, end, run, isBusy: () => activeTokens.size > 0, installCoreBridge });
   }
 
+  function ensureFatalStartupMessage() {
+    if (document.getElementById("mflStartupError")) return;
+    const message = document.createElement("p");
+    message.id = "mflStartupError";
+    message.className = "emptyState";
+    message.setAttribute("role", "alert");
+    message.textContent = "Could not load MFL Front Office.";
+    document.querySelector("main")?.prepend(message);
+  }
+
   syncStoredAccessFlags();
   const singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");
 
@@ -200,38 +210,38 @@
     } catch {}
     window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");
+    document.documentElement.classList.add("mflInitialRouteResolved");
     singleRenderStyle?.remove();
   };
 
   const recoverCompletedApplicationStartup = async () => {
     if (startupFailureRecoveryRunning || startupFinished) return;
     startupFailureRecoveryRunning = true;
-    const errorMessage = document.getElementById("mflStartupError");
-    if (errorMessage instanceof HTMLElement) errorMessage.hidden = true;
 
     const appStartPromise = window.__mflAppStartPromise;
-    let applicationStarted = false;
-    if (appStartPromise && typeof appStartPromise.then === "function") {
-      applicationStarted = await Promise.race([
-        appStartPromise.then(() => true, () => false),
-        new Promise((resolve) => window.setTimeout(() => resolve(false), 250)),
-      ]);
-    }
-
-    if (applicationStarted) {
-      document.getElementById("mflStartupError")?.remove();
-      document.documentElement.dataset.mflReady = "true";
-      console.warn("Ignored a non-fatal late startup runtime error because the application core completed successfully.");
-      window.dispatchEvent(new CustomEvent("mfl:ready", {
-        detail: Object.freeze({ version: STATIC_RELEASE_VERSION, description: "" }),
-      }));
+    if (!appStartPromise || typeof appStartPromise.then !== "function") {
+      ensureFatalStartupMessage();
       startupFailureRecoveryRunning = false;
+      await finishStartup({ skipAppStart: true });
       return;
     }
 
-    if (errorMessage instanceof HTMLElement) errorMessage.hidden = false;
+    const errorMessage = document.getElementById("mflStartupError");
+    if (errorMessage instanceof HTMLElement) errorMessage.hidden = true;
+
+    try {
+      await appStartPromise;
+    } catch (error) {
+      console.warn("Application core startup settled with an error after its shell initialized.", error);
+    }
+
+    document.getElementById("mflStartupError")?.remove();
+    document.documentElement.dataset.mflReady = "true";
+    console.warn("Suppressed a post-core startup error after the application shell finished settling.");
+    window.dispatchEvent(new CustomEvent("mfl:ready", {
+      detail: Object.freeze({ version: STATIC_RELEASE_VERSION, description: "" }),
+    }));
     startupFailureRecoveryRunning = false;
-    await finishStartup({ skipAppStart: true });
   };
 
   window.addEventListener("mfl:ready", () => { void finishStartup(); }, { once: true });

@@ -93,11 +93,11 @@
     }
   }
 
-  function show() {
-    if (destroyed || !tableRouteActive()) return false;
-    ensureCanonicalHeader();
+  function show({ replaceExisting = false, forceRoute = false } = {}) {
+    if (destroyed || (!forceRoute && !tableRouteActive())) return false;
+    if (!forceRoute) ensureCanonicalHeader();
     const { head, body, empty } = elements();
-    if (!head || !body || !head.rows[0]) return false;
+    if (!body) return false;
 
     const page = pager();
     if (page) page.hidden = true;
@@ -106,8 +106,13 @@
       empty.textContent = "";
     }
 
-    if (hasRealRows(body)) return false;
-    const columnCount = Math.max(1, head.rows[0].cells.length);
+    const realRowsPresent = hasRealRows(body);
+    if (body.dataset.staticLoading === "true" && realRowsPresent) {
+      return false;
+    }
+    if (realRowsPresent && !replaceExisting) return false;
+
+    const columnCount = Math.max(1, head?.rows[0]?.cells.length || 1);
     if (!blankRowsReady(body, columnCount)) {
       const fragment = document.createDocumentFragment();
       BLANK_ROW_OPACITIES.forEach((opacity, index) => {
@@ -170,7 +175,7 @@
           const stableRenderTableLoadingShell = function (pageName) {
             const result = originalRenderTableLoadingShell.apply(this, arguments);
             if (typeof tablePages === "object" && tablePages?.has?.(pageName)) {
-              window.__mflTableLoadingRuntime?.show?.();
+              window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
             }
             return result;
           };
@@ -193,7 +198,7 @@
       release();
       return;
     }
-    if (dataLoading()) show();
+    if (dataLoading()) show({ replaceExisting: true });
     else release();
   }
 

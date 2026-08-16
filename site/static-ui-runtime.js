@@ -86,6 +86,9 @@
     if (!/^\d+\.\d+\.\d+$/.test(version)) return;
     const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
     if (footer instanceof HTMLElement) footer.textContent = `MFL Front Office v${version}`;
+    document.querySelectorAll("[data-app-version]").forEach((element) => {
+      if (element instanceof HTMLElement) element.textContent = `v${version}`;
+    });
   }
 
   function setActiveNavigation(page) {
@@ -126,6 +129,34 @@
     }
   }
 
+  function routeNeedsLockedShell(page) {
+    return document.documentElement.dataset.storedWalletOptIn !== "true"
+      && ["watchlist", "myplayers", "settings"].includes(page);
+  }
+
+  function shellForRoute(state) {
+    if (routeNeedsLockedShell(state.page)) return document.getElementById("myPlayersLockedPage");
+    if (state.page === "database" && state.view === "stats") return document.getElementById("databaseStatsPage");
+    if (state.page === "mfl" && state.view === "stats") return document.getElementById("mflStatsPage");
+    if (tableViewConfig()[state.page]) return document.getElementById("progressionPage");
+    if (state.page === "evaluation") return document.getElementById("evaluationPage");
+    if (state.page === "player") return document.getElementById("playerPage");
+    if (state.page === "settings") return document.getElementById("settingsPage");
+    if (state.page === "changelog") return document.getElementById("changelogPage");
+    return document.getElementById("homePage");
+  }
+
+  function showRouteShell(state, { loading = false } = {}) {
+    const target = shellForRoute(state);
+    if (!(target instanceof HTMLElement)) return;
+    document.querySelectorAll("main > .pageView").forEach((page) => {
+      if (page instanceof HTMLElement) page.hidden = page !== target;
+    });
+    if (loading && target.id === "progressionPage") {
+      window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
+    }
+  }
+
   function syncRouteChrome(urlLike = window.location.href, { pending = false } = {}) {
     const state = routeState(urlLike);
     syncFooter();
@@ -137,6 +168,9 @@
     } else if (!pending) {
       document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
     }
+    showRouteShell(state, {
+      loading: pending || document.documentElement.classList.contains("mflSingleRenderPending"),
+    });
     return state;
   }
 
@@ -158,12 +192,15 @@
     const viewButton = target?.closest?.("main .views .viewButton[data-view]");
     if (!(viewButton instanceof HTMLButtonElement)) return;
     const container = viewButton.closest(".views");
-    if (container) setActiveView(container, String(viewButton.dataset.view || ""));
+    const view = String(viewButton.dataset.view || "");
+    if (container) setActiveView(container, view);
 
     const page = String(viewButton.dataset.page || routeState().page || "");
     if (container?.matches("#progressionPage .views")) {
-      syncSharedViewSet(page, String(viewButton.dataset.view || ""));
+      syncSharedViewSet(page, view);
     }
+    if (tableViewConfig()[page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, page);
+    showRouteShell({ page, view }, { loading: true });
   }
 
   function onKeyDown(event) {
@@ -178,12 +215,13 @@
   }
 
   function onPopState() {
-    syncRouteChrome(window.location.href);
+    syncRouteChrome(window.location.href, { pending: true });
   }
 
   function onBodyPageChange() {
     const pendingPage = document.documentElement.getAttribute(PENDING_PAGE_ATTRIBUTE);
-    if (pendingPage && String(document.body?.dataset.page || "") === pendingPage) {
+    const bodyPage = String(document.body?.dataset.page || "");
+    if (pendingPage && bodyPage === pendingPage) {
       document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
     }
   }

@@ -14,44 +14,69 @@ const [bootstrap, bootstrapCore] = await Promise.all([
 
 includes(
   bootstrap,
-  'document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");',
-  "bootstrap.js must synchronously own the first-paint route lock.",
+  'root.classList.add("mflSingleRenderPending");',
+  "bootstrap.js must synchronously own the first-paint loading shell state.",
+);
+includes(
+  bootstrap,
+  'root.classList.remove("mflInitialRouteResolved");',
+  "First-paint route styles must stay authoritative until startup settles.",
 );
 includes(
   bootstrap,
   'style.id = "mflSingleRenderPendingStyles";',
-  "bootstrap.js must synchronously own the first-paint hiding style.",
+  "bootstrap.js must synchronously style the loading shell.",
+);
+excludes(
+  bootstrap,
+  "main > .pageView { visibility: hidden !important; }",
+  "Startup must not hide the destination page shell while data loads.",
 );
 includes(
   bootstrap,
-  'style.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";',
-  "bootstrap.js must install the canonical first-paint hiding rule.",
+  "function primeInitialShell() {",
+  "bootstrap.js must immediately select the destination shell.",
+);
+includes(
+  bootstrap,
+  "function primeInitialTableRows() {",
+  "bootstrap.js must seed table routes with static blank rows before the core loads.",
+);
+includes(
+  bootstrap,
+  'row.className = "staticTableBlankRow";',
+  "Initial table loading must use the canonical five-row placeholder class.",
+);
+includes(
+  bootstrap,
+  "const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];",
+  "Initial table loading must retain exactly five blank rows.",
 );
 
 excludes(
   bootstrapCore,
   'document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");',
-  "bootstrap-core.js must not duplicate bootstrap.js first-paint lock ownership.",
-);
-excludes(
-  bootstrapCore,
-  'singleRenderStyle = document.createElement("style");',
-  "bootstrap-core.js must not duplicate bootstrap.js first-paint style creation.",
+  "bootstrap-core.js must not duplicate bootstrap.js first-paint ownership.",
 );
 includes(
   bootstrapCore,
   'const singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");',
-  "bootstrap-core.js must reference the bootstrap-owned first-paint style for cleanup.",
+  "bootstrap-core.js must reference the bootstrap-owned loading-shell style for cleanup.",
 );
 includes(
   bootstrapCore,
   'document.documentElement.classList.remove("mflSingleRenderPending");',
-  "bootstrap-core.js must release the first-paint route lock when startup finishes.",
+  "bootstrap-core.js must release the loading-shell state when startup finishes.",
+);
+includes(
+  bootstrapCore,
+  'document.documentElement.classList.add("mflInitialRouteResolved");',
+  "Runtime route ownership must replace first-paint route ownership only after startup settles.",
 );
 includes(
   bootstrapCore,
   "singleRenderStyle?.remove();",
-  "bootstrap-core.js must remove the bootstrap-owned first-paint style when startup finishes.",
+  "bootstrap-core.js must remove the bootstrap-owned loading-shell style when startup finishes.",
 );
 includes(
   bootstrapCore,
@@ -61,42 +86,37 @@ includes(
 includes(
   bootstrapCore,
   'if (document.documentElement.dataset.mflReady === "error")',
-  "The bootstrap busy controller must observe application startup failures.",
-);
-includes(
-  bootstrapCore,
-  'startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });',
-  "Application startup failure state must release the bootstrap-owned busy token.",
+  "The bootstrap busy controller must observe actual application startup failures.",
 );
 includes(
   bootstrapCore,
   "const recoverCompletedApplicationStartup = async () => {",
-  "Late startup errors must be classified against the actual application-core startup result.",
+  "Post-core startup errors must be classified against the application shell handshake.",
 );
 includes(
   bootstrapCore,
-  "applicationStarted = await Promise.race([",
-  "Non-fatal startup recovery must be bounded instead of waiting indefinitely.",
+  "await appStartPromise;",
+  "A post-core error must keep the visible loading shell active until the application promise settles.",
 );
-includes(
+excludes(
+  bootstrapCore,
+  "Promise.race([",
+  "Post-core recovery must not misclassify slow successful data loading with a short race timeout.",
+);
+excludes(
   bootstrapCore,
   "window.setTimeout(() => resolve(false), 250)",
-  "Late startup recovery must have a short timeout ceiling.",
+  "The obsolete 250ms false-failure cutoff must stay removed.",
 );
 includes(
   bootstrapCore,
   'document.getElementById("mflStartupError")?.remove();',
-  "A false fatal startup message must be removed when the application core completed successfully.",
+  "A post-core startup error must not leave a false fatal message after the shell settles.",
 );
 includes(
   bootstrapCore,
-  'document.documentElement.dataset.mflReady = "true";',
-  "Recovered application startup must restore the normal ready state.",
-);
-includes(
-  bootstrapCore,
-  "await finishStartup({ skipAppStart: true });",
-  "A real startup failure must release the bootstrap lock without awaiting a failed or stuck app promise.",
+  "function ensureFatalStartupMessage() {",
+  "Failures before the application-core handshake must still have a real fatal message owner.",
 );
 
-console.log("Bootstrap single-render ownership validation passed.");
+console.log("Bootstrap visible-shell and startup-error ownership validation passed.");

@@ -13,12 +13,45 @@ import { normalizePureTableStateRestoration } from "./app-core-table-state-norma
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
+function normalizeReleaseOwnership(source) {
+  let text = String(source || "");
+  text = text.replaceAll(
+    'const VERSION = "1.122.0";',
+    'const VERSION = String(window.__mflReleaseVersion || "");',
+  );
+  text = text.replaceAll(
+    'const RELEASE_VERSION = "1.122.0";',
+    'const RELEASE_VERSION = String(window.__mflReleaseVersion || "");',
+  );
+  text = text.replaceAll(
+    'const VERSION = String(window.__mflReleaseVersion || "1.122.0");',
+    'const VERSION = String(window.__mflReleaseVersion || "");',
+  );
+
+  const legacyFooterOwner = `  function setFooterVersion() {
+    const footerLink = document.querySelector(".siteFooter a[data-page='changelog']");
+    if (footerLink) footerLink.textContent = \`MFL Front Office v\${VERSION}\`;
+    document.querySelectorAll("[data-app-version]").forEach((element) => {
+      element.textContent = \`v\${VERSION}\`;
+    });
+  }`;
+  const sharedFooterOwner = `  function setFooterVersion() {
+    window.__mflStaticUiRuntime?.sync?.();
+  }`;
+  if (!text.includes(legacyFooterOwner)) {
+    throw new Error("Could not locate the legacy application-core footer version owner.");
+  }
+  text = text.split(legacyFooterOwner).join(sharedFooterOwner);
+  return text;
+}
+
 function normalizeCompleteApplicationCore(source) {
   const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
   const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);
   const tableStateSource = normalizePureTableStateRestoration(routeRuntimeSource);
-  return normalizeRouteRequestCancellation(tableStateSource);
+  const requestSource = normalizeRouteRequestCancellation(tableStateSource);
+  return normalizeReleaseOwnership(requestSource);
 }
 
 export function normalizeBuiltApplicationCoreArtifacts(source) {
