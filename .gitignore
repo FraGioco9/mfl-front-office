@@ -6,6 +6,7 @@ __pycache__/
 node_modules/
 site/api/data-files/*
 !site/api/data-files/.gitignore
+site/modules/app-core-runtime.js
 .env
 .env.*
 !.env.example
