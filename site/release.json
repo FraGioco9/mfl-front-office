@@ -1,4 +1,4 @@
 {
-  "version": "1.124.3",
-  "description": "Reduce table layout repair work and remove bootstrap network waterfalls"
+  "version": "1.124.4",
+  "description": "Start the canonical core before route-specific runtimes and cache the final normalized core"
 }
