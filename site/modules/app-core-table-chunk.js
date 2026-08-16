@@ -51,13 +51,13 @@ let __mflTableSetViewOwner = null;
 // link.dataset.walletAddress = String(walletAddress || "");
 // clubLink.dataset.clubId = clubId;
 
-function tableTitleForPage(pageName) {
+const tableTitleForPage = function (pageName) {
   if (typeof __mflTableTitleForPageOwner === "function") {
     return __mflTableTitleForPageOwner.apply(this, arguments);
   }
   const fallback = Reflect.get(window, "__mflTableTitleForPageFallback");
   return typeof fallback === "function" ? fallback(pageName, window.location.href) : "Progression";
-}
+};
 
 function buildTableColGroup() {
   return typeof __mflTableBuildTableColGroupOwner === "function"
