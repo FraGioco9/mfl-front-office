@@ -135,6 +135,10 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: npm run typecheck
 
+      - name: Build canonical application core
+        if: steps.changes.outputs.site == 'true'
+        run: npm run build:core
+
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
