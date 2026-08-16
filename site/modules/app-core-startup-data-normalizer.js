@@ -3,8 +3,8 @@
 const ORIGINAL_START_APP = `async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   loadSavedTableState();
+  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   applyStoredWalletPermission();
   loadEvaluationMflPerUsd();
@@ -23,8 +23,8 @@ const ORIGINAL_START_APP = `async function startApp() {
 const ROUTE_AWARE_START_APP = `async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   loadSavedTableState();
+  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
@@ -57,7 +57,7 @@ export function normalizeStartupDataDependencies(source) {
   const text = String(source || "");
   if (text.includes("const startupSummaryPromise = loadSummary();")) return text;
   if (!text.includes(ORIGINAL_START_APP)) {
-    throw new Error("Could not locate the application startup data barrier.");
+    throw new Error("Could not locate the canonical application startup data barrier.");
   }
   return text.replace(ORIGINAL_START_APP, ROUTE_AWARE_START_APP);
 }
