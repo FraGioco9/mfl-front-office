@@ -48,7 +48,8 @@ excludes(clubCore, "renderSearchResultsNowWithClubs", "The Club chunk must not p
 
 includes(routeLoader, 'club: "/modules/app-core-club-runtime.js"', "The route-core loader must map Club to its generated chunk.");
 includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
-includes(routeLoader, 'const routeCorePromise = ensure("club");', "Club navigation must start the Club core request immediately.");
+includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
+includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club navigation must start its ordered route-core dependency request immediately.");
 includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club navigation must overlap core and table-runtime loading.");
 includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club navigation must wait for both owners before invoking the route implementation.");
 includes(routeLoader, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
