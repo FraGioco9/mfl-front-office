@@ -1,101 +1,58 @@
 (() => {
-  const VERSION = String(window.__mflReleaseVersion || "1.123.11");
+  "use strict";
+
+  const VERSION = String(window.__mflReleaseVersion || "1.124.1");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
-  const DATABASE_PATH = /^\/database(?:\/|$)/i;
-  const FILTERS = [
-    { id: "all", label: "All", min: null, max: null },
-    { id: "ultimate", label: "Ultimate", min: 95, max: null },
-    { id: "legendary", label: "Legendary", min: 85, max: 94 },
-    { id: "rare", label: "Rare", min: 75, max: 84 },
-    { id: "uncommon", label: "Uncommon", min: 65, max: 74 },
-    { id: "limited", label: "Limited", min: 55, max: 64 },
-    { id: "common", label: "Common", min: null, max: 54 },
-    { id: "custom", label: "Custom", min: null, max: null },
-  ];
+  const FILTERS = Object.freeze([
+    ["all", "All", null, null],
+    ["ultimate", "Ultimate", 95, null],
+    ["legendary", "Legendary", 85, 94],
+    ["rare", "Rare", 75, 84],
+    ["uncommon", "Uncommon", 65, 74],
+    ["limited", "Limited", 55, 64],
+    ["common", "Common", null, 54],
+    ["custom", "Custom", null, null],
+  ]);
 
   window.__mflDatabaseStatsRuntime?.destroy?.();
 
-  let page = null;
-  let pageCreatedByRuntime = false;
+  const page = document.getElementById("databaseStatsPage");
+  if (!(page instanceof HTMLElement)) return;
+
+  let destroyed = false;
   let data = null;
   let dataPromise = null;
+  let dataBusyToken = "";
   let activeFilter = "all";
   let customMin = 0;
   let customMax = 99;
   let distributionMode = "overall";
-  let dataBusyToken = "";
-  let destroyed = false;
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
-  }
-
-  function isDatabaseTablePath(pathname = location.pathname) {
-    return DATABASE_PATH.test(String(pathname || "")) && !isStatsPath(pathname);
   }
 
   function formatCount(value) {
     return new Intl.NumberFormat("en-US").format(Number(value || 0));
   }
 
-  function installStyles() {
-    if (document.getElementById("databaseStatsRuntimeStyles")) return;
-    const style = document.createElement("style");
-    style.id = "databaseStatsRuntimeStyles";
-    style.textContent = `
-      #databaseStatsPage .databaseStatsCards {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-      }
-      #databaseStatsPage .databaseStatsFilters {
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      #databaseStatsPage .databaseStatsCustomFilter {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-left: 4px;
-      }
-      #databaseStatsPage .databaseStatsCustomFilter[hidden] {
-        display: none !important;
-      }
-      #databaseStatsPage .databaseStatsCustomFilter label {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      #databaseStatsPage .databaseStatsCustomFilter input {
-        width: 62px;
-        min-height: 34px;
-        padding: 5px 7px;
-        border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
-        border-radius: 7px;
-        background: var(--surface);
-        color: var(--text);
-        font: inherit;
-      }
-      #databaseStatsPage .mflStatsHistogram {
-        animation: none !important;
-        opacity: 1 !important;
-        transform: none !important;
-      }
-      #databaseStatsPage .mflStatsHistogramBar,
-      #databaseStatsPage .mflStatsHistogramBar::after {
-        animation: none !important;
-        transition: none !important;
-      }
-      #databaseStatsPage .mflStatsHistogram[data-database-stats-apply-transition="true"] .mflStatsHistogramBar::after {
-        animation: mflStatsBarRise 220ms ease-out !important;
-      }
-    `;
-    document.head.appendChild(style);
+  function filterButtons() {
+    return Array.from(page.querySelectorAll("#databaseStatsOverallFilters .mflStatsFilterButton"));
   }
 
-  function bindPage() {
-    if (!page || page.dataset.databaseStatsRuntimeBound === VERSION) return;
-    page.dataset.databaseStatsRuntimeBound = VERSION;
+  function bindPermanentControls() {
+    const buttons = filterButtons();
+    buttons.forEach((button, index) => {
+      const filter = FILTERS[index];
+      if (!filter) return;
+      button.dataset.filter = filter[0];
+      if (button.textContent !== filter[1]) button.textContent = filter[1];
+      button.addEventListener("click", () => {
+        activeFilter = filter[0];
+        syncFilterControls();
+        renderStats();
+      });
+    });
 
     page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
     page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
@@ -112,130 +69,50 @@
         if (event.key === "Enter") applyCustomFilter();
       });
     });
+    syncFilterControls();
   }
 
-  function createPage() {
-    if (page?.isConnected) return page;
-    const main = document.querySelector("main");
-    if (!main) return null;
-
-    const existing = document.getElementById("databaseStatsPage");
-    if (existing instanceof HTMLElement) {
-      page = existing;
-    } else {
-      page = document.createElement("section");
-      pageCreatedByRuntime = true;
-      page.id = "databaseStatsPage";
-      page.className = "pageView mflStatsPage databaseStatsPage";
-      page.hidden = true;
-      page.innerHTML = `
-        <h2 class="tablePageTitle">Database</h2>
-        <section class="views mflStatsViews" aria-label="Database views">
-          <button class="viewButton" type="button" data-page="database" data-view="attributes">Attributes</button>
-          <button class="viewButton" type="button" data-page="database" data-view="contracts">Contracts</button>
-          <button class="viewButton active" type="button" data-page="database" data-view="stats">Stats</button>
-        </section>
-        <section class="mflStatsFilters databaseStatsFilters" aria-label="Database stats overall filters">
-          <span>Overall Filters</span>
-          <div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">
-            <button class="mflStatsFilterButton active" type="button">All</button>
-            <button class="mflStatsFilterButton" type="button">Ultimate</button>
-            <button class="mflStatsFilterButton" type="button">Legendary</button>
-            <button class="mflStatsFilterButton" type="button">Rare</button>
-            <button class="mflStatsFilterButton" type="button">Uncommon</button>
-            <button class="mflStatsFilterButton" type="button">Limited</button>
-            <button class="mflStatsFilterButton" type="button">Common</button>
-            <button class="mflStatsFilterButton" type="button">Custom</button>
-          </div>
-          <div id="databaseStatsCustomFilter" class="databaseStatsCustomFilter" hidden>
-            <label>Min <input id="databaseStatsCustomMin" type="number" inputmode="numeric" min="0" max="99" value="0"></label>
-            <label>Max <input id="databaseStatsCustomMax" type="number" inputmode="numeric" min="0" max="99" value="99"></label>
-            <button id="databaseStatsCustomApply" class="compactButton" type="button">Apply</button>
-          </div>
-        </section>
-        <section class="mflStatsCards databaseStatsCards" aria-label="Database player statistics">
-          <article><span>Total active players</span><strong id="databaseStatsTotalPlayers">-</strong></article>
-          <article><span>Retiring in three years</span><strong id="databaseStatsRetiringThree">-</strong></article>
-          <article><span>Retiring in two years</span><strong id="databaseStatsRetiringTwo">-</strong></article>
-          <article><span>Retiring in one year</span><strong id="databaseStatsRetiringOne">-</strong></article>
-          <article><span>Retired</span><strong id="databaseStatsRetired">-</strong></article>
-        </section>
-        <section class="mflStatsDistribution" aria-label="Active players distribution">
-          <div class="mflStatsDistributionHeader">
-            <h3 id="databaseStatsDistributionTitle">Active Players Overall Distribution</h3>
-            <div class="mflStatsDistributionModeButtons" role="group" aria-label="Distribution mode">
-              <button class="mflStatsDistributionModeButton active" type="button" data-distribution="overall">Overall</button>
-              <button class="mflStatsDistributionModeButton" type="button" data-distribution="age">Age</button>
-            </div>
-          </div>
-          <div id="databaseStatsDistribution" class="mflStatsAgeDistribution"></div>
-        </section>
-      `;
-      main.appendChild(page);
-    }
-
-    bindPage();
-    renderFilterButtons();
-    return page;
+  function syncFilterControls() {
+    filterButtons().forEach((button) => {
+      const active = String(button.dataset.filter || "") === activeFilter;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    const custom = page.querySelector("#databaseStatsCustomFilter");
+    if (custom instanceof HTMLElement) custom.hidden = activeFilter !== "custom";
   }
 
-  function setNavigationActive() {
+  function showShell() {
+    if (!isStatsPath()) return false;
+    document.querySelectorAll("main > .pageView").forEach((candidate) => {
+      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
+    });
+    page.hidden = false;
+    document.body.dataset.page = "databasestats";
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       button.classList.toggle("active", button.dataset.page === "database");
     });
-  }
-
-  function showStatsShell() {
-    const target = createPage();
-    if (!target) return false;
-    installStyles();
-    document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (!(candidate instanceof HTMLElement)) return;
-      const shouldHide = candidate !== target;
-      if (candidate.hidden !== shouldHide) candidate.hidden = shouldHide;
+    page.querySelectorAll(".viewButton[data-view]").forEach((button) => {
+      const active = button.dataset.view === "stats";
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
     });
-    if (target.hidden) target.hidden = false;
-    if (document.body.dataset.page !== "databasestats") document.body.dataset.page = "databasestats";
-    setNavigationActive();
     return true;
   }
 
-  function hideStatsPage() {
-    if (page && !page.hidden) page.hidden = true;
+  function hideShell() {
+    page.hidden = true;
   }
 
   function currentFilter() {
     if (activeFilter === "custom") return { min: customMin, max: customMax };
-    return FILTERS.find((filter) => filter.id === activeFilter) || FILTERS[0];
-  }
-
-  function renderFilterButtons() {
-    const container = page?.querySelector("#databaseStatsOverallFilters");
-    if (!container) return;
-    const fragment = document.createDocumentFragment();
-    FILTERS.forEach((filter) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "mflStatsFilterButton";
-      button.classList.toggle("active", filter.id === activeFilter);
-      button.textContent = filter.label;
-      button.addEventListener("click", () => {
-        activeFilter = filter.id;
-        const custom = page?.querySelector("#databaseStatsCustomFilter");
-        if (custom) custom.hidden = filter.id !== "custom";
-        renderFilterButtons();
-        renderStats();
-      });
-      fragment.appendChild(button);
-    });
-    container.replaceChildren(fragment);
-    const custom = page.querySelector("#databaseStatsCustomFilter");
-    if (custom) custom.hidden = activeFilter !== "custom";
+    const filter = FILTERS.find(([id]) => id === activeFilter) || FILTERS[0];
+    return { min: filter[2], max: filter[3] };
   }
 
   function applyCustomFilter() {
-    const minInput = page?.querySelector("#databaseStatsCustomMin");
-    const maxInput = page?.querySelector("#databaseStatsCustomMax");
+    const minInput = page.querySelector("#databaseStatsCustomMin");
+    const maxInput = page.querySelector("#databaseStatsCustomMax");
     let minimum = Number(minInput?.value);
     let maximum = Number(maxInput?.value);
     if (!Number.isFinite(minimum)) minimum = 0;
@@ -245,99 +122,91 @@
     if (minimum > maximum) [minimum, maximum] = [maximum, minimum];
     customMin = minimum;
     customMax = maximum;
-    if (minInput) minInput.value = String(minimum);
-    if (maxInput) maxInput.value = String(maximum);
+    if (minInput instanceof HTMLInputElement) minInput.value = String(minimum);
+    if (maxInput instanceof HTMLInputElement) maxInput.value = String(maximum);
     activeFilter = "custom";
-    renderFilterButtons();
+    syncFilterControls();
     renderStats();
+  }
+
+  function retirementYears(group) {
+    const raw = group?.[2];
+    if (raw === null || raw === undefined || raw === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
   }
 
   function filteredGroups() {
     if (!Array.isArray(data?.rows)) return [];
-    const filter = currentFilter();
+    const { min, max } = currentFilter();
     return data.rows.filter((group) => {
-      const overall = Number(group[0]);
+      const overall = Number(group?.[0]);
       return Number.isFinite(overall)
-        && (filter.min === null || overall >= filter.min)
-        && (filter.max === null || overall <= filter.max);
+        && (min === null || overall >= min)
+        && (max === null || overall <= max);
     });
   }
 
   function sumGroups(groups, predicate = () => true) {
-    return groups.reduce((total, group) => (
-      predicate(group) ? total + Number(group[3] || 0) : total
-    ), 0);
-  }
-
-  function retirementYearsForGroup(group) {
-    const rawValue = group?.[2];
-    if (rawValue === null || rawValue === undefined || rawValue === "") return null;
-    const value = Number(rawValue);
-    return Number.isFinite(value) ? value : null;
-  }
-
-  function isRetiredGroup(group) {
-    return retirementYearsForGroup(group) === 0;
+    return groups.reduce((total, group) => predicate(group) ? total + Number(group?.[3] || 0) : total, 0);
   }
 
   function setCard(id, value) {
-    const element = page?.querySelector(`#${id}`);
+    const element = document.getElementById(id);
     if (element) element.textContent = formatCount(value);
   }
 
   function renderStats() {
-    if (!page || !data) return;
+    if (!data || !isStatsPath()) return;
     const groups = filteredGroups();
-    const filteredActivePlayers = sumGroups(groups, (group) => !isRetiredGroup(group));
-    const totalActivePlayers = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
+    const retired = (group) => retirementYears(group) === 0;
+    const activeCount = activeFilter === "all" && Number.isFinite(Number(data.totalActivePlayers))
       ? Number(data.totalActivePlayers)
-      : filteredActivePlayers;
-    const filteredRetiredPlayers = sumGroups(groups, isRetiredGroup);
-    const totalRetiredPlayers = activeFilter === "all" && Number.isFinite(Number(data.totalRetiredPlayers))
+      : sumGroups(groups, (group) => !retired(group));
+    const retiredCount = activeFilter === "all" && Number.isFinite(Number(data.totalRetiredPlayers))
       ? Number(data.totalRetiredPlayers)
-      : filteredRetiredPlayers;
-    setCard("databaseStatsTotalPlayers", totalActivePlayers);
-    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => retirementYearsForGroup(group) === 3));
-    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => retirementYearsForGroup(group) === 2));
-    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => retirementYearsForGroup(group) === 1));
-    setCard("databaseStatsRetired", totalRetiredPlayers);
+      : sumGroups(groups, retired);
+    setCard("databaseStatsTotalPlayers", activeCount);
+    setCard("databaseStatsRetiringThree", sumGroups(groups, (group) => retirementYears(group) === 3));
+    setCard("databaseStatsRetiringTwo", sumGroups(groups, (group) => retirementYears(group) === 2));
+    setCard("databaseStatsRetiringOne", sumGroups(groups, (group) => retirementYears(group) === 1));
+    setCard("databaseStatsRetired", retiredCount);
     renderDistribution();
   }
 
   function renderDistribution() {
-    if (!page || !data) return;
+    if (!data || !isStatsPath()) return;
     page.querySelectorAll("[data-distribution]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.distribution === distributionMode);
+      const active = button.dataset.distribution === distributionMode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
     });
-    const title = page.querySelector("#databaseStatsDistributionTitle");
-    if (title) {
-      title.textContent = distributionMode === "age"
-        ? "Active Players Age Distribution"
-        : "Active Players Overall Distribution";
-    }
+    const title = document.getElementById("databaseStatsDistributionTitle");
+    if (title) title.textContent = distributionMode === "age" ? "Active Players Age Distribution" : "Active Players Overall Distribution";
 
     const counts = new Map();
-    let totalActive = 0;
+    let total = 0;
     filteredGroups().forEach((group) => {
-      if (isRetiredGroup(group)) return;
-      const value = distributionMode === "age" ? group[1] : group[0];
-      if (value === null || value === undefined || value === "") return;
-      const numericValue = Number(value);
-      const count = Number(group[3] || 0);
-      if (!Number.isFinite(numericValue) || count <= 0) return;
-      counts.set(numericValue, (counts.get(numericValue) || 0) + count);
-      totalActive += count;
+      if (retirementYears(group) === 0) return;
+      const value = Number(distributionMode === "age" ? group?.[1] : group?.[0]);
+      const count = Number(group?.[3] || 0);
+      if (!Number.isFinite(value) || count <= 0) return;
+      counts.set(value, (counts.get(value) || 0) + count);
+      total += count;
     });
 
-    const distribution = page.querySelector("#databaseStatsDistribution");
-    if (!distribution) return;
+    const container = document.getElementById("databaseStatsDistribution");
+    if (!(container instanceof HTMLElement)) return;
     if (!counts.size) {
-      distribution.innerHTML = '<p class="mflStatsEmpty">No active players match this Overall filter.</p>';
+      const empty = document.createElement("p");
+      empty.className = "mflStatsEmpty";
+      empty.textContent = "No active players match this Overall filter.";
+      container.replaceChildren(empty);
       return;
     }
 
-    const rows = Array.from(counts.entries()).sort((left, right) => left[0] - right[0]);
-    const maxCount = Math.max(...rows.map((entry) => entry[1]));
+    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
+    const maxCount = Math.max(...rows.map(([, count]) => count));
     const histogram = document.createElement("div");
     histogram.className = "mflStatsHistogram";
     histogram.style.setProperty("--mfl-stats-bars", String(rows.length));
@@ -350,16 +219,14 @@
       const bar = document.createElement("div");
       bar.className = "mflStatsHistogramBar";
       bar.style.setProperty("--bar-height", `${Math.max(6, (count / maxCount) * 100)}%`);
-      const percentage = totalActive > 0 ? ((count / totalActive) * 100).toFixed(1) : "0.0";
-      bar.dataset.tooltip = `${formatCount(count)} (${percentage}%)`;
+      bar.dataset.tooltip = `${formatCount(count)} (${total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"}%)`;
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
       label.textContent = String(value);
       item.append(bar, label);
       histogram.appendChild(item);
     });
-
-    distribution.replaceChildren(histogram);
+    container.replaceChildren(histogram);
   }
 
   async function loadData() {
@@ -368,11 +235,9 @@
       dataPromise = fetch(`/api/data?mode=database-stats&v=${encodeURIComponent(VERSION)}`, { cache: "no-store" })
         .then(async (response) => {
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !Array.isArray(payload.rows)) {
-            throw new Error(payload.error || "Could not load Database Stats.");
-          }
+          if (!response.ok || !Array.isArray(payload.rows)) throw new Error(payload.error || "Could not load Database Stats.");
           data = payload;
-          return data;
+          return payload;
         })
         .catch((error) => {
           dataPromise = null;
@@ -382,155 +247,80 @@
     return dataPromise;
   }
 
-  function beginDataBusy() {
-    if (data || dataBusyToken || typeof window.__mflInteractionBusy?.begin !== "function") return;
-    dataBusyToken = window.__mflInteractionBusy.begin("databaseStatsData");
-    document.documentElement.dataset.databaseStatsLoading = "true";
+  function beginBusy() {
+    if (!dataBusyToken && !data && window.__mflInteractionBusy?.begin) {
+      dataBusyToken = window.__mflInteractionBusy.begin("databaseStatsData");
+    }
   }
 
-  function endDataBusy() {
-    if (dataBusyToken) {
-      window.__mflInteractionBusy?.end?.(dataBusyToken);
-      dataBusyToken = "";
-    }
-    delete document.documentElement.dataset.databaseStatsLoading;
+  function endBusy() {
+    if (!dataBusyToken) return;
+    window.__mflInteractionBusy?.end?.(dataBusyToken);
+    dataBusyToken = "";
   }
 
   async function showStatsPage(updateUrl = false) {
     if (destroyed) return;
     if (updateUrl && !isStatsPath()) history.pushState({}, "", "/database/stats");
     else if (!isStatsPath()) history.replaceState(history.state, "", "/database/stats");
-
-    showStatsShell();
-    const distribution = page?.querySelector("#databaseStatsDistribution");
-    if (!data && distribution) distribution.replaceChildren();
-
+    showShell();
     try {
-      if (!data) beginDataBusy();
+      beginBusy();
       await loadData();
-      if (destroyed || !isStatsPath()) return;
-      renderStats();
+      if (!destroyed && isStatsPath()) renderStats();
     } catch (error) {
-      if (distribution && isStatsPath()) {
+      const container = document.getElementById("databaseStatsDistribution");
+      if (container instanceof HTMLElement && isStatsPath()) {
         const message = document.createElement("p");
         message.className = "mflStatsEmpty";
         message.textContent = String(error?.message || "Could not load Database Stats.");
-        distribution.replaceChildren(message);
+        container.replaceChildren(message);
       }
     } finally {
-      endDataBusy();
-      if (!destroyed && isStatsPath()) showStatsShell();
+      endBusy();
     }
   }
 
   function openDatabaseView(view) {
-    hideStatsPage();
-    endDataBusy();
+    hideShell();
+    endBusy();
     if (typeof setPage === "function") {
       void setPage("database", true, { view, skipNavigationLoading: true });
       return;
     }
     history.pushState({}, "", `/database/${view}`);
-    location.reload();
-  }
-
-  function syncDatabaseViewOrder() {
-    const views = document.querySelector("#progressionPage .views");
-    const statsButton = views?.querySelector('.viewButton[data-view="stats"]');
-    if (!views || !statsButton) return;
-    if (isDatabaseTablePath()) {
-      const contractsButton = views.querySelector('.viewButton[data-view="contracts"]');
-      if (contractsButton && contractsButton.nextElementSibling !== statsButton) contractsButton.after(statsButton);
-      statsButton.hidden = false;
-      statsButton.classList.remove("active");
-    }
-  }
-
-  function shouldOpenStats(target) {
-    return target instanceof Element
-      && isDatabaseTablePath()
-      && Boolean(target.closest('#progressionPage .viewButton[data-view="stats"]'));
-  }
-
-  function preserveStatsShellAfterInteraction() {
-    requestAnimationFrame(() => {
-      if (!destroyed && isStatsPath()) showStatsShell();
-    });
-  }
-
-  function onDocumentClick(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target) return;
-    if (isStatsPath()) preserveStatsShellAfterInteraction();
-    if (shouldOpenStats(target)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      void showStatsPage(true);
-      return;
-    }
-    if (!target.closest("#databaseStatsPage") && target.closest("a[href], .navButton, [data-page], #progressionPage .viewButton[data-view]")) {
-      hideStatsPage();
-      endDataBusy();
-    }
-  }
-
-  function onDocumentPointerDown(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    if (target && isStatsPath()) preserveStatsShellAfterInteraction();
-    if (!target || target.closest("#databaseStatsPage") || shouldOpenStats(target)) return;
-    if (target.closest("a[href], .navButton, [data-page], #progressionPage .viewButton[data-view]")) {
-      hideStatsPage();
-      endDataBusy();
-    }
   }
 
   function onPopState() {
     if (isStatsPath()) void showStatsPage(false);
     else {
-      hideStatsPage();
-      endDataBusy();
-      syncDatabaseViewOrder();
+      hideShell();
+      endBusy();
     }
   }
 
   function sync() {
     if (destroyed) return;
-    installStyles();
-    syncDatabaseViewOrder();
     if (isStatsPath()) {
-      showStatsShell();
-      if (!data && !dataPromise) void showStatsPage(false);
-      else if (data) renderStats();
+      showShell();
+      if (data) renderStats();
+      else void showStatsPage(false);
     } else {
-      hideStatsPage();
-      endDataBusy();
+      hideShell();
+      endBusy();
     }
   }
 
-  installStyles();
-  document.addEventListener("click", onDocumentClick, true);
-  document.addEventListener("pointerdown", onDocumentPointerDown, true);
-  window.addEventListener("popstate", onPopState);
-  sync();
-
   function destroy() {
     destroyed = true;
-    document.removeEventListener("click", onDocumentClick, true);
-    document.removeEventListener("pointerdown", onDocumentPointerDown, true);
     window.removeEventListener("popstate", onPopState);
-    endDataBusy();
-    if (pageCreatedByRuntime) page?.remove();
-    document.getElementById("databaseStatsRuntimeStyles")?.remove();
+    endBusy();
   }
 
+  bindPermanentControls();
+  window.addEventListener("popstate", onPopState);
   window.renderDatabaseStatsPage = showStatsPage;
-  window.setDatabaseStatsPageVisibility = (visible) => {
-    if (visible) showStatsShell();
-    else hideStatsPage();
-  };
-  window.__mflDatabaseStatsRuntime = {
-    version: VERSION,
-    sync,
-    destroy,
-  };
+  window.setDatabaseStatsPageVisibility = (visible) => visible ? showShell() : hideShell();
+  window.__mflDatabaseStatsRuntime = Object.freeze({ version: VERSION, sync, destroy });
+  sync();
 })();

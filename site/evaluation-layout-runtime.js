@@ -1,550 +1,112 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "dev");
-
   window.__mflEvaluationLayoutRuntime?.destroy?.();
 
   let destroyed = false;
-  let frame = 0;
-  let observer = null;
-  let seededMflPerUsd = false;
-  let focusQueued = false;
-  let searchFocusDismissed = false;
-
-  function cleanPath() {
-    return String(location.pathname || "/").replace(/\/+$/, "") || "/";
-  }
+  let focusFrame = 0;
+  let focusDismissed = false;
 
   function evaluationActive() {
-    return cleanPath() === "/evaluation";
+    return /^\/evaluation\/?$/i.test(location.pathname);
   }
 
-  function storedEvaluationRouteActive() {
-    if (!evaluationActive()) return false;
+  function selectedEvaluation() {
     const params = new URLSearchParams(location.search);
-    return Boolean(params.get("saved") || params.get("share"));
-  }
-
-  function globalSearchOpen() {
-    const modal = document.getElementById("searchModal");
-    return modal instanceof HTMLElement && !modal.hidden;
-  }
-
-  function mflUsdEditorOpen() {
-    const editor = document.getElementById("evaluationMflUsdEditor");
-    return editor instanceof HTMLElement && !editor.hidden;
-  }
-
-  function appBusy() {
-    return document.documentElement.classList.contains("mflInteractionBusy")
-      || document.documentElement.dataset.interactionBusy === "true";
-  }
-
-  function evaluationSaveShareBusy() {
-    const saveButton = document.getElementById("evaluationSaveButton");
-    const shareButton = document.getElementById("evaluationShareButton");
-    return Boolean(
-      (saveButton instanceof HTMLButtonElement && saveButton.disabled)
-      || (shareButton instanceof HTMLButtonElement && shareButton.disabled),
-    );
-  }
-
-  function evaluationReady() {
-    return evaluationActive()
-      && document.documentElement.dataset.mflReady === "true"
-      && (!appBusy() || evaluationSaveShareBusy());
-  }
-
-  function setImportant(element, property, value) {
-    if (element instanceof HTMLElement) {
-      element.style.setProperty(property, value, "important");
-    }
-  }
-
-  function storedMflPerUsd() {
+    if (params.get("player") || params.get("saved") || params.get("share")) return true;
     try {
-      const value = Number(
-        String(localStorage.getItem("mfl-evaluation-mfl-per-usd") || "").replace(",", "."),
-      );
-      if (Number.isFinite(value) && value > 0) return value;
-    } catch {
-      // The static default remains available when storage cannot be read.
-    }
-    return 400;
-  }
-
-  function normalizeWalletAddress(value) {
-    const address = String(value || "").trim().toLowerCase();
-    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
-  }
-
-  function hasStoredWalletOptIn() {
-    if (document.documentElement.dataset.storedWalletOptIn === "true") return true;
-    try {
-      const address = normalizeWalletAddress(localStorage.getItem("mfl-linked-wallet-v1"));
-      const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
-      const proofAddress = normalizeWalletAddress(proof?.address);
-      return Boolean(
-        address
-        && proofAddress === address
-        && proof?.message
-        && Array.isArray(proof?.signatures)
-        && proof.signatures.length,
-      );
+      return Boolean(typeof state === "object" && state?.evaluationPlayerId);
     } catch {
       return false;
     }
   }
 
-  function hasSelectedEvaluation() {
-    const params = new URLSearchParams(location.search);
-    if (params.get("player") || params.get("saved") || params.get("share")) return true;
-    try {
-      if (typeof state === "object" && state?.evaluationPlayerId) return true;
-    } catch {
-      // The static shell is installed before application state exists.
-    }
-    const panel = document.getElementById("evaluationPanel");
-    return panel instanceof HTMLElement && !panel.hidden;
+  function ready() {
+    return evaluationActive()
+      && document.documentElement.dataset.mflReady === "true"
+      && !document.documentElement.classList.contains("mflInteractionBusy");
   }
 
-  function syncStoredEvaluationActions() {
-    const loading = storedEvaluationRouteActive()
-      && !document.documentElement.classList.contains("mflEvaluationReady");
-    document.documentElement.classList.toggle("mflEvaluationStoredSelectionLoading", loading);
-  }
-
-  function syncLoadButton() {
-    const buttons = document.getElementById("evaluationButtons");
-    const loadButton = document.getElementById("evaluationLoadButton");
-    if (!(buttons instanceof HTMLElement) || !(loadButton instanceof HTMLElement)) return;
-
-    const selectedEvaluation = hasSelectedEvaluation();
-    const visible = hasStoredWalletOptIn() && !selectedEvaluation;
-    document.documentElement.classList.toggle("mflEvaluationInitialLoadVisible", visible);
-
-    if (visible) {
-      buttons.hidden = false;
-      loadButton.hidden = false;
-      loadButton.removeAttribute("aria-hidden");
-      setImportant(buttons, "visibility", "visible");
-      setImportant(buttons, "opacity", "1");
-      setImportant(loadButton, "visibility", "visible");
-      setImportant(loadButton, "opacity", "1");
-      return;
-    }
-
-    loadButton.hidden = true;
-    loadButton.setAttribute("aria-hidden", "true");
-    loadButton.style.removeProperty("visibility");
-    loadButton.style.removeProperty("opacity");
-    if (!selectedEvaluation) {
-      buttons.hidden = true;
-      buttons.style.removeProperty("visibility");
-      buttons.style.removeProperty("opacity");
-    }
-  }
-
-  function syncDiscountRateFallback() {
-    const discountRate = document.getElementById("evaluationDiscountRate");
-    if (!(discountRate instanceof HTMLElement)) return;
-    if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
-    setImportant(discountRate, "visibility", "visible");
-  }
-
-  function keepStaticPosition() {
-    if (!evaluationActive() || evaluationReady()) return;
-    const main = document.querySelector("main");
-    if (main instanceof HTMLElement && main.scrollTop !== 0) main.scrollTop = 0;
-    if (document.scrollingElement && document.scrollingElement.scrollTop !== 0) {
-      document.scrollingElement.scrollTop = 0;
-    }
-  }
-
-  function syncSearchFocusGuard() {
+  function searchInput() {
     const input = document.getElementById("evaluationSearchInput");
-    if (!(input instanceof HTMLInputElement)) return;
+    return input instanceof HTMLInputElement ? input : null;
+  }
 
-    if (!evaluationActive()) {
-      if (input.dataset.staticFocusGuard === "true") {
-        input.inert = false;
-        delete input.dataset.staticFocusGuard;
+  function focusWhenReady() {
+    if (destroyed || focusDismissed || !ready() || selectedEvaluation()) return;
+    const input = searchInput();
+    if (!input || input.value.trim() || document.activeElement === input) return;
+    if (focusFrame) cancelAnimationFrame(focusFrame);
+    focusFrame = requestAnimationFrame(() => {
+      focusFrame = 0;
+      if (!destroyed && !focusDismissed && ready() && !selectedEvaluation() && !input.value.trim()) {
+        input.focus({ preventScroll: true });
       }
-      return;
-    }
-
-    if (!evaluationReady()) {
-      input.inert = true;
-      input.dataset.staticFocusGuard = "true";
-      if (document.activeElement === input) input.blur();
-      keepStaticPosition();
-      return;
-    }
-
-    input.inert = false;
-    delete input.dataset.staticFocusGuard;
-  }
-
-  function renderEmptyEvaluationRecents() {
-    const input = document.getElementById("evaluationSearchInput");
-    if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
-    try {
-      if (typeof window.renderEvaluationSearchResults === "function") {
-        window.renderEvaluationSearchResults();
-      } else {
-        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
-      }
-    } catch (error) {
-      console.warn("Could not keep recent Evaluation results visible.", error);
-    }
-  }
-
-  function focusEmptyEvaluationWhenReady() {
-    if (focusQueued
-      || searchFocusDismissed
-      || !evaluationReady()
-      || hasSelectedEvaluation()
-      || globalSearchOpen()
-      || mflUsdEditorOpen()) return;
-    const input = document.getElementById("evaluationSearchInput");
-    if (!(input instanceof HTMLInputElement) || input.value.trim()) return;
-
-    focusQueued = true;
-    requestAnimationFrame(() => {
-      focusQueued = false;
-      syncSearchFocusGuard();
-      if (searchFocusDismissed
-        || !evaluationReady()
-        || hasSelectedEvaluation()
-        || input.value.trim()
-        || globalSearchOpen()
-        || mflUsdEditorOpen()) return;
-      input.focus({ preventScroll: true });
     });
   }
 
-  function guardEvaluationFocus(event) {
-    const input = document.getElementById("evaluationSearchInput");
-    if (event.target !== input) return;
-    if (searchFocusDismissed) {
-      input.blur();
-      renderEmptyEvaluationRecents();
-      return;
-    }
-    if (evaluationReady()) return;
-    input.blur();
-    keepStaticPosition();
+  function renderEmptyRecents() {
+    const input = searchInput();
+    if (!input || input.value.trim()) return;
+    try {
+      window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
+    } catch {}
   }
 
-  function preserveEvaluationResultClick(event) {
-    if (event.button !== 0) return;
-    const target = event.target instanceof Element
-      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
-      : null;
-    if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
-
-    // Result clicks must remain trusted even when the Evaluation input is not
-    // focused. Preventing only the mousedown default avoids a focus transfer.
-    event.preventDefault();
-  }
-
-  function evaluationSearchInteraction(target) {
-    if (!(target instanceof Element)) return false;
-    return Boolean(target.closest(
-      "#evaluationSearchInput, #evaluationSearchClearButton, #evaluationSearchResults",
-    ));
-  }
-
-  function releaseEvaluationFocus() {
-    searchFocusDismissed = true;
-    const input = document.getElementById("evaluationSearchInput");
-    if (input instanceof HTMLInputElement && document.activeElement === input) {
-      input.blur();
-    }
-  }
-
-  function handleEvaluationSearchPointerIntent(event) {
-    if (event.button !== 0 || !evaluationActive()) return;
+  function onPointerDown(event) {
+    if (!evaluationActive() || event.button !== 0) return;
     const target = event.target instanceof Element ? event.target : null;
-
-    // Global search owns all focus while its opener/modal is being used. Do not
-    // render or refocus Evaluation search as a side effect of those pointer events.
-    if (target?.closest("#openSearchButton, #searchModal")) {
-      releaseEvaluationFocus();
+    if (target?.closest("#evaluationSearchInput, #evaluationSearchClearButton, #evaluationSearchResults")) {
+      focusDismissed = false;
       return;
     }
-
-    if (evaluationSearchInteraction(target)) {
-      if (target?.closest("#evaluationSearchInput, #evaluationSearchClearButton")) {
-        searchFocusDismissed = false;
-      }
-      return;
+    if (target?.closest("#openSearchButton, #searchModal, #evaluationMflUsdEditButton")) {
+      focusDismissed = true;
+    } else {
+      focusDismissed = true;
     }
-
-    releaseEvaluationFocus();
-    queueMicrotask(renderEmptyEvaluationRecents);
+    const input = searchInput();
+    if (input && document.activeElement === input) input.blur();
+    queueMicrotask(renderEmptyRecents);
   }
 
-  function allowKeyboardSearchFocus(event) {
-    if (!evaluationActive() || event.key !== "Tab") return;
-    if (globalSearchOpen()) return;
-    searchFocusDismissed = false;
+  function onKeyDown(event) {
+    if (!evaluationActive()) return;
+    if (event.key === "Tab") focusDismissed = false;
   }
 
-  function releaseSearchForMflUsdEdit(event) {
-    if (event.button !== 0) return;
-    const target = event.target instanceof Element
-      ? event.target.closest("#evaluationMflUsdEditButton")
-      : null;
-    if (!(target instanceof HTMLButtonElement) || target.disabled || target.hidden) return;
-
-    const input = document.getElementById("evaluationSearchInput");
-    if (input instanceof HTMLInputElement && document.activeElement === input) {
-      input.blur();
-    }
+  function onReady() {
+    focusDismissed = false;
+    focusWhenReady();
   }
 
-  function showEvaluationPage() {
-    const page = document.getElementById("evaluationPage");
-    if (!(page instanceof HTMLElement) || !document.body) return false;
-
-    document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (!(candidate instanceof HTMLElement)) return;
-      const hidden = candidate !== page;
-      if (candidate.hidden !== hidden) candidate.hidden = hidden;
-    });
-    page.hidden = false;
-    document.body.dataset.page = "evaluation";
-
-    const topbar = document.querySelector(".topbar");
-    const main = document.querySelector("main");
-    const menuRail = document.getElementById("menuRail");
-    const sidebar = document.getElementById("sidebar");
-    const footer = document.querySelector(".siteFooter");
-    if (menuRail instanceof HTMLElement) menuRail.hidden = false;
-    if (sidebar instanceof HTMLElement) sidebar.hidden = false;
-
-    [topbar, main, menuRail, sidebar, footer].forEach((element) => {
-      setImportant(element, "visibility", "visible");
-      setImportant(element, "opacity", "1");
-    });
-
-    document.querySelectorAll(".navButton[data-page]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === "evaluation");
-    });
-
-    const topBar = page.querySelector(".evaluationTopBar");
-    const titleRow = page.querySelector(".evaluationTitleRow");
-    const searchGroup = page.querySelector(".evaluationSearchGroup");
-    const search = page.querySelector(".evaluationSearch");
-    const metrics = page.querySelector(".evaluationMetrics");
-
-    setImportant(page, "visibility", "visible");
-    setImportant(page, "opacity", "1");
-    [titleRow, topBar, searchGroup, search, metrics].forEach((element) => {
-      setImportant(element, "visibility", "visible");
-      setImportant(element, "opacity", "1");
-    });
-
-    document.documentElement.classList.add(
-      "mflEvaluationStaticChromeReady",
-      "mflEvaluationInitialStateReady",
-    );
-    document.body.classList.add("evaluationStaticChromeReady");
-
-    const mflPerUsd = document.getElementById("evaluationMflUsd");
-    if (!seededMflPerUsd && mflPerUsd) {
-      const label = String(storedMflPerUsd());
-      if (mflPerUsd.textContent !== label) mflPerUsd.textContent = label;
-      seededMflPerUsd = true;
-    }
-
-    syncStoredEvaluationActions();
-    syncDiscountRateFallback();
-    syncLoadButton();
-    syncSearchFocusGuard();
-    keepStaticPosition();
-    focusEmptyEvaluationWhenReady();
-    return true;
-  }
-
-  function primeEvaluationNavigation(event) {
-    if (event.button !== 0 || event.defaultPrevented) return;
-    const link = event.target instanceof Element
-      ? event.target.closest('#sidebar .navButton[data-page="evaluation"]')
-      : null;
-    if (!(link instanceof HTMLAnchorElement)) return;
-
-    try {
-      const url = new URL(link.href, window.location.href);
-      const path = String(url.pathname || "/").replace(/\/+$/, "") || "/";
-      if (url.origin !== window.location.origin || path !== "/evaluation") return;
-    } catch {
-      return;
-    }
-
-    showEvaluationPage();
-  }
-
-  function clearRouteState() {
-    document.documentElement.classList.remove(
-      "mflEvaluationInitialLoadVisible",
-      "mflEvaluationReady",
-      "mflEvaluationStoredSelectionLoading",
-    );
-    document.body?.classList.remove("evaluationStaticChromeReady");
-    searchFocusDismissed = false;
-    syncSearchFocusGuard();
+  function onPopState() {
+    focusDismissed = false;
+    focusWhenReady();
   }
 
   function sync() {
-    frame = 0;
-    if (destroyed) return;
-    if (evaluationActive()) showEvaluationPage();
-    else clearRouteState();
+    if (!evaluationActive()) {
+      focusDismissed = false;
+      return;
+    }
+    focusWhenReady();
   }
-
-  function schedule() {
-    if (!destroyed && !frame) frame = requestAnimationFrame(sync);
-  }
-
-  function onMutation() {
-    if (destroyed) return;
-    schedule();
-  }
-
-  const style = document.createElement("style");
-  style.id = "mflEvaluationStaticChromeStyles";
-  style.textContent = `
-    body[data-page="evaluation"].evaluationRouteLoading,
-    body[data-page="evaluation"].evaluationRouteLoading *,
-    body[data-page="evaluation"].evaluationRouteLoading *::before,
-    body[data-page="evaluation"].evaluationRouteLoading *::after {
-      cursor: wait !important;
-    }
-
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTitleRow,
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationMetrics,
-    body[data-page="evaluation"] #evaluationPage .evaluationTitleRow,
-    body[data-page="evaluation"] #evaluationPage .evaluationTopBar,
-    body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"] #evaluationPage .evaluationSearch,
-    body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationTopBar,
-    body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
-      display: block !important;
-      margin-bottom: 18px !important;
-    }
-
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
-    body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
-      display: grid !important;
-      grid-template-columns: minmax(320px, 560px) minmax(520px, 1fr) !important;
-      column-gap: 8px !important;
-      row-gap: 8px !important;
-      align-items: end !important;
-      justify-content: space-between !important;
-      min-width: 0 !important;
-    }
-
-    html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
-    body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-      position: relative !important;
-      display: grid !important;
-      gap: 10px !important;
-      width: auto !important;
-      max-width: 560px !important;
-      min-width: 0 !important;
-    }
-
-    html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
-    body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
-      visibility: visible !important;
-    }
-
-    html.mflEvaluationStoredSelectionLoading #evaluationButtons,
-    html.mflEvaluationStoredSelectionLoading #evaluationButtons[hidden] {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    html.mflEvaluationStoredSelectionLoading #evaluationResetButton,
-    html.mflEvaluationStoredSelectionLoading #evaluationResetButton[hidden],
-    html.mflEvaluationStoredSelectionLoading #evaluationPlayerPageButton,
-    html.mflEvaluationStoredSelectionLoading #evaluationPlayerPageButton[hidden] {
-      display: inline-flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationButtons,
-    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationButtons[hidden] {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton,
-    html.mflEvaluationStaticChromeReady.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
-      display: inline-flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  document.addEventListener("focusin", guardEvaluationFocus, true);
-  document.addEventListener("mousedown", preserveEvaluationResultClick, true);
-  document.addEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
-  document.addEventListener("mousedown", releaseSearchForMflUsdEdit, true);
-  document.addEventListener("click", primeEvaluationNavigation, true);
-  document.addEventListener("keydown", allowKeyboardSearchFocus, true);
-  observer = new MutationObserver(onMutation);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: ["class", "data-page", "data-mfl-ready", "data-interaction-busy", "hidden"],
-  });
-  window.addEventListener("popstate", schedule);
-  window.addEventListener("storage", schedule);
-  window.addEventListener("mfl:ready", schedule);
 
   function destroy() {
     destroyed = true;
-    if (frame) cancelAnimationFrame(frame);
-    observer?.disconnect();
-    document.removeEventListener("focusin", guardEvaluationFocus, true);
-    document.removeEventListener("mousedown", preserveEvaluationResultClick, true);
-    document.removeEventListener("mousedown", handleEvaluationSearchPointerIntent, true);
-    document.removeEventListener("mousedown", releaseSearchForMflUsdEdit, true);
-    document.removeEventListener("click", primeEvaluationNavigation, true);
-    document.removeEventListener("keydown", allowKeyboardSearchFocus, true);
-    window.removeEventListener("popstate", schedule);
-    window.removeEventListener("storage", schedule);
-    window.removeEventListener("mfl:ready", schedule);
-    const input = document.getElementById("evaluationSearchInput");
-    if (input instanceof HTMLInputElement && input.dataset.staticFocusGuard === "true") {
-      input.inert = false;
-      delete input.dataset.staticFocusGuard;
-    }
-    style.remove();
-    clearRouteState();
+    if (focusFrame) cancelAnimationFrame(focusFrame);
+    focusFrame = 0;
+    document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("mfl:ready", onReady);
   }
 
-  window.__mflEvaluationLayoutRuntime = Object.freeze({
-    version: VERSION,
-    sync: schedule,
-    destroy,
-  });
-
+  document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("popstate", onPopState);
+  window.addEventListener("mfl:ready", onReady);
+  window.__mflEvaluationLayoutRuntime = Object.freeze({ sync, destroy });
   sync();
 })();
