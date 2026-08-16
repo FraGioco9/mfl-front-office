@@ -172,11 +172,11 @@ const initialPathname = String(window.location.pathname || "/");
 
 /** @param {string} pageName */
 function normalizeRoutePageName(pageName) {
-  const page = String(pageName || "").trim().toLowerCase();
-  if (page === "my-players") return "myplayers";
-  if (page === "databasestats") return "database";
-  if (page === "clubs") return "club";
-  return page || "home";
+  const normalizer = Reflect.get(window, "__mflNormalizeRoutePageName");
+  if (typeof normalizer !== "function") {
+    throw new Error("Route page-name normalizer is unavailable.");
+  }
+  return String(normalizer(pageName) || "home");
 }
 
 /** @param {Record<string, unknown>} [options] */
