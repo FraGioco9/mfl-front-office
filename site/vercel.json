@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": ".",
   "functions": {
     "api/data.js": {
       "includeFiles": "api/data-files/mfl_database.db",
