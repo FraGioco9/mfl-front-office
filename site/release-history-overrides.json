@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.39",
+    "Keep the footer and complete Changelog history aligned with the newest release"
+  ],
+  [
     "v1.124.38",
     "Prevent early Evaluation core execution and release startup loading on errors"
   ],
@@ -81,7 +85,7 @@
   ],
   [
     "v1.124.18",
-    "Load Player detail helpers only when the Player route needs them"
+    "Load Player detail helpers only when the Player route needs it"
   ],
   [
     "v1.124.17",
