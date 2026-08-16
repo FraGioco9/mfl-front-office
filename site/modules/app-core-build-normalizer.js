@@ -1,5 +1,6 @@
 // @ts-check
 
+import { splitAgentApplicationCoreRuntime } from "./app-core-agent-chunk.js";
 import { normalizeApplicationCore as normalizeBaseApplicationCore } from "./app-core-normalizer.js";
 import { normalizeRouteRequestCancellation } from "./app-core-route-request-normalizer.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
@@ -17,7 +18,8 @@ function normalizeCompleteApplicationCore(source) {
 }
 
 export function normalizeBuiltApplicationCoreArtifacts(source) {
-  return splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
+  const routeArtifacts = splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
+  return splitAgentApplicationCoreRuntime(routeArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

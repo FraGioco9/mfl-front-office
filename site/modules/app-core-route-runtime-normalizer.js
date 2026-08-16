@@ -50,6 +50,10 @@ window.__mflAppStartPromise = (async () => {
     && typeof window.__mflEnsureRouteCore === "function") {
     await window.__mflEnsureRouteCore("club");
   }
+  if (/^\\/agents?(?:\\/|$)/i.test(window.location.pathname)
+    && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("agents");
+  }
   return startApp();
 })();`;
 

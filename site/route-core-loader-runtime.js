@@ -21,6 +21,7 @@
     evaluation: "/modules/app-core-evaluation-runtime.js",
     mflstats: "/modules/app-core-mfl-stats-runtime.js",
     club: "/modules/app-core-club-runtime.js",
+    agents: "/modules/app-core-agent-runtime.js",
   });
   const routeCorePromises = new Map();
 
