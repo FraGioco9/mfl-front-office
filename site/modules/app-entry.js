@@ -234,20 +234,15 @@ function postCoreScriptsForRoute(pageName, options = {}) {
 }
 
 function initialRouteRuntimeRequest() {
-  const path = initialPathname.replace(/\/+$/, "") || "/";
-  if (/^\/evaluation$/i.test(path)) return { pageName: "evaluation", options: {} };
-  if (/^\/database\/stats$/i.test(path)) return { pageName: "database", options: { view: "stats" } };
-  if (/^\/changelog$/i.test(path)) return { pageName: "changelog", options: {} };
-  if (/^\/database(?:\/|$)/i.test(path)) return { pageName: "database", options: {} };
-  if (/^\/mfl(?:\/|$)/i.test(path)) return { pageName: "mfl", options: {} };
-  if (/^\/progression(?:\/|$)/i.test(path)) return { pageName: "progression", options: {} };
-  if (/^\/watchlist(?:\/|$)/i.test(path)) return { pageName: "watchlist", options: {} };
-  if (/^\/my-players(?:\/|$)/i.test(path)) return { pageName: "myplayers", options: {} };
-  if (/^\/agents(?:\/|$)/i.test(path)) return { pageName: "agents", options: {} };
-  if (/^\/(?:clubs|club)(?:\/|$)/i.test(path)) return { pageName: "club", options: {} };
-  if (/^\/players\/[^/]+$/i.test(path)) return { pageName: "player", options: {} };
-  if (/^\/settings$/i.test(path)) return { pageName: "settings", options: {} };
-  return { pageName: "home", options: {} };
+  const classifier = Reflect.get(window, "__mflInitialRouteRuntimeRequest");
+  if (typeof classifier !== "function") {
+    throw new Error("Initial route runtime classifier is unavailable.");
+  }
+  const request = classifier(initialPathname);
+  const options = request?.options && typeof request.options === "object" && !Array.isArray(request.options)
+    ? request.options
+    : {};
+  return { pageName: normalizeRoutePageName(request?.pageName), options };
 }
 
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
