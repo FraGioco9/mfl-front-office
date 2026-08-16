@@ -1,4 +1,5 @@
-const isDevelopment = process.env.VERCEL_ENV === "development";
+const isDevelopment = process.env.VERCEL_ENV === "development"
+  || process.env.__VERCEL_DEV_RUNNING === "1";
 
 const javascriptHeaders = isDevelopment
   ? [
@@ -22,6 +23,7 @@ const javascriptHeaders = isDevelopment
 
 export const config = {
   outputDirectory: ".",
+  buildCommand: "node build-app-core.mjs",
   functions: {
     "api/data.js": {
       includeFiles: "api/data-files/mfl_database.db",
