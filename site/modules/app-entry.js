@@ -232,7 +232,13 @@ const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
 const PREBUILT_CORE_PATH = "/modules/app-core-runtime.js";
 const SOURCE_CORE_PATH = "/modules/app-core.js";
-const CORE_RUNTIME_CACHE_KEY = `mfl-app-core-runtime:${entryRelease.version}:2`;
+const PREBUILT_CORE_CACHE_QUERY = "mfl_core";
+
+function prebuiltApplicationCorePath() {
+  return `${PREBUILT_CORE_PATH}?${PREBUILT_CORE_CACHE_QUERY}=${encodeURIComponent(entryRelease.version)}`;
+}
+
+preloadClassicScript(prebuiltApplicationCorePath());
 if (evaluationStartup) preloadClassicScript("/evaluation-search-state-runtime.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
@@ -244,23 +250,6 @@ function primeEvaluationDiscountRatePlaceholder() {
 }
 
 primeEvaluationDiscountRatePlaceholder();
-
-function cachedApplicationCore() {
-  try {
-    return sessionStorage.getItem(CORE_RUNTIME_CACHE_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-function cacheApplicationCore(source) {
-  if (!source) return;
-  try {
-    sessionStorage.setItem(CORE_RUNTIME_CACHE_KEY, source);
-  } catch {
-    // The application still starts normally if storage is unavailable or full.
-  }
-}
 
 function executeApplicationCore(path, source) {
   const script = document.createElement("script");
@@ -277,35 +266,24 @@ async function fetchApplicationCoreSource(path) {
   return response.text();
 }
 
-/** @returns {Promise<{path: string, source: string}>} */
-async function prepareApplicationCore() {
-  const cachedSource = cachedApplicationCore();
-  if (cachedSource) return { path: PREBUILT_CORE_PATH, source: cachedSource };
-
+async function loadApplicationCore() {
+  const prebuiltPath = prebuiltApplicationCorePath();
   try {
-    const source = await fetchApplicationCoreSource(PREBUILT_CORE_PATH);
-    cacheApplicationCore(source);
-    return { path: PREBUILT_CORE_PATH, source };
+    await loadClassicScript(prebuiltPath);
+    return;
   } catch (error) {
     console.warn("Prebuilt application core is unavailable; using source normalization fallback.", error);
   }
 
-  const normalizerPromise = import(assetUrl("/modules/app-core-normalizer.js"));
+  const normalizerPromise = import(assetUrl("/modules/app-core-build-normalizer.js"));
   const sourcePromise = fetchApplicationCoreSource(SOURCE_CORE_PATH);
   const [normalizer, rawSource] = await Promise.all([normalizerPromise, sourcePromise]);
-  if (typeof normalizer.normalizeApplicationCore !== "function") {
-    throw new Error("Application core normalizer is unavailable.");
+  if (typeof normalizer.normalizeBuiltApplicationCore !== "function") {
+    throw new Error("Application core build normalizer is unavailable.");
   }
 
-  const source = normalizer.normalizeApplicationCore(rawSource);
-  cacheApplicationCore(source);
-  return { path: SOURCE_CORE_PATH, source };
-}
-
-/** @param {Promise<{path: string, source: string}> | null} [preparedCore] */
-async function loadApplicationCore(preparedCore = null) {
-  const prepared = await (preparedCore || prepareApplicationCore());
-  executeApplicationCore(prepared.path, prepared.source);
+  const source = normalizer.normalizeBuiltApplicationCore(rawSource);
+  executeApplicationCore(SOURCE_CORE_PATH, source);
 }
 
 function showStartupError(error) {
@@ -410,7 +388,6 @@ async function start() {
   installApiFetchPolicy();
   const criticalScripts = initialCriticalRuntimeScripts;
   const deferredScripts = deferredRuntimeScripts(criticalScripts);
-  const preparedCorePromise = prepareApplicationCore();
 
   await responsiveStylesReady;
   await loadScriptGroup(criticalScripts);
@@ -420,7 +397,7 @@ async function start() {
     if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
   }
 
-  await loadApplicationCore(preparedCorePromise);
+  await loadApplicationCore();
 
   /* Start route-irrelevant runtimes after the canonical core render begins, but
    * do not keep the active route behind their completion. Initial-route runtimes
