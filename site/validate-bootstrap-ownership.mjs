@@ -68,5 +68,10 @@ includes(
   'startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });',
   "Application startup failure state must release the bootstrap-owned busy token.",
 );
+includes(
+  bootstrapCore,
+  'if (document.documentElement.dataset.mflReady !== "error" && window.__mflAppStartPromise)',
+  "Startup failure cleanup must release immediately without awaiting a failed or stuck application promise.",
+);
 
 console.log("Bootstrap single-render ownership validation passed.");
