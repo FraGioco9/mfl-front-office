@@ -48,8 +48,13 @@ includes(
 );
 includes(
   routeCoreLoader,
-  'return { pageName: "database", options: { view: "stats" } };',
-  "The central startup classifier must preserve the direct Database Stats request.",
+  'if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };',
+  "The central startup classifier must preserve Database view slugs through the generic view parser.",
+);
+includes(
+  routeCoreLoader,
+  'stats: "stats"',
+  "The central startup view parser must preserve the Database Stats slug.",
 );
 
 const renderStart = stateRuntime.indexOf("async function renderStatsRoute(updateUrl = false) {");
