@@ -1,4 +1,4 @@
 {
-  "version": "1.124.29",
-  "description": "Centralize route page-name normalization in the route-core loader"
+  "version": "1.124.30",
+  "description": "Centralize initial route runtime classification in the route-core loader"
 }
