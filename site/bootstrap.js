@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.7";
+  const STATIC_RELEASE_VERSION = "1.124.8";
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
