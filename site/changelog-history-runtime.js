@@ -6,15 +6,6 @@
     ? window.__mflAssetUrl
     : (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
   const RELEASES_URL = assetUrl("releases.json");
-  const initialList = document.querySelector(".changelogList");
-
-  if (initialList instanceof HTMLElement) {
-    initialList.replaceChildren();
-    initialList.hidden = true;
-    initialList.dataset.historyLoading = "true";
-  }
-
-  const previous = window.__mflChangelogHistoryRuntime;
   const expandedMinors = new Set();
 
   document.querySelectorAll(".changelogMinorSection.is-expanded .changelogMinorVersion").forEach((label) => {
@@ -22,14 +13,10 @@
     if (minor) expandedMinors.add(minor);
   });
 
-  previous?.destroy?.();
+  window.__mflChangelogHistoryRuntime?.destroy?.();
 
-  let observer = null;
-  let frame = 0;
-  let syncing = false;
+  let destroyed = false;
   let releases = [];
-  let releaseKey = "";
-  let groups = new Map();
 
   function versionParts(value) {
     const match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
@@ -72,10 +59,7 @@
       if (!versionParts(version) || merged.has(version)) return;
       merged.set(version, String(description || ""));
     });
-
     releases = Array.from(merged.entries()).sort((left, right) => compareVersionsDescending(left[0], right[0]));
-    releaseKey = JSON.stringify(releases);
-    groups = groupedReleases();
 
     if (!expandedMinors.size && releases.length) {
       const parts = versionParts(releases[0][0]);
@@ -102,22 +86,22 @@
     const target = event.target instanceof Element ? event.target : null;
     const button = target?.closest(".changelogMinorToggle");
     const section = button?.closest(".changelogMinorSection");
-    const list = section?.closest(".changelogList");
-    if (!button || !section || !list) return;
-
+    if (!(button instanceof HTMLButtonElement) || !(section instanceof HTMLElement)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     setSectionExpanded(section, button, !section.classList.contains("is-expanded"));
   }
 
-  function buildList(list) {
+  function buildList() {
+    const list = document.querySelector(".changelogList");
+    if (!(list instanceof HTMLElement)) return false;
     const fragment = document.createDocumentFragment();
 
-    groups.forEach((patches, minor) => {
+    groupedReleases().forEach((patches, minor) => {
       const section = document.createElement("li");
       section.className = "changelogMinorSection";
       const expanded = expandedMinors.has(minor);
-      if (expanded) section.classList.add("is-expanded");
+      section.classList.toggle("is-expanded", expanded);
 
       const toggle = document.createElement("button");
       toggle.className = "changelogMinorToggle";
@@ -165,20 +149,9 @@
     list.dataset.sectioned = "true";
     list.dataset.completeReleaseVersion = VERSION;
     list.dataset.releaseHistoryVersion = VERSION;
-    list.dataset.releaseHistoryKey = releaseKey;
     delete list.dataset.historyLoading;
     list.hidden = false;
-  }
-
-  function listMatches(list) {
-    if (list.dataset.releaseHistoryKey !== releaseKey) return false;
-    const items = Array.from(list.querySelectorAll(".changelogPatchList > li"));
-    if (items.length !== releases.length) return false;
-    return items.every((item, index) => {
-      const [version, description] = releases[index];
-      return String(item.querySelector(":scope > span")?.textContent || "").trim() === version
-        && String(item.querySelector(":scope > p")?.textContent || "").trim() === description;
-    });
+    return true;
   }
 
   function showLoadError() {
@@ -192,55 +165,26 @@
     list.hidden = false;
   }
 
-  function sync() {
-    frame = 0;
-    if (syncing || !releases.length) return;
-    syncing = true;
-    try {
-      const latestVersion = releases[0]?.[0]?.replace(/^v/, "") || VERSION;
-      const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
-      const footerLabel = `MFL Front Office v${latestVersion}`;
-      if (footer && footer.textContent !== footerLabel) footer.textContent = footerLabel;
-
-      const list = document.querySelector(".changelogList");
-      if (!list) return;
-      if (!listMatches(list)) buildList(list);
-    } finally {
-      syncing = false;
-    }
-  }
-
-  function schedule() {
-    if (frame) cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(sync);
-  }
-
   function destroy() {
-    if (frame) cancelAnimationFrame(frame);
-    observer?.disconnect();
+    destroyed = true;
     document.removeEventListener("click", onToggleClick, true);
   }
 
   async function initialize() {
     try {
       await loadReleases();
+      if (destroyed) return false;
+      buildList();
       document.addEventListener("click", onToggleClick, true);
-      observer = new MutationObserver(schedule);
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-
-      window.__mflChangelogHistoryRuntime = {
+      window.__mflChangelogHistoryRuntime = Object.freeze({
         version: VERSION,
         releases: Object.freeze(releases.map((entry) => Object.freeze([...entry]))),
-        sync,
         destroy,
-      };
-
-      sync();
-      [0, 50, 150, 400, 1000, 2000, 5000].forEach((delay) => setTimeout(sync, delay));
+      });
       return true;
     } catch (error) {
       console.error(error?.message || "Could not initialize Changelog history.");
-      showLoadError();
+      if (!destroyed) showLoadError();
       return false;
     }
   }

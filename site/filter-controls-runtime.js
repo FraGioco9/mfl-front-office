@@ -1,30 +1,8 @@
 (() => {
   "use strict";
 
-  const CONTRACT_COLUMN = "contract_status";
-  const AT_MOST_DEFAULT_COLUMNS = new Set(["age", "player_seasons", "player_id"]);
-  const STATIC_PAGE_VIEWS = Object.freeze({
-    database: ["attributes", "contracts", "stats"],
-    mfl: ["attributes", "stats"],
-    progression: ["current", "all"],
-    watchlist: ["attributes", "next", "contracts", "current", "all"],
-    myplayers: ["attributes", "next", "contracts", "current", "all"],
-  });
-  const STATIC_DEFAULT_VIEWS = Object.freeze({
-    database: "attributes",
-    mfl: "attributes",
-    progression: "current",
-    watchlist: "current",
-    myplayers: "attributes",
-  });
-  const STATIC_VIEW_SLUGS = Object.freeze({
-    attributes: "attributes",
-    stats: "stats",
-    contracts: "contracts",
-    "next-overall": "next",
-    "current-season": "current",
-    "all-time": "all",
-  });
+  let coreObserver = null;
+  let destroyed = false;
 
   function syncDropdowns(root = document) {
     try {
@@ -32,93 +10,6 @@
     } catch {
       // Dropdown enhancement is presentation-only; never block table startup.
     }
-  }
-
-  function staticPageNameFromPath(pathname = window.location.pathname) {
-    const first = String(pathname || "/").split("/").filter(Boolean)[0]?.toLowerCase() || "";
-    if (first === "my-players") return "myplayers";
-    return Object.prototype.hasOwnProperty.call(STATIC_PAGE_VIEWS, first) ? first : "";
-  }
-
-  function staticViewFromUrl(urlValue, pageName) {
-    const allowedViews = STATIC_PAGE_VIEWS[pageName] || [];
-    const fallback = STATIC_DEFAULT_VIEWS[pageName] || allowedViews[0] || "";
-    try {
-      const url = new URL(String(urlValue || ""), window.location.href);
-      const searchView = String(url.searchParams.get("view") || "").toLowerCase();
-      const normalizedSearchView = STATIC_VIEW_SLUGS[searchView] || searchView;
-      if (allowedViews.includes(normalizedSearchView)) return normalizedSearchView;
-
-      const segments = String(url.pathname || "").split("/").filter(Boolean);
-      for (let index = segments.length - 1; index >= 0; index -= 1) {
-        const segment = String(segments[index] || "").toLowerCase();
-        const view = STATIC_VIEW_SLUGS[segment] || segment;
-        if (allowedViews.includes(view)) return view;
-      }
-    } catch {
-      // Fall back to the page default when a link cannot be parsed.
-    }
-    return fallback;
-  }
-
-  function syncStaticViewButtons(pageName, requestedView = "") {
-    const allowedViews = STATIC_PAGE_VIEWS[pageName];
-    if (!Array.isArray(allowedViews) || !allowedViews.length) return;
-
-    const activeView = allowedViews.includes(requestedView)
-      ? requestedView
-      : (STATIC_DEFAULT_VIEWS[pageName] || allowedViews[0]);
-    const views = document.querySelector("#progressionPage .views");
-    if (views instanceof HTMLElement) {
-      const switcher = document.getElementById("watchlistSwitcher");
-      allowedViews.forEach((viewName) => {
-        const button = views.querySelector(`:scope > .viewButton[data-view="${viewName}"]`);
-        if (button instanceof HTMLButtonElement) views.insertBefore(button, switcher || null);
-      });
-
-      views.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
-        if (!(button instanceof HTMLButtonElement)) return;
-        const viewName = String(button.dataset.view || "");
-        button.hidden = !allowedViews.includes(viewName);
-        button.classList.toggle("active", viewName === activeView);
-      });
-    }
-
-    const staticStatsViews = pageName === "database"
-      ? document.querySelector("#databaseStatsPage .views")
-      : pageName === "mfl"
-        ? document.querySelector("#mflStatsPage .views")
-        : null;
-    if (staticStatsViews instanceof HTMLElement) {
-      staticStatsViews.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
-        if (!(button instanceof HTMLButtonElement)) return;
-        button.hidden = !allowedViews.includes(String(button.dataset.view || ""));
-        button.classList.toggle("active", String(button.dataset.view || "") === activeView);
-      });
-    }
-  }
-
-  function syncStaticViewButtonsFromLocation() {
-    const pageName = staticPageNameFromPath();
-    if (!pageName) return;
-    syncStaticViewButtons(pageName, staticViewFromUrl(window.location.href, pageName));
-  }
-
-  function installStaticViewShell() {
-    if (window.__mflStaticViewShellInstalled === true) return true;
-    window.__mflStaticViewShellInstalled = true;
-
-    document.addEventListener("click", (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      const sidebarButton = target?.closest?.("#sidebar .navButton[data-page]");
-      if (!(sidebarButton instanceof HTMLElement)) return;
-
-      const pageName = String(sidebarButton.dataset.page || "");
-      if (!STATIC_PAGE_VIEWS[pageName]) return;
-      const href = sidebarButton.getAttribute("href") || window.location.href;
-      syncStaticViewButtons(pageName, staticViewFromUrl(href, pageName));
-    }, true);
-    return true;
   }
 
   function currentStatsPageName() {
@@ -130,89 +21,29 @@
 
   function consumeActiveStatsViewEvent(event) {
     if (event.type === "pointerdown" && (event.isPrimary === false || event.button !== 0)) return;
-
     const target = event.target instanceof Element ? event.target : null;
     const button = target?.closest?.('.viewButton[data-view="stats"]');
     if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return;
 
     const currentPage = currentStatsPageName();
     if (!currentPage) return;
-
     const ownerPage = String(button.dataset.page || "")
       || (button.closest("#databaseStatsPage") ? "database" : "")
       || (button.closest("#mflStatsPage") ? "mfl" : "");
     if (ownerPage !== currentPage) return;
-
     event.preventDefault();
     event.stopImmediatePropagation();
   }
 
   function installActiveStatsViewNoop() {
-    if (window.__mflActiveStatsViewNoopInstalled === true) return true;
+    if (window.__mflActiveStatsViewNoopInstalled === true) return;
     window.__mflActiveStatsViewNoopInstalled = true;
     document.addEventListener("pointerdown", consumeActiveStatsViewEvent, true);
     document.addEventListener("click", consumeActiveStatsViewEvent, true);
-    return true;
-  }
-
-  function playerLoadingOverallValue(value) {
-    const normalized = String(value ?? "").trim().replace(",", ".");
-    if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
-    const overall = Number(normalized);
-    return Number.isFinite(overall) ? overall : null;
-  }
-
-  function playerLoadingOverallRarityColor(overall) {
-    if (overall >= 95) return "#00ffe9";
-    if (overall >= 85) return "#fa53ff";
-    if (overall >= 75) return "#0077ff";
-    if (overall >= 65) return "#71ff30";
-    if (overall >= 55) return "#ecd17f";
-    return "#bebebe";
-  }
-
-  function syncPlayerLoadingOverallCard() {
-    const detail = document.getElementById("playerDetail");
-    const loadingGrid = detail?.querySelector?.('[data-mfl-player-loading-grid="true"]');
-    if (!(loadingGrid instanceof HTMLElement)) return;
-
-    const overallCard = Array.from(loadingGrid.querySelectorAll(".attributeGrid .playerAttributeCard"))
-      .find((card) => String(card.querySelector(":scope > span")?.textContent || "").trim() === "Overall");
-    if (!(overallCard instanceof HTMLElement)) return;
-
-    overallCard.classList.add("fullWidth");
-    const overallText = overallCard.querySelector(".attributeValueText")?.textContent || "";
-    const overall = playerLoadingOverallValue(overallText);
-    if (overall === null) {
-      overallCard.classList.remove("featured");
-      overallCard.style.removeProperty("--rarity-color");
-      return;
-    }
-
-    overallCard.classList.add("featured");
-    overallCard.style.setProperty("--rarity-color", playerLoadingOverallRarityColor(overall));
-  }
-
-  function installPlayerLoadingOverallGuard() {
-    const detail = document.getElementById("playerDetail");
-    if (!(detail instanceof HTMLElement)) return false;
-    if (window.__mflPlayerLoadingOverallGuardInstalled === true) {
-      syncPlayerLoadingOverallCard();
-      return true;
-    }
-
-    window.__mflPlayerLoadingOverallGuardInstalled = true;
-    const observer = new MutationObserver(() => syncPlayerLoadingOverallCard());
-    observer.observe(detail, { childList: true, subtree: true, characterData: true });
-    syncPlayerLoadingOverallCard();
-    return true;
   }
 
   function installSelectedLinksDirectOpen() {
-    const button = document.getElementById("openSelectedLinksButton");
-    if (!(button instanceof HTMLButtonElement)) return false;
-    if (window.__mflSelectedLinksCaptureInstalled === true) return true;
-
+    if (window.__mflSelectedLinksCaptureInstalled === true) return;
     window.__mflSelectedLinksCaptureInstalled = true;
     window.addEventListener("click", (event) => {
       const target = event.target instanceof Element
@@ -232,36 +63,23 @@
 
       event.preventDefault();
       event.stopImmediatePropagation();
-
       let openedCount = 0;
       playerIds.forEach((playerId) => {
-        const playerUrl = `https://app.playmfl.com/players/${encodeURIComponent(playerId)}`;
-        const playerWindow = window.open(playerUrl, "_blank");
+        const playerWindow = window.open(`https://app.playmfl.com/players/${encodeURIComponent(playerId)}`, "_blank");
         if (!playerWindow) return;
         openedCount += 1;
-        try {
-          playerWindow.opener = null;
-        } catch {
-          // Best-effort opener isolation.
-        }
+        try { playerWindow.opener = null; } catch {}
       });
 
       if (openedCount < playerIds.length) {
-        try {
-          showToast("Allow pop-ups for this site, then click Open links again.");
-        } catch {
-          // Keep any successfully opened tabs even if the toast owner is unavailable.
-        }
+        try { showToast("Allow pop-ups for this site, then click Open links again."); } catch {}
       }
-
       try {
         clearSelection();
       } catch {
-        const clearButton = document.getElementById("clearSelectionButton");
-        if (clearButton instanceof HTMLButtonElement) clearButton.click();
+        document.getElementById("clearSelectionButton")?.click?.();
       }
     }, true);
-    return true;
   }
 
   function restorePageSizeSelectInteraction() {
@@ -274,51 +92,14 @@
     window.__mflDropdowns?.syncSelect(select);
   }
 
-  function syncExistingContractOperators() {
-    document.querySelectorAll(`.filterRule[data-filter-column="${CONTRACT_COLUMN}"] select[data-filter-operator]`).forEach((select) => {
-      if (!(select instanceof HTMLSelectElement)) return;
-      const selected = select.value === "!=" ? "!=" : "=";
-      select.hidden = false;
-      const alreadyCorrect = select.options.length === 2
-        && select.options[0]?.value === "="
-        && select.options[0]?.textContent === "is"
-        && select.options[1]?.value === "!="
-        && select.options[1]?.textContent === "is not";
-      if (!alreadyCorrect) {
-        select.replaceChildren(
-          new Option("is", "="),
-          new Option("is not", "!="),
-        );
-      }
-      select.value = selected;
-      window.__mflDropdowns?.syncSelect(select);
-    });
-  }
-
-  function installAddFilterDefaults() {
-    const addFilterRule = window.addFilterRule;
-    if (typeof addFilterRule !== "function" || addFilterRule.__mflFilterDefaults) return false;
-
-    const wrappedAddFilterRule = function(column, options = {}) {
-      const nextOptions = { ...options };
-      if (AT_MOST_DEFAULT_COLUMNS.has(String(column || "")) && !nextOptions.operator) {
-        nextOptions.operator = "<=";
-      }
-      const result = addFilterRule(column, nextOptions);
-      syncExistingContractOperators();
-      queueMicrotask(() => syncDropdowns(document.getElementById("filtersModal") || document));
-      return result;
-    };
-    Object.defineProperty(wrappedAddFilterRule, "__mflFilterDefaults", { value: true });
-    window.addFilterRule = wrappedAddFilterRule;
-    return true;
-  }
-
   function installCoreBridge() {
+    if (destroyed) return false;
     try {
       const installed = Boolean(window.eval(`(() => {
-        if (typeof buildOperatorSelect !== "function" || typeof ruleMatches !== "function") return false;
-        if (typeof contractStatusFilterColumn === "undefined") return false;
+        if (typeof buildOperatorSelect !== "function"
+          || typeof ruleMatches !== "function"
+          || typeof addFilterRule !== "function"
+          || typeof contractStatusFilterColumn === "undefined") return false;
 
         if (!buildOperatorSelect.__mflContractOperators) {
           const originalBuildOperatorSelect = buildOperatorSelect;
@@ -331,11 +112,6 @@
                 new Option("is not", "!="),
               );
             }
-            queueMicrotask(() => {
-              try {
-                window.__mflDropdowns?.enhanceVisible(document.getElementById("filtersModal") || document);
-              } catch {}
-            });
             return select;
           };
           Object.defineProperty(contractAwareBuildOperatorSelect, "__mflContractOperators", { value: true });
@@ -354,13 +130,24 @@
           ruleMatches = contractAwareRuleMatches;
         }
 
+        if (!addFilterRule.__mflFilterDefaults) {
+          const originalAddFilterRule = addFilterRule;
+          const atMostDefaults = new Set(["age", "player_seasons", "player_id"]);
+          const filterDefaultAddFilterRule = function(column, options = {}) {
+            const nextOptions = { ...options };
+            if (atMostDefaults.has(String(column || "")) && !nextOptions.operator) nextOptions.operator = "<=";
+            const result = originalAddFilterRule(column, nextOptions);
+            queueMicrotask(() => window.__mflDropdowns?.enhanceVisible(document.getElementById("filtersModal") || document));
+            return result;
+          };
+          Object.defineProperty(filterDefaultAddFilterRule, "__mflFilterDefaults", { value: true });
+          addFilterRule = filterDefaultAddFilterRule;
+          window.addFilterRule = filterDefaultAddFilterRule;
+        }
+
         return true;
-      })();`));
-      if (installed) {
-        installAddFilterDefaults();
-        syncExistingContractOperators();
-        syncDropdowns(document.getElementById("filtersModal") || document);
-      }
+      })()`));
+      if (installed) syncDropdowns(document.getElementById("filtersModal") || document);
       return installed;
     } catch (error) {
       console.warn("Could not initialize filter controls.", error);
@@ -370,35 +157,39 @@
 
   function sync() {
     installActiveStatsViewNoop();
-    installStaticViewShell();
-    installPlayerLoadingOverallGuard();
-    syncPlayerLoadingOverallCard();
-    syncStaticViewButtonsFromLocation();
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
-    installAddFilterDefaults();
     installCoreBridge();
-    syncExistingContractOperators();
     syncDropdowns(document);
   }
 
-  sync();
+  function installCoreBridgeWhenAvailable() {
+    if (installCoreBridge()) return;
+    coreObserver = new MutationObserver((records, observer) => {
+      const coreInserted = records.some((record) => Array.from(record.addedNodes).some((node) => (
+        node instanceof HTMLScriptElement && node.dataset.mflRuntime === "/modules/app-core.js"
+      )));
+      if (!coreInserted) return;
+      observer.disconnect();
+      coreObserver = null;
+      installCoreBridge();
+    });
+    coreObserver.observe(document.head, { childList: true });
+  }
 
-  const headObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (!(node instanceof HTMLScriptElement)) continue;
-        if (!/\/modules\/app-core\.js(?:$|\?)/.test(node.src)) continue;
-        node.addEventListener("load", sync, { once: true });
-      }
-    }
-  });
-  headObserver.observe(document.head, { childList: true });
+  installActiveStatsViewNoop();
+  installSelectedLinksDirectOpen();
+  installCoreBridgeWhenAvailable();
+  window.addEventListener("mfl:ready", sync, { once: true });
 
-  window.addEventListener("mfl:ready", () => {
-    sync();
-    headObserver.disconnect();
-  }, { once: true });
+  function destroy() {
+    destroyed = true;
+    coreObserver?.disconnect();
+    coreObserver = null;
+    document.removeEventListener("pointerdown", consumeActiveStatsViewEvent, true);
+    document.removeEventListener("click", consumeActiveStatsViewEvent, true);
+    window.removeEventListener("mfl:ready", sync);
+  }
 
-  window.__mflFilterControlsRuntime = Object.freeze({ sync });
+  window.__mflFilterControlsRuntime = Object.freeze({ sync, destroy });
 })();

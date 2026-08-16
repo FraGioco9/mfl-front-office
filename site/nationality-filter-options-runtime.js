@@ -2,13 +2,13 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "");
-  const previous = window.__mflNationalityFilterOptionsRuntime;
-  previous?.destroy?.();
+  window.__mflNationalityFilterOptionsRuntime?.destroy?.();
 
   let destroyed = false;
   let nationalityOptions = [];
   let loadingPromise = null;
-  let filterRulesObserver = null;
+  let coreObserver = null;
+  let bridgeInstalled = false;
 
   function nationalityLabel(value) {
     return String(value || "")
@@ -20,59 +20,57 @@
       .join(" ");
   }
 
-  function nationalitySelects() {
-    return Array.from(document.querySelectorAll(
-      '#filterRules .filterRule[data-filter-column="nationality"] select[data-filter-value]',
-    )).filter((select) => select instanceof HTMLSelectElement);
+  function publishOptions() {
+    window.__mflNationalityFilterOptions = Object.freeze([...nationalityOptions]);
   }
 
-  function expectedValues(selectedValue) {
-    return selectedValue && !nationalityOptions.includes(selectedValue)
-      ? [selectedValue, ...nationalityOptions]
-      : nationalityOptions;
-  }
-
-  function syncSelect(select) {
-    if (!(select instanceof HTMLSelectElement) || !nationalityOptions.length) return;
-
-    const selectedValue = String(select.value || "");
-    const values = expectedValues(selectedValue);
-    const currentValues = Array.from(select.options)
-      .filter((option) => option.value !== "")
-      .map((option) => option.value);
-    if (currentValues.length === values.length
-      && currentValues.every((value, index) => value === values[index])) {
-      return;
+  function installCoreBridge() {
+    if (destroyed || bridgeInstalled) return bridgeInstalled;
+    try {
+      bridgeInstalled = Boolean(window.eval(`(() => {
+        if (typeof uniqueNationalityValues !== "function") return false;
+        if (uniqueNationalityValues.__mflAuthoritativeFilterOptions) return true;
+        const originalUniqueNationalityValues = uniqueNationalityValues;
+        const authoritativeNationalityValues = function() {
+          const values = window.__mflNationalityFilterOptions;
+          if (!Array.isArray(values) || !values.length) {
+            return originalUniqueNationalityValues.apply(this, arguments);
+          }
+          return values.map((value) => ({
+            value,
+            label: typeof formatNationality === "function" ? formatNationality(value) : String(value),
+          }));
+        };
+        Object.defineProperty(authoritativeNationalityValues, "__mflAuthoritativeFilterOptions", { value: true });
+        uniqueNationalityValues = authoritativeNationalityValues;
+        return true;
+      })()`));
+    } catch (error) {
+      console.warn("Could not install nationality filter options.", error);
+      bridgeInstalled = false;
     }
-
-    const fragment = document.createDocumentFragment();
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Select...";
-    fragment.appendChild(placeholder);
-
-    values.forEach((value) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = nationalityLabel(value);
-      fragment.appendChild(option);
-    });
-
-    select.replaceChildren(fragment);
-    select.value = selectedValue;
+    return bridgeInstalled;
   }
 
-  function sync() {
-    if (destroyed || !nationalityOptions.length) return;
-    nationalitySelects().forEach(syncSelect);
+  function refreshCanonicalControls() {
+    if (!nationalityOptions.length || !installCoreBridge()) return false;
+    try {
+      return Boolean(window.eval(`(() => {
+        if (typeof readFilterDraftRules !== "function" || typeof restoreFilterDraftRules !== "function") return false;
+        const rules = readFilterDraftRules();
+        if (!Array.isArray(rules) || !rules.some((rule) => rule?.column === "nationality")) return true;
+        restoreFilterDraftRules(rules);
+        return true;
+      })()`));
+    } catch (error) {
+      console.warn("Could not refresh nationality filter controls.", error);
+      return false;
+    }
   }
 
   async function load() {
     if (destroyed) return [];
-    if (nationalityOptions.length) {
-      sync();
-      return nationalityOptions;
-    }
+    if (nationalityOptions.length) return nationalityOptions;
     if (loadingPromise) return loadingPromise;
 
     loadingPromise = fetch("/api/data?mode=filter-options", {
@@ -83,13 +81,14 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "Could not load nationality filter options.");
         if (destroyed) return [];
-
         nationalityOptions = Array.from(new Set(
           (Array.isArray(payload.nationalities) ? payload.nationalities : [])
             .map((value) => String(value || "").trim())
             .filter(Boolean),
         )).sort((a, b) => nationalityLabel(a).localeCompare(nationalityLabel(b)));
-        sync();
+        publishOptions();
+        installCoreBridge();
+        refreshCanonicalControls();
         return nationalityOptions;
       })
       .catch((error) => {
@@ -99,51 +98,52 @@
       .finally(() => {
         loadingPromise = null;
       });
-
     return loadingPromise;
   }
 
-  function observeFilterRules() {
-    const filterRules = document.getElementById("filterRules");
-    if (!(filterRules instanceof HTMLElement)) return false;
-    filterRulesObserver?.disconnect();
-    filterRulesObserver = new MutationObserver(sync);
-    filterRulesObserver.observe(filterRules, { childList: true, subtree: true });
-    sync();
-    return true;
+  function installCoreBridgeWhenAvailable() {
+    if (installCoreBridge()) return;
+    coreObserver = new MutationObserver((records, observer) => {
+      const coreInserted = records.some((record) => Array.from(record.addedNodes).some((node) => (
+        node instanceof HTMLScriptElement && node.dataset.mflRuntime === "/modules/app-core.js"
+      )));
+      if (!coreInserted) return;
+      observer.disconnect();
+      coreObserver = null;
+      installCoreBridge();
+      refreshCanonicalControls();
+    });
+    coreObserver.observe(document.head, { childList: true });
   }
 
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest("#openFiltersButton")) void load();
+    if (!target?.closest("#openFiltersButton")) return;
+    void load().then(() => refreshCanonicalControls());
   }
 
-  function onChange(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target?.closest("#filterRules, #addFilterSelect")) return;
-    queueMicrotask(sync);
+  function onReady() {
+    installCoreBridge();
+    refreshCanonicalControls();
   }
 
-  document.addEventListener("click", onClick, true);
-  document.addEventListener("change", onChange, true);
-  if (!observeFilterRules()) {
-    window.addEventListener("DOMContentLoaded", observeFilterRules, { once: true });
-  }
+  document.addEventListener("click", onClick);
+  window.addEventListener("mfl:ready", onReady);
+  installCoreBridgeWhenAvailable();
   void load();
 
   function destroy() {
     destroyed = true;
-    filterRulesObserver?.disconnect();
-    filterRulesObserver = null;
-    document.removeEventListener("click", onClick, true);
-    document.removeEventListener("change", onChange, true);
-    window.removeEventListener("DOMContentLoaded", observeFilterRules);
+    coreObserver?.disconnect();
+    coreObserver = null;
+    document.removeEventListener("click", onClick);
+    window.removeEventListener("mfl:ready", onReady);
   }
 
   window.__mflNationalityFilterOptionsRuntime = Object.freeze({
     version: VERSION,
     load,
-    sync,
+    refresh: refreshCanonicalControls,
     destroy,
   });
 })();
