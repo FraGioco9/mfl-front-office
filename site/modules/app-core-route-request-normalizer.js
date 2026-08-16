@@ -122,7 +122,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
         controller.abort();
       }, ROUTE_REQUEST_TIMEOUT_MS);
       try {
-        const response = await fetch(`/api/data?${requestKey}`, {
+        const response = await fetch("/api/data?" + requestKey, {
           cache: "no-store",
           headers: walletProofHeaders(true),
           signal: controller.signal,
