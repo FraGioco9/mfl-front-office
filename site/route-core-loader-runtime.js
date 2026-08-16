@@ -9,12 +9,14 @@
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
    * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
+   * __mflRouteUsesTableInfrastructure?: (pageName: string) => boolean,
    * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * __mflLoadFallbackApplicationCoreArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    *   normalizePageName?: (pageName: string) => string,
    *   normalizeView?: (options?: Record<string, unknown>) => string,
+   *   usesTableInfrastructure?: (pageName: string) => boolean,
    *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    *   loadFallbackArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * },
@@ -29,6 +31,9 @@
     }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizeView === "function") {
       runtimeWindow.__mflNormalizeRouteView = runtimeWindow.__mflRouteCoreRuntime.normalizeView;
+    }
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.usesTableInfrastructure === "function") {
+      runtimeWindow.__mflRouteUsesTableInfrastructure = runtimeWindow.__mflRouteCoreRuntime.usesTableInfrastructure;
     }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest === "function") {
       runtimeWindow.__mflInitialRouteRuntimeRequest = runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest;
@@ -49,7 +54,7 @@
     wallet: "/modules/app-core-wallet-runtime.js",
     watchlist: "/modules/app-core-watchlist-runtime.js",
   });
-  const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
+  const TABLE_INFRASTRUCTURE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
   const routeCorePromises = new Map();
   let fallbackArtifactsPromise = null;
 
@@ -180,6 +185,10 @@
     return String(options?.view || "").trim().toLowerCase();
   }
 
+  function routeUsesTableInfrastructure(pageName) {
+    return TABLE_INFRASTRUCTURE_PAGES.has(normalizeRoutePageName(pageName));
+  }
+
   function routeCoreDependencies(pageName, options = {}) {
     const page = normalizeRoutePageName(pageName);
     const view = routeView(options);
@@ -187,7 +196,7 @@
     if (page === "mfl" && view === "stats") return ["mflstats"];
     if (page === "club") return ["table", "club"];
     if (page === "watchlist") return ["table", "watchlist"];
-    if (TABLE_CORE_PAGES.has(page)) return ["table"];
+    if (routeUsesTableInfrastructure(page)) return ["table"];
     return ROUTE_CORE_PATHS[page] ? [page] : [];
   }
 
@@ -228,6 +237,7 @@
 
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
   runtimeWindow.__mflNormalizeRouteView = routeView;
+  runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;
   runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
   runtimeWindow.__mflLoadFallbackApplicationCoreArtifacts = loadFallbackApplicationCoreArtifacts;
   runtimeWindow.__mflEnsureRouteCore = ensure;
@@ -235,6 +245,7 @@
     ensure,
     normalizePageName: normalizeRoutePageName,
     normalizeView: routeView,
+    usesTableInfrastructure: routeUsesTableInfrastructure,
     initialRouteRequest: initialRouteRuntimeRequest,
     loadFallbackArtifacts: loadFallbackApplicationCoreArtifacts,
   });
