@@ -168,12 +168,10 @@
 
   function onKeyDown(event) {
     if (event.key !== "Escape") return;
-    const active = document.activeElement;
     queueMicrotask(() => {
       if (destroyed) return;
-      if (active instanceof HTMLElement && active !== document.body && document.activeElement === active) {
-        active.blur();
-      }
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active !== document.body) active.blur();
       const selection = window.getSelection?.();
       if (selection && !selection.isCollapsed) selection.removeAllRanges();
     });
