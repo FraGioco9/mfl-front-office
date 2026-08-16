@@ -1,7 +1,10 @@
 (() => {
+  "use strict";
+
   const VERSION = String(window.__mflReleaseVersion || "dev");
+
   function installStaticStyles() {
-    document.getElementById("mflEvaluationDiscountRateUiStyles")?.remove();
+    if (document.getElementById("mflEvaluationDiscountRateUiStyles")) return;
     const style = document.createElement("style");
     style.id = "mflEvaluationDiscountRateUiStyles";
     style.textContent = `
@@ -14,64 +17,11 @@
         line-height: 1.2 !important;
       }
 
-      html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
-      body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
+      #evaluationPage #evaluationDiscountRate {
         visibility: visible !important;
       }
     `;
     document.head.appendChild(style);
-  }
-
-  function installRateChrome() {
-    window.__mflDiscountRateChrome?.destroy?.();
-
-    let frame = 0;
-    let interval = 0;
-    let observer = null;
-
-    function sync() {
-      frame = 0;
-      const metric = document.querySelector(".evaluationMetric.evaluationDiscountRate");
-      const value = document.getElementById("evaluationDiscountRate");
-      const ready = Boolean(
-        metric instanceof HTMLElement
-        && value instanceof HTMLElement
-        && String(value.textContent || "").trim()
-        && String(value.textContent || "").trim() !== "-"
-        && String(metric.dataset.tooltip || "").trim(),
-      );
-
-      document.body?.classList.toggle("evaluationDiscountRateReady", ready);
-      document.documentElement.classList.toggle("mflEvaluationRateResolved", ready);
-      if (ready && metric instanceof HTMLElement) {
-        metric.setAttribute("aria-label", `Discount Rate. ${metric.dataset.tooltip}`);
-      } else if (metric instanceof HTMLElement) {
-        metric.removeAttribute("aria-describedby");
-      }
-    }
-
-    function schedule() {
-      if (!frame) frame = requestAnimationFrame(sync);
-    }
-
-    observer = new MutationObserver(schedule);
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["class", "data-page", "data-tooltip"],
-    });
-    interval = window.setInterval(schedule, 100);
-
-    function destroy() {
-      if (frame) cancelAnimationFrame(frame);
-      if (interval) clearInterval(interval);
-      observer?.disconnect();
-    }
-
-    window.__mflDiscountRateChrome = { version: VERSION, sync: schedule, destroy };
-    sync();
   }
 
   function installTooltipController() {
@@ -156,7 +106,7 @@
       if (!portal) return;
       portal.classList.remove("visible");
       if (immediate) {
-        portal?.remove();
+        portal.remove();
         portal = null;
         return;
       }
@@ -172,8 +122,7 @@
     }
 
     function show(metric) {
-      if (!(metric instanceof HTMLElement)) return;
-      if (!evaluationActive() || interactionBusy()) return;
+      if (!(metric instanceof HTMLElement) || !evaluationActive() || interactionBusy()) return;
       const text = String(metric.dataset.tooltip || "").trim();
       if (!text) {
         hide(true);
@@ -247,11 +196,8 @@
       const metric = metricFrom(event.target);
       if (!metric) return;
       hoverMetric = metric;
-      if (interactionBusy()) {
-        scheduleIdleSync();
-        return;
-      }
-      sync();
+      if (interactionBusy()) scheduleIdleSync();
+      else sync();
     }
 
     function onPointerMove(event) {
@@ -259,11 +205,8 @@
       const metric = metricFrom(event.target);
       if (metric === hoverMetric) return;
       hoverMetric = metric;
-      if (interactionBusy()) {
-        scheduleIdleSync();
-        return;
-      }
-      sync();
+      if (interactionBusy()) scheduleIdleSync();
+      else sync();
     }
 
     function onPointerOut(event) {
@@ -330,6 +273,11 @@
       clearAll(true);
     }
 
+    function onRateStateChange() {
+      if (!document.documentElement.classList.contains("mflEvaluationRateResolved")) clearAll(true);
+      else sync();
+    }
+
     window.addEventListener("pointerover", onPointerOver, true);
     window.addEventListener("pointermove", onPointerMove, true);
     window.addEventListener("pointerout", onPointerOut, true);
@@ -344,6 +292,8 @@
     window.addEventListener("pagehide", onPageLifecycleChange);
     window.addEventListener("popstate", onPageLifecycleChange);
     window.addEventListener("hashchange", onPageLifecycleChange);
+    window.addEventListener("mfl:season-ratios-ready", onRateStateChange);
+    window.addEventListener("mfl:evaluation-rate-settled", onRateStateChange);
 
     function destroy() {
       clearAll(true);
@@ -363,6 +313,8 @@
       window.removeEventListener("pagehide", onPageLifecycleChange);
       window.removeEventListener("popstate", onPageLifecycleChange);
       window.removeEventListener("hashchange", onPageLifecycleChange);
+      window.removeEventListener("mfl:season-ratios-ready", onRateStateChange);
+      window.removeEventListener("mfl:evaluation-rate-settled", onRateStateChange);
     }
 
     window.__mflDiscountTooltipController = { version: VERSION, show, hide, destroy };
@@ -370,5 +322,4 @@
 
   installStaticStyles();
   installTooltipController();
-  installRateChrome();
 })();

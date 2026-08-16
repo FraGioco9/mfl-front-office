@@ -83,6 +83,17 @@ const evaluationLayout = await readSite("evaluation-layout-runtime.js");
 excludes(evaluationLayout, /MutationObserver|showEvaluationPage|syncLoadButton|syncDiscountRateFallback|storedMflPerUsd|main\s*>\s*\.pageView|replaceChildren/, "Evaluation layout must not pre-render or repair Evaluation content.");
 matches(evaluationLayout, /focusWhenReady/, "Evaluation layout may own only post-readiness focus behavior.");
 
+const evaluationDiscountDisplay = await readSite("evaluation-discount-rate-display-runtime.js");
+excludes(evaluationDiscountDisplay, /MutationObserver|setInterval|querySelector|textContent\s*=|classList\./, "Evaluation discount display compatibility must never repair or poll rendered DOM.");
+
+const evaluationDiscountRate = await readSite("evaluation-discount-rate-runtime.js");
+matches(evaluationDiscountRate, /mfl:season-ratios-ready/, "Evaluation discount-rate data must publish one explicit ready event.");
+matches(evaluationDiscountRate, /coreObserver\.observe\(document\.head,\s*\{\s*childList:\s*true\s*\}\)/, "Evaluation discount-rate authority may use only a one-shot app-core insertion bridge.");
+excludes(evaluationDiscountRate, /setInterval|subtree:\s*true/, "Evaluation discount-rate ownership must be event-driven and must not poll or broadly observe the page.");
+
+const evaluationDiscountUi = await readSite("evaluation-discount-rate-ui-runtime.js");
+excludes(evaluationDiscountUi, /MutationObserver|setInterval|evaluationDiscountRate\.textContent|advancedDiscountRateValue\.textContent/, "Evaluation discount-rate UI must remain tooltip-only and event-driven.");
+
 const watchlistUi = await readSite("watchlist-ui-runtime.js");
 excludes(watchlistUi, /MutationObserver|history\.pushState|history\.replaceState|syncWatchlistTitle|syncWatchlistSwitcher|protectedRoute|currentWatchlistIdentity/, "Watchlist UI must not compete with app-core for route, title, or switcher state.");
 matches(watchlistUi, /watchlistRenameTooltip/, "Watchlist UI must retain the unique rename tooltip interaction.");
@@ -90,6 +101,9 @@ matches(watchlistUi, /watchlistRenameTooltip/, "Watchlist UI must retain the uni
 const databaseStats = await readSite("database-stats-runtime.js");
 matches(databaseStats, /bindPermanentControls/, "Database Stats must bind the permanent HTML shell instead of recreating it.");
 excludes(databaseStats, /function\s+createPage|page\.innerHTML|databaseStatsOverallFilters[\s\S]*replaceChildren\(fragment\)/, "Database Stats must not recreate its static page or filter controls.");
+
+const databaseStatsReloadBootstrap = await readSite("database-stats-reload-bootstrap-runtime.js");
+excludes(databaseStatsReloadBootstrap, /history\.|querySelector|classList\.|textContent\s*=|createElement|requestAnimationFrame/, "Database Stats reload compatibility must never compete with bootstrap-core for route or shell visibility.");
 
 const mflStats = await readSite("mfl-stats-runtime.js");
 matches(mflStats, /__mflStatsRuntime\s*=\s*Object\.freeze/, "MFL Stats compatibility hooks must remain available to app-entry.");
@@ -104,6 +118,7 @@ matches(indexHtml, /<link[^>]+href=["']\/responsive\.css["'][^>]+data-mfl-respon
 invariant(indexHtml.includes(`MFL Front Office v${release.version}`), "The static footer version must match release.json.");
 matches(indexHtml, /<colgroup id="tableColGroup"><\/colgroup>[\s\S]*<thead id="tableHead"><\/thead>[\s\S]*<tbody id="tableBody"><\/tbody>/, "Shared player table shell must stay permanent in index.html.");
 matches(indexHtml, /id="databaseStatsPage"[\s\S]*id="mflStatsPage"[\s\S]*id="evaluationPage"[\s\S]*id="playerPage"[\s\S]*id="settingsPage"[\s\S]*id="changelogPage"/, "Every major page must keep a permanent HTML shell.");
+matches(indexHtml, /id="evaluationDiscountRate"[^>]*>\s*-\s*<\/strong>/, "Evaluation Discount Rate must start from the permanent HTML placeholder instead of a bootstrap renderer.");
 
 const responsive = await readSite("responsive.css");
 matches(responsive, /\/\* Mobile parity contract\./, "responsive.css must keep the mobile parity contract.");
