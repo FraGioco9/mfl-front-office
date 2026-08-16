@@ -1,4 +1,4 @@
 {
-  "version": "1.124.13",
-  "description": "Stage saved table controls in state and sync them only during the final render"
+  "version": "1.124.14",
+  "description": "Split Evaluation-only logic and valuation data out of the shared application core"
 }
