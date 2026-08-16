@@ -1,4 +1,4 @@
 {
-  "version": "1.124.37",
-  "description": "Keep universal Table actions bound safely before the lazy Table core loads"
+  "version": "1.124.38",
+  "description": "Prevent early Evaluation core execution and release startup loading on errors"
 }
