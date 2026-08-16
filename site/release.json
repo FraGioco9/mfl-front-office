@@ -1,4 +1,4 @@
 {
-  "version": "1.124.25",
-  "description": "Load saved Evaluation modal UI only on the Evaluation route"
+  "version": "1.124.26",
+  "description": "Reuse one normalized application-core fallback across missing route chunks"
 }
