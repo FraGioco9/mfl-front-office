@@ -10,9 +10,6 @@
   const MOBILE_LAYOUT = "(max-width: 900px)";
   const MOBILE_TABLE_WIDTH = 1560;
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
-  const TABLE_STRUCTURE_SELECTOR = "table, colgroup, col, thead, tbody";
-  const WIDTH_STYLE_SELECTOR = "#progressionPage .tableShell, #progressionPage .tableScroller, #progressionPage .tableScroller table, #progressionPage .tableScroller col, #progressionPage .tableScroller th, #progressionPage .tableScroller td";
-  const COLUMN_GEOMETRY_PROPERTIES = ["width", "min-width", "max-width"];
 
   const COLUMN_LAYOUT = Object.freeze([
     Object.freeze(["col-overall", 5.5]),
@@ -50,11 +47,15 @@
   window.__mflTableWidthRuntime?.destroy?.();
   window.__mflTableWidthConfig = TABLE_WIDTH_CONFIG;
 
-  let observer = null;
+  const mobileQuery = window.matchMedia(MOBILE_LAYOUT);
   let frame = 0;
   let destroyed = false;
   let applying = false;
   let widthHookInstalled = false;
+  let lastTable = null;
+  let lastFirstColumn = null;
+  let lastMode = "";
+  let scheduledForce = false;
 
   function isTableRoute() {
     const page = String(document.body?.dataset.page || "").toLowerCase();
@@ -63,7 +64,7 @@
   }
 
   function isMobile() {
-    return window.matchMedia(MOBILE_LAYOUT).matches;
+    return mobileQuery.matches;
   }
 
   function syncMobileFlag(mobile = isMobile()) {
@@ -93,7 +94,7 @@
     properties.forEach((property) => element.style.removeProperty(property));
   }
 
-  function discardLegacyGeometry(elements) {
+  function discardLegacyContainerGeometry(elements) {
     const { shell, scroller, table } = elements;
     table.querySelectorAll(FILLER_SELECTOR).forEach((element) => element.remove());
 
@@ -104,9 +105,6 @@
     removeProperties(table, [
       "width", "min-width", "max-width", "box-sizing", "table-layout", "border-spacing",
     ]);
-    table.querySelectorAll("col, th, td").forEach((element) => {
-      removeProperties(element, COLUMN_GEOMETRY_PROPERTIES);
-    });
   }
 
   function canonicalColumns(table) {
@@ -185,53 +183,37 @@
     return true;
   }
 
-  function closeEnough(actual, expected) {
-    return Number.isFinite(actual) && Math.abs(actual - expected) < 0.03;
-  }
-
-  function cellHasLegacyGeometry(table) {
-    return Array.from(table.querySelectorAll("th, td")).some((cell) =>
-      COLUMN_GEOMETRY_PROPERTIES.some((property) => Boolean(cell.style.getPropertyValue(property))));
-  }
-
-  function layoutIntact() {
-    const elements = tableElements();
-    if (!elements || elements.page.hidden) return true;
-    const geometry = canonicalColumns(elements.table);
-    if (!geometry || cellHasLegacyGeometry(elements.table)) return false;
-
+  function apply(force = false) {
     const mobile = isMobile();
-    const { scroller, table } = elements;
-    for (let index = 0; index < geometry.columns.length; index += 1) {
-      const actual = Number.parseFloat(geometry.columns[index].style.width);
-      const expected = mobile
-        ? MOBILE_TABLE_WIDTH * geometry.percentages[index] / 100
-        : geometry.percentages[index];
-      if (!closeEnough(actual, expected)) return false;
-    }
-
-    const actualTableWidth = Number.parseFloat(table.style.width);
-    const expectedTableWidth = mobile ? MOBILE_TABLE_WIDTH : 100;
-    if (!closeEnough(actualTableWidth, expectedTableWidth)) return false;
-
-    const overflowX = window.getComputedStyle(scroller).overflowX;
-    return mobile ? ["auto", "scroll"].includes(overflowX) : overflowX === "hidden";
-  }
-
-  function apply() {
-    syncMobileFlag();
+    syncMobileFlag(mobile);
     if (destroyed || applying || !isTableRoute()) return false;
     const elements = tableElements();
     if (!elements || elements.page.hidden) return false;
 
+    const geometry = canonicalColumns(elements.table);
+    if (!geometry) return false;
+    const mode = mobile ? "mobile" : "desktop";
+    const firstColumn = geometry.columns[0] || null;
+
+    if (!force
+      && elements.table === lastTable
+      && firstColumn === lastFirstColumn
+      && mode === lastMode) {
+      return true;
+    }
+
     applying = true;
     try {
-      discardLegacyGeometry(elements);
-      const geometry = canonicalColumns(elements.table);
-      if (!geometry) return false;
-      return isMobile()
+      discardLegacyContainerGeometry(elements);
+      const applied = mobile
         ? applyMobileLayout(elements, geometry)
         : applyDesktopLayout(elements, geometry);
+      if (applied) {
+        lastTable = elements.table;
+        lastFirstColumn = firstColumn;
+        lastMode = mode;
+      }
+      return applied;
     } finally {
       applying = false;
     }
@@ -252,50 +234,27 @@
   function takeOwnership() {
     if (destroyed) return false;
     installWidthHook();
-    return apply();
+    return apply(true);
   }
 
-  function schedule() {
-    if (destroyed || frame) return;
+  function schedule(force = false) {
+    if (destroyed) return;
+    scheduledForce = scheduledForce || force;
+    if (frame) return;
     frame = window.requestAnimationFrame(() => {
+      const forceApply = scheduledForce;
+      scheduledForce = false;
       frame = 0;
-      apply();
+      apply(forceApply);
     });
   }
 
-  function nodeChangesTableStructure(node) {
-    if (!(node instanceof Element)) return false;
-    return node.matches(TABLE_STRUCTURE_SELECTOR) || Boolean(node.querySelector(TABLE_STRUCTURE_SELECTOR));
-  }
-
-  function shouldApplyForMutation(records) {
-    return records.some((record) => {
-      if (record.type === "attributes") {
-        if (record.attributeName === "hidden" || record.attributeName === "data-page") return true;
-        if (record.attributeName !== "style") return false;
-        const target = record.target;
-        return target instanceof Element && target.matches(WIDTH_STYLE_SELECTOR) && !layoutIntact();
-      }
-      return [...record.addedNodes, ...record.removedNodes].some(nodeChangesTableStructure);
-    });
-  }
-
-  function observe() {
-    observer?.disconnect();
-    observer = new MutationObserver((records) => {
-      if (applying || !isTableRoute() || !shouldApplyForMutation(records)) return;
-      apply();
-    });
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden", "data-page", "style"],
-    });
+  function handleLayoutModeChange() {
+    schedule(true);
   }
 
   function bind() {
-    window.addEventListener("resize", schedule, { passive: true });
+    mobileQuery.addEventListener?.("change", handleLayoutModeChange);
     window.addEventListener("popstate", schedule);
     window.addEventListener("mfl:ready", schedule);
   }
@@ -304,11 +263,13 @@
     destroyed = true;
     if (frame) window.cancelAnimationFrame(frame);
     frame = 0;
-    observer?.disconnect();
-    observer = null;
-    window.removeEventListener("resize", schedule);
+    scheduledForce = false;
+    mobileQuery.removeEventListener?.("change", handleLayoutModeChange);
     window.removeEventListener("popstate", schedule);
     window.removeEventListener("mfl:ready", schedule);
+    lastTable = null;
+    lastFirstColumn = null;
+    lastMode = "";
     if (widthHookInstalled) {
       try {
         delete window.applyExactPlayerTableWidths;
@@ -317,7 +278,6 @@
   }
 
   installWidthHook();
-  observe();
   bind();
   window.__mflTableWidthRuntime = Object.freeze({
     canonical: true,
