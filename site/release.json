@@ -1,4 +1,4 @@
 {
-  "version": "1.124.10",
-  "description": "Make initial summary and wallet preference dependencies route-aware"
+  "version": "1.124.11",
+  "description": "Load route-specific runtime owners only when their destination requires them"
 }

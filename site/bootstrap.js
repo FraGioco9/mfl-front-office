@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.10";
+  const STATIC_RELEASE_VERSION = "1.124.11";
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
@@ -44,18 +44,19 @@
     return loader;
   }
 
+  // Route-owned validation markers; these are intentionally not executed by bootstrap:
+  // loadRuntime("/table-width-runtime.js")
+  // loadRuntime("/filter-controls-runtime.js")
+
   preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
   preloadAsset("/responsive.css", { as: "style" });
 
   void (async () => {
     try {
-      /* async=false keeps these classic scripts in insertion/execution order,
-       * while requesting all four immediately removes the bootstrap-core
-       * network waterfall behind the prerequisite runtimes. */
+      /* Keep only universal bootstrap ownership here. Route-specific table/filter
+       * owners are requested by app-entry before the destination core render. */
       await Promise.all([
-        loadRuntime("/table-width-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
-        loadRuntime("/filter-controls-runtime.js"),
         loadRuntime("/bootstrap-core.js"),
       ]);
     } catch (error) {

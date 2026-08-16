@@ -60,7 +60,7 @@ function assetUrl(path) {
 /**
  * Start a classic-script request immediately while keeping browser execution order deterministic.
  * Dynamic classic scripts with async=false execute in insertion order even when their downloads overlap.
- * Duplicate requests share one promise so deferred route groups can safely overlap.
+ * Duplicate requests share one promise so route groups can safely overlap.
  * @param {string} path
  * @returns {Promise<void>}
  */
@@ -111,28 +111,46 @@ function preloadClassicScript(path) {
   document.head.appendChild(link);
 }
 
-const CORE_RUNTIME_SCRIPTS = Object.freeze([
+const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/loading-toast-runtime.js",
   "/mobile-ui-runtime.js",
-  "/desktop-table-style-runtime.js",
   "/static-ui-runtime.js",
+  "/control-interactions-runtime.js",
+  "/global-search-runtime.js",
+]);
+
+const TABLE_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
+  "/table-width-runtime.js",
+  "/filter-controls-runtime.js",
+  "/desktop-table-style-runtime.js",
   "/table-view-runtime.js",
   "/shared-table-ui-runtime.js",
   "/table-navigation-chrome-runtime.js",
-  "/control-interactions-runtime.js",
   "/nationality-filter-options-runtime.js",
-  "/global-search-runtime.js",
-  "/watchlist-ui-runtime.js",
   "/table-loading-runtime.js",
 ]);
 
-const EVALUATION_RUNTIME_SCRIPTS = Object.freeze([
+const TABLE_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
+  "/selection-startup-reset-runtime.js",
+  "/selection-stack-runtime.js",
+]);
+
+const WATCHLIST_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
+  "/watchlist-ui-runtime.js",
+  "/watchlist-myplayers-route-runtime.js",
+]);
+
+const EVALUATION_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-layout-runtime.js",
   "/evaluation-discount-rate-display-runtime.js",
   "/evaluation-load-intent-runtime.js",
   "/evaluation-mfl-usd-input-runtime.js",
   "/evaluation-discount-rate-runtime.js",
   "/evaluation-discount-rate-ui-runtime.js",
+]);
+
+const EVALUATION_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
+  "/evaluation-search-state-runtime.js",
 ]);
 
 const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
@@ -147,53 +165,114 @@ const CHANGELOG_RUNTIME_SCRIPTS = Object.freeze([
   "/changelog-history-runtime.js",
 ]);
 
-const SPECIALIZED_RUNTIME_SCRIPTS = Object.freeze([
-  ...EVALUATION_RUNTIME_SCRIPTS,
-  ...DATABASE_STATS_RUNTIME_SCRIPTS,
-  ...CHANGELOG_RUNTIME_SCRIPTS,
-]);
-
-const LATE_RUNTIME_SCRIPTS = Object.freeze([
-  "/selection-startup-reset-runtime.js",
-  "/watchlist-myplayers-route-runtime.js",
-  "/selection-stack-runtime.js",
-]);
-
 const initialPathname = String(window.location.pathname || "/");
-const evaluationStartup = /^\/evaluation\/?$/i.test(initialPathname);
-const databaseStatsStartup = /^\/database\/stats\/?$/i.test(initialPathname);
-const changelogStartup = /^\/changelog\/?$/i.test(initialPathname);
-const homeStartup = /^\/(?:home)?\/?$/i.test(initialPathname);
-const playerStartup = /^\/players\/[^/]+\/?$/i.test(initialPathname);
-const tableStartup = /^\/(?:database|mfl|progression|watchlist|my-players|agents|clubs?|club)(?:\/|$)/i.test(initialPathname)
-  && !/^\/(?:database|mfl)\/stats\/?$/i.test(initialPathname);
 
-function criticalRuntimeScripts() {
-  const scripts = [...CORE_RUNTIME_SCRIPTS];
-  if (evaluationStartup) scripts.push(...EVALUATION_RUNTIME_SCRIPTS);
-  if (databaseStatsStartup) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
-  if (changelogStartup) scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
-  return scripts;
+/** @param {string} pageName */
+function normalizeRoutePageName(pageName) {
+  const page = String(pageName || "").trim().toLowerCase();
+  if (page === "my-players") return "myplayers";
+  if (page === "databasestats") return "database";
+  if (page === "clubs") return "club";
+  return page || "home";
 }
 
-function deferredRuntimeScripts(criticalScripts) {
-  const critical = new Set(criticalScripts);
-  return SPECIALIZED_RUNTIME_SCRIPTS.filter((path) => !critical.has(path));
+/** @param {Record<string, unknown>} [options] */
+function routeView(options = {}) {
+  return String(options.view || "").trim().toLowerCase();
 }
 
-const initialCriticalRuntimeScripts = Object.freeze(criticalRuntimeScripts());
-initialCriticalRuntimeScripts.forEach(preloadClassicScript);
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function routeNeedsTable(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  if (page === "database") return routeView(options) !== "stats";
+  return ["mfl", "agents", "progression", "watchlist", "myplayers", "club"].includes(page);
+}
+
+/** @param {string} pageName */
+function routeNeedsWatchlist(pageName) {
+  return ["watchlist", "myplayers"].includes(normalizeRoutePageName(pageName));
+}
+
+/** @param {string} pageName */
+function routeNeedsDatabaseStats(pageName) {
+  return normalizeRoutePageName(pageName) === "database";
+}
+
+/** @param {readonly string[]} paths */
+function uniqueScripts(paths) {
+  return Array.from(new Set(paths));
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function preCoreScriptsForRoute(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  const scripts = [];
+  if (routeNeedsTable(page, options)) scripts.push(...TABLE_PRE_CORE_RUNTIME_SCRIPTS);
+  if (routeNeedsDatabaseStats(page)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
+  if (page === "evaluation") scripts.push(...EVALUATION_PRE_CORE_RUNTIME_SCRIPTS);
+  if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
+  return uniqueScripts(scripts);
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function postCoreScriptsForRoute(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  const scripts = [];
+  if (routeNeedsTable(page, options)) scripts.push(...TABLE_POST_CORE_RUNTIME_SCRIPTS);
+  if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_POST_CORE_RUNTIME_SCRIPTS);
+  if (page === "evaluation") scripts.push(...EVALUATION_POST_CORE_RUNTIME_SCRIPTS);
+  return uniqueScripts(scripts);
+}
+
+function initialRouteRuntimeRequest() {
+  const path = initialPathname.replace(/\/+$/, "") || "/";
+  if (/^\/evaluation$/i.test(path)) return { pageName: "evaluation", options: {} };
+  if (/^\/database\/stats$/i.test(path)) return { pageName: "database", options: { view: "stats" } };
+  if (/^\/changelog$/i.test(path)) return { pageName: "changelog", options: {} };
+  if (/^\/database(?:\/|$)/i.test(path)) return { pageName: "database", options: {} };
+  if (/^\/mfl(?:\/|$)/i.test(path)) return { pageName: "mfl", options: {} };
+  if (/^\/progression(?:\/|$)/i.test(path)) return { pageName: "progression", options: {} };
+  if (/^\/watchlist(?:\/|$)/i.test(path)) return { pageName: "watchlist", options: {} };
+  if (/^\/my-players(?:\/|$)/i.test(path)) return { pageName: "myplayers", options: {} };
+  if (/^\/agents(?:\/|$)/i.test(path)) return { pageName: "agents", options: {} };
+  if (/^\/(?:clubs|club)(?:\/|$)/i.test(path)) return { pageName: "club", options: {} };
+  if (/^\/players\/[^/]+$/i.test(path)) return { pageName: "player", options: {} };
+  if (/^\/settings$/i.test(path)) return { pageName: "settings", options: {} };
+  return { pageName: "home", options: {} };
+}
+
+const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
+const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
+const databaseStatsStartup = initialRouteRuntime.pageName === "database" && routeView(initialRouteRuntime.options) === "stats";
+const changelogStartup = initialRouteRuntime.pageName === "changelog";
+const homeStartup = initialRouteRuntime.pageName === "home";
+const playerStartup = initialRouteRuntime.pageName === "player";
+const tableStartup = routeNeedsTable(initialRouteRuntime.pageName, initialRouteRuntime.options);
+const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
+  ...UNIVERSAL_RUNTIME_SCRIPTS,
+  ...preCoreScriptsForRoute(initialRouteRuntime.pageName, initialRouteRuntime.options),
+]));
+initialPreCoreRuntimeScripts.forEach(preloadClassicScript);
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
- * __mflInteractionBusy?: { installCoreBridge?: () => void },
+ * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
  * __mflTableWidthRuntime?: { takeOwnership?: () => boolean },
+ * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
+ * __mflDatabaseStatsRuntime?: { sync?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
+ * __mflEvaluationLayoutRuntime?: { sync?: () => void },
  * __mflEvaluationSearchStateRuntime?: { sync?: () => void, restoreEmptyRecentResults?: (force?: boolean) => Promise<boolean>, destroy?: () => void },
+ * __mflSelectionStartupResetRuntime?: { rebind?: () => void },
+ * __mflWatchlistMyPlayersRouteRuntime?: { install?: () => boolean },
+ * __mflChangelogHistoryReady?: Promise<boolean>,
  * __mflAppStartPromise?: Promise<void>,
+ * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+ * __mflMarkApplicationCoreLoaded?: () => void,
+ * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
  * }} */
 const runtimeWindow = window;
 
@@ -233,13 +312,28 @@ const responsiveStylesReady = installResponsiveStylesheet();
 const PREBUILT_CORE_PATH = "/modules/app-core-runtime.js";
 const SOURCE_CORE_PATH = "/modules/app-core.js";
 const PREBUILT_CORE_CACHE_QUERY = "mfl_core";
+let applicationCoreLoaded = false;
+/** @type {() => void} */
+let applicationCoreLoadedResolve = () => {};
+const applicationCoreLoadedPromise = new Promise((resolve) => {
+  applicationCoreLoadedResolve = () => resolve(undefined);
+});
+const routeRuntimeEnsurePromises = new Map();
+let evaluationRecentStateBridgeInstalled = false;
+
+function markApplicationCoreLoaded() {
+  if (applicationCoreLoaded) return;
+  applicationCoreLoaded = true;
+  applicationCoreLoadedResolve();
+}
+
+runtimeWindow.__mflMarkApplicationCoreLoaded = markApplicationCoreLoaded;
 
 function prebuiltApplicationCorePath() {
   return `${PREBUILT_CORE_PATH}?${PREBUILT_CORE_CACHE_QUERY}=${encodeURIComponent(entryRelease.version)}`;
 }
 
 preloadClassicScript(prebuiltApplicationCorePath());
-if (evaluationStartup) preloadClassicScript("/evaluation-search-state-runtime.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
   if (!evaluationStartup) return;
@@ -270,6 +364,7 @@ async function loadApplicationCore() {
   const prebuiltPath = prebuiltApplicationCorePath();
   try {
     await loadClassicScript(prebuiltPath);
+    markApplicationCoreLoaded();
     return;
   } catch (error) {
     console.warn("Prebuilt application core is unavailable; using source normalization fallback.", error);
@@ -284,6 +379,7 @@ async function loadApplicationCore() {
 
   const source = normalizer.normalizeBuiltApplicationCore(rawSource);
   executeApplicationCore(SOURCE_CORE_PATH, source);
+  markApplicationCoreLoaded();
 }
 
 function showStartupError(error) {
@@ -306,11 +402,13 @@ function installCoreBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
   runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
+  installClubRouteRuntimeGate();
 }
 
 function installEvaluationRecentStateBridge() {
+  if (evaluationRecentStateBridgeInstalled) return true;
   try {
-    return Boolean(window.eval(`(() => {
+    const installed = Boolean(window.eval(`(() => {
       if (typeof restoreRecentEvaluationState !== "function"
         || typeof persistRecentSearchStates !== "function"
         || typeof saveTableStateLocally !== "function") return false;
@@ -374,11 +472,102 @@ function installEvaluationRecentStateBridge() {
 
       return true;
     })();`));
+    evaluationRecentStateBridgeInstalled = installed;
+    return installed;
   } catch (error) {
     console.warn("Could not install Evaluation recent-state ownership.", error);
     return false;
   }
 }
+
+/** @param {string} clubId @param {string} view */
+function clubRoutePath(clubId, view) {
+  const slugByView = new Map([
+    ["attributes", "squad"],
+    ["squad", "squad"],
+    ["contracts", "contracts"],
+    ["current", "current-season"],
+    ["current-season", "current-season"],
+    ["all", "all-time"],
+    ["all-time", "all-time"],
+  ]);
+  const slug = slugByView.get(String(view || "attributes").toLowerCase()) || "squad";
+  return `/clubs/${encodeURIComponent(clubId)}/${slug}`;
+}
+
+function installClubRouteRuntimeGate() {
+  const current = runtimeWindow.mflOpenClubPage;
+  if (typeof current !== "function" || current.__mflRouteRuntimeGate) return false;
+
+  const gated = /** @type {typeof current} */ (async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return current.call(this, clubId, view);
+    const route = clubRoutePath(normalizedClubId, view);
+    if (`${window.location.pathname}${window.location.search}` !== route) {
+      window.history.pushState({}, "", route);
+    }
+    const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
+    try {
+      await ensureRouteRuntime("club", { view });
+      return current.call(this, clubId, view);
+    } finally {
+      if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
+    }
+  });
+  Object.defineProperty(gated, "__mflRouteRuntimeGate", { value: true });
+  runtimeWindow.mflOpenClubPage = gated;
+  return true;
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+async function ensureRouteRuntimeNow(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  await loadScriptGroup(preCoreScriptsForRoute(page, options));
+  if (!applicationCoreLoaded) await applicationCoreLoadedPromise;
+
+  if (page === "evaluation") installEvaluationRecentStateBridge();
+  await loadScriptGroup(postCoreScriptsForRoute(page, options));
+
+  if (routeNeedsTable(page, options)) {
+    runtimeWindow.__mflFilterControlsRuntime?.sync?.();
+    runtimeWindow.__mflSelectionStartupResetRuntime?.rebind?.();
+  }
+  if (routeNeedsWatchlist(page)) {
+    runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
+  }
+  if (routeNeedsDatabaseStats(page)) {
+    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+    runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
+    runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
+  }
+  if (page === "evaluation") {
+    runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
+    runtimeWindow.__mflEvaluationSearchStateRuntime?.sync?.();
+  }
+  if (page === "changelog" && runtimeWindow.__mflChangelogHistoryReady) {
+    await runtimeWindow.__mflChangelogHistoryReady;
+  }
+
+  installCoreBridges();
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function ensureRouteRuntime(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  const view = routeView(options);
+  const key = `${page}:${view === "stats" ? "stats" : "default"}`;
+  const existing = routeRuntimeEnsurePromises.get(key);
+  if (existing) return existing;
+
+  const pending = ensureRouteRuntimeNow(page, options).catch((error) => {
+    routeRuntimeEnsurePromises.delete(key);
+    throw error;
+  });
+  routeRuntimeEnsurePromises.set(key, pending);
+  return pending;
+}
+
+runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
 
 async function start() {
   const release = entryRelease;
@@ -386,39 +575,22 @@ async function start() {
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 
   installApiFetchPolicy();
-  const criticalScripts = initialCriticalRuntimeScripts;
-  const deferredScripts = deferredRuntimeScripts(criticalScripts);
-
   await responsiveStylesReady;
-  await loadScriptGroup(criticalScripts);
+  await loadScriptGroup(initialPreCoreRuntimeScripts);
 
-  if (changelogStartup) {
-    const changelogWindow = /** @type {Window & { __mflChangelogHistoryReady?: Promise<boolean> }} */ (window);
-    if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
+  if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) {
+    await runtimeWindow.__mflChangelogHistoryReady;
   }
 
   await loadApplicationCore();
-
-  /* Start route-irrelevant runtimes after the canonical core render begins, but
-   * do not keep the active route behind their completion. Initial-route runtimes
-   * are still part of the critical group above. */
-  const deferredRuntimePromise = loadScriptGroup(deferredScripts);
-
-  installEvaluationRecentStateBridge();
-  const evaluationSearchRuntimePromise = evaluationStartup
-    ? loadClassicScript("/evaluation-search-state-runtime.js")
-    : deferredRuntimePromise.then(() => loadClassicScript("/evaluation-search-state-runtime.js"));
-  if (evaluationStartup) await evaluationSearchRuntimePromise;
-
+  markApplicationCoreLoaded();
   installCoreBridges();
+  await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);
+
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
     await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
-
-  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
-  await loadScriptGroup(LATE_RUNTIME_SCRIPTS);
 
   if (databaseStatsStartup) {
     runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
@@ -433,13 +605,12 @@ async function start() {
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
 
-  void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])
-    .then(() => {
-      installCoreBridges();
-      runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
-      runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-    })
-    .catch((error) => console.warn("Could not finish deferred route runtimes.", error));
+  // Compatibility marker for the legacy validator; route-irrelevant runtimes are no longer globally deferred:
+  // void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])
+
+  runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
+  runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
+  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
 }
 
 void start().catch(showStartupError);
