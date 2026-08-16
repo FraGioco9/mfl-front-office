@@ -1,4 +1,4 @@
 {
-  "version": "1.124.38",
-  "description": "Prevent early Evaluation core execution and release startup loading on errors"
+  "version": "1.124.39",
+  "description": "Keep the footer and complete Changelog history aligned with the newest release"
 }
