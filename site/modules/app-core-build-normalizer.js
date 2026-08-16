@@ -1,8 +1,10 @@
 // @ts-check
 
 import { normalizeApplicationCore as normalizeBaseApplicationCore } from "./app-core-normalizer.js";
+import { normalizeStartupDataDependencies } from "./app-core-startup-data-normalizer.js";
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 
 export function normalizeBuiltApplicationCore(source) {
-  return normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
+  const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
+  return normalizeStartupDataDependencies(tableEventsSource);
 }
