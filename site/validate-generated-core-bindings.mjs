@@ -103,9 +103,11 @@ if (!startApp) throw new Error("Generated shared application core is missing sta
 const startupReferences = collectReferences(startApp);
 const eagerReferences = collectEagerTopLevelReferences(coreInfo.file);
 const routeOwnedNames = new Map();
+const routeChunkInfo = new Map();
 
 for (const [chunkName, chunkSource] of Object.entries(artifacts.routeChunks || {})) {
   const chunkInfo = collectTopLevelDeclarations(String(chunkSource || ""), `app-core-${chunkName}-runtime.js`);
+  routeChunkInfo.set(chunkName, chunkInfo);
   for (const name of chunkInfo.names) {
     if (!routeOwnedNames.has(name)) routeOwnedNames.set(name, []);
     routeOwnedNames.get(name).push(chunkName);
@@ -126,4 +128,24 @@ if (unresolved.length) {
   throw new Error(`Application startup references lazy route-owned identifiers without a facade: ${unresolved.sort().join("; ")}`);
 }
 
-console.log("Generated application-core eager/startup binding audit passed.");
+const allowedChunkDependencies = new Map([
+  ["club", new Set(["table"])],
+  ["watchlist", new Set(["table"])],
+]);
+const crossChunkReferences = [];
+for (const [chunkName, chunkInfo] of routeChunkInfo) {
+  const references = collectReferences(chunkInfo.file);
+  const allowedOwners = allowedChunkDependencies.get(chunkName) || new Set();
+  for (const [name, owners] of routeOwnedNames) {
+    if (!references.has(name) || coreInfo.names.has(name) || chunkInfo.names.has(name)) continue;
+    const foreignOwners = owners.filter((owner) => owner !== chunkName);
+    if (!foreignOwners.length || foreignOwners.every((owner) => allowedOwners.has(owner))) continue;
+    crossChunkReferences.push(`${chunkName} -> ${name} [${foreignOwners.join(", ")}]`);
+  }
+}
+
+if (crossChunkReferences.length) {
+  throw new Error(`Generated route cores reference undeclared lazy dependencies: ${crossChunkReferences.sort().join("; ")}`);
+}
+
+console.log("Generated application-core eager/startup and route dependency audit passed.");
