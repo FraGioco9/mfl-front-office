@@ -181,7 +181,11 @@ function normalizeRoutePageName(pageName) {
 
 /** @param {Record<string, unknown>} [options] */
 function routeView(options = {}) {
-  return String(options.view || "").trim().toLowerCase();
+  const normalizer = Reflect.get(window, "__mflNormalizeRouteView");
+  if (typeof normalizer !== "function") {
+    throw new Error("Route view normalizer is unavailable.");
+  }
+  return String(normalizer(options) || "");
 }
 
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
