@@ -1,4 +1,4 @@
 {
-  "version": "1.124.9",
-  "description": "Load the prebuilt application core directly with release-keyed immutable caching"
+  "version": "1.124.10",
+  "description": "Make initial summary and wallet preference dependencies route-aware"
 }
