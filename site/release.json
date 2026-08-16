@@ -1,4 +1,4 @@
 {
-  "version": "1.124.35",
-  "description": "Restore the Table action facade required for refresh startup"
+  "version": "1.124.36",
+  "description": "Restore refresh startup after the Wallet core split"
 }
