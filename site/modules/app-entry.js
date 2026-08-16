@@ -345,6 +345,11 @@ function markApplicationCoreLoaded() {
 
 runtimeWindow.__mflMarkApplicationCoreLoaded = markApplicationCoreLoaded;
 
+function assertApplicationCoreInitialized(sourceLabel) {
+  if (applicationCoreLoaded && runtimeWindow.__mflAppStartPromise) return;
+  throw new Error(`${sourceLabel} application core loaded without initializing startup.`);
+}
+
 function prebuiltApplicationCorePath() {
   return `${PREBUILT_CORE_PATH}?${PREBUILT_CORE_CACHE_QUERY}=${encodeURIComponent(entryRelease.version)}`;
 }
@@ -371,14 +376,19 @@ function executeApplicationCore(path, source) {
 
 async function loadApplicationCore() {
   const prebuiltPath = prebuiltApplicationCorePath();
+  let prebuiltLoadError = null;
   try {
     await loadClassicScript(prebuiltPath);
-    markApplicationCoreLoaded();
-    return;
   } catch (error) {
-    console.warn("Prebuilt application core is unavailable; using source normalization fallback.", error);
+    prebuiltLoadError = error;
   }
 
+  if (!prebuiltLoadError) {
+    assertApplicationCoreInitialized("Prebuilt");
+    return;
+  }
+
+  console.warn("Prebuilt application core is unavailable; using source normalization fallback.", prebuiltLoadError);
   const fallbackLoader = Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts");
   if (typeof fallbackLoader !== "function") {
     throw new Error("Application core fallback artifact loader is unavailable.");
@@ -387,7 +397,7 @@ async function loadApplicationCore() {
   const source = String(artifacts?.core || "").trim();
   if (!source) throw new Error("Application core source fallback is unavailable.");
   executeApplicationCore(SOURCE_CORE_PATH, source);
-  markApplicationCoreLoaded();
+  assertApplicationCoreInitialized("Fallback");
 }
 
 function showStartupError(error) {
@@ -593,7 +603,6 @@ async function start() {
   }
 
   await loadApplicationCore();
-  markApplicationCoreLoaded();
   installCoreBridges();
   await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);
 
