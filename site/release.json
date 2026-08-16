@@ -1,4 +1,4 @@
 {
-  "version": "1.124.17",
-  "description": "Load Settings UI rendering only when the Settings route needs it"
+  "version": "1.124.18",
+  "description": "Load Player detail helpers only when the Player route needs them"
 }
