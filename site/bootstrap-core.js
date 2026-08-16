@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.37");
+  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.38");
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -15,7 +15,7 @@
     try {
       const linkedWallet = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
       if (!linkedWallet) return "";
-      const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
+      const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
       const proofWallet = normalizeWalletAddress(proof?.address);
       return proofWallet === linkedWallet
         && Boolean(proof?.message)
