@@ -48,12 +48,13 @@
   void (async () => {
     try {
       /* async=false keeps these classic scripts in insertion/execution order,
-       * while requesting all four immediately removes the bootstrap-core
+       * while requesting all five immediately removes the bootstrap-core
        * network waterfall behind the prerequisite runtimes. */
       await Promise.all([
         loadRuntime("/table-width-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
         loadRuntime("/filter-controls-runtime.js"),
+        loadRuntime("/core-response-cache-runtime.js"),
         loadRuntime("/bootstrap-core.js"),
       ]);
     } catch (error) {
