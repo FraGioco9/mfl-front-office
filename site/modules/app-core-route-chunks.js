@@ -20,6 +20,7 @@ export function splitApplicationCoreRuntime(source) {
   }
 
   const evaluationParts = [];
+  const mflStatsParts = [];
 
   let extracted = extractRequiredSection(
     core,
@@ -57,14 +58,33 @@ export function splitApplicationCoreRuntime(source) {
   core = extracted.core;
   evaluationParts.push(extracted.chunk);
 
+  extracted = extractRequiredSection(
+    core,
+    "const mflStatsOverallFilterOptions = [",
+    "function rowHasHiddenMflJoinedAgencyDate(row) {",
+    "MFL Stats renderer",
+  );
+  core = extracted.core;
+  mflStatsParts.push(extracted.chunk);
+
+  extracted = extractRequiredSection(
+    core,
+    'mflStatsDistributionModeButtons?.addEventListener("click", (event) => {',
+    "let pendingViewButtonPointer = null;",
+    "MFL Stats distribution interaction",
+  );
+  core = extracted.core;
+  mflStatsParts.push(extracted.chunk);
+
   const evaluation = evaluationParts.join("\n\n").replace(/\s*$/, "");
+  const mflstats = mflStatsParts.join("\n\n").replace(/\s*$/, "");
   const normalizedCore = core.replace(/\s*$/, "");
-  if (!evaluation || !normalizedCore) {
+  if (!evaluation || !mflstats || !normalizedCore) {
     throw new Error("Application core split produced an empty artifact.");
   }
 
   return Object.freeze({
     core: normalizedCore,
-    routeChunks: Object.freeze({ evaluation }),
+    routeChunks: Object.freeze({ evaluation, mflstats }),
   });
 }

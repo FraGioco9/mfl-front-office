@@ -22,6 +22,7 @@ const coreSource = await read("./modules/app-core.js");
 const normalizedArtifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const normalizedCore = normalizedArtifacts.core;
 const evaluationCore = normalizedArtifacts.routeChunks.evaluation;
+const mflStatsCore = normalizedArtifacts.routeChunks.mflstats;
 
 const bootstrapExecution = bootstrap.replace(/\/\/[^\n]*/g, "");
 excludes(bootstrapExecution, 'loadRuntime("/table-width-runtime.js")', "Bootstrap must not execute the table-width owner on every route.");
@@ -72,10 +73,14 @@ includes(routeNormalizer, "window.__mflMarkApplicationCoreLoaded?.();", "The gen
 includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");
 includes(routeChunks, "Evaluation save and share services", "The first split must move Evaluation services out of the universal core.");
 includes(routeChunks, "Evaluation saved-list renderer", "Saved Evaluation list rendering must be route-owned without extracting shared modal helpers.");
+includes(routeChunks, "MFL Stats renderer", "MFL Stats rendering must be split from routes that never use it.");
+includes(routeChunks, "MFL Stats distribution interaction", "MFL Stats distribution interaction must load with its renderer.");
 includes(routeCoreLoader, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "The route-core loader must map Evaluation to its generated chunk.");
+includes(routeCoreLoader, 'mflstats: "/modules/app-core-mfl-stats-runtime.js"', "The route-core loader must map MFL Stats to its generated chunk.");
 includes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Unprepared local environments must be able to build the missing route chunk from source.");
 includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");
 includes(routeCoreLoader, "runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();", "Late route-core functions must receive the same interaction-busy wrappers as startup functions.");
+excludes(routeCoreLoader, 'ensure("mflstats")', "MFL Stats must not execute before the shared core has created its permanent DOM references.");
 excludes(routeCoreLoader, "setInterval", "Route-core loading must remain event/promise driven.");
 
 includes(tableStateNormalizer, "export function normalizePureTableStateRestoration(source)", "Table-state restoration must be a build-time core transform.");
@@ -98,8 +103,10 @@ includes(filterControls, "Object.freeze({ sync, destroy })", "Filter controls mu
 
 invariant(normalizedCore.length > 300_000, "The shared application core became unexpectedly small.");
 invariant(evaluationCore.length > 12_000, "The Evaluation core chunk is too small to represent a meaningful split.");
+invariant(mflStatsCore.length > 4_000, "The MFL Stats core chunk is too small to represent a meaningful split.");
 new Function(normalizedCore);
 new Function(evaluationCore);
+new Function(mflStatsCore);
 excludes(normalizedCore, "const advancedPlayerTableTsv = `", "The large Evaluation valuation table must not remain in the shared core.");
 excludes(normalizedCore, "const evaluationContractsTable = (() => {", "Evaluation contract-table construction must not run on unrelated routes.");
 excludes(normalizedCore, "function normalizeSharedEvaluationPayload(payload) {", "Evaluation save/share services must not remain in the shared core.");
@@ -115,6 +122,14 @@ includes(evaluationCore, "function normalizeSharedEvaluationPayload(payload) {",
 includes(evaluationCore, "function renderSavedEvaluationList(rows) {", "The Evaluation chunk must own saved-evaluation list rendering/data helpers.");
 excludes(evaluationCore, "function hideEvaluationLoadActionTooltip()", "Cross-route tooltip helpers must not become Evaluation-only.");
 excludes(evaluationCore, "async function openSavedEvaluationsModal()", "The direct universal event handler must stay in the shared core.");
+
+excludes(normalizedCore, "const mflStatsOverallFilterOptions = [", "MFL Stats filter/render ownership must not remain in the shared core.");
+excludes(normalizedCore, 'mflStatsDistributionModeButtons?.addEventListener("click", (event) => {', "MFL Stats distribution interaction must not bind on unrelated routes.");
+includes(normalizedCore, "function rowHasHiddenMflJoinedAgencyDate(row)", "Shared table filtering must retain its MFL row-visibility helper.");
+includes(mflStatsCore, "const mflStatsOverallFilterOptions = [", "The MFL Stats chunk must own its filter definitions.");
+includes(mflStatsCore, "function renderMflStatsPage()", "The MFL Stats chunk must own the page renderer.");
+includes(mflStatsCore, 'mflStatsDistributionModeButtons?.addEventListener("click", (event) => {', "The MFL Stats chunk must own distribution interaction binding.");
+excludes(mflStatsCore, "function rowHasHiddenMflJoinedAgencyDate(row)", "Shared table filtering helpers must not become MFL Stats-only.");
 
 includes(normalizedCore, "let incrementalRouteRequestGeneration = 0;", "The generated core must track the latest route request intent.");
 includes(normalizedCore, "let activeIncrementalNetworkRequest = null;", "The generated core must track the active abortable route request.");

@@ -16,6 +16,7 @@
 
   const ROUTE_CORE_PATHS = Object.freeze({
     evaluation: "/modules/app-core-evaluation-runtime.js",
+    mflstats: "/modules/app-core-mfl-stats-runtime.js",
   });
   const routeCorePromises = new Map();
 
