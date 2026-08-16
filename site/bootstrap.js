@@ -547,6 +547,10 @@
   function normalizeBootstrapCoreWidthOwnership(source) {
     let normalized = String(source || "").replace(/\r\n?/g, "\n");
     normalized = normalized.replace('  const MOBILE_TABLE_MIN_WIDTH = 1240;\n', "");
+    normalized = normalized.replace(
+      '    "active_contract_revenue_share",\n    "active_contract_club_name",\n    "active_contract_club_division",',
+      '    "active_contract_club_name",\n    "active_contract_club_division",\n    "active_contract_revenue_share",',
+    );
 
     const metaStart = normalized.indexOf("  const STATIC_TABLE_COLUMN_META = Object.freeze({");
     const percentageStart = normalized.indexOf("  const STATIC_TABLE_COLUMN_PERCENTAGES = Object.freeze({", metaStart);

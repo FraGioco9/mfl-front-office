@@ -531,6 +531,12 @@ async function loadApplicationCore() {
 
   let source = removeObsoleteAgentViewRestriction(await response.text());
   source = removeLegacyTableWidthOwnership(source);
+  source = replaceCoreSourceIfPresent(
+    source,
+    ['const contractColumns = ["overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division"];'],
+    ['const contractColumns = ["overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share"];'],
+    "Contracts column order",
+  );
   source = source.replaceAll(
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
