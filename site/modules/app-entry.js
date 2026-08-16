@@ -69,6 +69,7 @@ function loadClassicScript(path) {
   const existingPromise = runtimeLoadPromises.get(normalizedPath);
   if (existingPromise) return existingPromise;
 
+  /** @type {Promise<void>} */
   const loader = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = assetUrl(normalizedPath);
@@ -269,12 +270,14 @@ function executeApplicationCore(path, source) {
   script.remove();
 }
 
+/** @returns {Promise<string>} */
 async function fetchApplicationCoreSource(path) {
   const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
   if (!response.ok) throw new Error(`Could not load ${path}.`);
   return response.text();
 }
 
+/** @returns {Promise<{path: string, source: string}>} */
 async function prepareApplicationCore() {
   const cachedSource = cachedApplicationCore();
   if (cachedSource) return { path: PREBUILT_CORE_PATH, source: cachedSource };
@@ -299,6 +302,7 @@ async function prepareApplicationCore() {
   return { path: SOURCE_CORE_PATH, source };
 }
 
+/** @param {Promise<{path: string, source: string}> | null} [preparedCore] */
 async function loadApplicationCore(preparedCore = null) {
   const prepared = await (preparedCore || prepareApplicationCore());
   executeApplicationCore(prepared.path, prepared.source);
