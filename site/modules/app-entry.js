@@ -123,7 +123,6 @@ const CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/global-search-runtime.js",
   "/watchlist-ui-runtime.js",
   "/table-loading-runtime.js",
-  "/table-blank-row-guard-runtime.js",
 ]);
 
 const EVALUATION_RUNTIME_SCRIPTS = Object.freeze([
@@ -140,6 +139,7 @@ const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-reload-bootstrap-runtime.js",
   "/database-stats-runtime.js",
   "/database-stats-state-runtime.js",
+  "/database-stats-custom-filter-runtime.js",
 ]);
 
 const CHANGELOG_RUNTIME_SCRIPTS = Object.freeze([
@@ -153,7 +153,6 @@ const SPECIALIZED_RUNTIME_SCRIPTS = Object.freeze([
 ]);
 
 const LATE_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-custom-filter-runtime.js",
   "/selection-startup-reset-runtime.js",
   "/watchlist-myplayers-route-runtime.js",
   "/selection-stack-runtime.js",
@@ -180,6 +179,9 @@ function deferredRuntimeScripts(criticalScripts) {
   const critical = new Set(criticalScripts);
   return SPECIALIZED_RUNTIME_SCRIPTS.filter((path) => !critical.has(path));
 }
+
+const initialCriticalRuntimeScripts = Object.freeze(criticalRuntimeScripts());
+initialCriticalRuntimeScripts.forEach(preloadClassicScript);
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
@@ -595,13 +597,10 @@ function executeApplicationCore(path, source) {
   script.remove();
 }
 
-async function loadApplicationCore() {
+async function prepareApplicationCore() {
   const path = "/modules/app-core.js";
   const cachedSource = cachedApplicationCore();
-  if (cachedSource) {
-    executeApplicationCore(path, cachedSource);
-    return;
-  }
+  if (cachedSource) return { path, source: cachedSource };
 
   const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
   if (!response.ok) {
@@ -624,7 +623,12 @@ async function loadApplicationCore() {
   source = normalizeWatchlistViewAuthority(source);
   source = scopeProgressionPermissionToProgressionPage(source);
   cacheApplicationCore(source);
-  executeApplicationCore(path, source);
+  return { path, source };
+}
+
+async function loadApplicationCore(preparedCore = null) {
+  const prepared = await (preparedCore || prepareApplicationCore());
+  executeApplicationCore(prepared.path, prepared.source);
 }
 
 function showStartupError(error) {
@@ -726,11 +730,12 @@ async function start() {
   window.__mflRelease = release;
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 
-  await responsiveStylesReady;
   installApiFetchPolicy();
-
-  const criticalScripts = criticalRuntimeScripts();
+  const criticalScripts = initialCriticalRuntimeScripts;
   const deferredScripts = deferredRuntimeScripts(criticalScripts);
+  const preparedCorePromise = prepareApplicationCore();
+
+  await responsiveStylesReady;
   await loadScriptGroup(criticalScripts);
 
   if (changelogStartup) {
@@ -738,7 +743,7 @@ async function start() {
     if (changelogWindow.__mflChangelogHistoryReady) await changelogWindow.__mflChangelogHistoryReady;
   }
 
-  await loadApplicationCore();
+  await loadApplicationCore(preparedCorePromise);
 
   /* Route-irrelevant runtimes begin only after app-core has executed and started
    * the canonical route render. They are still guaranteed to be ready before
