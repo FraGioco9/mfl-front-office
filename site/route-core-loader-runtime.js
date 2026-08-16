@@ -8,9 +8,11 @@
    * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
+   * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    *   normalizePageName?: (pageName: string) => string,
+   *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
@@ -20,6 +22,9 @@
     runtimeWindow.__mflEnsureRouteCore = runtimeWindow.__mflRouteCoreRuntime.ensure;
     if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizePageName === "function") {
       runtimeWindow.__mflNormalizeRoutePageName = runtimeWindow.__mflRouteCoreRuntime.normalizePageName;
+    }
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest === "function") {
+      runtimeWindow.__mflInitialRouteRuntimeRequest = runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest;
     }
     return;
   }
@@ -136,6 +141,31 @@
     return page || "home";
   }
 
+  function initialRouteRuntimeRequest(pathname = location.pathname) {
+    const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
+    if (!path.startsWith("/")) return { pageName: "home", options: {} };
+
+    const segments = path.split("/");
+    const pageSegment = String(segments[1] || "").toLowerCase();
+    if (pageSegment === "evaluation" && segments.length === 2) return { pageName: "evaluation", options: {} };
+    if (pageSegment === "changelog" && segments.length === 2) return { pageName: "changelog", options: {} };
+    if (pageSegment === "database") {
+      if (segments.length === 3 && String(segments[2] || "").toLowerCase() === "stats") {
+        return { pageName: "database", options: { view: "stats" } };
+      }
+      return { pageName: "database", options: {} };
+    }
+    if (pageSegment === "mfl") return { pageName: "mfl", options: {} };
+    if (pageSegment === "progression") return { pageName: "progression", options: {} };
+    if (pageSegment === "watchlist") return { pageName: "watchlist", options: {} };
+    if (pageSegment === "my-players") return { pageName: "myplayers", options: {} };
+    if (pageSegment === "agents") return { pageName: "agents", options: {} };
+    if (pageSegment === "clubs" || pageSegment === "club") return { pageName: "club", options: {} };
+    if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
+    if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
+    return { pageName: "home", options: {} };
+  }
+
   function routeView(options = {}) {
     return String(options?.view || "").trim().toLowerCase();
   }
@@ -187,8 +217,13 @@
   }
 
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
+  runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
   runtimeWindow.__mflEnsureRouteCore = ensure;
-  runtimeWindow.__mflRouteCoreRuntime = Object.freeze({ ensure, normalizePageName: normalizeRoutePageName });
+  runtimeWindow.__mflRouteCoreRuntime = Object.freeze({
+    ensure,
+    normalizePageName: normalizeRoutePageName,
+    initialRouteRequest: initialRouteRuntimeRequest,
+  });
   installClubRouteGate();
 
   if (/^\/evaluation\/?$/i.test(location.pathname)) {
