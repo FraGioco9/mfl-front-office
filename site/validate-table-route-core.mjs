@@ -43,11 +43,13 @@ includes(sharedCore, "function buildOperatorSelect() {", "The shared core must r
 includes(sharedCore, "function ruleMatches() {", "The shared core must retain the filter matching facade.");
 includes(sharedCore, "function addFilterRule() {", "The shared core must retain the add-filter facade.");
 includes(sharedCore, "function restoreSavedTableState() {", "The shared core must retain the table-state restoration facade.");
+includes(sharedCore, "let __mflTableOpenSelectedPlayerLinksOwner = null;", "The shared core must keep a stable owner slot for the selected-links action.");
+includes(sharedCore, "function openSelectedPlayerLinks() {", "The shared core must retain the selected-links facade used by universal event binding.");
+includes(sharedCore, 'openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);', "Universal event binding must never reference an extracted Table action directly.");
 
 excludes(sharedCore, "function tableNextOverallPreciseValue(row) {", "Table sorting calculations must not remain in the shared core.");
 excludes(sharedCore, "function activeFilterCount() {", "Table filter UI must not remain in the shared core.");
 excludes(sharedCore, "function currentPageRows() {", "Table paging and selection must not remain in the shared core.");
-excludes(sharedCore, "function openSelectedPlayerLinks() {", "Table selection actions must not remain in the shared core.");
 excludes(sharedCore, "function showTableBusyState() {", "Table busy-state rendering must not remain in the shared core.");
 excludes(sharedCore, "function tableTitleForPage(pageName) {", "Table destination-shell ownership must not remain in the shared core.");
 
@@ -64,6 +66,8 @@ includes(tableCore, "function tableAddFilterRuleOwner(", "The Table chunk must o
 includes(tableCore, "function tableRestoreSavedTableStateOwner(", "The Table chunk must own table-state restoration.");
 includes(tableCore, "function tableApplyFiltersOwner(", "The Table chunk must own filtering.");
 includes(tableCore, "function tableRenderTableOwner(", "The Table chunk must own row rendering.");
+includes(tableCore, "function tableOpenSelectedPlayerLinksOwner(", "The Table chunk must own the selected-links action implementation.");
+includes(tableCore, "__mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;", "The Table chunk must activate the selected-links facade when loaded.");
 includes(tableCore, "async function tableSetViewOwner(", "The Table chunk must own view switching.");
 includes(tableCore, "function currentPageRows() {", "The Table chunk must own page slicing.");
 includes(tableCore, "function updateSelectionBar() {", "The Table chunk must own selection presentation.");
