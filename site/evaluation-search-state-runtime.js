@@ -5,11 +5,10 @@
   const LEGACY_RECENT_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
   const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
   const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";
+
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
   let destroyed = false;
-  let syncing = false;
-  let resultsObserver = null;
   let recentPrimePromise = null;
   let recentPayload = null;
   let recentPayloadSignature = "";
@@ -22,11 +21,6 @@
   const input = () => document.getElementById("evaluationSearchInput");
   const results = () => document.getElementById("evaluationSearchResults");
   const clearButton = () => document.getElementById("evaluationSearchClearButton");
-  const normalize = (value) => String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
 
   function selectedPlayerIdFromUrl() {
@@ -47,12 +41,12 @@
     button.hidden = !(playerSelected() || field.value.trim());
   }
 
-  const recentRule = () => {
+  function recentRule() {
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
     if (field.value.trim()) return originalRecentRule?.() || false;
     return active();
-  };
+  }
 
   function installRecentRule() {
     if (window.shouldShowEvaluationRecentResults !== recentRule) {
@@ -67,8 +61,9 @@
   }
 
   function resultName(button) {
-    if (!(button instanceof HTMLButtonElement)) return "";
-    return String(button.querySelector("strong")?.textContent || "").trim();
+    return button instanceof HTMLButtonElement
+      ? String(button.querySelector("strong")?.textContent || "").trim()
+      : "";
   }
 
   function storePlayerLabel(playerId, playerName) {
@@ -77,34 +72,13 @@
     if (!id || !name || name === `Player #${id}`) return;
     try {
       localStorage.setItem(`${PLAYER_LABEL_STORAGE_PREFIX}${id}`, name);
-    } catch {
-      // Evaluation continues normally when browser storage is unavailable.
-    }
+    } catch {}
   }
 
   function syncSelectedPlayerLabel(field = input()) {
     if (!(field instanceof HTMLInputElement)) return;
     const playerId = selectedPlayerIdFromUrl();
-    if (!playerId) return;
-    storePlayerLabel(playerId, field.value);
-  }
-
-  function rememberClickedSearch(button) {
-    if (!(button instanceof HTMLButtonElement)) return;
-    storePlayerLabel(resultId(button), resultName(button));
-  }
-
-  function showSearching(container) {
-    const existing = container.querySelector(":scope > .searchHint");
-    if (existing instanceof HTMLElement && existing.textContent === "Searching..." && container.children.length === 1) {
-      container.hidden = false;
-      return;
-    }
-    const hint = document.createElement("div");
-    hint.className = "searchHint";
-    hint.textContent = "Searching...";
-    container.replaceChildren(hint);
-    container.hidden = false;
+    if (playerId) storePlayerLabel(playerId, field.value);
   }
 
   function purgeLegacyLocalRecentState() {
@@ -115,18 +89,12 @@
         || !("recentEvaluationPlayerIds" in savedState)) return;
       delete savedState.recentEvaluationPlayerIds;
       localStorage.setItem(TABLE_STATE_STORAGE_KEY, JSON.stringify(savedState));
-    } catch {
-      // Supabase remains authoritative even when browser storage cannot be cleaned.
-    }
+    } catch {}
   }
 
   function onLegacyRecentStorage(event) {
     if (event.key !== LEGACY_RECENT_STORAGE_KEY) return;
-    try {
-      localStorage.removeItem(LEGACY_RECENT_STORAGE_KEY);
-    } catch {
-      // The core bridge already ignores this key when storage is unavailable.
-    }
+    try { localStorage.removeItem(LEGACY_RECENT_STORAGE_KEY); } catch {}
   }
 
   function recentEvaluationPlayerIds() {
@@ -149,9 +117,7 @@
     window.__mflEvaluationNextRecentIds = normalizedIds;
     try {
       window.eval("if (typeof state === 'object' && state) state.recentEvaluationPlayerIds = [...window.__mflEvaluationNextRecentIds];");
-    } catch {
-      // Supabase write still owns persistence; this only keeps the current UI in sync.
-    } finally {
+    } catch {} finally {
       delete window.__mflEvaluationNextRecentIds;
     }
     return normalizedIds;
@@ -172,9 +138,7 @@
         entry,
         ...current.filter((item) => String(item?.playerId || "") !== key),
       ].slice(0, 5);
-    } catch {
-      // The exact entry will be re-fetched from the database immediately below.
-    } finally {
+    } catch {} finally {
       delete window.__mflEvaluationClickedRecentId;
     }
   }
@@ -216,7 +180,6 @@
   function commitRecentPlayer(playerId) {
     const key = String(playerId || "").trim();
     if (!key) return;
-
     const currentIds = recentEvaluationPlayerIds();
     const nextIds = setRecentEvaluationPlayerIds([
       key,
@@ -226,7 +189,6 @@
     recentPayload = null;
     recentPayloadSignature = "";
     const sequence = ++recentWriteSequence;
-
     queueMicrotask(() => {
       if (destroyed || sequence !== recentWriteSequence) return;
       void primeRecentSearchData({ force: true });
@@ -257,7 +219,7 @@
 
   function installCoreRecentRowsBridge() {
     try {
-      window.eval(`(() => {
+      return Boolean(window.eval(`(() => {
         if (typeof recentEvaluationRows !== "function") return false;
         if (recentEvaluationRows.__mflSupabaseOnly) return true;
         const supabaseRecentRows = function() {
@@ -267,15 +229,16 @@
         Object.defineProperty(supabaseRecentRows, "__mflSupabaseOnly", { value: true });
         recentEvaluationRows = supabaseRecentRows;
         return true;
-      })()`);
+      })()`));
     } catch (error) {
-      console.warn("Could not isolate Supabase Evaluation recent rows.", error);
+      console.warn("Could not install Evaluation recent-row ownership.", error);
+      return false;
     }
   }
 
   function installEmptyPlayerSearchBridge() {
     try {
-      window.eval(`(() => {
+      return Boolean(window.eval(`(() => {
         if (typeof requestDatabaseSearch !== "function") return false;
         if (requestDatabaseSearch.__mflEvaluationSupabaseOnly) return true;
         const originalRequestDatabaseSearch = requestDatabaseSearch;
@@ -291,15 +254,16 @@
         Object.defineProperty(supabaseOnlyRequestDatabaseSearch, "__mflEvaluationSupabaseOnly", { value: true });
         requestDatabaseSearch = supabaseOnlyRequestDatabaseSearch;
         return true;
-      })()`);
+      })()`));
     } catch (error) {
-      console.warn("Could not isolate empty Evaluation searches from generic recents.", error);
+      console.warn("Could not isolate empty Evaluation searches.", error);
+      return false;
     }
   }
 
   function installRecentWriteBridge() {
     try {
-      window.eval(`(() => {
+      return Boolean(window.eval(`(() => {
         if (typeof rememberEvaluationResult !== "function") return false;
         if (rememberEvaluationResult.__mflSupabaseImmediate) return true;
         const originalRememberEvaluationResult = rememberEvaluationResult;
@@ -311,33 +275,43 @@
         Object.defineProperty(supabaseImmediateRememberEvaluationResult, "__mflSupabaseImmediate", { value: true });
         rememberEvaluationResult = supabaseImmediateRememberEvaluationResult;
         return true;
-      })()`);
+      })()`));
     } catch (error) {
-      console.warn("Could not make Evaluation recent writes immediate.", error);
+      console.warn("Could not install Evaluation recent-write ownership.", error);
+      return false;
     }
   }
 
+  function installCoreBridges() {
+    installRecentRule();
+    installCoreRecentRowsBridge();
+    installEmptyPlayerSearchBridge();
+    installRecentWriteBridge();
+  }
+
   function publishRecentPayload(payload) {
-    const entries = buildRecentEntries(payload);
-    window[RECENT_ENTRIES_KEY] = entries;
+    window[RECENT_ENTRIES_KEY] = buildRecentEntries(payload);
     installCoreRecentRowsBridge();
   }
 
   function renderEmptySearchFromCore() {
+    if (!active()) return;
+    const field = input();
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
     try {
       if (typeof window.renderEvaluationSearchResults === "function") {
         window.renderEvaluationSearchResults();
-        return;
+      } else {
+        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
       }
-      window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
     }
+    syncClearButton(field);
   }
 
   async function fetchRecentEvaluationPayload(ids) {
     if (!ids.length) return { columns: [], rows: [] };
-
     const payloads = await Promise.all(ids.map(async (id) => {
       const url = new URL("/api/data", window.location.origin);
       url.searchParams.set("mode", "search");
@@ -345,10 +319,7 @@
       url.searchParams.set("q", id);
       url.searchParams.set("limit", "5");
       try {
-        const response = await fetch(url.toString(), {
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        });
+        const response = await fetch(url.toString(), { cache: "no-store", headers: { Accept: "application/json" } });
         return response.ok ? response.json() : null;
       } catch {
         return null;
@@ -367,17 +338,12 @@
       const exact = payloadRows.find((row) => Array.isArray(row) && String(row[idIndex]) === expectedId);
       if (exact) rowsById.set(expectedId, exact);
     });
-
-    return {
-      columns,
-      rows: ids.map((id) => rowsById.get(id)).filter(Boolean),
-    };
+    return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
   }
 
   function primeRecentSearchData({ force = false } = {}) {
     const ids = recentEvaluationPlayerIds();
     const signature = ids.join(",");
-
     if (!force && recentPayload && recentPayloadSignature === signature) {
       publishRecentPayload(recentPayload);
       renderEmptySearchFromCore();
@@ -404,113 +370,58 @@
     return recentPrimePromise;
   }
 
-  function sync() {
-    if (destroyed || syncing || !active()) return;
-    const field = input();
-    const container = results();
-    if (!(field instanceof HTMLInputElement) || !(container instanceof HTMLElement)) return;
-
-    syncing = true;
-    installRecentRule();
-    installCoreRecentRowsBridge();
-    installEmptyPlayerSearchBridge();
-    installRecentWriteBridge();
-    syncSelectedPlayerLabel(field);
-    syncClearButton(field);
-
-    const query = normalize(field.value);
-    if (query && document.documentElement.dataset.evaluationSearchQueryPending === query) {
-      showSearching(container);
-    } else if (!query) {
-      const ids = recentEvaluationPlayerIds();
-      const signature = ids.join(",");
-      if (recentPayload && recentPayloadSignature === signature) {
-        publishRecentPayload(recentPayload);
-        renderEmptySearchFromCore();
-      } else {
-        void primeRecentSearchData();
-      }
-    }
-
-    requestAnimationFrame(() => { syncing = false; });
-  }
-
   function restoreEmptyRecentResults(force = false) {
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
-    return primeRecentSearchData({ force }).finally(() => queueMicrotask(sync));
+    installCoreBridges();
+    return primeRecentSearchData({ force });
   }
 
-  function onReady() {
-    void restoreEmptyRecentResults(true);
+  function sync() {
+    if (destroyed || !active()) return;
+    installCoreBridges();
+    const field = input();
+    if (!(field instanceof HTMLInputElement)) return;
+    syncSelectedPlayerLabel(field);
+    syncClearButton(field);
+    if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
   function onBlur(event) {
-    if (event.target !== input()) return;
     const field = input();
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    syncSelectedPlayerLabel(field);
     syncClearButton(field);
-
-    const container = results();
-    if (!(container instanceof HTMLElement)) return;
-    if (event.relatedTarget instanceof Node && container.contains(event.relatedTarget)) return;
-
-    if (!field.value.trim()) {
-      void restoreEmptyRecentResults();
-    }
+    if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
   function onKeyUp(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncClearButton(field);
-    if (field.value.trim()) return;
-    void restoreEmptyRecentResults();
+    if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
   function onClick(event) {
     if (!(event.target instanceof Element)) return;
-
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      void restoreEmptyRecentResults(true);
+      queueMicrotask(() => void restoreEmptyRecentResults(true));
       return;
     }
 
     const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");
     if (!(result instanceof HTMLButtonElement) || result.disabled) return;
-    rememberClickedSearch(result);
+    storePlayerLabel(resultId(result), resultName(result));
   }
 
-  function installObserver() {
-    const container = results();
-    const button = clearButton();
-    if (!(container instanceof HTMLElement)) return;
-
-    resultsObserver = new MutationObserver(() => {
-      if (destroyed || syncing) return;
-      const field = input();
-      if (!(field instanceof HTMLInputElement)) return;
-
-      syncClearButton(field);
-
-      if (!field.value.trim()) {
-        queueMicrotask(sync);
-        return;
-      }
-
-      syncSelectedPlayerLabel(field);
-    });
-    resultsObserver.observe(container, { childList: true, attributes: true, attributeFilter: ["hidden"] });
-    if (button instanceof HTMLButtonElement) {
-      resultsObserver.observe(button, { attributes: true, attributeFilter: ["hidden"] });
-    }
+  function onReady() {
+    installCoreBridges();
+    void restoreEmptyRecentResults(true);
   }
 
   purgeLegacyLocalRecentState();
-  installRecentRule();
-  installCoreRecentRowsBridge();
-  installEmptyPlayerSearchBridge();
-  installRecentWriteBridge();
+  installCoreBridges();
   syncClearButton();
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -519,14 +430,10 @@
   window.addEventListener("mfl:evaluation-ready", onReady);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  installObserver();
   void restoreEmptyRecentResults(true);
-  sync();
 
   function destroy() {
     destroyed = true;
-    resultsObserver?.disconnect();
-    resultsObserver = null;
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
