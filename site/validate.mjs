@@ -205,15 +205,14 @@ includes(indexHtml, "data-mfl-responsive-layout=\"true\"", "responsive.css must 
 includes(indexHtml, "<colgroup id=\"tableColGroup\"></colgroup>", "Shared player table shell must stay permanent in index.html.");
 includes(indexHtml, "id=\"evaluationDiscountRate\"", "Evaluation must keep a permanent discount-rate placeholder.");
 
-const vercel = JSON.parse(await readSite("vercel.json"));
-const cacheHeaders = new Map((vercel.headers || []).map((rule) => [rule.source, rule.headers?.find((header) => header.key === "Cache-Control")?.value]));
-for (const source of ["/(.*\\.css)", "/release.json"]) {
-  invariant(cacheHeaders.get(source) === "no-store, max-age=0", `${source} must use the no-store cache policy.`);
-}
-const jsNoStoreRule = (vercel.headers || []).find((rule) => rule.source === "/(.*\\.js)" && rule.missing?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
-invariant(jsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Unversioned JavaScript must retain the no-store cache policy.");
-const coreCacheRule = (vercel.headers || []).find((rule) => rule.source === "/modules/app-core-runtime.js" && rule.has?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
-invariant(coreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "The versioned prebuilt application core must use immutable browser caching.");
+const vercel = await readSite("vercel.mjs");
+includes(vercel, 'process.env.VERCEL_ENV === "development"', "Vercel configuration must distinguish local development from deployments.");
+includes(vercel, 'source: "/(.*\\\\.js)"', "Vercel configuration must retain the JavaScript cache rule.");
+includes(vercel, 'missing: [{ type: "query", key: "mfl_core" }]', "Deployment JavaScript caching must retain the mfl_core missing condition.");
+includes(vercel, 'has: [{ type: "query", key: "mfl_core" }]', "Deployment application-core caching must retain the mfl_core presence condition.");
+includes(vercel, 'value: "public, max-age=31536000, immutable"', "The versioned prebuilt application core must use immutable browser caching in deployments.");
+includes(vercel, 'value: "no-store, max-age=0"', "Local and unversioned assets must retain the no-store cache policy.");
+await mustNotExist(resolve(siteRoot, "vercel.json"), "Static vercel.json must stay removed so local development does not parse unsupported has/missing rules.");
 
 const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
