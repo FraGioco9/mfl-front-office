@@ -524,26 +524,79 @@
   }
 
   function loadBootstrapRuntime(path) {
-    if (document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`)) return;
+    return new Promise((resolve, reject) => {
+      if (path === "/table-width-runtime.js" && window.__mflTableWidthRuntime?.canonical === true) {
+        resolve();
+        return;
+      }
+      const existing = document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`);
+      if (existing) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = path;
+      script.async = false;
+      script.dataset.mflBootstrapRuntime = path;
+      script.addEventListener("load", () => resolve(), { once: true });
+      script.addEventListener("error", () => reject(new Error(`Could not load ${path}.`)), { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  function normalizeBootstrapCoreWidthOwnership(source) {
+    let normalized = String(source || "").replace(/\r\n?/g, "\n");
+    normalized = normalized.replace('  const MOBILE_TABLE_MIN_WIDTH = 1240;\n', "");
+
+    const metaStart = normalized.indexOf("  const STATIC_TABLE_COLUMN_META = Object.freeze({");
+    const percentageStart = normalized.indexOf("  const STATIC_TABLE_COLUMN_PERCENTAGES = Object.freeze({", metaStart);
+    if (metaStart >= 0 && percentageStart > metaStart) {
+      const meta = normalized.slice(metaStart, percentageStart)
+        .replace(/,\s*width:\s*\d+(?:\.\d+)?/g, "");
+      normalized = `${normalized.slice(0, metaStart)}${meta}${normalized.slice(percentageStart)}`;
+    }
+
+    const mapsStart = normalized.indexOf("  const STATIC_TABLE_COLUMN_PERCENTAGES = Object.freeze({");
+    const mapsEnd = normalized.indexOf("\n\n  /** @type", mapsStart);
+    if (mapsStart >= 0 && mapsEnd > mapsStart) {
+      normalized = `${normalized.slice(0, mapsStart)}${normalized.slice(mapsEnd + 2)}`;
+    }
+
+    const helpersStart = normalized.indexOf("  function staticTableColumnPercentage(");
+    const headerStart = normalized.indexOf("  function primeStaticTableHeader(", helpersStart);
+    if (helpersStart >= 0 && headerStart > helpersStart) {
+      normalized = `${normalized.slice(0, helpersStart)}  function applyStaticSharedTableWidths() {\n    window.__mflTableWidthRuntime?.apply?.();\n  }\n\n${normalized.slice(headerStart)}`;
+    }
+
+    return normalized;
+  }
+
+  async function loadBootstrapCore() {
+    const response = await fetch("/bootstrap-core.js", { cache: "no-store" });
+    if (!response.ok) throw new Error("Could not load /bootstrap-core.js.");
+    const source = normalizeBootstrapCoreWidthOwnership(await response.text());
     const script = document.createElement("script");
-    script.src = path;
-    script.async = false;
-    script.dataset.mflBootstrapRuntime = path;
+    script.dataset.mflBootstrapRuntime = "/bootstrap-core.js";
+    script.textContent = `${source}\n//# sourceURL=/bootstrap-core.js`;
     document.head.appendChild(script);
+    script.remove();
   }
 
   syncBootstrapFirstPaint();
-  loadBootstrapRuntime("/player-loading-runtime.js");
-  loadBootstrapRuntime("/dropdowns-runtime.js");
-  loadBootstrapRuntime("/club-squad-route-runtime.js");
-  loadBootstrapRuntime("/filter-controls-runtime.js");
-
-  const core = document.createElement("script");
-  core.src = "/bootstrap-core.js";
-  core.async = false;
-  core.addEventListener("load", syncBootstrapFirstPaint, { once: true });
-  core.addEventListener("error", () => {
-    document.documentElement.dataset.mflReady = "error";
-  }, { once: true });
-  document.head.appendChild(core);
+  void (async () => {
+    try {
+      await loadBootstrapRuntime("/table-width-runtime.js");
+      await Promise.all([
+        loadBootstrapRuntime("/player-loading-runtime.js"),
+        loadBootstrapRuntime("/dropdowns-runtime.js"),
+        loadBootstrapRuntime("/club-squad-route-runtime.js"),
+        loadBootstrapRuntime("/filter-controls-runtime.js"),
+      ]);
+      await loadBootstrapCore();
+      syncBootstrapFirstPaint();
+    } catch (error) {
+      document.documentElement.dataset.mflReady = "error";
+      console.error("Could not initialize MFL Front Office bootstrap.", error);
+    }
+  })();
 })();

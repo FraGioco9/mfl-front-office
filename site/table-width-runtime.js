@@ -1,6 +1,11 @@
 (() => {
   "use strict";
 
+  if (window.__mflTableWidthRuntime?.canonical === true) {
+    window.__mflTableWidthRuntime.takeOwnership?.();
+    return;
+  }
+
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/|$)|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const MOBILE_LAYOUT = "(max-width: 900px)";
   const MOBILE_TABLE_WIDTH = 1560;
@@ -9,8 +14,6 @@
   const WIDTH_STYLE_SELECTOR = "#progressionPage .tableShell, #progressionPage .tableScroller, #progressionPage .tableScroller table, #progressionPage .tableScroller col, #progressionPage .tableScroller th, #progressionPage .tableScroller td";
   const COLUMN_GEOMETRY_PROPERTIES = ["width", "min-width", "max-width"];
 
-  // One canonical layout for every player table. Specific classes must precede
-  // their generic class (Overall before the other stat columns).
   const COLUMN_LAYOUT = Object.freeze([
     Object.freeze(["col-overall", 5.5]),
     Object.freeze(["col-select", 2.75]),
@@ -30,6 +33,10 @@
     Object.freeze(["col-owned-since", 10.5]),
     Object.freeze(["col-link", 2.5]),
   ]);
+  const TABLE_WIDTH_CONFIG = Object.freeze({
+    columnLayout: COLUMN_LAYOUT,
+    mobileTableWidth: MOBILE_TABLE_WIDTH,
+  });
 
   const SHARED_WIDTH = 68;
   const SIX_STATS_WIDTH = 32;
@@ -41,10 +48,12 @@
   }
 
   window.__mflTableWidthRuntime?.destroy?.();
+  window.__mflTableWidthConfig = TABLE_WIDTH_CONFIG;
 
   let observer = null;
   let frame = 0;
   let destroyed = false;
+  let applying = false;
   let widthHookInstalled = false;
 
   function isTableRoute() {
@@ -211,16 +220,21 @@
 
   function apply() {
     syncMobileFlag();
-    if (destroyed || !isTableRoute()) return false;
+    if (destroyed || applying || !isTableRoute()) return false;
     const elements = tableElements();
     if (!elements || elements.page.hidden) return false;
 
-    discardLegacyGeometry(elements);
-    const geometry = canonicalColumns(elements.table);
-    if (!geometry) return false;
-    return isMobile()
-      ? applyMobileLayout(elements, geometry)
-      : applyDesktopLayout(elements, geometry);
+    applying = true;
+    try {
+      discardLegacyGeometry(elements);
+      const geometry = canonicalColumns(elements.table);
+      if (!geometry) return false;
+      return isMobile()
+        ? applyMobileLayout(elements, geometry)
+        : applyDesktopLayout(elements, geometry);
+    } finally {
+      applying = false;
+    }
   }
 
   function installWidthHook() {
@@ -269,8 +283,8 @@
   function observe() {
     observer?.disconnect();
     observer = new MutationObserver((records) => {
-      if (!isTableRoute() || !shouldApplyForMutation(records)) return;
-      schedule();
+      if (applying || !isTableRoute() || !shouldApplyForMutation(records)) return;
+      apply();
     });
     observer.observe(document.documentElement, {
       childList: true,
@@ -306,6 +320,8 @@
   observe();
   bind();
   window.__mflTableWidthRuntime = Object.freeze({
+    canonical: true,
+    config: TABLE_WIDTH_CONFIG,
     columnLayout: COLUMN_LAYOUT,
     mobileTableWidth: MOBILE_TABLE_WIDTH,
     apply,

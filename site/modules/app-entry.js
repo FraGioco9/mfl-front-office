@@ -119,7 +119,6 @@ const EARLY_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-discount-rate-runtime.js",
   "/evaluation-discount-rate-ui-runtime.js",
   "/watchlist-ui-runtime.js",
-  "/table-width-runtime.js",
   "/table-loading-runtime.js",
   "/table-blank-row-guard-runtime.js",
   "/database-stats-reload-bootstrap-runtime.js",
@@ -219,6 +218,63 @@ function removeObsoleteAgentViewRestriction(source) {
 
   const before = normalized.slice(0, blockStart).replace(/\n+$/, "\n\n");
   return `${before}${normalized.slice(blockEnd)}`;
+}
+
+function removeLegacyTableWidthOwnership(source) {
+  let normalized = String(source || "").replace(/\r\n?/g, "\n");
+
+  const widthsStart = normalized.indexOf("const tableColumnWidths = {");
+  const joinedAgencyStart = normalized.indexOf("\nfunction joinedAgencyPages()", widthsStart);
+  if (widthsStart >= 0 && joinedAgencyStart > widthsStart) {
+    normalized = `${normalized.slice(0, widthsStart)}${normalized.slice(joinedAgencyStart + 1)}`;
+  }
+
+  const applyWidthStart = normalized.indexOf("function applyTableColWidth(");
+  const headerStart = normalized.indexOf("function buildHeader()", applyWidthStart);
+  if (applyWidthStart >= 0 && headerStart > applyWidthStart) {
+    const canonicalBuilder = `function buildTableColGroup() {\n  const fragment = document.createDocumentFragment();\n  const selectionCol = document.createElement("col");\n  selectionCol.className = "col-select";\n  fragment.appendChild(selectionCol);\n\n  currentViewColumns().forEach((column) => {\n    const col = document.createElement("col");\n    const columnClass = tableColumnClass(column);\n    if (columnClass) col.classList.add(...columnClass.split(" "));\n    fragment.appendChild(col);\n  });\n\n  tableColGroup.replaceChildren(fragment);\n  window.__mflTableWidthRuntime?.apply?.();\n}\n`;
+    normalized = `${normalized.slice(0, applyWidthStart)}${canonicalBuilder}${normalized.slice(headerStart)}`;
+  }
+
+  const percentageStart = normalized.indexOf("  const tableColumnPercentages = {");
+  const keepSidebarStart = normalized.indexOf("\n  function keepSidebarExpanded()", percentageStart);
+  if (percentageStart >= 0 && keepSidebarStart > percentageStart) {
+    normalized = `${normalized.slice(0, percentageStart)}${normalized.slice(keepSidebarStart + 1)}`;
+  }
+
+  const widthBlockStart = normalized.indexOf("/* Stable pinned layout and pre-reveal table widths */");
+  const nextBlockStart = normalized.indexOf("/* Layout-centered feedback and transition-free shared views */", widthBlockStart);
+  if (widthBlockStart >= 0 && nextBlockStart > widthBlockStart) {
+    normalized = `${normalized.slice(0, widthBlockStart)}${normalized.slice(nextBlockStart)}`;
+  }
+
+  normalized = normalized.replace(
+    '  let clubWidthUnlockTimer = null;\n  let clubWidthObserver = null;\n  let clubWidthLockStartedAt = 0;\n',
+    "",
+  );
+  const clubWidthStart = normalized.indexOf("  function rebuildClubColumns() {");
+  const clubStyleStart = normalized.indexOf('  const style = document.createElement("style");', clubWidthStart);
+  if (clubWidthStart >= 0 && clubStyleStart > clubWidthStart) {
+    normalized = `${normalized.slice(0, clubWidthStart)}${normalized.slice(clubStyleStart)}`;
+  }
+
+  const staleWidthOwners = [
+    "tableColumnWidths",
+    "tableColumnPercentages",
+    "applyTableColWidth",
+    "applySharedTableWidths",
+    "buildHeaderWithSharedWidths",
+    "buildTableColGroupWithSharedWidths",
+    "renderTableWithSharedWidths",
+    "updateViewButtonsWithSharedWidths",
+    "clubWidthHardLock",
+  ];
+  const remainingOwner = staleWidthOwners.find((name) => normalized.includes(name));
+  if (remainingOwner) {
+    throw new Error(`Legacy table width owner still present after normalization: ${remainingOwner}.`);
+  }
+
+  return normalized;
 }
 
 function normalizeContextualAgentNavigation(source) {
@@ -474,6 +530,7 @@ async function loadApplicationCore() {
   }
 
   let source = removeObsoleteAgentViewRestriction(await response.text());
+  source = removeLegacyTableWidthOwnership(source);
   source = source.replaceAll(
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
