@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.1";
+  const STATIC_RELEASE_VERSION = "1.124.2";
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   function loadRuntime(path) {
