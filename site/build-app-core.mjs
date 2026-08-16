@@ -57,12 +57,23 @@ await Promise.all([
   writeFile(walletRuntimePath, `${walletBanner}${walletRuntime}\n`, "utf8"),
   writeFile(watchlistRuntimePath, `${watchlistBanner}${watchlistRuntime}\n`, "utf8"),
 ]);
-console.log(`Generated ${runtimePath} (${Buffer.byteLength(normalized, "utf8")} normalized bytes).`);
-console.log(`Generated ${evaluationRuntimePath} (${Buffer.byteLength(evaluationRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${mflStatsRuntimePath} (${Buffer.byteLength(mflStatsRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${clubRuntimePath} (${Buffer.byteLength(clubRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${settingsRuntimePath} (${Buffer.byteLength(settingsRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${playerRuntimePath} (${Buffer.byteLength(playerRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${tableRuntimePath} (${Buffer.byteLength(tableRuntime, "utf8")} route-owned bytes).`);
-console.log(`Generated ${walletRuntimePath} (${Buffer.byteLength(walletRuntime, "utf8")} action-owned bytes).`);
-console.log(`Generated ${watchlistRuntimePath} (${Buffer.byteLength(watchlistRuntime, "utf8")} route-owned bytes).`);
+
+const generatedArtifacts = [
+  [runtimePath, normalized, "normalized"],
+  [evaluationRuntimePath, evaluationRuntime, "route-owned"],
+  [mflStatsRuntimePath, mflStatsRuntime, "route-owned"],
+  [clubRuntimePath, clubRuntime, "route-owned"],
+  [settingsRuntimePath, settingsRuntime, "route-owned"],
+  [playerRuntimePath, playerRuntime, "route-owned"],
+  [tableRuntimePath, tableRuntime, "route-owned"],
+  [walletRuntimePath, walletRuntime, "action-owned"],
+  [watchlistRuntimePath, watchlistRuntime, "route-owned"],
+];
+
+if (process.env.MFL_BUILD_VERBOSE === "1") {
+  generatedArtifacts.forEach(([path, artifact, ownership]) => {
+    console.log(`Generated ${path} (${Buffer.byteLength(artifact, "utf8")} ${ownership} bytes).`);
+  });
+} else {
+  console.log(`Generated application core: 1 shared + ${generatedArtifacts.length - 1} lazy chunks.`);
+}
