@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.3";
+  const STATIC_RELEASE_VERSION = "1.124.4";
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
   document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
@@ -48,13 +48,12 @@
   void (async () => {
     try {
       /* async=false keeps these classic scripts in insertion/execution order,
-       * while requesting all five immediately removes the bootstrap-core
+       * while requesting all four immediately removes the bootstrap-core
        * network waterfall behind the prerequisite runtimes. */
       await Promise.all([
         loadRuntime("/table-width-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
         loadRuntime("/filter-controls-runtime.js"),
-        loadRuntime("/core-response-cache-runtime.js"),
         loadRuntime("/bootstrap-core.js"),
       ]);
     } catch (error) {
