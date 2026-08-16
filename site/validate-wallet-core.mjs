@@ -39,6 +39,7 @@ excludes(sharedCore, "function walletAccessNonce() {", "Wallet account-proof non
 excludes(sharedCore, "function walletAccountProofFromUser(user, accountProof) {", "Wallet account-proof parsing must not remain in shared startup core.");
 excludes(sharedCore, "function configureFlowWallet(", "Flow wallet configuration must not remain in shared startup core.");
 excludes(sharedCore, "async function ensureFlowWallet() {", "Flow module loading must not remain in shared startup core.");
+excludes(sharedCore, "void ensureFlowWallet();", "Application startup must not call a Wallet-chunk-only Flow owner before the chunk is loaded.");
 excludes(sharedCore, "async function dapperAuthnService(fcl) {", "Dapper discovery must not remain in shared startup core.");
 excludes(sharedCore, "async function authenticateWithDapper(fcl) {", "Dapper authentication must not remain in shared startup core.");
 excludes(sharedCore, "function walletLinkErrorMessage(error) {", "Wallet opt-in error handling must not remain in shared startup core.");
