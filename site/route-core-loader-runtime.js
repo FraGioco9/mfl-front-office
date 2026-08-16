@@ -67,6 +67,19 @@
     return version ? `${path}?mfl_core=${encodeURIComponent(version)}` : path;
   }
 
+  function preloadRouteCore(pageName) {
+    const path = ROUTE_CORE_PATHS[String(pageName || "").trim().toLowerCase()];
+    if (!path) return;
+    const href = assetUrl(versionedPath(path));
+    if (document.querySelector(`link[data-mfl-route-core-preload="${path}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "script";
+    link.href = href;
+    link.dataset.mflRouteCorePreload = path;
+    document.head.appendChild(link);
+  }
+
   function executeRouteCore(path, source) {
     const script = document.createElement("script");
     script.dataset.mflRouteCore = path;
@@ -252,6 +265,6 @@
   installClubRouteGate();
 
   if (/^\/evaluation\/?$/i.test(location.pathname)) {
-    void ensure("evaluation").catch((error) => console.warn("Could not prime the Evaluation application core.", error));
+    preloadRouteCore("evaluation");
   }
 })();
