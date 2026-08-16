@@ -58,22 +58,19 @@ await Promise.all([
   writeFile(watchlistRuntimePath, `${watchlistBanner}${watchlistRuntime}\n`, "utf8"),
 ]);
 
-const generatedArtifacts = [
-  [runtimePath, normalized, "normalized"],
-  [evaluationRuntimePath, evaluationRuntime, "route-owned"],
-  [mflStatsRuntimePath, mflStatsRuntime, "route-owned"],
-  [clubRuntimePath, clubRuntime, "route-owned"],
-  [settingsRuntimePath, settingsRuntime, "route-owned"],
-  [playerRuntimePath, playerRuntime, "route-owned"],
-  [tableRuntimePath, tableRuntime, "route-owned"],
-  [walletRuntimePath, walletRuntime, "action-owned"],
-  [watchlistRuntimePath, watchlistRuntime, "route-owned"],
-];
-
 if (process.env.MFL_BUILD_VERBOSE === "1") {
+  const generatedArtifacts = [
+    [runtimePath, normalized, "normalized"],
+    [evaluationRuntimePath, evaluationRuntime, "route-owned"],
+    [mflStatsRuntimePath, mflStatsRuntime, "route-owned"],
+    [clubRuntimePath, clubRuntime, "route-owned"],
+    [settingsRuntimePath, settingsRuntime, "route-owned"],
+    [playerRuntimePath, playerRuntime, "route-owned"],
+    [tableRuntimePath, tableRuntime, "route-owned"],
+    [walletRuntimePath, walletRuntime, "action-owned"],
+    [watchlistRuntimePath, watchlistRuntime, "route-owned"],
+  ];
   generatedArtifacts.forEach(([path, artifact, ownership]) => {
     console.log(`Generated ${path} (${Buffer.byteLength(artifact, "utf8")} ${ownership} bytes).`);
   });
-} else {
-  console.log(`Generated application core: 1 shared + ${generatedArtifacts.length - 1} lazy chunks.`);
 }
