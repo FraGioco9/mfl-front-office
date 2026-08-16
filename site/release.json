@@ -1,4 +1,4 @@
 {
-  "version": "1.124.42",
-  "description": "Prime page titles, quickfilters, and pager state before first paint"
+  "version": "1.124.43",
+  "description": "Stabilize first-paint route skeletons, quickfilters, and Player refresh"
 }
