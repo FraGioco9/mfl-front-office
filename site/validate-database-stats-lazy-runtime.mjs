@@ -8,6 +8,7 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const entry = await read("./modules/app-entry.js");
+const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 
 const bridgeBlock = entry.match(/const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
@@ -42,8 +43,13 @@ includes(
 );
 includes(
   entry,
-  'if (/^\\/database\\/stats$/i.test(path)) return { pageName: "database", options: { view: "stats" } };',
-  "Direct Database Stats startup must preserve its explicit Stats runtime request.",
+  'Reflect.get(window, "__mflInitialRouteRuntimeRequest")',
+  "Direct Database Stats startup must resolve through the central startup classifier.",
+);
+includes(
+  routeCoreLoader,
+  'return { pageName: "database", options: { view: "stats" } };',
+  "The central startup classifier must preserve the direct Database Stats request.",
 );
 
 const renderStart = stateRuntime.indexOf("async function renderStatsRoute(updateUrl = false) {");
