@@ -42,7 +42,7 @@ excludes(sharedCore, "function playerTrainingKey(row) {", "Player training state
 excludes(sharedCore, "function playerAttributeColumns(row) {", "Player attribute configuration must not remain in the shared core.");
 excludes(sharedCore, "function nextOverallDetailHtml(row, column) {", "Player Next Overall card rendering must not remain in the shared core.");
 excludes(sharedCore, "function renderPlayerAttributePanel(row) {", "Player attribute-panel rendering must not remain in the shared core.");
-excludes(sharedCore, 'const playerName = formatCellValue(row, "name");', "Heavy Player page DOM construction must not remain in the shared core.");
+excludes(sharedCore, "const infoCardsData = [", "Heavy Player page DOM construction must not remain in the shared core.");
 
 includes(playerCore, "function renderPitch(row) {", "The Player chunk must own pitch rendering.");
 includes(playerCore, "function playerTrainingKey(row) {", "The Player chunk must own training state helpers.");
@@ -52,7 +52,7 @@ includes(playerCore, "function nextOverallDetailHtml(row, column) {", "The Playe
 includes(playerCore, "function renderPlayerAttributePanel(row) {", "The Player chunk must own attribute-panel rendering.");
 includes(playerCore, "function renderPlayerPageOwner(playerId) {", "The Player chunk must own the heavy Player page renderer implementation.");
 includes(playerCore, "window.__mflRenderPlayerPageOwner = renderPlayerPageOwner;", "The Player chunk must install its renderer behind the shared facade.");
-includes(playerCore, 'const playerName = formatCellValue(row, "name");', "The Player chunk must contain Player page DOM construction.");
+includes(playerCore, "const infoCardsData = [", "The Player chunk must contain Player page DOM construction.");
 excludes(playerCore, "function primaryPreciseOverall(row) {", "Shared overall math must not become Player-only.");
 excludes(playerCore, "async function copyPlayerId(id) {", "Shared copy behavior must not become Player-only.");
 excludes(playerCore, "function renderPlayerPage(playerId) {", "The stable Player renderer name must remain shared for existing wrappers and refresh owners.");
