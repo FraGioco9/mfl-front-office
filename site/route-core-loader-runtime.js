@@ -3,6 +3,7 @@
 
   /** @type {Window & {
    * __mflReleaseVersion?: string,
+   * __mflInteractionBusy?: { installCoreBridge?: () => void },
    * __mflEnsureRouteCore?: (pageName: string) => Promise<void>,
    * __mflRouteCoreRuntime?: { ensure?: (pageName: string) => Promise<void> },
    * }} */
@@ -72,12 +73,12 @@
 
     try {
       await loadExternalRouteCore(path);
-      return;
     } catch (error) {
       console.warn(`Prebuilt ${pageName} application core is unavailable; using source fallback.`, error);
+      await loadFallbackRouteCore(pageName, path);
     }
 
-    await loadFallbackRouteCore(pageName, path);
+    runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   }
 
   function ensure(pageName) {

@@ -42,8 +42,17 @@ export function splitApplicationCoreRuntime(source) {
   extracted = extractRequiredSection(
     core,
     "function normalizeSharedEvaluationPayload(payload) {",
+    "let evaluationLoadFloatingTooltip = null;",
+    "Evaluation save and share services",
+  );
+  core = extracted.core;
+  evaluationParts.push(extracted.chunk);
+
+  extracted = extractRequiredSection(
+    core,
+    "function renderSavedEvaluationList(rows) {",
     "async function openSavedEvaluationsModal() {",
-    "Evaluation save, share, and saved-list services",
+    "Evaluation saved-list renderer",
   );
   core = extracted.core;
   evaluationParts.push(extracted.chunk);
