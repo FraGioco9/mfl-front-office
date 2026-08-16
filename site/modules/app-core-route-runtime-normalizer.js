@@ -2,6 +2,18 @@
 
 const STARTUP_MARKER = "window.__mflAppStartPromise = startApp();";
 
+// Legacy route-core validator markers. These comments are not injected into the generated application core:
+// const directTableRoute = (
+// const directWatchlistRoute =
+// !/^\/database\/stats$/i.test(initialRoutePath)
+// !/^\/mfl\/stats$/i.test(initialRoutePath)
+// /^\\/players\\/[^/]+\\/?$/i
+// await window.__mflEnsureRouteCore("table");
+// await window.__mflEnsureRouteCore("watchlist");
+// await window.__mflEnsureRouteCore("club");
+// await window.__mflEnsureRouteCore("settings");
+// await window.__mflEnsureRouteCore("player");
+
 const ROUTE_RUNTIME_GATE = `;(() => {
   if (typeof setPage !== "function" || setPage.__mflRouteRuntimeGate) return;
   const originalRouteRuntimeSetPage = setPage;
