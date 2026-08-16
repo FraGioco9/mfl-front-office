@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { normalizeApplicationCore } from "./modules/app-core-normalizer.js";
+import { normalizeBuiltApplicationCore } from "./modules/app-core-build-normalizer.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(siteRoot, "..");
@@ -74,34 +74,51 @@ excludes(bootstrapCore, "normalizeSingleRenderCore", "bootstrap-core must not re
 excludes(bootstrapCore, "installSingleRenderCoreTransform", "bootstrap-core must not install legacy fetch interception.");
 
 const buildCore = await readSite("build-app-core.mjs");
-includes(buildCore, "normalizeApplicationCore", "The core build must use the canonical normalizer.");
+includes(buildCore, "normalizeBuiltApplicationCore", "The core build must use the complete build-time normalizer.");
 includes(buildCore, "modules/app-core.js", "The core build must read app-core.js as its source.");
 includes(buildCore, "modules/app-core-runtime.js", "The core build must write the generated runtime artifact.");
 includes(buildCore, "Do not edit directly", "The generated core must carry an ownership banner.");
 
 const coreSource = await readSite("modules/app-core.js");
 const normalizerSource = await readSite("modules/app-core-normalizer.js");
-includes(normalizerSource, "export function normalizeApplicationCore(source)", "The application core normalizer must expose one canonical transform.");
-const normalizedCore = normalizeApplicationCore(coreSource).replace(/\s*$/, "");
+const tableEventNormalizerSource = await readSite("modules/app-core-table-events-normalizer.js");
+const buildNormalizerSource = await readSite("modules/app-core-build-normalizer.js");
+includes(normalizerSource, "export function normalizeApplicationCore(source)", "The base application core normalizer must expose its canonical transform.");
+includes(tableEventNormalizerSource, "export function normalizeTableEventDelegation(source)", "Table event delegation must be a build-time core transform.");
+includes(buildNormalizerSource, "normalizeTableEventDelegation(normalizeBaseApplicationCore(source))", "The build normalizer must apply table delegation after the base core transform.");
+const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\s*$/, "");
 invariant(normalizedCore.length > 300_000, "Canonical core normalization produced an unexpectedly small runtime.");
 invariant(normalizedCore !== coreSource.replace(/\s*$/, ""), "The canonical normalizer must still apply the required source migrations.");
 includes(normalizedCore, "const shellFirstTablePages = new Set();", "The generated core must keep destination shell-first rendering disabled.");
 includes(normalizedCore, "squad|contracts|attributes|current-season|all-time", "The generated core must own the canonical Club Squad route.");
 excludes(normalizedCore, "      renderIncrementalLoadingState(pageName, route);", "The generated core must not render a destination loading phase before canonical data.");
+includes(normalizedCore, "function copyDelegatedPlayerId(button, event)", "The generated core must own player-ID copying through table delegation.");
+includes(normalizedCore, 'tableBody?.addEventListener("click", (event) => {', "The generated core must have one delegated player-table click owner.");
+includes(normalizedCore, 'tableBody?.addEventListener("pointerover", (event) => {', "The generated core must delegate table tooltip entry.");
+includes(normalizedCore, 'selectionInput.dataset.playerId = String(playerId);', "Rendered selection controls must carry player identity instead of row closures.");
+includes(normalizedCore, 'nameLink.dataset.playerId = String(playerId);', "Rendered player links must carry player identity instead of row closures.");
+includes(normalizedCore, 'link.dataset.walletAddress = String(walletAddress || "");', "Rendered agent links must carry wallet identity instead of row closures.");
+includes(normalizedCore, "clubLink.dataset.clubId = clubId;", "Rendered Club links must carry Club identity instead of row closures.");
+excludes(normalizedCore, 'selectionInput.addEventListener("click", (event) => setPlayerSelected', "Rows must not allocate selection click closures.");
+excludes(normalizedCore, 'nameLink.addEventListener("click", (event) => {', "Rows must not allocate player navigation closures.");
+excludes(normalizedCore, 'noteIcon.addEventListener("mouseenter"', "Rows must not allocate note tooltip closures.");
+excludes(normalizedCore, 'markerElement.addEventListener("mouseenter"', "Rows must not allocate marker tooltip closures.");
+excludes(normalizedCore, 'link.addEventListener("mouseenter", () => showPlayerNoteTooltip(link));', "Rows must not allocate agent tooltip closures.");
+excludes(normalizedCore, 'clubLink.addEventListener("click", (event) => {', "Rows must not allocate Club navigation closures.");
 
 const generatedCore = await readOptionalSite("modules/app-core-runtime.js");
 if (generatedCore !== null) {
   const banner = "// Generated by build-app-core.mjs from modules/app-core.js. Do not edit directly.\n";
   invariant(generatedCore.startsWith(banner), "Generated app-core-runtime.js must carry the build ownership banner.");
-  invariant(generatedCore.slice(banner.length).replace(/\s*$/, "") === normalizedCore, "Generated app-core-runtime.js must exactly match normalizeApplicationCore(app-core.js).");
+  invariant(generatedCore.slice(banner.length).replace(/\s*$/, "") === normalizedCore, "Generated app-core-runtime.js must exactly match normalizeBuiltApplicationCore(app-core.js).");
 }
 
 const entry = await readSite("modules/app-entry.js");
 includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must prefer the build-time application core.");
 includes(entry, "const SOURCE_CORE_PATH = \"/modules/app-core.js\"", "app-entry.js must retain a source fallback for unprepared local environments.");
 includes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "app-entry.js must request the prebuilt core before normalization fallback.");
-includes(entry, "import(assetUrl(\"/modules/app-core-normalizer.js\"))", "app-entry.js must keep normalization only as a fallback.");
-includes(entry, "mfl-app-core-runtime:${entryRelease.version}:2", "The prebuilt core transition must use a new session-cache generation.");
+includes(entry, "import(assetUrl(\"/modules/app-core-normalizer.js\"))", "app-entry.js must keep base normalization only as a fallback.");
+includes(entry, "mfl-app-core-runtime:${entryRelease.version}:2", "The prebuilt core transition must use the current session-cache generation.");
 includes(entry, "\"/table-loading-runtime.js\"", "app-entry.js must load the canonical table-loading owner.");
 excludes(entry, "view-button-visibility-runtime", "app-entry.js must not restore deprecated view repair owners.");
 excludes(entry, "club-squad-route-runtime", "app-entry.js must not restore deprecated Club route repair owners.");
