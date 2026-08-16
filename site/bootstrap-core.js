@@ -185,7 +185,12 @@
 
   window.__mflInteractionBusy = createInteractionBusyController();
   const startupToken = window.__mflInteractionBusy.begin("startup");
+  let startupFinished = false;
+  let startupStateObserver = null;
   const finishStartup = async () => {
+    if (startupFinished) return;
+    startupFinished = true;
+    startupStateObserver?.disconnect();
     try {
       if (window.__mflAppStartPromise) await window.__mflAppStartPromise;
     } catch {}
@@ -194,6 +199,12 @@
     singleRenderStyle?.remove();
   };
   window.addEventListener("mfl:ready", finishStartup, { once: true });
+  startupStateObserver = new MutationObserver(() => {
+    if (document.documentElement.dataset.mflReady === "error") {
+      void finishStartup();
+    }
+  });
+  startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });
 
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
   const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
