@@ -1,4 +1,4 @@
 {
-  "version": "1.124.32",
-  "description": "Share one cached application-core fallback artifact build across startup and route chunks"
+  "version": "1.124.33",
+  "description": "Centralize table-route membership in the route-core loader"
 }
