@@ -1,4 +1,4 @@
 {
-  "version": "1.124.8",
-  "description": "Delegate player table interactions in the prebuilt application core"
+  "version": "1.124.9",
+  "description": "Load the prebuilt application core directly with release-keyed immutable caching"
 }
