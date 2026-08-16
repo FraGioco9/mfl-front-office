@@ -25,7 +25,8 @@ function renameRequiredTableOwner(source, functionName, ownerName) {
   throw new Error(`Could not delegate Table application core owner: ${functionName}.`);
 }
 
-const TABLE_FACADE_BLOCK = `let __mflTableBuildTableColGroupOwner = null;
+const TABLE_FACADE_BLOCK = `let __mflTableTitleForPageOwner = null;
+let __mflTableBuildTableColGroupOwner = null;
 let __mflTableBuildHeaderOwner = null;
 let __mflTableBuildOperatorSelectOwner = null;
 let __mflTableRuleMatchesOwner = null;
@@ -49,6 +50,14 @@ let __mflTableSetViewOwner = null;
 // nameLink.dataset.playerId = String(playerId);
 // link.dataset.walletAddress = String(walletAddress || "");
 // clubLink.dataset.clubId = clubId;
+
+function tableTitleForPage(pageName) {
+  if (typeof __mflTableTitleForPageOwner === "function") {
+    return __mflTableTitleForPageOwner.apply(this, arguments);
+  }
+  const fallback = Reflect.get(window, "__mflTableTitleForPageFallback");
+  return typeof fallback === "function" ? fallback(pageName, window.location.href) : "Progression";
+}
 
 function buildTableColGroup() {
   return typeof __mflTableBuildTableColGroupOwner === "function"
@@ -152,7 +161,8 @@ function setView() {
     : undefined;
 }`;
 
-const TABLE_OWNER_ASSIGNMENTS = `__mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
+const TABLE_OWNER_ASSIGNMENTS = `__mflTableTitleForPageOwner = tableTitleForPageOwner;
+__mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
 __mflTableBuildHeaderOwner = tableBuildHeaderOwner;
 __mflTableBuildOperatorSelectOwner = tableBuildOperatorSelectOwner;
 __mflTableRuleMatchesOwner = tableRuleMatchesOwner;
@@ -242,6 +252,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   core = `${core.slice(0, firstSectionStart)}${TABLE_FACADE_BLOCK}\n\n${core.slice(firstSectionStart)}`;
 
   let table = tableParts.join("\n\n").replace(/\s*$/, "");
+  table = renameRequiredTableOwner(table, "tableTitleForPage", "tableTitleForPageOwner");
   table = renameRequiredTableOwner(table, "buildTableColGroup", "tableBuildTableColGroupOwner");
   table = renameRequiredTableOwner(table, "buildHeader", "tableBuildHeaderOwner");
   table = renameRequiredTableOwner(table, "buildOperatorSelect", "tableBuildOperatorSelectOwner");
