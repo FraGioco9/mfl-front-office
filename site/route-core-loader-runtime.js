@@ -29,6 +29,7 @@
   });
   const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);
   const routeCorePromises = new Map();
+  let fallbackArtifactsPromise = null;
 
   function assetUrl(path) {
     return new URL(String(path || "").replace(/^\/+/, ""), `${location.origin}/`).href;
@@ -62,17 +63,30 @@
     });
   }
 
-  async function loadFallbackRouteCore(pageName, path) {
-    const normalizerPromise = import(assetUrl("/modules/app-core-build-normalizer.js"));
-    const sourcePromise = fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" });
-    const [normalizer, response] = await Promise.all([normalizerPromise, sourcePromise]);
-    if (!response.ok) throw new Error("Could not load the application core source fallback.");
-    if (typeof normalizer.normalizeBuiltApplicationCoreArtifacts !== "function") {
-      throw new Error("Application core artifact normalizer is unavailable.");
-    }
+  function loadFallbackApplicationCoreArtifacts() {
+    if (fallbackArtifactsPromise) return fallbackArtifactsPromise;
 
-    const rawSource = await response.text();
-    const artifacts = normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource);
+    fallbackArtifactsPromise = (async () => {
+      const normalizerPromise = import(assetUrl("/modules/app-core-build-normalizer.js"));
+      const sourcePromise = fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" });
+      const [normalizer, response] = await Promise.all([normalizerPromise, sourcePromise]);
+      if (!response.ok) throw new Error("Could not load the application core source fallback.");
+      if (typeof normalizer.normalizeBuiltApplicationCoreArtifacts !== "function") {
+        throw new Error("Application core artifact normalizer is unavailable.");
+      }
+
+      const rawSource = await response.text();
+      return normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource);
+    })().catch((error) => {
+      fallbackArtifactsPromise = null;
+      throw error;
+    });
+
+    return fallbackArtifactsPromise;
+  }
+
+  async function loadFallbackRouteCore(pageName, path) {
+    const artifacts = await loadFallbackApplicationCoreArtifacts();
     const source = String(artifacts?.routeChunks?.[pageName] || "").trim();
     if (!source) throw new Error(`The ${pageName} application core chunk is unavailable.`);
     executeRouteCore(path, source);
