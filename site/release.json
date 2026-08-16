@@ -1,4 +1,4 @@
 {
-  "version": "1.124.4",
-  "description": "Preload critical runtimes, overlap core preparation, and defer route-specific startup work"
+  "version": "1.124.5",
+  "description": "Lazy-load core normalization and remove bootstrap fetch interception"
 }
