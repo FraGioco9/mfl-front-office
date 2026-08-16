@@ -53,5 +53,20 @@ includes(
   "singleRenderStyle?.remove();",
   "bootstrap-core.js must remove the bootstrap-owned first-paint style when startup finishes.",
 );
+includes(
+  bootstrapCore,
+  "if (startupFinished) return;",
+  "Startup cleanup must be idempotent across success and error completion paths.",
+);
+includes(
+  bootstrapCore,
+  'if (document.documentElement.dataset.mflReady === "error")',
+  "The bootstrap busy controller must observe application startup failures.",
+);
+includes(
+  bootstrapCore,
+  'startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });',
+  "Application startup failure state must release the bootstrap-owned busy token.",
+);
 
 console.log("Bootstrap single-render ownership validation passed.");
