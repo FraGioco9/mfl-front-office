@@ -38,11 +38,7 @@ function normalizeReleaseOwnership(source) {
   const sharedFooterOwner = `  function setFooterVersion() {
     window.__mflStaticUiRuntime?.sync?.();
   }`;
-  if (!text.includes(legacyFooterOwner)) {
-    throw new Error("Could not locate the legacy application-core footer version owner.");
-  }
-  text = text.split(legacyFooterOwner).join(sharedFooterOwner);
-  return text;
+  return text.split(legacyFooterOwner).join(sharedFooterOwner);
 }
 
 function normalizeCompleteApplicationCore(source) {
@@ -50,8 +46,18 @@ function normalizeCompleteApplicationCore(source) {
   const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);
   const tableStateSource = normalizePureTableStateRestoration(routeRuntimeSource);
-  const requestSource = normalizeRouteRequestCancellation(tableStateSource);
-  return normalizeReleaseOwnership(requestSource);
+  return normalizeRouteRequestCancellation(tableStateSource);
+}
+
+function normalizeGeneratedReleaseOwnership(artifacts) {
+  const routeChunks = Object.fromEntries(
+    Object.entries(artifacts.routeChunks || {}).map(([name, source]) => [name, normalizeReleaseOwnership(source)]),
+  );
+  return {
+    ...artifacts,
+    core: normalizeReleaseOwnership(artifacts.core),
+    routeChunks,
+  };
 }
 
 export function normalizeBuiltApplicationCoreArtifacts(source) {
@@ -60,7 +66,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
-  return splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
+  const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
+  return normalizeGeneratedReleaseOwnership(watchlistArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
