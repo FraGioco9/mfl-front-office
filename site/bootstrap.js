@@ -523,6 +523,28 @@
     syncEvaluationActionsFirstPaint();
   }
 
+  function ensureContractsFirstPaintColumnOrder() {
+    if (initialTableView() !== "contracts") return;
+    const headerRow = document.querySelector("#tableHead > tr");
+    const colGroup = document.getElementById("tableColGroup");
+    if (!(headerRow instanceof HTMLTableRowElement) || !(colGroup instanceof HTMLTableColElement)) return;
+
+    const contractClasses = ["col-contract-club", "col-contract-division", "col-contract-revenue"];
+    const reorder = (parent) => {
+      const children = Array.from(parent.children);
+      const targets = contractClasses.map((className) => children.find((child) => child.classList.contains(className)));
+      if (targets.some((target) => !target)) return false;
+      const indexes = targets.map((target) => children.indexOf(target));
+      const anchor = children[Math.max(...indexes) + 1] || null;
+      targets.forEach((target) => parent.insertBefore(target, anchor));
+      return true;
+    };
+
+    const headerChanged = reorder(headerRow);
+    const columnsChanged = reorder(colGroup);
+    if (headerChanged || columnsChanged) window.__mflTableWidthRuntime?.apply?.();
+  }
+
   function loadBootstrapRuntime(path) {
     return new Promise((resolve, reject) => {
       if (path === "/table-width-runtime.js" && window.__mflTableWidthRuntime?.canonical === true) {
@@ -597,6 +619,7 @@
         loadBootstrapRuntime("/filter-controls-runtime.js"),
       ]);
       await loadBootstrapCore();
+      ensureContractsFirstPaintColumnOrder();
       syncBootstrapFirstPaint();
     } catch (error) {
       document.documentElement.dataset.mflReady = "error";
