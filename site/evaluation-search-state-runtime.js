@@ -19,7 +19,6 @@
     : null;
 
   const input = () => document.getElementById("evaluationSearchInput");
-  const results = () => document.getElementById("evaluationSearchResults");
   const clearButton = () => document.getElementById("evaluationSearchClearButton");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
 
