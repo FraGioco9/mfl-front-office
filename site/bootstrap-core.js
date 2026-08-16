@@ -15,7 +15,7 @@
     try {
       const linkedWallet = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
       if (!linkedWallet) return "";
-      const proof = JSON.parse(localStorage.getItem("mfl-linked-wallet-proof-v1") || "null");
+      const proof = JSON.parse(localStorage.getItem(LINKED_WALLET_PROOF_STORAGE_KEY) || "null");
       const proofWallet = normalizeWalletAddress(proof?.address);
       return proofWallet === linkedWallet
         && Boolean(proof?.message)
