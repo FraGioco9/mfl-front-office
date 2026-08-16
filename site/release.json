@@ -1,4 +1,4 @@
 {
-  "version": "1.124.33",
-  "description": "Centralize table-route membership in the route-core loader"
+  "version": "1.124.34",
+  "description": "Load the Watchlist rename-tooltip runtime only on Watchlist pages"
 }
