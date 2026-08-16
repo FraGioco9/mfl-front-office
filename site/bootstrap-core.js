@@ -192,7 +192,9 @@
     startupFinished = true;
     startupStateObserver?.disconnect();
     try {
-      if (window.__mflAppStartPromise) await window.__mflAppStartPromise;
+      if (document.documentElement.dataset.mflReady !== "error" && window.__mflAppStartPromise) {
+        await window.__mflAppStartPromise;
+      }
     } catch {}
     window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");
