@@ -1,4 +1,4 @@
 {
-  "version": "1.124.12",
-  "description": "Cancel obsolete route data requests and prevent stale incremental commits"
+  "version": "1.124.13",
+  "description": "Stage saved table controls in state and sync them only during the final render"
 }
