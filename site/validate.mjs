@@ -205,14 +205,17 @@ includes(indexHtml, "data-mfl-responsive-layout=\"true\"", "responsive.css must 
 includes(indexHtml, "<colgroup id=\"tableColGroup\"></colgroup>", "Shared player table shell must stay permanent in index.html.");
 includes(indexHtml, "id=\"evaluationDiscountRate\"", "Evaluation must keep a permanent discount-rate placeholder.");
 
-const vercel = await readSite("vercel.mjs");
-includes(vercel, 'process.env.VERCEL_ENV === "development"', "Vercel configuration must distinguish local development from deployments.");
-includes(vercel, 'source: "/(.*\\\\.js)"', "Vercel configuration must retain the JavaScript cache rule.");
-includes(vercel, 'missing: [{ type: "query", key: "mfl_core" }]', "Deployment JavaScript caching must retain the mfl_core missing condition.");
-includes(vercel, 'has: [{ type: "query", key: "mfl_core" }]', "Deployment application-core caching must retain the mfl_core presence condition.");
-includes(vercel, 'value: "public, max-age=31536000, immutable"', "The versioned prebuilt application core must use immutable browser caching in deployments.");
-includes(vercel, 'value: "no-store, max-age=0"', "Local and unversioned assets must retain the no-store cache policy.");
-await mustNotExist(resolve(siteRoot, "vercel.json"), "Static vercel.json must stay removed so local development does not parse unsupported has/missing rules.");
+const vercelLocal = JSON.parse(await readSite("vercel.json"));
+const vercelProduction = JSON.parse(await readSite("vercel.production.json"));
+const localConfigSource = JSON.stringify(vercelLocal);
+invariant(!localConfigSource.includes('"has"') && !localConfigSource.includes('"missing"'), "Local Vercel config must not contain unsupported has/missing request conditions.");
+const localJsRule = (vercelLocal.headers || []).find((rule) => rule.source === "/(.*\\.js)");
+invariant(localJsRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Local JavaScript must use the no-store cache policy.");
+const productionJsNoStoreRule = (vercelProduction.headers || []).find((rule) => rule.source === "/(.*\\.js)" && rule.missing?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
+invariant(productionJsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Production unversioned JavaScript must retain the no-store cache policy.");
+const productionCoreCacheRule = (vercelProduction.headers || []).find((rule) => rule.source === "/modules/app-core-runtime.js" && rule.has?.some((condition) => condition.type === "query" && condition.key === "mfl_core"));
+invariant(productionCoreCacheRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=31536000, immutable"), "Production versioned application core must retain immutable browser caching.");
+await mustNotExist(resolve(siteRoot, "vercel.mjs"), "Programmatic Vercel config must stay removed so local development uses the static safe config.");
 
 const databaseRefresh = await readRepository(".github/workflows/full-database-refresh.yml");
 includes(databaseRefresh, "--workflow vercel-site-update.yml", "Database refreshes must resolve the last explicit site release.");
@@ -222,6 +225,7 @@ const siteDeploy = await readRepository(".github/workflows/vercel-site-update.ym
 includes(siteDeploy, "node site/build-app-core.mjs", "Vercel deployment must generate the canonical application core before upload.");
 includes(siteDeploy, "test -s site/modules/app-core-runtime.js", "Vercel deployment must refuse to upload without the generated core.");
 includes(siteDeploy, "vercel deploy --prod --yes --force", "Site deployment must force the explicit production release.");
+includes(siteDeploy, "--local-config site/vercel.production.json", "Production deployment must use the dedicated production Vercel config.");
 
 const siteQuality = await readRepository(".github/workflows/site-quality.yml");
 includes(siteQuality, "npm run build:core", "Site quality must execute the same canonical core build used by deployment.");
