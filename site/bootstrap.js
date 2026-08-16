@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.42";
+  const STATIC_RELEASE_VERSION = "1.124.43";
+  const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
@@ -60,6 +61,16 @@
     return "Progression";
   }
 
+  function storedTablePageState(page) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+      const pageState = saved?.pages?.[page];
+      return pageState && typeof pageState === "object" && !Array.isArray(pageState) ? pageState : null;
+    } catch {
+      return null;
+    }
+  }
+
   function primeInitialTableChrome(page, urlLike = window.location.href) {
     const normalizedPage = String(page || "").toLowerCase();
     if (!normalizedPage) return;
@@ -81,6 +92,38 @@
       newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
     }
 
+    const attributesView = document.querySelector('#progressionPage .views > .viewButton[data-view="attributes"]');
+    if (attributesView instanceof HTMLButtonElement) {
+      attributesView.textContent = normalizedPage === "club" ? "Squad" : "Attributes";
+    }
+
+    const savedState = storedTablePageState(normalizedPage) || {};
+    const clubPage = normalizedPage === "club";
+    const hideRetiredInput = document.getElementById("hideRetiredInput");
+    if (hideRetiredInput instanceof HTMLInputElement) {
+      hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;
+    }
+    const hideRetiringInput = document.getElementById("hideRetiringInput");
+    if (hideRetiringInput instanceof HTMLInputElement) {
+      hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);
+    }
+    const hideMflPlayersInput = document.getElementById("hideMflPlayersInput");
+    if (hideMflPlayersInput instanceof HTMLInputElement) {
+      hideMflPlayersInput.checked = normalizedPage === "database"
+        ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+        : false;
+    }
+    const packablePlayersInput = document.getElementById("packablePlayersInput");
+    if (packablePlayersInput instanceof HTMLInputElement) {
+      packablePlayersInput.checked = normalizedPage === "mfl"
+        ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
+        : false;
+    }
+    const newMintsInput = document.getElementById("newMintsInput");
+    if (newMintsInput instanceof HTMLInputElement) {
+      newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);
+    }
+
     const pager = document.querySelector("#progressionPage nav.pager");
     if (pager instanceof HTMLElement) pager.hidden = true;
     const watchlistCount = document.getElementById("watchlistPlayerCount");
@@ -88,10 +131,11 @@
   }
 
   Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);
+  Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);
 
-  function primeInitialTableRows() {
+  function primeInitialTableRows(replaceExisting = false) {
     const body = document.getElementById("tableBody");
-    if (!(body instanceof HTMLTableSectionElement) || body.rows.length) return;
+    if (!(body instanceof HTMLTableSectionElement) || (body.rows.length && !replaceExisting)) return;
     const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
     const fragment = document.createDocumentFragment();
     opacities.forEach((opacity, index) => {
@@ -110,6 +154,27 @@
     body.dataset.staticLoading = "true";
   }
 
+  Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);
+
+  function primeRouteSkeleton(target) {
+    if (!(target instanceof HTMLElement)) return;
+    if (target.id === "playerPage") {
+      const playerDetail = document.getElementById("playerDetail");
+      if (playerDetail instanceof HTMLElement) {
+        playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
+      }
+      return;
+    }
+    if (target.id === "evaluationPage") {
+      const evaluationPanel = document.getElementById("evaluationPanel");
+      if (evaluationPanel instanceof HTMLElement) evaluationPanel.hidden = true;
+      const evaluationSearchResults = document.getElementById("evaluationSearchResults");
+      if (evaluationSearchResults instanceof HTMLElement) evaluationSearchResults.hidden = true;
+    }
+  }
+
+  Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);
+
   function primeInitialShell() {
     const target = initialShellTarget();
     if (!(target instanceof HTMLElement)) return;
@@ -117,6 +182,8 @@
     if (target.id === "progressionPage" && tablePage) {
       primeInitialTableChrome(tablePage, window.location.href);
       primeInitialTableRows();
+    } else {
+      primeRouteSkeleton(target);
     }
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
@@ -129,6 +196,9 @@
     style.textContent = `
       html.mflSingleRenderPending #mflStartupError { display: none !important; }
       html.mflSingleRenderPending #progressionPage nav.pager { display: none !important; }
+      html.mflSingleRenderPending[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow { align-items: center !important; }
+      html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"] { font-size: inherit !important; }
+      html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after { content: none !important; display: none !important; }
       html.mflSingleRenderPending #tableBody > .staticTableBlankRow,
       html.mflSingleRenderPending #tableBody > .staticTableBlankRow > td {
         pointer-events: none !important;
