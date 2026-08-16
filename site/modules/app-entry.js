@@ -229,7 +229,9 @@ function promoteResponsiveStylesheet() {
 
 const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
-const CORE_RUNTIME_CACHE_KEY = `mfl-app-core-runtime:${entryRelease.version}:1`;
+const PREBUILT_CORE_PATH = "/modules/app-core-runtime.js";
+const SOURCE_CORE_PATH = "/modules/app-core.js";
+const CORE_RUNTIME_CACHE_KEY = `mfl-app-core-runtime:${entryRelease.version}:2`;
 if (evaluationStartup) preloadClassicScript("/evaluation-search-state-runtime.js");
 
 function primeEvaluationDiscountRatePlaceholder() {
@@ -267,24 +269,34 @@ function executeApplicationCore(path, source) {
   script.remove();
 }
 
+async function fetchApplicationCoreSource(path) {
+  const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
+  if (!response.ok) throw new Error(`Could not load ${path}.`);
+  return response.text();
+}
+
 async function prepareApplicationCore() {
-  const path = "/modules/app-core.js";
   const cachedSource = cachedApplicationCore();
-  if (cachedSource) return { path, source: cachedSource };
+  if (cachedSource) return { path: PREBUILT_CORE_PATH, source: cachedSource };
+
+  try {
+    const source = await fetchApplicationCoreSource(PREBUILT_CORE_PATH);
+    cacheApplicationCore(source);
+    return { path: PREBUILT_CORE_PATH, source };
+  } catch (error) {
+    console.warn("Prebuilt application core is unavailable; using source normalization fallback.", error);
+  }
 
   const normalizerPromise = import(assetUrl("/modules/app-core-normalizer.js"));
-  const responsePromise = nativeFetch(assetUrl(path), { cache: "no-store" });
-  const [normalizer, response] = await Promise.all([normalizerPromise, responsePromise]);
-  if (!response.ok) {
-    throw new Error(`Could not load ${path}.`);
-  }
+  const sourcePromise = fetchApplicationCoreSource(SOURCE_CORE_PATH);
+  const [normalizer, rawSource] = await Promise.all([normalizerPromise, sourcePromise]);
   if (typeof normalizer.normalizeApplicationCore !== "function") {
     throw new Error("Application core normalizer is unavailable.");
   }
 
-  const source = normalizer.normalizeApplicationCore(await response.text());
+  const source = normalizer.normalizeApplicationCore(rawSource);
   cacheApplicationCore(source);
-  return { path, source };
+  return { path: SOURCE_CORE_PATH, source };
 }
 
 async function loadApplicationCore(preparedCore = null) {
