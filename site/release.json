@@ -1,4 +1,4 @@
 {
-  "version": "1.124.14",
-  "description": "Split Evaluation-only logic and valuation data out of the shared application core"
+  "version": "1.124.15",
+  "description": "Split MFL Stats rendering and distribution controls out of the shared application core"
 }
