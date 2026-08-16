@@ -23,6 +23,7 @@ const normalizedArtifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const normalizedCore = normalizedArtifacts.core;
 const evaluationCore = normalizedArtifacts.routeChunks.evaluation;
 const mflStatsCore = normalizedArtifacts.routeChunks.mflstats;
+const tableCore = normalizedArtifacts.routeChunks.table;
 
 const bootstrapExecution = bootstrap.replace(/\/\/[^\n]*/g, "");
 excludes(bootstrapExecution, 'loadRuntime("/table-width-runtime.js")', "Bootstrap must not execute the table-width owner on every route.");
@@ -104,9 +105,11 @@ includes(filterControls, "Object.freeze({ sync, destroy })", "Filter controls mu
 invariant(normalizedCore.length > 300_000, "The shared application core became unexpectedly small.");
 invariant(evaluationCore.length > 12_000, "The Evaluation core chunk is too small to represent a meaningful split.");
 invariant(mflStatsCore.length > 4_000, "The MFL Stats core chunk is too small to represent a meaningful split.");
+invariant(tableCore.length > 20_000, "The Table core chunk is too small to represent a meaningful split.");
 new Function(normalizedCore);
 new Function(evaluationCore);
 new Function(mflStatsCore);
+new Function(tableCore);
 excludes(normalizedCore, "const advancedPlayerTableTsv = `", "The large Evaluation valuation table must not remain in the shared core.");
 excludes(normalizedCore, "const evaluationContractsTable = (() => {", "Evaluation contract-table construction must not run on unrelated routes.");
 excludes(normalizedCore, "function normalizeSharedEvaluationPayload(payload) {", "Evaluation save/share services must not remain in the shared core.");
@@ -140,12 +143,12 @@ includes(normalizedCore, "if (result === false) return false;", "Obsolete page r
 includes(normalizedCore, "if (!dataPayload) return;", "Obsolete Club payloads must not commit a Club render.");
 includes(evaluationCore, "if (!playerPayload) return;", "Obsolete saved-Evaluation hydration must not commit Evaluation state.");
 excludes(normalizedCore, "      await requestIncrementalRoute(route, page);\n      state.incrementalApplying = true;", "Pagination must not render after an obsolete request.");
-excludes(normalizedCore, "        await requestIncrementalRoute(route, 1);\n        state.incrementalApplying = true;", "View switches must not render after an obsolete request.");
+excludes(tableCore, "        await requestIncrementalRoute(route, 1);\n        state.incrementalApplying = true;", "View switches must not render after an obsolete request.");
 
-const restoreStart = normalizedCore.indexOf('function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {');
-const restoreEnd = normalizedCore.indexOf("function syncRestoredTableControls(", restoreStart);
-invariant(restoreStart >= 0 && restoreEnd > restoreStart, "The generated core must contain the pure saved table-state restore and its final sync owner.");
-const pureRestoreSection = normalizedCore.slice(restoreStart, restoreEnd);
+const restoreStart = tableCore.indexOf('function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {');
+const restoreEnd = tableCore.indexOf("function syncRestoredTableControls(", restoreStart);
+invariant(restoreStart >= 0 && restoreEnd > restoreStart, "The Table core must contain the pure saved table-state restore and its final sync owner.");
+const pureRestoreSection = tableCore.slice(restoreStart, restoreEnd);
 includes(pureRestoreSection, "state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);", "Saved table controls must be staged in state during restore.");
 for (const forbidden of [
   "updateViewButtons(",
