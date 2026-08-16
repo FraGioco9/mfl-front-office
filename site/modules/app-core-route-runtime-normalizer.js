@@ -14,14 +14,18 @@ const ROUTE_RUNTIME_GATE = `;(() => {
       : "";
     try {
       if (!runtimeReady) window.__mflCancelIncrementalRouteRequest?.();
+      const routeCorePromise = !runtimeReady && typeof window.__mflEnsureRouteCore === "function"
+        ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
+        : null;
       if (!runtimeReady && typeof window.__mflEnsureRouteRuntime === "function") {
         await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
-        if (setPage !== ownerBeforeRuntime) {
-          return setPage.call(this, pageName, updateHash, {
-            ...incomingOptions,
-            __mflRouteRuntimeReady: true,
-          });
-        }
+      }
+      if (routeCorePromise) await routeCorePromise;
+      if (!runtimeReady && setPage !== ownerBeforeRuntime) {
+        return setPage.call(this, pageName, updateHash, {
+          ...incomingOptions,
+          __mflRouteRuntimeReady: true,
+        });
       }
 
       if (!runtimeReady) {

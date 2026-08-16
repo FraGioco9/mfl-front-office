@@ -56,6 +56,7 @@
       /* Keep only universal bootstrap ownership here. Route-specific table/filter
        * owners are requested by app-entry before the destination core render. */
       await Promise.all([
+        loadRuntime("/route-core-loader-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
         loadRuntime("/bootstrap-core.js"),
       ]);

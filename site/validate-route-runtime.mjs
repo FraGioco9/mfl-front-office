@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { normalizeBuiltApplicationCore } from "./modules/app-core-build-normalizer.js";
+import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -14,14 +14,19 @@ const entry = await read("./modules/app-entry.js");
 const buildNormalizer = await read("./modules/app-core-build-normalizer.js");
 const requestNormalizer = await read("./modules/app-core-route-request-normalizer.js");
 const routeNormalizer = await read("./modules/app-core-route-runtime-normalizer.js");
+const routeChunks = await read("./modules/app-core-route-chunks.js");
+const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const tableStateNormalizer = await read("./modules/app-core-table-state-normalizer.js");
 const filterControls = await read("./filter-controls-runtime.js");
 const coreSource = await read("./modules/app-core.js");
-const normalizedCore = normalizeBuiltApplicationCore(coreSource);
+const normalizedArtifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const normalizedCore = normalizedArtifacts.core;
+const evaluationCore = normalizedArtifacts.routeChunks.evaluation;
 
 const bootstrapExecution = bootstrap.replace(/\/\/[^\n]*/g, "");
 excludes(bootstrapExecution, 'loadRuntime("/table-width-runtime.js")', "Bootstrap must not execute the table-width owner on every route.");
 excludes(bootstrapExecution, 'loadRuntime("/filter-controls-runtime.js")', "Bootstrap must not execute filter controls on every route.");
+includes(bootstrapExecution, 'loadRuntime("/route-core-loader-runtime.js")', "The tiny route-core loader must start before the application core.");
 includes(bootstrapExecution, 'loadRuntime("/dropdowns-runtime.js")', "Dropdown ownership must remain universal.");
 includes(bootstrapExecution, 'loadRuntime("/bootstrap-core.js")', "bootstrap-core must remain universal.");
 
@@ -60,7 +65,16 @@ includes(routeNormalizer, "export function normalizeRouteRuntimeGate(source)", "
 includes(routeNormalizer, "setPageWithRouteRuntime", "The generated core must gate setPage before destination commit.");
 includes(routeNormalizer, "ownerBeforeRuntime", "The gate must redispatch when a loaded runtime replaces setPage.");
 includes(routeNormalizer, "window.__mflCancelIncrementalRouteRequest?.();", "A new SPA route intent must cancel obsolete route data before lazy runtime loading.");
+includes(routeNormalizer, "window.__mflEnsureRouteCore", "The route gate must await route-owned core code before committing its destination.");
+includes(routeNormalizer, "routeCorePromise", "Route-core download must overlap route-runtime loading.");
 includes(routeNormalizer, "window.__mflMarkApplicationCoreLoaded?.();", "The generated core must mark itself loaded before startApp.");
+
+includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");
+includes(routeChunks, "Evaluation save, share, and load services", "The first split must move Evaluation services out of the universal core.");
+includes(routeCoreLoader, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "The route-core loader must map Evaluation to its generated chunk.");
+includes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Unprepared local environments must be able to build the missing route chunk from source.");
+includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");
+excludes(routeCoreLoader, "setInterval", "Route-core loading must remain event/promise driven.");
 
 includes(tableStateNormalizer, "export function normalizePureTableStateRestoration(source)", "Table-state restoration must be a build-time core transform.");
 includes(tableStateNormalizer, "state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);", "Saved controls must stage in JavaScript state instead of mutating the page during route preparation.");
@@ -77,7 +91,20 @@ includes(requestNormalizer, "if (force) state.incrementalPayloadCache.delete(cac
 includes(buildNormalizer, "normalizeRouteRuntimeGate(startupDataSource)", "The build must apply the route runtime gate after startup-data normalization.");
 includes(buildNormalizer, "normalizePureTableStateRestoration(routeRuntimeSource)", "The build must make saved table-state restoration pure before route request cancellation is applied.");
 includes(buildNormalizer, "normalizeRouteRequestCancellation(tableStateSource)", "The build must apply route cancellation after pure table-state restoration.");
+includes(buildNormalizer, "splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source))", "The complete normalized core must be split only after all behavior transforms are applied.");
 includes(filterControls, "Object.freeze({ sync, destroy })", "Filter controls must expose an explicit late-load sync hook.");
+
+invariant(normalizedCore.length > 300_000, "The shared application core became unexpectedly small.");
+invariant(evaluationCore.length > 12_000, "The Evaluation core chunk is too small to represent a meaningful split.");
+new Function(normalizedCore);
+new Function(evaluationCore);
+excludes(normalizedCore, "const advancedPlayerTableTsv = `", "The large Evaluation valuation table must not remain in the shared core.");
+excludes(normalizedCore, "const evaluationContractsTable = (() => {", "Evaluation contract-table construction must not run on unrelated routes.");
+excludes(normalizedCore, "function normalizeSharedEvaluationPayload(payload) {", "Evaluation save/share services must not remain in the shared core.");
+includes(evaluationCore, "const advancedPlayerTableTsv = `", "The Evaluation chunk must own its advanced valuation table.");
+includes(evaluationCore, "const evaluationContractsTable = (() => {", "The Evaluation chunk must own contract-table construction.");
+includes(evaluationCore, "function normalizeSharedEvaluationPayload(payload) {", "The Evaluation chunk must own save/share payload handling.");
+includes(evaluationCore, "async function openSavedEvaluationsModal()", "The Evaluation chunk must own saved-evaluation modal data work.");
 
 includes(normalizedCore, "let incrementalRouteRequestGeneration = 0;", "The generated core must track the latest route request intent.");
 includes(normalizedCore, "let activeIncrementalNetworkRequest = null;", "The generated core must track the active abortable route request.");
@@ -86,7 +113,7 @@ includes(normalizedCore, "if (!payload || !incrementalRouteRequestIsCurrent(gene
 includes(normalizedCore, "if (error?.name === \"AbortError\" && !timedOut) return null;", "Intentional route aborts must remain silent.");
 includes(normalizedCore, "if (result === false) return false;", "Obsolete page renders must stop before scroll or final commit work.");
 includes(normalizedCore, "if (!dataPayload) return;", "Obsolete Club payloads must not commit a Club render.");
-includes(normalizedCore, "if (!playerPayload) return;", "Obsolete saved-Evaluation hydration must not commit Evaluation state.");
+includes(evaluationCore, "if (!playerPayload) return;", "Obsolete saved-Evaluation hydration must not commit Evaluation state.");
 excludes(normalizedCore, "      await requestIncrementalRoute(route, page);\n      state.incrementalApplying = true;", "Pagination must not render after an obsolete request.");
 excludes(normalizedCore, "        await requestIncrementalRoute(route, 1);\n        state.incrementalApplying = true;", "View switches must not render after an obsolete request.");
 
@@ -129,4 +156,4 @@ includes(normalizedCore, `      if (tablePages.has(pageName)) {
       }
       state.incrementalApplying = true;`, "The public incremental table renderer must consume staged controls only after its route data is ready.");
 
-console.log("Route runtime, request cancellation, and pure table-state validation passed.");
+console.log("Route runtime, route-core splitting, request cancellation, and pure table-state validation passed.");
