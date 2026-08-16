@@ -1,4 +1,4 @@
 {
-  "version": "1.124.20",
-  "description": "Load the shared table engine only for table-based routes"
+  "version": "1.124.21",
+  "description": "Load Dapper opt-in authentication only when Opt In is requested"
 }
