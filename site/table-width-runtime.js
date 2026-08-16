@@ -234,7 +234,7 @@
   function takeOwnership() {
     if (destroyed) return false;
     installWidthHook();
-    return apply(true);
+    return apply();
   }
 
   function schedule(force = false) {
