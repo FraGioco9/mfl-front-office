@@ -589,6 +589,14 @@ function ensureRouteRuntime(pageName, options = {}) {
 
 runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
 
+function runPostStartupSync(label, callback) {
+  try {
+    callback?.();
+  } catch (error) {
+    console.warn(`Post-start ${label} synchronization failed.`, error);
+  }
+}
+
 async function start() {
   const release = entryRelease;
   window.__mflRelease = release;
@@ -621,15 +629,16 @@ async function start() {
   }
 
   promoteResponsiveStylesheet();
+
+  runPostStartupSync("Evaluation layout", () => runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.());
+  runPostStartupSync("Database Stats reload", () => runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.());
+  runPostStartupSync("Database Stats state", () => runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.());
+
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
 
   // Compatibility marker for the legacy validator; route-irrelevant runtimes are no longer globally deferred:
   // void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])
-
-  runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
-  runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
-  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
 }
 
 void start().catch(showStartupError);
