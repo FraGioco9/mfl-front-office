@@ -83,6 +83,39 @@ includes(
   "Repeated route-core loader execution must restore the classifier facade.",
 );
 
+const loaderViewStart = routeCoreLoader.indexOf("function routeView(options = {}) {");
+const loaderViewEnd = routeCoreLoader.indexOf("function routeCoreDependencies(", loaderViewStart);
+invariant(loaderViewStart >= 0 && loaderViewEnd > loaderViewStart, "Route-core loader must own route view normalization.");
+const loaderViewSection = routeCoreLoader.slice(loaderViewStart, loaderViewEnd);
+const normalizeRouteView = new Function(`${loaderViewSection}\nreturn routeView;`)();
+
+for (const [options, expected] of [
+  [{}, ""],
+  [{ view: "stats" }, "stats"],
+  [{ view: " Stats " }, "stats"],
+  [{ view: "CURRENT-SEASON" }, "current-season"],
+  [{ view: 42 }, "42"],
+]) {
+  invariant(normalizeRouteView(options) === expected, `Route view ${String(options.view || "default")} must normalize to ${expected || "empty"}.`);
+}
+invariant(normalizeRouteView() === "", "Missing route view options must normalize to an empty view.");
+
+includes(
+  routeCoreLoader,
+  "runtimeWindow.__mflNormalizeRouteView = routeView;",
+  "The route-core loader must expose its route view normalizer to app-entry.",
+);
+includes(
+  routeCoreLoader,
+  "normalizeView: routeView,",
+  "The route-core runtime object must retain the route view normalizer across repeated installs.",
+);
+includes(
+  routeCoreLoader,
+  "runtimeWindow.__mflNormalizeRouteView = runtimeWindow.__mflRouteCoreRuntime.normalizeView;",
+  "Repeated route-core loader execution must restore the route view normalizer facade.",
+);
+
 const entryNormalizeStart = entry.indexOf("function normalizeRoutePageName(pageName) {");
 const entryNormalizeEnd = entry.indexOf("function routeView(options = {})", entryNormalizeStart);
 invariant(entryNormalizeStart >= 0 && entryNormalizeEnd > entryNormalizeStart, "app-entry must retain a stable route page-name normalization facade.");
@@ -106,6 +139,26 @@ for (const duplicateRule of [
 ]) {
   excludes(entryNormalizeSection, duplicateRule, `app-entry must not duplicate route page-name ownership through ${duplicateRule}.`);
 }
+
+const entryViewStart = entry.indexOf("function routeView(options = {}) {");
+const entryViewEnd = entry.indexOf("function routeNeedsTable(", entryViewStart);
+invariant(entryViewStart >= 0 && entryViewEnd > entryViewStart, "app-entry must retain a stable route view normalization facade.");
+const entryViewSection = entry.slice(entryViewStart, entryViewEnd);
+includes(
+  entryViewSection,
+  'Reflect.get(window, "__mflNormalizeRouteView")',
+  "app-entry must delegate route view normalization to the route-core loader.",
+);
+includes(
+  entryViewSection,
+  'throw new Error("Route view normalizer is unavailable.");',
+  "app-entry must fail clearly if bootstrap ordering stops providing the central view normalizer.",
+);
+excludes(
+  entryViewSection,
+  '.trim().toLowerCase()',
+  "app-entry must not duplicate route view trim/lowercase normalization.",
+);
 
 const entryInitialStart = entry.indexOf("function initialRouteRuntimeRequest() {");
 const entryInitialEnd = entry.indexOf("const initialRouteRuntime =", entryInitialStart);
@@ -136,4 +189,4 @@ for (const duplicateRouteMarker of [
   excludes(entryInitialSection, duplicateRouteMarker, `app-entry must not duplicate initial route classification through ${duplicateRouteMarker}.`);
 }
 
-console.log("Central route page-name and initial-route classification validation passed.");
+console.log("Central route page-name, view, and initial-route normalization validation passed.");
