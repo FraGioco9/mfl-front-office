@@ -8,6 +8,7 @@ const invariant = (condition, message) => {
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
+const matches = (source, pattern, message) => invariant(pattern.test(source), message);
 
 const [coreSource, tableSplitter, routeLoader, routeNormalizer, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
@@ -78,8 +79,8 @@ includes(routeLoader, "for (const dependency of dependencies)", "Route-core depe
 
 includes(routeNormalizer, "const directTableRoute = (", "Direct startup must classify table routes before startApp.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct table startup must load the Table core before startApp.");
-includes(routeNormalizer, "database\\/stats", "Direct Database Stats startup must stay outside the Table core.");
-includes(routeNormalizer, "mfl\\/stats", "Direct MFL Stats startup must stay outside the Table core.");
+matches(routeNormalizer, /!\/\^.*database.*stats.*test\(initialRoutePath\)/, "Direct Database Stats startup must stay outside the Table core.");
+matches(routeNormalizer, /!\/\^.*mfl.*stats.*test\(initialRoutePath\)/, "Direct MFL Stats startup must stay outside the Table core.");
 
 includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
 includes(buildCore, "artifacts.routeChunks?.table", "The build must consume the Table artifact.");
