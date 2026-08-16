@@ -26,7 +26,8 @@
   }
 
   function loadRuntime(path) {
-    return new Promise((resolve, reject) => {
+    /** @type {Promise<void>} */
+    const loader = new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-mfl-bootstrap-runtime="${path}"]`);
       if (existing) {
         resolve();
@@ -40,6 +41,7 @@
       script.addEventListener("error", () => reject(new Error(`Could not load ${path}.`)), { once: true });
       document.head.appendChild(script);
     });
+    return loader;
   }
 
   preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
