@@ -361,13 +361,6 @@ function executeApplicationCore(path, source) {
   script.remove();
 }
 
-/** @returns {Promise<string>} */
-async function fetchApplicationCoreSource(path) {
-  const response = await nativeFetch(assetUrl(path), { cache: "no-store" });
-  if (!response.ok) throw new Error(`Could not load ${path}.`);
-  return response.text();
-}
-
 async function loadApplicationCore() {
   const prebuiltPath = prebuiltApplicationCorePath();
   try {
@@ -378,14 +371,13 @@ async function loadApplicationCore() {
     console.warn("Prebuilt application core is unavailable; using source normalization fallback.", error);
   }
 
-  const normalizerPromise = import(assetUrl("/modules/app-core-build-normalizer.js"));
-  const sourcePromise = fetchApplicationCoreSource(SOURCE_CORE_PATH);
-  const [normalizer, rawSource] = await Promise.all([normalizerPromise, sourcePromise]);
-  if (typeof normalizer.normalizeBuiltApplicationCore !== "function") {
-    throw new Error("Application core build normalizer is unavailable.");
+  const fallbackLoader = Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts");
+  if (typeof fallbackLoader !== "function") {
+    throw new Error("Application core fallback artifact loader is unavailable.");
   }
-
-  const source = normalizer.normalizeBuiltApplicationCore(rawSource);
+  const artifacts = await fallbackLoader();
+  const source = String(artifacts?.core || "").trim();
+  if (!source) throw new Error("Application core source fallback is unavailable.");
   executeApplicationCore(SOURCE_CORE_PATH, source);
   markApplicationCoreLoaded();
 }
