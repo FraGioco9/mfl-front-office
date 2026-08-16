@@ -3,9 +3,12 @@
 
   /** @type {Window & {
    * __mflReleaseVersion?: string,
-   * __mflInteractionBusy?: { installCoreBridge?: () => void },
+   * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
+   * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+   * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
    * __mflEnsureRouteCore?: (pageName: string) => Promise<void>,
    * __mflRouteCoreRuntime?: { ensure?: (pageName: string) => Promise<void> },
+   * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
   const runtimeWindow = window;
 
@@ -17,6 +20,7 @@
   const ROUTE_CORE_PATHS = Object.freeze({
     evaluation: "/modules/app-core-evaluation-runtime.js",
     mflstats: "/modules/app-core-mfl-stats-runtime.js",
+    club: "/modules/app-core-club-runtime.js",
   });
   const routeCorePromises = new Map();
 
@@ -97,8 +101,37 @@
     return pending;
   }
 
+  function installClubRouteGate() {
+    if (runtimeWindow.mflOpenClubPage?.__mflRouteRuntimeGate) return;
+
+    const gated = async function mflOpenClubPageWithRouteCore(clubId, view = "attributes") {
+      const normalizedClubId = String(clubId || "").trim();
+      if (!normalizedClubId) return;
+
+      const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
+      try {
+        const routeCorePromise = ensure("club");
+        const routeRuntimePromise = typeof runtimeWindow.__mflEnsureRouteRuntime === "function"
+          ? runtimeWindow.__mflEnsureRouteRuntime("club", { view })
+          : Promise.resolve();
+        await Promise.all([routeCorePromise, routeRuntimePromise]);
+
+        const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
+        if (typeof routeOwner !== "function") {
+          throw new Error("Club route owner is unavailable.");
+        }
+        return routeOwner.call(runtimeWindow, normalizedClubId, view);
+      } finally {
+        if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
+      }
+    };
+    Object.defineProperty(gated, "__mflRouteRuntimeGate", { value: true });
+    runtimeWindow.mflOpenClubPage = gated;
+  }
+
   runtimeWindow.__mflEnsureRouteCore = ensure;
   runtimeWindow.__mflRouteCoreRuntime = Object.freeze({ ensure });
+  installClubRouteGate();
 
   if (/^\/evaluation\/?$/i.test(location.pathname)) {
     void ensure("evaluation").catch((error) => console.warn("Could not prime the Evaluation application core.", error));

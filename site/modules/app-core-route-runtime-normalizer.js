@@ -45,7 +45,13 @@ const ROUTE_RUNTIME_GATE = `;(() => {
 
 window.__mflMarkApplicationCoreLoaded?.();
 
-${STARTUP_MARKER}`;
+window.__mflAppStartPromise = (async () => {
+  if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(window.location.pathname)
+    && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("club");
+  }
+  return startApp();
+})();`;
 
 export function normalizeRouteRuntimeGate(source) {
   const text = String(source || "");
