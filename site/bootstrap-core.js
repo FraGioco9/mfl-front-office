@@ -187,12 +187,14 @@
   const startupToken = window.__mflInteractionBusy.begin("startup");
   let startupFinished = false;
   let startupStateObserver = null;
-  const finishStartup = async () => {
+  let startupFailureRecoveryRunning = false;
+
+  const finishStartup = async ({ skipAppStart = false } = {}) => {
     if (startupFinished) return;
     startupFinished = true;
     startupStateObserver?.disconnect();
     try {
-      if (document.documentElement.dataset.mflReady !== "error" && window.__mflAppStartPromise) {
+      if (!skipAppStart && window.__mflAppStartPromise) {
         await window.__mflAppStartPromise;
       }
     } catch {}
@@ -200,10 +202,42 @@
     document.documentElement.classList.remove("mflSingleRenderPending");
     singleRenderStyle?.remove();
   };
-  window.addEventListener("mfl:ready", finishStartup, { once: true });
+
+  const recoverCompletedApplicationStartup = async () => {
+    if (startupFailureRecoveryRunning || startupFinished) return;
+    startupFailureRecoveryRunning = true;
+    const errorMessage = document.getElementById("mflStartupError");
+    if (errorMessage instanceof HTMLElement) errorMessage.hidden = true;
+
+    const appStartPromise = window.__mflAppStartPromise;
+    let applicationStarted = false;
+    if (appStartPromise && typeof appStartPromise.then === "function") {
+      applicationStarted = await Promise.race([
+        appStartPromise.then(() => true, () => false),
+        new Promise((resolve) => window.setTimeout(() => resolve(false), 250)),
+      ]);
+    }
+
+    if (applicationStarted) {
+      document.getElementById("mflStartupError")?.remove();
+      document.documentElement.dataset.mflReady = "true";
+      console.warn("Ignored a non-fatal late startup runtime error because the application core completed successfully.");
+      window.dispatchEvent(new CustomEvent("mfl:ready", {
+        detail: Object.freeze({ version: STATIC_RELEASE_VERSION, description: "" }),
+      }));
+      startupFailureRecoveryRunning = false;
+      return;
+    }
+
+    if (errorMessage instanceof HTMLElement) errorMessage.hidden = false;
+    startupFailureRecoveryRunning = false;
+    await finishStartup({ skipAppStart: true });
+  };
+
+  window.addEventListener("mfl:ready", () => { void finishStartup(); }, { once: true });
   startupStateObserver = new MutationObserver(() => {
     if (document.documentElement.dataset.mflReady === "error") {
-      void finishStartup();
+      void recoverCompletedApplicationStartup();
     }
   });
   startupStateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mfl-ready"] });
@@ -214,7 +248,6 @@
 
   void import(new URL("/modules/app-entry.js", location.origin).href).catch((error) => {
     document.documentElement.dataset.mflReady = "error";
-    void finishStartup();
     console.error("Could not import MFL Front Office.", error);
   });
 })();
