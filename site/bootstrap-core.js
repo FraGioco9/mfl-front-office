@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.43");
+  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.44");
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
@@ -71,17 +71,17 @@
     style.id = "mflInteractionBusyStyles";
     style.textContent = `
       html.${BUSY_CLASS}, html.${BUSY_CLASS} body, html.${BUSY_CLASS} body *,
-      html.${BUSY_CLASS} body *::before, html.${BUSY_CLASS} body *::after { cursor: wait !important; }
-      html.${BUSY_CLASS} body * { pointer-events: none !important; }
+      html.${BUSY_CLASS} body *::before, html.${BUSY_CLASS} body *::after { cursor: wait; }
+      html.${BUSY_CLASS} body * { pointer-events: none; }
       html.${BUSY_CLASS} body *, html.${BUSY_CLASS} body *::before, html.${BUSY_CLASS} body *::after {
-        transition: none !important; animation: none !important;
+        transition: none; animation: none;
       }
       html.${BUSY_CLASS} body::after {
         content: ""; position: fixed; inset: 0; z-index: 2147483647; background: transparent;
-        pointer-events: auto !important; cursor: wait !important; transition: none !important; animation: none !important;
+        pointer-events: auto; cursor: wait; transition: none; animation: none;
       }
       html.${DATA_LOADING_CLASS} #progressionPage nav.pager,
-      html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none !important; }
+      html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }
     `;
     document.head.appendChild(style);
 
@@ -191,7 +191,6 @@
   }
 
   syncStoredAccessFlags();
-  const singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");
 
   window.__mflInteractionBusy = createInteractionBusyController();
   const startupToken = window.__mflInteractionBusy.begin("startup");
@@ -211,7 +210,6 @@
     window.__mflInteractionBusy.end(startupToken);
     document.documentElement.classList.remove("mflSingleRenderPending");
     document.documentElement.classList.add("mflInitialRouteResolved");
-    singleRenderStyle?.remove();
   };
 
   const recoverCompletedApplicationStartup = async () => {

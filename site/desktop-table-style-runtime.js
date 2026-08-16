@@ -1,17 +1,8 @@
 (() => {
   "use strict";
 
-  const STYLESHEET_PATH = "/desktop-table-layout.css";
   const TITLE_SELECTOR = "#tablePageTitle";
   let routeFrame = 0;
-
-  if (!document.querySelector(`link[data-mfl-stylesheet="${STYLESHEET_PATH}"]`)) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = STYLESHEET_PATH;
-    link.dataset.mflStylesheet = STYLESHEET_PATH;
-    document.head.appendChild(link);
-  }
 
   function normalizeAgentAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -39,13 +30,11 @@
     if (!title) return;
     const address = agentAddressFromPath();
     if (!address) {
-      if (title.hasAttribute("data-agent-wallet-copy")) {
-        title.removeAttribute("data-agent-wallet-copy");
-        title.removeAttribute("data-tooltip");
-        title.removeAttribute("role");
-        title.removeAttribute("tabindex");
-        title.removeAttribute("aria-label");
-      }
+      title.removeAttribute("data-agent-wallet-copy");
+      title.removeAttribute("data-tooltip");
+      title.removeAttribute("role");
+      title.removeAttribute("tabindex");
+      title.removeAttribute("aria-label");
       return;
     }
 
@@ -138,24 +127,6 @@
   window.addEventListener("pageshow", scheduleRouteSync);
   window.addEventListener("popstate", scheduleRouteSync);
   syncAgentTitleInteraction();
-
-  if (!document.getElementById("mflAgentWalletCopyStyles")) {
-    const style = document.createElement("style");
-    style.id = "mflAgentWalletCopyStyles";
-    style.textContent = `
-      #tablePageTitle[data-agent-wallet-copy] {
-        cursor: pointer;
-      }
-
-      #tablePageTitle[data-agent-wallet-copy]:hover,
-      #tablePageTitle[data-agent-wallet-copy]:focus-visible,
-      #tablePageTitle[data-agent-wallet-copy]:active {
-        text-decoration: underline;
-        outline: 0;
-      }
-    `;
-    document.head.appendChild(style);
-  }
 
   window.__mflDesktopTableStyleRuntime = Object.freeze({
     sync: scheduleRouteSync,

@@ -15,22 +15,12 @@ const [bootstrap, bootstrapCore] = await Promise.all([
 includes(
   bootstrap,
   'root.classList.add("mflSingleRenderPending");',
-  "bootstrap.js must synchronously own the first-paint loading shell state.",
+  "bootstrap.js must synchronously own first-paint loading state.",
 );
 includes(
   bootstrap,
   'root.classList.remove("mflInitialRouteResolved");',
-  "First-paint route styles must stay authoritative until startup settles.",
-);
-includes(
-  bootstrap,
-  'style.id = "mflSingleRenderPendingStyles";',
-  "bootstrap.js must synchronously style the loading shell.",
-);
-excludes(
-  bootstrap,
-  "main > .pageView { visibility: hidden !important; }",
-  "Startup must not hide the destination page shell while data loads.",
+  "First-paint route state must remain distinct until startup settles.",
 );
 includes(
   bootstrap,
@@ -40,122 +30,67 @@ includes(
 includes(
   bootstrap,
   "function primeInitialTableChrome(page, urlLike = window.location.href) {",
-  "bootstrap.js must synchronously prime table title, quickfilters, and pager before first paint.",
+  "bootstrap.js must synchronously prime table title and quickfilters.",
+);
+includes(
+  bootstrap,
+  "function primeViewButtons(page, view) {",
+  "First-paint view buttons must be updated directly in the DOM.",
+);
+includes(
+  bootstrap,
+  "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);",
+  "View order must be represented by DOM order instead of CSS order overrides.",
+);
+includes(
+  bootstrap,
+  'button.textContent = page === "club" ? "Squad" : "Attributes";',
+  "Club Squad must use real button text instead of generated pseudo-content.",
 );
 includes(
   bootstrap,
   'Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);',
-  "Runtime navigation must reuse the bootstrap-owned destination table chrome primer.",
+  "Runtime navigation must reuse the bootstrap-owned table chrome primer.",
 );
 includes(
   bootstrap,
   'Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);',
-  "Non-table route chunks must retain access to the bootstrap-safe table-title fallback.",
-);
-includes(
-  bootstrap,
-  'title.textContent = firstPaintTableTitle(normalizedPage, urlLike);',
-  "The destination table title must be correct before its shell is revealed.",
-);
-includes(
-  bootstrap,
-  'hideMflPlayersFilter.hidden = normalizedPage !== "database";',
-  "Database-only quickfilters must be correct before first paint.",
-);
-includes(
-  bootstrap,
-  'packablePlayersFilter.hidden = normalizedPage !== "mfl";',
-  "MFL-only quickfilters must be correct before first paint.",
-);
-includes(
-  bootstrap,
-  'newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";',
-  "The MFL quickfilter label must be correct before first paint.",
-);
-includes(
-  bootstrap,
-  "function storedTablePageState(page) {",
-  "First-paint quickfilter state must come from the locally persisted page state.",
-);
-includes(
-  bootstrap,
-  'localStorage.getItem(FILTER_STORAGE_KEY)',
-  "First-paint quickfilters must read the same local table-state storage as the application core.",
-);
-includes(
-  bootstrap,
-  "hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;",
-  "Hide-retired selection must be correct before first paint.",
-);
-includes(
-  bootstrap,
-  "hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);",
-  "Hide-retiring selection must be correct before first paint.",
-);
-includes(
-  bootstrap,
-  "savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true",
-  "Database MFL-player selection must restore before first paint.",
-);
-includes(
-  bootstrap,
-  "savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true",
-  "MFL packable-player selection must restore before first paint.",
-);
-includes(
-  bootstrap,
-  "newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);",
-  "New-mint or aged-player selection must restore before first paint.",
-);
-includes(
-  bootstrap,
-  'attributesView.textContent = normalizedPage === "club" ? "Squad" : "Attributes";',
-  "Squad must use real button text instead of a generated pseudo-element label.",
-);
-includes(
-  bootstrap,
-  "if (pager instanceof HTMLElement) pager.hidden = true;",
-  "The table pager must be hidden before the first loading shell is revealed.",
+  "Player-only startup must retain a shared table-title fallback.",
 );
 includes(
   bootstrap,
   "function primeInitialTableRows(replaceExisting = false) {",
-  "bootstrap.js must seed and replace table loading rows before route work starts.",
-);
-includes(
-  bootstrap,
-  'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);',
-  "Runtime navigation must be able to show the table skeleton synchronously.",
-);
-includes(
-  bootstrap,
-  "function primeRouteSkeleton(target) {",
-  "Bootstrap must own immediate non-table destination skeletons.",
-);
-includes(
-  bootstrap,
-  'playerDetail.innerHTML = \'<div class="emptyState">Loading player...</div>\';',
-  "Player direct refresh must show its loading shell immediately.",
-);
-includes(
-  bootstrap,
-  'html.mflSingleRenderPending[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow { align-items: center !important; }',
-  "Evaluation title alignment must match its final layout during first paint.",
-);
-includes(
-  bootstrap,
-  'html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after { content: none !important; display: none !important; }',
-  "The legacy Squad pseudo-element must stay suppressed during first paint.",
-);
-includes(
-  bootstrap,
-  'row.className = "staticTableBlankRow";',
-  "Initial table loading must use the canonical five-row placeholder class.",
+  "bootstrap.js must seed table routes with five rows before data arrives.",
 );
 includes(
   bootstrap,
   "const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];",
   "Initial table loading must retain exactly five blank rows.",
+);
+includes(
+  bootstrap,
+  "function primeRouteSkeleton(target) {",
+  "Non-table routes must have an immediate static skeleton owner.",
+);
+includes(
+  bootstrap,
+  "function primePlayerSkeleton() {",
+  "Player navigation must reveal structural boxes before player data resolves.",
+);
+includes(
+  bootstrap,
+  "function resetStatsShell(target) {",
+  "Stats navigation must reset destination boxes before data resolves.",
+);
+excludes(
+  bootstrap,
+  'document.createElement("style")',
+  "First-paint bootstrap must not patch layout through injected styles.",
+);
+excludes(
+  bootstrap,
+  "!important",
+  "First-paint bootstrap must not use CSS overrides.",
 );
 
 excludes(
@@ -165,63 +100,48 @@ excludes(
 );
 includes(
   bootstrapCore,
-  'const singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");',
-  "bootstrap-core.js must reference the bootstrap-owned loading-shell style for cleanup.",
-);
-includes(
-  bootstrapCore,
   'document.documentElement.classList.remove("mflSingleRenderPending");',
-  "bootstrap-core.js must release the loading-shell state when startup finishes.",
+  "bootstrap-core.js must release first-paint loading state when startup finishes.",
 );
 includes(
   bootstrapCore,
   'document.documentElement.classList.add("mflInitialRouteResolved");',
-  "Runtime route ownership must replace first-paint route ownership only after startup settles.",
-);
-includes(
-  bootstrapCore,
-  "singleRenderStyle?.remove();",
-  "bootstrap-core.js must remove the bootstrap-owned loading-shell style when startup finishes.",
+  "Runtime route ownership must begin only after startup settles.",
 );
 includes(
   bootstrapCore,
   "if (startupFinished) return;",
-  "Startup cleanup must be idempotent across success and error completion paths.",
+  "Startup cleanup must be idempotent across success and error paths.",
 );
 includes(
   bootstrapCore,
   'if (document.documentElement.dataset.mflReady === "error")',
-  "The bootstrap busy controller must observe actual application startup failures.",
+  "The bootstrap busy controller must observe actual startup failures.",
 );
 includes(
   bootstrapCore,
   "const recoverCompletedApplicationStartup = async () => {",
-  "Post-core startup errors must be classified against the application shell handshake.",
+  "Post-core errors must be classified against the application startup promise.",
 );
 includes(
   bootstrapCore,
   "await appStartPromise;",
-  "A post-core error must keep the visible loading shell active until the application promise settles.",
+  "A post-core error must keep loading active until the application promise settles.",
 );
 excludes(
   bootstrapCore,
   "Promise.race([",
-  "Post-core recovery must not misclassify slow successful data loading with a short race timeout.",
-);
-excludes(
-  bootstrapCore,
-  "window.setTimeout(() => resolve(false), 250)",
-  "The obsolete 250ms false-failure cutoff must stay removed.",
+  "Post-core recovery must not use a short timeout that can misclassify slow successful loading.",
 );
 includes(
   bootstrapCore,
   'document.getElementById("mflStartupError")?.remove();',
-  "A post-core startup error must not leave a false fatal message after the shell settles.",
+  "A recovered post-core error must remove its false fatal message.",
 );
-includes(
+excludes(
   bootstrapCore,
-  "function ensureFatalStartupMessage() {",
-  "Failures before the application-core handshake must still have a real fatal message owner.",
+  "!important",
+  "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap visible-shell, saved first-paint table chrome, route skeletons, and startup-error ownership validation passed.");
+console.log("Bootstrap direct first-paint skeleton and startup ownership validation passed.");

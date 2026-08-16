@@ -3,27 +3,6 @@
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
 
-  function installStaticStyles() {
-    if (document.getElementById("mflEvaluationDiscountRateUiStyles")) return;
-    const style = document.createElement("style");
-    style.id = "mflEvaluationDiscountRateUiStyles";
-    style.textContent = `
-      #evaluationPage .evaluationTitleRow {
-        align-items: flex-start !important;
-      }
-
-      #evaluationPage .evaluationTitleRow > .tablePageTitle {
-        margin-top: 0 !important;
-        line-height: 1.2 !important;
-      }
-
-      #evaluationPage #evaluationDiscountRate {
-        visibility: visible !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
   function installTooltipController() {
     window.__mflDiscountTooltipController?.destroy?.();
 
@@ -320,6 +299,5 @@
     window.__mflDiscountTooltipController = { version: VERSION, show, hide, destroy };
   }
 
-  installStaticStyles();
   installTooltipController();
 })();

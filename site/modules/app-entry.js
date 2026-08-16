@@ -361,7 +361,6 @@ function primeEvaluationDiscountRatePlaceholder() {
   const discountRate = document.getElementById("evaluationDiscountRate");
   if (!(discountRate instanceof HTMLElement)) return;
   if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
-  discountRate.style.setProperty("visibility", "visible", "important");
 }
 
 primeEvaluationDiscountRatePlaceholder();

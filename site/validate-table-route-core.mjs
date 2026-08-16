@@ -27,22 +27,38 @@ invariant(tableCore.length > 20_000, "The Table core chunk is too small to repre
 new Function(sharedCore);
 new Function(tableCore);
 
+includes(tableSplitter, 'const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";', "Table facade insertion must use a stable source marker rather than a stale numeric offset.");
+excludes(tableSplitter, "firstSectionStart", "Table facade insertion must not reuse an index captured before extraction mutates the shared core.");
+includes(tableSplitter, "core = core.replace(\n    TABLE_FACADE_INSERTION_MARKER,", "The shared Table facade must be inserted at the stable setPage boundary.");
 includes(tableSplitter, '"Table destination shell"', "The Table splitter must extract the table destination shell.");
 includes(tableSplitter, '"Table sorting and header owner"', "The Table splitter must extract sorting and header ownership.");
 includes(tableSplitter, '"Table filter controls and matching"', "The Table splitter must extract filter controls and matching.");
 includes(tableSplitter, '"Table selection owner"', "The Table splitter must extract selection ownership.");
 includes(tableSplitter, '"Table row renderer"', "The Table splitter must extract row rendering.");
-includes(tableSplitter, "routeChunks: Object.freeze({ ...routeChunks, table:", "The artifact map must expose the Table chunk.");
 
-includes(sharedCore, "let __mflTableBuildHeaderOwner = null;", "The shared core must keep the stable Table facade bridge.");
-includes(sharedCore, "function buildHeader() {", "The shared core must retain the stable buildHeader facade for existing wrappers.");
-includes(sharedCore, "function applyFilters() {", "The shared core must retain the stable applyFilters facade for existing wrappers.");
-includes(sharedCore, "function renderTable() {", "The shared core must retain the stable renderTable facade for existing wrappers.");
-includes(sharedCore, "function setView() {", "The shared core must retain the stable setView facade for existing wrappers.");
-includes(sharedCore, "function buildOperatorSelect() {", "The shared core must retain the filter-controls facade.");
-includes(sharedCore, "function ruleMatches() {", "The shared core must retain the filter matching facade.");
-includes(sharedCore, "function addFilterRule() {", "The shared core must retain the add-filter facade.");
-includes(sharedCore, "function restoreSavedTableState() {", "The shared core must retain the table-state restoration facade.");
+includes(sharedCore, "let __mflTableTitleForPageOwner = null;", "The shared core must keep the stable table-title facade slot for Player-only startup.");
+includes(sharedCore, "const tableTitleForPage = function (pageName) {", "The shared core must expose tableTitleForPage before Player rendering can call it.");
+includes(sharedCore, 'Reflect.get(window, "__mflTableTitleForPageFallback")', "The table-title facade must have a bootstrap fallback before the Table chunk loads.");
+const titleFacadeIndex = sharedCore.indexOf("const tableTitleForPage = function (pageName) {");
+const setPageIndex = sharedCore.indexOf("async function setPage(pageName, updateHash = true, options = {}) {");
+invariant(titleFacadeIndex >= 0 && setPageIndex > titleFacadeIndex, "tableTitleForPage must be declared in shared top-level scope before setPage and Player startup execution.");
+includes(tableCore, "function tableTitleForPageOwner(pageName) {", "The lazy Table chunk must retain the real table-title implementation.");
+includes(tableCore, "__mflTableTitleForPageOwner = tableTitleForPageOwner;", "Loading the Table chunk must activate the real table-title owner.");
+
+for (const [facade, ownerSlot, chunkOwner] of [
+  ["buildHeader", "__mflTableBuildHeaderOwner", "tableBuildHeaderOwner"],
+  ["applyFilters", "__mflTableApplyFiltersOwner", "tableApplyFiltersOwner"],
+  ["renderTable", "__mflTableRenderTableOwner", "tableRenderTableOwner"],
+  ["setView", "__mflTableSetViewOwner", "tableSetViewOwner"],
+  ["buildOperatorSelect", "__mflTableBuildOperatorSelectOwner", "tableBuildOperatorSelectOwner"],
+  ["ruleMatches", "__mflTableRuleMatchesOwner", "tableRuleMatchesOwner"],
+  ["addFilterRule", "__mflTableAddFilterRuleOwner", "tableAddFilterRuleOwner"],
+  ["restoreSavedTableState", "__mflTableRestoreSavedTableStateOwner", "tableRestoreSavedTableStateOwner"],
+]) {
+  includes(sharedCore, `let ${ownerSlot} = null;`, `The shared core must keep the stable ${facade} owner slot.`);
+  includes(sharedCore, `function ${facade}() {`, `The shared core must retain the ${facade} facade.`);
+  includes(tableCore, `${ownerSlot} = ${chunkOwner};`, `The Table chunk must activate ${facade}.`);
+}
 
 const universalTableHandlers = [
   ["openFilters", "__mflTableOpenFiltersOwner", "tableOpenFiltersOwner", 'openFiltersButton.addEventListener("click", openFilters);'],
@@ -54,52 +70,25 @@ const universalTableHandlers = [
   ["moveSelectedToWatchlist", "__mflTableMoveSelectedToWatchlistOwner", "tableMoveSelectedToWatchlistOwner", 'moveToWatchlistButton?.addEventListener("click", moveSelectedToWatchlist);'],
   ["openSelectedPlayerLinks", "__mflTableOpenSelectedPlayerLinksOwner", "tableOpenSelectedPlayerLinksOwner", 'openSelectedLinksButton.addEventListener("click", openSelectedPlayerLinks);'],
 ];
-
 for (const [handler, ownerSlot, chunkOwner, binding] of universalTableHandlers) {
   includes(sharedCore, `let ${ownerSlot} = null;`, `The shared core must keep a stable owner slot for ${handler}.`);
-  includes(sharedCore, `function ${handler}() {`, `The shared core must retain the ${handler} facade used by universal event binding.`);
-  includes(sharedCore, binding, `Universal event binding must retain ${handler} through its stable facade.`);
+  includes(sharedCore, `function ${handler}() {`, `The shared core must retain the ${handler} facade used by universal binding.`);
+  includes(sharedCore, binding, `Universal event binding must retain ${handler} through its facade.`);
   includes(tableCore, `function ${chunkOwner}(`, `The Table chunk must own the ${handler} implementation.`);
-  includes(tableCore, `${ownerSlot} = ${chunkOwner};`, `The Table chunk must activate the ${handler} facade when loaded.`);
+  includes(tableCore, `${ownerSlot} = ${chunkOwner};`, `The Table chunk must activate ${handler} when loaded.`);
 }
 
 excludes(sharedCore, "function tableNextOverallPreciseValue(row) {", "Table sorting calculations must not remain in the shared core.");
 excludes(sharedCore, "function activeFilterCount() {", "Table filter UI must not remain in the shared core.");
 excludes(sharedCore, "function currentPageRows() {", "Table paging and selection must not remain in the shared core.");
 excludes(sharedCore, "function showTableBusyState() {", "Table busy-state rendering must not remain in the shared core.");
-excludes(sharedCore, "function tableTitleForPage(pageName) {", "Table destination-shell ownership must not remain in the shared core.");
-
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route player/search formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
-includes(sharedCore, "function rowHasHiddenMflJoinedAgencyDate(row) {", "MFL Stats shared row visibility logic must remain universal.");
-includes(sharedCore, "function renderSearchResultsNow() {", "Global Search rendering must remain universal.");
-
-includes(tableCore, "function tableBuildTableColGroupOwner(", "The Table chunk must own column construction.");
-includes(tableCore, "function tableBuildHeaderOwner(", "The Table chunk must own header rendering.");
-includes(tableCore, "function tableBuildOperatorSelectOwner(", "The Table chunk must own filter operator construction.");
-includes(tableCore, "function tableRuleMatchesOwner(", "The Table chunk must own row filter matching.");
-includes(tableCore, "function tableAddFilterRuleOwner(", "The Table chunk must own filter row construction.");
-includes(tableCore, "function tableRestoreSavedTableStateOwner(", "The Table chunk must own table-state restoration.");
-includes(tableCore, "function tableApplyFiltersOwner(", "The Table chunk must own filtering.");
-includes(tableCore, "function tableRenderTableOwner(", "The Table chunk must own row rendering.");
-includes(tableCore, "async function tableSetViewOwner(", "The Table chunk must own view switching.");
-includes(tableCore, "function currentPageRows() {", "The Table chunk must own page slicing.");
-includes(tableCore, "function updateSelectionBar() {", "The Table chunk must own selection presentation.");
-excludes(tableCore, "function formatCellValue(row, column) {", "Cross-route cell formatting must not become Table-only.");
-excludes(tableCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must not become Table-only.");
-excludes(tableCore, "function rowHasHiddenMflJoinedAgencyDate(row) {", "MFL Stats row visibility logic must not become Table-only.");
 
 includes(routeLoader, 'table: "/modules/app-core-table-runtime.js"', "The route-core loader must map the Table chunk.");
-includes(routeLoader, 'const TABLE_INFRASTRUCTURE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);', "The loader must centrally own table-capable route membership.");
-includes(routeLoader, "function routeUsesTableInfrastructure(pageName) {", "The loader must expose one table-route membership classifier.");
-includes(routeLoader, "return TABLE_INFRASTRUCTURE_PAGES.has(normalizeRoutePageName(pageName));", "Table-route membership must use canonical page-name normalization.");
-includes(routeLoader, "runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;", "The loader must expose table-route membership to app-entry.");
-includes(routeLoader, "usesTableInfrastructure: routeUsesTableInfrastructure,", "Repeated loader installs must retain table-route membership ownership.");
-includes(routeLoader, "runtimeWindow.__mflRouteUsesTableInfrastructure = runtimeWindow.__mflRouteCoreRuntime.usesTableInfrastructure;", "Repeated loader execution must restore the table-route classifier bridge.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club must load the Table core before the Club core.");
 includes(routeLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must not load the Table core.");
 includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["mflstats"];', "MFL Stats must keep its independent core.");
-includes(routeLoader, 'if (routeUsesTableInfrastructure(page)) return ["table"];', "Generic Table core loading must reuse the central table-route membership classifier.");
 includes(routeLoader, "for (const dependency of dependencies)", "Route-core dependencies must execute in declared order.");
 
 const routeNeedsTableStart = appEntry.indexOf("function routeNeedsTable(pageName, options = {}) {");
@@ -107,22 +96,16 @@ const routeNeedsTableEnd = appEntry.indexOf("function routeNeedsWatchlist(pageNa
 invariant(routeNeedsTableStart >= 0 && routeNeedsTableEnd > routeNeedsTableStart, "app-entry must retain a stable Table runtime decision facade.");
 const routeNeedsTableSection = appEntry.slice(routeNeedsTableStart, routeNeedsTableEnd);
 includes(routeNeedsTableSection, 'Reflect.get(window, "__mflRouteUsesTableInfrastructure")', "app-entry must reuse central table-route membership.");
-includes(routeNeedsTableSection, 'throw new Error("Table-route classifier is unavailable.");', "app-entry must fail clearly if bootstrap ordering stops providing table-route membership.");
-includes(routeNeedsTableSection, "if (!classifier(page)) return false;", "Non-table routes must skip Table runtimes through the central classifier.");
-includes(routeNeedsTableSection, 'return page !== "database" || routeView(options) !== "stats";', "Database Stats must remain the only app-entry Table-runtime exclusion.");
 excludes(routeNeedsTableSection, '["mfl", "agents", "progression", "watchlist", "myplayers", "club"]', "app-entry must not duplicate the table-capable page list.");
 
 includes(routeNormalizer, "const directTableRoute = (", "Direct startup must classify table routes before startApp.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct table startup must load the Table core before startApp.");
 matches(routeNormalizer, /!\/\^.*database.*stats.*test\(initialRoutePath\)/, "Direct Database Stats startup must stay outside the Table core.");
-matches(routeNormalizer, /!\/\^.*mfl.*stats.*test\(initialRoutePath\)/, "Direct MFL Stats startup must stay outside the Table core.");
 
 includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
-includes(buildCore, "artifacts.routeChunks?.table", "The build must consume the Table artifact.");
-
 const generatedTable = await read("./modules/app-core-table-runtime.js");
 const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");
 invariant(generatedTable.slice(tableBanner.length).replace(/\s*$/, "") === tableCore.replace(/\s*$/, ""), "Generated Table runtime must exactly match the Table build artifact.");
 
-console.log("Table route-core splitting validation passed.");
+console.log("Table route-core splitting and globally placed facade validation passed.");

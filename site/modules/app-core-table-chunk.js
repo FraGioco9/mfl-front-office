@@ -180,6 +180,8 @@ __mflTableMoveSelectedToWatchlistOwner = tableMoveSelectedToWatchlistOwner;
 __mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;
 __mflTableSetViewOwner = tableSetViewOwner;`;
 
+const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";
+
 export function splitTableApplicationCoreRuntime(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
   const routeChunks = input.routeChunks && typeof input.routeChunks === "object" ? input.routeChunks : {};
@@ -191,9 +193,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   }
 
   const tableParts = [];
-  let firstSectionStart = -1;
   const extract = (startMarker, endMarker, label) => {
-    if (firstSectionStart < 0) firstSectionStart = core.indexOf(startMarker);
     const extracted = extractRequiredTableSection(core, startMarker, endMarker, label);
     core = extracted.core;
     tableParts.push(extracted.chunk);
@@ -201,7 +201,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
 
   extract(
     "function tableTitleForPage(pageName) {",
-    "async function setPage(pageName, updateHash = true, options = {}) {",
+    TABLE_FACADE_INSERTION_MARKER,
     "Table destination shell",
   );
   extract(
@@ -245,11 +245,13 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     "Table view switching owner",
   );
 
-  if (firstSectionStart < 0) {
-    throw new Error("Could not locate the Table facade insertion point.");
+  if (!core.includes(TABLE_FACADE_INSERTION_MARKER)) {
+    throw new Error("Could not locate the stable Table facade insertion marker.");
   }
-
-  core = `${core.slice(0, firstSectionStart)}${TABLE_FACADE_BLOCK}\n\n${core.slice(firstSectionStart)}`;
+  core = core.replace(
+    TABLE_FACADE_INSERTION_MARKER,
+    `${TABLE_FACADE_BLOCK}\n\n${TABLE_FACADE_INSERTION_MARKER}`,
+  );
 
   let table = tableParts.join("\n\n").replace(/\s*$/, "");
   table = renameRequiredTableOwner(table, "tableTitleForPage", "tableTitleForPageOwner");

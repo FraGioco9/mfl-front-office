@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.43";
+  const STATIC_RELEASE_VERSION = "1.124.44";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
@@ -36,14 +36,20 @@
     return document.getElementById("homePage");
   }
 
-  function firstPaintTableTitle(page, urlLike = window.location.href) {
-    const currentTitle = document.getElementById("tablePageTitle");
-    const currentBodyPage = String(document.body?.dataset.page || "").toLowerCase();
-    const currentText = String(currentTitle?.textContent || "").trim();
-    if (["watchlist", "agents", "club"].includes(page) && currentBodyPage === page && currentText && currentText !== "Progression") {
-      return currentText;
+  function storedTablePageState(page) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+      const pages = saved?.pages && typeof saved.pages === "object" && !Array.isArray(saved.pages)
+        ? saved.pages
+        : null;
+      const pageState = pages?.[page];
+      return pageState && typeof pageState === "object" && !Array.isArray(pageState) ? pageState : null;
+    } catch {
+      return null;
     }
+  }
 
+  function firstPaintTableTitle(page, urlLike = window.location.href) {
     if (page === "database") return "Database";
     if (page === "mfl") return "MFL Wallet";
     if (page === "progression") return "Progression";
@@ -61,67 +67,86 @@
     return "Progression";
   }
 
-  function storedTablePageState(page) {
-    try {
-      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
-      const pageState = saved?.pages?.[page];
-      return pageState && typeof pageState === "object" && !Array.isArray(pageState) ? pageState : null;
-    } catch {
-      return null;
-    }
+  function primeViewButtons(page, view) {
+    const config = window.__mflTableViewConfig?.[page];
+    if (!config || !Array.isArray(config.order)) return;
+    const container = document.querySelector("#progressionPage .views");
+    if (!(container instanceof HTMLElement)) return;
+
+    const buttons = new Map();
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+      const buttonView = String(button.dataset.view || "");
+      buttons.set(buttonView, button);
+      button.hidden = !config.order.includes(buttonView);
+      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
+        button.textContent = page === "club" ? "Squad" : "Attributes";
+      }
+    });
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    config.order.forEach((buttonView) => {
+      const button = buttons.get(buttonView);
+      if (!(button instanceof HTMLElement)) return;
+      button.hidden = false;
+      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+    });
+
+    const activeView = config.order.includes(view)
+      ? view
+      : String(config.fallback || config.order[0] || "");
+    container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
+      button.classList.toggle("active", String(button.dataset.view || "") === activeView);
+    });
   }
 
   function primeInitialTableChrome(page, urlLike = window.location.href) {
     const normalizedPage = String(page || "").toLowerCase();
     if (!normalizedPage) return;
 
+    const config = window.__mflTableViewConfig?.[normalizedPage];
+    const requestedView = String(root.dataset.initialTablePage || "") === normalizedPage
+      ? String(root.dataset.initialTableView || "")
+      : "";
+    const view = config?.order?.includes(requestedView) ? requestedView : String(config?.fallback || requestedView || "");
+    primeViewButtons(normalizedPage, view);
+
     const title = document.getElementById("tablePageTitle");
     if (title instanceof HTMLElement) title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
 
+    const clubPage = normalizedPage === "club";
+    const savedState = storedTablePageState(normalizedPage) || {};
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    if (quickFilters instanceof HTMLElement) quickFilters.hidden = normalizedPage === "club";
+    if (quickFilters instanceof HTMLElement) quickFilters.hidden = clubPage;
+
+    const hideRetiredInput = document.getElementById("hideRetiredInput");
+    if (hideRetiredInput instanceof HTMLInputElement) hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;
+
+    const hideRetiringInput = document.getElementById("hideRetiringInput");
+    if (hideRetiringInput instanceof HTMLInputElement) hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);
 
     const hideMflPlayersFilter = document.getElementById("hideMflPlayersFilter");
     if (hideMflPlayersFilter instanceof HTMLElement) hideMflPlayersFilter.hidden = normalizedPage !== "database";
-
-    const packablePlayersFilter = document.getElementById("packablePlayersFilter");
-    if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = normalizedPage !== "mfl";
-
-    const newMintsLabel = document.getElementById("newMintsLabel");
-    if (newMintsLabel instanceof HTMLElement) {
-      newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
-    }
-
-    const attributesView = document.querySelector('#progressionPage .views > .viewButton[data-view="attributes"]');
-    if (attributesView instanceof HTMLButtonElement) {
-      attributesView.textContent = normalizedPage === "club" ? "Squad" : "Attributes";
-    }
-
-    const savedState = storedTablePageState(normalizedPage) || {};
-    const clubPage = normalizedPage === "club";
-    const hideRetiredInput = document.getElementById("hideRetiredInput");
-    if (hideRetiredInput instanceof HTMLInputElement) {
-      hideRetiredInput.checked = clubPage ? false : savedState.hideRetired !== false;
-    }
-    const hideRetiringInput = document.getElementById("hideRetiringInput");
-    if (hideRetiringInput instanceof HTMLInputElement) {
-      hideRetiringInput.checked = clubPage ? false : Boolean(savedState.hideRetiring);
-    }
     const hideMflPlayersInput = document.getElementById("hideMflPlayersInput");
     if (hideMflPlayersInput instanceof HTMLInputElement) {
       hideMflPlayersInput.checked = normalizedPage === "database"
         ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
         : false;
     }
+
+    const packablePlayersFilter = document.getElementById("packablePlayersFilter");
+    if (packablePlayersFilter instanceof HTMLElement) packablePlayersFilter.hidden = normalizedPage !== "mfl";
     const packablePlayersInput = document.getElementById("packablePlayersInput");
     if (packablePlayersInput instanceof HTMLInputElement) {
       packablePlayersInput.checked = normalizedPage === "mfl"
         ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
         : false;
     }
+
     const newMintsInput = document.getElementById("newMintsInput");
-    if (newMintsInput instanceof HTMLInputElement) {
-      newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);
+    if (newMintsInput instanceof HTMLInputElement) newMintsInput.checked = clubPage ? false : Boolean(savedState.newMints);
+    const newMintsLabel = document.getElementById("newMintsLabel");
+    if (newMintsLabel instanceof HTMLElement) {
+      newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
     }
 
     const pager = document.querySelector("#progressionPage nav.pager");
@@ -135,7 +160,9 @@
 
   function primeInitialTableRows(replaceExisting = false) {
     const body = document.getElementById("tableBody");
-    if (!(body instanceof HTMLTableSectionElement) || (body.rows.length && !replaceExisting)) return;
+    if (!(body instanceof HTMLTableSectionElement)) return;
+    if (!replaceExisting && body.rows.length) return;
+
     const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
     const fragment = document.createDocumentFragment();
     opacities.forEach((opacity, index) => {
@@ -152,25 +179,79 @@
     });
     body.replaceChildren(fragment);
     body.dataset.staticLoading = "true";
+    const emptyState = document.getElementById("emptyState");
+    if (emptyState instanceof HTMLElement) emptyState.hidden = true;
+    const pager = document.querySelector("#progressionPage nav.pager");
+    if (pager instanceof HTMLElement) pager.hidden = true;
   }
 
   Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);
 
+  function resetStatsShell(target) {
+    if (target.id === "databaseStatsPage") {
+      ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
+        .forEach((id) => {
+          const element = document.getElementById(id);
+          if (element instanceof HTMLElement) element.textContent = "-";
+        });
+      document.getElementById("databaseStatsDistribution")?.replaceChildren();
+      return;
+    }
+    if (target.id === "mflStatsPage") {
+      ["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]
+        .forEach((id) => {
+          const element = document.getElementById(id);
+          if (element instanceof HTMLElement) element.textContent = "-";
+        });
+      document.getElementById("mflStatsAgeDistribution")?.replaceChildren();
+    }
+  }
+
+  function primePlayerSkeleton() {
+    const playerDetail = document.getElementById("playerDetail");
+    if (!(playerDetail instanceof HTMLElement)) return;
+    playerDetail.innerHTML = `
+      <section class="playerHero" aria-hidden="true">
+        <div><span class="playerEyebrow">Player</span><h2>-</h2><p>-</p></div>
+      </section>
+      <section class="playerGrid" aria-hidden="true">
+        <section class="playerStack">
+          <section class="playerPanel playerInfoPanel"><h3>Details</h3><div class="detailGrid">${Array.from({ length: 8 }, () => "<div><span>&nbsp;</span><strong>-</strong></div>").join("")}</div></section>
+          <section class="playerPanel attributesPanel"><h3>Attributes</h3><div class="attributeGrid">${Array.from({ length: 6 }, () => "<div class=\"playerAttributeCard\"><span>&nbsp;</span><strong>-</strong></div>").join("")}</div></section>
+        </section>
+        <section class="playerPanel pitchPanel"><h3>Positions</h3><div class="emptyState">&nbsp;</div></section>
+      </section>`;
+  }
+
   function primeRouteSkeleton(target) {
     if (!(target instanceof HTMLElement)) return;
+    if (target.id === "homePage") {
+      const players = document.getElementById("homePlayers");
+      const wallets = document.getElementById("homeWallets");
+      if (players instanceof HTMLElement) players.textContent = "-";
+      if (wallets instanceof HTMLElement) wallets.textContent = "-";
+      return;
+    }
     if (target.id === "playerPage") {
-      const playerDetail = document.getElementById("playerDetail");
-      if (playerDetail instanceof HTMLElement) {
-        playerDetail.innerHTML = '<div class="emptyState">Loading player...</div>';
-      }
+      primePlayerSkeleton();
       return;
     }
     if (target.id === "evaluationPage") {
-      const evaluationPanel = document.getElementById("evaluationPanel");
-      if (evaluationPanel instanceof HTMLElement) evaluationPanel.hidden = true;
-      const evaluationSearchResults = document.getElementById("evaluationSearchResults");
-      if (evaluationSearchResults instanceof HTMLElement) evaluationSearchResults.hidden = true;
+      const panel = document.getElementById("evaluationPanel");
+      if (panel instanceof HTMLElement) panel.hidden = true;
+      const results = document.getElementById("evaluationSearchResults");
+      if (results instanceof HTMLElement) results.hidden = true;
+      const discountRate = document.getElementById("evaluationDiscountRate");
+      if (discountRate instanceof HTMLElement) discountRate.textContent = "-";
+      const buttons = document.getElementById("evaluationButtons");
+      const loadButton = document.getElementById("evaluationLoadButton");
+      const plainEvaluation = root.dataset.initialEvaluationSelection !== "true";
+      const canLoad = root.dataset.storedWalletOptIn === "true" && plainEvaluation;
+      if (buttons instanceof HTMLElement && canLoad) buttons.hidden = false;
+      if (loadButton instanceof HTMLElement) loadButton.hidden = !canLoad;
+      return;
     }
+    resetStatsShell(target);
   }
 
   Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);
@@ -185,37 +266,15 @@
     } else {
       primeRouteSkeleton(target);
     }
+
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-  }
 
-  if (!document.getElementById("mflSingleRenderPendingStyles")) {
-    const style = document.createElement("style");
-    style.id = "mflSingleRenderPendingStyles";
-    style.textContent = `
-      html.mflSingleRenderPending #mflStartupError { display: none !important; }
-      html.mflSingleRenderPending #progressionPage nav.pager { display: none !important; }
-      html.mflSingleRenderPending[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow { align-items: center !important; }
-      html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"] { font-size: inherit !important; }
-      html.mflSingleRenderPending[data-initial-table-page="club"] #progressionPage .views > .viewButton[data-view="attributes"]::after { content: none !important; display: none !important; }
-      html.mflSingleRenderPending #tableBody > .staticTableBlankRow,
-      html.mflSingleRenderPending #tableBody > .staticTableBlankRow > td {
-        pointer-events: none !important;
-        transition: none !important;
-        animation: none !important;
-      }
-      html.mflSingleRenderPending #tableBody > .staticTableBlankRow > td {
-        height: 39px !important;
-        min-height: 39px !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        background: var(--surface-muted) !important;
-        color: transparent !important;
-        user-select: none !important;
-      }
-    `;
-    document.head.appendChild(style);
+    const initialPage = tablePage || (String(root.dataset.initialPage || "home").startsWith("players/") ? "player" : String(root.dataset.initialPage || "home").split("/")[0]);
+    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
+      button.classList.toggle("active", String(button.dataset.page || "") === initialPage);
+    });
   }
 
   primeInitialShell();
@@ -262,8 +321,6 @@
 
   void (async () => {
     try {
-      /* Keep only universal bootstrap ownership here. Route-specific table/filter
-       * owners are requested by app-entry before the destination core render. */
       await Promise.all([
         loadRuntime("/route-core-loader-runtime.js"),
         loadRuntime("/dropdowns-runtime.js"),
@@ -273,7 +330,6 @@
       root.dataset.mflReady = "error";
       root.classList.remove("mflSingleRenderPending");
       root.classList.add("mflInitialRouteResolved");
-      document.getElementById("mflSingleRenderPendingStyles")?.remove();
       console.error("Could not initialize MFL Front Office.", error);
     }
   })();

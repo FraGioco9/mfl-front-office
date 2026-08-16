@@ -1,4 +1,4 @@
 {
-  "version": "1.124.43",
-  "description": "Stabilize first-paint route skeletons, quickfilters, and Player refresh"
+  "version": "1.124.44",
+  "description": "Replace first-paint overrides with direct route skeleton ownership"
 }

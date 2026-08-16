@@ -1,8 +1,6 @@
 (() => {
   "use strict";
 
-  const STYLE_ID = "mflStaticRouteChromeStyles";
-  const PENDING_PAGE_ATTRIBUTE = "data-mfl-pending-table-page";
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     squad: "attributes",
@@ -16,7 +14,6 @@
   window.__mflStaticUiRuntime?.destroy?.();
 
   let destroyed = false;
-  let bodyPageObserver = null;
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -50,35 +47,6 @@
     return { page, view, url: url.href };
   }
 
-  function installStyles() {
-    document.getElementById(STYLE_ID)?.remove();
-    const config = tableViewConfig();
-    const rules = [];
-
-    Object.entries(config).forEach(([page, entry]) => {
-      if (!entry || !Array.isArray(entry.order) || !entry.order.length) return;
-      const selectors = [
-        `body[data-page="${page}"]`,
-        `html[${PENDING_PAGE_ATTRIBUTE}="${page}"] body`,
-      ];
-      selectors.forEach((scope) => {
-        rules.push(`${scope} #progressionPage .views > .viewButton { display: none !important; }`);
-        entry.order.forEach((view, index) => {
-          rules.push(`${scope} #progressionPage .views > .viewButton[data-view="${view}"]:not([hidden]) { display: inline-flex !important; order: ${index + 1} !important; }`);
-        });
-      });
-    });
-
-    rules.push(
-      `html[data-stored-progression-access="false"] body[data-page="watchlist"] #progressionPage .views > .viewButton:is([data-view="current"], [data-view="all"]), html[data-stored-progression-access="false"][${PENDING_PAGE_ATTRIBUTE}="watchlist"] #progressionPage .views > .viewButton:is([data-view="current"], [data-view="all"]) { display: none !important; }`,
-    );
-
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = rules.join("\n");
-    document.head.appendChild(style);
-  }
-
   function syncFooter() {
     const version = String(window.__mflReleaseVersion || window.__mflRelease?.version || "").trim();
     if (!/^\d+\.\d+\.\d+$/.test(version)) return;
@@ -92,7 +60,7 @@
   function setActiveNavigation(page) {
     document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
       const buttonPage = String(button.dataset.page || "").toLowerCase();
-      button.classList.toggle("active", buttonPage === page || (page === "myplayers" && buttonPage === "myplayers"));
+      button.classList.toggle("active", buttonPage === page);
     });
   }
 
@@ -107,17 +75,29 @@
     const config = tableViewConfig()[page];
     if (!config || !Array.isArray(config.order)) return;
     const container = document.querySelector("#progressionPage .views");
-    if (!(container instanceof Element)) return;
-    const allowed = new Set(config.order);
+    if (!(container instanceof HTMLElement)) return;
+
+    const buttons = new Map();
     container.querySelectorAll(":scope > .viewButton[data-view]").forEach((button) => {
       const buttonView = String(button.dataset.view || "");
-      button.hidden = !allowed.has(buttonView);
-      if (allowed.has(buttonView)) button.style.order = String(config.order.indexOf(buttonView) + 1);
+      buttons.set(buttonView, button);
+      button.hidden = !config.order.includes(buttonView);
       if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
         button.textContent = page === "club" ? "Squad" : "Attributes";
       }
     });
-    const activeView = allowed.has(view) ? view : String(config.fallback || config.order[0] || "");
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    config.order.forEach((buttonView) => {
+      const button = buttons.get(buttonView);
+      if (!(button instanceof HTMLElement)) return;
+      button.hidden = false;
+      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
+    });
+
+    const activeView = config.order.includes(view)
+      ? view
+      : String(config.fallback || config.order[0] || "");
     setActiveView(container, activeView);
   }
 
@@ -143,89 +123,61 @@
     return document.getElementById("homePage");
   }
 
-  function hideDestinationPager() {
-    const pager = document.querySelector("#progressionPage nav.pager");
-    if (pager instanceof HTMLElement) pager.hidden = true;
-  }
-
-  function syncDestinationTableChrome(state, { loading = false } = {}) {
-    hideDestinationPager();
+  function syncDestinationTableChrome(state) {
     const prime = Reflect.get(window, "__mflPrimeTableChrome");
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
-    if (loading) {
-      const primeRows = Reflect.get(window, "__mflPrimeTableRows");
-      if (typeof primeRows === "function") primeRows(true);
-    }
   }
 
-  function primeDestinationSkeleton(target, loading) {
-    if (!loading || !(target instanceof HTMLElement)) return;
-    const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");
-    if (typeof prime === "function") prime(target);
-
-    if (target.id === "databaseStatsPage" || target.id === "mflStatsPage") {
-      target.querySelectorAll(".mflStatsCards strong").forEach((value) => {
-        if (value instanceof HTMLElement) value.textContent = "-";
-      });
-      target.querySelectorAll(".mflStatsAgeDistribution").forEach((distribution) => distribution.replaceChildren());
+  function primeDestinationSkeleton(target, state) {
+    if (!(target instanceof HTMLElement)) return;
+    if (target.id === "progressionPage") {
+      const primeRows = Reflect.get(window, "__mflPrimeTableRows");
+      if (typeof primeRows === "function") primeRows(true);
+      window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
+      return;
     }
+    const primeRoute = Reflect.get(window, "__mflPrimeRouteSkeleton");
+    if (typeof primeRoute === "function") primeRoute(target, state);
   }
 
   function showRouteShell(state, { loading = false } = {}) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
-    if (target.id === "progressionPage") syncDestinationTableChrome(state, { loading });
-    else primeDestinationSkeleton(target, loading);
+    if (target.id === "progressionPage") syncDestinationTableChrome(state);
+    if (loading) primeDestinationSkeleton(target, state);
+
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
-    if (loading && target.id === "progressionPage") {
-      window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
-    }
   }
 
-  function syncRouteChrome(urlLike = window.location.href, { pending = false } = {}) {
+  function syncRouteChrome(urlLike = window.location.href, { loading = false } = {}) {
     const state = routeState(urlLike);
     syncFooter();
     setActiveNavigation(state.page);
     syncSharedViewSet(state.page, state.view);
     syncStatsViews(state.page, state.view);
-    if (pending && tableViewConfig()[state.page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, state.page);
-    else if (!pending) document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
-    showRouteShell(state, { loading: pending || document.documentElement.classList.contains("mflSingleRenderPending") });
+    showRouteShell(state, { loading });
     return state;
   }
 
-  function routeUrlFromElement(element) {
-    if (!(element instanceof Element)) return "";
+  function sameOriginRouteFromLink(element) {
+    if (!(element instanceof HTMLAnchorElement)) return "";
+    if (element.target && element.target !== "_self") return "";
+    if (element.hasAttribute("download")) return "";
     const href = element.getAttribute("href");
-    return href ? new URL(href, window.location.href).href : "";
-  }
-
-  function routeLinkFromEvent(event, target) {
-    const link = target?.closest?.("a[href]");
-    if (!(link instanceof HTMLAnchorElement)) return null;
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;
-    if (link.target && link.target.toLowerCase() !== "_self") return null;
-    if (link.hasAttribute("download")) return null;
-    const href = routeUrlFromElement(link);
-    if (!href) return null;
+    if (!href) return "";
     try {
       const url = new URL(href, window.location.href);
-      return url.origin === window.location.origin ? link : null;
+      return url.origin === window.location.origin ? url.href : "";
     } catch {
-      return null;
+      return "";
     }
   }
 
   function onClick(event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const target = event.target instanceof Element ? event.target : null;
-    const nav = target?.closest?.("#sidebar .navButton[data-page]");
-    if (nav instanceof HTMLElement) {
-      const href = routeUrlFromElement(nav);
-      if (href) syncRouteChrome(href, { pending: true });
-      return;
-    }
 
     const viewButton = target?.closest?.("main .views .viewButton[data-view]");
     if (viewButton instanceof HTMLButtonElement) {
@@ -236,16 +188,13 @@
       const currentState = routeState();
       const page = String(viewButton.dataset.page || currentState.page || "");
       if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
-      if (tableViewConfig()[page]) document.documentElement.setAttribute(PENDING_PAGE_ATTRIBUTE, page);
       showRouteShell({ page, view, url: currentState.url }, { loading: true });
       return;
     }
 
-    const routeLink = routeLinkFromEvent(event, target);
-    if (routeLink) {
-      const href = routeUrlFromElement(routeLink);
-      if (href) syncRouteChrome(href, { pending: true });
-    }
+    const link = target?.closest?.("a[href]");
+    const href = sameOriginRouteFromLink(link);
+    if (href) syncRouteChrome(href, { loading: true });
   }
 
   function onKeyDown(event) {
@@ -260,40 +209,24 @@
   }
 
   function onPopState() {
-    syncRouteChrome(window.location.href, { pending: true });
-  }
-
-  function onBodyPageChange() {
-    const pendingPage = document.documentElement.getAttribute(PENDING_PAGE_ATTRIBUTE);
-    const bodyPage = String(document.body?.dataset.page || "");
-    if (pendingPage && bodyPage === pendingPage) document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
+    syncRouteChrome(window.location.href, { loading: true });
   }
 
   function sync() {
-    installStyles();
     syncRouteChrome(window.location.href);
   }
 
   function destroy() {
     destroyed = true;
-    bodyPageObserver?.disconnect();
-    bodyPageObserver = null;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("popstate", onPopState);
-    document.documentElement.removeAttribute(PENDING_PAGE_ATTRIBUTE);
-    document.getElementById(STYLE_ID)?.remove();
   }
 
-  installStyles();
   syncRouteChrome(window.location.href);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("popstate", onPopState);
-  if (document.body) {
-    bodyPageObserver = new MutationObserver(onBodyPageChange);
-    bodyPageObserver.observe(document.body, { attributes: true, attributeFilter: ["data-page"] });
-  }
 
   window.__mflStaticUiRuntime = Object.freeze({ sync, destroy });
 })();
