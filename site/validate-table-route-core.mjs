@@ -10,12 +10,13 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const matches = (source, pattern, message) => invariant(pattern.test(source), message);
 
-const [coreSource, tableSplitter, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, tableSplitter, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
+  read("./modules/app-entry.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
@@ -71,11 +72,27 @@ excludes(tableCore, "function rowByPlayerId(playerId) {", "Cross-route player lo
 excludes(tableCore, "function rowHasHiddenMflJoinedAgencyDate(row) {", "MFL Stats row visibility logic must not become Table-only.");
 
 includes(routeLoader, 'table: "/modules/app-core-table-runtime.js"', "The route-core loader must map the Table chunk.");
-includes(routeLoader, 'const TABLE_CORE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers"]);', "The loader must identify table destinations centrally.");
+includes(routeLoader, 'const TABLE_INFRASTRUCTURE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);', "The loader must centrally own table-capable route membership.");
+includes(routeLoader, "function routeUsesTableInfrastructure(pageName) {", "The loader must expose one table-route membership classifier.");
+includes(routeLoader, "return TABLE_INFRASTRUCTURE_PAGES.has(normalizeRoutePageName(pageName));", "Table-route membership must use canonical page-name normalization.");
+includes(routeLoader, "runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;", "The loader must expose table-route membership to app-entry.");
+includes(routeLoader, "usesTableInfrastructure: routeUsesTableInfrastructure,", "Repeated loader installs must retain table-route membership ownership.");
+includes(routeLoader, "runtimeWindow.__mflRouteUsesTableInfrastructure = runtimeWindow.__mflRouteCoreRuntime.usesTableInfrastructure;", "Repeated loader execution must restore the table-route classifier bridge.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club must load the Table core before the Club core.");
 includes(routeLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must not load the Table core.");
 includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["mflstats"];', "MFL Stats must keep its independent core.");
+includes(routeLoader, 'if (routeUsesTableInfrastructure(page)) return ["table"];', "Generic Table core loading must reuse the central table-route membership classifier.");
 includes(routeLoader, "for (const dependency of dependencies)", "Route-core dependencies must execute in declared order.");
+
+const routeNeedsTableStart = appEntry.indexOf("function routeNeedsTable(pageName, options = {}) {");
+const routeNeedsTableEnd = appEntry.indexOf("function routeNeedsWatchlist(pageName)", routeNeedsTableStart);
+invariant(routeNeedsTableStart >= 0 && routeNeedsTableEnd > routeNeedsTableStart, "app-entry must retain a stable Table runtime decision facade.");
+const routeNeedsTableSection = appEntry.slice(routeNeedsTableStart, routeNeedsTableEnd);
+includes(routeNeedsTableSection, 'Reflect.get(window, "__mflRouteUsesTableInfrastructure")', "app-entry must reuse central table-route membership.");
+includes(routeNeedsTableSection, 'throw new Error("Table-route classifier is unavailable.");', "app-entry must fail clearly if bootstrap ordering stops providing table-route membership.");
+includes(routeNeedsTableSection, "if (!classifier(page)) return false;", "Non-table routes must skip Table runtimes through the central classifier.");
+includes(routeNeedsTableSection, 'return page !== "database" || routeView(options) !== "stats";', "Database Stats must remain the only app-entry Table-runtime exclusion.");
+excludes(routeNeedsTableSection, '["mfl", "agents", "progression", "watchlist", "myplayers", "club"]', "app-entry must not duplicate the table-capable page list.");
 
 includes(routeNormalizer, "const directTableRoute = (", "Direct startup must classify table routes before startApp.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct table startup must load the Table core before startApp.");
