@@ -1,4 +1,4 @@
 {
-  "version": "1.124.27",
-  "description": "Load Database Stats render and data runtimes only when Stats is opened"
+  "version": "1.124.28",
+  "description": "Resolve initial route-core dependencies through the canonical route parser"
 }
