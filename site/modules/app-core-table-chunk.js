@@ -33,6 +33,13 @@ let __mflTableAddFilterRuleOwner = null;
 let __mflTableRestoreSavedTableStateOwner = null;
 let __mflTableApplyFiltersOwner = null;
 let __mflTableRenderTableOwner = null;
+let __mflTableOpenFiltersOwner = null;
+let __mflTableClearAdvancedFiltersOwner = null;
+let __mflTableCloseFiltersOwner = null;
+let __mflTableApplyAdvancedFiltersOwner = null;
+let __mflTableClearSelectionOwner = null;
+let __mflTableAddSelectedToWatchlistOwner = null;
+let __mflTableMoveSelectedToWatchlistOwner = null;
 let __mflTableOpenSelectedPlayerLinksOwner = null;
 let __mflTableSetViewOwner = null;
 
@@ -91,6 +98,48 @@ function renderTable() {
     : undefined;
 }
 
+function openFilters() {
+  return typeof __mflTableOpenFiltersOwner === "function"
+    ? __mflTableOpenFiltersOwner.apply(this, arguments)
+    : undefined;
+}
+
+function clearAdvancedFilters() {
+  return typeof __mflTableClearAdvancedFiltersOwner === "function"
+    ? __mflTableClearAdvancedFiltersOwner.apply(this, arguments)
+    : undefined;
+}
+
+function closeFilters() {
+  return typeof __mflTableCloseFiltersOwner === "function"
+    ? __mflTableCloseFiltersOwner.apply(this, arguments)
+    : undefined;
+}
+
+function applyAdvancedFilters() {
+  return typeof __mflTableApplyAdvancedFiltersOwner === "function"
+    ? __mflTableApplyAdvancedFiltersOwner.apply(this, arguments)
+    : undefined;
+}
+
+function clearSelection() {
+  return typeof __mflTableClearSelectionOwner === "function"
+    ? __mflTableClearSelectionOwner.apply(this, arguments)
+    : undefined;
+}
+
+function addSelectedToWatchlist() {
+  return typeof __mflTableAddSelectedToWatchlistOwner === "function"
+    ? __mflTableAddSelectedToWatchlistOwner.apply(this, arguments)
+    : undefined;
+}
+
+function moveSelectedToWatchlist() {
+  return typeof __mflTableMoveSelectedToWatchlistOwner === "function"
+    ? __mflTableMoveSelectedToWatchlistOwner.apply(this, arguments)
+    : undefined;
+}
+
 function openSelectedPlayerLinks() {
   return typeof __mflTableOpenSelectedPlayerLinksOwner === "function"
     ? __mflTableOpenSelectedPlayerLinksOwner.apply(this, arguments)
@@ -111,6 +160,13 @@ __mflTableAddFilterRuleOwner = tableAddFilterRuleOwner;
 __mflTableRestoreSavedTableStateOwner = tableRestoreSavedTableStateOwner;
 __mflTableApplyFiltersOwner = tableApplyFiltersOwner;
 __mflTableRenderTableOwner = tableRenderTableOwner;
+__mflTableOpenFiltersOwner = tableOpenFiltersOwner;
+__mflTableClearAdvancedFiltersOwner = tableClearAdvancedFiltersOwner;
+__mflTableCloseFiltersOwner = tableCloseFiltersOwner;
+__mflTableApplyAdvancedFiltersOwner = tableApplyAdvancedFiltersOwner;
+__mflTableClearSelectionOwner = tableClearSelectionOwner;
+__mflTableAddSelectedToWatchlistOwner = tableAddSelectedToWatchlistOwner;
+__mflTableMoveSelectedToWatchlistOwner = tableMoveSelectedToWatchlistOwner;
 __mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;
 __mflTableSetViewOwner = tableSetViewOwner;`;
 
@@ -194,6 +250,13 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   table = renameRequiredTableOwner(table, "restoreSavedTableState", "tableRestoreSavedTableStateOwner");
   table = renameRequiredTableOwner(table, "applyFilters", "tableApplyFiltersOwner");
   table = renameRequiredTableOwner(table, "renderTable", "tableRenderTableOwner");
+  table = renameRequiredTableOwner(table, "openFilters", "tableOpenFiltersOwner");
+  table = renameRequiredTableOwner(table, "clearAdvancedFilters", "tableClearAdvancedFiltersOwner");
+  table = renameRequiredTableOwner(table, "closeFilters", "tableCloseFiltersOwner");
+  table = renameRequiredTableOwner(table, "applyAdvancedFilters", "tableApplyAdvancedFiltersOwner");
+  table = renameRequiredTableOwner(table, "clearSelection", "tableClearSelectionOwner");
+  table = renameRequiredTableOwner(table, "addSelectedToWatchlist", "tableAddSelectedToWatchlistOwner");
+  table = renameRequiredTableOwner(table, "moveSelectedToWatchlist", "tableMoveSelectedToWatchlistOwner");
   table = renameRequiredTableOwner(table, "openSelectedPlayerLinks", "tableOpenSelectedPlayerLinksOwner");
   table = renameRequiredTableOwner(table, "setView", "tableSetViewOwner");
   table = `${table}\n\n${TABLE_OWNER_ASSIGNMENTS}`;
