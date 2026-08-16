@@ -406,9 +406,9 @@ async function start() {
 
   await loadApplicationCore(preparedCorePromise);
 
-  /* Route-irrelevant runtimes begin only after app-core has executed and started
-   * the canonical route render. They are still guaranteed to be ready before
-   * mfl:ready, so later SPA navigation keeps the same capabilities. */
+  /* Start route-irrelevant runtimes after the canonical core render begins, but
+   * do not keep the active route behind their completion. Initial-route runtimes
+   * are still part of the critical group above. */
   const deferredRuntimePromise = loadScriptGroup(deferredScripts);
 
   installEvaluationRecentStateBridge();
@@ -427,11 +427,10 @@ async function start() {
   runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   await loadScriptGroup(LATE_RUNTIME_SCRIPTS);
 
-  await Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise]);
-  installCoreBridges();
-  runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
-  runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  promoteResponsiveStylesheet();
+  if (databaseStatsStartup) {
+    runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
+    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+  }
 
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
@@ -440,6 +439,14 @@ async function start() {
   promoteResponsiveStylesheet();
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
+
+  void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])
+    .then(() => {
+      installCoreBridges();
+      runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
+      runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+    })
+    .catch((error) => console.warn("Could not finish deferred route runtimes.", error));
 }
 
 void start().catch(showStartupError);
