@@ -46,30 +46,11 @@ const ROUTE_RUNTIME_GATE = `;(() => {
 window.__mflMarkApplicationCoreLoaded?.();
 
 window.__mflAppStartPromise = (async () => {
-  const initialRoutePath = window.location.pathname.replace(/\\/+$/, "") || "/";
-  const directWatchlistRoute = /^\\/watchlist(?:\\/|$)/i.test(initialRoutePath);
-  const directTableRoute = (
-    (/^\\/database(?:\\/|$)/i.test(initialRoutePath) && !/^\\/database\\/stats$/i.test(initialRoutePath))
-    || (/^\\/mfl(?:\\/|$)/i.test(initialRoutePath) && !/^\\/mfl\\/stats$/i.test(initialRoutePath))
-    || /^\\/(?:agents|progression|my-players)(?:\\/|$)/i.test(initialRoutePath)
-  );
-  if (directTableRoute && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("table");
-  }
-  if (directWatchlistRoute && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("watchlist");
-  }
-  if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(window.location.pathname)
-    && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("club");
-  }
-  if (/^\\/settings\\/?$/i.test(window.location.pathname)
-    && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("settings");
-  }
-  if (/^\\/players\\/[^/]+\\/?$/i.test(window.location.pathname)
-    && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("player");
+  if (typeof pageTargetFromPath === "function" && typeof window.__mflEnsureRouteCore === "function") {
+    const initialRouteTarget = pageTargetFromPath(window.location.pathname);
+    if (initialRouteTarget?.pageName) {
+      await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});
+    }
   }
   return startApp();
 })();`;
