@@ -54,6 +54,10 @@ window.__mflAppStartPromise = (async () => {
     && typeof window.__mflEnsureRouteCore === "function") {
     await window.__mflEnsureRouteCore("settings");
   }
+  if (/^\\/players\\/[^/]+\\/?$/i.test(window.location.pathname)
+    && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("player");
+  }
   return startApp();
 })();`;
 

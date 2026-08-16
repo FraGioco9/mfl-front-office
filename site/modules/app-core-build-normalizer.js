@@ -1,6 +1,7 @@
 // @ts-check
 
 import { normalizeApplicationCore as normalizeBaseApplicationCore } from "./app-core-normalizer.js";
+import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { normalizeRouteRequestCancellation } from "./app-core-route-request-normalizer.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { normalizeRouteRuntimeGate } from "./app-core-route-runtime-normalizer.js";
@@ -19,7 +20,8 @@ function normalizeCompleteApplicationCore(source) {
 
 export function normalizeBuiltApplicationCoreArtifacts(source) {
   const routeArtifacts = splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source));
-  return splitSettingsApplicationCoreRuntime(routeArtifacts);
+  const settingsArtifacts = splitSettingsApplicationCoreRuntime(routeArtifacts);
+  return splitPlayerApplicationCoreRuntime(settingsArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

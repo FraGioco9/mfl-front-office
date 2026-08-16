@@ -22,6 +22,7 @@
     mflstats: "/modules/app-core-mfl-stats-runtime.js",
     club: "/modules/app-core-club-runtime.js",
     settings: "/modules/app-core-settings-runtime.js",
+    player: "/modules/app-core-player-runtime.js",
   });
   const routeCorePromises = new Map();
 
