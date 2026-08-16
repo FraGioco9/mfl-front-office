@@ -51,6 +51,38 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   core = extracted.core;
   playerParts.push(extracted.chunk);
 
+  extracted = extractRequiredPlayerSection(
+    core,
+    "function renderPlayerPage(playerId) {",
+    "function showModal(modal) {",
+    "Player page renderer owner",
+  );
+  core = extracted.core;
+  const playerRenderer = extracted.chunk.replace(
+    "function renderPlayerPage(playerId) {",
+    "function renderPlayerPageOwner(playerId) {",
+  );
+  if (!playerRenderer.includes("function renderPlayerPageOwner(playerId) {")) {
+    throw new Error("Could not rename the Player page renderer owner.");
+  }
+  playerParts.push(`${playerRenderer}\n\nwindow.__mflRenderPlayerPageOwner = renderPlayerPageOwner;`);
+
+  const sharedPlayerFacade = [
+    "function renderPlayerPage(playerId) {",
+    "  const owner = window.__mflRenderPlayerPageOwner;",
+    '  if (typeof owner !== "function") {',
+    '    throw new Error("Player route core is not loaded.");',
+    "  }",
+    "  return owner(playerId);",
+    "}",
+    "",
+  ].join("\n");
+  const modalMarker = "function showModal(modal) {";
+  if (!core.includes(modalMarker)) {
+    throw new Error("Could not install the shared Player renderer facade.");
+  }
+  core = core.replace(modalMarker, `${sharedPlayerFacade}${modalMarker}`);
+
   const player = playerParts.join("\n\n").replace(/\s*$/, "");
   const normalizedCore = core.replace(/\s*$/, "");
   if (!player || !normalizedCore) {
