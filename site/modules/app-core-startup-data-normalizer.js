@@ -3,7 +3,7 @@
 const ORIGINAL_START_APP = `async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialTarget = pageTargetFromPath(\`${location.pathname}${location.search}\`);
+  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   loadSavedTableState();
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   applyStoredWalletPermission();
@@ -23,7 +23,7 @@ const ORIGINAL_START_APP = `async function startApp() {
 const ROUTE_AWARE_START_APP = `async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialTarget = pageTargetFromPath(\`${location.pathname}${location.search}\`);
+  const initialTarget = pageTargetFromPath(\`\${location.pathname}\${location.search}\`);
   loadSavedTableState();
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
