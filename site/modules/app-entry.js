@@ -501,7 +501,7 @@ function installClubRouteRuntimeGate() {
 
   const gated = /** @type {typeof current} */ (async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
-    if (!normalizedClubId) return current.call(this, clubId, view);
+    if (!normalizedClubId) return current.call(runtimeWindow, clubId, view);
     const route = clubRoutePath(normalizedClubId, view);
     if (`${window.location.pathname}${window.location.search}` !== route) {
       window.history.pushState({}, "", route);
@@ -509,7 +509,7 @@ function installClubRouteRuntimeGate() {
     const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
     try {
       await ensureRouteRuntime("club", { view });
-      return current.call(this, clubId, view);
+      return current.call(runtimeWindow, clubId, view);
     } finally {
       if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
     }
