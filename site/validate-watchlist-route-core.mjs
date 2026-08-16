@@ -9,12 +9,13 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, splitter, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, splitter, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-watchlist-route-chunk.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
+  read("./modules/app-entry.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -53,6 +54,13 @@ excludes(watchlistCore, "async function ensureWatchlistRoute(", "Watchlist route
 excludes(watchlistCore, "function switchWatchlist(", "Watchlist switching must not be duplicated in the UI chunk.");
 excludes(watchlistCore, "function selectedPlayerIdsArray() {", "Cross-route selection actions must not become Watchlist-only.");
 excludes(watchlistCore, "function normalizeWatchlists(watchlists, legacyIds = []) {", "Watchlist persistence normalization must not become route-only.");
+
+includes(coreSource, 'const visible = state.currentPage === "watchlist" && hasWalletOptIn();', "The Watchlist switcher must remain visible only on the Watchlist page.");
+includes(appEntry, "const WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist-only UI behavior must have its own runtime group.");
+includes(appEntry, "const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist/My Players route coordination must remain shared between both pages.");
+includes(appEntry, 'if (page === "watchlist") scripts.push(...WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS);', "Only the Watchlist page may load the rename-tooltip UI runtime.");
+includes(appEntry, "if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);", "Watchlist/My Players route coordination must still load on both pages.");
+excludes(appEntry, "WATCHLIST_POST_CORE_RUNTIME_SCRIPTS", "My Players must not inherit the Watchlist-only UI runtime through a combined group.");
 
 includes(routeLoader, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Route loader must map the Watchlist core.");
 includes(routeLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist routes must load Table before Watchlist UI ownership.");
