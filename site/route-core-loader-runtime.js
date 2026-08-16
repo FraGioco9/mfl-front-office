@@ -8,10 +8,12 @@
    * __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown,
    * __mflEnsureRouteCore?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    * __mflNormalizeRoutePageName?: (pageName: string) => string,
+   * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
    * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    *   normalizePageName?: (pageName: string) => string,
+   *   normalizeView?: (options?: Record<string, unknown>) => string,
    *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
    * },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
@@ -22,6 +24,9 @@
     runtimeWindow.__mflEnsureRouteCore = runtimeWindow.__mflRouteCoreRuntime.ensure;
     if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizePageName === "function") {
       runtimeWindow.__mflNormalizeRoutePageName = runtimeWindow.__mflRouteCoreRuntime.normalizePageName;
+    }
+    if (typeof runtimeWindow.__mflRouteCoreRuntime.normalizeView === "function") {
+      runtimeWindow.__mflNormalizeRouteView = runtimeWindow.__mflRouteCoreRuntime.normalizeView;
     }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest === "function") {
       runtimeWindow.__mflInitialRouteRuntimeRequest = runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest;
@@ -217,11 +222,13 @@
   }
 
   runtimeWindow.__mflNormalizeRoutePageName = normalizeRoutePageName;
+  runtimeWindow.__mflNormalizeRouteView = routeView;
   runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
   runtimeWindow.__mflEnsureRouteCore = ensure;
   runtimeWindow.__mflRouteCoreRuntime = Object.freeze({
     ensure,
     normalizePageName: normalizeRoutePageName,
+    normalizeView: routeView,
     initialRouteRequest: initialRouteRuntimeRequest,
   });
   installClubRouteGate();
