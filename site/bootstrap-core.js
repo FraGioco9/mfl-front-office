@@ -104,6 +104,75 @@
       "Club Squad view label",
     );
 
+    const linkColumnBranch = '      } else if (column === linkColumn) {';
+    const canonicalClubCellBranch = `      } else if (column === "active_contract_club_name") {
+        const clubId = String(getValue(row, "active_contract_club_id") || "").trim();
+        const clubName = formatContractClubName(row);
+        if (state.currentPage !== "club" && clubId && rowHasActiveContract(row)) {
+          const clubLink = document.createElement("a");
+          clubLink.href = \`/clubs/\${encodeURIComponent(clubId)}/squad\`;
+          clubLink.className = "clubPageLink";
+          clubLink.textContent = clubName;
+          clubLink.addEventListener("click", (event) => {
+            if (typeof window.mflOpenClubPage !== "function") return;
+            event.preventDefault();
+            window.mflOpenClubPage(clubId, "attributes");
+          });
+          cell.appendChild(clubLink);
+        } else {
+          cell.textContent = clubName;
+        }
+${linkColumnBranch}`;
+    nextSource = replaceRequired(
+      nextSource,
+      linkColumnBranch,
+      canonicalClubCellBranch,
+      "canonical Contract Club table cell",
+    );
+
+    nextSource = replaceRequired(
+      nextSource,
+      "    renderClubTitle();\n    hideClubPageControls();\n    updateClubLinks();",
+      "    renderClubTitle();\n    hideClubPageControls();",
+      "Club presentation post-render link repair",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      "        const result = originalApplyFilters.apply(this, arguments);\n        restoreStandardControls();\n        requestAnimationFrame(updateClubLinks);\n        return result;",
+      "        const result = originalApplyFilters.apply(this, arguments);\n        restoreStandardControls();\n        return result;",
+      "non-Club contract-link repair pass",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      "        state.tableSourceRowsCount = state.rows.length;\n        applyClubPresentation();\n        return result;",
+      "        state.tableSourceRowsCount = state.rows.length;\n        return result;",
+      "Club filter presentation repair",
+    );
+    nextSource = replaceSourceSection(
+      nextSource,
+      "  function updateClubLinks() {",
+      "  function clubSearchEntries(query) {",
+      "",
+      "post-render Club link updater",
+    );
+    nextSource = replaceRequired(
+      nextSource,
+      `  if (typeof renderTable === "function") {
+    const originalRenderTable = renderTable;
+    renderTable = function renderTableWithClubLinks() {
+      const result = originalRenderTable.apply(this, arguments);
+      requestAnimationFrame(() => {
+        updateClubLinks();
+        applyClubPresentation();
+      });
+      return result;
+    };
+  }
+`,
+      "",
+      "post-render Club table wrapper",
+    );
+
     const shellFirstOwner = '  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);';
     nextSource = replaceRequired(
       nextSource,
@@ -260,19 +329,18 @@
       });
     });
   }`;
-    const singleFrameClubFinish = `  function finishClubSwitch() {
+    const layoutOnlyClubFinish = `  function finishClubSwitch() {
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         if (typeof buildTableColGroup === "function") buildTableColGroup();
         if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-        applyClubPresentation();
         document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
         setClubSwitching(false);
         resolve();
       });
     });
   }`;
-    nextSource = replaceRequired(nextSource, twoFrameClubFinish, singleFrameClubFinish, "two-frame Club finalization");
+    nextSource = replaceRequired(nextSource, twoFrameClubFinish, layoutOnlyClubFinish, "Club post-render presentation passes");
 
     const manualRouteRender = [
       "      state.incrementalApplying = true;",
