@@ -66,12 +66,42 @@ function collectReferences(node) {
   return names;
 }
 
+function immediatelyInvokedFunction(node) {
+  if (!ts.isFunctionExpression(node) && !ts.isArrowFunction(node)) return false;
+  let expression = node;
+  let parent = node.parent;
+  while (parent && ts.isParenthesizedExpression(parent)) {
+    expression = parent;
+    parent = parent.parent;
+  }
+  return Boolean(parent && ts.isCallExpression(parent) && parent.expression === expression);
+}
+
+function collectEagerTopLevelReferences(file) {
+  const names = new Set();
+  const visit = (current) => {
+    if (ts.isFunctionLike(current) && !immediatelyInvokedFunction(current)) return;
+    if (ts.isClassDeclaration(current) || ts.isClassExpression(current)) return;
+    if (ts.isIdentifier(current) && !identifierIsNonReference(current) && !ts.isTypeOfExpression(current.parent)) {
+      names.add(current.text);
+    }
+    ts.forEachChild(current, visit);
+  };
+
+  for (const statement of file.statements) {
+    if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) continue;
+    visit(statement);
+  }
+  return names;
+}
+
 const coreInfo = collectTopLevelDeclarations(artifacts.core, "app-core-runtime.js");
 const startApp = coreInfo.file.statements.find((statement) => (
   ts.isFunctionDeclaration(statement) && statement.name?.text === "startApp"
 ));
 if (!startApp) throw new Error("Generated shared application core is missing startApp().");
 const startupReferences = collectReferences(startApp);
+const eagerReferences = collectEagerTopLevelReferences(coreInfo.file);
 const routeOwnedNames = new Map();
 
 for (const [chunkName, chunkSource] of Object.entries(artifacts.routeChunks || {})) {
@@ -84,12 +114,16 @@ for (const [chunkName, chunkSource] of Object.entries(artifacts.routeChunks || {
 
 const unresolved = [];
 for (const [name, owners] of routeOwnedNames) {
-  if (!startupReferences.has(name) || coreInfo.names.has(name)) continue;
-  unresolved.push(`${name} [${owners.join(", ")}]`);
+  if (coreInfo.names.has(name)) continue;
+  const contexts = [];
+  if (eagerReferences.has(name)) contexts.push("eager");
+  if (startupReferences.has(name)) contexts.push("startApp");
+  if (!contexts.length) continue;
+  unresolved.push(`${name} [${owners.join(", ")}; ${contexts.join("+")}]`);
 }
 
 if (unresolved.length) {
-  throw new Error(`Application startup directly references lazy route-owned identifiers without a facade: ${unresolved.sort().join("; ")}`);
+  throw new Error(`Application startup references lazy route-owned identifiers without a facade: ${unresolved.sort().join("; ")}`);
 }
 
-console.log("Generated application-core startup binding audit passed.");
+console.log("Generated application-core eager/startup binding audit passed.");
