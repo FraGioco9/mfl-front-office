@@ -1,13 +1,10 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.1");
+  const STATIC_RELEASE_VERSION = String(window.__mflReleaseVersion || "1.124.2");
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
-  const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
-  const VIEW_SLUGS = new Set(["attributes", "stats", "next-overall", "contracts", "current-season", "all-time"]);
-  const OPT_IN_REQUIRED_PAGES = new Set(["myplayers", "watchlist", "settings"]);
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -49,98 +46,204 @@
     return { storedOptIn, storedAccess };
   }
 
-  function routeFromPath(pathname = location.pathname) {
-    const path = String(pathname || "/").replace(/\/+$/, "") || "/";
-    const parts = path.split("/").filter(Boolean);
-    const first = String(parts[0] || "").toLowerCase();
-    const last = String(parts.at(-1) || "").toLowerCase();
-
-    if (path === "/" || path === "/home") return { pageName: "home", pageId: "homePage", navPage: "home" };
-    if (first === "evaluation") return { pageName: "evaluation", pageId: "evaluationPage", navPage: "evaluation" };
-    if (first === "settings") return { pageName: "settings", pageId: "settingsPage", navPage: "settings" };
-    if (first === "changelog") return { pageName: "changelog", pageId: "changelogPage", navPage: "changelog" };
-    if (first === "players") return { pageName: "player", pageId: "playerPage", navPage: "" };
-    if (first === "database" && last === "stats") return { pageName: "databasestats", pageId: "databaseStatsPage", navPage: "database" };
-    if (first === "mfl" && last === "stats") return { pageName: "mflstats", pageId: "mflStatsPage", navPage: "mfl" };
-
-    const pageName = first === "my-players"
-      ? "myplayers"
-      : first === "clubs" || first === "club"
-        ? "club"
-        : ["database", "mfl", "progression", "watchlist", "agents"].includes(first)
-          ? first
-          : "home";
-    return {
-      pageName,
-      pageId: pageName === "home" ? "homePage" : "progressionPage",
-      navPage: pageName === "myplayers" ? "myplayers" : pageName,
-    };
-  }
-
-  function storedWatchlistName() {
-    const wallet = storedWalletOptInAddress();
-    if (!wallet) return "";
-    try {
-      const parts = String(location.pathname || "").split("/").filter(Boolean);
-      const requested = String(parts[1] || "");
-      const requestedId = VIEW_SLUGS.has(requested) ? "" : decodeURIComponent(requested);
-      const stored = JSON.parse(localStorage.getItem(`${WALLET_WATCHLIST_STORAGE_PREFIX}${wallet}`) || "[]");
-      const watchlists = Array.isArray(stored) ? stored.filter((item) => item && typeof item === "object" && !Array.isArray(item)) : [];
-      const selected = watchlists.find((watchlist) => String(watchlist.id || "") === requestedId)
-        || (!requestedId ? watchlists[0] : null);
-      return String(selected?.name || "").trim().replace(/\s+/g, " ").slice(0, 20);
-    } catch {
-      return "";
+  function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
+    const start = source.indexOf(startMarker);
+    const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
+    if (start < 0 || end < 0) {
+      throw new Error(`Could not normalize single-render core section: ${label}.`);
     }
+    return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
   }
 
-  function tableTitle(pageName) {
-    if (pageName === "database") return "Database";
-    if (pageName === "mfl") return "MFL Wallet";
-    if (pageName === "progression") return "Progression";
-    if (pageName === "myplayers") return "My Players";
-    if (pageName === "watchlist") return `Watchlist - ${storedWatchlistName() || "Default"}`;
-    if (pageName === "agents") return "Agent";
-    if (pageName === "club") return "Club";
-    return "";
-  }
+  function normalizeSingleRenderCore(source) {
+    let nextSource = String(source || "").replace(/\r\n?/g, "\n");
 
-  function applyRouteShell() {
-    const route = routeFromPath();
-    const { storedOptIn } = syncStoredAccessFlags();
-    const locked = !storedOptIn && OPT_IN_REQUIRED_PAGES.has(route.pageName);
-    const targetId = locked ? "myPlayersLockedPage" : route.pageId;
+    const shellFirstOwner = '  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);';
+    if (!nextSource.includes(shellFirstOwner)) {
+      throw new Error("Could not disable the destination-shell render phase.");
+    }
+    nextSource = nextSource.replace(shellFirstOwner, "  const shellFirstTablePages = new Set();");
 
-    document.body.dataset.page = route.pageName;
-    document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page.id !== targetId;
+    const loadingPhase = [
+      "    return withInteractionBusy(async () => {",
+      "      renderIncrementalLoadingState(pageName, route);",
+      "      return loadAndRender();",
+      "    });",
+    ].join("\n");
+    const singlePhaseLoad = "    return withInteractionBusy(loadAndRender);";
+    const loadingPhaseCount = nextSource.split(loadingPhase).length - 1;
+    if (loadingPhaseCount < 2) {
+      throw new Error("Could not collapse all incremental loading render phases.");
+    }
+    nextSource = nextSource.split(loadingPhase).join(singlePhaseLoad);
+
+    const singlePhaseSetView = `  setView = async function setIncrementalView(viewName) {
+    if (!state.incrementalMode || state.currentPage === "club") {
+      return originalSetView.apply(this, arguments);
+    }
+
+    const pageName = state.currentPage;
+    const nextView = normalizeViewForPage(viewName, pageName);
+    if (!allowedViewsForPage(pageName).includes(nextView)) {
+      return;
+    }
+
+    const route = incrementalRouteTarget(pageName, {
+      view: nextView,
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
     });
-    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
-      const active = Boolean(route.navPage) && button.dataset.page === route.navPage;
-      button.classList.toggle("active", active);
-      if (active) button.setAttribute("aria-current", "page");
-      else button.removeAttribute("aria-current");
-    });
+    if (!route) {
+      return originalSetView.call(this, nextView);
+    }
 
-    if (locked) {
-      const title = document.getElementById("optInLockedTitle");
-      const message = document.getElementById("optInLockedMessage");
-      if (title) title.textContent = route.pageName === "watchlist" ? "Watchlist" : route.pageName === "settings" ? "Settings" : "My Players";
-      if (message) {
-        message.textContent = route.pageName === "watchlist"
-          ? "In order to use the watchlist, you need to opt in."
-          : route.pageName === "settings"
-            ? "In order to view settings, you need to opt in."
-            : "In order to see your players, you need to opt in.";
+    const loadAndRender = async () => {
+      try {
+        await requestIncrementalRoute(route, 1);
+        state.incrementalApplying = true;
+        try {
+          return await originalSetView.call(this, nextView);
+        } finally {
+          state.incrementalApplying = false;
+        }
+      } catch (error) {
+        showToast(error?.message || "Could not load this view.");
       }
-    } else if (route.pageId === "progressionPage") {
-      const title = document.getElementById("tablePageTitle");
-      const text = tableTitle(route.pageName);
-      if (title && text) title.textContent = text;
+    };
+
+    if (incrementalRouteIsCached(route, 1)) {
+      return loadAndRender();
     }
 
-    document.documentElement.dataset.staticPage = route.pageName;
-    document.documentElement.classList.add("mflInitialRouteResolved");
+    return withInteractionBusy(loadAndRender);
+  };
+
+`;
+    nextSource = replaceSourceSection(
+      nextSource,
+      "  setView = async function setIncrementalView(viewName) {",
+      "  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {",
+      singlePhaseSetView,
+      "incremental view switch",
+    );
+
+    const stagedClubLoad = [
+      '      if (typeof setPage === "function") {',
+      '        const sourcePage = ["current", "all"].includes(nextView) ? "progression" : "database";',
+      '        await setPage(sourcePage, false, { view: nextView, skipNavigationLoading: false });',
+      "      }",
+      "",
+    ].join("\n");
+    const singlePhaseClubLoad = [
+      '      const dataRoute = typeof incrementalRouteTarget === "function"',
+      '        ? incrementalRouteTarget(CLUB_PAGE, { view: nextView })',
+      "        : null;",
+      '      if (dataRoute && typeof requestIncrementalRoute === "function") {',
+      "        await requestIncrementalRoute(dataRoute, 1);",
+      "      }",
+      "",
+    ].join("\n");
+    if (!nextSource.includes(stagedClubLoad)) {
+      throw new Error("Could not collapse the staged Club page load.");
+    }
+    nextSource = nextSource.replace(stagedClubLoad, singlePhaseClubLoad);
+
+    const clubStateStart = [
+      "      state.currentPage = CLUB_PAGE;",
+      "      state.view = nextView;",
+      "      state.page = 1;",
+    ].join("\n");
+    const singlePhaseClubStateStart = [
+      "      state.currentPage = CLUB_PAGE;",
+      "      state.view = nextView;",
+      '      state.dataAccess = typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public";',
+      "      document.body.dataset.page = CLUB_PAGE;",
+      "      homePage.hidden = true;",
+      "      progressionPage.hidden = false;",
+      "      mflStatsPage.hidden = true;",
+      "      myPlayersLockedPage.hidden = true;",
+      "      evaluationPage.hidden = true;",
+      "      playerPage.hidden = true;",
+      "      settingsPage.hidden = true;",
+      "      changelogPage.hidden = true;",
+      "      state.page = 1;",
+    ].join("\n");
+    if (!nextSource.includes(clubStateStart)) {
+      throw new Error("Could not make the Club page final render atomic.");
+    }
+    nextSource = nextSource.replace(clubStateStart, singlePhaseClubStateStart);
+
+    const stagedInitialClub = [
+      '        await originalShowHomeShell.call(this, "database", false, { view: initialClubRoute.view });',
+      "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
+    ].join("\n");
+    const singleInitialClub = "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);";
+    if (!nextSource.includes(stagedInitialClub)) {
+      throw new Error("Could not collapse the initial Club route render.");
+    }
+    nextSource = nextSource.replace(stagedInitialClub, singleInitialClub);
+
+    const earlyClubViewChrome = [
+      "    setClubSwitching(true);",
+      '    if (typeof updateViewButtons === "function") updateViewButtons();',
+      "    void (async () => {",
+    ].join("\n");
+    const deferredClubViewChrome = [
+      "    setClubSwitching(true);",
+      "    void (async () => {",
+    ].join("\n");
+    if (!nextSource.includes(earlyClubViewChrome)) {
+      throw new Error("Could not defer Club view chrome to the final render.");
+    }
+    nextSource = nextSource.replace(earlyClubViewChrome, deferredClubViewChrome);
+
+    const manualRouteRender = [
+      "      state.incrementalApplying = true;",
+      "      try {",
+      "        buildHeader();",
+      "        originalApplyFilters.call(this, { save: false });",
+    ].join("\n");
+    const manualRouteFinalRender = [
+      "      state.incrementalApplying = true;",
+      "      try {",
+      "        updateViewButtons();",
+      "        buildHeader();",
+      "        originalApplyFilters.call(this, { save: false });",
+    ].join("\n");
+    const lastManualRouteRender = nextSource.lastIndexOf(manualRouteRender);
+    if (lastManualRouteRender < 0) {
+      throw new Error("Could not normalize the final incremental route render.");
+    }
+    nextSource = `${nextSource.slice(0, lastManualRouteRender)}${manualRouteFinalRender}${nextSource.slice(lastManualRouteRender + manualRouteRender.length)}`;
+
+    return nextSource;
+  }
+
+  function installSingleRenderCoreTransform() {
+    if (window.__mflSingleRenderCoreTransformInstalled) return;
+    window.__mflSingleRenderCoreTransformInstalled = true;
+    const upstreamFetch = window.fetch.bind(window);
+
+    window.fetch = async (input, init) => {
+      const response = await upstreamFetch(input, init);
+      let url = null;
+      try {
+        const raw = input instanceof Request ? input.url : String(input);
+        url = new URL(raw, window.location.href);
+      } catch {
+        return response;
+      }
+      if (url.origin !== window.location.origin || url.pathname !== "/modules/app-core.js" || !response.ok) {
+        return response;
+      }
+
+      const transformed = normalizeSingleRenderCore(await response.text());
+      return new Response(transformed, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    };
   }
 
   function createInteractionBusyController() {
@@ -263,10 +366,26 @@
     return Object.freeze({ begin, end, run, isBusy: () => activeTokens.size > 0, installCoreBridge });
   }
 
-  applyRouteShell();
+  syncStoredAccessFlags();
+  installSingleRenderCoreTransform();
+  document.documentElement.classList.add("mflSingleRenderPending");
+  const singleRenderStyle = document.createElement("style");
+  singleRenderStyle.id = "mflSingleRenderPendingStyles";
+  singleRenderStyle.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
+  document.head.appendChild(singleRenderStyle);
+
   window.__mflInteractionBusy = createInteractionBusyController();
   const startupToken = window.__mflInteractionBusy.begin("startup");
-  const finishStartup = () => window.__mflInteractionBusy.end(startupToken);
+  const finishStartup = async () => {
+    try {
+      if (window.__mflAppStartPromise) {
+        await window.__mflAppStartPromise;
+      }
+    } catch {}
+    window.__mflInteractionBusy.end(startupToken);
+    document.documentElement.classList.remove("mflSingleRenderPending");
+    singleRenderStyle.remove();
+  };
   window.addEventListener("mfl:ready", finishStartup, { once: true });
 
   void (async () => {
@@ -283,7 +402,7 @@
       await import(new URL("/modules/app-entry.js", location.origin).href);
     } catch (error) {
       document.documentElement.dataset.mflReady = "error";
-      finishStartup();
+      void finishStartup();
       console.error("Could not import MFL Front Office.", error);
     }
   })();
