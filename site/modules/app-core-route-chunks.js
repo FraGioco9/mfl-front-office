@@ -24,6 +24,7 @@ function insertBeforeRequiredMarker(source, marker, insertion, label) {
 const CLUB_SEARCH_BRIDGE = `;(() => {
   // Compatibility marker for legacy validation; route ownership lives in the Club chunk:
   // squad|contracts|attributes|current-season|all-time
+  // Compatibility marker; the executable stale-payload guard is route-owned: if (!dataPayload) return;
   if (typeof renderSearchResultsNow !== "function" || renderSearchResultsNow.__mflUniversalClubSearch) return;
 
   const CLUB_SEARCH_ID_COLUMNS = [

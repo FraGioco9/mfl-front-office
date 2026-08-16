@@ -40,6 +40,7 @@ includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club ro
 includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk must own per-view render caching.");
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
+includes(clubCore, "if (!dataPayload) return;", "Obsolete Club payloads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route owner.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
