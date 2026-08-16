@@ -181,14 +181,7 @@
   }
 
   syncStoredAccessFlags();
-  document.documentElement.classList.add("mflSingleRenderPending", "mflInitialRouteResolved");
-  let singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");
-  if (!(singleRenderStyle instanceof HTMLStyleElement)) {
-    singleRenderStyle = document.createElement("style");
-    singleRenderStyle.id = "mflSingleRenderPendingStyles";
-    singleRenderStyle.textContent = "html.mflSingleRenderPending main > .pageView { visibility: hidden !important; }";
-    document.head.appendChild(singleRenderStyle);
-  }
+  const singleRenderStyle = document.getElementById("mflSingleRenderPendingStyles");
 
   window.__mflInteractionBusy = createInteractionBusyController();
   const startupToken = window.__mflInteractionBusy.begin("startup");
