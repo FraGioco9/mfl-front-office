@@ -10,13 +10,18 @@
     "current-season": "current",
     "all-time": "all",
   });
+  const TOOLTIP_SETTINGS = Object.freeze({
+    durationMs: 170,
+    gap: 8,
+  });
   const SPECIALIZED_TOOLTIP_SELECTOR = [
     ".evaluationMetric.evaluationDiscountRate",
-    ".evaluationLoadIconButton",
+    "#evaluationLoadModal .evaluationLoadIconButton",
     ".playerNoteIcon",
   ].join(", ");
 
   window.__mflStaticUiRuntime?.destroy?.();
+  window.__mflTooltipSettings = TOOLTIP_SETTINGS;
 
   let destroyed = false;
   let tooltipPortal = null;
@@ -24,6 +29,8 @@
   let activeTooltipText = "";
   let activeTooltipHovered = false;
   let activeTooltipFocused = false;
+  let tooltipShowFrame = 0;
+  let tooltipHideTimer = 0;
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -201,18 +208,25 @@
     if (!document.body) return null;
     tooltipPortal = document.createElement("div");
     tooltipPortal.id = "mflGlobalTooltip";
-    tooltipPortal.className = "mflGlobalTooltip";
+    tooltipPortal.className = "floatingActionTooltip mflGlobalTooltip";
     tooltipPortal.setAttribute("role", "tooltip");
     tooltipPortal.hidden = true;
     document.body.appendChild(tooltipPortal);
     return tooltipPortal;
   }
 
+  function cancelTooltipMotion() {
+    if (tooltipShowFrame) cancelAnimationFrame(tooltipShowFrame);
+    tooltipShowFrame = 0;
+    if (tooltipHideTimer) window.clearTimeout(tooltipHideTimer);
+    tooltipHideTimer = 0;
+  }
+
   function positionTooltipPortal() {
     if (!(tooltipPortal instanceof HTMLElement) || !(activeTooltipTarget instanceof HTMLElement)) return;
     const anchor = activeTooltipTarget.getBoundingClientRect();
     const tooltip = tooltipPortal.getBoundingClientRect();
-    const gap = 8;
+    const gap = TOOLTIP_SETTINGS.gap;
     let top = anchor.top - tooltip.height - gap;
     if (top < 8) top = anchor.bottom + gap;
     const left = Math.min(
@@ -229,31 +243,56 @@
     activeTooltipTarget.removeAttribute("aria-describedby");
   }
 
-  function hideGlobalTooltip({ restore = true } = {}) {
+  function finishTooltipHide(portal) {
+    if (tooltipPortal !== portal) return;
+    portal.hidden = true;
+    portal.classList.remove("visible", "tooltipHiding");
+    portal.textContent = "";
+    tooltipHideTimer = 0;
+  }
+
+  function hideGlobalTooltip({ restore = true, immediate = false } = {}) {
     if (restore) restoreActiveTooltipAttribute();
     activeTooltipTarget = null;
     activeTooltipText = "";
     activeTooltipHovered = false;
     activeTooltipFocused = false;
     if (!(tooltipPortal instanceof HTMLElement)) return;
-    tooltipPortal.hidden = true;
-    tooltipPortal.textContent = "";
+
+    cancelTooltipMotion();
+    const portal = tooltipPortal;
+    portal.classList.remove("visible");
+    if (immediate) {
+      finishTooltipHide(portal);
+      return;
+    }
+    portal.classList.add("tooltipHiding");
+    tooltipHideTimer = window.setTimeout(() => finishTooltipHide(portal), TOOLTIP_SETTINGS.durationMs);
   }
 
   function showGlobalTooltip(target, mode) {
     if (!(target instanceof HTMLElement)) return;
     if (target !== activeTooltipTarget) {
-      hideGlobalTooltip();
+      hideGlobalTooltip({ immediate: true });
       const text = String(target.dataset.tooltip || "").trim();
       if (!text) return;
       const portal = ensureTooltipPortal();
       if (!portal) return;
+      cancelTooltipMotion();
       activeTooltipTarget = target;
       activeTooltipText = text;
       target.removeAttribute("data-tooltip");
       target.setAttribute("aria-describedby", portal.id);
       portal.textContent = text;
       portal.hidden = false;
+      portal.classList.remove("tooltipHiding");
+      positionTooltipPortal();
+      tooltipShowFrame = requestAnimationFrame(() => {
+        tooltipShowFrame = 0;
+        if (destroyed || tooltipPortal !== portal || activeTooltipTarget !== target) return;
+        portal.classList.add("visible");
+        positionTooltipPortal();
+      });
     }
     if (mode === "hover") activeTooltipHovered = true;
     if (mode === "focus") activeTooltipFocused = true;
@@ -327,7 +366,7 @@
   }
 
   function onPopState() {
-    hideGlobalTooltip();
+    hideGlobalTooltip({ immediate: true });
     syncRouteChrome(window.location.href, { loading: true });
   }
 
@@ -337,7 +376,8 @@
 
   function destroy() {
     destroyed = true;
-    hideGlobalTooltip();
+    hideGlobalTooltip({ immediate: true });
+    cancelTooltipMotion();
     tooltipPortal?.remove();
     tooltipPortal = null;
     document.removeEventListener("click", onClick, true);

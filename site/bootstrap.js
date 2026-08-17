@@ -3,6 +3,17 @@
 
   const STATIC_RELEASE_VERSION = "1.124.44";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
+  const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
+  const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
+  const BLANK_LOADING_TEXT = "\u00a0";
+  const WATCHLIST_VIEW_SLUGS = new Set([
+    "attributes",
+    "stats",
+    "next-overall",
+    "contracts",
+    "current-season",
+    "all-time",
+  ]);
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
@@ -19,6 +30,49 @@
       return new URL(String(urlLike || window.location.href), window.location.href).pathname.split("/").filter(Boolean);
     } catch {
       return window.location.pathname.split("/").filter(Boolean);
+    }
+  }
+
+  function normalizeWalletAddress(value) {
+    const address = String(value || "").trim().toLowerCase();
+    return address ? (address.startsWith("0x") ? address : `0x${address}`) : "";
+  }
+
+  function decodedRoutePart(value) {
+    try {
+      return decodeURIComponent(String(value || ""));
+    } catch {
+      return String(value || "");
+    }
+  }
+
+  function firstPaintWatchlistIdentity(urlLike = window.location.href) {
+    const parts = routeParts(urlLike);
+    if (String(parts[0] || "").toLowerCase() !== "watchlist") {
+      return { id: "", name: "Default" };
+    }
+
+    const firstSegment = decodedRoutePart(parts[1]);
+    const routeWatchlistId = firstSegment && !WATCHLIST_VIEW_SLUGS.has(firstSegment.toLowerCase())
+      ? firstSegment
+      : "";
+
+    try {
+      const wallet = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY));
+      const stored = wallet
+        ? JSON.parse(localStorage.getItem(`${WALLET_WATCHLIST_STORAGE_PREFIX}${wallet}`) || "[]")
+        : [];
+      const watchlists = Array.isArray(stored) ? stored : [];
+      const selected = (routeWatchlistId
+        ? watchlists.find((watchlist) => String(watchlist?.id || "") === routeWatchlistId)
+        : null) || watchlists[0] || null;
+      const name = String(selected?.name || "").trim();
+      return {
+        id: String(selected?.id || routeWatchlistId || ""),
+        name: name || "Default",
+      };
+    } catch {
+      return { id: routeWatchlistId, name: "Default" };
     }
   }
 
@@ -59,10 +113,7 @@
     if (page === "mfl") return "MFL Wallet";
     if (page === "progression") return "Progression";
     if (page === "myplayers") return "My Players";
-    if (page === "watchlist") {
-      const watchlistName = String(document.getElementById("watchlistButtonText")?.textContent || "Default").trim() || "Default";
-      return `Watchlist - ${watchlistName}`;
-    }
+    if (page === "watchlist") return `Watchlist - ${firstPaintWatchlistIdentity(urlLike).name}`;
     const parts = routeParts(urlLike);
     if (page === "agents") {
       const wallet = String(parts[1] || "").trim();
@@ -116,6 +167,12 @@
       : "";
     const view = config?.order?.includes(requestedView) ? requestedView : String(config?.fallback || requestedView || "");
     primeViewButtons(normalizedPage, view);
+
+    if (normalizedPage === "watchlist") {
+      const identity = firstPaintWatchlistIdentity(urlLike);
+      const watchlistButtonText = document.getElementById("watchlistButtonText");
+      if (watchlistButtonText instanceof HTMLElement) watchlistButtonText.textContent = identity.name;
+    }
 
     const title = document.getElementById("tablePageTitle");
     if (title instanceof HTMLElement) title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
@@ -180,7 +237,7 @@
       row.style.opacity = String(opacity);
       const cell = document.createElement("td");
       cell.colSpan = 16;
-      cell.textContent = "\u00a0";
+      cell.textContent = BLANK_LOADING_TEXT;
       row.appendChild(cell);
       fragment.appendChild(row);
     });
@@ -194,49 +251,81 @@
 
   Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);
 
+  function setBlankLoadingValue(id) {
+    const element = document.getElementById(id);
+    if (element instanceof HTMLElement) element.textContent = BLANK_LOADING_TEXT;
+  }
+
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
       ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
-        .forEach((id) => {
-          const element = document.getElementById(id);
-          if (element instanceof HTMLElement) element.textContent = "-";
-        });
+        .forEach(setBlankLoadingValue);
       document.getElementById("databaseStatsDistribution")?.replaceChildren();
       return;
     }
     if (target.id === "mflStatsPage") {
       ["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]
-        .forEach((id) => {
-          const element = document.getElementById(id);
-          if (element instanceof HTMLElement) element.textContent = "-";
-        });
+        .forEach(setBlankLoadingValue);
       document.getElementById("mflStatsAgeDistribution")?.replaceChildren();
     }
+  }
+
+  function playerLoadingViewButtons() {
+    return [
+      ["attributes", "Attributes"],
+      ["training", "Training"],
+      ["next", "Next Overall"],
+      ["current", "Current Season"],
+      ["all", "All Time"],
+    ].map(([view, label], index) => (
+      `<button class="playerAttributeViewButton${index === 0 ? " active" : ""}" type="button" data-view="${view}" disabled>${label}</button>`
+    )).join("");
   }
 
   function primePlayerSkeleton() {
     const playerDetail = document.getElementById("playerDetail");
     if (!(playerDetail instanceof HTMLElement)) return;
+    const optedIn = root.dataset.storedWalletOptIn === "true";
+    const watchlistAction = optedIn
+      ? '<button class="playerWatchlistButton" type="button" disabled>Watchlist</button>'
+      : "";
+    const notesPanel = optedIn
+      ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/200</span></div></div>`
+      : "";
+    const infoCards = Array.from({ length: 8 }, () => '<div><span>&nbsp;</span><strong>&nbsp;</strong></div>').join("");
+    const attributeCards = Array.from({ length: 7 }, (_, index) => (
+      `<div class="playerAttributeCard${index === 0 ? " featured fullWidth" : ""}"><span>&nbsp;</span><strong>&nbsp;</strong></div>`
+    )).join("");
+
+    playerDetail.dataset.loadingShell = "true";
     playerDetail.innerHTML = `
       <section class="playerHero" aria-hidden="true">
-        <div><span class="playerEyebrow">Player</span><h2>-</h2><p>-</p></div>
+        <div>
+          <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
+          <h2 class="playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
+          <p>&nbsp;</p>
+        </div>
+        <div class="playerHeroActions" style="visibility:hidden">
+          <button class="playerEvaluateButton" type="button" disabled>Evaluate</button>
+          ${watchlistAction}
+          <a class="playerExternalButton" tabindex="-1" aria-hidden="true">Open link</a>
+        </div>
       </section>
       <section class="playerGrid" aria-hidden="true">
-        <section class="playerStack">
-          <section class="playerPanel playerInfoPanel"><h3>Details</h3><div class="detailGrid">${Array.from({ length: 8 }, () => "<div><span>&nbsp;</span><strong>-</strong></div>").join("")}</div></section>
-          <section class="playerPanel attributesPanel"><h3>Attributes</h3><div class="attributeGrid">${Array.from({ length: 6 }, () => "<div class=\"playerAttributeCard\"><span>&nbsp;</span><strong>-</strong></div>").join("")}</div></section>
-        </section>
-        <section class="playerPanel pitchPanel"><h3>Positions</h3><div class="emptyState">&nbsp;</div></section>
+        <div class="playerStack">
+          <div class="playerPanel playerInfoPanel"><h3>Profile</h3><div class="detailGrid">${infoCards}</div></div>
+          <div class="playerPanel attributesPanel"><div class="playerPanelHeader"><h3>Attributes</h3><div class="playerAttributeViews" style="visibility:hidden">${playerLoadingViewButtons()}</div></div><div class="attributeGrid">${attributeCards}</div></div>
+          ${notesPanel}
+        </div>
+        <div class="playerPanel pitchPanel"><h3>Positions</h3><div class="pitch"></div></div>
       </section>`;
   }
 
   function primeRouteSkeleton(target) {
     if (!(target instanceof HTMLElement)) return;
     if (target.id === "homePage") {
-      const players = document.getElementById("homePlayers");
-      const wallets = document.getElementById("homeWallets");
-      if (players instanceof HTMLElement) players.textContent = "-";
-      if (wallets instanceof HTMLElement) wallets.textContent = "-";
+      setBlankLoadingValue("homePlayers");
+      setBlankLoadingValue("homeWallets");
       return;
     }
     if (target.id === "playerPage") {
@@ -248,8 +337,7 @@
       if (panel instanceof HTMLElement) panel.hidden = true;
       const results = document.getElementById("evaluationSearchResults");
       if (results instanceof HTMLElement) results.hidden = true;
-      const discountRate = document.getElementById("evaluationDiscountRate");
-      if (discountRate instanceof HTMLElement) discountRate.textContent = "-";
+      setBlankLoadingValue("evaluationDiscountRate");
       const buttons = document.getElementById("evaluationButtons");
       const loadButton = document.getElementById("evaluationLoadButton");
       const plainEvaluation = root.dataset.initialEvaluationSelection !== "true";
@@ -264,6 +352,9 @@
   Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);
 
   function primeInitialShell() {
+    setBlankLoadingValue("totalPlayers");
+    setBlankLoadingValue("totalWallets");
+
     const target = initialShellTarget();
     if (!(target instanceof HTMLElement)) return;
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();

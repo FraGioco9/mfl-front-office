@@ -3,6 +3,8 @@
 :root {
   --mfl-dropdown-gap: 8px;
   --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  --mfl-row-selector-width: 92px;
+  --mfl-row-selector-slot-width: 150px;
 }
 
 /* Keep original controls in layout. The runtime opts visible selects into the
@@ -392,18 +394,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
 }
 
+/* Rows occupies the same fixed final slot on every table page. */
 .controlsBar > .field.compact.rowsField {
   position: relative;
   z-index: 1;
+  width: var(--mfl-row-selector-slot-width);
+  flex: 0 0 var(--mfl-row-selector-slot-width);
   justify-self: end;
+  justify-content: flex-end;
 }
 
-/* Rows has a fixed footprint with dedicated room for the value and chevron. */
 #pageSizeSelect {
+  box-sizing: border-box;
   width: 92px;
   min-width: 92px;
   max-width: 92px;
+  height: 40px;
   flex: 0 0 92px;
+  margin: 0;
   padding-left: 11px;
   padding-right: 10px;
   line-height: 1;
