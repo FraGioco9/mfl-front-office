@@ -10,7 +10,7 @@
   --mfl-pager-block-padding: 12px;
 }
 
-.viewButton {
+.viewButton:not([hidden]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
