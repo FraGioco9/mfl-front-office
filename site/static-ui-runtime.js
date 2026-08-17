@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     squad: "attributes",
@@ -9,6 +10,88 @@
     contracts: "contracts",
     "current-season": "current",
     "all-time": "all",
+  });
+  const STATIC_TABLE_BASE_COLUMNS = Object.freeze([
+    "player_id", "nationality_flag", "name", "nationality", "age", "positions", "player_seasons",
+  ]);
+  const STATIC_TABLE_STAT_COLUMNS = Object.freeze([
+    "overall", "pace", "shooting", "passing", "dribbling", "defense", "physical",
+  ]);
+  const STATIC_TABLE_CONTRACT_COLUMNS = Object.freeze([
+    "overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division",
+  ]);
+  const STATIC_TABLE_VIEW_COLUMNS = Object.freeze({
+    attributes: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
+    current: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
+    all: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
+    next: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
+    contracts: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_CONTRACT_COLUMNS, "wallet_name", "player_link"]),
+  });
+  const STATIC_JOINED_AGENCY_PAGES = new Set(["myplayers", "agents", "mfl"]);
+  const STATIC_TABLE_SORTABLE_COLUMNS = new Set([
+    "player_id", "name", "age", "player_seasons", "owned_since",
+    "active_contract_revenue_share", "active_contract_club_division",
+    ...STATIC_TABLE_STAT_COLUMNS,
+  ]);
+  const STATIC_TABLE_COLUMN_LABELS = Object.freeze({
+    player_id: "ID",
+    nationality_flag: "",
+    wallet_name: "Agent",
+    owned_since: "Joined Agency",
+    name: "Name",
+    nationality: "Nationality",
+    age: "Age",
+    positions: "Positions",
+    player_seasons: "Seasons",
+    overall: "Overall",
+    pace: "Pace",
+    shooting: "Shooting",
+    passing: "Passing",
+    dribbling: "Dribbling",
+    defense: "Defense",
+    physical: "Physical",
+    active_contract_revenue_share: "Rev. Share",
+    active_contract_club_name: "Club Name",
+    active_contract_club_division: "Division",
+    player_link: "",
+  });
+  const STATIC_TABLE_COLUMN_CLASSES = Object.freeze({
+    player_id: "col-id",
+    nationality_flag: "col-flag",
+    name: "col-name",
+    nationality: "col-nationality",
+    age: "col-age",
+    positions: "col-positions",
+    player_seasons: "col-seasons",
+    wallet_name: "col-agent",
+    owned_since: "col-agent",
+    active_contract_revenue_share: "col-contract-revenue",
+    active_contract_club_name: "col-contract-club",
+    active_contract_club_division: "col-contract-division",
+    player_link: "col-link",
+  });
+  const STATIC_TABLE_COLUMN_WIDTHS = Object.freeze({
+    selection: 51.09,
+    player_id: 68.13,
+    nationality_flag: 45.41,
+    name: 212.89,
+    nationality: 141.92,
+    age: 65.28,
+    positions: 119.22,
+    player_seasons: 82.31,
+    overall: 107.86,
+    pace: 107.86,
+    shooting: 107.86,
+    passing: 107.86,
+    dribbling: 107.86,
+    defense: 107.86,
+    physical: 107.86,
+    wallet_name: 187.34,
+    owned_since: 187.34,
+    active_contract_revenue_share: 140,
+    active_contract_club_name: 227.16,
+    active_contract_club_division: 280,
+    player_link: 48.39,
   });
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
@@ -31,6 +114,7 @@
   let activeTooltipFocused = false;
   let tooltipShowFrame = 0;
   let tooltipHideTimer = 0;
+  let lastPrimedRouteIdentity = "";
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -145,15 +229,198 @@
     return document.getElementById("homePage");
   }
 
+  function staticTableDisplayColumn(page, column) {
+    return column === "wallet_name" && STATIC_JOINED_AGENCY_PAGES.has(page) ? "owned_since" : column;
+  }
+
+  function staticTableColumns(page, view) {
+    const source = STATIC_TABLE_VIEW_COLUMNS[view] || STATIC_TABLE_VIEW_COLUMNS.attributes;
+    return source.map((column) => staticTableDisplayColumn(page, column));
+  }
+
+  function staticTableColumnClass(column) {
+    if (column === "overall") return "col-stat col-overall";
+    if (STATIC_TABLE_STAT_COLUMNS.includes(column)) return "col-stat";
+    return STATIC_TABLE_COLUMN_CLASSES[column] || "";
+  }
+
+  function staticTableSortState(route) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
+      const pageState = saved?.pages?.[route.page];
+      const viewState = pageState?.viewSortStates?.[route.view] || pageState || null;
+      const savedSortKey = String(viewState?.sortKey || "");
+      const savedSortDirection = String(viewState?.sortDirection || "");
+      if (STATIC_TABLE_SORTABLE_COLUMNS.has(savedSortKey)) {
+        return {
+          sortKey: savedSortKey,
+          sortDirection: savedSortDirection === "asc" ? "asc" : "desc",
+        };
+      }
+    } catch {
+      // Use canonical defaults when storage is unavailable.
+    }
+
+    if (route.page === "club") return { sortKey: "positions", sortDirection: "asc" };
+    return { sortKey: "overall", sortDirection: route.view === "next" ? "asc" : "desc" };
+  }
+
+  function applyStaticTableColumnWidth(element, width) {
+    if (!(element instanceof HTMLElement) || !Number.isFinite(width)) return 0;
+    const pixelWidth = `${width}px`;
+    element.style.width = pixelWidth;
+    element.style.minWidth = pixelWidth;
+    element.style.maxWidth = pixelWidth;
+    return width;
+  }
+
+  function tryCanonicalTableHeader(route, signature) {
+    try {
+      return Boolean(window.eval(`(() => {
+        if (typeof state !== "object" || !state || typeof buildHeader !== "function") return false;
+        const page = state.currentPage === "mflstats" ? "mfl" : String(state.currentPage || "");
+        const liveSignature = [page, String(state.view || ""), String(state.sortKey || ""), String(state.sortDirection || "")].join("|");
+        if (liveSignature !== ${JSON.stringify(signature)}) return false;
+        const ownerReady = (typeof __mflTableBuildHeaderOwner === "function") || buildHeader.__mflSingleRenderOwner === true;
+        if (!ownerReady) return false;
+        buildHeader();
+        const head = document.getElementById("tableHead");
+        if (!(head instanceof HTMLTableSectionElement) || !head.rows[0]) return false;
+        head.dataset.mflHeaderSignature = ${JSON.stringify(signature)};
+        delete head.dataset.mflStaticHeader;
+        window.__mflTableWidthRuntime?.apply?.();
+        return true;
+      })()`));
+    } catch {
+      return false;
+    }
+  }
+
+  function primeStaticTableHeader(route) {
+    const head = document.getElementById("tableHead");
+    const colGroup = document.getElementById("tableColGroup");
+    if (!(head instanceof HTMLTableSectionElement) || !(colGroup instanceof HTMLTableColElement)) return false;
+
+    const columns = staticTableColumns(route.page, route.view);
+    const sort = staticTableSortState(route);
+    const signature = [route.page, route.view, sort.sortKey, sort.sortDirection].join("|");
+    if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader !== "true") {
+      window.__mflTableWidthRuntime?.apply?.();
+      return true;
+    }
+    if (tryCanonicalTableHeader(route, signature)) return true;
+    if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader === "true") return true;
+
+    const headerRow = document.createElement("tr");
+    const selectionHeader = document.createElement("th");
+    selectionHeader.className = "selectionCell";
+    const selectionInput = document.createElement("input");
+    selectionInput.id = "selectVisiblePlayersInput";
+    selectionInput.type = "checkbox";
+    selectionInput.setAttribute("aria-label", "Select visible players");
+    selectionHeader.appendChild(selectionInput);
+    headerRow.appendChild(selectionHeader);
+
+    columns.forEach((column) => {
+      const cell = document.createElement("th");
+      const columnClass = staticTableColumnClass(column);
+      if (columnClass) cell.classList.add(...columnClass.split(" "));
+      const label = document.createElement("span");
+      label.textContent = STATIC_TABLE_COLUMN_LABELS[column] || "";
+      cell.appendChild(label);
+      if (STATIC_TABLE_SORTABLE_COLUMNS.has(column)) {
+        cell.classList.add("sortable");
+        if (sort.sortKey === column) {
+          const arrow = document.createElement("span");
+          arrow.className = `sortArrow ${sort.sortDirection}`;
+          arrow.setAttribute("aria-hidden", "true");
+          cell.appendChild(arrow);
+        }
+      }
+      headerRow.appendChild(cell);
+    });
+
+    const columnFragment = document.createDocumentFragment();
+    let totalWidth = 0;
+    const selectionColumn = document.createElement("col");
+    totalWidth += applyStaticTableColumnWidth(selectionColumn, STATIC_TABLE_COLUMN_WIDTHS.selection);
+    columnFragment.appendChild(selectionColumn);
+    columns.forEach((column) => {
+      const col = document.createElement("col");
+      const columnClass = staticTableColumnClass(column);
+      if (columnClass) col.classList.add(...columnClass.split(" "));
+      totalWidth += applyStaticTableColumnWidth(col, STATIC_TABLE_COLUMN_WIDTHS[column]);
+      columnFragment.appendChild(col);
+    });
+
+    const table = colGroup.closest("table");
+    if (table instanceof HTMLTableElement) {
+      const pixelWidth = `${totalWidth}px`;
+      table.style.width = pixelWidth;
+      table.style.minWidth = pixelWidth;
+    }
+    colGroup.replaceChildren(columnFragment);
+    head.replaceChildren(headerRow);
+    head.dataset.mflHeaderSignature = signature;
+    head.dataset.mflStaticHeader = "true";
+    return true;
+  }
+
   function syncDestinationTableChrome(state) {
     const prime = Reflect.get(window, "__mflPrimeTableChrome");
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
+    primeStaticTableHeader(state);
+  }
+
+  function routeIdentity(state) {
+    try {
+      const url = new URL(String(state.url || window.location.href), window.location.href);
+      return `${state.page}|${state.view}|${url.pathname}${url.search}`;
+    } catch {
+      return `${state.page}|${state.view}|${window.location.pathname}${window.location.search}`;
+    }
+  }
+
+  function primePlayerStaticLabels(target) {
+    if (!(target instanceof HTMLElement) || target.id !== "playerPage") return;
+    const profileLabels = ["Nationality", "Age", "Height", "Foot", "Seasons", "Agent", "Contract"];
+    const profileCards = Array.from(target.querySelectorAll(".playerInfoPanel .detailGrid > div"));
+    profileCards.slice(profileLabels.length).forEach((card) => card.remove());
+    profileCards.slice(0, profileLabels.length).forEach((card, index) => {
+      const label = card.querySelector("span");
+      if (label instanceof HTMLElement) label.textContent = profileLabels[index];
+      if (index === profileLabels.length - 1) card.classList.add("contractDetailCard");
+    });
+
+    const attributeLabels = ["Overall", "Pace", "Shooting", "Passing", "Dribbling", "Defense", "Physical"];
+    Array.from(target.querySelectorAll(".attributesPanel .attributeGrid > .playerAttributeCard")).forEach((card, index) => {
+      const label = card.querySelector("span");
+      if (label instanceof HTMLElement && attributeLabels[index]) label.textContent = attributeLabels[index];
+    });
+  }
+
+  function primeDestinationRouteShell(state, target) {
+    const identity = routeIdentity(state);
+    if (target.id === "progressionPage") {
+      if (identity !== lastPrimedRouteIdentity) {
+        const primeRows = Reflect.get(window, "__mflPrimeTableRows");
+        if (typeof primeRows === "function") primeRows(true);
+      }
+      lastPrimedRouteIdentity = identity;
+      return;
+    }
+    if (identity === lastPrimedRouteIdentity) return;
+    const prime = Reflect.get(window, "__mflPrimeRouteSkeleton");
+    if (typeof prime === "function") prime(target);
+    primePlayerStaticLabels(target);
+    lastPrimedRouteIdentity = identity;
   }
 
   function showRouteShell(state) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
     if (target.id === "progressionPage") syncDestinationTableChrome(state);
+    primeDestinationRouteShell(state, target);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;

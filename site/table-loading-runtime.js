@@ -81,10 +81,23 @@
         if (typeof buildHeader !== "function") return false;
         const head = document.getElementById("tableHead");
         if (!(head instanceof HTMLTableSectionElement)) return false;
-        if (!head.rows[0]) buildHeader();
-        if (!head.rows[0]) return false;
         const page = typeof tablePageKey === "function" ? (tablePageKey() || state.currentPage || "") : (state.currentPage || "");
-        head.dataset.mflHeaderSignature = [page, state.view, state.sortKey, state.sortDirection].join("|");
+        const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
+        const ownerReady = (typeof __mflTableBuildHeaderOwner === "function") || buildHeader.__mflSingleRenderOwner === true;
+        const staticHeader = head.dataset.mflStaticHeader === "true";
+        const staticSignature = String(head.dataset.mflHeaderSignature || "");
+        if (staticHeader && staticSignature && staticSignature !== signature) {
+          window.__mflTableWidthRuntime?.apply?.();
+          return true;
+        }
+        const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
+        if (needsCanonicalBuild && ownerReady) buildHeader();
+        if (!head.rows[0]) return false;
+        if (ownerReady && needsCanonicalBuild) {
+          head.dataset.mflHeaderSignature = signature;
+          delete head.dataset.mflStaticHeader;
+        }
+        if (head.dataset.mflStaticHeader !== "true" && head.dataset.mflHeaderSignature !== signature) return false;
         window.__mflTableWidthRuntime?.apply?.();
         return true;
       })()`));
@@ -157,12 +170,21 @@
             const page = typeof tablePageKey === "function" ? (tablePageKey() || state.currentPage || "") : (state.currentPage || "");
             const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
             const head = document.getElementById("tableHead");
-            if (head instanceof HTMLTableSectionElement && head.dataset.mflHeaderSignature === signature && head.rows[0]) {
+            const staticHeader = head instanceof HTMLTableSectionElement && head.dataset.mflStaticHeader === "true";
+            const staticSignature = head instanceof HTMLTableSectionElement ? String(head.dataset.mflHeaderSignature || "") : "";
+            if (staticHeader && staticSignature && staticSignature !== signature) {
+              window.__mflTableWidthRuntime?.apply?.();
+              return undefined;
+            }
+            if (!staticHeader && head instanceof HTMLTableSectionElement && staticSignature === signature && head.rows[0]) {
               window.__mflTableWidthRuntime?.apply?.();
               return undefined;
             }
             const result = originalBuildHeader.apply(this, arguments);
-            if (head instanceof HTMLTableSectionElement) head.dataset.mflHeaderSignature = signature;
+            if (head instanceof HTMLTableSectionElement) {
+              head.dataset.mflHeaderSignature = signature;
+              delete head.dataset.mflStaticHeader;
+            }
             window.__mflTableWidthRuntime?.apply?.();
             return result;
           };
