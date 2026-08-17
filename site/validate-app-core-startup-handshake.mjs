@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { normalizeStartupDataDependencies } from "./modules/app-core-startup-data-normalizer.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
@@ -7,9 +8,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [entry, routeNormalizer] = await Promise.all([
+const [entry, routeNormalizer, applicationCore] = await Promise.all([
   read("./modules/app-entry.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
+  read("./modules/app-core.js"),
 ]);
 
 includes(
@@ -60,6 +62,40 @@ excludes(
   entry,
   "await loadApplicationCore();\n  markApplicationCoreLoaded();",
   "Startup must trust only the application core's explicit initialization marker.",
+);
+
+const normalizedStartup = normalizeStartupDataDependencies(applicationCore);
+includes(
+  normalizedStartup,
+  "const startupProgressionPermissionPromise = (",
+  "Startup must create a Progression permission refresh before initial route authorization.",
+);
+includes(
+  normalizedStartup,
+  "pageRequiresProgressionPermission(initialTarget.pageName)",
+  "Startup must use the canonical Progression permission route classifier.",
+);
+includes(
+  normalizedStartup,
+  "&& hasWalletOptIn()",
+  "Startup must refresh Progression permission only when a signed wallet proof was restored.",
+);
+includes(
+  normalizedStartup,
+  "? loadWalletPermissions({ force: true })",
+  "Initial Progression startup must force a live permission revalidation instead of trusting stale cache state.",
+);
+includes(
+  normalizedStartup,
+  "if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);",
+  "The Progression permission refresh must join the initial startup barrier.",
+);
+const permissionRefreshIndex = normalizedStartup.indexOf("? loadWalletPermissions({ force: true })");
+const startupBarrierIndex = normalizedStartup.indexOf("await Promise.allSettled(startupDependencies);");
+const initialRouteIndex = normalizedStartup.indexOf("await showHomeShell(initialTarget.pageName, false, initialTarget.options);");
+invariant(
+  permissionRefreshIndex >= 0 && startupBarrierIndex > permissionRefreshIndex && initialRouteIndex > startupBarrierIndex,
+  "Progression permission must settle before the initial route can run its authorization redirect.",
 );
 
 console.log("Application-core startup handshake validation passed.");
