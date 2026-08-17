@@ -22,12 +22,7 @@ const ROUTE_RUNTIME_GATE = `;(() => {
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
 
     if (!runtimeReady) {
-      const runTransition = Reflect.get(window, "__mflRunPageTransition");
-      if (typeof runTransition !== "function") {
-        throw new Error("Global page transition owner is unavailable.");
-      }
-
-      return runTransition(String(pageName || ""), updateHash, incomingOptions, async () => {
+      const loadCommittedRoute = async () => {
         const ownerBeforeRuntime = setPage;
         const busyToken = window.__mflInteractionBusy?.begin
           ? window.__mflInteractionBusy.begin("route-runtime")
@@ -56,7 +51,17 @@ const ROUTE_RUNTIME_GATE = `;(() => {
         } finally {
           if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
         }
-      });
+      };
+
+      if (incomingOptions.skipNavigationTransition === true) {
+        return loadCommittedRoute();
+      }
+
+      const runTransition = Reflect.get(window, "__mflRunPageTransition");
+      if (typeof runTransition !== "function") {
+        throw new Error("Global page transition owner is unavailable.");
+      }
+      return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);
     }
 
     const cleanOptions = { ...incomingOptions };

@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.50",
+    "Standardize Node.js 22 across local, CI, and Vercel builds"
+  ],
+  [
     "v1.124.49",
     "Commit page chrome before lazy route loading"
   ],

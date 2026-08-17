@@ -17,32 +17,39 @@ const gateEnd = gateStart >= 0
 invariant(gateStart >= 0 && gateEnd > gateStart, "Could not locate the generated page route-runtime gate.");
 
 const gate = generatedCore.slice(gateStart, gateEnd);
-const transitionCall = gate.indexOf("return runTransition(String(pageName || \"\"), updateHash, incomingOptions, async () => {");
-const busyStart = gate.indexOf('window.__mflInteractionBusy.begin("route-runtime")', transitionCall);
-const cancelRequest = gate.indexOf("window.__mflCancelIncrementalRouteRequest?.();", transitionCall);
-const routeCoreLoad = gate.indexOf("window.__mflEnsureRouteCore", transitionCall);
-const routeRuntimeLoad = gate.indexOf("await window.__mflEnsureRouteRuntime", transitionCall);
-const skipDuplicateTransition = gate.indexOf("skipNavigationTransition: true", transitionCall);
+const loaderOwner = gate.indexOf("const loadCommittedRoute = async () => {");
+const busyStart = gate.indexOf('window.__mflInteractionBusy.begin("route-runtime")', loaderOwner);
+const cancelRequest = gate.indexOf("window.__mflCancelIncrementalRouteRequest?.();", loaderOwner);
+const routeCoreLoad = gate.indexOf("window.__mflEnsureRouteCore", loaderOwner);
+const routeRuntimeLoad = gate.indexOf("await window.__mflEnsureRouteRuntime", loaderOwner);
+const skipDuplicateTransition = gate.indexOf("skipNavigationTransition: true", loaderOwner);
 const downstreamSetPage = gate.indexOf("originalRouteRuntimeSetPage.call", skipDuplicateTransition);
+const committedBypass = gate.indexOf("if (incomingOptions.skipNavigationTransition === true) {");
+const bypassLoad = gate.indexOf("return loadCommittedRoute();", committedBypass);
+const transitionCall = gate.indexOf('return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);');
 
-invariant(transitionCall >= 0, "Page navigation must enter the global page transition runner at the route-runtime gate.");
+invariant(loaderOwner >= 0, "The route-runtime gate must separate lazy loading from navigation ownership.");
 invariant(
-  busyStart > transitionCall,
-  "The route-runtime busy state must begin only inside the global transition loader callback, after destination chrome has painted.",
-);
-invariant(
-  cancelRequest > busyStart && routeCoreLoad > busyStart && routeRuntimeLoad > busyStart,
-  "Route cancellation and lazy route owners must start only after the global page transition has committed and painted.",
+  busyStart > loaderOwner && cancelRequest > busyStart && routeCoreLoad > busyStart && routeRuntimeLoad > busyStart,
+  "Route cancellation and lazy route owners must start only inside the committed-route loader.",
 );
 invariant(
   skipDuplicateTransition > routeRuntimeLoad && downstreamSetPage > skipDuplicateTransition,
-  "The downstream page renderer must consume the already-committed route without running a second navigation transition.",
+  "The downstream page renderer must consume the already-committed route without running another navigation transition.",
 );
 invariant(
-  !gate.slice(0, transitionCall).includes('begin("route-runtime")')
-    && !gate.slice(0, transitionCall).includes("__mflEnsureRouteCore")
-    && !gate.slice(0, transitionCall).includes("__mflEnsureRouteRuntime"),
-  "No busy or lazy-loading owner may run before the global page transition runner.",
+  committedBypass > downstreamSetPage && bypassLoad > committedBypass && transitionCall > bypassLoad,
+  "A page or view transition that already painted must enter lazy loading directly instead of starting a second page transition.",
+);
+invariant(
+  gate.slice(committedBypass, transitionCall).includes("skipNavigationTransition === true"),
+  "The route-runtime gate must explicitly recognize already-committed navigation.",
+);
+invariant(
+  !gate.slice(0, loaderOwner).includes('begin("route-runtime")')
+    && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteCore")
+    && !gate.slice(0, loaderOwner).includes("__mflEnsureRouteRuntime"),
+  "No busy or lazy-loading owner may run before the committed-route loader.",
 );
 
-console.log("Page route gate commits and paints destination chrome before busy state, lazy loading, and final render.");
+console.log("Page route gate uses one painted navigation transition, then lazy loading and final render for every route.");

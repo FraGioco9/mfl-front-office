@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.50";
+  const STATIC_RELEASE_VERSION = "1.124.51";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
@@ -16,6 +16,31 @@
     "all-time": "all",
   });
   const TABLE_VIEW_SLUGS = new Set(Object.keys(TABLE_VIEW_BY_SLUG));
+  const MFL_STATS_FILTER_LABELS = Object.freeze([
+    ["all", "All"],
+    ["90-94", "90-94"],
+    ["legendary", "Legendary"],
+    ["85-89", "85-89"],
+    ["80-84", "80-84"],
+    ["rare", "Rare"],
+    ["75-79", "75-79"],
+    ["70-74", "70-74"],
+    ["uncommon", "Uncommon"],
+    ["65-69", "65-69"],
+    ["60-64", "60-64"],
+    ["limited", "Limited"],
+    ["55-59", "55-59"],
+    ["50-54", "50-54"],
+    ["common", "Common"],
+  ]);
+  const SETTINGS_DATE_FORMAT_LABELS = Object.freeze([
+    ["DMY", "DD/MM/YYYY"],
+    ["MDY", "MM/DD/YYYY"],
+  ]);
+  const SETTINGS_TIME_FORMAT_LABELS = Object.freeze([
+    ["24h", "24h"],
+    ["12h", "12h"],
+  ]);
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
@@ -271,6 +296,43 @@
 
   Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);
 
+  function primeStaticButtonGroup(containerId, options, className, activeValue) {
+    const container = document.getElementById(containerId);
+    if (!(container instanceof HTMLElement)) return;
+    const existing = Array.from(container.children).filter((child) => child instanceof HTMLButtonElement);
+    const matches = existing.length === options.length && options.every(([value, label], index) => {
+      const button = existing[index];
+      return button instanceof HTMLButtonElement
+        && button.dataset.staticValue === value
+        && button.textContent === label;
+    });
+    const buttons = matches ? existing : options.map(([value, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = className;
+      button.dataset.staticValue = value;
+      button.textContent = label;
+      return button;
+    });
+    if (!matches) container.replaceChildren(...buttons);
+    buttons.forEach((button, index) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.className = className;
+      button.classList.toggle("active", options[index][0] === activeValue);
+    });
+  }
+
+  function primeMflStatsControls() {
+    primeStaticButtonGroup("mflStatsOverallFilters", MFL_STATS_FILTER_LABELS, "mflStatsFilterButton", "all");
+  }
+
+  function primeSettingsControls() {
+    setLoadingValue("settingsAgentName");
+    setLoadingValue("settingsWalletAddress");
+    primeStaticButtonGroup("settingsDateFormatOptions", SETTINGS_DATE_FORMAT_LABELS, "settingsToggleButton", "DMY");
+    primeStaticButtonGroup("settingsTimeFormatOptions", SETTINGS_TIME_FORMAT_LABELS, "settingsToggleButton", "24h");
+  }
+
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
       ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
@@ -279,6 +341,7 @@
       return;
     }
     if (target.id === "mflStatsPage") {
+      primeMflStatsControls();
       ["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]
         .forEach(setLoadingValue);
       document.getElementById("mflStatsAgeDistribution")?.replaceChildren();
@@ -359,6 +422,10 @@
       const canLoad = root.dataset.storedWalletOptIn === "true" && plainEvaluation;
       if (buttons instanceof HTMLElement && canLoad) buttons.hidden = false;
       if (loadButton instanceof HTMLElement) loadButton.hidden = !canLoad;
+      return;
+    }
+    if (target.id === "settingsPage") {
+      primeSettingsControls();
       return;
     }
     resetStatsShell(target);

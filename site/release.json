@@ -1,4 +1,4 @@
 {
-  "version": "1.124.50",
-  "description": "Standardize Node.js 22 across local, CI, and Vercel builds"
+  "version": "1.124.51",
+  "description": "Unify complete first-paint shells and lazy loading across every route"
 }

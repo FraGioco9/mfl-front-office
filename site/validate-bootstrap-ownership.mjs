@@ -122,6 +122,38 @@ includes(
   "function resetStatsShell(target) {",
   "Stats navigation must reset destination boxes before data resolves.",
 );
+includes(
+  bootstrap,
+  "function primeStaticButtonGroup(containerId, options, className, activeValue) {",
+  "Deterministic route controls must have a reusable first-paint renderer.",
+);
+includes(
+  bootstrap,
+  'primeStaticButtonGroup("mflStatsOverallFilters", MFL_STATS_FILTER_LABELS, "mflStatsFilterButton", "all");',
+  "MFL Stats overall filters must exist at their final size before its lazy runtime loads.",
+);
+includes(
+  bootstrap,
+  'primeStaticButtonGroup("settingsDateFormatOptions", SETTINGS_DATE_FORMAT_LABELS, "settingsToggleButton", "DMY");',
+  "Settings date-format controls must exist before Settings data loads.",
+);
+includes(
+  bootstrap,
+  'primeStaticButtonGroup("settingsTimeFormatOptions", SETTINGS_TIME_FORMAT_LABELS, "settingsToggleButton", "24h");',
+  "Settings time-format controls must exist before Settings data loads.",
+);
+includes(
+  bootstrap,
+  'if (target.id === "settingsPage") {',
+  "Settings must participate in the same deterministic route-shell priming used by other pages.",
+);
+const mflStatsResetStart = bootstrap.indexOf('if (target.id === "mflStatsPage") {');
+const mflStatsPrime = bootstrap.indexOf("primeMflStatsControls();", mflStatsResetStart);
+const mflStatsValues = bootstrap.indexOf('["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]', mflStatsResetStart);
+invariant(
+  mflStatsResetStart >= 0 && mflStatsPrime > mflStatsResetStart && mflStatsValues > mflStatsPrime,
+  "MFL Stats fixed controls must be committed before its loading values are reset.",
+);
 excludes(
   bootstrap,
   'document.createElement("style")',
@@ -184,4 +216,4 @@ excludes(
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap direct first-paint skeleton, global loading-box placeholder, route-authoritative table chrome, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, loading placeholders, and startup ownership validation passed.");
