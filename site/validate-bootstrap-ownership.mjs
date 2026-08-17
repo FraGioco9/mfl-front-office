@@ -29,8 +29,13 @@ includes(
 );
 includes(
   bootstrap,
-  "function primeInitialTableChrome(page, urlLike = window.location.href) {",
-  "bootstrap.js must synchronously prime table title and quickfilters.",
+  "function primeTableChrome(page, urlLike = window.location.href) {",
+  "bootstrap.js must synchronously prime route-authoritative table title, view, and quickfilters.",
+);
+includes(
+  bootstrap,
+  "function tableViewFromUrl(page, urlLike = window.location.href) {",
+  "Bootstrap table chrome must derive the active view from the destination URL.",
 );
 includes(
   bootstrap,
@@ -49,8 +54,8 @@ includes(
 );
 includes(
   bootstrap,
-  'Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);',
-  "Runtime navigation must reuse the bootstrap-owned table chrome primer.",
+  'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);',
+  "Runtime navigation must reuse the bootstrap-owned route-authoritative table chrome primer.",
 );
 includes(
   bootstrap,
@@ -144,4 +149,4 @@ excludes(
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap direct first-paint skeleton and startup ownership validation passed.");
+console.log("Bootstrap direct first-paint skeleton, route-authoritative table chrome, and startup ownership validation passed.");

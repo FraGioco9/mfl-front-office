@@ -1,4 +1,4 @@
 {
-  "version": "1.124.45",
-  "description": "Invalidate stale generated core cache after view transition fixes"
+  "version": "1.124.46",
+  "description": "Make table view chrome authoritative from the current route URL"
 }

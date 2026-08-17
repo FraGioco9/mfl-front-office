@@ -73,6 +73,16 @@ includes(staticUi, 'document.body.appendChild(tooltipPortal);', "Generic tooltip
 includes(styles, ".mflGlobalTooltip {", "The global tooltip portal must have canonical static styling.");
 includes(styles, "z-index: 2147483647;", "Global tooltip portals must sit above every application layer.");
 
+includes(bootstrap, "const TABLE_VIEW_BY_SLUG = Object.freeze({", "Bootstrap table chrome must understand canonical route view slugs directly.");
+includes(bootstrap, "function tableViewFromUrl(page, urlLike = window.location.href) {", "Bootstrap table chrome must resolve its view from the destination URL.");
+includes(bootstrap, "const routeSlug = decodedRoutePart(parts[parts.length - 1]).toLowerCase();", "Destination table chrome must use the current route's final view slug.");
+includes(bootstrap, "const requestedView = tableViewFromUrl(normalizedPage, urlLike);", "Table chrome must make the live destination URL authoritative over startup state.");
+const primeTableChromeStart = bootstrap.indexOf("function primeTableChrome(page, urlLike = window.location.href) {");
+const primeTableChromeEnd = primeTableChromeStart >= 0 ? bootstrap.indexOf('\n  Reflect.set(window, "__mflPrimeTableChrome"', primeTableChromeStart) : -1;
+invariant(primeTableChromeStart >= 0 && primeTableChromeEnd > primeTableChromeStart, "Bootstrap table chrome owner must exist.");
+const primeTableChrome = bootstrap.slice(primeTableChromeStart, primeTableChromeEnd);
+excludes(primeTableChrome, "root.dataset.initialTableView", "SPA table navigation must never reuse the page-load-only initial view.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', "Navigation must reuse the route-authoritative table chrome owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must expose its five-row skeleton to navigation.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must expose non-table route skeletons to navigation.");
 
@@ -127,6 +137,7 @@ const watchlistBlockStart = buildNormalizer.indexOf("function normalizeWatchlist
 const watchlistBlockEnd = watchlistBlockStart >= 0 ? buildNormalizer.indexOf("\nfunction normalizeReleaseOwnership", watchlistBlockStart) : -1;
 invariant(watchlistBlockStart >= 0 && watchlistBlockEnd > watchlistBlockStart, "Watchlist shell normalization block must exist.");
 const watchlistBlock = buildNormalizer.slice(watchlistBlockStart, watchlistBlockEnd);
+includes(watchlistBlock, 'primeTableChrome("watchlist", window.location.href);', "Watchlist shell navigation must pass the live route URL into table chrome.");
 includes(watchlistBlock, 'if (typeof primeTableRows === "function") primeTableRows(true);', "Watchlist must display five blank rows before waiting on route data.");
 const watchlistPrimeIndex = watchlistBlock.indexOf('if (typeof primeTableRows === "function") primeTableRows(true);');
 const watchlistAwaitIndex = watchlistBlock.lastIndexOf("await ensureWatchlistRoute(options);");
@@ -138,4 +149,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established 9
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Direct route shell, painted canonical state-URL-button transitions, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
+console.log("Direct route shell, route-authoritative table chrome, painted canonical state-URL-button transitions, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");

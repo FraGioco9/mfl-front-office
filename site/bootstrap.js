@@ -1,19 +1,20 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.45";
+  const STATIC_RELEASE_VERSION = "1.124.46";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const BLANK_LOADING_TEXT = "\u00a0";
-  const WATCHLIST_VIEW_SLUGS = new Set([
-    "attributes",
-    "stats",
-    "next-overall",
-    "contracts",
-    "current-season",
-    "all-time",
-  ]);
+  const TABLE_VIEW_BY_SLUG = Object.freeze({
+    attributes: "attributes",
+    stats: "stats",
+    "next-overall": "next",
+    contracts: "contracts",
+    "current-season": "current",
+    "all-time": "all",
+  });
+  const TABLE_VIEW_SLUGS = new Set(Object.keys(TABLE_VIEW_BY_SLUG));
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
@@ -46,6 +47,17 @@
     }
   }
 
+  function tableViewFromUrl(page, urlLike = window.location.href) {
+    const normalizedPage = String(page || "").toLowerCase();
+    const config = tableViewConfig()[normalizedPage];
+    if (!config || !Array.isArray(config.order)) return "";
+
+    const parts = routeParts(urlLike);
+    const routeSlug = decodedRoutePart(parts[parts.length - 1]).toLowerCase();
+    const routeView = TABLE_VIEW_BY_SLUG[routeSlug] || "";
+    return config.order.includes(routeView) ? routeView : "";
+  }
+
   function firstPaintWatchlistIdentity(urlLike = window.location.href) {
     const parts = routeParts(urlLike);
     if (String(parts[0] || "").toLowerCase() !== "watchlist") {
@@ -53,7 +65,7 @@
     }
 
     const firstSegment = decodedRoutePart(parts[1]);
-    const routeWatchlistId = firstSegment && !WATCHLIST_VIEW_SLUGS.has(firstSegment.toLowerCase())
+    const routeWatchlistId = firstSegment && !TABLE_VIEW_SLUGS.has(firstSegment.toLowerCase())
       ? firstSegment
       : "";
 
@@ -157,14 +169,12 @@
     });
   }
 
-  function primeInitialTableChrome(page, urlLike = window.location.href) {
+  function primeTableChrome(page, urlLike = window.location.href) {
     const normalizedPage = String(page || "").toLowerCase();
     if (!normalizedPage) return;
 
     const config = tableViewConfig()[normalizedPage];
-    const requestedView = String(root.dataset.initialTablePage || "") === normalizedPage
-      ? String(root.dataset.initialTableView || "")
-      : "";
+    const requestedView = tableViewFromUrl(normalizedPage, urlLike);
     const view = config?.order?.includes(requestedView) ? requestedView : String(config?.fallback || requestedView || "");
     primeViewButtons(normalizedPage, view);
 
@@ -219,7 +229,7 @@
     if (watchlistCount instanceof HTMLElement) watchlistCount.hidden = true;
   }
 
-  Reflect.set(window, "__mflPrimeTableChrome", primeInitialTableChrome);
+  Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);
   Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);
 
   function primeInitialTableRows(replaceExisting = false) {
@@ -359,7 +369,7 @@
     if (!(target instanceof HTMLElement)) return;
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
     if (target.id === "progressionPage" && tablePage) {
-      primeInitialTableChrome(tablePage, window.location.href);
+      primeTableChrome(tablePage, window.location.href);
       primeInitialTableRows();
     } else {
       primeRouteSkeleton(target);
