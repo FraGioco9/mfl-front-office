@@ -337,14 +337,10 @@
 
     const viewButton = target?.closest?.("main .views .viewButton[data-view]");
     if (viewButton instanceof HTMLButtonElement) {
-      const container = viewButton.closest(".views");
-      const view = String(viewButton.dataset.view || "");
-      if (container) setActiveView(container, view);
-
-      const currentState = routeState();
-      const page = String(viewButton.dataset.page || currentState.page || "");
-      if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
-      showRouteShell({ page, view, url: currentState.url }, { loading: true, primeChrome: false });
+      queueMicrotask(() => {
+        if (destroyed) return;
+        showRouteShell(routeState(), { loading: true, primeChrome: false });
+      });
       return;
     }
 

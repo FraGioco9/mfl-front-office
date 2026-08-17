@@ -83,12 +83,200 @@ function normalizeSharedViewOwnership(source) {
     `function updateViewButtons() {
   const pageName = state.currentPage === "mflstats"
     ? "mfl"
-    : (tablePageKey() || "progression");
+    : state.currentPage === "club"
+      ? "club"
+      : (tablePageKey() || "progression");
   const activeView = state.currentPage === "mflstats" ? "stats" : state.view;
   window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);
   updateNavigationLinks();
 }`,
     "single loaded view-button owner",
+  );
+
+  return text;
+}
+
+function normalizeCanonicalViewTransitions(source) {
+  let text = String(source || "");
+
+  const transitionOwner = `function commitViewTransition(pageName, viewName, options = {}) {
+  const nextView = String(viewName || "");
+  if (!nextView) return "";
+
+  const statePageName = String(
+    options.statePageName
+    || (pageName === "mfl" && nextView === "stats" ? "mflstats" : pageName)
+    || state.currentPage
+  );
+
+  state.currentPage = statePageName;
+  state.view = nextView;
+  state.page = 1;
+
+  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) {
+    state.sortKey = options.sortKey;
+  }
+  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) {
+    state.sortDirection = options.sortDirection;
+  }
+
+  let targetPath = String(options.path || "");
+  if (!targetPath) {
+    targetPath = pageName === "mfl" && nextView === "stats"
+      ? "/mfl/stats"
+      : pagePath(pageName, {
+          ...options,
+          view: nextView,
+          walletAddress: options.walletAddress || state.currentAgentWalletAddress,
+          watchlistId: options.watchlistId || state.currentWatchlistId,
+        });
+  }
+
+  if (targetPath && \`\${window.location.pathname}\${window.location.search}\` !== targetPath) {
+    window.history[options.replace ? "replaceState" : "pushState"]({}, "", targetPath);
+  }
+
+  updateViewButtons();
+  return nextView;
+}
+Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
+
+`;
+  text = replaceRequired(
+    text,
+    "function resetPageScroll() {",
+    `${transitionOwner}function resetPageScroll() {`,
+    "canonical view transition owner",
+  );
+
+  text = replaceFunction(
+    text,
+    "pageNameForViewButton",
+    `function pageNameForViewButton(button) {
+  const currentPage = state.currentPage === "mflstats"
+    ? "mfl"
+    : state.currentPage === "club"
+      ? "club"
+      : tablePageKey();
+  return currentPage || button?.dataset?.page || "progression";
+}`,
+    "Club-aware view button page ownership",
+  );
+
+  text = replaceRequired(
+    text,
+    `    state.view = nextView;
+    state.page = 1;
+    const targetSortState = normalizedViewSortState(
+      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
+      nextView,
+    );
+    state.sortKey = targetSortState.sortKey;
+    state.sortDirection = targetSortState.sortDirection;
+    updatePageUrl(pageName, { updateUrl: true, ...routeOptions });
+    updateViewButtons();`,
+    `    const targetSortState = normalizedViewSortState(
+      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
+      nextView,
+    );
+    commitViewTransition(pageName, nextView, {
+      ...routeOptions,
+      sortKey: targetSortState.sortKey,
+      sortDirection: targetSortState.sortDirection,
+    });`,
+    "shared table view transition",
+  );
+
+  text = replaceFunction(
+    text,
+    "activateViewButton",
+    `function activateViewButton(button) {
+  if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return;
+  const pageName = pageNameForViewButton(button);
+  const viewName = button.dataset.view;
+  if (!viewName) return;
+
+  if (pageName === "club") return;
+
+  if (pageName === "mfl" && viewName === "stats") {
+    commitViewTransition("mfl", "stats", { statePageName: "mflstats" });
+    void setPage("mflstats", false, { skipNavigationLoading: true });
+    return;
+  }
+  if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
+    commitViewTransition("mfl", "attributes", { statePageName: "mfl" });
+    void setPage("mfl", false, { view: "attributes", skipNavigationLoading: true });
+    return;
+  }
+  if (pageName !== state.currentPage && tablePages.has(pageName)) {
+    state.currentPage = pageName;
+    document.body.dataset.page = pageName;
+  }
+  void setView(viewName);
+}`,
+    "MFL Stats shared view transition",
+  );
+
+  text = replaceFunction(
+    text,
+    "openClubImmediately",
+    `function openClubImmediately(clubId, view = "attributes") {
+    void openClubPage(clubId, view, true);
+  }`,
+    "Club route entry transition",
+  );
+
+  text = replaceRequired(
+    text,
+    `    openingClub = true;
+    setClubSwitching(true);
+    try {
+      activeClubId = String(clubId);
+      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
+      const route = canonicalClubRoute(activeClubId, nextView);
+      if (updateHistory && \`\${window.location.pathname}\${window.location.search}\` !== route) {
+        window.history.pushState({}, "", route);
+      } else if (!updateHistory && normalizedPath() !== route) {
+        window.history.replaceState({}, "", route);
+      }`,
+    `    openingClub = true;
+    try {
+      activeClubId = String(clubId);
+      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
+      const route = canonicalClubRoute(activeClubId, nextView);
+      commitViewTransition(CLUB_PAGE, nextView, {
+        statePageName: CLUB_PAGE,
+        path: route,
+        replace: !updateHistory,
+        sortKey: "positions",
+        sortDirection: "asc",
+      });
+      setClubSwitching(true);`,
+    "Club page transition before loading",
+  );
+
+  text = replaceRequired(
+    text,
+    `    captureClubView(state.view);
+    window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
+    state.view = nextView;
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    if (restoreCachedClubView(nextView)) return;
+    setClubSwitching(true);
+    if (typeof updateViewButtons === "function") updateViewButtons();`,
+    `    captureClubView(state.view);
+    commitViewTransition(CLUB_PAGE, nextView, {
+      statePageName: CLUB_PAGE,
+      path: canonicalClubRoute(activeClubId, nextView),
+      replace: true,
+      sortKey: "positions",
+      sortDirection: "asc",
+    });
+    if (restoreCachedClubView(nextView)) return;
+    setClubSwitching(true);`,
+    "Club view transition before loading",
   );
 
   return text;
@@ -153,7 +341,8 @@ function normalizeCompleteApplicationCore(source) {
   // normalizeTableEventDelegation(normalizeBaseApplicationCore(source))
   const baseSource = normalizeBaseApplicationCore(source);
   const sharedViewsSource = normalizeSharedViewOwnership(baseSource);
-  const watchlistShellSource = normalizeWatchlistShellFirstNavigation(sharedViewsSource);
+  const viewTransitionsSource = normalizeCanonicalViewTransitions(sharedViewsSource);
+  const watchlistShellSource = normalizeWatchlistShellFirstNavigation(viewTransitionsSource);
   const tableEventsSource = normalizeTableEventDelegation(watchlistShellSource);
   const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);

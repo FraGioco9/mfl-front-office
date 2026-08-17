@@ -91,6 +91,17 @@
     }
   }
 
+  function commitStatsTransition(updateUrl = false) {
+    const commit = Reflect.get(window, "__mflCommitViewTransition");
+    if (typeof commit !== "function") return false;
+    commit("database", "stats", {
+      statePageName: "database",
+      path: "/database/stats",
+      replace: !updateUrl,
+    });
+    return true;
+  }
+
   function rememberStatsView(forceSave = false) {
     if (!isStatsPath()) {
       lastPersistedStatsRoute = false;
@@ -100,17 +111,12 @@
     try {
       ensureStatsAllowedInDatabaseView();
       if (typeof state !== "object") return;
-      const alreadyStats = state.currentPage === "database"
-        && state.view === "stats"
-        && state.tablePageStates?.database?.view === "stats";
-      state.currentPage = "database";
-      state.view = "stats";
       const existing = state.tablePageStates?.database && typeof state.tablePageStates.database === "object"
         ? state.tablePageStates.database
         : {};
+      const alreadyStats = state.tablePageStates?.database?.view === "stats";
       state.tablePageStates = state.tablePageStates || {};
       state.tablePageStates.database = { ...existing, view: "stats" };
-      if (typeof updateViewButtons === "function") updateViewButtons();
       refreshDatabaseNavigation();
       if ((forceSave || !lastPersistedStatsRoute || !alreadyStats) && typeof saveTableState === "function") {
         saveTableState();
@@ -130,16 +136,13 @@
   }
 
   async function renderStatsRoute(updateUrl = false) {
+    ensureStatsAllowedInDatabaseView();
+    saveCurrentTableBeforeStats();
+    commitStatsTransition(updateUrl);
+    rememberStatsView(true);
+
     const runtimeToken = window.__mflInteractionBusy?.begin?.("route-runtime") || "";
     try {
-      ensureStatsAllowedInDatabaseView();
-      saveCurrentTableBeforeStats();
-
-      if (!isStatsPath()) {
-        history[updateUrl ? "pushState" : "replaceState"](history.state, "", "/database/stats");
-      }
-
-      rememberStatsView(true);
       if (typeof window.__mflEnsureRouteRuntime === "function") {
         await window.__mflEnsureRouteRuntime("database", { view: "stats" });
       }
@@ -198,6 +201,7 @@
       }
 
       if (explicitStatsRoute) {
+        commitStatsTransition(false);
         rememberStatsView(true);
         queueStatsCloudPersist();
       }
@@ -246,7 +250,6 @@
       if (initialStatsIntent && !initialStatsHandled) {
         initialStatsHandled = true;
         ensureStatsAllowedInDatabaseView();
-        if (!isStatsPath()) history.replaceState(history.state, "", "/database/stats");
         if (typeof syncHomeLoginButton === "function") syncHomeLoginButton();
         if (typeof updateAccountState === "function") updateAccountState();
         await renderStatsRoute(false);
@@ -277,7 +280,7 @@
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#databaseStatsCustomTooltipPortal")) return;
     clearBarTransition();
-    if (!isStatsPath()) history.replaceState(history.state, "", "/database/stats");
+    commitStatsTransition(false);
     window.setDatabaseStatsPageVisibility?.(true);
     rememberStatsView(false);
   }
@@ -292,6 +295,7 @@
     installSetViewBridge();
     installInitialShellBridge();
     if (isStatsPath()) {
+      commitStatsTransition(false);
       rememberStatsView(false);
       window.setDatabaseStatsPageVisibility?.(true);
     } else {
