@@ -1,4 +1,4 @@
 {
-  "version": "1.124.51",
-  "description": "Unify complete first-paint shells and lazy loading across every route"
+  "version": "1.124.52",
+  "description": "Keep MFL Stats Overall Filters at their final size from first paint"
 }

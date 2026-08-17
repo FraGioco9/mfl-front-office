@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.51",
+    "Unify complete first-paint shells and lazy loading across every route"
+  ],
+  [
     "v1.124.50",
     "Standardize Node.js 22 across local, CI, and Vercel builds"
   ],
