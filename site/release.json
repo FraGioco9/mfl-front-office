@@ -1,4 +1,4 @@
 {
-  "version": "1.124.44",
-  "description": "Replace first-paint overrides with direct route skeleton ownership"
+  "version": "1.124.45",
+  "description": "Invalidate stale generated core cache after view transition fixes"
 }
