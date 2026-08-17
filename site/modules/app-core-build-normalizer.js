@@ -151,10 +151,10 @@ function normalizeReleaseOwnership(source) {
 }
 
 function normalizeCompleteApplicationCore(source) {
-  const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(source));
-  const sharedViewsSource = normalizeSharedViewOwnership(tableEventsSource);
+  const sharedViewsSource = normalizeSharedViewOwnership(source);
   const watchlistShellSource = normalizeWatchlistShellFirstNavigation(sharedViewsSource);
-  const startupDataSource = normalizeStartupDataDependencies(watchlistShellSource);
+  const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(watchlistShellSource));
+  const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);
   const tableStateSource = normalizePureTableStateRestoration(routeRuntimeSource);
   return normalizeRouteRequestCancellation(tableStateSource);
