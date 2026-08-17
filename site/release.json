@@ -1,4 +1,4 @@
 {
-  "version": "1.124.49",
-  "description": "Commit page chrome before lazy route loading"
+  "version": "1.124.50",
+  "description": "Standardize Node.js 22 across local, CI, and Vercel builds"
 }

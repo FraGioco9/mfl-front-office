@@ -32,14 +32,13 @@ python prepare_runtime_database.py site\api\data-files\mfl_database.db
 vercel.cmd dev --listen 4000
 ```
 
-Node.js 22 is required for `node:sqlite`.
+Node.js 22 LTS is required for the site runtime and `node:sqlite`.
 
 For lightweight repository checks without browser-test infrastructure:
 
 ```powershell
-cd site
-npm install
-npm run check
+npm --prefix site install
+npm --prefix site run check
 ```
 
 ## GitHub Actions

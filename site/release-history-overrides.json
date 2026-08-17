@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.49",
+    "Commit page chrome before lazy route loading"
+  ],
+  [
     "v1.124.48",
     "Globalize Club and Stats navigation transitions"
   ],

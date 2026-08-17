@@ -124,7 +124,7 @@ jobs:
           node-version: 22
 
       - name: Install site dependencies
-        if: steps.changes.outputs.site == 'true'
+        if: steps.changes.outputs.quality == 'true'
         run: npm install
 
       - name: Lint
@@ -136,7 +136,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build canonical application core
-        if: steps.changes.outputs.site == 'true'
+        if: steps.changes.outputs.quality == 'true'
         run: npm run build:core
 
       - name: Repository validation

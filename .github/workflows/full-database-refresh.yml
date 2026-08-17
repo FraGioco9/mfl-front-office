@@ -67,6 +67,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Restore previous database for email comparison
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: builder
