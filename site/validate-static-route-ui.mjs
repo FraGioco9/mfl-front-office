@@ -70,9 +70,13 @@ includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The runtime loading shell 
 
 includes(buildNormalizer, 'Reflect.get(window, "__mflTableViewConfig")', "Loaded application views must consume the canonical first-paint view configuration.");
 includes(buildNormalizer, 'window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);', "Loaded view-button rendering must delegate to the canonical static owner.");
-includes(buildNormalizer, 'if (typeof primeTableRows === "function") primeTableRows(true);', "Watchlist must display five blank rows before waiting on route data.");
-const watchlistPrimeIndex = buildNormalizer.indexOf('if (typeof primeTableRows === "function") primeTableRows(true);');
-const watchlistAwaitIndex = buildNormalizer.indexOf("await ensureWatchlistRoute(options);");
+const watchlistBlockStart = buildNormalizer.indexOf("function normalizeWatchlistShellFirstNavigation(source) {");
+const watchlistBlockEnd = watchlistBlockStart >= 0 ? buildNormalizer.indexOf("\nfunction normalizeReleaseOwnership", watchlistBlockStart) : -1;
+invariant(watchlistBlockStart >= 0 && watchlistBlockEnd > watchlistBlockStart, "Watchlist shell normalization block must exist.");
+const watchlistBlock = buildNormalizer.slice(watchlistBlockStart, watchlistBlockEnd);
+includes(watchlistBlock, 'if (typeof primeTableRows === "function") primeTableRows(true);', "Watchlist must display five blank rows before waiting on route data.");
+const watchlistPrimeIndex = watchlistBlock.indexOf('if (typeof primeTableRows === "function") primeTableRows(true);');
+const watchlistAwaitIndex = watchlistBlock.lastIndexOf("await ensureWatchlistRoute(options);");
 invariant(watchlistPrimeIndex >= 0 && watchlistAwaitIndex > watchlistPrimeIndex, "Watchlist shell must be visible before its asynchronous route data is awaited.");
 
 includes(styles, "--mfl-pager-block-padding: 12px;", "Pager spacing must have one global 12px setting.");
