@@ -336,13 +336,7 @@
     const target = event.target instanceof Element ? event.target : null;
 
     const viewButton = target?.closest?.("main .views .viewButton[data-view]");
-    if (viewButton instanceof HTMLButtonElement) {
-      queueMicrotask(() => {
-        if (destroyed) return;
-        showRouteShell(routeState(), { loading: true, primeChrome: false });
-      });
-      return;
-    }
+    if (viewButton instanceof HTMLButtonElement) return;
 
     const link = target?.closest?.("a[href]");
     const href = sameOriginRouteFromLink(link);

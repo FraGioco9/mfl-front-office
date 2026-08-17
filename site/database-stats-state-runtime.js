@@ -102,6 +102,11 @@
     return true;
   }
 
+  async function waitForStatsTransitionPaint() {
+    const wait = Reflect.get(window, "__mflWaitForViewTransitionPaint");
+    if (typeof wait === "function") await wait();
+  }
+
   function rememberStatsView(forceSave = false) {
     if (!isStatsPath()) {
       lastPersistedStatsRoute = false;
@@ -140,6 +145,7 @@
     saveCurrentTableBeforeStats();
     commitStatsTransition(updateUrl);
     rememberStatsView(true);
+    await waitForStatsTransitionPaint();
 
     const runtimeToken = window.__mflInteractionBusy?.begin?.("route-runtime") || "";
     try {

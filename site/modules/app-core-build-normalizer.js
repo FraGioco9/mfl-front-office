@@ -139,7 +139,15 @@ function normalizeCanonicalViewTransitions(source) {
   updateViewButtons();
   return nextView;
 }
+
+function waitForViewTransitionPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
+Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);
 
 `;
   text = replaceRequired(
@@ -183,7 +191,8 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
       ...routeOptions,
       sortKey: targetSortState.sortKey,
       sortDirection: targetSortState.sortDirection,
-    });`,
+    });
+    await waitForViewTransitionPaint();`,
     "shared table view transition",
   );
 
@@ -200,12 +209,18 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
 
   if (pageName === "mfl" && viewName === "stats") {
     commitViewTransition("mfl", "stats", { statePageName: "mflstats" });
-    void setPage("mflstats", false, { skipNavigationLoading: true });
+    void (async () => {
+      await waitForViewTransitionPaint();
+      await setPage("mflstats", false, { skipNavigationLoading: true });
+    })();
     return;
   }
   if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
     commitViewTransition("mfl", "attributes", { statePageName: "mfl" });
-    void setPage("mfl", false, { view: "attributes", skipNavigationLoading: true });
+    void (async () => {
+      await waitForViewTransitionPaint();
+      await setPage("mfl", false, { view: "attributes", skipNavigationLoading: true });
+    })();
     return;
   }
   if (pageName !== state.currentPage && tablePages.has(pageName)) {
@@ -251,6 +266,7 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
         sortKey: "positions",
         sortDirection: "asc",
       });
+      await waitForViewTransitionPaint();
       setClubSwitching(true);`,
     "Club page transition before loading",
   );
@@ -265,7 +281,8 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
     state.sortDirection = "asc";
     if (restoreCachedClubView(nextView)) return;
     setClubSwitching(true);
-    if (typeof updateViewButtons === "function") updateViewButtons();`,
+    if (typeof updateViewButtons === "function") updateViewButtons();
+    void (async () => {`,
     `    captureClubView(state.view);
     commitViewTransition(CLUB_PAGE, nextView, {
       statePageName: CLUB_PAGE,
@@ -274,8 +291,10 @@ Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
       sortKey: "positions",
       sortDirection: "asc",
     });
-    if (restoreCachedClubView(nextView)) return;
-    setClubSwitching(true);`,
+    void (async () => {
+      await waitForViewTransitionPaint();
+      if (restoreCachedClubView(nextView)) return;
+      setClubSwitching(true);`,
     "Club view transition before loading",
   );
 

@@ -16,7 +16,6 @@
     'input[type="radio"]',
   ].join(", ");
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
-  const viewButtonsContainer = document.querySelector("#progressionPage .views");
 
   let pointerFocusedControl = null;
   let gestureStartControl = null;
@@ -113,10 +112,6 @@
       .find((modal) => modal instanceof HTMLElement && modal.getClientRects().length > 0) || null;
   }
 
-  function clubRouteActive() {
-    return /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname);
-  }
-
   function onClick(event) {
     if (suppressDraggedClick(event)) return;
 
@@ -132,17 +127,6 @@
 
     const button = showAddFilterButton();
     if (button && document.activeElement === button) button.blur();
-  }
-
-  function onSharedViewButtonClick(event) {
-    if (!clubRouteActive()) return;
-    const target = event.target instanceof Element ? event.target : null;
-    const button = target?.closest?.(".viewButton[data-view]");
-    if (!(button instanceof HTMLButtonElement)) return;
-
-    // The button's own route handler is authoritative. Prevent the older
-    // document-level Club handler from processing the same activation again.
-    event.stopPropagation();
   }
 
   function onEnterBubble(event) {
@@ -242,7 +226,6 @@
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("keydown", onEnterBubble);
   document.addEventListener("focusin", onFocusIn, true);
-  viewButtonsContainer?.addEventListener("click", onSharedViewButtonClick);
 
   function destroy() {
     pointerFocusedControl = null;
@@ -257,7 +240,6 @@
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("keydown", onEnterBubble);
     document.removeEventListener("focusin", onFocusIn, true);
-    viewButtonsContainer?.removeEventListener("click", onSharedViewButtonClick);
   }
 
   window.__mflControlInteractionsRuntime = Object.freeze({ destroy });
