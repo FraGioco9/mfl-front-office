@@ -21,45 +21,53 @@ function replaceRequired(source, current, replacement, label) {
   return text.split(current).join(replacement);
 }
 
+function replaceFunction(source, functionName, replacement, label) {
+  const text = String(source || "");
+  const marker = `function ${functionName}(`;
+  const start = text.indexOf(marker);
+  const openBrace = start >= 0 ? text.indexOf("{", start + marker.length) : -1;
+  if (start < 0 || openBrace < 0) {
+    throw new Error(`Could not normalize application core function: ${label}.`);
+  }
+
+  let depth = 0;
+  let end = -1;
+  for (let index = openBrace; index < text.length; index += 1) {
+    if (text[index] === "{") depth += 1;
+    if (text[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = index + 1;
+        break;
+      }
+    }
+  }
+  if (end < 0) {
+    throw new Error(`Could not find the end of application core function: ${label}.`);
+  }
+  return `${text.slice(0, start)}${replacement}${text.slice(end)}`;
+}
+
 function normalizeSharedViewOwnership(source) {
   let text = String(source || "");
 
-  text = replaceRequired(
+  text = replaceFunction(
     text,
-    `function allowedViewsForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return ["attributes", "next", "contracts"];
-  }
-
-  return pageViewOptions[pageName] || pageViewOptions.progression;
-}`,
+    "allowedViewsForPage",
     `function allowedViewsForPage(pageName = tablePageKey() || "progression") {
   const viewConfig = Reflect.get(window, "__mflTableViewConfig");
   const configuredOrder = viewConfig && typeof viewConfig === "object" && Array.isArray(viewConfig?.[pageName]?.order)
     ? Array.from(viewConfig[pageName].order)
     : null;
-  const allowedViews = configuredOrder || pageViewOptions[pageName] || pageViewOptions.progression;
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return allowedViews.filter((viewName) => ["attributes", "next", "contracts"].includes(viewName));
-  }
-  return allowedViews;
+  return configuredOrder || pageViewOptions[pageName] || pageViewOptions.progression;
 }`,
     "canonical allowed view ownership",
   );
 
-  text = replaceRequired(
+  text = replaceFunction(
     text,
+    "defaultViewForPage",
     `function defaultViewForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return "attributes";
-  }
-
-  return defaultPageViews[pageName] || "current";
-}`,
-    `function defaultViewForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return "attributes";
-  }
   const viewConfig = Reflect.get(window, "__mflTableViewConfig");
   const configuredFallback = viewConfig && typeof viewConfig === "object"
     ? String(viewConfig?.[pageName]?.fallback || "")
@@ -69,20 +77,9 @@ function normalizeSharedViewOwnership(source) {
     "canonical default view ownership",
   );
 
-  text = replaceRequired(
+  text = replaceFunction(
     text,
-    `function updateViewButtons() {
-  viewButtons.forEach((button) => {
-    const pageName = pageNameForViewButton(button);
-    const allowedViews = allowedViewsForPage(pageName);
-    const buttonView = button.dataset.view;
-    const activeView = state.currentPage === "mflstats" && pageName === "mfl" ? "stats" : state.view;
-    const allowed = allowedViews.includes(buttonView);
-    button.hidden = !allowed;
-    button.classList.toggle("active", allowed && buttonView === activeView);
-  });
-  updateNavigationLinks();
-}`,
+    "updateViewButtons",
     `function updateViewButtons() {
   const pageName = state.currentPage === "mflstats"
     ? "mfl"
@@ -151,9 +148,10 @@ function normalizeReleaseOwnership(source) {
 }
 
 function normalizeCompleteApplicationCore(source) {
-  const sharedViewsSource = normalizeSharedViewOwnership(source);
+  const baseSource = normalizeBaseApplicationCore(source);
+  const sharedViewsSource = normalizeSharedViewOwnership(baseSource);
   const watchlistShellSource = normalizeWatchlistShellFirstNavigation(sharedViewsSource);
-  const tableEventsSource = normalizeTableEventDelegation(normalizeBaseApplicationCore(watchlistShellSource));
+  const tableEventsSource = normalizeTableEventDelegation(watchlistShellSource);
   const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);
   const tableStateSource = normalizePureTableStateRestoration(routeRuntimeSource);
