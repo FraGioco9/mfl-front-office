@@ -24,6 +24,41 @@ includes(
 );
 includes(
   bootstrap,
+  'const LOADING_VALUE_TEXT = "-";',
+  "All first-paint data boxes must share the global dash loading placeholder.",
+);
+includes(
+  bootstrap,
+  'Reflect.set(window, "__mflLoadingValueText", LOADING_VALUE_TEXT);',
+  "The loading-value placeholder must be published for route runtimes to reuse.",
+);
+includes(
+  bootstrap,
+  'Reflect.set(window, "__mflSetLoadingValue", setLoadingValue);',
+  "Data-box loading state must have one shared setter instead of page-specific blank values.",
+);
+includes(
+  bootstrap,
+  'const BLANK_TABLE_LOADING_TEXT = "\\u00a0";',
+  "Table-row loading skeletons must remain separate from data-box placeholders.",
+);
+includes(
+  bootstrap,
+  "cell.textContent = BLANK_TABLE_LOADING_TEXT;",
+  "Table-row skeletons must keep their dedicated blank placeholder.",
+);
+excludes(
+  bootstrap,
+  "function setBlankLoadingValue(",
+  "Bootstrap must not retain a competing blank data-box loading owner.",
+);
+includes(
+  bootstrap,
+  '<strong>${LOADING_VALUE_TEXT}</strong>',
+  "Player loading cards must show the same global dash placeholder while data resolves.",
+);
+includes(
+  bootstrap,
   "function primeInitialShell() {",
   "bootstrap.js must immediately select the destination shell.",
 );
@@ -149,4 +184,4 @@ excludes(
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap direct first-paint skeleton, route-authoritative table chrome, and startup ownership validation passed.");
+console.log("Bootstrap direct first-paint skeleton, global loading-box placeholder, route-authoritative table chrome, and startup ownership validation passed.");

@@ -5,7 +5,8 @@
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
-  const BLANK_LOADING_TEXT = "\u00a0";
+  const LOADING_VALUE_TEXT = "-";
+  const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const TABLE_VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     stats: "stats",
@@ -17,6 +18,15 @@
   const TABLE_VIEW_SLUGS = new Set(Object.keys(TABLE_VIEW_BY_SLUG));
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
+
+  function setLoadingValue(target) {
+    const element = typeof target === "string" ? document.getElementById(target) : target;
+    if (element instanceof HTMLElement) element.textContent = LOADING_VALUE_TEXT;
+    return element;
+  }
+
+  Reflect.set(window, "__mflLoadingValueText", LOADING_VALUE_TEXT);
+  Reflect.set(window, "__mflSetLoadingValue", setLoadingValue);
 
   root.classList.add("mflSingleRenderPending");
   root.classList.remove("mflInitialRouteResolved");
@@ -247,7 +257,7 @@
       row.style.opacity = String(opacity);
       const cell = document.createElement("td");
       cell.colSpan = 16;
-      cell.textContent = BLANK_LOADING_TEXT;
+      cell.textContent = BLANK_TABLE_LOADING_TEXT;
       row.appendChild(cell);
       fragment.appendChild(row);
     });
@@ -261,21 +271,16 @@
 
   Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);
 
-  function setBlankLoadingValue(id) {
-    const element = document.getElementById(id);
-    if (element instanceof HTMLElement) element.textContent = BLANK_LOADING_TEXT;
-  }
-
   function resetStatsShell(target) {
     if (target.id === "databaseStatsPage") {
       ["databaseStatsTotalPlayers", "databaseStatsRetiringThree", "databaseStatsRetiringTwo", "databaseStatsRetiringOne", "databaseStatsRetired"]
-        .forEach(setBlankLoadingValue);
+        .forEach(setLoadingValue);
       document.getElementById("databaseStatsDistribution")?.replaceChildren();
       return;
     }
     if (target.id === "mflStatsPage") {
       ["mflStatsTotalPlayers", "mflStatsPackablePlayers", "mflStatsAgedPlayers", "mflStatsOtherPlayers"]
-        .forEach(setBlankLoadingValue);
+        .forEach(setLoadingValue);
       document.getElementById("mflStatsAgeDistribution")?.replaceChildren();
     }
   }
@@ -302,9 +307,9 @@
     const notesPanel = optedIn
       ? `<div class="playerPanel playerNotesPanel"><h3>Notes</h3><div class="playerNotesInputWrap"><textarea class="playerNotesInput" style="visibility:hidden" aria-hidden="true" disabled></textarea><span class="playerNotesCount" style="visibility:hidden">0/200</span></div></div>`
       : "";
-    const infoCards = Array.from({ length: 8 }, () => '<div><span>&nbsp;</span><strong>&nbsp;</strong></div>').join("");
+    const infoCards = Array.from({ length: 8 }, () => `<div><span>&nbsp;</span><strong>${LOADING_VALUE_TEXT}</strong></div>`).join("");
     const attributeCards = Array.from({ length: 7 }, (_, index) => (
-      `<div class="playerAttributeCard${index === 0 ? " featured fullWidth" : ""}"><span>&nbsp;</span><strong>&nbsp;</strong></div>`
+      `<div class="playerAttributeCard${index === 0 ? " featured fullWidth" : ""}"><span>&nbsp;</span><strong>${LOADING_VALUE_TEXT}</strong></div>`
     )).join("");
 
     playerDetail.dataset.loadingShell = "true";
@@ -334,8 +339,8 @@
   function primeRouteSkeleton(target) {
     if (!(target instanceof HTMLElement)) return;
     if (target.id === "homePage") {
-      setBlankLoadingValue("homePlayers");
-      setBlankLoadingValue("homeWallets");
+      setLoadingValue("homePlayers");
+      setLoadingValue("homeWallets");
       return;
     }
     if (target.id === "playerPage") {
@@ -347,7 +352,7 @@
       if (panel instanceof HTMLElement) panel.hidden = true;
       const results = document.getElementById("evaluationSearchResults");
       if (results instanceof HTMLElement) results.hidden = true;
-      setBlankLoadingValue("evaluationDiscountRate");
+      setLoadingValue("evaluationDiscountRate");
       const buttons = document.getElementById("evaluationButtons");
       const loadButton = document.getElementById("evaluationLoadButton");
       const plainEvaluation = root.dataset.initialEvaluationSelection !== "true";
@@ -362,8 +367,8 @@
   Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);
 
   function primeInitialShell() {
-    setBlankLoadingValue("totalPlayers");
-    setBlankLoadingValue("totalWallets");
+    setLoadingValue("totalPlayers");
+    setLoadingValue("totalWallets");
 
     const target = initialShellTarget();
     if (!(target instanceof HTMLElement)) return;
