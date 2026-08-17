@@ -99,7 +99,10 @@ function normalizeSharedViewOwnership(source) {
 function normalizeCanonicalViewTransitions(source) {
   let text = String(source || "");
 
-  const transitionOwner = `function commitViewTransition(pageName, viewName, options = {}) {
+  const transitionOwner = `let pendingViewTransition = null;
+let viewTransitionSequence = 0;
+
+function commitViewTransition(pageName, viewName, options = {}) {
   const nextView = String(viewName || "");
   if (!nextView) return "";
 
@@ -140,6 +143,50 @@ function normalizeCanonicalViewTransitions(source) {
   return nextView;
 }
 
+function stageViewTransition(pageName, viewName, options = {}) {
+  const nextView = String(viewName || "");
+  if (!nextView) return null;
+
+  const transition = {
+    sequence: ++viewTransitionSequence,
+    pageName: String(pageName || ""),
+    viewName: nextView,
+    previousCurrentPage: state.currentPage,
+    previousView: state.view,
+    previousPage: state.page,
+    previousSortKey: state.sortKey,
+    previousSortDirection: state.sortDirection,
+    previousPath: \`\${window.location.pathname}\${window.location.search}\`,
+    targetPath: "",
+  };
+  pendingViewTransition = transition;
+  commitViewTransition(pageName, nextView, options);
+  transition.targetPath = \`\${window.location.pathname}\${window.location.search}\`;
+  return transition;
+}
+
+function stagedViewTransitionIsCurrent(transition) {
+  return Boolean(
+    transition
+    && pendingViewTransition === transition
+    && state.view === transition.viewName
+    && \`\${window.location.pathname}\${window.location.search}\` === transition.targetPath
+  );
+}
+
+function takeStagedViewTransition(pageName, viewName) {
+  const transition = pendingViewTransition;
+  if (
+    !transition
+    || transition.pageName !== String(pageName || "")
+    || transition.viewName !== String(viewName || "")
+  ) {
+    return null;
+  }
+  pendingViewTransition = null;
+  return transition;
+}
+
 function waitForViewTransitionPaint() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
@@ -173,6 +220,25 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
 
   text = replaceRequired(
     text,
+    `    const pageKey = tablePageKey();
+    const previousView = state.view;
+    const previousPage = state.page;
+    const previousSortKey = state.sortKey;
+    const previousSortDirection = state.sortDirection;
+    const previousPath = \`\${window.location.pathname}\${window.location.search}\`;`,
+    `    const stagedTransition = takeStagedViewTransition(pageName, nextView);
+    const pageKey = tablePageKey();
+    const previousCurrentPage = stagedTransition?.previousCurrentPage || state.currentPage;
+    const previousView = stagedTransition?.previousView || state.view;
+    const previousPage = stagedTransition?.previousPage ?? state.page;
+    const previousSortKey = stagedTransition?.previousSortKey || state.sortKey;
+    const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
+    const previousPath = stagedTransition?.previousPath || \`\${window.location.pathname}\${window.location.search}\`;`,
+    "staged incremental view transition snapshot",
+  );
+
+  text = replaceRequired(
+    text,
     `    state.view = nextView;
     state.page = 1;
     const targetSortState = normalizedViewSortState(
@@ -187,13 +253,34 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
       nextView,
     );
-    commitViewTransition(pageName, nextView, {
-      ...routeOptions,
-      sortKey: targetSortState.sortKey,
-      sortDirection: targetSortState.sortDirection,
-    });
-    await waitForViewTransitionPaint();`,
+    if (stagedTransition) {
+      state.sortKey = targetSortState.sortKey;
+      state.sortDirection = targetSortState.sortDirection;
+    } else {
+      commitViewTransition(pageName, nextView, {
+        ...routeOptions,
+        sortKey: targetSortState.sortKey,
+        sortDirection: targetSortState.sortDirection,
+      });
+      await waitForViewTransitionPaint();
+    }`,
     "shared table view transition",
+  );
+
+  text = replaceRequired(
+    text,
+    `      } catch (error) {
+        state.view = previousView;
+        state.page = previousPage;
+        state.sortKey = previousSortKey;
+        state.sortDirection = previousSortDirection;`,
+    `      } catch (error) {
+        state.currentPage = previousCurrentPage;
+        state.view = previousView;
+        state.page = previousPage;
+        state.sortKey = previousSortKey;
+        state.sortDirection = previousSortDirection;`,
+    "incremental view transition rollback",
   );
 
   text = replaceFunction(
@@ -208,6 +295,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
   if (pageName === "club") return;
 
   if (pageName === "mfl" && viewName === "stats") {
+    pendingViewTransition = null;
     commitViewTransition("mfl", "stats", { statePageName: "mflstats" });
     void (async () => {
       await waitForViewTransitionPaint();
@@ -216,6 +304,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     return;
   }
   if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
+    pendingViewTransition = null;
     commitViewTransition("mfl", "attributes", { statePageName: "mfl" });
     void (async () => {
       await waitForViewTransitionPaint();
@@ -223,13 +312,34 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     })();
     return;
   }
+  if (pageName === "database" && viewName === "stats") {
+    pendingViewTransition = null;
+    commitViewTransition("database", "stats");
+    void (async () => {
+      await waitForViewTransitionPaint();
+      await setView("stats");
+    })();
+    return;
+  }
   if (pageName !== state.currentPage && tablePages.has(pageName)) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
   }
+  if (state.incrementalMode) {
+    const transition = stageViewTransition(pageName, viewName, {
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+    });
+    void (async () => {
+      await waitForViewTransitionPaint();
+      if (!stagedViewTransitionIsCurrent(transition)) return;
+      await setView(viewName);
+    })();
+    return;
+  }
   void setView(viewName);
 }`,
-    "MFL Stats shared view transition",
+    "view intent before incremental loader ownership",
   );
 
   text = replaceFunction(
@@ -259,6 +369,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       activeClubId = String(clubId);
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
+      pendingViewTransition = null;
       commitViewTransition(CLUB_PAGE, nextView, {
         statePageName: CLUB_PAGE,
         path: route,
@@ -284,6 +395,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     if (typeof updateViewButtons === "function") updateViewButtons();
     void (async () => {`,
     `    captureClubView(state.view);
+    pendingViewTransition = null;
     commitViewTransition(CLUB_PAGE, nextView, {
       statePageName: CLUB_PAGE,
       path: canonicalClubRoute(activeClubId, nextView),
