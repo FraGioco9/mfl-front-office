@@ -1,6 +1,8 @@
 // @ts-check
 
 const STARTUP_MARKER = "window.__mflAppStartPromise = startApp();";
+const FIRST_LOAD_DATA_BARRIER = "if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
+const MFL_STATS_FIRST_LOAD_DATA_BARRIER = "if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
 
 // Legacy route-core validator markers. These comments are not injected into the generated application core:
 // const directTableRoute = (
@@ -28,6 +30,10 @@ const ROUTE_RUNTIME_GATE = `;(() => {
           ? window.__mflInteractionBusy.begin("route-runtime")
           : "";
         try {
+          const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");
+          if (busyToken && typeof waitForLoadingPaint === "function") {
+            await waitForLoadingPaint();
+          }
           window.__mflCancelIncrementalRouteRequest?.();
           const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
             ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
@@ -85,7 +91,13 @@ window.__mflAppStartPromise = (async () => {
 })();`;
 
 export function normalizeRouteRuntimeGate(source) {
-  const text = String(source || "");
+  let text = String(source || "");
+  if (!text.includes(MFL_STATS_FIRST_LOAD_DATA_BARRIER)) {
+    if (!text.includes(FIRST_LOAD_DATA_BARRIER)) {
+      throw new Error("Could not locate the first-load data barrier for MFL Stats.");
+    }
+    text = text.replace(FIRST_LOAD_DATA_BARRIER, MFL_STATS_FIRST_LOAD_DATA_BARRIER);
+  }
   if (text.includes("setPageWithRouteRuntime")) return text;
   if (!text.includes(STARTUP_MARKER)) {
     throw new Error("Could not locate the application startup marker for the route runtime gate.");

@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.52",
+    "Keep MFL Stats Overall Filters at their final size from first paint"
+  ],
+  [
     "v1.124.51",
     "Unify complete first-paint shells and lazy loading across every route"
   ],
