@@ -180,23 +180,40 @@ ${linkColumnBranch}`;
     const nextView = normalizeViewForPage(viewName, pageName);
     if (!allowedViewsForPage(pageName).includes(nextView)) return;
 
-    const route = incrementalRouteTarget(pageName, {
+    const routeOptions = {
       view: nextView,
       walletAddress: state.currentAgentWalletAddress,
       watchlistId: state.currentWatchlistId,
-    });
+    };
+    const route = incrementalRouteTarget(pageName, routeOptions);
     if (!route) return originalSetView.call(this, nextView);
+
+    const previousView = state.view;
+    const previousPage = state.page;
+    const previousPath = \`\${window.location.pathname}\${window.location.search}\`;
+    state.view = nextView;
+    state.page = 1;
+    updatePageUrl(pageName, { updateUrl: true, ...routeOptions });
+    updateViewButtons();
 
     const loadAndRender = async () => {
       try {
         await requestIncrementalRoute(route, 1);
         state.incrementalApplying = true;
+        state.view = previousView;
+        state.page = previousPage;
         try {
           return await originalSetView.call(this, nextView);
         } finally {
           state.incrementalApplying = false;
         }
       } catch (error) {
+        state.view = previousView;
+        state.page = previousPage;
+        if (\`\${window.location.pathname}\${window.location.search}\` !== previousPath) {
+          window.history.replaceState({}, "", previousPath);
+        }
+        updateViewButtons();
         showToast(error?.message || "Could not load this view.");
       }
     };
