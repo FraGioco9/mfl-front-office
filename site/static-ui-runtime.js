@@ -162,10 +162,10 @@
     if (typeof primeRoute === "function") primeRoute(target, state);
   }
 
-  function showRouteShell(state, { loading = false } = {}) {
+  function showRouteShell(state, { loading = false, primeChrome = true } = {}) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
-    if (target.id === "progressionPage") syncDestinationTableChrome(state);
+    if (primeChrome && target.id === "progressionPage") syncDestinationTableChrome(state);
     if (loading) primeDestinationSkeleton(target, state);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
@@ -344,7 +344,7 @@
       const currentState = routeState();
       const page = String(viewButton.dataset.page || currentState.page || "");
       if (container?.matches("#progressionPage .views")) syncSharedViewSet(page, view);
-      showRouteShell({ page, view, url: currentState.url }, { loading: true });
+      showRouteShell({ page, view, url: currentState.url }, { loading: true, primeChrome: false });
       return;
     }
 

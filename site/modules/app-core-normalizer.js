@@ -188,11 +188,35 @@ ${linkColumnBranch}`;
     const route = incrementalRouteTarget(pageName, routeOptions);
     if (!route) return originalSetView.call(this, nextView);
 
+    const pageKey = tablePageKey();
     const previousView = state.view;
     const previousPage = state.page;
+    const previousSortKey = state.sortKey;
+    const previousSortDirection = state.sortDirection;
     const previousPath = \`\${window.location.pathname}\${window.location.search}\`;
+
+    if (pageKey) {
+      const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
+      state.tablePageStates[pageKey] = {
+        ...existingPageState,
+        viewSortStates: {
+          ...(existingPageState.viewSortStates || {}),
+          [previousView]: {
+            sortKey: previousSortKey,
+            sortDirection: previousSortDirection,
+          },
+        },
+      };
+    }
+
     state.view = nextView;
     state.page = 1;
+    const targetSortState = normalizedViewSortState(
+      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
+      nextView,
+    );
+    state.sortKey = targetSortState.sortKey;
+    state.sortDirection = targetSortState.sortDirection;
     updatePageUrl(pageName, { updateUrl: true, ...routeOptions });
     updateViewButtons();
 
@@ -200,8 +224,6 @@ ${linkColumnBranch}`;
       try {
         await requestIncrementalRoute(route, 1);
         state.incrementalApplying = true;
-        state.view = previousView;
-        state.page = previousPage;
         try {
           return await originalSetView.call(this, nextView);
         } finally {
@@ -210,6 +232,8 @@ ${linkColumnBranch}`;
       } catch (error) {
         state.view = previousView;
         state.page = previousPage;
+        state.sortKey = previousSortKey;
+        state.sortDirection = previousSortDirection;
         if (\`\${window.location.pathname}\${window.location.search}\` !== previousPath) {
           window.history.replaceState({}, "", previousPath);
         }
@@ -279,17 +303,6 @@ ${linkColumnBranch}`;
     ].join("\n"),
     "        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);",
     "initial Club route",
-  );
-
-  nextSource = replaceRequired(
-    nextSource,
-    [
-      "    setClubSwitching(true);",
-      '    if (typeof updateViewButtons === "function") updateViewButtons();',
-      "    void (async () => {",
-    ].join("\n"),
-    ["    setClubSwitching(true);", "    void (async () => {"].join("\n"),
-    "Club view pre-render chrome",
   );
 
   const twoFrameClubFinish = `  function finishClubSwitch() {

@@ -7,10 +7,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [indexHtml, bootstrap, staticUi, tableLoading, entry, buildNormalizer, styles, dropdowns] = await Promise.all([
+const [indexHtml, bootstrap, staticUi, tableView, tableLoading, entry, buildNormalizer, styles, dropdowns] = await Promise.all([
   read("./index.html"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
+  read("./table-view-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./modules/app-entry.js"),
   read("./modules/app-core-build-normalizer.js"),
@@ -41,8 +42,9 @@ includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLEleme
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button owner.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The loaded application core must be able to reuse canonical view-button ownership.");
-includes(staticUi, "function showRouteShell(state, { loading = false } = {}) {", "Static route chrome must own the immediate destination shell.");
-includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Destination table chrome must synchronize before reveal.");
+includes(staticUi, "function showRouteShell(state, { loading = false, primeChrome = true } = {}) {", "Static route chrome must own the immediate destination shell.");
+includes(staticUi, 'if (primeChrome && target.id === "progressionPage") syncDestinationTableChrome(state);', "Destination table chrome must synchronize before page reveal without repainting same-page view intent.");
+includes(staticUi, 'showRouteShell({ page, view, url: currentState.url }, { loading: true, primeChrome: false });', "Same-page view clicks must keep the clicked view authoritative while the loading shell appears.");
 includes(staticUi, 'if (typeof primeRows === "function") primeRows(true);', "Page switches must synchronously install the five-row destination table skeleton.");
 includes(staticUi, 'if (typeof primeRoute === "function") primeRoute(target, state);', "Non-table page switches must synchronously install destination boxes/skeletons.");
 includes(staticUi, 'page.hidden = page !== target;', "A newly selected page shell must replace the previous page immediately.");
@@ -54,6 +56,10 @@ excludes(staticUi, 'document.createElement("style")', "Static route chrome must 
 excludes(staticUi, "!important", "Static route chrome must not use CSS priority overrides.");
 excludes(staticUi, "MutationObserver", "Static route chrome must not observe and repair rendered DOM.");
 excludes(staticUi, ".style.order", "View order must be represented in DOM order rather than inline style overrides.");
+
+excludes(tableView, 'classList.toggle("active"', "The auxiliary table-view runtime must not override canonical active-view state.");
+excludes(tableView, 'document.createElement("style")', "The auxiliary table-view runtime must not inject view-button CSS overrides.");
+excludes(tableView, 'addEventListener("pointerdown"', "The auxiliary table-view runtime must not pre-commit view state before the canonical click owner.");
 
 includes(staticUi, 'tooltipPortal = document.createElement("div");', "Generic tooltips must use a body-level portal instead of page pseudo-elements.");
 includes(staticUi, 'document.body.appendChild(tooltipPortal);', "Generic tooltips must escape page/sidebar stacking contexts.");
@@ -85,4 +91,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established 9
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Direct route shell, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
+console.log("Direct route shell, single view-state ownership, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
