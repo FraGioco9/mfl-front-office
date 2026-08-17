@@ -114,6 +114,13 @@ export function normalizeTableEventDelegation(source) {
 
   nextSource = replaceRequired(
     nextSource,
+    '          clubLink.className = "clubPageLink";\n          clubLink.textContent = clubName;',
+    '          clubLink.className = "agentTableLink";\n          markTableInteractiveHover(clubLink, "club", clubId);\n          clubLink.textContent = clubName;',
+    "club table link presentation",
+  );
+
+  nextSource = replaceRequired(
+    nextSource,
     [
       '          clubLink.addEventListener("click", (event) => {',
       '            if (typeof window.mflOpenClubPage !== "function") return;',
@@ -184,7 +191,7 @@ tableBody?.addEventListener("click", (event) => {
     return;
   }
 
-  const clubLink = event.target.closest(".clubPageLink[data-club-id]");
+  const clubLink = event.target.closest(".agentTableLink[data-club-id]");
   if (clubLink instanceof HTMLAnchorElement && tableBody.contains(clubLink) && typeof window.mflOpenClubPage === "function") {
     event.preventDefault();
     window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");

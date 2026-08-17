@@ -37,6 +37,32 @@
     hovered = null;
   }
 
+  function viewButtonFromEvent(event) {
+    if (event.isPrimary === false || event.button !== 0 || !(event.target instanceof Element)) return null;
+    const button = event.target.closest("main .views .viewButton[data-view]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return null;
+    return button;
+  }
+
+  function activatePressedView(button) {
+    const container = button.closest(".views");
+    if (!(container instanceof HTMLElement)) return;
+    container.querySelectorAll(".viewButton[data-view]").forEach((candidate) => {
+      candidate.classList.toggle("active", candidate === button);
+    });
+  }
+
+  function onPointerDown(event) {
+    const button = viewButtonFromEvent(event);
+    if (!button) return;
+    activatePressedView(button);
+    clearHover();
+  }
+
+  function onPointerCancel() {
+    window.__mflStaticUiRuntime?.sync?.();
+  }
+
   function onPointerMove(event) {
     if (event.pointerType === "touch" || document.documentElement.classList.contains("mflInteractionBusy")) {
       clearHover();
@@ -60,12 +86,16 @@
 
   function destroy() {
     clearHover();
+    document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("pointercancel", onPointerCancel, true);
     document.removeEventListener("pointermove", onPointerMove, true);
     document.removeEventListener("pointerleave", onPointerLeave, true);
     document.getElementById(STYLE_ID)?.remove();
   }
 
   installStyles();
+  document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("pointercancel", onPointerCancel, true);
   document.addEventListener("pointermove", onPointerMove, true);
   document.addEventListener("pointerleave", onPointerLeave, true);
   window.__mflTableViewRuntime = Object.freeze({ destroy });

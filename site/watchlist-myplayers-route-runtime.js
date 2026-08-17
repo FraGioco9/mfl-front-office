@@ -77,7 +77,7 @@
     return preferredView ? { ...options, view: preferredView } : { ...options };
   }
   function resolveWatchlistNavigationOptions(options = {}) {
-    const nextOptions = intentOptions("watchlist", options);
+    const nextOptions = { ...options };
     if (String(nextOptions.watchlistId || "").trim()) return nextOptions;
 
     let watchlistId = "";

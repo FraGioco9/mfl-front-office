@@ -112,6 +112,7 @@ function normalizeWatchlistShellFirstNavigation(source) {
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== progressionPage;
     });
+    renderWatchlistSwitcher();
     state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
     await ensureWatchlistRoute(options);
   }`,
