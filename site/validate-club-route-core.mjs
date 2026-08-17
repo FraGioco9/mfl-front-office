@@ -9,10 +9,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeChunksSource, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, routeChunksSource, routeLoader, appEntry, routeNormalizer, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
   read("./route-core-loader-runtime.js"),
+  read("./modules/app-entry.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
 ]);
@@ -36,24 +37,38 @@ excludes(sharedCore, "function applyClubPresentation()", "Club-only presentation
 includes(sharedCore, "renderSearchResultsNowWithUniversalClubs", "Club search must remain available before the Club chunk is loaded.");
 includes(sharedCore, 'void window.mflOpenClubPage(clubId, "attributes")', "Shared Club search must navigate through the lazy public gate.");
 
-includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route state.");
+includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
 includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk must own per-view render caching.");
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
 includes(clubCore, "if (!dataPayload) return;", "Obsolete Club payloads must stop inside the Club route chunk before render commit.");
-includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route owner.");
+includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
 excludes(clubCore, "renderSearchResultsNowWithClubs", "The Club chunk must not patch Global Search after navigation.");
+includes(clubCore, "runPageTransition(CLUB_PAGE, updateHistory", "Club page entry must use the global page transition runner.");
+includes(clubCore, "runViewTransition(CLUB_PAGE, nextView", "Club same-page views must use the global view transition runner.");
+excludes(clubCore, "commitViewTransition(CLUB_PAGE", "Club must not retain a private direct view commit.");
 
 includes(routeLoader, 'club: "/modules/app-core-club-runtime.js"', "The route-core loader must map Club to its generated chunk.");
 includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
-includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club navigation must start its ordered route-core dependency request immediately.");
-includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club navigation must overlap core and table-runtime loading.");
-includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club navigation must wait for both owners before invoking the route implementation.");
+includes(routeLoader, 'runTransition("club", true', "The primary Club gate must enter the global page transition before lazy loading.");
+includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club loading must start its ordered route-core dependency request inside the global loader callback.");
+includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club loading must overlap core and table-runtime loading.");
+includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
 includes(routeLoader, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
-excludes(routeLoader, "window.history.pushState", "The lazy Club gate must not change the URL before the Club chunk executes.");
+excludes(routeLoader, "window.history.pushState", "The primary Club lazy gate must not own history outside the global transition.");
+excludes(routeLoader, "window.history.replaceState", "The primary Club lazy gate must not own history outside the global transition.");
+
+includes(appEntry, "function installClubRouteRuntimeGate()", "The fallback Club gate must remain compatible with lazy route-runtime loading.");
+includes(appEntry, "const runTransition = runtimeWindow.__mflRunPageTransition;", "The fallback Club gate must reuse the same global page transition runner.");
+includes(appEntry, 'return runTransition("club", true, {', "The fallback Club gate must commit through the global transition before its loader callback.");
+const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
+const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
+const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
+excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
+excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
 
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("club");', "Direct Club startup must load the Club route owner before startApp.");
 includes(routeNormalizer, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");
@@ -66,4 +81,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club route-core splitting validation passed.");
+console.log("Club global-navigation and route-core splitting validation passed.");

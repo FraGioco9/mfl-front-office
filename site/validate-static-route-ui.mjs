@@ -7,7 +7,20 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [indexHtml, bootstrap, staticUi, tableView, tableLoading, controlInteractions, databaseStatsState, entry, buildNormalizer, styles, dropdowns] = await Promise.all([
+const [
+  indexHtml,
+  bootstrap,
+  staticUi,
+  tableView,
+  tableLoading,
+  controlInteractions,
+  databaseStatsState,
+  entry,
+  buildNormalizer,
+  routeCoreLoader,
+  styles,
+  dropdowns,
+] = await Promise.all([
   read("./index.html"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
@@ -17,6 +30,7 @@ const [indexHtml, bootstrap, staticUi, tableView, tableLoading, controlInteracti
   read("./database-stats-state-runtime.js"),
   read("./modules/app-entry.js"),
   read("./modules/app-core-build-normalizer.js"),
+  read("./route-core-loader-runtime.js"),
   read("./styles.css"),
   read("./dropdowns.css"),
 ]);
@@ -37,122 +51,151 @@ for (const canonicalConfig of [
 includes(entry, '"/static-ui-runtime.js"', "Static route chrome must load universally before the application core.");
 includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reuse first-paint view configuration.");
 includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
-includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must switch when the canonical transition commits.");
-includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "View destination state must switch when the canonical transition commits.");
-includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View buttons must be reordered directly instead of through CSS order overrides.");
+includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must be rendered by passive route chrome.");
+includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "Active view state must be rendered by passive route chrome.");
+includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
-includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button owner.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The loaded application core must be able to reuse canonical route chrome ownership.");
-includes(staticUi, "function showRouteShell(state) {", "Static route chrome must render the route already committed by the canonical transition.");
-includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize their view chrome before page reveal.");
-includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell immediately.");
-excludes(staticUi, 'document.addEventListener("click", onClick, true);', "Static route chrome must not own a second page-navigation click flow.");
-excludes(staticUi, "function sameOriginRouteFromLink", "Static route chrome must not derive or stage page navigation independently of setPage.");
-excludes(staticUi, "function primeDestinationSkeleton", "Static route chrome must not start a separate pre-navigation loading flow.");
-excludes(staticUi, "syncRouteChrome(href", "Internal links must be committed only by the canonical application transition.");
-excludes(staticUi, "{ loading: true", "Static route chrome must not own loading state.");
-includes(staticUi, 'if (event.key !== "Escape") return;', "Escape must have a global focus cleanup owner.");
+includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
+includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The application core must be able to reuse passive route chrome.");
+includes(staticUi, "function showRouteShell(state) {", "Static route chrome must reveal an already-committed route shell.");
+includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize view chrome before page reveal.");
+includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
+for (const forbidden of [
+  'document.addEventListener("click", onClick, true);',
+  "function sameOriginRouteFromLink",
+  "function primeDestinationSkeleton",
+  "syncRouteChrome(href",
+  "{ loading: true",
+]) {
+  excludes(staticUi, forbidden, `Static route chrome must not own navigation/loading via ${forbidden}.`);
+}
+includes(staticUi, 'if (event.key !== "Escape") return;', "Escape must retain global focus cleanup ownership.");
 includes(staticUi, "active.blur();", "Escape must remove the active element focus ring.");
 includes(staticUi, "selection.removeAllRanges();", "Escape must clear highlighted page text.");
-excludes(staticUi, 'document.createElement("style")', "Static route chrome must not inject CSS repair layers.");
-excludes(staticUi, "!important", "Static route chrome must not use CSS priority overrides.");
-excludes(staticUi, "MutationObserver", "Static route chrome must not observe and repair rendered DOM.");
-excludes(staticUi, ".style.order", "View order must be represented in DOM order rather than inline style overrides.");
+for (const forbidden of ['document.createElement("style")', "!important", "MutationObserver", ".style.order"]) {
+  excludes(staticUi, forbidden, `Static route chrome must not use repair ownership via ${forbidden}.`);
+}
 
-excludes(tableView, 'classList.toggle("active"', "The auxiliary table-view runtime must not override canonical active-view state.");
-excludes(tableView, 'document.createElement("style")', "The auxiliary table-view runtime must not inject view-button CSS overrides.");
-excludes(tableView, 'addEventListener("pointerdown"', "The auxiliary table-view runtime must not pre-commit view state before the canonical click owner.");
-excludes(controlInteractions, "function onSharedViewButtonClick", "Control interaction helpers must not intercept shared Club view clicks.");
-excludes(controlInteractions, "clubRouteActive", "Control interaction helpers must not own Club route/view state.");
-excludes(controlInteractions, 'viewButtonsContainer?.addEventListener("click"', "Shared view buttons must not have a second Club click propagation owner.");
+for (const forbidden of ['classList.toggle("active"', 'document.createElement("style")', 'addEventListener("pointerdown"']) {
+  excludes(tableView, forbidden, `Auxiliary table-view runtime must not own view state via ${forbidden}.`);
+}
+for (const forbidden of ["function onSharedViewButtonClick", "clubRouteActive", 'viewButtonsContainer?.addEventListener("click"']) {
+  excludes(controlInteractions, forbidden, `Control interaction helpers must not own Club navigation via ${forbidden}.`);
+}
 
-includes(staticUi, 'tooltipPortal = document.createElement("div");', "Generic tooltips must use a body-level portal instead of page pseudo-elements.");
-includes(staticUi, 'document.body.appendChild(tooltipPortal);', "Generic tooltips must escape page/sidebar stacking contexts.");
+includes(staticUi, 'tooltipPortal = document.createElement("div");', "Generic tooltips must use a body-level portal.");
+includes(staticUi, "document.body.appendChild(tooltipPortal);", "Generic tooltips must escape page/sidebar stacking contexts.");
 includes(styles, ".mflGlobalTooltip {", "The global tooltip portal must have canonical static styling.");
-includes(styles, "z-index: 2147483647;", "Global tooltip portals must sit above every application layer.");
+includes(styles, "z-index: 2147483647;", "Global tooltip portals must sit above application layers.");
 
 includes(bootstrap, "const TABLE_VIEW_BY_SLUG = Object.freeze({", "Bootstrap table chrome must understand canonical route view slugs directly.");
 includes(bootstrap, "function tableViewFromUrl(page, urlLike = window.location.href) {", "Bootstrap table chrome must resolve its view from the destination URL.");
-includes(bootstrap, "const routeSlug = decodedRoutePart(parts[parts.length - 1]).toLowerCase();", "Destination table chrome must use the current route's final view slug.");
-includes(bootstrap, "const requestedView = tableViewFromUrl(normalizedPage, urlLike);", "Table chrome must make the live destination URL authoritative over startup state.");
+includes(bootstrap, "const requestedView = tableViewFromUrl(normalizedPage, urlLike);", "Table chrome must make the live route authoritative.");
 const primeTableChromeStart = bootstrap.indexOf("function primeTableChrome(page, urlLike = window.location.href) {");
 const primeTableChromeEnd = primeTableChromeStart >= 0 ? bootstrap.indexOf('\n  Reflect.set(window, "__mflPrimeTableChrome"', primeTableChromeStart) : -1;
 invariant(primeTableChromeStart >= 0 && primeTableChromeEnd > primeTableChromeStart, "Bootstrap table chrome owner must exist.");
 const primeTableChrome = bootstrap.slice(primeTableChromeStart, primeTableChromeEnd);
-excludes(primeTableChrome, "root.dataset.initialTableView", "SPA table navigation must never reuse the page-load-only initial view.");
-includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', "Navigation must reuse the route-authoritative table chrome owner.");
-includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its five-row first-paint skeleton owner.");
+excludes(primeTableChrome, "root.dataset.initialTableView", "SPA navigation must never reuse page-load-only initial view state.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', "Navigation must reuse route-authoritative table chrome.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
 
-includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must retain explicit route loading support after the canonical transition paints.");
-includes(tableLoading, 'if (destroyed || (!forceRoute && !tableRouteActive())) return false;', "Only explicit destination ownership may bypass passive route detection.");
-includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPresent)', "A final real render must not be overwritten while the busy token is unwinding.");
-includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The runtime loading shell must retain its fixed five-row structure.");
+includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must remain available only after navigation commits.");
+includes(tableLoading, 'if (destroyed || (!forceRoute && !tableRouteActive())) return false;', "Passive route detection must guard table loading.");
+includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPresent)', "Final real rows must not be overwritten while busy state unwinds.");
+includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The loading shell must retain its fixed row structure.");
 
-includes(buildNormalizer, 'Reflect.get(window, "__mflTableViewConfig")', "Loaded application views must consume the canonical first-paint view configuration.");
-includes(buildNormalizer, 'window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);', "Loaded view-button rendering must delegate to the canonical static owner.");
-includes(buildNormalizer, "function normalizeCanonicalViewTransitions(source) {", "One canonical build owner must normalize page and view transitions.");
-includes(buildNormalizer, 'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);', "The canonical view transition must be reusable by specialized route renderers.");
-includes(buildNormalizer, 'Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);', "The canonical page transition must be shared by all setPage navigation.");
-includes(buildNormalizer, 'Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);', "All navigation loaders must be able to wait until committed chrome has painted.");
-includes(buildNormalizer, "requestAnimationFrame(() => requestAnimationFrame(resolve));", "Navigation must cross a real render boundary before loading starts.");
-includes(buildNormalizer, "function commitPageTransition(pageName, updateHash = true, options = {}) {", "Page navigation must have one canonical transition owner.");
-includes(buildNormalizer, "commitViewTransition(pageName, nextView, {", "Shared table views must use the canonical transition.");
-includes(buildNormalizer, 'commitViewTransition("mfl", "stats", { statePageName: "mflstats" });', "MFL Stats must commit through the canonical transition before its specialized renderer.");
-includes(buildNormalizer, "commitViewTransition(CLUB_PAGE, nextView, {", "Club views must commit through the canonical transition before Club loading.");
+for (const marker of [
+  'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);',
+  'Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);',
+  'Reflect.set(window, "__mflRunViewTransition", runViewTransition);',
+  'Reflect.set(window, "__mflRunPageTransition", runPageTransition);',
+  'Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);',
+  "requestAnimationFrame(() => requestAnimationFrame(resolve));",
+]) {
+  includes(buildNormalizer, marker, `Canonical navigation owner must retain ${marker}.`);
+}
 excludes(buildNormalizer, "normalizeWatchlistShellFirstNavigation", "Watchlist must not retain a separate page-change shell flow.");
 
 const pageTransitionStart = buildNormalizer.indexOf("function commitPageTransition(pageName, updateHash = true, options = {}) {");
 const pageTransitionEnd = pageTransitionStart >= 0 ? buildNormalizer.indexOf("function stageViewTransition", pageTransitionStart) : -1;
 invariant(pageTransitionStart >= 0 && pageTransitionEnd > pageTransitionStart, "Canonical page transition implementation must exist.");
 const pageTransition = buildNormalizer.slice(pageTransitionStart, pageTransitionEnd);
-const pageStateIndex = pageTransition.indexOf("state.currentPage = requestedPageName;");
-const pageUrlIndex = pageTransition.indexOf("window.history.pushState");
+const pageStateIndex = pageTransition.indexOf("state.currentPage = statePageName;");
+const pageUrlIndex = pageTransition.indexOf('window.history[replaceRoute ? "replaceState" : "pushState"]');
 const pageChromeIndex = pageTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
 invariant(pageStateIndex >= 0 && pageUrlIndex > pageStateIndex && pageChromeIndex > pageUrlIndex, "Page transitions must commit state, then URL, then sidebar/view/page chrome.");
 
-const setPageTransitionIndex = buildNormalizer.indexOf("commitPageTransition(pageName, navigationUpdatesHistory, options);");
-const setPagePaintIndex = buildNormalizer.indexOf("await waitForViewTransitionPaint();", setPageTransitionIndex);
-const setPagePrepareIndex = buildNormalizer.indexOf("const requestedMflView = pageName === \"mfl\"", setPagePaintIndex);
-invariant(setPageTransitionIndex >= 0 && setPagePaintIndex > setPageTransitionIndex && setPagePrepareIndex > setPagePaintIndex, "Every setPage path must paint committed route chrome before route-specific loading logic starts.");
+const viewTransitionStart = buildNormalizer.indexOf("function commitViewTransition(pageName, viewName, options = {}) {");
+const viewTransitionEnd = viewTransitionStart >= 0 ? buildNormalizer.indexOf("function commitPageTransition", viewTransitionStart) : -1;
+invariant(viewTransitionStart >= 0 && viewTransitionEnd > viewTransitionStart, "Canonical view transition implementation must exist.");
+const viewTransition = buildNormalizer.slice(viewTransitionStart, viewTransitionEnd);
+const viewStateIndex = viewTransition.indexOf("state.view = nextView;");
+const viewUrlIndex = viewTransition.indexOf('window.history[options.replace ? "replaceState" : "pushState"]');
+const viewButtonIndex = viewTransition.indexOf("updateViewButtons();");
+const viewShellIndex = viewTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
+invariant(viewStateIndex >= 0 && viewUrlIndex > viewStateIndex && viewButtonIndex > viewUrlIndex && viewShellIndex > viewButtonIndex, "View transitions must commit state, URL, active button, then destination shell.");
 
-const transitionOwnerStart = buildNormalizer.indexOf("function commitViewTransition(pageName, viewName, options = {}) {");
-const transitionOwnerEnd = transitionOwnerStart >= 0 ? buildNormalizer.indexOf("function commitPageTransition", transitionOwnerStart) : -1;
-invariant(transitionOwnerStart >= 0 && transitionOwnerEnd > transitionOwnerStart, "Canonical view transition implementation must exist.");
-const transitionOwner = buildNormalizer.slice(transitionOwnerStart, transitionOwnerEnd);
-const stateIndex = transitionOwner.indexOf("state.view = nextView;");
-const urlIndex = transitionOwner.indexOf('window.history[options.replace ? "replaceState" : "pushState"]');
-const buttonIndex = transitionOwner.indexOf("updateViewButtons();");
-invariant(stateIndex >= 0 && urlIndex > stateIndex && buttonIndex > urlIndex, "View transitions must commit state, then URL, then active button in that order.");
+const pageRunnerStart = buildNormalizer.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
+const pageRunnerEnd = buildNormalizer.indexOf("async function runViewTransition", pageRunnerStart);
+const pageRunner = buildNormalizer.slice(pageRunnerStart, pageRunnerEnd);
+invariant(
+  pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)") >= 0
+    && pageRunner.indexOf("await waitForViewTransitionPaint();") > pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)")
+    && pageRunner.indexOf('typeof loader === "function" ? loader(transition)') > pageRunner.indexOf("await waitForViewTransitionPaint();"),
+  "Global page transitions must commit, paint, then load.",
+);
 
-const sharedTransitionIndex = buildNormalizer.indexOf("commitViewTransition(pageName, nextView, {");
-const sharedPaintIndex = buildNormalizer.indexOf("await waitForViewTransitionPaint();", sharedTransitionIndex);
-invariant(sharedTransitionIndex >= 0 && sharedPaintIndex > sharedTransitionIndex, "Shared table loading must wait until the new URL and active button have painted.");
-const mflStatsTransitionIndex = buildNormalizer.indexOf('commitViewTransition("mfl", "stats", { statePageName: "mflstats" });');
-const mflStatsPaintIndex = buildNormalizer.indexOf("await waitForViewTransitionPaint();", mflStatsTransitionIndex);
-const mflStatsLoadIndex = buildNormalizer.indexOf('await setPage("mflstats", false', mflStatsTransitionIndex);
-invariant(mflStatsTransitionIndex >= 0 && mflStatsPaintIndex > mflStatsTransitionIndex && mflStatsLoadIndex > mflStatsPaintIndex, "MFL Stats must paint state, URL, and active view before its specialized loader starts.");
-const clubTransitionIndex = buildNormalizer.indexOf("commitViewTransition(CLUB_PAGE, nextView, {");
-const clubPaintIndex = buildNormalizer.indexOf("await waitForViewTransitionPaint();", clubTransitionIndex);
-const clubLoadingIndex = buildNormalizer.indexOf("setClubSwitching(true);", clubTransitionIndex);
-invariant(clubTransitionIndex >= 0 && clubPaintIndex > clubTransitionIndex && clubLoadingIndex > clubPaintIndex, "Club must paint state, URL, and active view before its loading state starts.");
+const viewRunnerStart = buildNormalizer.indexOf("async function runViewTransition(pageName, viewName, options = {}, loader = null) {");
+const viewRunnerEnd = buildNormalizer.indexOf('Reflect.set(window, "__mflCommitViewTransition"', viewRunnerStart);
+const viewRunner = buildNormalizer.slice(viewRunnerStart, viewRunnerEnd);
+invariant(
+  viewRunner.indexOf("stageViewTransition(pageName, viewName, options)") >= 0
+    && viewRunner.indexOf("await waitForViewTransitionPaint();") > viewRunner.indexOf("stageViewTransition(pageName, viewName, options)")
+    && viewRunner.indexOf('typeof loader === "function"') > viewRunner.indexOf("await waitForViewTransitionPaint();"),
+  "Global view transitions must commit, paint, then load.",
+);
 
-includes(databaseStatsState, "function commitStatsTransition(updateUrl = false) {", "Database Stats must reuse the canonical transition instead of owning a second state workflow.");
-includes(databaseStatsState, 'const commit = Reflect.get(window, "__mflCommitViewTransition");', "Database Stats must call the canonical transition owner.");
-includes(databaseStatsState, 'const wait = Reflect.get(window, "__mflWaitForViewTransitionPaint");', "Database Stats must reuse the canonical transition paint boundary.");
-const databaseStatsRenderStart = databaseStatsState.indexOf("async function renderStatsRoute(updateUrl = false) {");
-const databaseStatsRenderEnd = databaseStatsRenderStart >= 0 ? databaseStatsState.indexOf("\n  function cloudDatabaseView", databaseStatsRenderStart) : -1;
-invariant(databaseStatsRenderStart >= 0 && databaseStatsRenderEnd > databaseStatsRenderStart, "Database Stats render workflow must exist.");
-const databaseStatsRender = databaseStatsState.slice(databaseStatsRenderStart, databaseStatsRenderEnd);
-const databaseStatsCommitIndex = databaseStatsRender.indexOf("commitStatsTransition(updateUrl);");
-const databaseStatsPaintIndex = databaseStatsRender.indexOf("await waitForStatsTransitionPaint();");
-const databaseStatsBusyIndex = databaseStatsRender.indexOf('window.__mflInteractionBusy?.begin?.("route-runtime")');
-invariant(databaseStatsCommitIndex >= 0 && databaseStatsPaintIndex > databaseStatsCommitIndex && databaseStatsBusyIndex > databaseStatsPaintIndex, "Database Stats must paint state, URL, and active button before loading begins.");
+const setPageTransitionIndex = buildNormalizer.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+const setPagePrepareIndex = buildNormalizer.indexOf('const requestedMflView = pageName === "mfl"', setPageTransitionIndex);
+invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransitionIndex, "Every setPage path must settle the global transition before route-specific work starts.");
+
+for (const [transitionMarker, loaderMarker, label] of [
+  ['runViewTransition("mfl", "stats"', 'setPage("mflstats", false', "MFL Stats"],
+  ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
+  ["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],
+  ["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],
+]) {
+  const transitionIndex = buildNormalizer.indexOf(transitionMarker);
+  const loaderIndex = buildNormalizer.indexOf(loaderMarker, transitionIndex);
+  invariant(transitionIndex >= 0 && loaderIndex > transitionIndex, `${label} must enter the global transition runner before specialized loading starts.`);
+}
+
+for (const forbiddenOwner of [
+  "commitStatsTransition",
+  "__mflCommitViewTransition",
+  "__mflWaitForViewTransitionPaint",
+  "setPage =",
+  "setView =",
+  "showHomeShell =",
+  "history.pushState",
+  "history.replaceState",
+]) {
+  excludes(databaseStatsState, forbiddenOwner, `Database Stats state runtime must remain passive and must not own ${forbiddenOwner}.`);
+}
+includes(databaseStatsState, "async function renderStatsRoute() {", "Database Stats state runtime may retain passive rendering/persistence ownership only.");
+
+const clubGateStart = routeCoreLoader.indexOf("const gated = async function mflOpenClubPageWithRouteCore");
+const clubGateEnd = routeCoreLoader.indexOf("Object.defineProperty(gated", clubGateStart);
+const clubGate = routeCoreLoader.slice(clubGateStart, clubGateEnd);
+includes(clubGate, 'runTransition("club", true', "Club lazy route loading must start through the global page transition runner.");
+excludes(clubGate, "history.pushState", "Club route-core gate must not push history independently.");
+excludes(clubGate, "history.replaceState", "Club route-core gate must not replace history independently.");
 
 includes(styles, "--mfl-pager-block-padding: 12px;", "Pager spacing must have one global 12px setting.");
 includes(styles, "padding-block: var(--mfl-pager-block-padding);", "All pagers must consume the global block-padding setting.");
-includes(dropdowns, "width: 92px;", "Rows selector must retain its established 92px footprint.");
+includes(dropdowns, "width: 92px;", "Rows selector must retain its established footprint.");
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Unified painted page/view transitions, route-authoritative chrome, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
+console.log("One global painted navigation flow, passive specialized Stats/Club rendering, route-authoritative chrome, canonical view order, pager, dropdown, tooltip, and first-paint validation passed.");

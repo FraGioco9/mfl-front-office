@@ -100,7 +100,11 @@ function normalizeCanonicalViewTransitions(source) {
   let text = String(source || "");
 
   const transitionOwner = `let pendingViewTransition = null;
-let viewTransitionSequence = 0;
+let navigationTransitionSequence = 0;
+
+function currentNavigationPath() {
+  return \`\${window.location.pathname}\${window.location.search}\`;
+}
 
 function commitViewTransition(pageName, viewName, options = {}) {
   const nextView = String(viewName || "");
@@ -116,12 +120,8 @@ function commitViewTransition(pageName, viewName, options = {}) {
   state.view = nextView;
   state.page = 1;
 
-  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) {
-    state.sortKey = options.sortKey;
-  }
-  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) {
-    state.sortDirection = options.sortDirection;
-  }
+  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
 
   let targetPath = String(options.path || "");
   if (!targetPath) {
@@ -135,11 +135,12 @@ function commitViewTransition(pageName, viewName, options = {}) {
         });
   }
 
-  if (targetPath && \`\${window.location.pathname}\${window.location.search}\` !== targetPath) {
+  if (targetPath && currentNavigationPath() !== targetPath) {
     window.history[options.replace ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
   updateViewButtons();
+  window.__mflStaticUiRuntime?.sync?.();
   return nextView;
 }
 
@@ -155,22 +156,24 @@ function commitPageTransition(pageName, updateHash = true, options = {}) {
     : configuredViews
       ? normalizeViewForPage(options.view || preferredViewForPage(routePageName), routePageName)
       : "";
+  const statePageName = routePageName === "mfl" && nextView === "stats" ? "mflstats" : requestedPageName;
 
   pendingViewTransition = null;
-  state.currentPage = requestedPageName;
+  state.currentPage = statePageName;
   if (nextView) state.view = nextView;
   state.page = 1;
+  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
   document.body.dataset.page = routePageName;
 
-  const targetPath = String(options.replaceUrl || pagePath(routePageName, {
+  const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
     ...options,
     ...(nextView ? { view: nextView } : {}),
   }));
-  const currentPath = \`\${window.location.pathname}\${window.location.search}\`;
-  if (options.replaceUrl && targetPath && currentPath !== targetPath) {
-    window.history.replaceState({}, "", targetPath);
-  } else if (updateHash && targetPath && currentPath !== targetPath) {
-    window.history.pushState({}, "", targetPath);
+  const replaceRoute = Boolean(options.replace || options.replaceUrl);
+  const currentPath = currentNavigationPath();
+  if (targetPath && currentPath !== targetPath && (updateHash || replaceRoute)) {
+    window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
   }
 
   window.__mflStaticUiRuntime?.sync?.();
@@ -182,7 +185,7 @@ function stageViewTransition(pageName, viewName, options = {}) {
   if (!nextView) return null;
 
   const transition = {
-    sequence: ++viewTransitionSequence,
+    sequence: ++navigationTransitionSequence,
     pageName: String(pageName || ""),
     viewName: nextView,
     previousCurrentPage: state.currentPage,
@@ -190,21 +193,22 @@ function stageViewTransition(pageName, viewName, options = {}) {
     previousPage: state.page,
     previousSortKey: state.sortKey,
     previousSortDirection: state.sortDirection,
-    previousPath: \`\${window.location.pathname}\${window.location.search}\`,
+    previousPath: currentNavigationPath(),
     targetPath: "",
   };
   pendingViewTransition = transition;
   commitViewTransition(pageName, nextView, options);
-  transition.targetPath = \`\${window.location.pathname}\${window.location.search}\`;
+  transition.targetPath = currentNavigationPath();
   return transition;
 }
 
 function stagedViewTransitionIsCurrent(transition) {
   return Boolean(
     transition
+    && transition.sequence === navigationTransitionSequence
     && pendingViewTransition === transition
     && state.view === transition.viewName
-    && \`\${window.location.pathname}\${window.location.search}\` === transition.targetPath
+    && currentNavigationPath() === transition.targetPath
   );
 }
 
@@ -214,9 +218,7 @@ function takeStagedViewTransition(pageName, viewName) {
     !transition
     || transition.pageName !== String(pageName || "")
     || transition.viewName !== String(viewName || "")
-  ) {
-    return null;
-  }
+  ) return null;
   pendingViewTransition = null;
   return transition;
 }
@@ -227,17 +229,35 @@ function waitForViewTransitionPaint() {
   });
 }
 
+async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
+  const sequence = ++navigationTransitionSequence;
+  const transition = commitPageTransition(pageName, updateHash, options);
+  await waitForViewTransitionPaint();
+  if (sequence !== navigationTransitionSequence) return null;
+  if (transition.targetPath && currentNavigationPath() !== transition.targetPath) return null;
+  return typeof loader === "function" ? loader(transition) : transition;
+}
+
+async function runViewTransition(pageName, viewName, options = {}, loader = null) {
+  const transition = stageViewTransition(pageName, viewName, options);
+  if (!transition) return null;
+  await waitForViewTransitionPaint();
+  if (!stagedViewTransitionIsCurrent(transition)) return null;
+  if (typeof loader === "function") {
+    pendingViewTransition = null;
+    return loader(transition);
+  }
+  return transition;
+}
+
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
 Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
+Reflect.set(window, "__mflRunViewTransition", runViewTransition);
+Reflect.set(window, "__mflRunPageTransition", runPageTransition);
 Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);
 
 `;
-  text = replaceRequired(
-    text,
-    "function resetPageScroll() {",
-    `${transitionOwner}function resetPageScroll() {`,
-    "canonical view transition owner",
-  );
+  text = replaceRequired(text, "function resetPageScroll() {", `${transitionOwner}function resetPageScroll() {`, "canonical view transition owner");
 
   text = replaceFunction(
     text,
@@ -268,7 +288,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     const previousPage = stagedTransition?.previousPage ?? state.page;
     const previousSortKey = stagedTransition?.previousSortKey || state.sortKey;
     const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
-    const previousPath = stagedTransition?.previousPath || \`\${window.location.pathname}\${window.location.search}\`;`,
+    const previousPath = stagedTransition?.previousPath || currentNavigationPath();`,
     "staged incremental view transition snapshot",
   );
 
@@ -292,12 +312,12 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       state.sortKey = targetSortState.sortKey;
       state.sortDirection = targetSortState.sortDirection;
     } else {
-      commitViewTransition(pageName, nextView, {
+      const transition = await runViewTransition(pageName, nextView, {
         ...routeOptions,
         sortKey: targetSortState.sortKey,
         sortDirection: targetSortState.sortDirection,
       });
-      await waitForViewTransitionPaint();
+      if (!transition) return;
     }`,
     "shared table view transition",
   );
@@ -324,8 +344,10 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     const requestedMflView = pageName === "mfl"`,
     `  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
     const navigationUpdatesHistory = updateHash;
-    commitPageTransition(pageName, navigationUpdatesHistory, options);
-    await waitForViewTransitionPaint();
+    if (!options.skipNavigationTransition) {
+      const navigationTransition = await runPageTransition(pageName, navigationUpdatesHistory, options);
+      if (!navigationTransition) return;
+    }
     updateHash = false;
 
     const requestedMflView = pageName === "mfl"`,
@@ -334,10 +356,41 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
 
   text = replaceRequired(
     text,
-    "      ignoreCurrentClubRoute: updateHash,",
-    "      ignoreCurrentClubRoute: navigationUpdatesHistory,",
-    "preserve page-navigation route intent after early commit",
+    `    if (pageName === "mfl" && requestedMflView === "stats") {
+      state.incrementalMode = false;
+      return originalSetPage.call(this, pageName, updateHash, {
+        ...options,
+        view: "stats",
+        skipNavigationLoading: true,
+      });
+    }`,
+    `    if (pageName === "mfl" && requestedMflView === "stats") {
+      state.incrementalMode = false;
+      return originalSetPage.call(this, "mflstats", false, {
+        ...options,
+        replaceUrl: options.replaceUrl || "/mfl/stats",
+        view: "stats",
+        skipNavigationLoading: true,
+      });
+    }
+
+    const requestedDatabaseView = pageName === "database"
+      ? normalizeViewForPage(options.view, "database")
+      : "";
+    if (pageName === "database" && requestedDatabaseView === "stats") {
+      state.incrementalMode = false;
+      if (typeof window.__mflEnsureRouteRuntime === "function") {
+        await window.__mflEnsureRouteRuntime("database", { view: "stats" });
+      }
+      const statsOwner = window.__mflDatabaseStatsStateRuntime;
+      if (typeof statsOwner?.render === "function") return statsOwner.render();
+      if (typeof window.renderDatabaseStatsPage === "function") return window.renderDatabaseStatsPage(false);
+      return;
+    }`,
+    "specialized Stats renderers after global transition",
   );
+
+  text = replaceRequired(text, "      ignoreCurrentClubRoute: updateHash,", "      ignoreCurrentClubRoute: navigationUpdatesHistory,", "preserve page-navigation route intent after early commit");
 
   text = replaceFunction(
     text,
@@ -351,61 +404,43 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
   if (pageName === "club") return;
 
   if (pageName === "mfl" && viewName === "stats") {
-    pendingViewTransition = null;
-    commitViewTransition("mfl", "stats", { statePageName: "mflstats" });
-    void (async () => {
-      await waitForViewTransitionPaint();
-      await setPage("mflstats", false, { skipNavigationLoading: true });
-    })();
+    void runViewTransition("mfl", "stats", { statePageName: "mflstats" }, async () => {
+      await setPage("mflstats", false, { skipNavigationTransition: true, skipNavigationLoading: true });
+    });
     return;
   }
   if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
-    pendingViewTransition = null;
-    commitViewTransition("mfl", "attributes", { statePageName: "mfl" });
-    void (async () => {
-      await waitForViewTransitionPaint();
-      await setPage("mfl", false, { view: "attributes", skipNavigationLoading: true });
-    })();
+    void runViewTransition("mfl", "attributes", { statePageName: "mfl" }, async () => {
+      await setPage("mfl", false, { view: "attributes", skipNavigationTransition: true, skipNavigationLoading: true });
+    });
     return;
   }
   if (pageName === "database" && viewName === "stats") {
-    pendingViewTransition = null;
-    commitViewTransition("database", "stats");
-    void (async () => {
-      await waitForViewTransitionPaint();
-      await setView("stats");
-    })();
+    void runViewTransition("database", "stats", {}, async () => {
+      await setPage("database", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
+    });
     return;
   }
   if (pageName !== state.currentPage && tablePages.has(pageName)) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
   }
-  if (state.incrementalMode) {
-    const transition = stageViewTransition(pageName, viewName, {
+  void (async () => {
+    const transition = await runViewTransition(pageName, viewName, {
       walletAddress: state.currentAgentWalletAddress,
       watchlistId: state.currentWatchlistId,
     });
-    void (async () => {
-      await waitForViewTransitionPaint();
-      if (!stagedViewTransitionIsCurrent(transition)) return;
-      await setView(viewName);
-    })();
-    return;
-  }
-  void setView(viewName);
+    if (!transition) return;
+    if (!state.incrementalMode) pendingViewTransition = null;
+    await setView(viewName);
+  })();
 }`,
-    "view intent before incremental loader ownership",
+    "global view transition before every shared view loader",
   );
 
-  text = replaceFunction(
-    text,
-    "openClubImmediately",
-    `function openClubImmediately(clubId, view = "attributes") {
+  text = replaceFunction(text, "openClubImmediately", `function openClubImmediately(clubId, view = "attributes") {
     void openClubPage(clubId, view, true);
-  }`,
-    "Club route entry transition",
-  );
+  }`, "Club route entry transition");
 
   text = replaceRequired(
     text,
@@ -425,17 +460,23 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       activeClubId = String(clubId);
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
-      pendingViewTransition = null;
-      commitViewTransition(CLUB_PAGE, nextView, {
-        statePageName: CLUB_PAGE,
-        path: route,
-        replace: !updateHistory,
-        sortKey: "positions",
-        sortDirection: "asc",
-      });
-      await waitForViewTransitionPaint();
+      const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
+      if (!routeAlreadyCommitted) {
+        const transition = await runPageTransition(CLUB_PAGE, updateHistory, {
+          view: nextView,
+          clubId: activeClubId,
+          path: route,
+          replace: !updateHistory,
+          sortKey: "positions",
+          sortDirection: "asc",
+        });
+        if (!transition) return;
+      } else {
+        state.sortKey = "positions";
+        state.sortDirection = "asc";
+      }
       setClubSwitching(true);`,
-    "Club page transition before loading",
+    "Club page entry through global page transition",
   );
 
   text = replaceRequired(
@@ -451,19 +492,31 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     if (typeof updateViewButtons === "function") updateViewButtons();
     void (async () => {`,
     `    captureClubView(state.view);
-    pendingViewTransition = null;
-    commitViewTransition(CLUB_PAGE, nextView, {
+    void runViewTransition(CLUB_PAGE, nextView, {
       statePageName: CLUB_PAGE,
       path: canonicalClubRoute(activeClubId, nextView),
       replace: true,
       sortKey: "positions",
       sortDirection: "asc",
-    });
-    void (async () => {
-      await waitForViewTransitionPaint();
+    }, async () => {
       if (restoreCachedClubView(nextView)) return;
       setClubSwitching(true);`,
-    "Club view transition before loading",
+    "Club view entry through global view transition",
+  );
+
+  text = replaceRequired(
+    text,
+    `      } finally {
+        await finishClubSwitch();
+        captureClubView(nextView);
+      }
+    })();`,
+    `      } finally {
+        await finishClubSwitch();
+        captureClubView(nextView);
+      }
+    });`,
+    "Club global view transition callback closure",
   );
 
   return text;
@@ -471,18 +524,9 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
 
 function normalizeReleaseOwnership(source) {
   let text = String(source || "");
-  text = text.replaceAll(
-    'const VERSION = "1.122.0";',
-    'const VERSION = String(window.__mflReleaseVersion || "");',
-  );
-  text = text.replaceAll(
-    'const RELEASE_VERSION = "1.122.0";',
-    'const RELEASE_VERSION = String(window.__mflReleaseVersion || "");',
-  );
-  text = text.replaceAll(
-    'const VERSION = String(window.__mflReleaseVersion || "1.122.0");',
-    'const VERSION = String(window.__mflReleaseVersion || "");',
-  );
+  text = text.replaceAll('const VERSION = "1.122.0";', 'const VERSION = String(window.__mflReleaseVersion || "");');
+  text = text.replaceAll('const RELEASE_VERSION = "1.122.0";', 'const RELEASE_VERSION = String(window.__mflReleaseVersion || "");');
+  text = text.replaceAll('const VERSION = String(window.__mflReleaseVersion || "1.122.0");', 'const VERSION = String(window.__mflReleaseVersion || "");');
 
   const legacyFooterOwner = `  function setFooterVersion() {
     const footerLink = document.querySelector(".siteFooter a[data-page='changelog']");

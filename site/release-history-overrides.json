@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.47",
+    "Unify page and view navigation under one painted transition flow"
+  ],
+  [
     "v1.124.46",
     "Make table view chrome authoritative from the current route URL"
   ],

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
 const source = await readFile(new URL("./modules/app-core.js", import.meta.url), "utf8");
+const routeCoreLoader = await readFile(new URL("./route-core-loader-runtime.js", import.meta.url), "utf8");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const generatedSources = new Map([
   ["core", String(artifacts.core || "")],
@@ -33,29 +34,73 @@ const pageTransition = section(
   "function stageViewTransition",
   "page transition owner",
 );
-const pageState = pageTransition.indexOf("state.currentPage = requestedPageName;");
-const pageUrl = pageTransition.indexOf("window.history.pushState");
+const pageState = pageTransition.indexOf("state.currentPage = statePageName;");
+const pageUrl = pageTransition.indexOf('window.history[replaceRoute ? "replaceState" : "pushState"]');
 const pageChrome = pageTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
 invariant(
   pageState >= 0 && pageUrl > pageState && pageChrome > pageUrl,
   "Generated page navigation must commit application state, URL, and route chrome in that order.",
 );
 
+const viewTransitionOwner = sourceContaining("function commitViewTransition(pageName, viewName, options = {}) {", "view transition owner");
+const viewTransition = section(
+  viewTransitionOwner.text,
+  "function commitViewTransition(pageName, viewName, options = {}) {",
+  "function commitPageTransition",
+  "view transition owner",
+);
+const viewState = viewTransition.indexOf("state.view = nextView;");
+const viewUrl = viewTransition.indexOf('window.history[options.replace ? "replaceState" : "pushState"]');
+const viewButtons = viewTransition.indexOf("updateViewButtons();");
+const viewShell = viewTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
+invariant(
+  viewState >= 0 && viewUrl > viewState && viewButtons > viewUrl && viewShell > viewButtons,
+  "Generated view navigation must commit state, URL, active button, and route shell in that order.",
+);
+
+const transitionRunnerOwner = sourceContaining("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {", "global transition runners");
+const pageRunner = section(
+  transitionRunnerOwner.text,
+  "async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {",
+  "async function runViewTransition",
+  "global page transition runner",
+);
+const pageRunnerCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
+const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerCommit);
+const pageRunnerLoad = pageRunner.indexOf('typeof loader === "function" ? loader(transition)', pageRunnerPaint);
+invariant(
+  pageRunnerCommit >= 0 && pageRunnerPaint > pageRunnerCommit && pageRunnerLoad > pageRunnerPaint,
+  "The global page transition runner must commit and paint before any loader callback starts.",
+);
+
+const viewRunner = section(
+  transitionRunnerOwner.text,
+  "async function runViewTransition(pageName, viewName, options = {}, loader = null) {",
+  'Reflect.set(window, "__mflCommitViewTransition"',
+  "global view transition runner",
+);
+const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
+const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
+const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
+invariant(
+  viewRunnerStage >= 0 && viewRunnerPaint > viewRunnerStage && viewRunnerLoad > viewRunnerPaint,
+  "The global view transition runner must commit and paint before any loader callback starts.",
+);
+
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");
 const pageLoaderStart = pageLoaderOwner.text.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
 const pageLoader = pageLoaderOwner.text.slice(pageLoaderStart);
-const pageCommit = pageLoader.indexOf("commitPageTransition(pageName, navigationUpdatesHistory, options);");
-const pagePaint = pageLoader.indexOf("await waitForViewTransitionPaint();", pageCommit);
-const pageRoutePrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", pagePaint);
-const pageRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", pagePaint);
+const pageRun = pageLoader.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+const pageRoutePrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", pageRun);
+const pageRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", pageRun);
 const firstPageLoad = [pageRoutePrepare, pageRequest].filter((index) => index >= 0).sort((a, b) => a - b)[0] ?? -1;
 invariant(
-  pageCommit >= 0 && pagePaint > pageCommit && firstPageLoad > pagePaint,
-  "Generated page loading must begin only after state, URL, sidebar/view chrome, and a browser paint have committed.",
+  pageRun >= 0 && firstPageLoad > pageRun,
+  "Generated page loading must begin only after the global page transition runner settles.",
 );
 invariant(
-  pageLoader.indexOf("updateHash = false;", pagePaint) > pagePaint,
-  "Generated page loader must suppress downstream duplicate history ownership after the canonical transition.",
+  pageLoader.indexOf("updateHash = false;", pageRun) > pageRun,
+  "Generated page loader must suppress downstream duplicate history ownership after the global transition.",
 );
 
 const activationOwner = sourceContaining("function activateViewButton(button) {", "view-button activation owner");
@@ -65,13 +110,18 @@ const activation = section(
   "function clearPointerCommittedViewButton() {",
   "view-button activation owner",
 );
-const activationStage = activation.indexOf("const transition = stageViewTransition(pageName, viewName, {");
-const activationPaint = activation.indexOf("await waitForViewTransitionPaint();", activationStage);
-const activationLoad = activation.indexOf("await setView(viewName);", activationPaint);
-invariant(
-  activationStage >= 0 && activationPaint > activationStage && activationLoad > activationPaint,
-  "Generated shared view activation must commit URL/button intent and paint before calling the view loader.",
-);
+for (const [transitionMarker, loaderMarker, label] of [
+  ['runViewTransition("mfl", "stats"', 'setPage("mflstats", false', "MFL Stats"],
+  ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
+  ["await runViewTransition(pageName, viewName", "await setView(viewName);", "shared table view"],
+]) {
+  const transitionIndex = activation.indexOf(transitionMarker);
+  const loaderIndex = activation.indexOf(loaderMarker, transitionIndex);
+  invariant(
+    transitionIndex >= 0 && loaderIndex > transitionIndex,
+    `${label} activation must enter the global view transition before its specialized loader.`,
+  );
+}
 
 const incrementalOwner = sourceContaining("setView = async function setIncrementalView(viewName) {", "incremental view loader");
 const incrementalView = section(
@@ -81,27 +131,53 @@ const incrementalView = section(
   "incremental view loader",
 );
 const stagedTake = incrementalView.indexOf("const stagedTransition = takeStagedViewTransition(pageName, nextView);");
-const stagedBranch = incrementalView.indexOf("if (stagedTransition) {", stagedTake);
-const request = incrementalView.indexOf("requestIncrementalRoute(route, 1)", stagedBranch);
+const fallbackTransition = incrementalView.indexOf("await runViewTransition(pageName, nextView", stagedTake);
+const request = incrementalView.indexOf("requestIncrementalRoute(route, 1)", stagedTake);
 invariant(
-  stagedTake >= 0 && stagedBranch > stagedTake && request > stagedBranch,
-  "Generated incremental view loader must consume the already-painted interaction transition before requesting data.",
+  stagedTake >= 0 && fallbackTransition > stagedTake && request > fallbackTransition,
+  "Programmatic generated view switches must use the global transition runner before requesting data.",
 );
 
-const fallbackCommit = incrementalView.indexOf("commitViewTransition(pageName, nextView, {", stagedBranch);
-const fallbackPaint = incrementalView.indexOf("await waitForViewTransitionPaint();", fallbackCommit);
+const databaseStatsBranch = pageLoader.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {');
+const databaseStatsRuntime = pageLoader.indexOf('await window.__mflEnsureRouteRuntime("database", { view: "stats" });', databaseStatsBranch);
+const databaseStatsRender = pageLoader.indexOf("statsOwner.render()", databaseStatsRuntime);
 invariant(
-  fallbackCommit >= 0 && fallbackPaint > fallbackCommit && request > fallbackPaint,
-  "Programmatic generated view switches must commit and paint before requesting data.",
+  databaseStatsBranch >= 0 && databaseStatsRuntime > databaseStatsBranch && databaseStatsRender > databaseStatsRuntime,
+  "Database Stats must perform only runtime/data work after the global page/view transition has settled.",
 );
 
-const clubOwner = sourceContaining("commitViewTransition(CLUB_PAGE, nextView, {", "Club view owner");
-const clubCommit = clubOwner.text.indexOf("commitViewTransition(CLUB_PAGE, nextView, {");
-const clubPaint = clubOwner.text.indexOf("await waitForViewTransitionPaint();", clubCommit);
-const clubLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubPaint);
+const clubOwner = sourceContaining("runPageTransition(CLUB_PAGE, updateHistory", "Club transition owner");
+const clubPageTransition = clubOwner.text.indexOf("runPageTransition(CLUB_PAGE, updateHistory");
+const clubPageLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubPageTransition);
+const clubViewTransition = clubOwner.text.indexOf("runViewTransition(CLUB_PAGE, nextView");
+const clubViewLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubViewTransition);
 invariant(
-  clubCommit >= 0 && clubPaint > clubCommit && clubLoading > clubPaint,
-  "Generated Club view switching must commit URL/button state and paint before loading starts.",
+  clubPageTransition >= 0 && clubPageLoading > clubPageTransition,
+  "Generated Club page entry must use the global page transition before Club loading starts.",
+);
+invariant(
+  clubViewTransition >= 0 && clubViewLoading > clubViewTransition,
+  "Generated Club view switching must use the global view transition before Club loading starts.",
+);
+invariant(
+  !clubOwner.text.includes("commitViewTransition(CLUB_PAGE"),
+  "Club must not retain a private direct view-transition commit.",
+);
+
+const clubGateStart = routeCoreLoader.indexOf("const gated = async function mflOpenClubPageWithRouteCore");
+const clubGateEnd = routeCoreLoader.indexOf("Object.defineProperty(gated", clubGateStart);
+const clubGate = routeCoreLoader.slice(clubGateStart, clubGateEnd);
+invariant(
+  clubGate.includes('runTransition("club", true'),
+  "The Club route-core gate must enter through the global page transition runner.",
+);
+invariant(
+  clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime")'),
+  "The Club route-core gate must retain lazy route loading after transition ownership is committed.",
+);
+invariant(
+  !clubGate.includes("history.pushState") && !clubGate.includes("history.replaceState"),
+  "The Club route-core gate must not own history outside the global transition.",
 );
 
 invariant(
@@ -110,5 +186,5 @@ invariant(
 );
 
 console.log(
-  `Generated page/view transitions validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: state and URL chrome paint before loading.`,
+  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: Club, MFL Stats, Database Stats, pages, views, and specialized shells all transition before loading.`,
 );

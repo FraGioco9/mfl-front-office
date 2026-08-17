@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = String(window.__mflReleaseVersion || "1.124.1");
+  const VERSION = String(window.__mflReleaseVersion || "");
   const DATABASE_STATS_PATH = /^\/database\/stats\/?$/i;
   const FILTERS = Object.freeze([
     ["all", "All", null, null],
@@ -54,9 +54,6 @@
       });
     });
 
-    page.querySelector('[data-view="attributes"]')?.addEventListener("click", () => openDatabaseView("attributes"));
-    page.querySelector('[data-view="contracts"]')?.addEventListener("click", () => openDatabaseView("contracts"));
-    page.querySelector('[data-view="stats"]')?.addEventListener("click", () => void showStatsPage(true));
     page.querySelectorAll("[data-distribution]").forEach((button) => {
       button.addEventListener("click", () => {
         distributionMode = button.dataset.distribution === "age" ? "age" : "overall";
@@ -80,28 +77,6 @@
     });
     const custom = page.querySelector("#databaseStatsCustomFilter");
     if (custom instanceof HTMLElement) custom.hidden = activeFilter !== "custom";
-  }
-
-  function showShell() {
-    if (!isStatsPath()) return false;
-    document.querySelectorAll("main > .pageView").forEach((candidate) => {
-      if (candidate instanceof HTMLElement) candidate.hidden = candidate !== page;
-    });
-    page.hidden = false;
-    document.body.dataset.page = "databasestats";
-    document.querySelectorAll("#sidebar .navButton[data-page]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.page === "database");
-    });
-    page.querySelectorAll(".viewButton[data-view]").forEach((button) => {
-      const active = button.dataset.view === "stats";
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    });
-    return true;
-  }
-
-  function hideShell() {
-    page.hidden = true;
   }
 
   function currentFilter() {
@@ -259,15 +234,13 @@
     dataBusyToken = "";
   }
 
-  async function showStatsPage(updateUrl = false) {
-    if (destroyed) return;
-    if (updateUrl && !isStatsPath()) history.pushState({}, "", "/database/stats");
-    else if (!isStatsPath()) history.replaceState(history.state, "", "/database/stats");
-    showShell();
+  async function showStatsPage() {
+    if (destroyed || !isStatsPath()) return false;
     try {
       beginBusy();
       await loadData();
       if (!destroyed && isStatsPath()) renderStats();
+      return true;
     } catch (error) {
       const container = document.getElementById("databaseStatsDistribution");
       if (container instanceof HTMLElement && isStatsPath()) {
@@ -276,25 +249,8 @@
         message.textContent = String(error?.message || "Could not load Database Stats.");
         container.replaceChildren(message);
       }
+      return false;
     } finally {
-      endBusy();
-    }
-  }
-
-  function openDatabaseView(view) {
-    hideShell();
-    endBusy();
-    if (typeof setPage === "function") {
-      void setPage("database", true, { view, skipNavigationLoading: true });
-      return;
-    }
-    history.pushState({}, "", `/database/${view}`);
-  }
-
-  function onPopState() {
-    if (isStatsPath()) void showStatsPage(false);
-    else {
-      hideShell();
       endBusy();
     }
   }
@@ -302,25 +258,28 @@
   function sync() {
     if (destroyed) return;
     if (isStatsPath()) {
-      showShell();
       if (data) renderStats();
-      else void showStatsPage(false);
+      else void showStatsPage();
     } else {
-      hideShell();
       endBusy();
     }
   }
 
   function destroy() {
     destroyed = true;
-    window.removeEventListener("popstate", onPopState);
     endBusy();
   }
 
   bindPermanentControls();
-  window.addEventListener("popstate", onPopState);
   window.renderDatabaseStatsPage = showStatsPage;
-  window.setDatabaseStatsPageVisibility = (visible) => visible ? showShell() : hideShell();
-  window.__mflDatabaseStatsRuntime = Object.freeze({ version: VERSION, sync, destroy });
+  window.setDatabaseStatsPageVisibility = (visible) => {
+    if (visible && isStatsPath()) page.hidden = false;
+  };
+  window.__mflDatabaseStatsRuntime = Object.freeze({
+    version: VERSION,
+    sync,
+    render: showStatsPage,
+    destroy,
+  });
   sync();
 })();

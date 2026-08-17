@@ -287,6 +287,7 @@ initialPreCoreRuntimeScripts.forEach(preloadClassicScript);
  * __mflChangelogHistoryReady?: Promise<boolean>,
  * __mflAppStartPromise?: Promise<void>,
  * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
+ * __mflRunPageTransition?: (pageName: string, updateHash?: boolean, options?: Record<string, unknown>, loader?: (() => unknown)) => Promise<unknown>,
  * __mflMarkApplicationCoreLoaded?: () => void,
  * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
  * }} */
@@ -519,17 +520,28 @@ function installClubRouteRuntimeGate() {
   const gated = /** @type {typeof current} */ (async function mflOpenClubPageWithRouteRuntime(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return current.call(runtimeWindow, clubId, view);
-    const route = clubRoutePath(normalizedClubId, view);
-    if (`${window.location.pathname}${window.location.search}` !== route) {
-      window.history.pushState({}, "", route);
+
+    const loadClub = async () => {
+      const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
+      try {
+        await ensureRouteRuntime("club", { view });
+        return current.call(runtimeWindow, normalizedClubId, view);
+      } finally {
+        if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
+      }
+    };
+
+    const runTransition = runtimeWindow.__mflRunPageTransition;
+    if (typeof runTransition === "function") {
+      return runTransition("club", true, {
+        clubId: normalizedClubId,
+        view,
+        path: clubRoutePath(normalizedClubId, view),
+        sortKey: "positions",
+        sortDirection: "asc",
+      }, loadClub);
     }
-    const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
-    try {
-      await ensureRouteRuntime("club", { view });
-      return current.call(runtimeWindow, clubId, view);
-    } finally {
-      if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
-    }
+    return loadClub();
   });
   Object.defineProperty(gated, "__mflRouteRuntimeGate", { value: true });
   runtimeWindow.mflOpenClubPage = gated;
