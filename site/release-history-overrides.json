@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.48",
+    "Globalize Club and Stats navigation transitions"
+  ],
+  [
     "v1.124.47",
     "Unify page and view navigation under one painted transition flow"
   ],

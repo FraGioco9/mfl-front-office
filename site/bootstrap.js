@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.48";
+  const STATIC_RELEASE_VERSION = "1.124.49";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";

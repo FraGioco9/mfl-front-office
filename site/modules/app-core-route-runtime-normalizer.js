@@ -20,36 +20,48 @@ const ROUTE_RUNTIME_GATE = `;(() => {
   const routeRuntimeSetPage = async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
-    const ownerBeforeRuntime = setPage;
-    const busyToken = !runtimeReady && window.__mflInteractionBusy?.begin
-      ? window.__mflInteractionBusy.begin("route-runtime")
-      : "";
-    try {
-      if (!runtimeReady) window.__mflCancelIncrementalRouteRequest?.();
-      const routeCorePromise = !runtimeReady && typeof window.__mflEnsureRouteCore === "function"
-        ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
-        : null;
-      if (!runtimeReady && typeof window.__mflEnsureRouteRuntime === "function") {
-        await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
-      }
-      if (routeCorePromise) await routeCorePromise;
-      if (!runtimeReady && setPage !== ownerBeforeRuntime) {
-        return setPage.call(this, pageName, updateHash, {
-          ...incomingOptions,
-          __mflRouteRuntimeReady: true,
-        });
+
+    if (!runtimeReady) {
+      const runTransition = Reflect.get(window, "__mflRunPageTransition");
+      if (typeof runTransition !== "function") {
+        throw new Error("Global page transition owner is unavailable.");
       }
 
-      if (!runtimeReady) {
-        return originalRouteRuntimeSetPage.call(this, pageName, updateHash, incomingOptions);
-      }
+      return runTransition(String(pageName || ""), updateHash, incomingOptions, async () => {
+        const ownerBeforeRuntime = setPage;
+        const busyToken = window.__mflInteractionBusy?.begin
+          ? window.__mflInteractionBusy.begin("route-runtime")
+          : "";
+        try {
+          window.__mflCancelIncrementalRouteRequest?.();
+          const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
+            ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
+            : null;
+          if (typeof window.__mflEnsureRouteRuntime === "function") {
+            await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
+          }
+          if (routeCorePromise) await routeCorePromise;
 
-      const cleanOptions = { ...incomingOptions };
-      delete cleanOptions.__mflRouteRuntimeReady;
-      return originalRouteRuntimeSetPage.call(this, pageName, updateHash, cleanOptions);
-    } finally {
-      if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
+          const committedOptions = {
+            ...incomingOptions,
+            skipNavigationTransition: true,
+          };
+          if (setPage !== ownerBeforeRuntime) {
+            return setPage.call(this, pageName, updateHash, {
+              ...committedOptions,
+              __mflRouteRuntimeReady: true,
+            });
+          }
+          return originalRouteRuntimeSetPage.call(this, pageName, updateHash, committedOptions);
+        } finally {
+          if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
+        }
+      });
     }
+
+    const cleanOptions = { ...incomingOptions };
+    delete cleanOptions.__mflRouteRuntimeReady;
+    return originalRouteRuntimeSetPage.call(this, pageName, updateHash, cleanOptions);
   };
   Object.defineProperty(routeRuntimeSetPage, "__mflRouteRuntimeGate", { value: true });
   setPage = routeRuntimeSetPage;
