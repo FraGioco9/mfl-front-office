@@ -44,7 +44,7 @@ includes(
 );
 includes(
   bootstrap,
-  'button.textContent = page === "club" ? "Squad" : "Attributes";',
+  'candidate.textContent = page === "club" ? "Squad" : "Attributes";',
   "Club Squad must use real button text instead of generated pseudo-content.",
 );
 includes(
