@@ -217,7 +217,8 @@
     const page = normalizeRoutePageName(pageName);
     const view = routeView(options);
     if (page === "database" && view === "stats") return [];
-    if (page === "mfl" && view === "stats") return ["mflstats"];
+    if (page === "mflstats") return ["table", "mflstats"];
+    if (page === "mfl" && view === "stats") return ["table", "mflstats"];
     if (page === "club") return ["table", "club"];
     if (page === "watchlist") return ["table", "watchlist"];
     if (routeUsesTableInfrastructure(page)) return ["table"];

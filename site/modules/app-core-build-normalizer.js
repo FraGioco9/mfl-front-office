@@ -6,8 +6,8 @@ import { normalizeRouteRequestCancellation } from "./app-core-route-request-norm
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { normalizeRouteRuntimeGate } from "./app-core-route-runtime-normalizer.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
-import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { normalizeStartupDataDependencies } from "./app-core-startup-data-normalizer.js";
+import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { normalizeTableEventDelegation } from "./app-core-table-events-normalizer.js";
 import { normalizePureTableStateRestoration } from "./app-core-table-state-normalizer.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
@@ -340,6 +340,24 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
 
   text = replaceRequired(
     text,
+    '  if (pageName === "mfl") return { ...base, scope: "mfl" };',
+    '  if (pageName === "mfl") return { ...base, scope: view === "stats" ? "mflstats" : "mfl" };',
+    "MFL Stats shared incremental route scope",
+  );
+
+  text = replaceRequired(
+    text,
+    `      : route.scope === "club"
+        ? 5000
+        : state.pageSize),`,
+    `      : ["club", "mflstats"].includes(route.scope)
+        ? 5000
+        : state.pageSize),`,
+    "MFL Stats complete incremental page size",
+  );
+
+  text = replaceRequired(
+    text,
     `  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
     const requestedMflView = pageName === "mfl"`,
     `  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
@@ -365,13 +383,34 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       });
     }`,
     `    if (pageName === "mfl" && requestedMflView === "stats") {
-      state.incrementalMode = false;
-      return originalSetPage.call(this, "mflstats", false, {
+      const route = prepareIncrementalRoute(pageName, {
         ...options,
-        replaceUrl: options.replaceUrl || "/mfl/stats",
         view: "stats",
-        skipNavigationLoading: true,
+        ignoreCurrentClubRoute: navigationUpdatesHistory,
       });
+      if (!route) {
+        state.incrementalMode = false;
+        return originalSetPage.call(this, "mflstats", false, {
+          ...options,
+          replaceUrl: "",
+          view: "stats",
+          skipNavigationLoading: true,
+        });
+      }
+      const payload = await requestIncrementalRoute(route, 1);
+      if (!payload) return false;
+      state.dataAccess = currentDataAccess(pageName);
+      state.incrementalApplying = true;
+      try {
+        return await originalSetPage.call(this, "mflstats", false, {
+          ...options,
+          replaceUrl: "",
+          view: "stats",
+          skipNavigationLoading: true,
+        });
+      } finally {
+        state.incrementalApplying = false;
+      }
     }
 
     const requestedDatabaseView = pageName === "database"
@@ -387,7 +426,7 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
       if (typeof window.renderDatabaseStatsPage === "function") return window.renderDatabaseStatsPage(false);
       return;
     }`,
-    "specialized Stats renderers after global transition",
+    "specialized Stats renderers after shared loading",
   );
 
   text = replaceRequired(text, "      ignoreCurrentClubRoute: updateHash,", "      ignoreCurrentClubRoute: navigationUpdatesHistory,", "preserve page-navigation route intent after early commit");
@@ -401,11 +440,15 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
   const viewName = button.dataset.view;
   if (!viewName) return;
 
+  const activePageName = state.currentPage === "mflstats" ? "mfl" : state.currentPage;
+  const activeViewName = state.currentPage === "mflstats" ? "stats" : state.view;
+  if (pageName === activePageName && viewName === activeViewName) return;
+
   if (pageName === "club") return;
 
   if (pageName === "mfl" && viewName === "stats") {
     void runViewTransition("mfl", "stats", { statePageName: "mflstats" }, async () => {
-      await setPage("mflstats", false, { skipNavigationTransition: true, skipNavigationLoading: true });
+      await setPage("mfl", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
     });
     return;
   }
@@ -436,6 +479,27 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
   })();
 }`,
     "global view transition before every shared view loader",
+  );
+
+  text = replaceRequired(
+    text,
+    `  playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.playerAttributeView = button.dataset.playerAttributeView;
+      saveTableState();
+      renderPlayerPage(id);
+    });
+  });`,
+    `  playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextView = button.dataset.playerAttributeView;
+      if (!nextView || nextView === state.playerAttributeView) return;
+      state.playerAttributeView = nextView;
+      saveTableState();
+      renderPlayerPage(id);
+    });
+  });`,
+    "Player active view no-op",
   );
 
   text = replaceFunction(text, "openClubImmediately", `function openClubImmediately(clubId, view = "attributes") {
@@ -491,7 +555,8 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
     setClubSwitching(true);
     if (typeof updateViewButtons === "function") updateViewButtons();
     void (async () => {`,
-    `    captureClubView(state.view);
+    `    if (nextView === state.view) return;
+    captureClubView(state.view);
     void runViewTransition(CLUB_PAGE, nextView, {
       statePageName: CLUB_PAGE,
       path: canonicalClubRoute(activeClubId, nextView),

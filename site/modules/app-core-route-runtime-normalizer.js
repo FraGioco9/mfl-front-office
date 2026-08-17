@@ -3,6 +3,18 @@
 const STARTUP_MARKER = "window.__mflAppStartPromise = startApp();";
 const FIRST_LOAD_DATA_BARRIER = "if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
 const MFL_STATS_FIRST_LOAD_DATA_BARRIER = "if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
+const MFL_STATS_PAGE_TARGET = `  if (cleanPath === "/mfl/stats") {
+    return {
+      pageName: "mflstats",
+      options: {},
+    };
+  }`;
+const UNIFORM_MFL_STATS_PAGE_TARGET = `  if (cleanPath === "/mfl/stats") {
+    return {
+      pageName: "mfl",
+      options: { view: "stats" },
+    };
+  }`;
 
 // Legacy route-core validator markers. These comments are not injected into the generated application core:
 // const directTableRoute = (
@@ -97,6 +109,12 @@ export function normalizeRouteRuntimeGate(source) {
       throw new Error("Could not locate the first-load data barrier for MFL Stats.");
     }
     text = text.replace(FIRST_LOAD_DATA_BARRIER, MFL_STATS_FIRST_LOAD_DATA_BARRIER);
+  }
+  if (!text.includes(UNIFORM_MFL_STATS_PAGE_TARGET)) {
+    if (!text.includes(MFL_STATS_PAGE_TARGET)) {
+      throw new Error("Could not locate the MFL Stats route target.");
+    }
+    text = text.replace(MFL_STATS_PAGE_TARGET, UNIFORM_MFL_STATS_PAGE_TARGET);
   }
   if (text.includes("setPageWithRouteRuntime")) return text;
   if (!text.includes(STARTUP_MARKER)) {

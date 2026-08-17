@@ -10,20 +10,29 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
+const mflStatsTarget = `if (cleanPath === "/mfl/stats") {
+    return {
+      pageName: "mfl",
+      options: { view: "stats" },
+    };
+  }`;
+invariant(
+  generatedCore.includes(mflStatsTarget),
+  "MFL Stats URLs must resolve through the canonical MFL page with the Stats view.",
+);
+invariant(
+  !generatedCore.includes('pageName: "mflstats",\n      options: {},'),
+  "MFL Stats URLs must not retain the legacy pseudo-page route target.",
+);
+
 const mflStatsDataBarrier = "if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {";
 invariant(
   generatedCore.includes(mflStatsDataBarrier),
-  "MFL Stats must participate in the first-load data barrier before its final renderer runs.",
+  "The internal MFL Stats renderer must retain a safe first-load data fallback.",
 );
 invariant(
   !generatedCore.includes("if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {"),
-  "The generated first-load data barrier must not exclude MFL Stats.",
-);
-const mflStatsBarrierIndex = generatedCore.indexOf(mflStatsDataBarrier);
-const progressionLoadIndex = generatedCore.indexOf("const loaded = await ensureProgressionData();", mflStatsBarrierIndex);
-invariant(
-  progressionLoadIndex > mflStatsBarrierIndex,
-  "MFL Stats first entry must reach ensureProgressionData through the shared loading/data barrier.",
+  "The generated fallback data barrier must not exclude the internal MFL Stats renderer.",
 );
 
 const gateStart = generatedCore.indexOf("const routeRuntimeSetPage = async function setPageWithRouteRuntime");
@@ -75,4 +84,4 @@ invariant(
   "No busy or lazy-loading owner may run before the committed-route loader.",
 );
 
-console.log("Page route gate paints route chrome, then loading feedback, then lazy runtime/data work; MFL Stats participates in the shared first-load data barrier.");
+console.log("Page route gate paints route chrome and loading before lazy work; MFL Stats resolves as the canonical MFL Stats view and retains only a renderer fallback.");

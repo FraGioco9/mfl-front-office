@@ -35,11 +35,12 @@ for (const duplicateOwner of [
 
 includes(routeCoreLoader, "function routeCoreDependencies(pageName, options = {})", "The route-core loader must remain the central dependency owner.");
 includes(routeCoreLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must continue to skip table core startup.");
-includes(routeCoreLoader, 'if (page === "mfl" && view === "stats") return ["mflstats"];', "MFL Stats must continue to resolve its dedicated core chunk.");
+includes(routeCoreLoader, 'if (page === "mflstats") return ["table", "mflstats"];', "Direct MFL Stats entry must resolve Table before its dedicated Stats core.");
+includes(routeCoreLoader, 'if (page === "mfl" && view === "stats") return ["table", "mflstats"];', "MFL Stats view navigation must resolve Table before its dedicated Stats core.");
 includes(routeCoreLoader, 'if (page === "club") return ["table", "club"];', "Club startup must continue to resolve Table before Club core.");
 includes(routeCoreLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist startup must continue to resolve Table before Watchlist core.");
 includes(routeCoreLoader, "function preloadRouteCore(pageName) {", "Route-core startup must support network-only preloading without executing a lazy core.");
 includes(routeCoreLoader, 'preloadRouteCore("evaluation");', "Evaluation startup should retain early network priming through a preload.");
 excludes(routeCoreLoader, 'void ensure("evaluation")', "Evaluation core must not execute before the shared application core has initialized its facade bindings.");
 
-console.log("Initial route-core dependency ownership validation passed.");
+console.log("Initial route-core dependency ownership validation passed; MFL Stats now shares the normal Table-first loading path.");

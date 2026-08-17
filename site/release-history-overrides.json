@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.53",
+    "Restore MFL Stats loading for cold and cached visits"
+  ],
+  [
     "v1.124.52",
     "Keep MFL Stats Overall Filters at their final size from first paint"
   ],

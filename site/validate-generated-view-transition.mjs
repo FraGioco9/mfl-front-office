@@ -103,6 +103,23 @@ invariant(
   "Generated page loader must suppress downstream duplicate history ownership after the global transition.",
 );
 
+const mflRouteOwner = sourceContaining(
+  'if (pageName === "mfl") return { ...base, scope: view === "stats" ? "mflstats" : "mfl" };',
+  "MFL incremental route owner",
+);
+invariant(
+  mflRouteOwner.text.includes('["club", "mflstats"].includes(route.scope)'),
+  "MFL Stats must use the complete shared incremental page size instead of the normal paginated MFL table size.",
+);
+const mflStatsBranch = pageLoader.indexOf('if (pageName === "mfl" && requestedMflView === "stats") {');
+const mflStatsPrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", mflStatsBranch);
+const mflStatsRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", mflStatsPrepare);
+const mflStatsFinalRender = pageLoader.indexOf('originalSetPage.call(this, "mflstats"', mflStatsRequest);
+invariant(
+  mflStatsBranch >= 0 && mflStatsPrepare > mflStatsBranch && mflStatsRequest > mflStatsPrepare && mflStatsFinalRender > mflStatsRequest,
+  "MFL Stats must use the same incremental route preparation and request pipeline before its final renderer runs.",
+);
+
 const activationOwner = sourceContaining("function activateViewButton(button) {", "view-button activation owner");
 const activation = section(
   activationOwner.text,
@@ -110,8 +127,18 @@ const activation = section(
   "function clearPointerCommittedViewButton() {",
   "view-button activation owner",
 );
+const activeViewNoOp = activation.indexOf('if (pageName === activePageName && viewName === activeViewName) return;');
+const firstViewTransition = activation.indexOf("runViewTransition(");
+invariant(
+  activeViewNoOp >= 0 && firstViewTransition > activeViewNoOp,
+  "Every shared active view button must return before any transition or loader starts, matching active page buttons.",
+);
+invariant(
+  !activation.includes('setPage("mflstats"'),
+  "MFL Stats view activation must stay on the canonical MFL page/view navigation path.",
+);
 for (const [transitionMarker, loaderMarker, label] of [
-  ['runViewTransition("mfl", "stats"', 'setPage("mflstats", false', "MFL Stats"],
+  ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
   ["await runViewTransition(pageName, viewName", "await setView(viewName);", "shared table view"],
 ]) {
@@ -119,7 +146,7 @@ for (const [transitionMarker, loaderMarker, label] of [
   const loaderIndex = activation.indexOf(loaderMarker, transitionIndex);
   invariant(
     transitionIndex >= 0 && loaderIndex > transitionIndex,
-    `${label} activation must enter the global view transition before its specialized loader.`,
+    `${label} activation must enter the global view transition before its loader.`,
   );
 }
 
@@ -146,14 +173,27 @@ invariant(
   "Database Stats must perform only runtime/data work after the global page/view transition has settled.",
 );
 
+const playerOwner = sourceContaining("const nextView = button.dataset.playerAttributeView;", "Player view activation owner");
+const playerActiveViewNoOp = playerOwner.text.indexOf("if (!nextView || nextView === state.playerAttributeView) return;");
+const playerViewCommit = playerOwner.text.indexOf("state.playerAttributeView = nextView;", playerActiveViewNoOp);
+invariant(
+  playerActiveViewNoOp >= 0 && playerViewCommit > playerActiveViewNoOp,
+  "Player active view buttons must return before state changes or rerendering, matching every other active view button.",
+);
+
 const clubOwner = sourceContaining("runPageTransition(CLUB_PAGE, updateHistory", "Club transition owner");
 const clubPageTransition = clubOwner.text.indexOf("runPageTransition(CLUB_PAGE, updateHistory");
 const clubPageLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubPageTransition);
 const clubViewTransition = clubOwner.text.indexOf("runViewTransition(CLUB_PAGE, nextView");
 const clubViewLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubViewTransition);
+const clubActiveViewNoOp = clubOwner.text.indexOf("if (nextView === state.view) return;");
 invariant(
   clubPageTransition >= 0 && clubPageLoading > clubPageTransition,
   "Generated Club page entry must use the global page transition before Club loading starts.",
+);
+invariant(
+  clubActiveViewNoOp >= 0 && clubViewTransition > clubActiveViewNoOp,
+  "Club active view buttons must keep the same no-op behavior as all shared active view buttons.",
 );
 invariant(
   clubViewTransition >= 0 && clubViewLoading > clubViewTransition,
@@ -186,5 +226,5 @@ invariant(
 );
 
 console.log(
-  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: Club, MFL Stats, Database Stats, pages, views, and specialized shells all transition before loading.`,
+  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: active views no-op uniformly, and MFL Stats uses the shared incremental loading pipeline before its renderer.`,
 );
