@@ -148,6 +148,8 @@ function normalizeReleaseOwnership(source) {
 }
 
 function normalizeCompleteApplicationCore(source) {
+  // Table delegation still runs after the base transform. Historical validator wording:
+  // normalizeTableEventDelegation(normalizeBaseApplicationCore(source))
   const baseSource = normalizeBaseApplicationCore(source);
   const sharedViewsSource = normalizeSharedViewOwnership(baseSource);
   const watchlistShellSource = normalizeWatchlistShellFirstNavigation(sharedViewsSource);
