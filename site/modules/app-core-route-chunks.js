@@ -21,6 +21,53 @@ function insertBeforeRequiredMarker(source, marker, insertion, label) {
   return `${source.slice(0, index)}${insertion}\n\n${source.slice(index)}`;
 }
 
+function normalizeMflStatsStaticFilters(source) {
+  const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
+  if (!pattern.test(source)) {
+    throw new Error("Could not normalize MFL Stats static filter hydration.");
+  }
+
+  return source.replace(pattern, `function renderMflStatsFilterButtons() {
+  if (!mflStatsOverallFilters) {
+    return;
+  }
+
+  const existingButtons = new Map(
+    Array.from(mflStatsOverallFilters.querySelectorAll(":scope > .mflStatsFilterButton"))
+      .map((button) => [String(button.dataset.staticValue || ""), button]),
+  );
+  const expectedButtons = new Set();
+
+  mflStatsOverallFilterOptions.forEach((filter) => {
+    let button = existingButtons.get(filter.id);
+    if (!(button instanceof HTMLButtonElement)) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.className = "mflStatsFilterButton";
+      button.dataset.staticValue = filter.id;
+      button.textContent = filter.label;
+    }
+
+    expectedButtons.add(button);
+    button.classList.toggle("active", filter.id === state.mflStatsOverallFilter);
+    if (button.dataset.mflStatsBound !== "true") {
+      button.dataset.mflStatsBound = "true";
+      button.addEventListener("click", () => {
+        state.mflStatsOverallFilter = filter.id;
+        renderMflStatsPage();
+      });
+    }
+    mflStatsOverallFilters.appendChild(button);
+  });
+
+  Array.from(mflStatsOverallFilters.children).forEach((button) => {
+    if (!expectedButtons.has(button)) button.remove();
+  });
+}
+
+function mflStatsDistributionValue`);
+}
+
 const EVALUATION_SAVED_MODAL_FACADE = `let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
@@ -182,7 +229,7 @@ export function splitApplicationCoreRuntime(source) {
     "MFL Stats renderer",
   );
   core = extracted.core;
-  mflStatsParts.push(extracted.chunk);
+  mflStatsParts.push(normalizeMflStatsStaticFilters(extracted.chunk));
 
   extracted = extractRequiredSection(
     core,

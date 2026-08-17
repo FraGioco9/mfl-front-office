@@ -18,38 +18,6 @@
   text-align: center;
 }
 
-#mflStatsPage .mflStatsFilters {
-  container-type: inline-size;
-}
-
-#mflStatsOverallFilters {
-  min-height: 26px;
-}
-
-@container (max-width: 1359px) {
-  #mflStatsOverallFilters {
-    min-height: 57px;
-  }
-}
-
-@container (max-width: 722px) {
-  #mflStatsOverallFilters {
-    min-height: 88px;
-  }
-}
-
-@media (max-width: 900px) {
-  #mflStatsOverallFilters {
-    min-height: 307px;
-  }
-}
-
-@media (max-width: 520px) {
-  #mflStatsOverallFilters {
-    min-height: 580px;
-  }
-}
-
 @supports (appearance: base-select) {
   #pageSizeSelect,
   #pageSizeSelect::picker(select) {
