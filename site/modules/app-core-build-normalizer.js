@@ -143,6 +143,40 @@ function commitViewTransition(pageName, viewName, options = {}) {
   return nextView;
 }
 
+function commitPageTransition(pageName, updateHash = true, options = {}) {
+  const requestedPageName = String(pageName || "home");
+  const routePageName = requestedPageName === "mflstats" ? "mfl" : requestedPageName;
+  const viewConfig = Reflect.get(window, "__mflTableViewConfig");
+  const configuredViews = viewConfig && typeof viewConfig === "object" && Array.isArray(viewConfig?.[routePageName]?.order)
+    ? viewConfig[routePageName].order
+    : null;
+  const nextView = requestedPageName === "mflstats"
+    ? "stats"
+    : configuredViews
+      ? normalizeViewForPage(options.view || preferredViewForPage(routePageName), routePageName)
+      : "";
+
+  pendingViewTransition = null;
+  state.currentPage = requestedPageName;
+  if (nextView) state.view = nextView;
+  state.page = 1;
+  document.body.dataset.page = routePageName;
+
+  const targetPath = String(options.replaceUrl || pagePath(routePageName, {
+    ...options,
+    ...(nextView ? { view: nextView } : {}),
+  }));
+  const currentPath = \`\${window.location.pathname}\${window.location.search}\`;
+  if (options.replaceUrl && targetPath && currentPath !== targetPath) {
+    window.history.replaceState({}, "", targetPath);
+  } else if (updateHash && targetPath && currentPath !== targetPath) {
+    window.history.pushState({}, "", targetPath);
+  }
+
+  window.__mflStaticUiRuntime?.sync?.();
+  return { pageName: routePageName, viewName: nextView, targetPath };
+}
+
 function stageViewTransition(pageName, viewName, options = {}) {
   const nextView = String(viewName || "");
   if (!nextView) return null;
@@ -194,6 +228,7 @@ function waitForViewTransitionPaint() {
 }
 
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
+Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
 Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);
 
 `;
@@ -281,6 +316,27 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
         state.sortKey = previousSortKey;
         state.sortDirection = previousSortDirection;`,
     "incremental view transition rollback",
+  );
+
+  text = replaceRequired(
+    text,
+    `  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const requestedMflView = pageName === "mfl"`,
+    `  setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const navigationUpdatesHistory = updateHash;
+    commitPageTransition(pageName, navigationUpdatesHistory, options);
+    await waitForViewTransitionPaint();
+    updateHash = false;
+
+    const requestedMflView = pageName === "mfl"`,
+    "global page transition before route loading",
+  );
+
+  text = replaceRequired(
+    text,
+    "      ignoreCurrentClubRoute: updateHash,",
+    "      ignoreCurrentClubRoute: navigationUpdatesHistory,",
+    "preserve page-navigation route intent after early commit",
   );
 
   text = replaceFunction(
@@ -413,32 +469,6 @@ Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPain
   return text;
 }
 
-function normalizeWatchlistShellFirstNavigation(source) {
-  return replaceRequired(
-    source,
-    `  if (pageName === "watchlist" && hasWalletOptIn()) {
-    state.currentPage = pageName;
-    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-    await ensureWatchlistRoute(options);
-  }`,
-    `  if (pageName === "watchlist" && hasWalletOptIn()) {
-    state.currentPage = pageName;
-    document.body.dataset.page = pageName;
-    const primeTableChrome = Reflect.get(window, "__mflPrimeTableChrome");
-    if (typeof primeTableChrome === "function") primeTableChrome("watchlist", window.location.href);
-    const primeTableRows = Reflect.get(window, "__mflPrimeTableRows");
-    if (typeof primeTableRows === "function") primeTableRows(true);
-    document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page !== progressionPage;
-    });
-    renderWatchlistSwitcher();
-    state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-    await ensureWatchlistRoute(options);
-  }`,
-    "Watchlist destination shell before route data",
-  );
-}
-
 function normalizeReleaseOwnership(source) {
   let text = String(source || "");
   text = text.replaceAll(
@@ -473,8 +503,7 @@ function normalizeCompleteApplicationCore(source) {
   const baseSource = normalizeBaseApplicationCore(source);
   const sharedViewsSource = normalizeSharedViewOwnership(baseSource);
   const viewTransitionsSource = normalizeCanonicalViewTransitions(sharedViewsSource);
-  const watchlistShellSource = normalizeWatchlistShellFirstNavigation(viewTransitionsSource);
-  const tableEventsSource = normalizeTableEventDelegation(watchlistShellSource);
+  const tableEventsSource = normalizeTableEventDelegation(viewTransitionsSource);
   const startupDataSource = normalizeStartupDataDependencies(tableEventsSource);
   const routeRuntimeSource = normalizeRouteRuntimeGate(startupDataSource);
   const tableStateSource = normalizePureTableStateRestoration(routeRuntimeSource);

@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.46",
+    "Make table view chrome authoritative from the current route URL"
+  ],
+  [
     "v1.124.45",
     "Invalidate stale generated core cache after view transition fixes"
   ],

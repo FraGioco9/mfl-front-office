@@ -150,50 +150,23 @@
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
   }
 
-  function primeDestinationSkeleton(target, state) {
-    if (!(target instanceof HTMLElement)) return;
-    if (target.id === "progressionPage") {
-      const primeRows = Reflect.get(window, "__mflPrimeTableRows");
-      if (typeof primeRows === "function") primeRows(true);
-      window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
-      return;
-    }
-    const primeRoute = Reflect.get(window, "__mflPrimeRouteSkeleton");
-    if (typeof primeRoute === "function") primeRoute(target, state);
-  }
-
-  function showRouteShell(state, { loading = false, primeChrome = true } = {}) {
+  function showRouteShell(state) {
     const target = shellForRoute(state);
     if (!(target instanceof HTMLElement)) return;
-    if (primeChrome && target.id === "progressionPage") syncDestinationTableChrome(state);
-    if (loading) primeDestinationSkeleton(target, state);
+    if (target.id === "progressionPage") syncDestinationTableChrome(state);
 
     document.querySelectorAll("main > .pageView").forEach((page) => {
       if (page instanceof HTMLElement) page.hidden = page !== target;
     });
   }
 
-  function syncRouteChrome(urlLike = window.location.href, { loading = false } = {}) {
+  function syncRouteChrome(urlLike = window.location.href) {
     const state = routeState(urlLike);
     syncFooter();
     setActiveNavigation(state.page);
     syncTableViews(state.page, state.view);
-    showRouteShell(state, { loading });
+    showRouteShell(state);
     return state;
-  }
-
-  function sameOriginRouteFromLink(element) {
-    if (!(element instanceof HTMLAnchorElement)) return "";
-    if (element.target && element.target !== "_self") return "";
-    if (element.hasAttribute("download")) return "";
-    const href = element.getAttribute("href");
-    if (!href) return "";
-    try {
-      const url = new URL(href, window.location.href);
-      return url.origin === window.location.origin ? url.href : "";
-    } catch {
-      return "";
-    }
   }
 
   function tooltipTargetFrom(target) {
@@ -331,18 +304,6 @@
     if (!activeTooltipHovered) hideGlobalTooltip();
   }
 
-  function onClick(event) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const target = event.target instanceof Element ? event.target : null;
-
-    const viewButton = target?.closest?.("main .views .viewButton[data-view]");
-    if (viewButton instanceof HTMLButtonElement) return;
-
-    const link = target?.closest?.("a[href]");
-    const href = sameOriginRouteFromLink(link);
-    if (href) syncRouteChrome(href, { loading: true });
-  }
-
   function onKeyDown(event) {
     if (event.key !== "Escape") return;
     hideGlobalTooltip();
@@ -357,7 +318,7 @@
 
   function onPopState() {
     hideGlobalTooltip({ immediate: true });
-    syncRouteChrome(window.location.href, { loading: true });
+    syncRouteChrome(window.location.href);
   }
 
   function sync() {
@@ -370,7 +331,6 @@
     cancelTooltipMotion();
     tooltipPortal?.remove();
     tooltipPortal = null;
-    document.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("pointerover", onTooltipPointerOver, true);
     document.removeEventListener("pointerout", onTooltipPointerOut, true);
@@ -382,7 +342,6 @@
   }
 
   syncRouteChrome(window.location.href);
-  document.addEventListener("click", onClick, true);
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("pointerover", onTooltipPointerOver, true);
   document.addEventListener("pointerout", onTooltipPointerOut, true);

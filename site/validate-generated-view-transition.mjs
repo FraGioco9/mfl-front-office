@@ -26,6 +26,38 @@ const section = (text, startMarker, endMarker, label) => {
   return text.slice(start, end);
 };
 
+const pageTransitionOwner = sourceContaining("function commitPageTransition(pageName, updateHash = true, options = {}) {", "page transition owner");
+const pageTransition = section(
+  pageTransitionOwner.text,
+  "function commitPageTransition(pageName, updateHash = true, options = {}) {",
+  "function stageViewTransition",
+  "page transition owner",
+);
+const pageState = pageTransition.indexOf("state.currentPage = requestedPageName;");
+const pageUrl = pageTransition.indexOf("window.history.pushState");
+const pageChrome = pageTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
+invariant(
+  pageState >= 0 && pageUrl > pageState && pageChrome > pageUrl,
+  "Generated page navigation must commit application state, URL, and route chrome in that order.",
+);
+
+const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");
+const pageLoaderStart = pageLoaderOwner.text.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
+const pageLoader = pageLoaderOwner.text.slice(pageLoaderStart);
+const pageCommit = pageLoader.indexOf("commitPageTransition(pageName, navigationUpdatesHistory, options);");
+const pagePaint = pageLoader.indexOf("await waitForViewTransitionPaint();", pageCommit);
+const pageRoutePrepare = pageLoader.indexOf("prepareIncrementalRoute(pageName", pagePaint);
+const pageRequest = pageLoader.indexOf("requestIncrementalRoute(route, 1)", pagePaint);
+const firstPageLoad = [pageRoutePrepare, pageRequest].filter((index) => index >= 0).sort((a, b) => a - b)[0] ?? -1;
+invariant(
+  pageCommit >= 0 && pagePaint > pageCommit && firstPageLoad > pagePaint,
+  "Generated page loading must begin only after state, URL, sidebar/view chrome, and a browser paint have committed.",
+);
+invariant(
+  pageLoader.indexOf("updateHash = false;", pagePaint) > pagePaint,
+  "Generated page loader must suppress downstream duplicate history ownership after the canonical transition.",
+);
+
 const activationOwner = sourceContaining("function activateViewButton(button) {", "view-button activation owner");
 const activation = section(
   activationOwner.text,
@@ -78,5 +110,5 @@ invariant(
 );
 
 console.log(
-  `Generated view transitions validated across ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: state, URL, and active button commit before loading.`,
+  `Generated page/view transitions validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: state and URL chrome paint before loading.`,
 );

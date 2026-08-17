@@ -37,22 +37,20 @@ for (const canonicalConfig of [
 includes(entry, '"/static-ui-runtime.js"', "Static route chrome must load universally before the application core.");
 includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reuse first-paint view configuration.");
 includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
-includes(staticUi, 'document.addEventListener("click", onClick, true);', "Static route shell ownership must observe route clicks in the capture phase.");
-includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must switch immediately.");
-includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "View destination state must switch immediately.");
+includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must switch when the canonical transition commits.");
+includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "View destination state must switch when the canonical transition commits.");
 includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View buttons must be reordered directly instead of through CSS order overrides.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button owner.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The loaded application core must be able to reuse canonical view-button ownership.");
-includes(staticUi, "function showRouteShell(state, { loading = false, primeChrome = true } = {}) {", "Static route chrome must own the immediate destination shell for page navigation.");
-includes(staticUi, 'if (primeChrome && target.id === "progressionPage") syncDestinationTableChrome(state);', "Destination table chrome must synchronize before page reveal.");
-includes(staticUi, 'if (viewButton instanceof HTMLButtonElement) return;', "Same-page view clicks must be left entirely to the canonical view transition owner.");
-excludes(staticUi, "showRouteShell(routeState(), { loading: true, primeChrome: false });", "Static click capture must not start same-page view loading before the canonical transition paints.");
-excludes(staticUi, 'if (container) setActiveView(container, view);', "Static click capture must not pre-commit active view state.");
-includes(staticUi, 'if (typeof primeRows === "function") primeRows(true);', "Page switches must synchronously install the five-row destination table skeleton.");
-includes(staticUi, 'if (typeof primeRoute === "function") primeRoute(target, state);', "Non-table page switches must synchronously install destination boxes/skeletons.");
-includes(staticUi, 'page.hidden = page !== target;', "A newly selected page shell must replace the previous page immediately.");
-includes(staticUi, 'if (href) syncRouteChrome(href, { loading: true });', "Internal route links must prime their destination shell before asynchronous page navigation.");
+includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The loaded application core must be able to reuse canonical route chrome ownership.");
+includes(staticUi, "function showRouteShell(state) {", "Static route chrome must render the route already committed by the canonical transition.");
+includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize their view chrome before page reveal.");
+includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell immediately.");
+excludes(staticUi, 'document.addEventListener("click", onClick, true);', "Static route chrome must not own a second page-navigation click flow.");
+excludes(staticUi, "function sameOriginRouteFromLink", "Static route chrome must not derive or stage page navigation independently of setPage.");
+excludes(staticUi, "function primeDestinationSkeleton", "Static route chrome must not start a separate pre-navigation loading flow.");
+excludes(staticUi, "syncRouteChrome(href", "Internal links must be committed only by the canonical application transition.");
+excludes(staticUi, "{ loading: true", "Static route chrome must not own loading state.");
 includes(staticUi, 'if (event.key !== "Escape") return;', "Escape must have a global focus cleanup owner.");
 includes(staticUi, "active.blur();", "Escape must remove the active element focus ring.");
 includes(staticUi, "selection.removeAllRanges();", "Escape must clear highlighted page text.");
@@ -83,25 +81,43 @@ invariant(primeTableChromeStart >= 0 && primeTableChromeEnd > primeTableChromeSt
 const primeTableChrome = bootstrap.slice(primeTableChromeStart, primeTableChromeEnd);
 excludes(primeTableChrome, "root.dataset.initialTableView", "SPA table navigation must never reuse the page-load-only initial view.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', "Navigation must reuse the route-authoritative table chrome owner.");
-includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must expose its five-row skeleton to navigation.");
-includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must expose non-table route skeletons to navigation.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its five-row first-paint skeleton owner.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
 
-includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must support explicit destination shells before URL navigation finishes.");
+includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must retain explicit route loading support after the canonical transition paints.");
 includes(tableLoading, 'if (destroyed || (!forceRoute && !tableRouteActive())) return false;', "Only explicit destination ownership may bypass passive route detection.");
 includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPresent)', "A final real render must not be overwritten while the busy token is unwinding.");
 includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The runtime loading shell must retain its fixed five-row structure.");
 
 includes(buildNormalizer, 'Reflect.get(window, "__mflTableViewConfig")', "Loaded application views must consume the canonical first-paint view configuration.");
 includes(buildNormalizer, 'window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);', "Loaded view-button rendering must delegate to the canonical static owner.");
-includes(buildNormalizer, "function normalizeCanonicalViewTransitions(source) {", "One canonical build owner must normalize all view transitions.");
-includes(buildNormalizer, 'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);', "The canonical transition must be reusable by specialized route renderers.");
-includes(buildNormalizer, 'Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);', "All view loaders must be able to wait until committed view chrome has painted.");
-includes(buildNormalizer, "requestAnimationFrame(() => requestAnimationFrame(resolve));", "View transition paint must cross a render boundary before loading starts.");
+includes(buildNormalizer, "function normalizeCanonicalViewTransitions(source) {", "One canonical build owner must normalize page and view transitions.");
+includes(buildNormalizer, 'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);', "The canonical view transition must be reusable by specialized route renderers.");
+includes(buildNormalizer, 'Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);', "The canonical page transition must be shared by all setPage navigation.");
+includes(buildNormalizer, 'Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);', "All navigation loaders must be able to wait until committed chrome has painted.");
+includes(buildNormalizer, "requestAnimationFrame(() => requestAnimationFrame(resolve));", "Navigation must cross a real render boundary before loading starts.");
+includes(buildNormalizer, "function commitPageTransition(pageName, updateHash = true, options = {}) {", "Page navigation must have one canonical transition owner.");
 includes(buildNormalizer, "commitViewTransition(pageName, nextView, {", "Shared table views must use the canonical transition.");
 includes(buildNormalizer, 'commitViewTransition("mfl", "stats", { statePageName: "mflstats" });', "MFL Stats must commit through the canonical transition before its specialized renderer.");
 includes(buildNormalizer, "commitViewTransition(CLUB_PAGE, nextView, {", "Club views must commit through the canonical transition before Club loading.");
+excludes(buildNormalizer, "normalizeWatchlistShellFirstNavigation", "Watchlist must not retain a separate page-change shell flow.");
+
+const pageTransitionStart = buildNormalizer.indexOf("function commitPageTransition(pageName, updateHash = true, options = {}) {");
+const pageTransitionEnd = pageTransitionStart >= 0 ? buildNormalizer.indexOf("function stageViewTransition", pageTransitionStart) : -1;
+invariant(pageTransitionStart >= 0 && pageTransitionEnd > pageTransitionStart, "Canonical page transition implementation must exist.");
+const pageTransition = buildNormalizer.slice(pageTransitionStart, pageTransitionEnd);
+const pageStateIndex = pageTransition.indexOf("state.currentPage = requestedPageName;");
+const pageUrlIndex = pageTransition.indexOf("window.history.pushState");
+const pageChromeIndex = pageTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
+invariant(pageStateIndex >= 0 && pageUrlIndex > pageStateIndex && pageChromeIndex > pageUrlIndex, "Page transitions must commit state, then URL, then sidebar/view/page chrome.");
+
+const setPageTransitionIndex = buildNormalizer.indexOf("commitPageTransition(pageName, navigationUpdatesHistory, options);");
+const setPagePaintIndex = buildNormalizer.indexOf("await waitForViewTransitionPaint();", setPageTransitionIndex);
+const setPagePrepareIndex = buildNormalizer.indexOf("const requestedMflView = pageName === \"mfl\"", setPagePaintIndex);
+invariant(setPageTransitionIndex >= 0 && setPagePaintIndex > setPageTransitionIndex && setPagePrepareIndex > setPagePaintIndex, "Every setPage path must paint committed route chrome before route-specific loading logic starts.");
+
 const transitionOwnerStart = buildNormalizer.indexOf("function commitViewTransition(pageName, viewName, options = {}) {");
-const transitionOwnerEnd = transitionOwnerStart >= 0 ? buildNormalizer.indexOf("function waitForViewTransitionPaint()", transitionOwnerStart) : -1;
+const transitionOwnerEnd = transitionOwnerStart >= 0 ? buildNormalizer.indexOf("function commitPageTransition", transitionOwnerStart) : -1;
 invariant(transitionOwnerStart >= 0 && transitionOwnerEnd > transitionOwnerStart, "Canonical view transition implementation must exist.");
 const transitionOwner = buildNormalizer.slice(transitionOwnerStart, transitionOwnerEnd);
 const stateIndex = transitionOwner.indexOf("state.view = nextView;");
@@ -133,20 +149,10 @@ const databaseStatsPaintIndex = databaseStatsRender.indexOf("await waitForStatsT
 const databaseStatsBusyIndex = databaseStatsRender.indexOf('window.__mflInteractionBusy?.begin?.("route-runtime")');
 invariant(databaseStatsCommitIndex >= 0 && databaseStatsPaintIndex > databaseStatsCommitIndex && databaseStatsBusyIndex > databaseStatsPaintIndex, "Database Stats must paint state, URL, and active button before loading begins.");
 
-const watchlistBlockStart = buildNormalizer.indexOf("function normalizeWatchlistShellFirstNavigation(source) {");
-const watchlistBlockEnd = watchlistBlockStart >= 0 ? buildNormalizer.indexOf("\nfunction normalizeReleaseOwnership", watchlistBlockStart) : -1;
-invariant(watchlistBlockStart >= 0 && watchlistBlockEnd > watchlistBlockStart, "Watchlist shell normalization block must exist.");
-const watchlistBlock = buildNormalizer.slice(watchlistBlockStart, watchlistBlockEnd);
-includes(watchlistBlock, 'primeTableChrome("watchlist", window.location.href);', "Watchlist shell navigation must pass the live route URL into table chrome.");
-includes(watchlistBlock, 'if (typeof primeTableRows === "function") primeTableRows(true);', "Watchlist must display five blank rows before waiting on route data.");
-const watchlistPrimeIndex = watchlistBlock.indexOf('if (typeof primeTableRows === "function") primeTableRows(true);');
-const watchlistAwaitIndex = watchlistBlock.lastIndexOf("await ensureWatchlistRoute(options);");
-invariant(watchlistPrimeIndex >= 0 && watchlistAwaitIndex > watchlistPrimeIndex, "Watchlist shell must be visible before its asynchronous route data is awaited.");
-
 includes(styles, "--mfl-pager-block-padding: 12px;", "Pager spacing must have one global 12px setting.");
 includes(styles, "padding-block: var(--mfl-pager-block-padding);", "All pagers must consume the global block-padding setting.");
 includes(dropdowns, "width: 92px;", "Rows selector must retain its established 92px footprint.");
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Direct route shell, route-authoritative table chrome, painted canonical state-URL-button transitions, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
+console.log("Unified painted page/view transitions, route-authoritative chrome, canonical view order, pager, Rows selector, dropdown overflow, tooltip portal, and first-paint validation passed.");
