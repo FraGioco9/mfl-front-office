@@ -10,10 +10,20 @@
     "current-season": "current",
     "all-time": "all",
   });
+  const SPECIALIZED_TOOLTIP_SELECTOR = [
+    ".evaluationMetric.evaluationDiscountRate",
+    ".evaluationLoadIconButton",
+    ".playerNoteIcon",
+  ].join(", ");
 
   window.__mflStaticUiRuntime?.destroy?.();
 
   let destroyed = false;
+  let tooltipPortal = null;
+  let activeTooltipTarget = null;
+  let activeTooltipText = "";
+  let activeTooltipHovered = false;
+  let activeTooltipFocused = false;
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -106,6 +116,11 @@
     if (page === "mfl" && view === "stats") setActiveView(document.querySelector("#mflStatsPage .views"), "stats");
   }
 
+  function syncTableViews(page, view) {
+    syncSharedViewSet(String(page || ""), String(view || ""));
+    syncStatsViews(String(page || ""), String(view || ""));
+  }
+
   function routeNeedsLockedShell(page) {
     return document.documentElement.dataset.storedWalletOptIn !== "true"
       && ["watchlist", "myplayers", "settings"].includes(page);
@@ -155,8 +170,7 @@
     const state = routeState(urlLike);
     syncFooter();
     setActiveNavigation(state.page);
-    syncSharedViewSet(state.page, state.view);
-    syncStatsViews(state.page, state.view);
+    syncTableViews(state.page, state.view);
     showRouteShell(state, { loading });
     return state;
   }
@@ -173,6 +187,109 @@
     } catch {
       return "";
     }
+  }
+
+  function tooltipTargetFrom(target) {
+    if (!(target instanceof Element)) return null;
+    const tooltipTarget = target.closest("[data-tooltip]");
+    if (!(tooltipTarget instanceof HTMLElement) || tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;
+    return tooltipTarget;
+  }
+
+  function ensureTooltipPortal() {
+    if (tooltipPortal?.isConnected) return tooltipPortal;
+    if (!document.body) return null;
+    tooltipPortal = document.createElement("div");
+    tooltipPortal.id = "mflGlobalTooltip";
+    tooltipPortal.className = "mflGlobalTooltip";
+    tooltipPortal.setAttribute("role", "tooltip");
+    tooltipPortal.hidden = true;
+    document.body.appendChild(tooltipPortal);
+    return tooltipPortal;
+  }
+
+  function positionTooltipPortal() {
+    if (!(tooltipPortal instanceof HTMLElement) || !(activeTooltipTarget instanceof HTMLElement)) return;
+    const anchor = activeTooltipTarget.getBoundingClientRect();
+    const tooltip = tooltipPortal.getBoundingClientRect();
+    const gap = 8;
+    let top = anchor.top - tooltip.height - gap;
+    if (top < 8) top = anchor.bottom + gap;
+    const left = Math.min(
+      window.innerWidth - tooltip.width - 8,
+      Math.max(8, anchor.left + (anchor.width - tooltip.width) / 2),
+    );
+    tooltipPortal.style.left = `${Math.round(left)}px`;
+    tooltipPortal.style.top = `${Math.round(top)}px`;
+  }
+
+  function restoreActiveTooltipAttribute() {
+    if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipText) return;
+    activeTooltipTarget.dataset.tooltip = activeTooltipText;
+    activeTooltipTarget.removeAttribute("aria-describedby");
+  }
+
+  function hideGlobalTooltip({ restore = true } = {}) {
+    if (restore) restoreActiveTooltipAttribute();
+    activeTooltipTarget = null;
+    activeTooltipText = "";
+    activeTooltipHovered = false;
+    activeTooltipFocused = false;
+    if (!(tooltipPortal instanceof HTMLElement)) return;
+    tooltipPortal.hidden = true;
+    tooltipPortal.textContent = "";
+  }
+
+  function showGlobalTooltip(target, mode) {
+    if (!(target instanceof HTMLElement)) return;
+    if (target !== activeTooltipTarget) {
+      hideGlobalTooltip();
+      const text = String(target.dataset.tooltip || "").trim();
+      if (!text) return;
+      const portal = ensureTooltipPortal();
+      if (!portal) return;
+      activeTooltipTarget = target;
+      activeTooltipText = text;
+      target.removeAttribute("data-tooltip");
+      target.setAttribute("aria-describedby", portal.id);
+      portal.textContent = text;
+      portal.hidden = false;
+    }
+    if (mode === "hover") activeTooltipHovered = true;
+    if (mode === "focus") activeTooltipFocused = true;
+    positionTooltipPortal();
+  }
+
+  function onTooltipPointerOver(event) {
+    if (activeTooltipTarget instanceof HTMLElement && activeTooltipTarget.contains(event.target)) {
+      activeTooltipHovered = true;
+      return;
+    }
+    const target = tooltipTargetFrom(event.target);
+    if (target) showGlobalTooltip(target, "hover");
+  }
+
+  function onTooltipPointerOut(event) {
+    if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipTarget.contains(event.target)) return;
+    if (event.relatedTarget instanceof Node && activeTooltipTarget.contains(event.relatedTarget)) return;
+    activeTooltipHovered = false;
+    if (!activeTooltipFocused) hideGlobalTooltip();
+  }
+
+  function onTooltipFocusIn(event) {
+    if (activeTooltipTarget instanceof HTMLElement && activeTooltipTarget.contains(event.target)) {
+      activeTooltipFocused = true;
+      return;
+    }
+    const target = tooltipTargetFrom(event.target);
+    if (target) showGlobalTooltip(target, "focus");
+  }
+
+  function onTooltipFocusOut(event) {
+    if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipTarget.contains(event.target)) return;
+    if (event.relatedTarget instanceof Node && activeTooltipTarget.contains(event.relatedTarget)) return;
+    activeTooltipFocused = false;
+    if (!activeTooltipHovered) hideGlobalTooltip();
   }
 
   function onClick(event) {
@@ -199,6 +316,7 @@
 
   function onKeyDown(event) {
     if (event.key !== "Escape") return;
+    hideGlobalTooltip();
     queueMicrotask(() => {
       if (destroyed) return;
       const active = document.activeElement;
@@ -209,6 +327,7 @@
   }
 
   function onPopState() {
+    hideGlobalTooltip();
     syncRouteChrome(window.location.href, { loading: true });
   }
 
@@ -218,15 +337,30 @@
 
   function destroy() {
     destroyed = true;
+    hideGlobalTooltip();
+    tooltipPortal?.remove();
+    tooltipPortal = null;
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("pointerover", onTooltipPointerOver, true);
+    document.removeEventListener("pointerout", onTooltipPointerOut, true);
+    document.removeEventListener("focusin", onTooltipFocusIn, true);
+    document.removeEventListener("focusout", onTooltipFocusOut, true);
+    window.removeEventListener("resize", positionTooltipPortal);
+    window.removeEventListener("scroll", positionTooltipPortal, true);
     window.removeEventListener("popstate", onPopState);
   }
 
   syncRouteChrome(window.location.href);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener("pointerover", onTooltipPointerOver, true);
+  document.addEventListener("pointerout", onTooltipPointerOut, true);
+  document.addEventListener("focusin", onTooltipFocusIn, true);
+  document.addEventListener("focusout", onTooltipFocusOut, true);
+  window.addEventListener("resize", positionTooltipPortal);
+  window.addEventListener("scroll", positionTooltipPortal, true);
   window.addEventListener("popstate", onPopState);
 
-  window.__mflStaticUiRuntime = Object.freeze({ sync, destroy });
+  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, destroy });
 })();

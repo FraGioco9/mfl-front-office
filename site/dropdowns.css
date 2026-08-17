@@ -242,6 +242,8 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   width: 350px;
   min-width: 350px;
   max-width: calc(100vw - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .watchlistDropdownItem {
@@ -398,10 +400,10 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 /* Rows has a fixed footprint with dedicated room for the value and chevron. */
 #pageSizeSelect {
-  width: 92px !important;
-  min-width: 92px !important;
-  max-width: 92px !important;
-  flex: 0 0 92px !important;
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+  flex: 0 0 92px;
   padding-left: 11px;
   padding-right: 10px;
   line-height: 1;

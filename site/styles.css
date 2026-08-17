@@ -7,6 +7,7 @@
   --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
   --mfl-popup-close-size: 36px;
   --mfl-popup-close-glyph-size: 12px;
+  --mfl-pager-block-padding: 12px;
 }
 
 .viewButton {
@@ -22,14 +23,6 @@
   #pageSizeSelect::picker(select) {
     appearance: base-select;
   }
-}
-
-.controlsBar > .field.compact.rowsField #pageSizeSelect {
-  width: auto;
-  min-width: 0;
-  max-width: none;
-  flex: 1 1 auto;
-  padding-right: var(--mfl-dropdown-chevron-inset);
 }
 
 select[data-mfl-dropdown-enhanced="true"]:open,
@@ -56,6 +49,7 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 
 [data-mfl-dropdown-menu="true"] {
   max-height: var(--mfl-dropdown-max-height);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -299,6 +293,37 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 #tablePageTitle[data-agent-wallet-copy]:active {
   text-decoration: underline;
   outline: 0;
+}
+
+.pager {
+  padding-block: var(--mfl-pager-block-padding);
+  padding-inline: 0;
+}
+
+.mflGlobalTooltip {
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #171717;
+  color: #ffffff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.mflGlobalTooltip[hidden] {
+  display: none;
 }
 
 html:has(body > .modalBackdrop:not([hidden])),
