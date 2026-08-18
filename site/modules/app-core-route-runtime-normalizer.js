@@ -67,7 +67,7 @@ const CORE_RUNTIME_CONTRACT = `;(() => {
   }
 
   function installTableLoadingOwners() {
-    if (typeof buildHeader !== "function" || typeof renderTableLoadingShell !== "function") return false;
+    if (typeof buildHeader !== "function") return false;
 
     if (!buildHeader.__mflSingleRenderOwner) {
       const originalBuildHeader = buildHeader;
@@ -95,19 +95,6 @@ const CORE_RUNTIME_CONTRACT = `;(() => {
       };
       Object.defineProperty(stableBuildHeader, "__mflSingleRenderOwner", { value: true });
       buildHeader = stableBuildHeader;
-    }
-
-    if (!renderTableLoadingShell.__mflSingleRenderOwner) {
-      const originalRenderTableLoadingShell = renderTableLoadingShell;
-      const stableRenderTableLoadingShell = function(pageName) {
-        const result = originalRenderTableLoadingShell.apply(this, arguments);
-        if (typeof tablePages === "object" && tablePages?.has?.(pageName)) {
-          window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
-        }
-        return result;
-      };
-      Object.defineProperty(stableRenderTableLoadingShell, "__mflSingleRenderOwner", { value: true });
-      renderTableLoadingShell = stableRenderTableLoadingShell;
     }
     return true;
   }
