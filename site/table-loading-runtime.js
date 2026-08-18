@@ -1,10 +1,8 @@
 (() => {
   "use strict";
 
-  const STYLE_ID = "mflTableLoadingStyles";
-  const BLANK_ROW_CLASS = "staticTableBlankRow";
+  const BLANK_ROW_CLASS = "mflTableLoadingRow";
   const BLANK_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
-  const TABLE_ROW_HEIGHT = 39;
 
   window.__mflTableLoadingRuntime?.destroy?.();
 
@@ -37,29 +35,6 @@
 
   function dataLoading() {
     return document.documentElement.classList.contains("mflDataLoading");
-  }
-
-  function installStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      #tableBody > .${BLANK_ROW_CLASS}, #tableBody > .${BLANK_ROW_CLASS} > td {
-        pointer-events: none !important;
-        transition: none !important;
-        animation: none !important;
-      }
-      #tableBody > .${BLANK_ROW_CLASS} > td {
-        height: ${TABLE_ROW_HEIGHT}px !important;
-        min-height: ${TABLE_ROW_HEIGHT}px !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        background: var(--surface-muted) !important;
-        color: transparent !important;
-        user-select: none !important;
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   function blankRowsReady(body, columnCount) {
@@ -134,7 +109,11 @@
         row.dataset.loadingRow = String(index + 1);
         row.setAttribute("aria-hidden", "true");
         row.style.opacity = String(opacity);
-        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) row.appendChild(document.createElement("td"));
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+          const cell = document.createElement("td");
+          cell.textContent = "\u00a0";
+          row.appendChild(cell);
+        }
         fragment.appendChild(row);
       });
       body.replaceChildren(fragment);
@@ -238,10 +217,8 @@
     observer = null;
     window.removeEventListener("popstate", sync);
     release();
-    document.getElementById(STYLE_ID)?.remove();
   }
 
-  installStyles();
   observe();
   window.addEventListener("popstate", sync);
   window.__mflTableLoadingRuntime = Object.freeze({ show, release, sync, installCoreBridge, destroy });
