@@ -73,8 +73,7 @@
       Object.defineProperty(discountFunction, "__mflSupabaseAuthority", { value: VERSION });
     }
     window.__mflSupabaseDiscountRateFunction = discountFunction;
-    try { window.evaluationDiscountRateValue = discountFunction; } catch {}
-    try { window.eval("evaluationDiscountRateValue = window.__mflSupabaseDiscountRateFunction"); } catch {}
+    Reflect.set(window, "evaluationDiscountRateValue", discountFunction);
   }
 
   function setText(id, value) {
@@ -247,8 +246,6 @@
   }
 
   function onDocumentClick() {
-    // App-core commits route and button-driven Evaluation changes before the event reaches document.
-    // One post-interaction frame is enough to observe the new canonical state without DOM polling.
     schedule();
   }
 

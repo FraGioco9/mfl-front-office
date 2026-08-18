@@ -236,41 +236,56 @@
       blockedEvents.forEach((eventName) => document.removeEventListener(eventName, blockInteraction, true));
     }
 
+    function globalFunction(name) {
+      const candidate = Reflect.get(window, name);
+      return typeof candidate === "function" ? candidate : null;
+    }
+
+    function replaceGlobalFunction(name, expected, replacement) {
+      if (typeof replacement !== "function") return false;
+      const current = globalFunction(name);
+      if (expected && current !== expected) return false;
+      return Reflect.set(window, name, replacement);
+    }
+
+    function wrapBusyGlobal(name) {
+      const original = globalFunction(name);
+      if (!original || original.__mflInteractionBusyWrapped) return Boolean(original);
+      const wrapped = (...args) => run(() => original.apply(window, args), name);
+      Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+      Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
+      return replaceGlobalFunction(name, original, wrapped);
+    }
+
     function installCoreBridge() {
       window.__mflWithInteractionBusy = (callback) => run(callback, "interaction-loading");
-      window.__mflWrapInteractionBusyFunction = (callback, reason) => (...args) => run(() => callback(...args), reason);
       window.__mflSyncStoredAccessFlags = syncStoredAccessFlags;
-      try { window.eval("withInteractionBusy = window.__mflWithInteractionBusy"); } catch {}
-      try {
-        window.eval(`(() => {
-          if (typeof syncHomeLoginButton !== "function" || syncHomeLoginButton.__mflStoredAccessWrapped) return;
-          const original = syncHomeLoginButton;
-          const wrapped = function (...args) {
-            const result = original.apply(this, args);
-            window.__mflSyncStoredAccessFlags();
-            return result;
-          };
-          Object.defineProperty(wrapped, "__mflStoredAccessWrapped", { value: true });
-          syncHomeLoginButton = wrapped;
-        })()`);
-      } catch {}
+
+      const currentWithInteractionBusy = globalFunction("withInteractionBusy");
+      if (currentWithInteractionBusy && !currentWithInteractionBusy.__mflInteractionBusyWrapped) {
+        const wrappedWithInteractionBusy = (callback) => run(callback, "interaction-loading");
+        Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyWrapped", { value: true });
+        Object.defineProperty(wrappedWithInteractionBusy, "__mflInteractionBusyOriginal", { value: currentWithInteractionBusy });
+        replaceGlobalFunction("withInteractionBusy", currentWithInteractionBusy, wrappedWithInteractionBusy);
+      }
+
+      const homeLoginButton = globalFunction("syncHomeLoginButton");
+      if (homeLoginButton && !homeLoginButton.__mflStoredAccessWrapped) {
+        const wrappedHomeLoginButton = function (...args) {
+          const result = homeLoginButton.apply(this, args);
+          syncStoredAccessFlags();
+          return result;
+        };
+        Object.defineProperty(wrappedHomeLoginButton, "__mflStoredAccessWrapped", { value: true });
+        replaceGlobalFunction("syncHomeLoginButton", homeLoginButton, wrappedHomeLoginButton);
+      }
       syncStoredAccessFlags();
+
       [
         "setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
         "openSavedEvaluationsModal", "createSharedEvaluationFromPayload", "createSharedEvaluation",
         "createSavedEvaluation", "linkWallet",
-      ].forEach((name) => {
-        try {
-          window.eval(`(() => {
-            if (typeof ${name} !== "function" || ${name}.__mflInteractionBusyWrapped) return;
-            const original = ${name};
-            const wrapped = window.__mflWrapInteractionBusyFunction(original, ${JSON.stringify(name)});
-            Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
-            Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
-            ${name} = wrapped;
-          })()`);
-        } catch {}
-      });
+      ].forEach(wrapBusyGlobal);
     }
 
     return Object.freeze({

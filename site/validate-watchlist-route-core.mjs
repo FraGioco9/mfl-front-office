@@ -69,11 +69,10 @@ excludes(watchlistCore, "function selectedPlayerIdsArray() {", "Cross-route sele
 excludes(watchlistCore, "function normalizeWatchlists(watchlists, legacyIds = []) {", "Watchlist persistence normalization must not become route-only.");
 
 includes(coreSource, 'const visible = state.currentPage === "watchlist" && hasWalletOptIn();', "The Watchlist switcher must remain visible only on the Watchlist page.");
-includes(appEntry, "const WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist-only UI behavior must have its own runtime group.");
+excludes(appEntry, "WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS", "Retired Watchlist compatibility UI must not return to the runtime graph.");
+excludes(appEntry, "/watchlist-ui-runtime.js", "The retired Watchlist UI compatibility runtime must stay removed.");
 includes(appEntry, "const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist/My Players route coordination must remain shared between both pages.");
-includes(appEntry, 'if (page === "watchlist") scripts.push(...WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS);', "Only the Watchlist page may load the rename-tooltip UI runtime.");
 includes(appEntry, "if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);", "Watchlist/My Players route coordination must still load on both pages.");
-excludes(appEntry, "WATCHLIST_POST_CORE_RUNTIME_SCRIPTS", "My Players must not inherit the Watchlist-only UI runtime through a combined group.");
 
 includes(routeLoader, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Route loader must map the Watchlist core.");
 includes(routeLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist routes must load Table before Watchlist UI ownership.");
@@ -101,23 +100,23 @@ includes(
 includes(
   bootstrapCore,
   '"setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"',
-  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners, so loading starts before the active-list mutation regardless of cache state.",
+  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners.",
 );
 includes(
   bootstrapCore,
   'Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });',
-  "Uniform Loading Workflow wrappers must expose their delegate so route runtimes can recognize an already-wrapped owner without wrapping it recursively.",
+  "Uniform Loading Workflow wrappers must expose their delegate so route runtimes can recognize an already-wrapped owner.",
 );
-includes(
+includes(bootstrapCore, "function globalFunction(name) {", "Loading bridge must resolve global functions explicitly.");
+includes(bootstrapCore, "function replaceGlobalFunction(name, expected, replacement) {", "Loading bridge must replace global functions explicitly.");
+excludes(bootstrapCore, "window.eval", "Loading bridge must not use eval to replace global functions.");
+excludes(
   bootstrapCore,
   "window.__mflTableLoadingRuntime?.sync?.();",
-  "The Uniform Loading Workflow must synchronize table loading presentation at the same time as its loading token state changes.",
+  "Uniform Loading Workflow must publish state to subscribers rather than repairing table presentation directly.",
 );
-includes(
-  tableLoading,
-  'document.documentElement.classList.contains("mflDataLoading")',
-  "Table loading must be driven only by the global data-loading state.",
-);
+
+includes(tableLoading, "controller.subscribe(sync)", "Table loading must subscribe to the canonical loading-state owner.");
 includes(
   tableLoading,
   '["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"]',
@@ -129,6 +128,9 @@ includes(
   "function interactionBusyChainIncludes(candidate, target) {",
   "Watchlist/My Players coordination must recognize the Uniform Loading Workflow wrapper chain instead of treating it as a new route owner.",
 );
+includes(watchlistRouteRuntime, "function globalFunction(name) {", "Watchlist route coordination must resolve global function owners explicitly.");
+includes(watchlistRouteRuntime, "function replaceGlobalFunction(name, expected, replacement) {", "Watchlist route coordination must replace global function owners explicitly.");
+excludes(watchlistRouteRuntime, "window.eval", "Watchlist route coordination must not use eval for function replacement.");
 includes(
   watchlistRouteRuntime,
   "candidate === wrappedSetPage || interactionBusyChainIncludes(candidate, wrappedSetPage)",
@@ -203,4 +205,4 @@ invariant(
   "Generated Watchlist runtime must exactly match the Watchlist build artifact.",
 );
 
-console.log("Watchlist route-core splitting, stable route delegates, and canonical Uniform Loading Workflow ownership validation passed.");
+console.log("Watchlist route-core splitting, direct global function ownership, stable delegates, and canonical loading validation passed.");
