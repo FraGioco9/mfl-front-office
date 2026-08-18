@@ -11,6 +11,7 @@ const [
   bootstrapCore,
   watchlistRuntime,
   evaluationRateRuntime,
+  evaluationSearchRuntime,
   tableLoadingRuntime,
   globalSearchRuntime,
   appEntry,
@@ -20,6 +21,7 @@ const [
   read("./bootstrap-core.js"),
   read("./watchlist-myplayers-route-runtime.js"),
   read("./evaluation-discount-rate-runtime.js"),
+  read("./evaluation-search-state-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./global-search-runtime.js"),
   read("./modules/app-entry.js"),
@@ -45,6 +47,7 @@ invariant(
 );
 
 for (const [name, source] of [
+  ["evaluation-search-state-runtime.js", evaluationSearchRuntime],
   ["table-loading-runtime.js", tableLoadingRuntime],
   ["global-search-runtime.js", globalSearchRuntime],
   ["modules/app-entry.js", appEntry],
@@ -88,6 +91,32 @@ for (const removedBridge of [
 }
 
 invariant(
+  evaluationSearchRuntime.includes("window.__mflCoreContracts"),
+  "Evaluation Search must consume the explicit application-core contract.",
+);
+for (const contractCall of [
+  "evaluationRecentPlayerIds",
+  "setEvaluationRecentPlayerIds",
+  "evaluationSearchEntry",
+  "buildEvaluationRecentEntries",
+  "persistEvaluationRecentPlayerIds",
+  "installEvaluationRecentRowsOwner",
+  "installEvaluationEmptySearchOwner",
+  "installEvaluationRecentWriteOwner",
+  "renderCurrentEvaluationSearchResults",
+]) {
+  invariant(evaluationSearchRuntime.includes(contractCall), `Evaluation Search must use the core contract for ${contractCall}.`);
+}
+for (const removedBridge of [
+  "__mflEvaluationNextRecentIds",
+  "__mflEvaluationClickedRecentId",
+  "__mflEvaluationPendingRecentIds",
+  "__mflEvaluationSupabaseRecentPayload",
+]) {
+  invariant(!evaluationSearchRuntime.includes(removedBridge), `Evaluation Search must not restore temporary bridge ${removedBridge}.`);
+}
+
+invariant(
   appEntry.includes('Reflect.get(window, "__mflCoreContracts")'),
   "app-entry must consume the explicit application-core contract for Evaluation recent-state ownership.",
 );
@@ -110,6 +139,14 @@ for (const contractMethod of [
   "resetCurrentEvaluationSelection",
   "applySearchPayload",
   "invalidateDatabaseSearch",
+  "evaluationRecentPlayerIds",
+  "setEvaluationRecentPlayerIds",
+  "evaluationSearchEntry",
+  "buildEvaluationRecentEntries",
+  "persistEvaluationRecentPlayerIds",
+  "installEvaluationRecentRowsOwner",
+  "installEvaluationEmptySearchOwner",
+  "installEvaluationRecentWriteOwner",
   "installEvaluationRecentStateOwnership",
 ]) {
   invariant(
@@ -167,4 +204,4 @@ for (const legacyBridge of [
   invariant(!watchlistRuntime.includes(legacyBridge), `Watchlist route runtime must not restore legacy eval bridge ${legacyBridge}.`);
 }
 
-console.log("Direct core ownership validation passed without table, search, app-entry, or global-function eval bridges.");
+console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges.");
