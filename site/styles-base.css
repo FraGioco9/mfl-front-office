@@ -1787,8 +1787,6 @@ button:disabled {
 .advancedPlayerTable {
   position: relative;
   z-index: 1;
-  width: max-content;
-  min-width: 100%;
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1801,9 +1799,6 @@ button:disabled {
 
 .advancedPlayerTable th,
 .advancedPlayerTable td {
-  width: 52px;
-  min-width: 52px;
-  max-width: 52px;
   height: 32px;
   padding: 4px 5px;
   border-bottom: 1px solid var(--border);
@@ -1850,9 +1845,6 @@ button:disabled {
 
 .advancedPlayerTable thead th:first-child,
 .advancedPlayerTable tbody th {
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
   position: sticky;
   left: 0;
   z-index: 22;
@@ -1974,15 +1966,6 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1240px;
-}
-
-.col-select {
-  width: 51.09px;
-}
-
-.col-id {
-  width: 68.13px;
 }
 
 .copyPlayerIdButton {
@@ -2012,66 +1995,12 @@ table {
   text-decoration: underline;
 }
 
-.col-flag {
-  width: 45.41px;
-}
-
-.col-name {
-  width: 212.89px;
-}
-
-.col-nationality {
-  width: 141.92px;
-}
-
-.col-age {
-  width: 65.28px;
-}
-
-.col-positions {
-  width: 119.22px;
-}
-
-.col-seasons {
-  width: 82.31px;
-}
-
-.col-stat {
-  width: 107.86px;
-}
-
 .col-overall {
   font-weight: 800;
 }
 
-.col-agent {
-  width: 187.34px;
-}
-
-.col-contract-revenue {
-  width: 140px;
-  min-width: 140px;
-  max-width: 140px;
-}
-
-.col-contract-club {
-  width: 227.16px;
-  min-width: 227.16px;
-  max-width: 227.16px;
-}
-
-.col-contract-division {
-  width: 280px;
-  min-width: 280px;
-  max-width: 280px;
-}
-
 .contractDivisionLabel {
   font-weight: 700;
-}
-
-.col-link {
-  width: 48.39px;
 }
 
 th,
@@ -2210,10 +2139,6 @@ th.sortable:hover {
   height: 15px;
   padding: 0;
   vertical-align: middle;
-}
-
-.nameCell {
-  width: 100%;
 }
 
 td a {
@@ -3691,41 +3616,6 @@ td a {
   white-space: normal;
 }
 
-.evaluationSummaryTable th:nth-child(1),
-.evaluationSummaryTable td:nth-child(1) {
-  width: 24%;
-}
-
-.evaluationSummaryTable th:nth-child(2),
-.evaluationSummaryTable td:nth-child(2) {
-  width: 10%;
-}
-
-.evaluationSummaryTable th:nth-child(3),
-.evaluationSummaryTable td:nth-child(3) {
-  width: 8.5%;
-}
-
-.evaluationSummaryTable th:nth-child(4),
-.evaluationSummaryTable td:nth-child(4) {
-  width: 12.5%;
-}
-
-.evaluationSummaryTable th:nth-child(5),
-.evaluationSummaryTable td:nth-child(5) {
-  width: 16.25%;
-}
-
-.evaluationSummaryTable th:nth-child(6),
-.evaluationSummaryTable td:nth-child(6) {
-  width: 16.25%;
-}
-
-.evaluationSummaryTable th:nth-child(7),
-.evaluationSummaryTable td:nth-child(7) {
-  width: 12.5%;
-}
-
 .evaluationSummaryTable td:nth-child(7) {
   font-weight: 800;
 }
@@ -3821,46 +3711,6 @@ td a {
 .evaluationPanel h3 {
   margin: 0 0 10px;
   font-size: 18px;
-}
-
-.evaluationTableShell table {
-  min-width: 900px;
-}
-.evaluationTableShell th:nth-child(1),
-.evaluationTableShell td:nth-child(1) {
-  width: 24%;
-}
-
-.evaluationTableShell th:nth-child(2),
-.evaluationTableShell td:nth-child(2) {
-  width: 10%;
-}
-
-.evaluationTableShell th:nth-child(3),
-.evaluationTableShell td:nth-child(3) {
-  width: 8.5%;
-}
-
-.evaluationTableShell th:nth-child(4),
-.evaluationTableShell td:nth-child(4),
-.evaluationTableShell th:nth-child(8),
-.evaluationTableShell td:nth-child(8) {
-  width: 12.5%;
-}
-
-.evaluationTableShell th:nth-child(5),
-.evaluationTableShell td:nth-child(5) {
-  width: 9%;
-}
-
-.evaluationTableShell th:nth-child(6),
-.evaluationTableShell td:nth-child(6) {
-  width: 9%;
-}
-
-.evaluationTableShell th:nth-child(7),
-.evaluationTableShell td:nth-child(7) {
-  width: 14.5%;
 }
 
 .evaluationTable th,
@@ -5091,148 +4941,8 @@ td a {
   resize: none;
 }
 
-/* v1.149.64 - Fit player table inside the viewport with the sidebar open */
-.appShell:not(.menuClosed) .tableScroller table {
-  width: 100% !important;
-  min-width: 0 !important;
-  table-layout: fixed;
-}
-
-.appShell:not(.menuClosed) .tableScroller col {
-  min-width: 0 !important;
-  max-width: none !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-select {
-  width: 3.5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-id {
-  width: 5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-flag {
-  width: 3.5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-name {
-  width: 15% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-nationality {
-  width: 10% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-age {
-  width: 4.5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-positions {
-  width: 8% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-seasons {
-  width: 5.5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-stat {
-  width: 7.5% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-agent {
-  width: 13% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-contract-revenue {
-  width: 10% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-contract-club {
-  width: 18% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-contract-division {
-  width: 14% !important;
-}
-
-.appShell:not(.menuClosed) .tableScroller .col-link {
-  width: 4% !important;
-}
-
 .appShell:not(.menuClosed) .tableScroller th,
-.appShell:not(.menuClosed) .tableScroller td {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-/* v1.149.65 - Use numeric endpoints in both sidebar directions */
-.appShell.menuAnimating .tableScroller table,
-.appShell.menuAnimating .tableScroller col {
-  transition: width 220ms ease, min-width 220ms ease !important;
-}
-
-.appShell.menuClosed .tableScroller table {
-  width: 100% !important;
-  min-width: 1240px !important;
-  table-layout: fixed;
-}
-
-.appShell.menuClosed .tableScroller .col-select {
-  width: 51.09px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-id {
-  width: 68.13px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-flag {
-  width: 45.41px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-name {
-  width: 212.89px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-nationality {
-  width: 141.92px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-age {
-  width: 65.28px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-positions {
-  width: 119.22px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-seasons {
-  width: 82.31px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-stat {
-  width: 107.86px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-agent {
-  width: 187.34px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-contract-revenue {
-  width: 140px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-contract-club {
-  width: 227.16px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-contract-division {
-  width: 280px !important;
-}
-
-.appShell.menuClosed .tableScroller .col-link {
-  width: 48.39px !important;
-}
-
+.appShell:not(.menuClosed) .tableScroller td,
 .appShell.menuClosed .tableScroller th,
 .appShell.menuClosed .tableScroller td {
   padding-left: 4px;
@@ -5240,10 +4950,6 @@ td a {
 }
 
 /* v1.149.66 - Preserve cell alignment for the full sidebar transition */
-.appShell .tableScroller table {
-  table-layout: fixed;
-}
-
 .appShell .tableScroller th,
 .appShell .tableScroller td {
   vertical-align: middle;
@@ -5264,20 +4970,7 @@ td a {
   text-align: center;
 }
 
-/* v1.149.67 - Keep the checkbox column visible during sidebar transitions */
-.appShell .tableScroller .col-select {
-  width: max(3.5%, 44px) !important;
-  min-width: 44px !important;
-}
-
-.appShell.menuAnimating .tableScroller .col-select {
-  width: 44px !important;
-  min-width: 44px !important;
-}
-
 .appShell .tableScroller .selectionCell {
-  min-width: 44px;
-  width: 44px;
   padding-left: 4px;
   padding-right: 4px;
   text-align: center;
@@ -5470,11 +5163,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   overflow: visible !important;
 }
 
-#progressionPage .tableScroller table {
-  table-layout: fixed !important;
-  border-spacing: 0 !important;
-}
-
 #progressionPage .tableScroller table,
 #progressionPage .tableScroller col,
 #progressionPage .tableScroller th,
@@ -5482,17 +5170,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
   transition: none !important;
   animation: none !important;
 }
-
-#progressionPage .tableScroller .col-shared-width-filler,
-#progressionPage .tableScroller .col-stable-width-filler,
-#progressionPage .tableScroller .col-exact-width-filler {
-  padding: 0 !important;
-  border-left: 0 !important;
-  border-right: 0 !important;
-  background: inherit !important;
-  pointer-events: none !important;
-}
-
 
 @media (prefers-reduced-motion: reduce) {
   #progressionPage {
@@ -5575,11 +5252,6 @@ body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
 
 #progressionPage .tableScroller thead th:last-child {
   border-top-right-radius: inherit;
-}
-
-html.table-layout-pending #progressionPage .tableScroller:not(.tableWidthsReady) table,
-body.tableLayoutPending #progressionPage .tableScroller:not(.tableWidthsReady) table {
-  visibility: hidden !important;
 }
 
 /* v1.150.8 - Content-area pagination and stable initial table width */
