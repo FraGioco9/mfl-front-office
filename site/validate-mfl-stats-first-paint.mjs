@@ -16,6 +16,17 @@ const [indexHtml, bootstrap, routeChunks, styles, stylesBase, responsive] = awai
   read("./responsive.css"),
 ]);
 
+includes(
+  indexHtml,
+  '<div id="databaseStatsOverallFilters" class="mflStatsFilterButtons">',
+  "Database Stats Overall Filters must use the shared Stats filter container.",
+);
+includes(
+  indexHtml,
+  '<div id="mflStatsOverallFilters" class="mflStatsFilterButtons">',
+  "MFL Stats Overall Filters must use the same shared Stats filter container as Database Stats.",
+);
+
 const filterStart = indexHtml.indexOf('<div id="mflStatsOverallFilters" class="mflStatsFilterButtons">');
 const filterEnd = filterStart >= 0 ? indexHtml.indexOf("</div>", filterStart) : -1;
 invariant(filterStart >= 0 && filterEnd > filterStart, "MFL Stats Overall Filters must exist in the base HTML.");
@@ -83,12 +94,17 @@ excludes(
 includes(
   stylesBase,
   ".mflStatsFilterButton {\n  width: 86px;\n  height: 26px;",
-  "Desktop first paint must use the canonical loaded MFL Stats filter dimensions.",
+  "Both Stats pages must inherit one shared intrinsic Overall-filter button size.",
 );
 includes(
+  styles,
+  ".mflStatsFilterButton {\n  flex: 1 1 auto;\n}",
+  "Both Stats pages must use the same shared flex-growth rule so Overall filters fill the available box width from first paint.",
+);
+excludes(
   responsive,
-  ".mflStatsFilterButton {\n    width: 100%;\n    min-width: 0;\n    height: 34px;",
-  "Responsive first paint must use the canonical loaded MFL Stats filter dimensions.",
+  ".mflStatsFilterButton {",
+  "Responsive layout must not assign a second Overall-filter button size or replace the shared first-paint button rule.",
 );
 excludes(
   styles,
@@ -101,4 +117,4 @@ excludes(
   "MFL Stats first paint must not depend on a container-query sizing patch.",
 );
 
-console.log("MFL Stats Overall Filters are real static controls at first paint and are hydrated in place after loading.");
+console.log("Database Stats and MFL Stats share the same full-width Overall-filter layout from first paint through hydration.");
