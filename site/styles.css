@@ -12,9 +12,7 @@
   --mfl-page-title-margin-block-end: 12px;
   --mfl-page-title-line-height: 1.2;
 
-  /* Global table geometry contract. First paint, loading state, loaded rows,
-   * and route switches all resolve these same dimensions. */
-  --mfl-table-mobile-width: 1560px;
+  /* Uniform Width. This is the only numeric column-width contract. */
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 38px;
   --mfl-table-col-select: 2.75%;
@@ -56,28 +54,28 @@
   --mfl-advanced-player-col-value: 6.4%;
 }
 
-/* Shared table-route percentages: Database, MFL, Progression, Agents,
- * Watchlist, My Players, and Clubs all use these semantic column classes. */
-table col.col-select { width: var(--mfl-table-col-select); min-width: 0; max-width: none; }
-table col.col-id { width: var(--mfl-table-col-id); min-width: 0; max-width: none; }
-table col.col-flag { width: var(--mfl-table-col-flag); min-width: 0; max-width: none; }
-table col.col-name { width: var(--mfl-table-col-name); min-width: 0; max-width: none; }
-table col.col-nationality { width: var(--mfl-table-col-nationality); min-width: 0; max-width: none; }
-table col.col-age { width: var(--mfl-table-col-age); min-width: 0; max-width: none; }
-table col.col-positions { width: var(--mfl-table-col-positions); min-width: 0; max-width: none; }
-table col.col-seasons { width: var(--mfl-table-col-seasons); min-width: 0; max-width: none; }
-table col.col-stat { width: var(--mfl-table-col-stat); min-width: 0; max-width: none; }
-table col.col-overall { width: var(--mfl-table-col-overall); min-width: 0; max-width: none; }
-table col.col-contract-revenue { width: var(--mfl-table-col-contract-revenue); min-width: 0; max-width: none; }
-table col.col-contract-club { width: var(--mfl-table-col-contract-club); min-width: 0; max-width: none; }
-table col.col-contract-division { width: var(--mfl-table-col-contract-division); min-width: 0; max-width: none; }
-table col.col-agent { width: var(--mfl-table-col-agent); min-width: 0; max-width: none; }
-table col.col-joined-agency { width: var(--mfl-table-col-joined-agency); min-width: 0; max-width: none; }
-table col.col-owned-since { width: var(--mfl-table-col-owned-since); min-width: 0; max-width: none; }
-table col.col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
+/* Uniform Width owns both the colgroup and the corresponding header/data
+ * cells. No later render phase can introduce a second width input. */
+#progressionPage .playerTableScroller :is(col, th, td).col-select { width: var(--mfl-table-col-select); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-id { width: var(--mfl-table-col-id); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-flag { width: var(--mfl-table-col-flag); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-name { width: var(--mfl-table-col-name); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-nationality { width: var(--mfl-table-col-nationality); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-age { width: var(--mfl-table-col-age); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-positions { width: var(--mfl-table-col-positions); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-seasons { width: var(--mfl-table-col-seasons); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-stat { width: var(--mfl-table-col-stat); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-overall { width: var(--mfl-table-col-overall); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-contract-revenue { width: var(--mfl-table-col-contract-revenue); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-contract-club { width: var(--mfl-table-col-contract-club); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-contract-division { width: var(--mfl-table-col-contract-division); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-agent { width: var(--mfl-table-col-agent); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-joined-agency { width: var(--mfl-table-col-joined-agency); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-owned-since { width: var(--mfl-table-col-owned-since); min-width: 0; max-width: none; }
+#progressionPage .playerTableScroller :is(col, th, td).col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
 
-/* The player table uses a dedicated scroller so historical generic
- * .tableScroller rules cannot become a second geometry owner. */
+/* The player table has a dedicated scroller so historical generic
+ * .tableScroller rules are outside the live player-table cascade. */
 #progressionPage .playerTableScroller {
   width: 100%;
   min-width: 0;
