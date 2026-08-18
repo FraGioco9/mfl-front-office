@@ -65,7 +65,7 @@ const evaluationSeason = [
   "--mfl-evaluation-season-col-value",
 ].reduce((sum, name) => sum + percentageVariable(name), 0);
 const advancedPlayer = percentageVariable("--mfl-advanced-player-col-label")
-  + (16 * percentageVariable("--mfl-advanced-player-col-value"));
+  + (15 * percentageVariable("--mfl-advanced-player-col-value"));
 
 invariant(Math.abs(evaluationSummary - 100) < 0.0001, "Evaluation Summary columns must total 100%.");
 invariant(Math.abs(evaluationSeason - 100) < 0.0001, "Evaluation season columns must total 100%.");
