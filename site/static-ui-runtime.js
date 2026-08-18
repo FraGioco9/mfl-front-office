@@ -70,29 +70,6 @@
     active_contract_club_division: "col-contract-division",
     player_link: "col-link",
   });
-  const STATIC_TABLE_COLUMN_WIDTHS = Object.freeze({
-    selection: 51.09,
-    player_id: 68.13,
-    nationality_flag: 45.41,
-    name: 212.89,
-    nationality: 141.92,
-    age: 65.28,
-    positions: 119.22,
-    player_seasons: 82.31,
-    overall: 107.86,
-    pace: 107.86,
-    shooting: 107.86,
-    passing: 107.86,
-    dribbling: 107.86,
-    defense: 107.86,
-    physical: 107.86,
-    wallet_name: 187.34,
-    owned_since: 187.34,
-    active_contract_revenue_share: 140,
-    active_contract_club_name: 227.16,
-    active_contract_club_division: 280,
-    player_link: 48.39,
-  });
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
     gap: 8,
@@ -265,15 +242,6 @@
     return { sortKey: "overall", sortDirection: route.view === "next" ? "asc" : "desc" };
   }
 
-  function applyStaticTableColumnWidth(element, width) {
-    if (!(element instanceof HTMLElement) || !Number.isFinite(width)) return 0;
-    const pixelWidth = `${width}px`;
-    element.style.width = pixelWidth;
-    element.style.minWidth = pixelWidth;
-    element.style.maxWidth = pixelWidth;
-    return width;
-  }
-
   function tryCanonicalTableHeader(route, signature) {
     try {
       return Boolean(window.eval(`(() => {
@@ -288,7 +256,6 @@
         if (!(head instanceof HTMLTableSectionElement) || !head.rows[0]) return false;
         head.dataset.mflHeaderSignature = ${JSON.stringify(signature)};
         delete head.dataset.mflStaticHeader;
-        window.__mflTableWidthRuntime?.apply?.();
         return true;
       })()`));
     } catch {
@@ -305,7 +272,6 @@
     const sort = staticTableSortState(route);
     const signature = [route.page, route.view, sort.sortKey, sort.sortDirection].join("|");
     if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader !== "true") {
-      window.__mflTableWidthRuntime?.apply?.();
       return true;
     }
     if (tryCanonicalTableHeader(route, signature)) return true;
@@ -341,24 +307,16 @@
     });
 
     const columnFragment = document.createDocumentFragment();
-    let totalWidth = 0;
     const selectionColumn = document.createElement("col");
-    totalWidth += applyStaticTableColumnWidth(selectionColumn, STATIC_TABLE_COLUMN_WIDTHS.selection);
+    selectionColumn.className = "col-select";
     columnFragment.appendChild(selectionColumn);
     columns.forEach((column) => {
       const col = document.createElement("col");
       const columnClass = staticTableColumnClass(column);
       if (columnClass) col.classList.add(...columnClass.split(" "));
-      totalWidth += applyStaticTableColumnWidth(col, STATIC_TABLE_COLUMN_WIDTHS[column]);
       columnFragment.appendChild(col);
     });
 
-    const table = colGroup.closest("table");
-    if (table instanceof HTMLTableElement) {
-      const pixelWidth = `${totalWidth}px`;
-      table.style.width = pixelWidth;
-      table.style.minWidth = pixelWidth;
-    }
     colGroup.replaceChildren(columnFragment);
     head.replaceChildren(headerRow);
     head.dataset.mflHeaderSignature = signature;
