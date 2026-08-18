@@ -15,6 +15,12 @@
     'input[type="checkbox"]',
     'input[type="radio"]',
   ].join(", ");
+  const ACTIVE_PAGE_VIEW_FILTER_SELECTOR = [
+    "#sidebar .navButton.active[data-page]",
+    ".viewButton.active[data-view]",
+    ".mflStatsFilterButton.active",
+    ".mflStatsDistributionModeButton.active",
+  ].join(", ");
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
 
   let pointerFocusedControl = null;
@@ -34,6 +40,23 @@
   function showAddFilterButton() {
     const button = document.getElementById("showAddFilterButton");
     return button instanceof HTMLButtonElement ? button : null;
+  }
+
+  function activePageViewFilterControl(target) {
+    if (!(target instanceof Element)) return null;
+    const control = target.closest(ACTIVE_PAGE_VIEW_FILTER_SELECTOR);
+    if (!(control instanceof HTMLElement) || control.hidden) return null;
+    if (control instanceof HTMLButtonElement && control.disabled) return null;
+    return control;
+  }
+
+  function consumeActivePageViewFilterEvent(event) {
+    const control = activePageViewFilterControl(event.target);
+    if (!control) return false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (document.activeElement === control) control.blur();
+    return true;
   }
 
   function buttonGestureFromTarget(target) {
@@ -113,6 +136,7 @@
   }
 
   function onClick(event) {
+    if (consumeActivePageViewFilterEvent(event)) return;
     if (suppressDraggedClick(event)) return;
 
     const target = event.target instanceof Element ? event.target : null;
@@ -154,11 +178,15 @@
   }
 
   function onPointerDown(event) {
-    pointerFocusedControl = pointerControlFromTarget(event.target);
     clearGesture();
     clearClickSuppression();
     if (event.isPrimary === false || event.button !== 0) return;
+    if (consumeActivePageViewFilterEvent(event)) {
+      pointerFocusedControl = null;
+      return;
+    }
 
+    pointerFocusedControl = pointerControlFromTarget(event.target);
     gestureStartControl = buttonGestureFromTarget(event.target);
     gesturePointerId = event.pointerId;
     gestureStartX = event.clientX;
