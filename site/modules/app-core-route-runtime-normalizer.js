@@ -223,6 +223,93 @@ const CORE_RUNTIME_CONTRACT = `;(() => {
     }
   }
 
+  function evaluationRecentPlayerIds() {
+    return Array.isArray(state.recentEvaluationPlayerIds)
+      ? normalizeIdList(state.recentEvaluationPlayerIds, 5)
+      : [];
+  }
+
+  function setEvaluationRecentPlayerIds(ids) {
+    state.recentEvaluationPlayerIds = normalizeIdList(Array.isArray(ids) ? ids : [], 5);
+    return [...state.recentEvaluationPlayerIds];
+  }
+
+  function evaluationSearchEntry(playerId) {
+    const key = String(playerId || "").trim();
+    if (!key || !Array.isArray(state.evaluationSearchIndex)) return null;
+    return state.evaluationSearchIndex.find((item) => String(item?.playerId || "") === key) || null;
+  }
+
+  function buildEvaluationRecentEntries(payload) {
+    const columns = Array.isArray(payload?.columns) ? payload.columns : [];
+    const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+    if (typeof buildPlayerSearchEntryFromCompactRow !== "function") return [];
+    return rows
+      .map((row) => buildPlayerSearchEntryFromCompactRow(row, columns))
+      .filter((entry) => entry && !entry.retired);
+  }
+
+  async function persistEvaluationRecentPlayerIds(ids) {
+    setEvaluationRecentPlayerIds(ids);
+    if (state.walletPreferencesSaveTimer) {
+      window.clearTimeout(state.walletPreferencesSaveTimer);
+      state.walletPreferencesSaveTimer = null;
+    }
+    if (!state.linkedWalletAddress
+      || typeof hasWalletProof !== "function"
+      || !hasWalletProof()
+      || typeof saveWalletPreferencesNow !== "function") {
+      return false;
+    }
+    try {
+      await saveWalletPreferencesNow();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function installEvaluationRecentRowsOwner(provider) {
+    if (typeof recentEvaluationRows !== "function" || typeof provider !== "function") return false;
+    if (recentEvaluationRows.__mflSupabaseOnly) return true;
+    const supabaseRecentRows = function() {
+      const entries = provider();
+      return Array.isArray(entries) ? entries.slice(0, 5) : [];
+    };
+    Object.defineProperty(supabaseRecentRows, "__mflSupabaseOnly", { value: true });
+    recentEvaluationRows = supabaseRecentRows;
+    return true;
+  }
+
+  function installEvaluationEmptySearchOwner(restore) {
+    if (typeof requestDatabaseSearch !== "function" || typeof restore !== "function") return false;
+    if (requestDatabaseSearch.__mflEvaluationSupabaseOnly) return true;
+    const originalRequestDatabaseSearch = requestDatabaseSearch;
+    const supabaseOnlyRequestDatabaseSearch = function(rawQuery = "", type = "all", options = {}) {
+      if (type === "players" && !String(rawQuery || "").trim()) {
+        return Promise.resolve(restore(Boolean(options?.force)));
+      }
+      return originalRequestDatabaseSearch.apply(this, arguments);
+    };
+    Object.defineProperty(supabaseOnlyRequestDatabaseSearch, "__mflEvaluationSupabaseOnly", { value: true });
+    requestDatabaseSearch = supabaseOnlyRequestDatabaseSearch;
+    return true;
+  }
+
+  function installEvaluationRecentWriteOwner(commit) {
+    if (typeof rememberEvaluationResult !== "function" || typeof commit !== "function") return false;
+    if (rememberEvaluationResult.__mflSupabaseImmediate) return true;
+    const originalRememberEvaluationResult = rememberEvaluationResult;
+    const supabaseImmediateRememberEvaluationResult = function(playerId) {
+      const result = originalRememberEvaluationResult.apply(this, arguments);
+      commit(playerId);
+      return result;
+    };
+    Object.defineProperty(supabaseImmediateRememberEvaluationResult, "__mflSupabaseImmediate", { value: true });
+    rememberEvaluationResult = supabaseImmediateRememberEvaluationResult;
+    return true;
+  }
+
   function installEvaluationRecentStateOwnership() {
     if (typeof restoreRecentEvaluationState !== "function"
       || typeof persistRecentSearchStates !== "function"
@@ -294,6 +381,14 @@ const CORE_RUNTIME_CONTRACT = `;(() => {
     resetCurrentEvaluationSelection,
     applySearchPayload,
     invalidateDatabaseSearch,
+    evaluationRecentPlayerIds,
+    setEvaluationRecentPlayerIds,
+    evaluationSearchEntry,
+    buildEvaluationRecentEntries,
+    persistEvaluationRecentPlayerIds,
+    installEvaluationRecentRowsOwner,
+    installEvaluationEmptySearchOwner,
+    installEvaluationRecentWriteOwner,
     installEvaluationRecentStateOwnership,
   });
 })();`;
