@@ -143,6 +143,14 @@ invariant(
   "The Players table must never enter the historical generic tableScroller width cascade, even before bootstrap.",
 );
 
+const canonicalContractColumns = [
+  "overall",
+  "active_contract_club_name",
+  "active_contract_club_division",
+  "active_contract_revenue_share",
+];
+const canonicalContractBlock = canonicalContractColumns.map((column) => `    "${column}",`).join("\n");
+
 invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not switch table scroller classes after first paint.");
 invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(bootstrap.includes("function primeInitialTableStructure(page, view) {"), "Bootstrap must build first-paint table structure synchronously.");
@@ -150,8 +158,8 @@ invariant(bootstrap.includes('selectionCol.className = "col-select";'), "First-p
 invariant(bootstrap.includes('selectionHeader.className = "selectionCell";'), "First-paint selection header must not carry a column-width class.");
 invariant(!bootstrap.includes('selectionHeader.className = "selectionCell col-select";'), "Selection width must belong to the colgroup, not the header cell.");
 invariant(
-  bootstrap.includes('const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([\n    "overall",\n    "active_contract_revenue_share",\n    "active_contract_club_name",\n    "active_contract_club_division",\n  ]);'),
-  "Contracts first paint must use the same semantic column order as the application core.",
+  bootstrap.includes(`const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([\n${canonicalContractBlock}\n  ]);`),
+  "Contracts first paint must use the canonical semantic column order.",
 );
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
 invariant(!bootstrap.includes("cell.colSpan = 16"), "First-paint loading rows must not collapse the table into one colspan cell.");
@@ -191,8 +199,14 @@ invariant(
   "Static UI must not own or apply player table widths during startup.",
 );
 invariant(
-  staticUiRuntime.includes('selectionColumn.className = "col-select";'),
-  "Static UI colgroup reconstruction must preserve the Uniform Width selection class.",
+  staticUiRuntime.includes(`const STATIC_TABLE_CONTRACT_COLUMNS = Object.freeze([\n${canonicalContractBlock}\n  ]);`),
+  "Static UI Contracts columns must use the same canonical order as bootstrap and core.",
+);
+invariant(
+  staticUiRuntime.includes('const targetClasses = ["col-select", ...columns.map((column) => staticTableColumnClass(column))];')
+  && staticUiRuntime.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
+  && staticUiRuntime.includes("if (!alreadyCanonical) {"),
+  "Static UI must not rebuild an already-canonical colgroup.",
 );
 
 invariant(
