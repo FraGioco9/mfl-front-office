@@ -219,27 +219,12 @@ includes(
 includes(
   bootstrapCore,
   "window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;",
-  "The canonical Uniform Loading Workflow name must point at the existing global loading controller rather than creating a competing owner.",
-);
-includes(
-  bootstrapCore,
-  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
-  "The Uniform Loading Workflow must own the pre-transition navigation-pending state.",
+  "The canonical Uniform Loading Workflow name must point at the global loading controller rather than creating a competing owner.",
 );
 includes(
   bootstrapCore,
   '"startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime",',
   "Page transitions, view transitions, Watchlist switches, and lazy route-runtime loading must all participate in the same data-loading lifecycle.",
-);
-includes(
-  bootstrapCore,
-  'html.${NAVIGATION_PENDING_CLASS} #progressionPage nav.pager,',
-  "Pagination must be hidden from navigation intent, before the route transition handler begins.",
-);
-includes(
-  bootstrapCore,
-  'html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }',
-  "Pagination must remain hidden for the entire Uniform Loading Workflow and appear only after loading ends.",
 );
 includes(
   bootstrapCore,
@@ -253,13 +238,33 @@ includes(
 );
 includes(
   bootstrapCore,
-  "window.__mflTableLoadingRuntime?.sync?.();",
-  "Table loading presentation must synchronize in the same turn as Uniform Loading Workflow token changes rather than waiting only for a MutationObserver.",
+  "const subscribers = new Set();",
+  "Uniform Loading Workflow must publish state directly to loading consumers.",
 );
 includes(
   bootstrapCore,
-  'html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }',
-  "Watchlist count can remain data-loading scoped while pagination follows the full Uniform Loading Workflow.",
+  "function subscribe(callback, options = {}) {",
+  "Loading consumers must subscribe to the controller instead of observing DOM state.",
+);
+includes(
+  bootstrapCore,
+  'window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));',
+  "Uniform Loading Workflow must expose one explicit loading-state event for decoupled consumers.",
+);
+includes(
+  bootstrapCore,
+  "snapshot: () => currentSnapshot,",
+  "Loading consumers must be able to read the canonical immutable state snapshot.",
+);
+excludes(
+  bootstrapCore,
+  'document.createElement("style")',
+  "The loading controller must not inject runtime CSS.",
+);
+excludes(
+  bootstrapCore,
+  "window.__mflTableLoadingRuntime?.sync?.();",
+  "The loading controller must notify subscribers rather than directly repairing table presentation.",
 );
 excludes(
   bootstrapCore,
@@ -270,7 +275,7 @@ excludes(
 includes(
   controlInteractions,
   'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
-  "Universal control interactions must share the pre-transition loading-state name with the busy controller.",
+  "Universal control interactions must retain the pre-transition navigation-intent marker until navigation ownership is consolidated.",
 );
 includes(
   controlInteractions,
@@ -303,4 +308,4 @@ includes(
   "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, named Uniform Loading Workflow, synchronous table loading, placeholders, and startup ownership validation passed.");
+console.log("Bootstrap first-paint shells, canonical Uniform Loading Workflow snapshots, placeholders, and startup ownership validation passed.");

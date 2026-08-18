@@ -49,7 +49,6 @@
 
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
-    const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set([
       "startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
@@ -66,38 +65,44 @@
       ".searchBody", ".filterBuilder", ".advancedSettingsBody",
     ].join(", ");
     const activeTokens = new Map();
+    const subscribers = new Set();
     let sequence = 0;
     let interactionListenersBound = false;
+    let currentSnapshot = Object.freeze({
+      busy: false,
+      dataLoading: false,
+      reasons: Object.freeze([]),
+    });
 
-    const style = document.createElement("style");
-    style.id = "mflInteractionBusyStyles";
-    style.textContent = `
-      html.${BUSY_CLASS}, html.${BUSY_CLASS} body, html.${BUSY_CLASS} body *,
-      html.${BUSY_CLASS} body *::before, html.${BUSY_CLASS} body *::after { cursor: wait; }
-      html.${BUSY_CLASS} body * { pointer-events: none; }
-      html.${BUSY_CLASS} body *, html.${BUSY_CLASS} body *::before, html.${BUSY_CLASS} body *::after {
-        transition: none; animation: none;
-      }
-      html.${BUSY_CLASS} body::after {
-        content: ""; position: fixed; inset: 0; z-index: 2147483647; background: transparent;
-        pointer-events: auto; cursor: wait; transition: none; animation: none;
-      }
-      html.${NAVIGATION_PENDING_CLASS} #progressionPage nav.pager,
-      html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }
-      html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }
-    `;
-    document.head.appendChild(style);
+    function makeSnapshot() {
+      const reasons = Object.freeze(Array.from(activeTokens.values()));
+      return Object.freeze({
+        busy: reasons.length > 0,
+        dataLoading: reasons.some((reason) => DATA_LOADING_REASONS.has(reason)),
+        reasons,
+      });
+    }
+
+    function notifySubscribers(snapshot) {
+      subscribers.forEach((subscriber) => {
+        try {
+          subscriber(snapshot);
+        } catch (error) {
+          console.warn("Loading-state subscriber failed.", error);
+        }
+      });
+      window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));
+    }
 
     function applyState() {
-      const busy = activeTokens.size > 0;
-      const dataLoading = Array.from(activeTokens.values()).some((reason) => DATA_LOADING_REASONS.has(reason));
-      if (busy) bindInteractionBlockers();
+      currentSnapshot = makeSnapshot();
+      if (currentSnapshot.busy) bindInteractionBlockers();
       else unbindInteractionBlockers();
-      document.documentElement.classList.toggle(BUSY_CLASS, busy);
-      document.documentElement.classList.toggle(DATA_LOADING_CLASS, dataLoading);
-      document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
-      document.body.setAttribute("aria-busy", busy ? "true" : "false");
-      window.__mflTableLoadingRuntime?.sync?.();
+      document.documentElement.classList.toggle(BUSY_CLASS, currentSnapshot.busy);
+      document.documentElement.classList.toggle(DATA_LOADING_CLASS, currentSnapshot.dataLoading);
+      document.documentElement.dataset.interactionBusy = currentSnapshot.busy ? "true" : "false";
+      if (document.body) document.body.setAttribute("aria-busy", currentSnapshot.busy ? "true" : "false");
+      notifySubscribers(currentSnapshot);
     }
 
     function begin(reason = "loading") {
@@ -119,6 +124,13 @@
       } finally {
         end(token);
       }
+    }
+
+    function subscribe(callback, options = {}) {
+      if (typeof callback !== "function") return () => {};
+      subscribers.add(callback);
+      if (options.immediate !== false) callback(currentSnapshot);
+      return () => subscribers.delete(callback);
     }
 
     function eventTargetsBusyScrollSurface(event) {
@@ -187,7 +199,10 @@
       begin,
       end,
       run,
-      isBusy: () => activeTokens.size > 0,
+      subscribe,
+      snapshot: () => currentSnapshot,
+      isBusy: () => currentSnapshot.busy,
+      isDataLoading: () => currentSnapshot.dataLoading,
       installCoreBridge,
     });
   }

@@ -3,11 +3,12 @@
 
   const BLANK_ROW_CLASS = "mflTableLoadingRow";
   const BLANK_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
+  const controller = window.__mflInteractionBusy;
 
   window.__mflTableLoadingRuntime?.destroy?.();
 
   let destroyed = false;
-  let observer = null;
+  let unsubscribe = null;
   let coreBridgeInstalled = false;
 
   function tableRouteActive() {
@@ -33,8 +34,8 @@
     return element instanceof HTMLElement ? element : null;
   }
 
-  function dataLoading() {
-    return document.documentElement.classList.contains("mflDataLoading");
+  function loadingSnapshot() {
+    return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
   }
 
   function blankRowsReady(body, columnCount) {
@@ -99,9 +100,7 @@
     }
 
     const realRowsPresent = hasRealRows(body);
-    if (body.dataset.staticLoading === "true" && realRowsPresent) {
-      return false;
-    }
+    if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
     if (realRowsPresent && !replaceExisting) return false;
 
     const columnCount = Math.max(1, head?.rows[0]?.cells.length || 1);
@@ -133,7 +132,7 @@
       body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => row.remove());
     }
     const page = pager();
-    if (page && !dataLoading()) page.hidden = false;
+    if (page && !loadingSnapshot().dataLoading) page.hidden = false;
   }
 
   function installCoreBridge() {
@@ -199,34 +198,28 @@
     sync();
   }
 
-  function sync() {
+  function sync(snapshot = loadingSnapshot()) {
     if (destroyed) return;
     if (!tableRouteActive()) {
       release();
       return;
     }
-    if (dataLoading()) show({ replaceExisting: true });
+    if (snapshot.dataLoading) show({ replaceExisting: true });
     else release();
   }
 
-  function observe() {
-    observer?.disconnect();
-    observer = new MutationObserver(() => queueMicrotask(sync));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    const body = document.getElementById("tableBody");
-    if (body) observer.observe(body, { childList: true });
+  if (typeof controller?.subscribe === "function") {
+    unsubscribe = controller.subscribe(sync);
+  } else {
+    sync();
   }
 
   function destroy() {
     destroyed = true;
-    observer?.disconnect();
-    observer = null;
-    window.removeEventListener("popstate", sync);
+    unsubscribe?.();
+    unsubscribe = null;
     release();
   }
 
-  observe();
-  window.addEventListener("popstate", sync);
   window.__mflTableLoadingRuntime = Object.freeze({ show, release, sync, installCoreBridge, destroy });
-  sync();
 })();

@@ -1,0 +1,85 @@
+/* Canonical loading-state presentation for MFL Front Office. */
+
+html.mflInteractionBusy,
+html.mflInteractionBusy body {
+  cursor: wait;
+}
+
+html.mflInteractionBusy body *,
+html.mflInteractionBusy body *::before,
+html.mflInteractionBusy body *::after {
+  pointer-events: none;
+  transition: none;
+  animation: none;
+}
+
+html.mflInteractionBusy body main,
+html.mflInteractionBusy body .tableScroller,
+html.mflInteractionBusy body .evaluationLoadList,
+html.mflInteractionBusy body .searchBody,
+html.mflInteractionBusy body .filterBuilder,
+html.mflInteractionBusy body .advancedSettingsBody,
+html.mflInteractionBusy body .sidebar,
+html.mflInteractionBusy body .views,
+html.mflInteractionBusy body .playerAttributeViews,
+html.mflInteractionBusy body .advancedPlayerTableSection,
+html.mflInteractionBusy body .mflStatsAgeDistribution {
+  pointer-events: auto;
+}
+
+html.mflInteractionBusy body::after {
+  content: "";
+  display: block;
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  background: transparent;
+  pointer-events: auto;
+  cursor: wait;
+  transition: none;
+  animation: none;
+}
+
+html.mflNavigationPending #progressionPage nav.pager,
+html.mflInteractionBusy #progressionPage nav.pager {
+  display: none;
+}
+
+html.mflDataLoading #progressionPage #watchlistPlayerCount {
+  display: none;
+}
+
+html.mflTableScrolling #progressionPage .tableScroller tbody {
+  pointer-events: none;
+}
+
+.siteFooter.mflLoadingLocked,
+.siteFooter.mflLoadingLocked * {
+  pointer-events: none;
+  cursor: default;
+  transition: none;
+  animation: none;
+}
+
+.siteFooter.mflLoadingLocked a,
+.siteFooter.mflLoadingLocked a:hover,
+.siteFooter.mflLoadingLocked a:focus,
+.siteFooter.mflLoadingLocked a:focus-visible,
+.siteFooter.mflLoadingLocked a:active {
+  color: var(--text);
+  text-decoration: none;
+  transform: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.toastMessage {
+  z-index: 2147483647;
+}
+
+#mflLoadingToast,
+.toastMessage[data-mfl-retiring-toast="true"] {
+  pointer-events: none;
+  user-select: none;
+}

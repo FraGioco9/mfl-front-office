@@ -3,6 +3,7 @@
 @import url("/dropdowns.css");
 @import url("/controls.css");
 @import url("/footer.css");
+@import url("/loading.css");
 
 :root {
   --mfl-pager-block-padding: 12px;
@@ -226,41 +227,6 @@ html:has(body > .modalBackdrop:not([hidden])) body,
 html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   overflow: hidden;
   overscroll-behavior: none;
-}
-
-html.mflInteractionBusy,
-html.mflInteractionBusy body,
-html.mflInteractionBusy body *,
-html.mflInteractionBusy body *::before,
-html.mflInteractionBusy body *::after {
-  cursor: wait;
-}
-
-html.mflInteractionBusy body * {
-  pointer-events: none;
-}
-
-html.mflInteractionBusy body *,
-html.mflInteractionBusy body *::before,
-html.mflInteractionBusy body *::after {
-  transition: none;
-  animation: none;
-}
-
-html.mflInteractionBusy body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647;
-  background: transparent;
-  pointer-events: auto;
-  cursor: wait;
-  transition: none;
-  animation: none;
-}
-
-html.mflDataLoading #progressionPage #watchlistPlayerCount {
-  display: none;
 }
 
 .retirementMarker[data-tooltip="1 year left"],

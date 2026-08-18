@@ -4,138 +4,19 @@
   window.__mflLoadingToastRuntime?.destroy?.();
 
   const TOAST_ID = "mflLoadingToast";
-  const STYLE_ID = "mflLoadingToastRuntimeStyles";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
+  const controller = window.__mflInteractionBusy;
   let destroyed = false;
-  let observer = null;
-  let layerObserver = null;
+  let unsubscribe = null;
   let tableScrollTimer = 0;
-
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    html.mflInteractionBusy,
-    html.mflInteractionBusy body,
-    html.mflInteractionBusy body *,
-    html.mflInteractionBusy body *::before,
-    html.mflInteractionBusy body *::after,
-    html.mflInteractionBusy body::after {
-      cursor: default !important;
-    }
-
-    /* Controls remain completely non-targetable while loading. The fixed busy
-       shield below becomes the only pointer target, so controls cannot retain
-       hover states while their loading state changes. */
-    html.mflInteractionBusy body *,
-    html.mflInteractionBusy body *::before,
-    html.mflInteractionBusy body *::after {
-      pointer-events: none !important;
-      transition: none !important;
-      animation: none !important;
-    }
-
-    html.mflInteractionBusy body button,
-    html.mflInteractionBusy body button *,
-    html.mflInteractionBusy body [role="button"],
-    html.mflInteractionBusy body [role="button"] * {
-      transition: none !important;
-      animation: none !important;
-    }
-
-    /* Drop the browser's stationary row hover target while the table moves
-       under the pointer. Removing this class after scrolling ends lets the row
-       currently under the pointer become the hover target normally. */
-    html.${TABLE_SCROLL_CLASS} #progressionPage .tableScroller tbody {
-      pointer-events: none;
-    }
-
-    /* The footer is never an interactive loading surface. Keep its normal
-       resting appearance and suppress link hover/focus/active paint entirely. */
-    .siteFooter.${FOOTER_LOCK_CLASS},
-    .siteFooter.${FOOTER_LOCK_CLASS} * {
-      pointer-events: none !important;
-      cursor: default !important;
-      transition: none !important;
-      animation: none !important;
-    }
-
-    .siteFooter.${FOOTER_LOCK_CLASS} a,
-    .siteFooter.${FOOTER_LOCK_CLASS} a:hover,
-    .siteFooter.${FOOTER_LOCK_CLASS} a:focus,
-    .siteFooter.${FOOTER_LOCK_CLASS} a:focus-visible,
-    .siteFooter.${FOOTER_LOCK_CLASS} a:active {
-      color: var(--text) !important;
-      text-decoration: none !important;
-      transform: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-    }
-
-    /* Keep native scrolling available while descendants remain non-targetable.
-       The busy shield still owns pointer hover, so these scroll surfaces cannot
-       expose hover animation on the controls they contain. */
-    html.mflInteractionBusy body main,
-    html.mflInteractionBusy body .tableScroller,
-    html.mflInteractionBusy body .evaluationLoadList,
-    html.mflInteractionBusy body .searchBody,
-    html.mflInteractionBusy body .filterBuilder,
-    html.mflInteractionBusy body .advancedSettingsBody,
-    html.mflInteractionBusy body .sidebar,
-    html.mflInteractionBusy body .views,
-    html.mflInteractionBusy body .playerAttributeViews,
-    html.mflInteractionBusy body .advancedPlayerTableSection,
-    html.mflInteractionBusy body .mflStatsAgeDistribution {
-      pointer-events: auto !important;
-    }
-
-    /* The fixed shield is the sole pointer target during loading. This clears
-       any stationary :hover state immediately (notably Evaluation's Load button)
-       while still sitting below application toasts. */
-    html.mflInteractionBusy body::after {
-      content: "" !important;
-      display: block !important;
-      visibility: visible !important;
-      position: fixed !important;
-      inset: 0 !important;
-      z-index: 2147483646 !important;
-      background: transparent !important;
-      pointer-events: auto !important;
-      cursor: wait !important;
-      transition: none !important;
-      animation: none !important;
-    }
-
-    /* Toasts are application-level feedback and must remain visible over every
-       modal, backdrop and busy shield. Keep the shield one layer below them. */
-    .toastMessage {
-      z-index: 2147483647 !important;
-    }
-
-    #${TOAST_ID} {
-      pointer-events: none !important;
-      user-select: none;
-    }
-
-    .toastMessage[data-mfl-retiring-toast="true"] {
-      pointer-events: none !important;
-      user-select: none;
-    }
-  `;
-  document.head.appendChild(style);
-
-  function openModalHost() {
-    const modals = Array.from(document.querySelectorAll(".modalBackdrop:not([hidden])"))
-      .filter((modal) => modal instanceof HTMLElement);
-    return modals.at(-1) || null;
-  }
 
   function positionToast(toast) {
     if (!(toast instanceof HTMLElement)) return;
     const mobile = window.matchMedia("(max-width: 900px)").matches;
     const viewport = window.visualViewport;
     if (mobile && viewport) {
-      toast.style.setProperty("left", `${viewport.offsetLeft + viewport.width / 2}px`, "important");
+      toast.style.left = `${viewport.offsetLeft + viewport.width / 2}px`;
       const layoutHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
       const obscuredBottom = Math.max(0, layoutHeight - viewport.offsetTop - viewport.height);
       toast.style.setProperty("--mfl-visual-viewport-bottom", `${obscuredBottom}px`);
@@ -150,34 +31,27 @@
     }
 
     const rect = main.getBoundingClientRect();
-    if (!(rect.width > 0)) return;
-    toast.style.setProperty("left", `${rect.left + rect.width / 2}px`, "important");
+    if (rect.width > 0) toast.style.left = `${rect.left + rect.width / 2}px`;
   }
 
-  function retireApplicationToast(snapshot, liveToast) {
-    if (!(snapshot instanceof HTMLElement) || !(liveToast instanceof HTMLElement) || !document.body) return;
+  function retireApplicationToast(snapshot) {
+    if (!(snapshot instanceof HTMLElement) || !document.body) return;
 
-    const retiringToast = snapshot;
-    retiringToast.removeAttribute("id");
-    retiringToast.dataset.mflRetiringToast = "true";
-    retiringToast.hidden = false;
-    retiringToast.classList.add("visible");
-    retiringToast.removeAttribute("role");
-    retiringToast.removeAttribute("aria-live");
-    retiringToast.removeAttribute("aria-atomic");
-    retiringToast.setAttribute("aria-hidden", "true");
+    snapshot.removeAttribute("id");
+    snapshot.dataset.mflRetiringToast = "true";
+    snapshot.hidden = false;
+    snapshot.classList.add("visible");
+    snapshot.removeAttribute("role");
+    snapshot.removeAttribute("aria-live");
+    snapshot.removeAttribute("aria-atomic");
+    snapshot.setAttribute("aria-hidden", "true");
+    document.body.appendChild(snapshot);
+    positionToast(snapshot);
 
-    const host = liveToast.parentElement || openModalHost() || document.body;
-    host.appendChild(retiringToast);
-    retiringToast.style.setProperty("z-index", "2147483647", "important");
-    positionToast(retiringToast);
-
-    /* Busy/loading disables CSS transitions globally, so the retiring copy
-       uses WAAPI and cannot be cancelled by that cascade. */
     const removeRetiringToast = () => {
-      if (retiringToast.isConnected) retiringToast.remove();
+      if (snapshot.isConnected) snapshot.remove();
     };
-    const exitAnimation = retiringToast.animate([
+    const exitAnimation = snapshot.animate([
       { opacity: 1, transform: "translate(-50%, 0)" },
       { opacity: 0, transform: "translate(-50%, 14px)" },
     ], {
@@ -196,27 +70,14 @@
       || liveToast.hidden
       || !liveToast.classList.contains("visible")) return;
 
-    const snapshot = liveToast.cloneNode(true);
-    retireApplicationToast(snapshot, liveToast);
-
-    // The live application toast must stop painting immediately; its retiring
-    // copy owns the exit animation while the Loading toast takes its place.
+    retireApplicationToast(liveToast.cloneNode(true));
     liveToast.classList.remove("visible");
-  }
-
-  function syncToastHosts() {
-    if (destroyed || !document.body) return;
-    const host = openModalHost() || document.body;
-    document.querySelectorAll(".toastMessage").forEach((toast) => {
-      if (!(toast instanceof HTMLElement)) return;
-      if (toast.parentElement !== host) host.appendChild(toast);
-      toast.style.setProperty("z-index", "2147483647", "important");
-    });
   }
 
   function ensureToast() {
     let toast = document.getElementById(TOAST_ID);
     if (toast instanceof HTMLElement) return toast;
+    if (!document.body) return null;
 
     toast = document.createElement("div");
     toast.id = TOAST_ID;
@@ -227,28 +88,13 @@
     toast.textContent = "Loading...";
     toast.hidden = true;
     document.body.appendChild(toast);
-    syncToastHosts();
     return toast;
   }
 
-  function interactionBusy() {
-    const root = document.documentElement;
-    return root.classList.contains("mflInteractionBusy")
-      || root.dataset.interactionBusy === "true";
-  }
-
-  function footerLoadingActive() {
-    const root = document.documentElement;
-    return interactionBusy()
-      || root.classList.contains("mflDataLoading")
-      || root.dataset.mflReady !== "true"
-      || document.body?.getAttribute("aria-busy") === "true";
-  }
-
-  function syncFooterLock() {
+  function syncFooterLock(snapshot) {
     const footer = document.querySelector(".siteFooter");
     if (!(footer instanceof HTMLElement)) return;
-    const locked = footerLoadingActive();
+    const locked = Boolean(snapshot?.busy) || document.documentElement.dataset.mflReady !== "true";
     footer.classList.toggle(FOOTER_LOCK_CLASS, locked);
     if (locked) {
       footer.inert = true;
@@ -262,22 +108,23 @@
   }
 
   function toastSuppressed() {
-    // evaluationLoadIntent is owned exclusively by the initial fetch that opens
-    // the saved-evaluations popup. Keep the interaction lock active, but let
-    // the popup's own loading state be the only feedback.
     return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
   }
 
-  function sync() {
+  function loadingSnapshot() {
+    return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
+  }
+
+  function sync(snapshot = loadingSnapshot()) {
+    if (!snapshot || typeof snapshot.busy !== "boolean") snapshot = loadingSnapshot();
     if (destroyed || !document.body) return;
-    syncFooterLock();
+    syncFooterLock(snapshot);
     const toast = ensureToast();
-    syncToastHosts();
+    if (!(toast instanceof HTMLElement)) return;
     positionToast(toast);
-    const busy = interactionBusy();
     const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
-    if (busy && !toastSuppressed()) {
+    if (snapshot.busy && !toastSuppressed()) {
       if (!loadingToastVisible) retireVisibleApplicationToast();
       toast.hidden = false;
       toast.classList.add("visible");
@@ -301,24 +148,10 @@
     tableScrollTimer = window.setTimeout(clearTableScrollHover, 80);
   }
 
-  observer = new MutationObserver(sync);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class", "data-interaction-busy", "data-mfl-ready"],
-  });
-  if (document.body) {
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class", "aria-busy"],
-    });
-
-    layerObserver = new MutationObserver(syncToastHosts);
-    layerObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden"],
-    });
+  if (typeof controller?.subscribe === "function") {
+    unsubscribe = controller.subscribe(sync);
+  } else {
+    sync();
   }
 
   window.addEventListener("mfl:ready", sync);
@@ -326,12 +159,11 @@
   document.addEventListener("scroll", onScroll, true);
   window.visualViewport?.addEventListener("resize", sync, { passive: true });
   window.visualViewport?.addEventListener("scroll", sync, { passive: true });
-  sync();
 
   function destroy() {
     destroyed = true;
-    observer?.disconnect();
-    layerObserver?.disconnect();
+    unsubscribe?.();
+    unsubscribe = null;
     if (tableScrollTimer) window.clearTimeout(tableScrollTimer);
     tableScrollTimer = 0;
     document.documentElement.classList.remove(TABLE_SCROLL_CLASS);
@@ -341,13 +173,6 @@
     window.visualViewport?.removeEventListener("resize", sync);
     window.visualViewport?.removeEventListener("scroll", sync);
     document.querySelectorAll('.toastMessage[data-mfl-retiring-toast="true"]').forEach((toast) => toast.remove());
-    if (document.body) {
-      document.querySelectorAll(".toastMessage").forEach((toast) => {
-        if (toast instanceof HTMLElement && toast.id !== TOAST_ID && toast.parentElement !== document.body) {
-          document.body.appendChild(toast);
-        }
-      });
-    }
     document.getElementById(TOAST_ID)?.remove();
     const footer = document.querySelector(".siteFooter");
     if (footer instanceof HTMLElement) {
@@ -357,7 +182,6 @@
         delete footer.dataset.mflLoadingLocked;
       }
     }
-    style.remove();
   }
 
   window.__mflLoadingToastRuntime = Object.freeze({ sync, destroy });
