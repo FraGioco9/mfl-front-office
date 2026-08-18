@@ -325,7 +325,6 @@ ${linkColumnBranch}`;
   const layoutOnlyClubFinish = `  function finishClubSwitch() {
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
-        if (typeof buildTableColGroup === "function") buildTableColGroup();
         document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
         setClubSwitching(false);
         resolve();
@@ -386,7 +385,7 @@ function removeLegacyTableWidthOwnership(source) {
   const applyWidthStart = normalized.indexOf("function applyTableColWidth(");
   const headerStart = normalized.indexOf("function buildHeader()", applyWidthStart);
   if (applyWidthStart >= 0 && headerStart > applyWidthStart) {
-    const canonicalBuilder = `function buildTableColGroup() {\n  const fragment = document.createDocumentFragment();\n  const selectionCol = document.createElement("col");\n  selectionCol.className = "col-select";\n  fragment.appendChild(selectionCol);\n\n  currentViewColumns().forEach((column) => {\n    const col = document.createElement("col");\n    const columnClass = tableColumnClass(column);\n    if (columnClass) col.classList.add(...columnClass.split(" "));\n    fragment.appendChild(col);\n  });\n\n  tableColGroup.replaceChildren(fragment);\n}\n`;
+    const canonicalBuilder = `function buildTableColGroup() {\n  const targetClasses = [\n    "col-select",\n    ...currentViewColumns().map((column) => tableColumnClass(column)),\n  ];\n  const existingCols = Array.from(tableColGroup.children);\n  const alreadyCanonical = existingCols.length === targetClasses.length\n    && existingCols.every((col, index) => col.className === targetClasses[index]);\n  if (alreadyCanonical) return;\n\n  const fragment = document.createDocumentFragment();\n  targetClasses.forEach((columnClass) => {\n    const col = document.createElement("col");\n    if (columnClass) col.classList.add(...columnClass.split(" "));\n    fragment.appendChild(col);\n  });\n\n  tableColGroup.replaceChildren(fragment);\n}\n`;
     normalized = `${normalized.slice(0, applyWidthStart)}${canonicalBuilder}${normalized.slice(headerStart)}`;
   }
 
