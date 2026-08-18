@@ -16,7 +16,20 @@
   justify-content: center;
   line-height: 1;
   text-align: center;
+}
+
+.viewButton:not([hidden]):not(.active) {
+  cursor: pointer;
+}
+
+.viewButton.active,
+.mflStatsFilterButton,
+.mflStatsDistributionModeButton {
   cursor: default;
+}
+
+.mflStatsFilterButton {
+  flex: 1 1 auto;
 }
 
 @supports (appearance: base-select) {
@@ -365,7 +378,6 @@ html.mflInteractionBusy body::after {
   animation: none;
 }
 
-html.mflDataLoading #progressionPage nav.pager,
 html.mflDataLoading #progressionPage #watchlistPlayerCount {
   display: none;
 }
