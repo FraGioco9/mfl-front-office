@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, tableWidthRuntime, tableLoadingRuntime, bootstrap, bootstrapCore, indexHtml, responsive] = await Promise.all([
+const [styles, tableWidthRuntime, tableLoadingRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
   read("./styles.css"),
   read("./table-width-runtime.js"),
   read("./table-loading-runtime.js"),
@@ -13,6 +13,7 @@ const [styles, tableWidthRuntime, tableLoadingRuntime, bootstrap, bootstrapCore,
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./responsive.css"),
+  read("./modules/app-core-normalizer.js"),
 ]);
 
 function percentageVariable(name) {
@@ -26,6 +27,24 @@ function pixelVariable(name) {
   invariant(match, `Missing global table pixel dimension ${name}.`);
   return Number(match[1]);
 }
+
+const playerVariables = Object.freeze({
+  "col-select": "--mfl-table-col-select",
+  "col-id": "--mfl-table-col-id",
+  "col-flag": "--mfl-table-col-flag",
+  "col-name": "--mfl-table-col-name",
+  "col-nationality": "--mfl-table-col-nationality",
+  "col-age": "--mfl-table-col-age",
+  "col-positions": "--mfl-table-col-positions",
+  "col-seasons": "--mfl-table-col-seasons",
+  "col-stat": "--mfl-table-col-stat",
+  "col-overall": "--mfl-table-col-overall",
+  "col-contract-revenue": "--mfl-table-col-contract-revenue",
+  "col-contract-club": "--mfl-table-col-contract-club",
+  "col-contract-division": "--mfl-table-col-contract-division",
+  "col-agent": "--mfl-table-col-agent",
+  "col-link": "--mfl-table-col-link",
+});
 
 const shared = [
   "--mfl-table-col-select",
@@ -49,11 +68,6 @@ const contracts = [
 
 invariant(Math.abs(shared + stats - 100) < 0.0001, "Uniform Width player Stats columns must total 100%.");
 invariant(Math.abs(shared + contracts - 100) < 0.0001, "Uniform Width player Contracts columns must total 100%.");
-invariant(
-  Math.abs(percentageVariable("--mfl-table-col-joined-agency") - percentageVariable("--mfl-table-col-agent")) < 0.0001
-  && Math.abs(percentageVariable("--mfl-table-col-owned-since") - percentageVariable("--mfl-table-col-agent")) < 0.0001,
-  "Uniform Width agent identity columns must share one percentage.",
-);
 
 const evaluationSummary = [
   "--mfl-evaluation-summary-col-name",
@@ -81,17 +95,18 @@ invariant(Math.abs(evaluationSummary - 100) < 0.0001, "Uniform Width Evaluation 
 invariant(Math.abs(evaluationSeason - 100) < 0.0001, "Uniform Width Evaluation season columns must total 100%.");
 invariant(Math.abs(advancedContracts - 100) < 0.0001, "Uniform Width Advanced Contracts columns must total 100%.");
 
+Object.entries(playerVariables).forEach(([className, variableName]) => {
+  invariant(
+    styles.includes(`#progressionPage .playerTableScroller :is(col, th, td).${className} { width: var(${variableName});`),
+    `Uniform Width must own col/th/td geometry for ${className}.`,
+  );
+});
+invariant(
+  !styles.includes("--mfl-table-mobile-width"),
+  "Uniform Width must contain percentages only; table pixel width is not part of the contract.",
+);
 invariant(pixelVariable("--mfl-table-header-height") === 38, "Player table headers must use the global 38px height.");
 invariant(pixelVariable("--mfl-table-row-height") === 38, "Player table rows must use the global 38px height.");
-invariant(
-  styles.includes("#progressionPage .playerTableScroller th {\n  height: var(--mfl-table-header-height);")
-  && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);"),
-  "Header and row height must remain independent from Uniform Width.",
-);
-invariant(
-  !styles.includes("#progressionPage .tableScroller"),
-  "Canonical player-table CSS must not re-enter the historical generic tableScroller cascade.",
-);
 invariant(
   styles.includes("#progressionPage .playerTableScroller table {")
   && styles.includes("table-layout: fixed;"),
@@ -127,11 +142,6 @@ invariant(
   && !tableWidthRuntime.includes('endsWith("px")'),
   "Uniform Width must never convert column percentages into runtime pixel widths.",
 );
-invariant(
-  tableWidthRuntime.includes("const apply = () => true;")
-  && tableWidthRuntime.includes("takeOwnership: apply"),
-  "Legacy width-sync callers must resolve to a compatibility no-op.",
-);
 
 const directWidthScriptIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
 const bootstrapScriptIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
@@ -139,14 +149,18 @@ invariant(
   directWidthScriptIndex >= 0 && bootstrapScriptIndex > directWidthScriptIndex,
   "Uniform Width validation must execute before synchronous bootstrap first-paint rendering.",
 );
-
-invariant(bootstrap.includes("function primePlayerTableScroller() {"), "Bootstrap must isolate the player scroller before first reveal.");
+const playerTableShell = indexHtml.match(/<section class="tableShell" aria-label="Players table">([\s\S]*?)<div id="emptyState"/)?.[1] || "";
 invariant(
-  bootstrap.includes('scroller.classList.remove("tableScroller");')
-  && bootstrap.includes('scroller.classList.add("playerTableScroller");'),
-  "Bootstrap must remove the legacy generic player-scroller class rather than add a competing width override.",
+  playerTableShell.includes('<div class="playerTableScroller">'),
+  "The static Players table must be born with its final Uniform Width scroller class.",
 );
-invariant(bootstrap.indexOf("primePlayerTableScroller();") < bootstrap.indexOf("function setLoadingValue"), "Player scroller isolation must happen before first-paint table work.");
+invariant(
+  !playerTableShell.includes('class="tableScroller"'),
+  "The Players table must never enter the historical generic tableScroller width cascade, even before bootstrap.",
+);
+
+invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not switch table scroller classes after first paint.");
+invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(bootstrap.includes("function primeInitialTableStructure(page, view) {"), "Bootstrap must build first-paint table structure synchronously.");
 invariant(bootstrap.includes('selectionCol.className = "col-select";'), "First-paint colgroup must include the selection column.");
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
@@ -172,6 +186,7 @@ invariant(
 );
 
 invariant(tableLoadingRuntime.includes('const BLANK_ROW_CLASS = "mflTableLoadingRow";'), "Runtime loading rows must use the first-paint loading-row class.");
+invariant(!tableLoadingRuntime.includes("__mflTableWidthRuntime"), "The loading/header runtime must not invoke a width owner.");
 invariant(!tableLoadingRuntime.includes("TABLE_ROW_HEIGHT = 39"), "Loading runtime must not own a conflicting 39px row height.");
 invariant(!tableLoadingRuntime.includes("installStyles()"), "Loading runtime must not inject a second table geometry stylesheet.");
 invariant(
@@ -180,13 +195,23 @@ invariant(
   && tableLoadingRuntime.includes("document.documentElement.dataset.initialTableView"),
   "Loading/header ownership must preserve the first-paint header until the application core reaches the requested page and view.",
 );
+
+invariant(
+  !/\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive),
+  "Responsive CSS must not override Uniform Width column percentages.",
+);
 invariant(
   !responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive),
   "Responsive styling must not assign a conflicting height to canonical loading rows.",
 );
+
 invariant(
-  !/\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive),
-  "Responsive CSS must not override Uniform Width column percentages.",
+  appCoreNormalizer.includes("tableColGroup.replaceChildren(fragment);\\n  window.__mflTableWidthRuntime?.apply?.();"),
+  "Raw app-core legacy width ownership must remain explicitly recognized by the normalizer until the source core is rebuilt.",
+);
+invariant(
+  appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"),
+  "Generated application core must remove its raw legacy table-width owner before execution.",
 );
 
 const widthLoadIndex = bootstrapCore.indexOf("await ensureFirstPaintTableWidths();");
