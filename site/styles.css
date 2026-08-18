@@ -12,9 +12,11 @@
   --mfl-page-title-margin-block-end: 12px;
   --mfl-page-title-line-height: 1.2;
 
-  /* Global table column contract. All column geometry lives here so first paint,
-   * loading rows, loaded rows, and route switches resolve the same percentages. */
+  /* Global table geometry contract. First paint, loading state, loaded rows,
+   * and route switches all resolve these same dimensions. */
   --mfl-table-mobile-width: 1560px;
+  --mfl-table-header-height: 38px;
+  --mfl-table-row-height: 38px;
   --mfl-table-col-select: 2.75%;
   --mfl-table-col-id: 3.75%;
   --mfl-table-col-flag: 2.5%;
@@ -73,6 +75,34 @@ table col.col-agent { width: var(--mfl-table-col-agent); min-width: 0; max-width
 table col.col-joined-agency { width: var(--mfl-table-col-joined-agency); min-width: 0; max-width: none; }
 table col.col-owned-since { width: var(--mfl-table-col-owned-since); min-width: 0; max-width: none; }
 table col.col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
+
+#progressionPage .tableScroller th {
+  height: var(--mfl-table-header-height);
+  min-height: var(--mfl-table-header-height);
+  line-height: var(--mfl-table-header-height);
+}
+
+#progressionPage .tableScroller td {
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+}
+
+#tableBody > .mflTableLoadingRow,
+#tableBody > .mflTableLoadingRow > td {
+  pointer-events: none;
+  transition: none;
+  animation: none;
+}
+
+#tableBody > .mflTableLoadingRow > td {
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+  padding-top: 0;
+  padding-bottom: 0;
+  background: var(--surface-muted);
+  color: transparent;
+  user-select: none;
+}
 
 .evaluationSummaryTable :is(th, td):nth-child(1) { width: var(--mfl-evaluation-summary-col-name); }
 .evaluationSummaryTable :is(th, td):nth-child(2) { width: var(--mfl-evaluation-summary-col-position); }
