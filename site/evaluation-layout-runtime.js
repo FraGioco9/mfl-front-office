@@ -6,6 +6,8 @@
   let destroyed = false;
   let focusFrame = 0;
   let focusDismissed = false;
+  let savedEvaluationLoadOriginal = null;
+  let savedEvaluationLoadOwner = null;
 
   function evaluationActive() {
     return /^\/evaluation\/?$/i.test(location.pathname);
@@ -30,6 +32,34 @@
   function searchInput() {
     const input = document.getElementById("evaluationSearchInput");
     return input instanceof HTMLInputElement ? input : null;
+  }
+
+  function installSavedEvaluationLoadOwner() {
+    const current = Reflect.get(window, "openSavedEvaluationsModal");
+    if (typeof current !== "function") return false;
+    if (current.__mflEvaluationBusyOwner === true) {
+      savedEvaluationLoadOwner = current;
+      return true;
+    }
+
+    const wrapped = async function openSavedEvaluationsModalWithBusyState(...args) {
+      const input = searchInput();
+      if (input && document.activeElement === input) input.blur();
+
+      const controller = window.__mflInteractionBusy;
+      const token = controller?.begin?.("evaluation-load") || "";
+      try {
+        return await current.apply(this, args);
+      } finally {
+        if (token) controller?.end?.(token);
+      }
+    };
+    Object.defineProperty(wrapped, "__mflEvaluationBusyOwner", { value: true });
+
+    if (!Reflect.set(window, "openSavedEvaluationsModal", wrapped)) return false;
+    savedEvaluationLoadOriginal = current;
+    savedEvaluationLoadOwner = wrapped;
+    return true;
   }
 
   function focusWhenReady() {
@@ -60,11 +90,7 @@
       focusDismissed = false;
       return;
     }
-    if (target?.closest("#openSearchButton, #searchModal, #evaluationMflUsdEditButton")) {
-      focusDismissed = true;
-    } else {
-      focusDismissed = true;
-    }
+    focusDismissed = true;
     const input = searchInput();
     if (input && document.activeElement === input) input.blur();
     queueMicrotask(renderEmptyRecents);
@@ -76,6 +102,7 @@
   }
 
   function onReady() {
+    installSavedEvaluationLoadOwner();
     focusDismissed = false;
     focusWhenReady();
   }
@@ -86,6 +113,7 @@
   }
 
   function sync() {
+    installSavedEvaluationLoadOwner();
     if (!evaluationActive()) {
       focusDismissed = false;
       return;
@@ -101,6 +129,15 @@
     document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("popstate", onPopState);
     window.removeEventListener("mfl:ready", onReady);
+    if (
+      savedEvaluationLoadOwner
+      && savedEvaluationLoadOriginal
+      && Reflect.get(window, "openSavedEvaluationsModal") === savedEvaluationLoadOwner
+    ) {
+      Reflect.set(window, "openSavedEvaluationsModal", savedEvaluationLoadOriginal);
+    }
+    savedEvaluationLoadOriginal = null;
+    savedEvaluationLoadOwner = null;
   }
 
   document.addEventListener("pointerdown", onPointerDown, true);
