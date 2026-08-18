@@ -7,9 +7,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [bootstrap, bootstrapCore] = await Promise.all([
+const [bootstrap, bootstrapCore, controlInteractions] = await Promise.all([
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
+  read("./control-interactions-runtime.js"),
 ]);
 
 includes(
@@ -212,8 +213,18 @@ includes(
 );
 includes(
   bootstrapCore,
+  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
+  "The uniform loading controller must own the pre-transition navigation-pending state.",
+);
+includes(
+  bootstrapCore,
+  'html.${NAVIGATION_PENDING_CLASS} #progressionPage nav.pager,',
+  "Pagination must be hidden from navigation intent, before the route transition handler begins.",
+);
+includes(
+  bootstrapCore,
   'html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }',
-  "Pagination must stay hidden for the entire uniform interaction-busy lifecycle and appear only after loading ends.",
+  "Pagination must remain hidden for the entire uniform interaction-busy lifecycle and appear only after loading ends.",
 );
 includes(
   bootstrapCore,
@@ -231,4 +242,40 @@ excludes(
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, route-entry loading, uniform pager loading, placeholders, and startup ownership validation passed.");
+includes(
+  controlInteractions,
+  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
+  "Universal control interactions must share the pre-transition loading-state name with the busy controller.",
+);
+includes(
+  controlInteractions,
+  '"#sidebar .navButton[data-page]:not(.active)"',
+  "Non-active page navigation must enter navigation-pending state at the gesture boundary.",
+);
+includes(
+  controlInteractions,
+  '".viewButton[data-view]:not(.active)"',
+  "Non-active view navigation must enter navigation-pending state at the gesture boundary.",
+);
+includes(
+  controlInteractions,
+  'document.documentElement.classList.add(NAVIGATION_PENDING_CLASS);',
+  "Navigation intent must synchronously hide pagination before page/view handlers execute.",
+);
+includes(
+  controlInteractions,
+  'document.querySelectorAll("#progressionPage nav.pager")',
+  "Navigation intent must also set the pager hidden state directly so no authored display rule can expose it between events.",
+);
+includes(
+  controlInteractions,
+  "beginNavigationIntent(event.target);",
+  "Pointer navigation must hide pagination during pointerdown capture, before click navigation begins.",
+);
+includes(
+  controlInteractions,
+  "if (beginNavigationIntent(event.target)) handOffNavigationIntent();",
+  "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
+);
+
+console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, uniform loading, placeholders, and startup ownership validation passed.");
