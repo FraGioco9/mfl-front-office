@@ -106,6 +106,10 @@ invariant(
   !tableWidthRuntime.includes('["col-name", 15]'),
   "Table width runtime must not duplicate canonical percentage values.",
 );
+invariant(
+  !tableWidthRuntime.includes("if (!elements || elements.page.hidden) return false;"),
+  "Canonical table widths must be applicable while the destination page is still hidden before first reveal.",
+);
 
 const directWidthScriptIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
 const bootstrapScriptIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
