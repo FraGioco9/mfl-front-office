@@ -85,13 +85,23 @@ includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume 
 
 includes(
   bootstrapCore,
-  '"startup", "interaction-loading", "setPage", "setView", "route-runtime",',
-  "Watchlist page, view and lazy-route transitions must inherit the same global data-loading lifecycle as every other route.",
+  'const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";',
+  "Watchlist must use the canonical project-wide Uniform Loading Workflow rather than an unnamed page-specific loader.",
 );
 includes(
   bootstrapCore,
-  '"setPage", "setView", "ensureProgressionData", "requestIncrementalRoute"',
-  "The global loading bridge must wrap both page and view owners so Watchlist behavior cannot depend on cache hits.",
+  "window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;",
+  "The Uniform Loading Workflow must remain an alias of the sole global loading controller.",
+);
+includes(
+  bootstrapCore,
+  '"startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime",',
+  "Watchlist page, view, direct list-switch, and lazy-route transitions must inherit the same global data-loading lifecycle as every other route.",
+);
+includes(
+  bootstrapCore,
+  '"setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"',
+  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners, so loading starts before the active-list mutation regardless of cache state.",
 );
 includes(
   tableLoading,
@@ -114,11 +124,16 @@ includes(
   "if (watchlistNavigation && walletPreferencesSyncActive()) await waitForWalletPreferencesSettled();",
   "Watchlist navigation must not finish until its required wallet-preference synchronization has settled.",
 );
+includes(
+  watchlistRouteRuntime,
+  "wrappedSwitchWatchlist = function switchWatchlistWithSingleLoad(...args) {",
+  "Direct Watchlist changes may retain request deduping, but their final owner must be wrapped by the Uniform Loading Workflow.",
+);
 const watchlistRuntimeInstall = appEntry.indexOf("runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();");
 const globalBridgeReinstall = appEntry.indexOf("installCoreBridges();", watchlistRuntimeInstall);
 invariant(
   watchlistRuntimeInstall >= 0 && globalBridgeReinstall > watchlistRuntimeInstall,
-  "After installing the Watchlist route wrapper, app-entry must re-install the global loading bridge so the full Watchlist operation remains inside uniform loading.",
+  "After installing the Watchlist route wrapper, app-entry must re-install the global loading bridge so page and direct-list Watchlist operations remain inside the Uniform Loading Workflow.",
 );
 for (const forbidden of [
   'classList.add("mflDataLoading"',
@@ -131,7 +146,7 @@ for (const forbidden of [
   excludes(
     watchlistRouteRuntime,
     forbidden,
-    `Watchlist route coordination must not own loading presentation directly (${forbidden}); the global loading workflow is the sole owner.`,
+    `Watchlist route coordination must not own loading presentation directly (${forbidden}); the Uniform Loading Workflow is the sole owner.`,
   );
 }
 
@@ -143,4 +158,4 @@ invariant(
   "Generated Watchlist runtime must exactly match the Watchlist build artifact.",
 );
 
-console.log("Watchlist route-core splitting and uniform loading ownership validation passed.");
+console.log("Watchlist route-core splitting and canonical Uniform Loading Workflow ownership validation passed.");
