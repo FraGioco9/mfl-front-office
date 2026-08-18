@@ -11,6 +11,11 @@
   let unsubscribe = null;
   let coreBridgeInstalled = false;
 
+  function coreContracts() {
+    const contracts = Reflect.get(window, "__mflCoreContracts");
+    return contracts && typeof contracts === "object" ? contracts : null;
+  }
+
   function tableRouteActive() {
     if (/^\/(?:database|mfl)\/stats\/?$/i.test(location.pathname)) return false;
     const page = String(document.body?.dataset.page || "").toLowerCase();
@@ -52,38 +57,8 @@
 
   function ensureCanonicalHeader() {
     if (!tableRouteActive()) return false;
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof buildHeader !== "function") return false;
-        const head = document.getElementById("tableHead");
-        if (!(head instanceof HTMLTableSectionElement)) return false;
-        const page = typeof tablePageKey === "function" ? (tablePageKey() || state.currentPage || "") : (state.currentPage || "");
-        const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
-        const ownerReady = (typeof __mflTableBuildHeaderOwner === "function") || buildHeader.__mflSingleRenderOwner === true;
-        const staticHeader = head.dataset.mflStaticHeader === "true";
-        const staticSignature = String(head.dataset.mflHeaderSignature || "");
-        const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
-        const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
-        const currentPage = String(state.currentPage || "").toLowerCase();
-        const currentView = String(state.view || "").toLowerCase();
-        const staticRoutePending = staticHeader
-          && staticPage
-          && staticView
-          && (currentPage !== staticPage || currentView !== staticView);
-        if (staticRoutePending) return true;
-        if (staticHeader && staticSignature && staticSignature !== signature) return true;
-        const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
-        if (needsCanonicalBuild && ownerReady) buildHeader();
-        if (!head.rows[0]) return false;
-        if (ownerReady && needsCanonicalBuild) {
-          head.dataset.mflHeaderSignature = signature;
-          delete head.dataset.mflStaticHeader;
-        }
-        return head.dataset.mflStaticHeader === "true" || head.dataset.mflHeaderSignature === signature;
-      })()`));
-    } catch {
-      return false;
-    }
+    const ensureHeader = coreContracts()?.ensureCanonicalTableHeader;
+    return typeof ensureHeader === "function" ? Boolean(ensureHeader()) : false;
   }
 
   function show({ replaceExisting = false, forceRoute = false } = {}) {
@@ -141,59 +116,9 @@
       return;
     }
 
-    let installed = false;
-    try {
-      installed = Boolean(window.eval(`(() => {
-        if (typeof buildHeader !== "function" || typeof renderTableLoadingShell !== "function") return false;
-
-        if (!buildHeader.__mflSingleRenderOwner) {
-          const originalBuildHeader = buildHeader;
-          const stableBuildHeader = function () {
-            const page = typeof tablePageKey === "function" ? (tablePageKey() || state.currentPage || "") : (state.currentPage || "");
-            const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
-            const head = document.getElementById("tableHead");
-            const staticHeader = head instanceof HTMLTableSectionElement && head.dataset.mflStaticHeader === "true";
-            const staticSignature = head instanceof HTMLTableSectionElement ? String(head.dataset.mflHeaderSignature || "") : "";
-            const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
-            const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
-            const currentPage = String(state.currentPage || "").toLowerCase();
-            const currentView = String(state.view || "").toLowerCase();
-            const staticRoutePending = staticHeader
-              && staticPage
-              && staticView
-              && (currentPage !== staticPage || currentView !== staticView);
-            if (staticRoutePending) return undefined;
-            if (staticHeader && staticSignature && staticSignature !== signature) return undefined;
-            if (!staticHeader && head instanceof HTMLTableSectionElement && staticSignature === signature && head.rows[0]) return undefined;
-            const result = originalBuildHeader.apply(this, arguments);
-            if (head instanceof HTMLTableSectionElement) {
-              head.dataset.mflHeaderSignature = signature;
-              delete head.dataset.mflStaticHeader;
-            }
-            return result;
-          };
-          Object.defineProperty(stableBuildHeader, "__mflSingleRenderOwner", { value: true });
-          buildHeader = stableBuildHeader;
-        }
-
-        if (!renderTableLoadingShell.__mflSingleRenderOwner) {
-          const originalRenderTableLoadingShell = renderTableLoadingShell;
-          const stableRenderTableLoadingShell = function (pageName) {
-            const result = originalRenderTableLoadingShell.apply(this, arguments);
-            if (typeof tablePages === "object" && tablePages?.has?.(pageName)) {
-              window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true, forceRoute: true });
-            }
-            return result;
-          };
-          Object.defineProperty(stableRenderTableLoadingShell, "__mflSingleRenderOwner", { value: true });
-          renderTableLoadingShell = stableRenderTableLoadingShell;
-        }
-        return true;
-      })()`));
-    } catch (error) {
-      console.warn("Could not install the single-render table bridge.", error);
-    }
-    coreBridgeInstalled = installed;
+    const installOwners = coreContracts()?.installTableLoadingOwners;
+    coreBridgeInstalled = typeof installOwners === "function" && Boolean(installOwners());
+    if (!coreBridgeInstalled) return;
     ensureCanonicalHeader();
     sync();
   }
