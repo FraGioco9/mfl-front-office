@@ -18,7 +18,7 @@
     "overall", "pace", "shooting", "passing", "dribbling", "defense", "physical",
   ]);
   const STATIC_TABLE_CONTRACT_COLUMNS = Object.freeze([
-    "overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division",
+    "overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share",
   ]);
   const STATIC_TABLE_VIEW_COLUMNS = Object.freeze({
     attributes: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
@@ -306,18 +306,20 @@
       headerRow.appendChild(cell);
     });
 
-    const columnFragment = document.createDocumentFragment();
-    const selectionColumn = document.createElement("col");
-    selectionColumn.className = "col-select";
-    columnFragment.appendChild(selectionColumn);
-    columns.forEach((column) => {
-      const col = document.createElement("col");
-      const columnClass = staticTableColumnClass(column);
-      if (columnClass) col.classList.add(...columnClass.split(" "));
-      columnFragment.appendChild(col);
-    });
+    const targetClasses = ["col-select", ...columns.map((column) => staticTableColumnClass(column))];
+    const existingCols = Array.from(colGroup.children);
+    const alreadyCanonical = existingCols.length === targetClasses.length
+      && existingCols.every((col, index) => col.className === targetClasses[index]);
+    if (!alreadyCanonical) {
+      const columnFragment = document.createDocumentFragment();
+      targetClasses.forEach((columnClass) => {
+        const col = document.createElement("col");
+        if (columnClass) col.classList.add(...columnClass.split(" "));
+        columnFragment.appendChild(col);
+      });
+      colGroup.replaceChildren(columnFragment);
+    }
 
-    colGroup.replaceChildren(columnFragment);
     head.replaceChildren(headerRow);
     head.dataset.mflHeaderSignature = signature;
     head.dataset.mflStaticHeader = "true";
