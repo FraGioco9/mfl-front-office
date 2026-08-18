@@ -19,8 +19,6 @@
       Object.freeze(["contractClub", "--mfl-table-col-contract-club"]),
       Object.freeze(["contractDivision", "--mfl-table-col-contract-division"]),
       Object.freeze(["agent", "--mfl-table-col-agent"]),
-      Object.freeze(["joinedAgency", "--mfl-table-col-joined-agency"]),
-      Object.freeze(["ownedSince", "--mfl-table-col-owned-since"]),
       Object.freeze(["link", "--mfl-table-col-link"]),
     ]),
     evaluationSummary: Object.freeze([
@@ -98,8 +96,6 @@
 
   if (!closeTo(statsTotal, 100)
     || !closeTo(contractsTotal, 100)
-    || !closeTo(player.joinedAgency, player.agent)
-    || !closeTo(player.ownedSince, player.agent)
     || !closeTo(total(groups.evaluationSummary), 100)
     || !closeTo(total(groups.evaluationSeason), 100)
     || !closeTo(groups.advancedContracts.label + (groups.advancedContracts.value * 15), 100)) {
@@ -113,9 +109,7 @@
     groups,
   });
 
-  /* Compatibility only. Widths are CSS-owned and are never applied by JS.
-   * Existing callers may request a sync while old route code is phased out;
-   * this intentionally performs no DOM mutation. */
+  /* Compatibility only. Widths are CSS-owned and are never applied by JS. */
   const apply = () => true;
   const destroy = () => {};
 
