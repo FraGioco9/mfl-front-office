@@ -3,12 +3,12 @@
 :root {
   --mfl-dropdown-gap: 8px;
   --mfl-dropdown-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  --mfl-dropdown-max-height: min(320px, calc(100vh - 16px));
+  --mfl-dropdown-chevron-inset: 10px;
   --mfl-row-selector-width: 92px;
   --mfl-row-selector-slot-width: 150px;
 }
 
-/* Keep original controls in layout. The runtime opts visible selects into the
- * customizable picker after preserving the Rows footprint and chevron room. */
 select[data-mfl-dropdown-enhanced="true"] {
   box-sizing: border-box;
   cursor: pointer;
@@ -16,10 +16,14 @@ select[data-mfl-dropdown-enhanced="true"] {
 
 select[data-mfl-dropdown-enhanced="true"]:hover:not(:disabled),
 select[data-mfl-dropdown-enhanced="true"]:focus:not(:disabled),
-select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled) {
+select[data-mfl-dropdown-enhanced="true"]:focus-visible:not(:disabled),
+select[data-mfl-dropdown-enhanced="true"]:open,
+#pageSizeSelect:open,
+#addFilterSelect:open,
+.watchlistButton[aria-expanded="true"] {
   outline: 0;
   border-color: var(--primary-hover);
-  background-color: var(--row-hover);
+  background: var(--row-hover);
   color: var(--text);
   box-shadow: none;
 }
@@ -28,28 +32,23 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   cursor: default;
 }
 
-/* Chrome's customizable select keeps the original select box and exposes the
- * picker and picker icon for styling. Unsupported browsers retain their native
- * select behavior without any replacement control. */
 @supports (appearance: base-select) {
   select[data-mfl-dropdown-enhanced="true"],
-  select[data-mfl-dropdown-enhanced="true"]::picker(select) {
+  select[data-mfl-dropdown-enhanced="true"]::picker(select),
+  #pageSizeSelect,
+  #pageSizeSelect::picker(select),
+  .filtersDialog select,
+  .filtersDialog select::picker(select) {
     appearance: base-select;
   }
 
-  select[data-mfl-dropdown-enhanced="true"]::picker-icon,
-  select[data-mfl-dropdown-enhanced="true"]:open::picker-icon {
-    align-self: center;
-    margin-block: 0;
-    color: var(--text-soft);
-    transform: none;
-    transition: none;
-  }
-
-  select[data-mfl-dropdown-enhanced="true"]::picker(select) {
+  select[data-mfl-dropdown-enhanced="true"]::picker(select),
+  #pageSizeSelect::picker(select),
+  .filtersDialog select::picker(select) {
     box-sizing: border-box;
-    max-height: min(320px, calc(100vh - 16px));
-    margin: var(--mfl-dropdown-gap) 0 0;
+    max-height: var(--mfl-dropdown-max-height);
+    margin-block: var(--mfl-dropdown-gap);
+    margin-inline: 0;
     padding: 5px;
     overflow-x: hidden;
     overflow-y: auto;
@@ -61,8 +60,32 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     box-shadow: var(--mfl-dropdown-shadow);
   }
 
-  select[data-mfl-dropdown-enhanced="true"] option {
+  select[data-mfl-dropdown-enhanced="true"]::picker-icon,
+  select[data-mfl-dropdown-enhanced="true"]:open::picker-icon,
+  #pageSizeSelect::picker-icon,
+  #pageSizeSelect:open::picker-icon,
+  .filtersDialog select::picker-icon,
+  .filtersDialog select:open::picker-icon {
+    content: "";
+    display: block;
+    flex: 0 0 auto;
+    align-self: center;
+    width: 7px;
+    height: 7px;
+    margin: 0 0 0 auto;
+    border: 0;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    color: var(--text-soft);
+    font-size: 0;
+    transform: rotate(45deg);
+    transition: none;
+  }
+
+  select[data-mfl-dropdown-enhanced="true"] option,
+  .filtersDialog select option {
     min-height: 34px;
+    margin: 0;
     padding: 7px 9px;
     border: 0;
     border-radius: 6px;
@@ -74,31 +97,39 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
     cursor: pointer;
   }
 
-  select[data-mfl-dropdown-enhanced="true"] option + option {
+  select[data-mfl-dropdown-enhanced="true"] option + option,
+  .filtersDialog select option + option {
     margin-top: 2px;
   }
 
   select[data-mfl-dropdown-enhanced="true"] option:hover,
-  select[data-mfl-dropdown-enhanced="true"] option:focus-visible {
+  select[data-mfl-dropdown-enhanced="true"] option:focus-visible,
+  .filtersDialog select option:hover,
+  .filtersDialog select option:focus-visible {
     outline: 0;
     background: var(--row-hover);
     color: var(--text);
   }
 
-  select[data-mfl-dropdown-enhanced="true"] option:checked {
+  select[data-mfl-dropdown-enhanced="true"] option:checked,
+  .filtersDialog select option:checked {
     background: color-mix(in srgb, var(--primary) 12%, var(--surface));
     color: var(--primary);
   }
 
-  select[data-mfl-dropdown-enhanced="true"] option::checkmark {
+  select[data-mfl-dropdown-enhanced="true"] option::checkmark,
+  .filtersDialog select option::checkmark {
     display: none;
   }
 }
 
-/* Shared dropdown surface used by the Account and Watchlist menus too. */
 [data-mfl-dropdown-menu="true"] {
   box-sizing: border-box;
+  max-height: var(--mfl-dropdown-max-height);
   padding: 5px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface);
@@ -110,28 +141,17 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: none;
 }
 
-/* All non-native dropdown chevrons stay visually fixed in every state. */
-#accountButton::after,
-#accountButton[aria-expanded="true"]::after,
-.watchlistButtonChevron,
-.watchlistButton[aria-expanded="true"] .watchlistButtonChevron {
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  color: var(--text-soft);
-  transform: rotate(45deg);
-  transition: none;
-}
-
-/* Account uses the shared dropdown surface and keeps icon + label centered as
- * one content group; the chevron is positioned independently on the right. */
 .accountMenu {
   position: relative;
   width: 124px;
 }
 
+.accountMenu[hidden] {
+  display: none;
+}
+
 .accountMenu .compactButton {
+  width: 100%;
   height: 50px;
 }
 
@@ -145,16 +165,22 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   line-height: 1;
 }
 
-#accountButton::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 4px);
-  right: 12px;
+#accountButton[aria-expanded="true"],
+#accountButton[aria-expanded="true"]:hover,
+#accountButton[aria-expanded="true"]:focus,
+#accountButton[aria-expanded="true"]:focus-visible {
+  outline: 0;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
 }
 
 #accountDropdown {
+  position: absolute;
   top: calc(100% + var(--mfl-dropdown-gap));
   right: 0;
+  z-index: 20;
   width: 100%;
 }
 
@@ -167,6 +193,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   min-height: 34px;
   margin: 0;
   padding: 0 9px;
+  overflow: hidden;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -174,11 +201,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   font: inherit;
   font-weight: 700;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   box-shadow: none;
 }
 
 .accountDropdownItem + .accountDropdownItem {
   margin-top: 2px;
+}
+
+.accountDropdown button.accountDropdownItem {
+  cursor: pointer;
+}
+
+.accountDropdown button.accountDropdownItem:disabled,
+.accountDropdown button.accountDropdownItem:disabled:hover {
+  cursor: default;
+  background: transparent;
+  color: var(--text-muted);
 }
 
 .accountDropdown button.accountDropdownItem:hover:not(:disabled),
@@ -195,31 +235,40 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .accountDropdown .accountSettingsButton:hover:not(:disabled),
 .accountDropdown .accountSettingsButton:focus-visible:not(:disabled) {
   border: 0;
+  background: transparent;
+  color: var(--text);
   box-shadow: none;
 }
 
 #linkWalletButton:not(:disabled) {
+  background: transparent;
   color: #2fbf62;
 }
 
 #linkWalletButton:hover:not(:disabled) {
+  background: var(--row-hover);
   color: #249b50;
 }
 
 #linkWalletButton.walletOptOut {
+  background: transparent;
   color: #d84b4b;
 }
 
 #linkWalletButton.walletOptOut:hover:not(:disabled) {
+  background: var(--row-hover);
   color: #ff6b6b;
 }
 
-/* Watchlist keeps its established dimensions while sharing the same surface. */
 .watchlistButton {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 350px;
   height: 40px;
-  padding: 0 10px;
+  padding: 0 calc(var(--mfl-dropdown-chevron-inset) + 16px) 0 10px;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -232,23 +281,47 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   background: var(--row-hover);
 }
 
-.watchlistButtonChevron {
-  display: inline-block;
-  flex: 0 0 auto;
+#watchlistButton::after,
+#watchlistButton[aria-expanded="true"]::after {
+  box-sizing: border-box;
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--mfl-dropdown-chevron-inset);
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: var(--text-soft);
   font-size: 0;
+  transform: translateY(-50%) rotate(45deg);
+  transition: none;
+}
+
+.watchlistButtonChevron {
+  display: none;
 }
 
 .watchlistDropdown {
+  position: absolute;
   top: calc(100% + var(--mfl-dropdown-gap));
   right: 0;
+  z-index: 20;
   width: 350px;
   min-width: 350px;
   max-width: calc(100vw - 24px);
+  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
 }
 
+.watchlistDropdown[hidden] {
+  display: none;
+}
+
 .watchlistDropdownItem {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -389,12 +462,24 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   height: 36px;
 }
 
-/* Preserve the exact Filters grid used before the dropdown rebuild. */
 .filtersDialog .filterRule {
   grid-template-columns: 104px minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(180px, 1.2fr) 40px;
 }
 
-/* Rows occupies the same fixed final slot on every table page. */
+.filtersDialog select {
+  align-items: center;
+  align-content: center;
+  padding-right: var(--mfl-dropdown-chevron-inset);
+  line-height: 1;
+}
+
+#showAddFilterButton,
+#showAddFilterButton:hover,
+#addFilterSelect,
+#addFilterSelect:hover {
+  cursor: pointer;
+}
+
 .controlsBar > .field.compact.rowsField {
   position: relative;
   z-index: 1;
@@ -406,11 +491,11 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 #pageSizeSelect {
   box-sizing: border-box;
-  width: 92px;
-  min-width: 92px;
-  max-width: 92px;
+  width: var(--mfl-row-selector-width);
+  min-width: var(--mfl-row-selector-width);
+  max-width: var(--mfl-row-selector-width);
   height: 40px;
-  flex: 0 0 92px;
+  flex: 0 0 var(--mfl-row-selector-width);
   margin: 0;
   padding-left: 11px;
   padding-right: 10px;
@@ -421,15 +506,6 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   #pageSizeSelect {
     align-items: center;
     gap: 10px;
-  }
-
-  #pageSizeSelect::picker-icon,
-  #pageSizeSelect:open::picker-icon {
-    align-self: center;
-    margin: 0;
-    color: var(--text-soft);
-    transform: none;
-    transition: none;
   }
 }
 

@@ -3,26 +3,8 @@
 
   const enhancedSelects = new WeakSet();
   const suppressNextClick = new WeakSet();
-  const RUNTIME_STYLE_ID = "mflDropdownRuntimeAdjustments";
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
-
-  function installRuntimeStyles() {
-    if (document.getElementById(RUNTIME_STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = RUNTIME_STYLE_ID;
-    style.textContent = `
-      @supports (appearance: base-select) {
-        html body select[data-mfl-dropdown-enhanced="true"]::picker(select),
-        html body #pageSizeSelect::picker(select),
-        html body .filtersDialog select::picker(select) {
-          margin-block: var(--mfl-dropdown-gap);
-          margin-inline: 0;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -35,9 +17,6 @@
     if (!(select instanceof HTMLSelectElement)) return null;
     if (enhancedSelects.has(select)) return select;
 
-    /* Static selects can already have their first-paint dropdown appearance in
-     * CSS. The runtime only marks visible selects so dynamically-created ones
-     * opt into the same dropdown styling without changing their geometry. */
     select.dataset.mflDropdownEnhanced = "true";
     enhancedSelects.add(select);
     return select;
@@ -146,9 +125,6 @@
     document.documentElement.classList.remove("mflFiltersOpeningNeutral");
   }
 
-  /* A second click directly on an open select closes it and removes focus.
-   * Option pointer/click events are deliberately left untouched so selections
-   * inside customizable pickers continue to work normally. */
   document.addEventListener("pointerdown", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -194,9 +170,6 @@
     endNeutralFiltersOpen(event.target);
   }, true);
 
-  /* Enter confirms the highlighted value of any open select, including inside
-   * a popup. The select keeps its native default Enter behavior, then loses focus
-   * after that default action has committed the value. */
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     const select = openSelect();
@@ -208,9 +181,6 @@
     }, 0);
   });
 
-  /* The shared view-button path already commits mouse activation on pointerup.
-   * Intercept its follow-up click at window capture, before app-core's older
-   * document-capture club handler can observe it and run a second state change. */
   window.addEventListener("click", (event) => {
     if (!clubPointerCommittedView) return;
     const target = event.target instanceof Element ? event.target : null;
@@ -226,8 +196,6 @@
     event.stopImmediatePropagation();
   }, true);
 
-  /* Only static button dropdowns need the follow-up click suppressed; native
-   * select option clicks must never be intercepted here. */
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -242,7 +210,6 @@
     event.stopImmediatePropagation();
   }, true);
 
-  installRuntimeStyles();
   enhanceVisible(document);
   syncAttributesViewLabel();
 
