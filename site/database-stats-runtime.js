@@ -27,6 +27,7 @@
   let customMin = 0;
   let customMax = 99;
   let distributionMode = "overall";
+  let customPanelFrame = 0;
 
   function isStatsPath(pathname = location.pathname) {
     return DATABASE_STATS_PATH.test(String(pathname || ""));
@@ -40,6 +41,49 @@
     return Array.from(page.querySelectorAll("#databaseStatsOverallFilters .mflStatsFilterButton"));
   }
 
+  function customButton() {
+    return page.querySelector('#databaseStatsOverallFilters .mflStatsFilterButton[data-filter="custom"]');
+  }
+
+  function customPanel() {
+    return page.querySelector("#databaseStatsCustomFilter");
+  }
+
+  function closeCustomPanel({ restoreFocus = false } = {}) {
+    const panel = customPanel();
+    if (panel instanceof HTMLElement) panel.hidden = true;
+    if (restoreFocus) customButton()?.focus({ preventScroll: true });
+  }
+
+  function positionCustomPanel() {
+    customPanelFrame = 0;
+    const button = customButton();
+    const panel = customPanel();
+    if (!(button instanceof HTMLElement) || !(panel instanceof HTMLElement) || panel.hidden || !isStatsPath()) return;
+
+    const buttonRect = button.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const viewportPadding = 12;
+    const gap = 9;
+    let left = buttonRect.left + (buttonRect.width - panelRect.width) / 2;
+    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - panelRect.width - viewportPadding));
+
+    const fitsBelow = buttonRect.bottom + gap + panelRect.height <= window.innerHeight - viewportPadding;
+    const top = fitsBelow
+      ? buttonRect.bottom + gap
+      : Math.max(viewportPadding, buttonRect.top - panelRect.height - gap);
+
+    panel.classList.toggle("databaseStatsTooltipAbove", !fitsBelow);
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    const arrowLeft = Math.max(10, Math.min(panelRect.width - 10, buttonRect.left + buttonRect.width / 2 - left));
+    panel.style.setProperty("--database-stats-arrow-left", `${Math.round(arrowLeft)}px`);
+  }
+
+  function scheduleCustomPanel() {
+    if (!destroyed && !customPanelFrame) customPanelFrame = requestAnimationFrame(positionCustomPanel);
+  }
+
   function bindPermanentControls() {
     const buttons = filterButtons();
     buttons.forEach((button, index) => {
@@ -51,6 +95,14 @@
         activeFilter = filter[0];
         syncFilterControls();
         renderStats();
+        if (activeFilter === "custom") {
+          requestAnimationFrame(() => {
+            scheduleCustomPanel();
+            customPanel()?.querySelector("input")?.focus({ preventScroll: true });
+          });
+        } else {
+          closeCustomPanel();
+        }
       });
     });
 
@@ -75,8 +127,11 @@
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     });
-    const custom = page.querySelector("#databaseStatsCustomFilter");
-    if (custom instanceof HTMLElement) custom.hidden = activeFilter !== "custom";
+    const custom = customPanel();
+    if (custom instanceof HTMLElement) {
+      custom.hidden = activeFilter !== "custom";
+      if (!custom.hidden) scheduleCustomPanel();
+    }
   }
 
   function currentFilter() {
@@ -102,6 +157,7 @@
     activeFilter = "custom";
     syncFilterControls();
     renderStats();
+    closeCustomPanel();
   }
 
   function retirementYears(group) {
@@ -260,17 +316,47 @@
     if (isStatsPath()) {
       if (data) renderStats();
       else void showStatsPage();
+      scheduleCustomPanel();
     } else {
+      closeCustomPanel();
       endBusy();
     }
   }
 
+  function onDocumentClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    const panel = customPanel();
+    if (!(panel instanceof HTMLElement) || panel.hidden) return;
+    if (target.closest('#databaseStatsOverallFilters .mflStatsFilterButton[data-filter="custom"]')) return;
+    if (panel.contains(target)) return;
+    closeCustomPanel();
+  }
+
+  function onKeyDown(event) {
+    if (event.key !== "Escape") return;
+    const panel = customPanel();
+    if (!(panel instanceof HTMLElement) || panel.hidden) return;
+    closeCustomPanel({ restoreFocus: true });
+  }
+
   function destroy() {
     destroyed = true;
+    if (customPanelFrame) cancelAnimationFrame(customPanelFrame);
+    customPanelFrame = 0;
+    document.removeEventListener("click", onDocumentClick);
+    document.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("resize", scheduleCustomPanel);
+    window.removeEventListener("scroll", scheduleCustomPanel, true);
+    closeCustomPanel();
     endBusy();
   }
 
   bindPermanentControls();
+  document.addEventListener("click", onDocumentClick);
+  document.addEventListener("keydown", onKeyDown);
+  window.addEventListener("resize", scheduleCustomPanel);
+  window.addEventListener("scroll", scheduleCustomPanel, true);
   window.renderDatabaseStatsPage = showStatsPage;
   window.setDatabaseStatsPageVisibility = (visible) => {
     if (visible && isStatsPath()) page.hidden = false;

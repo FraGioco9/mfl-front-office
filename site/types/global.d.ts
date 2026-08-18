@@ -6,7 +6,6 @@ interface Window {
   __mflPopupCenteringResizeObserver?: ResizeObserver;
   __mflStaticUiRuntime?: { destroy?: () => void };
   __mflFilterControlsRuntime?: { sync?: () => void };
-  __mflEvaluationDiscountRateDisplayRuntime?: { sync?: () => void; destroy?: () => void };
   __mflSelectionStartupResetRuntime?: { rebind?: () => void; destroy?: () => void };
   __mflDatabaseStatsRuntime?: { sync?: () => void };
 }

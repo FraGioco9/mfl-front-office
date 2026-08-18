@@ -129,6 +129,16 @@ excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser
 excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
 excludes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "The production prebuilt core must not be fetched as text.");
 includes(entry, "\"/table-loading-runtime.js\"", "app-entry.js must load the canonical table-loading owner.");
+for (const retiredRuntime of [
+  "table-view-runtime.js",
+  "evaluation-discount-rate-display-runtime.js",
+  "database-stats-tooltip-portal-runtime.js",
+  "database-stats-reload-bootstrap-runtime.js",
+  "database-stats-custom-filter-runtime.js",
+  "watchlist-ui-runtime.js",
+]) {
+  excludes(entry, retiredRuntime, `${retiredRuntime} must stay retired from the browser runtime graph.`);
+}
 excludes(entry, "view-button-visibility-runtime", "app-entry.js must not restore deprecated view repair owners.");
 excludes(entry, "club-squad-route-runtime", "app-entry.js must not restore deprecated Club route repair owners.");
 const readyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:ready"');
@@ -149,10 +159,6 @@ excludes(tableWidth, "MutationObserver", "The table width owner must not globall
 const sharedTableUi = await readSite("shared-table-ui-runtime.js");
 excludes(sharedTableUi, "MutationObserver", "Shared table UI must not observe and repair rendered tables.");
 excludes(sharedTableUi, "replaceChildren", "Shared table UI must not recreate table content.");
-
-const tableView = await readSite("table-view-runtime.js");
-excludes(tableView, "MutationObserver", "Table view runtime must remain interaction-only.");
-excludes(tableView, "replaceChildren", "Table view runtime must not render destination content.");
 
 const desktopTableStyle = await readSite("desktop-table-style-runtime.js");
 excludes(desktopTableStyle, "MutationObserver", "Desktop table styling must not repair rendered content after app-core.");
@@ -179,10 +185,6 @@ includes(globalSearch, "installCoreSearchMatching", "Global Search runtime must 
 includes(globalSearch, "__mflSurnameFirst", "Player search must preserve surname-first matching.");
 excludes(globalSearch, "resultsObserver", "Global Search must not repair rendered result nodes.");
 
-const watchlistUi = await readSite("watchlist-ui-runtime.js");
-excludes(watchlistUi, "MutationObserver", "Watchlist UI must not compete with app-core rendering.");
-excludes(watchlistUi, "history.pushState", "Watchlist UI must not own route history.");
-
 const filterControls = await readSite("filter-controls-runtime.js");
 includes(filterControls, "buildOperatorSelect.__mflContractOperators", "Filter behavior must be installed at canonical control construction time.");
 excludes(filterControls, "subtree: true", "Filter controls must not broadly observe rendered controls.");
@@ -197,6 +199,8 @@ excludes(changelogHistory, "MutationObserver", "Changelog history must not conti
 
 const databaseStats = await readSite("database-stats-runtime.js");
 includes(databaseStats, "bindPermanentControls", "Database Stats must bind the permanent HTML shell instead of recreating it.");
+includes(databaseStats, "function positionCustomPanel()", "Database Stats must own its Custom filter in the same domain runtime.");
+excludes(databaseStats, 'document.createElement("style")', "Database Stats must not create runtime CSS.");
 excludes(databaseStats, "function createPage", "Database Stats must not recreate its static page.");
 
 const indexHtml = await readSite("index.html");
@@ -238,16 +242,22 @@ for (const path of [
   "core-response-cache-runtime.js",
   "mfl-stats-runtime.js",
   "table-blank-row-guard-runtime.js",
+  "table-view-runtime.js",
   "player-loading-runtime.js",
   "club-squad-route-runtime.js",
   "desktop-table-observer-guard-runtime.js",
   "desktop-table-width.css",
+  "evaluation-discount-rate-display-runtime.js",
   "evaluation-discount-rate-guard-runtime.js",
   "filter-contract-operator-runtime.js",
   "release-ui-runtime.js",
   "selection-refresh-reset-runtime.js",
   "view-button-visibility-runtime.js",
+  "watchlist-ui-runtime.js",
   "watchlist-route-ui-runtime.js",
+  "database-stats-tooltip-portal-runtime.js",
+  "database-stats-reload-bootstrap-runtime.js",
+  "database-stats-custom-filter-runtime.js",
 ]) {
   await mustNotExist(resolve(siteRoot, path), `${path} is deprecated and must stay removed.`);
 }

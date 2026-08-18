@@ -265,3 +265,43 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 .retirementMarker[data-tooltip="3 years left"] {
   color: #ffdd33;
 }
+
+#databaseStatsPage #databaseStatsCustomFilter {
+  position: fixed;
+  z-index: 2147483000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+#databaseStatsPage #databaseStatsCustomFilter[hidden] {
+  display: none;
+}
+
+#databaseStatsPage #databaseStatsCustomFilter::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: var(--database-stats-arrow-left, 50%);
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+#databaseStatsPage #databaseStatsCustomFilter.databaseStatsTooltipAbove::before {
+  top: auto;
+  bottom: -6px;
+  transform: translateX(-50%) rotate(225deg);
+}

@@ -133,17 +133,12 @@ const TABLE_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/selection-stack-runtime.js",
 ]);
 
-const WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/watchlist-ui-runtime.js",
-]);
-
 const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/watchlist-myplayers-route-runtime.js",
 ]);
 
 const EVALUATION_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-layout-runtime.js",
-  "/evaluation-discount-rate-display-runtime.js",
   "/evaluation-load-intent-runtime.js",
   "/evaluation-mfl-usd-input-runtime.js",
   "/evaluation-discount-rate-runtime.js",
@@ -159,10 +154,7 @@ const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object.freeze([
 ]);
 
 const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-tooltip-portal-runtime.js",
-  "/database-stats-reload-bootstrap-runtime.js",
   "/database-stats-runtime.js",
-  "/database-stats-custom-filter-runtime.js",
 ]);
 
 const CHANGELOG_RUNTIME_SCRIPTS = Object.freeze([
@@ -237,7 +229,6 @@ function postCoreScriptsForRoute(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const scripts = [];
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_POST_CORE_RUNTIME_SCRIPTS);
-  if (page === "watchlist") scripts.push(...WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS);
   if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_POST_CORE_RUNTIME_SCRIPTS);
   return uniqueScripts(scripts);
@@ -273,7 +264,6 @@ initialPreCoreRuntimeScripts.forEach(preloadClassicScript);
  * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
  * __mflFilterControlsRuntime?: { sync?: () => void },
- * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflDatabaseStatsRuntime?: { sync?: () => void },
  * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
@@ -565,7 +555,6 @@ async function ensureRouteRuntimeNow(pageName, options = {}) {
   }
   if (routeNeedsDatabaseStats(page, options)) {
     runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
-    runtimeWindow.__mflDatabaseStatsReloadBootstrap?.restoreRoute?.();
   }
   if (page === "evaluation") {
     runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
@@ -627,7 +616,6 @@ async function start() {
   }
 
   if (databaseStatsStartup) {
-    runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.();
     runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
   }
 
@@ -638,7 +626,6 @@ async function start() {
   promoteResponsiveStylesheet();
 
   runPostStartupSync("Evaluation layout", () => runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.());
-  runPostStartupSync("Database Stats reload", () => runtimeWindow.__mflDatabaseStatsReloadBootstrap?.finalize?.());
   runPostStartupSync("Database Stats state", () => runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.());
 
   document.documentElement.dataset.mflReady = "true";
