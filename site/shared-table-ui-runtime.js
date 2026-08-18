@@ -14,20 +14,6 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      #mflStatsPage #mflStatsOverallFilters {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        gap: 6px !important;
-        width: 100% !important;
-      }
-      #mflStatsPage #mflStatsOverallFilters .mflStatsFilterButton {
-        flex: 1 1 0 !important;
-        width: auto !important;
-        min-width: 0 !important;
-        padding-left: 5px !important;
-        padding-right: 5px !important;
-        white-space: nowrap !important;
-      }
       .field.rowsField { min-width: 0 !important; pointer-events: none !important; }
       .field.rowsField > span { flex: 0 0 auto !important; pointer-events: none !important; }
       .field.rowsField > #pageSizeSelect { flex: 1 1 0 !important; width: 0 !important; min-width: 0 !important; pointer-events: auto !important; }
