@@ -234,7 +234,7 @@
     syncMobileFlag(mobile);
     if (destroyed || applying || !isTableRoute()) return false;
     const elements = tableElements();
-    if (!elements || elements.page.hidden) return false;
+    if (!elements) return false;
 
     const geometry = canonicalColumns(elements.table);
     if (!geometry) return false;
