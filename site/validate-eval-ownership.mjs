@@ -152,11 +152,10 @@ invariant(
 invariant(
   !evaluationLayoutRuntime.includes("MutationObserver")
     && !evaluationLayoutRuntime.includes('document.createElement("style")')
-    && !evaluationLayoutRuntime.includes("mflInteractionBusy"),
-  "Evaluation layout must not recreate observer-driven or CSS-driven loading ownership.",
+    && !evaluationLayoutRuntime.includes('__mflInteractionBusy?.begin'),
+  "Evaluation layout must not recreate observer-driven, runtime-CSS, or token ownership for loading.",
 );
 
-invariant(!routeRuntimeNormalizer.includes("window.eval"), "The application-core contract must not be implemented through window.eval.");
 invariant(
   routeRuntimeNormalizer.includes("window.__mflCoreContracts = Object.freeze({"),
   "The route normalizer must publish one immutable application-core contract before startup.",
@@ -164,6 +163,10 @@ invariant(
 invariant(
   routeRuntimeNormalizer.includes("function removeLegacyEvaluationRouteStability(source)"),
   "The shared normalizer pipeline must remove the legacy Evaluation route-stability tail for both build and fallback paths.",
+);
+invariant(
+  routeRuntimeNormalizer.includes('\'window.eval("renderEvaluationPage = window.__mflStableEvaluationRender")\''),
+  "The sanitizer must recognize the historical Evaluation eval marker without executing it.",
 );
 for (const contractMethod of [
   "ensureCanonicalTableHeader",
