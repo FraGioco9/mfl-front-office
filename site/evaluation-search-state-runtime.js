@@ -21,6 +21,10 @@
   const input = () => document.getElementById("evaluationSearchInput");
   const clearButton = () => document.getElementById("evaluationSearchClearButton");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
+  const coreContracts = () => {
+    const contracts = window.__mflCoreContracts;
+    return contracts && typeof contracts === "object" ? contracts : null;
+  };
 
   function selectedPlayerIdFromUrl() {
     if (!/^\/evaluation\/?$/i.test(location.pathname)) return "";
@@ -97,76 +101,34 @@
   }
 
   function recentEvaluationPlayerIds() {
-    try {
-      const ids = window.eval(
-        "typeof state === 'object' && Array.isArray(state.recentEvaluationPlayerIds) ? [...state.recentEvaluationPlayerIds] : []",
-      );
-      return Array.isArray(ids)
-        ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
-        : [];
-    } catch {
-      return [];
-    }
+    const ids = coreContracts()?.evaluationRecentPlayerIds?.();
+    return Array.isArray(ids)
+      ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
+      : [];
   }
 
   function setRecentEvaluationPlayerIds(ids) {
     const normalizedIds = Array.isArray(ids)
       ? ids.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 5)
       : [];
-    window.__mflEvaluationNextRecentIds = normalizedIds;
-    try {
-      window.eval("if (typeof state === 'object' && state) state.recentEvaluationPlayerIds = [...window.__mflEvaluationNextRecentIds];");
-    } catch {} finally {
-      delete window.__mflEvaluationNextRecentIds;
-    }
-    return normalizedIds;
+    const storedIds = coreContracts()?.setEvaluationRecentPlayerIds?.(normalizedIds);
+    return Array.isArray(storedIds) ? storedIds : normalizedIds;
   }
 
   function promoteRecentEntry(playerId) {
     const key = String(playerId || "").trim();
     if (!key) return;
-    window.__mflEvaluationClickedRecentId = key;
-    try {
-      const entry = window.eval(`(() => {
-        if (typeof state !== "object" || !Array.isArray(state.evaluationSearchIndex)) return null;
-        return state.evaluationSearchIndex.find((item) => String(item?.playerId || "") === window.__mflEvaluationClickedRecentId) || null;
-      })()`);
-      if (!entry || entry.retired) return;
-      const current = Array.isArray(window[RECENT_ENTRIES_KEY]) ? window[RECENT_ENTRIES_KEY] : [];
-      window[RECENT_ENTRIES_KEY] = [
-        entry,
-        ...current.filter((item) => String(item?.playerId || "") !== key),
-      ].slice(0, 5);
-    } catch {} finally {
-      delete window.__mflEvaluationClickedRecentId;
-    }
+    const entry = coreContracts()?.evaluationSearchEntry?.(key);
+    if (!entry || entry.retired) return;
+    const current = Array.isArray(window[RECENT_ENTRIES_KEY]) ? window[RECENT_ENTRIES_KEY] : [];
+    window[RECENT_ENTRIES_KEY] = [
+      entry,
+      ...current.filter((item) => String(item?.playerId || "") !== key),
+    ].slice(0, 5);
   }
 
   function persistRecentEvaluationToSupabase(ids, sequence) {
-    window.__mflEvaluationPendingRecentIds = ids;
-    let savePromise = Promise.resolve(false);
-    try {
-      savePromise = window.eval(`(() => {
-        if (typeof state !== "object" || !state) return Promise.resolve(false);
-        state.recentEvaluationPlayerIds = [...window.__mflEvaluationPendingRecentIds];
-        if (state.walletPreferencesSaveTimer) {
-          window.clearTimeout(state.walletPreferencesSaveTimer);
-          state.walletPreferencesSaveTimer = null;
-        }
-        if (!state.linkedWalletAddress
-          || typeof hasWalletProof !== "function"
-          || !hasWalletProof()
-          || typeof saveWalletPreferencesNow !== "function") {
-          return Promise.resolve(false);
-        }
-        return Promise.resolve(saveWalletPreferencesNow()).then(() => true, () => false);
-      })()`);
-    } catch {
-      savePromise = Promise.resolve(false);
-    } finally {
-      delete window.__mflEvaluationPendingRecentIds;
-    }
-
+    const savePromise = coreContracts()?.persistEvaluationRecentPlayerIds?.(ids) || Promise.resolve(false);
     return Promise.resolve(savePromise).finally(() => {
       if (destroyed || sequence !== recentWriteSequence) return;
       setRecentEvaluationPlayerIds(ids);
@@ -196,89 +158,32 @@
   }
 
   function buildRecentEntries(payload) {
-    window.__mflEvaluationSupabaseRecentPayload = payload;
-    try {
-      const entries = window.eval(`(() => {
-        const payload = window.__mflEvaluationSupabaseRecentPayload || {};
-        const columns = Array.isArray(payload.columns) ? payload.columns : [];
-        const rows = Array.isArray(payload.rows) ? payload.rows : [];
-        if (typeof buildPlayerSearchEntryFromCompactRow !== "function") return [];
-        return rows
-          .map((row) => buildPlayerSearchEntryFromCompactRow(row, columns))
-          .filter((entry) => entry && !entry.retired);
-      })()`);
-      return Array.isArray(entries) ? entries : [];
-    } catch (error) {
-      console.warn("Could not build Supabase Evaluation recent entries.", error);
-      return [];
-    } finally {
-      delete window.__mflEvaluationSupabaseRecentPayload;
-    }
+    const entries = coreContracts()?.buildEvaluationRecentEntries?.(payload);
+    return Array.isArray(entries) ? entries : [];
   }
 
   function installCoreRecentRowsBridge() {
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof recentEvaluationRows !== "function") return false;
-        if (recentEvaluationRows.__mflSupabaseOnly) return true;
-        const supabaseRecentRows = function() {
-          const entries = window.${RECENT_ENTRIES_KEY};
-          return Array.isArray(entries) ? entries.slice(0, 5) : [];
-        };
-        Object.defineProperty(supabaseRecentRows, "__mflSupabaseOnly", { value: true });
-        recentEvaluationRows = supabaseRecentRows;
-        return true;
-      })()`));
-    } catch (error) {
-      console.warn("Could not install Evaluation recent-row ownership.", error);
-      return false;
-    }
+    const install = coreContracts()?.installEvaluationRecentRowsOwner;
+    return typeof install === "function"
+      ? Boolean(install(() => window[RECENT_ENTRIES_KEY]))
+      : false;
   }
 
   function installEmptyPlayerSearchBridge() {
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof requestDatabaseSearch !== "function") return false;
-        if (requestDatabaseSearch.__mflEvaluationSupabaseOnly) return true;
-        const originalRequestDatabaseSearch = requestDatabaseSearch;
-        const supabaseOnlyRequestDatabaseSearch = function(rawQuery = "", type = "all", options = {}) {
-          if (type === "players" && !String(rawQuery || "").trim()) {
-            const restore = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-            return typeof restore === "function"
-              ? restore(Boolean(options?.force))
-              : Promise.resolve(false);
-          }
-          return originalRequestDatabaseSearch.apply(this, arguments);
-        };
-        Object.defineProperty(supabaseOnlyRequestDatabaseSearch, "__mflEvaluationSupabaseOnly", { value: true });
-        requestDatabaseSearch = supabaseOnlyRequestDatabaseSearch;
-        return true;
-      })()`));
-    } catch (error) {
-      console.warn("Could not isolate empty Evaluation searches.", error);
-      return false;
-    }
+    const install = coreContracts()?.installEvaluationEmptySearchOwner;
+    if (typeof install !== "function") return false;
+    return Boolean(install((force) => {
+      const restore = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+      return typeof restore === "function" ? restore(Boolean(force)) : Promise.resolve(false);
+    }));
   }
 
   function installRecentWriteBridge() {
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof rememberEvaluationResult !== "function") return false;
-        if (rememberEvaluationResult.__mflSupabaseImmediate) return true;
-        const originalRememberEvaluationResult = rememberEvaluationResult;
-        const supabaseImmediateRememberEvaluationResult = function(playerId) {
-          const result = originalRememberEvaluationResult.apply(this, arguments);
-          window.__mflEvaluationSearchStateRuntime?.commitRecentPlayer?.(playerId);
-          return result;
-        };
-        Object.defineProperty(supabaseImmediateRememberEvaluationResult, "__mflSupabaseImmediate", { value: true });
-        rememberEvaluationResult = supabaseImmediateRememberEvaluationResult;
-        return true;
-      })()`));
-    } catch (error) {
-      console.warn("Could not install Evaluation recent-write ownership.", error);
-      return false;
-    }
+    const install = coreContracts()?.installEvaluationRecentWriteOwner;
+    if (typeof install !== "function") return false;
+    return Boolean(install((playerId) => {
+      window.__mflEvaluationSearchStateRuntime?.commitRecentPlayer?.(playerId);
+    }));
   }
 
   function installCoreBridges() {
@@ -298,11 +203,7 @@
     const field = input();
     if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
     try {
-      if (typeof window.renderEvaluationSearchResults === "function") {
-        window.renderEvaluationSearchResults();
-      } else {
-        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
-      }
+      coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
     }
