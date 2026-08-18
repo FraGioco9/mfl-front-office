@@ -52,26 +52,24 @@
   --mfl-advanced-player-col-value: 6.4%;
 }
 
-/* Uniform Width owns both the colgroup and the corresponding header/data
- * cells. No later render phase can introduce a second width input. */
-#progressionPage .playerTableScroller :is(col, th, td).col-select { width: var(--mfl-table-col-select); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-id { width: var(--mfl-table-col-id); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-flag { width: var(--mfl-table-col-flag); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-name { width: var(--mfl-table-col-name); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-nationality { width: var(--mfl-table-col-nationality); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-age { width: var(--mfl-table-col-age); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-positions { width: var(--mfl-table-col-positions); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-seasons { width: var(--mfl-table-col-seasons); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-stat { width: var(--mfl-table-col-stat); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-overall { width: var(--mfl-table-col-overall); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-contract-revenue { width: var(--mfl-table-col-contract-revenue); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-contract-club { width: var(--mfl-table-col-contract-club); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-contract-division { width: var(--mfl-table-col-contract-division); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-agent { width: var(--mfl-table-col-agent); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
+/* Uniform Width is consumed by the player table only through its colgroup.
+ * Headers, loading cells, and loaded cells never become width owners. */
+#progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
+#progressionPage .playerTableScroller col.col-id { width: var(--mfl-table-col-id); }
+#progressionPage .playerTableScroller col.col-flag { width: var(--mfl-table-col-flag); }
+#progressionPage .playerTableScroller col.col-name { width: var(--mfl-table-col-name); }
+#progressionPage .playerTableScroller col.col-nationality { width: var(--mfl-table-col-nationality); }
+#progressionPage .playerTableScroller col.col-age { width: var(--mfl-table-col-age); }
+#progressionPage .playerTableScroller col.col-positions { width: var(--mfl-table-col-positions); }
+#progressionPage .playerTableScroller col.col-seasons { width: var(--mfl-table-col-seasons); }
+#progressionPage .playerTableScroller col.col-stat { width: var(--mfl-table-col-stat); }
+#progressionPage .playerTableScroller col.col-overall { width: var(--mfl-table-col-overall); }
+#progressionPage .playerTableScroller col.col-contract-revenue { width: var(--mfl-table-col-contract-revenue); }
+#progressionPage .playerTableScroller col.col-contract-club { width: var(--mfl-table-col-contract-club); }
+#progressionPage .playerTableScroller col.col-contract-division { width: var(--mfl-table-col-contract-division); }
+#progressionPage .playerTableScroller col.col-agent { width: var(--mfl-table-col-agent); }
+#progressionPage .playerTableScroller col.col-link { width: var(--mfl-table-col-link); }
 
-/* The player table has a dedicated scroller so historical generic
- * .tableScroller rules are outside the live player-table cascade. */
 #progressionPage .playerTableScroller {
   width: 100%;
   min-width: 0;
@@ -140,14 +138,10 @@
 
 .advancedPlayerTable :is(th, td) {
   width: var(--mfl-advanced-player-col-value);
-  min-width: 0;
-  max-width: none;
 }
 
 .advancedPlayerTable :is(thead th:first-child, tbody th) {
   width: var(--mfl-advanced-player-col-label);
-  min-width: 0;
-  max-width: none;
 }
 
 .tablePageTitle {
