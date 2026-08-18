@@ -32,8 +32,13 @@ invariant(
 );
 
 invariant(
-  /:is\(\.viewButton:not\(\[hidden\]\), \.mflStatsFilterButton, \.mflStatsDistributionModeButton\)\s*\{[^}]*cursor:\s*default;/s.test(styles),
-  "View and Stats buttons must define the default cursor in their shared canonical rule.",
+  /\.viewButton:not\(\[hidden\]\):not\(\.active\)\s*\{[^}]*cursor:\s*pointer;/s.test(styles),
+  "Non-active view buttons must use the pointer cursor.",
+);
+
+invariant(
+  /\.viewButton\.active,\s*\.mflStatsFilterButton,\s*\.mflStatsDistributionModeButton\s*\{[^}]*cursor:\s*default;/s.test(styles),
+  "Active views and Stats selection controls must keep the default cursor.",
 );
 
 const statsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\bwidth:\s*86px;[^}]*\bheight:\s*26px;/s;
@@ -41,7 +46,7 @@ const competingStatsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\b(?:width
 
 invariant(
   statsFilterSizeRule.test(stylesBase),
-  "styles-base.css must remain the single owner of MFL Stats Overall-filter button dimensions.",
+  "styles-base.css must remain the single owner of the shared Stats Overall-filter intrinsic dimensions.",
 );
 
 for (const [fileName, source] of [
@@ -52,9 +57,14 @@ for (const [fileName, source] of [
 ]) {
   invariant(
     !competingStatsFilterSizeRule.test(source),
-    `${fileName} must not assign a second size to MFL Stats Overall-filter buttons.`,
+    `${fileName} must not assign a second size to Stats Overall-filter buttons.`,
   );
 }
+
+invariant(
+  /\.mflStatsFilterButton\s*\{[^}]*flex:\s*1 1 auto;/s.test(styles),
+  "Database Stats and MFL Stats Overall filters must share the same flex-growth rule and fill the available filter-box width.",
+);
 
 invariant(
   filterControls.includes('".mflStatsFilterButton.active, .mflStatsDistributionModeButton.active"')
@@ -62,4 +72,4 @@ invariant(
   "Active Overall filters and Overall/Age controls must be consumed as no-op interactions.",
 );
 
-console.log("MFL Stats data, control interaction, cursor behavior, and filter sizing ownership are canonical.");
+console.log("MFL Stats data, shared filter layout, control interaction, and view-button cursors are canonical.");
