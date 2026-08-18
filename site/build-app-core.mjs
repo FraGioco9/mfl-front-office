@@ -8,7 +8,7 @@ import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(siteRoot, "modules/app-core.js");
 const releasePath = resolve(siteRoot, "release.json");
-const appConfigRuntimePath = resolve(siteRoot, "app-config-runtime.js");
+const tableWidthRuntimePath = resolve(siteRoot, "table-width-runtime.js");
 const runtimePath = resolve(siteRoot, "modules/app-core-runtime.js");
 const evaluationRuntimePath = resolve(siteRoot, "modules/app-core-evaluation-runtime.js");
 const mflStatsRuntimePath = resolve(siteRoot, "modules/app-core-mfl-stats-runtime.js");
@@ -84,6 +84,7 @@ function normalizeRetirementCalendarIcon(source) {
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "");
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
+const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
 const source = normalizeRetirementCalendarIcon(
   removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
@@ -141,7 +142,7 @@ const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do 
 const walletBanner = "// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.\n";
 const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\n";
 await Promise.all([
-  writeFile(appConfigRuntimePath, `${appConfigRuntime}\n`, "utf8"),
+  writeFile(tableWidthRuntimePath, `${preBootstrapRuntime}\n`, "utf8"),
   writeFile(runtimePath, `${banner}${normalized}\n`, "utf8"),
   writeFile(evaluationRuntimePath, `${evaluationBanner}${evaluationRuntime}\n`, "utf8"),
   writeFile(mflStatsRuntimePath, `${mflStatsBanner}${mflStatsRuntime}\n`, "utf8"),
@@ -154,7 +155,7 @@ await Promise.all([
 ]);
 
 if (process.env.MFL_BUILD_VERBOSE === "1") {
-  console.log(`Generated ${appConfigRuntimePath} (${Buffer.byteLength(appConfigRuntime, "utf8")} canonical config bytes).`);
+  console.log(`Generated ${tableWidthRuntimePath} (${Buffer.byteLength(preBootstrapRuntime, "utf8")} canonical config + Uniform Width bytes).`);
   generatedArtifacts.forEach(([path, artifact, ownership]) => {
     console.log(`Generated ${path} (${Buffer.byteLength(artifact, "utf8")} ${ownership} bytes).`);
   });
