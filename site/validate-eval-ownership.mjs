@@ -3,6 +3,15 @@ import { readFile } from "node:fs/promises";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const exists = async (path) => {
+  try {
+    await read(path);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+};
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -11,22 +20,28 @@ const [
   bootstrapCore,
   watchlistRuntime,
   evaluationRateRuntime,
+  evaluationLayoutRuntime,
   evaluationSearchRuntime,
   tableLoadingRuntime,
   globalSearchRuntime,
   appEntry,
+  buildAppCore,
   routeRuntimeNormalizer,
   appCoreSource,
+  retiredEvaluationLoadRuntimeExists,
 ] = await Promise.all([
   read("./bootstrap-core.js"),
   read("./watchlist-myplayers-route-runtime.js"),
   read("./evaluation-discount-rate-runtime.js"),
+  read("./evaluation-layout-runtime.js"),
   read("./evaluation-search-state-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./global-search-runtime.js"),
   read("./modules/app-entry.js"),
+  read("./build-app-core.mjs"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./modules/app-core.js"),
+  exists("./evaluation-load-intent-runtime.js"),
 ]);
 
 for (const [name, source] of [
@@ -125,10 +140,30 @@ invariant(
   "app-entry must delegate Evaluation recent-state ownership into the core lexical scope.",
 );
 
+invariant(!retiredEvaluationLoadRuntimeExists, "Observer-driven evaluation-load-intent-runtime.js must remain deleted.");
+invariant(
+  !appEntry.includes("/evaluation-load-intent-runtime.js"),
+  "Evaluation runtime routing must not restore the retired load-intent request.",
+);
+invariant(
+  bootstrapCore.includes('"openSavedEvaluationsModal"'),
+  "Saved Evaluation loading must remain under the Uniform Loading Workflow.",
+);
+invariant(
+  !evaluationLayoutRuntime.includes("MutationObserver")
+    && !evaluationLayoutRuntime.includes('document.createElement("style")')
+    && !evaluationLayoutRuntime.includes("mflInteractionBusy"),
+  "Evaluation layout must not recreate observer-driven or CSS-driven loading ownership.",
+);
+
 invariant(!routeRuntimeNormalizer.includes("window.eval"), "The application-core contract must not be implemented through window.eval.");
 invariant(
   routeRuntimeNormalizer.includes("window.__mflCoreContracts = Object.freeze({"),
   "The route normalizer must publish one immutable application-core contract before startup.",
+);
+invariant(
+  routeRuntimeNormalizer.includes("function removeLegacyEvaluationRouteStability(source)"),
+  "The shared normalizer pipeline must remove the legacy Evaluation route-stability tail for both build and fallback paths.",
 );
 for (const contractMethod of [
   "ensureCanonicalTableHeader",
@@ -158,10 +193,19 @@ invariant(
   !routeRuntimeNormalizer.includes("stableRenderTableLoadingShell"),
   "Core contracts must not recreate the obsolete renderTableLoadingShell monkey patch; showTableBusyState already owns loading presentation.",
 );
+invariant(
+  !buildAppCore.includes("function removeLegacyEvaluationRouteStability(source)"),
+  "The build must reuse the shared normalizer sanitizer instead of duplicating Evaluation-tail removal.",
+);
+invariant(
+  buildAppCore.includes("String evaluation leaked into generated application core"),
+  "The build must reject any string-evaluation regression in emitted core artifacts.",
+);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const sharedCore = String(artifacts.core || "");
 const tableCore = String(artifacts.routeChunks?.table || "");
+const generatedSources = [sharedCore, ...Object.values(artifacts.routeChunks || {}).map((source) => String(source || ""))];
 invariant(
   sharedCore.includes("window.__mflCoreContracts = Object.freeze({"),
   "The generated shared application core must retain the explicit lexical-owner contract after route splitting.",
@@ -174,6 +218,12 @@ invariant(
   tableCore.includes('if (window.__mflTableLoadingRuntime?.show?.()) return;'),
   "The Table chunk must retain direct busy-state delegation to the table-loading runtime after removing the shell monkey patch.",
 );
+for (const generatedSource of generatedSources) {
+  invariant(!generatedSource.includes("window.eval"), "Generated/fallback application core must not contain window.eval.");
+  invariant(!generatedSource.includes("eval("), "Generated/fallback application core must not contain string evaluation.");
+  invariant(!generatedSource.includes("__mflEvaluationRouteStability"), "Generated/fallback application core must not contain the legacy Evaluation stability owner.");
+  invariant(!generatedSource.includes("evaluationRouteStabilityStyles"), "Generated/fallback application core must not contain legacy Evaluation stability CSS injection.");
+}
 new Function(sharedCore);
 new Function(tableCore);
 
