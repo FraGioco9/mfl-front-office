@@ -23,103 +23,14 @@
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  function coreContracts() {
+    const contracts = Reflect.get(window, "__mflCoreContracts");
+    return contracts && typeof contracts === "object" ? contracts : null;
+  }
+
   function installCoreSearchMatching() {
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof normalizeSearchText !== "function") return false;
-
-        const searchTokens = (value) => String(value || "")
-          .normalize("NFD")
-          .replace(/[\\u0300-\\u036f]/g, "")
-          .toLowerCase()
-          .trim()
-          .split(/\\s+/)
-          .filter(Boolean);
-
-        const orderedTokensMatch = (text, query) => {
-          const haystack = searchTokens(text).join(" ");
-          const tokens = searchTokens(query);
-          if (!tokens.length) return false;
-          let cursor = 0;
-          for (const token of tokens) {
-            const index = haystack.indexOf(token, cursor);
-            if (index < 0) return false;
-            cursor = index + token.length;
-          }
-          return true;
-        };
-
-        if (!normalizeSearchText.__mflWhitespaceAware) {
-          const originalNormalizeSearchText = normalizeSearchText;
-          const whitespaceAwareNormalizeSearchText = function(value) {
-            return originalNormalizeSearchText(value).replace(/\\s+/g, " ").trim();
-          };
-          Object.defineProperty(whitespaceAwareNormalizeSearchText, "__mflWhitespaceAware", { value: true });
-          normalizeSearchText = whitespaceAwareNormalizeSearchText;
-        }
-
-        if (typeof searchMatchScore === "function" && !searchMatchScore.__mflSurnameFirst) {
-          const surnameFirstSearchMatchScore = function(query, primaryText, secondaryText = "") {
-            const normalizedQuery = normalizeSearchText(query);
-            const primary = normalizeSearchText(primaryText);
-            const secondary = normalizeSearchText(secondaryText);
-            const primaryIsPlayerName = /^\\d+$/.test(secondary) && primary && !/^\\d+$/.test(primary);
-
-            if (primaryIsPlayerName) {
-              const surname = searchTokens(primary).at(-1) || "";
-              if (secondary === normalizedQuery) return 120;
-              if (surname === normalizedQuery) return 110;
-              if (surname.startsWith(normalizedQuery)) return 95;
-              if (primary === normalizedQuery) return 90;
-              if (secondary.startsWith(normalizedQuery)) return 85;
-              if (primary.startsWith(normalizedQuery)) return 75;
-              if (surname.includes(normalizedQuery)) return 65;
-              if (primary.includes(normalizedQuery)) return 50;
-              if (orderedTokensMatch(primary, normalizedQuery)) return 45;
-              if (secondary.includes(normalizedQuery)) return 40;
-              return 0;
-            }
-
-            if (primary === normalizedQuery || secondary === normalizedQuery) return 100;
-            if (primary.startsWith(normalizedQuery)) return 80;
-            if (secondary.startsWith(normalizedQuery)) return 70;
-            if (primary.includes(normalizedQuery)) return 50;
-            if (secondary.includes(normalizedQuery)) return 40;
-            if (orderedTokensMatch(primary, normalizedQuery)) return 45;
-            if (orderedTokensMatch(secondary, normalizedQuery)) return 35;
-            return 0;
-          };
-          Object.defineProperty(surnameFirstSearchMatchScore, "__mflSurnameFirst", { value: true });
-          searchMatchScore = surnameFirstSearchMatchScore;
-        }
-
-        if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflSurnameFirst) {
-          const surnameFirstEvaluationSearchMatches = function(query) {
-            if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
-            const results = [];
-            state.evaluationSearchIndex.forEach((entry) => {
-              if (entry.retired) return;
-              const score = searchMatchScore(query, entry.name, entry.id);
-              if (score <= 0) return;
-              results.push({ entry, score });
-            });
-            return results
-              .sort((a, b) => b.score - a.score
-                || b.entry.overall - a.entry.overall
-                || a.entry.nameDisplay.localeCompare(b.entry.nameDisplay))
-              .slice(0, 5)
-              .map((result) => result.entry);
-          };
-          Object.defineProperty(surnameFirstEvaluationSearchMatches, "__mflSurnameFirst", { value: true });
-          evaluationSearchMatches = surnameFirstEvaluationSearchMatches;
-        }
-
-        return true;
-      })();`));
-    } catch (error) {
-      console.warn("Could not install surname-first search matching.", error);
-      return false;
-    }
+    const install = coreContracts()?.installSearchMatching;
+    return typeof install === "function" ? Boolean(install()) : false;
   }
 
   function searchInput() {
@@ -207,11 +118,7 @@
 
   function renderCurrentResults() {
     try {
-      if (typeof window.renderSearchResultsNow === "function") {
-        window.renderSearchResultsNow();
-      } else {
-        window.eval("if (typeof renderSearchResultsNow === 'function') renderSearchResultsNow();");
-      }
+      coreContracts()?.renderGlobalSearchResults?.();
     } catch (error) {
       console.warn("Could not render Global Search results.", error);
     }
@@ -219,11 +126,7 @@
 
   function renderCurrentEvaluationResults() {
     try {
-      if (typeof window.renderEvaluationSearchResults === "function") {
-        window.renderEvaluationSearchResults();
-      } else {
-        window.eval("if (typeof renderEvaluationSearchResults === 'function') renderEvaluationSearchResults();");
-      }
+      coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render Evaluation search results.", error);
     }
@@ -231,43 +134,26 @@
 
   function resetEvaluationSelection() {
     try {
-      if (typeof window.resetEvaluationSelection === "function") {
-        window.resetEvaluationSelection();
-      } else {
-        window.eval("if (typeof resetEvaluationSelection === 'function') resetEvaluationSelection();");
-      }
+      coreContracts()?.resetCurrentEvaluationSelection?.();
     } catch (error) {
       console.warn("Could not reset Evaluation selection.", error);
     }
   }
 
   function payloadApplierReady() {
-    if (typeof window.applyDatabaseSearchPayload === "function") return true;
-    try {
-      return Boolean(window.eval("typeof applyDatabaseSearchPayload === 'function'"));
-    } catch {
-      return false;
-    }
+    return typeof coreContracts()?.applySearchPayload === "function";
   }
 
   function applyPayload(payload, normalizedQuery = "") {
     installCoreSearchMatching();
-    if (!payloadApplierReady()) {
+    const applySearchPayload = coreContracts()?.applySearchPayload;
+    if (typeof applySearchPayload !== "function") {
       pendingPayload = payload;
       pendingQuery = normalizedQuery;
       return false;
     }
 
-    window.__mflAuthoritativeGlobalSearchPayload = payload;
-    try {
-      if (typeof window.applyDatabaseSearchPayload === "function") {
-        window.applyDatabaseSearchPayload(payload, "all");
-      } else {
-        window.eval("if (typeof applyDatabaseSearchPayload === 'function') applyDatabaseSearchPayload(window.__mflAuthoritativeGlobalSearchPayload, 'all');");
-      }
-    } finally {
-      delete window.__mflAuthoritativeGlobalSearchPayload;
-    }
+    applySearchPayload(payload, "all");
     pendingPayload = null;
     pendingQuery = "";
     renderCurrentResults();
@@ -277,22 +163,14 @@
 
   function applyEvaluationPayload(payload, normalizedQuery = "") {
     installCoreSearchMatching();
-    if (!payloadApplierReady()) {
+    const applySearchPayload = coreContracts()?.applySearchPayload;
+    if (typeof applySearchPayload !== "function") {
       pendingEvaluationPayload = payload;
       pendingEvaluationQuery = normalizedQuery;
       return false;
     }
 
-    window.__mflAuthoritativeEvaluationSearchPayload = payload;
-    try {
-      if (typeof window.applyDatabaseSearchPayload === "function") {
-        window.applyDatabaseSearchPayload(payload, "players");
-      } else {
-        window.eval("if (typeof applyDatabaseSearchPayload === 'function') applyDatabaseSearchPayload(window.__mflAuthoritativeEvaluationSearchPayload, 'players');");
-      }
-    } finally {
-      delete window.__mflAuthoritativeEvaluationSearchPayload;
-    }
+    applySearchPayload(payload, "players");
     pendingEvaluationPayload = null;
     pendingEvaluationQuery = "";
     renderCurrentEvaluationResults();
@@ -323,25 +201,11 @@
   }
 
   function invalidateLegacyAllSearch() {
-    try {
-      window.eval(`(() => {
-        if (typeof databaseSearchAbortControllers !== "undefined") databaseSearchAbortControllers.get("all")?.abort?.();
-        if (typeof databaseSearchSequences !== "undefined") {
-          databaseSearchSequences.set("all", (databaseSearchSequences.get("all") || 0) + 1);
-        }
-      })();`);
-    } catch {}
+    coreContracts()?.invalidateDatabaseSearch?.("all");
   }
 
   function invalidateLegacyEvaluationSearch() {
-    try {
-      window.eval(`(() => {
-        if (typeof databaseSearchAbortControllers !== "undefined") databaseSearchAbortControllers.get("players")?.abort?.();
-        if (typeof databaseSearchSequences !== "undefined") {
-          databaseSearchSequences.set("players", (databaseSearchSequences.get("players") || 0) + 1);
-        }
-      })();`);
-    } catch {}
+    coreContracts()?.invalidateDatabaseSearch?.("players");
   }
 
   async function searchDatabase(rawQuery) {
