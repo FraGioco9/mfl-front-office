@@ -36,9 +36,9 @@
   ]);
   const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([
     "overall",
+    "active_contract_revenue_share",
     "active_contract_club_name",
     "active_contract_club_division",
-    "active_contract_revenue_share",
   ]);
   const FIRST_PAINT_AGENT_PAGES = new Set(["myplayers", "agents", "mfl"]);
   const FIRST_PAINT_COLUMN_CLASSES = Object.freeze({
@@ -365,7 +365,7 @@
 
     const row = document.createElement("tr");
     const selectionHeader = document.createElement("th");
-    selectionHeader.className = "selectionCell col-select";
+    selectionHeader.className = "selectionCell";
     selectionHeader.setAttribute("aria-label", "Selection");
     row.appendChild(selectionHeader);
     columns.forEach((column) => {
