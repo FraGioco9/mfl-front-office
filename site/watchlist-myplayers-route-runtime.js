@@ -25,6 +25,17 @@
   let deferredWatchlistFilter = null;
   let reconciling = false;
   let destroyed = false;
+  function interactionBusyChainIncludes(candidate, target) {
+    if (typeof candidate !== "function" || typeof target !== "function") return false;
+    const seen = new Set();
+    let current = candidate;
+    while (typeof current === "function" && !seen.has(current)) {
+      if (current === target) return true;
+      seen.add(current);
+      current = current.__mflInteractionBusyOriginal;
+    }
+    return false;
+  }
   function statePage() {
     try { return typeof state === "object" && state ? String(state.currentPage || "") : ""; }
     catch { return ""; }
@@ -148,13 +159,13 @@
       return "";
     }
   }
-  async function reconcile(intent) {
+  async function reconcile(intent, setPageDelegate = originalSetPage) {
     if (destroyed || reconciling || !intent || latestIntent?.sequence !== intent.sequence) return;
-    if (intentSatisfied(intent)) return;
+    if (intentSatisfied(intent) || typeof setPageDelegate !== "function") return;
     reconciling = true;
     try {
       const expectedPath = intentPath(intent);
-      await originalSetPage.call(window, intent.pageName, false, {
+      await setPageDelegate.call(window, intent.pageName, false, {
         ...intent.options,
         ...(expectedPath ? { replaceUrl: expectedPath } : {}),
         skipNavigationLoading: true,
@@ -281,14 +292,15 @@
     let candidate = null;
     try { candidate = switchWatchlist; } catch {}
     if (typeof candidate !== "function") return false;
-    if (candidate === wrappedSwitchWatchlist) return true;
+    if (candidate === wrappedSwitchWatchlist || interactionBusyChainIncludes(candidate, wrappedSwitchWatchlist)) return true;
 
-    originalSwitchWatchlist = candidate;
+    const delegatedSwitchWatchlist = candidate;
+    originalSwitchWatchlist = delegatedSwitchWatchlist;
     wrappedSwitchWatchlist = function switchWatchlistWithSingleLoad(...args) {
       let filterCandidate = null;
       try { filterCandidate = applyFilters; } catch {}
       if (typeof filterCandidate !== "function") {
-        return originalSwitchWatchlist.apply(this, args);
+        return delegatedSwitchWatchlist.apply(this, args);
       }
 
       let filterRequested = false;
@@ -311,7 +323,7 @@
       if (!deferredInstalled) {
         delete window.__mflWatchlistApplyFiltersOriginal;
         delete window.__mflWatchlistApplyFiltersDeferred;
-        return originalSwitchWatchlist.apply(this, args);
+        return delegatedSwitchWatchlist.apply(this, args);
       }
 
       let result;
@@ -320,7 +332,7 @@
         // once inside the base switch, then again after restoring that list's
         // saved view. Defer both synchronous calls and execute only the final
         // one, after the saved view has already been applied.
-        result = originalSwitchWatchlist.apply(this, args);
+        result = delegatedSwitchWatchlist.apply(this, args);
       } finally {
         try { window.eval("applyFilters = window.__mflWatchlistApplyFiltersOriginal"); } catch {}
         delete window.__mflWatchlistApplyFiltersOriginal;
@@ -344,11 +356,12 @@
     let candidate = null;
     try { candidate = setPage; } catch {}
     if (typeof candidate !== "function") return false;
-    if (candidate === wrappedSetPage) {
+    if (candidate === wrappedSetPage || interactionBusyChainIncludes(candidate, wrappedSetPage)) {
       installWatchlistSwitchLoadDedupe();
       return true;
     }
-    originalSetPage = candidate;
+    const delegatedSetPage = candidate;
+    originalSetPage = delegatedSetPage;
     wrappedSetPage = async function setPageWithLatestWatchlistMyPlayersIntent(pageName, updateHash = true, options = {}) {
       const normalizedPage = String(pageName || "");
       const tableNavigation = TABLE_PAGES.has(normalizedPage);
@@ -366,12 +379,12 @@
       }
       if (watchlistNavigation) watchlistNavigationDepth += 1;
       try {
-        const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
+        const result = await delegatedSetPage.call(this, pageName, updateHash, nextOptions);
         if (watchlistNavigation && walletPreferencesSyncActive()) await waitForWalletPreferencesSettled();
-        if (pairNavigation && latestIntent?.sequence !== requestSequence) await reconcile(latestIntent);
+        if (pairNavigation && latestIntent?.sequence !== requestSequence) await reconcile(latestIntent, delegatedSetPage);
         else if (pairNavigation && latestIntent?.sequence === requestSequence) {
           await Promise.resolve();
-          await reconcile(latestIntent);
+          await reconcile(latestIntent, delegatedSetPage);
         }
         return result;
       } finally {
