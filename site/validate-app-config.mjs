@@ -10,8 +10,8 @@ import {
   TABLE_SORTABLE_COLUMNS,
   TABLE_STAT_COLUMNS,
   TABLE_VIEW_CONFIG,
+  TABLE_VIEW_COLUMNS,
   VIEW_BY_SLUG,
-  browserConfigRuntimeSource,
 } from "./modules/app-config.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -29,8 +29,8 @@ function initializer(source, name) {
   return source.slice(valueStart, end);
 }
 
-function evaluateInitializer(source, name) {
-  return vm.runInNewContext(initializer(source, name), { Object, Set });
+function evaluateInitializer(source, name, context = {}) {
+  return vm.runInNewContext(initializer(source, name), { Object, Set, ...context });
 }
 
 function plain(value) {
@@ -68,11 +68,30 @@ const [
 ]);
 
 const release = JSON.parse(releaseSource);
-const expectedPreBootstrapRuntime = `${browserConfigRuntimeSource(release).replace(/\s*$/, "")}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});\n`;
-invariant(
-  tableWidthSource === expectedPreBootstrapRuntime,
-  "table-width-runtime.js must be generated only from release.json and modules/app-config.js.",
-);
+const runtimeSandbox = {
+  window: {},
+  location: { pathname: "/", origin: "https://example.test" },
+  Object,
+  Set,
+  encodeURIComponent,
+};
+vm.runInNewContext(tableWidthSource, runtimeSandbox);
+const runtimeConfig = runtimeSandbox.window.__mflAppConfig;
+invariant(runtimeConfig, "Pre-bootstrap runtime must expose the canonical app configuration.");
+same(runtimeConfig.release, release, "pre-bootstrap release config");
+same(runtimeConfig.routes.tableViews, TABLE_VIEW_CONFIG, "pre-bootstrap route views");
+same(runtimeConfig.routes.viewBySlug, VIEW_BY_SLUG, "pre-bootstrap view slug map");
+same(runtimeConfig.table.baseColumns, TABLE_BASE_COLUMNS, "pre-bootstrap base columns");
+same(runtimeConfig.table.statColumns, TABLE_STAT_COLUMNS, "pre-bootstrap stat columns");
+same(runtimeConfig.table.contractColumns, TABLE_CONTRACT_COLUMNS, "pre-bootstrap contract columns");
+same(runtimeConfig.table.viewColumns, TABLE_VIEW_COLUMNS, "pre-bootstrap table view columns");
+same(runtimeConfig.table.joinedAgencyPages, TABLE_JOINED_AGENCY_PAGES, "pre-bootstrap joined-agency pages");
+same(runtimeConfig.table.sortableColumns, TABLE_SORTABLE_COLUMNS, "pre-bootstrap sortable columns");
+same(runtimeConfig.table.columnLabels, TABLE_COLUMN_LABELS, "pre-bootstrap column labels");
+same(runtimeConfig.table.columnClasses, TABLE_COLUMN_CLASSES, "pre-bootstrap column classes");
+invariant(runtimeSandbox.window.__mflReleaseVersion === release.version, "Pre-bootstrap release facade must come from release.json.");
+invariant(runtimeSandbox.window.__mflTableViewConfig === runtimeConfig.routes.tableViews, "Legacy table-view facade must point to canonical config.");
+invariant(runtimeSandbox.window.__mflUniformWidth?.name === "Uniform Width", "Uniform Width marker must remain available before bootstrap.");
 
 same(evaluateInitializer(indexSource, "TABLE_VIEW_CONFIG"), TABLE_VIEW_CONFIG, "index first-paint view config");
 same(evaluateInitializer(indexSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "index first-paint view slug map");
@@ -98,7 +117,11 @@ same(evaluateInitializer(staticUiSource, "STATIC_TABLE_BASE_COLUMNS"), TABLE_BAS
 same(evaluateInitializer(staticUiSource, "STATIC_TABLE_STAT_COLUMNS"), TABLE_STAT_COLUMNS, "static UI stat columns");
 same(evaluateInitializer(staticUiSource, "STATIC_TABLE_CONTRACT_COLUMNS"), TABLE_CONTRACT_COLUMNS, "static UI contract columns");
 same(evaluateInitializer(staticUiSource, "STATIC_JOINED_AGENCY_PAGES"), TABLE_JOINED_AGENCY_PAGES, "static UI joined-agency pages");
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_SORTABLE_COLUMNS"), TABLE_SORTABLE_COLUMNS, "static UI sortable columns");
+same(
+  evaluateInitializer(staticUiSource, "STATIC_TABLE_SORTABLE_COLUMNS", { STATIC_TABLE_STAT_COLUMNS: TABLE_STAT_COLUMNS }),
+  TABLE_SORTABLE_COLUMNS,
+  "static UI sortable columns",
+);
 same(evaluateInitializer(staticUiSource, "STATIC_TABLE_COLUMN_LABELS"), TABLE_COLUMN_LABELS, "static UI column labels");
 same(evaluateInitializer(staticUiSource, "STATIC_TABLE_COLUMN_CLASSES"), TABLE_COLUMN_CLASSES, "static UI column classes");
 
