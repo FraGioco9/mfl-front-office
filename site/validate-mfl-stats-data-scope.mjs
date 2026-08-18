@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbars, filterControls] = await Promise.all([
+const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([
   readFile(new URL("./api/_data-page.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_data-query.js", import.meta.url), "utf8"),
   readFile(new URL("./styles.css", import.meta.url), "utf8"),
@@ -8,6 +8,7 @@ const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbar
   readFile(new URL("./responsive.css", import.meta.url), "utf8"),
   readFile(new URL("./dropdowns.css", import.meta.url), "utf8"),
   readFile(new URL("./scrollbars.css", import.meta.url), "utf8"),
+  readFile(new URL("./control-interactions-runtime.js", import.meta.url), "utf8"),
   readFile(new URL("./filter-controls-runtime.js", import.meta.url), "utf8"),
 ]);
 
@@ -31,14 +32,22 @@ invariant(
   "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
 );
 
+const sharedControlSelector = ":is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton)";
 invariant(
-  /\.viewButton:not\(\[hidden\]\):not\(\.active\)\s*\{[^}]*cursor:\s*pointer;/s.test(styles),
-  "Non-active view buttons must use the pointer cursor.",
+  styles.includes(`${sharedControlSelector}:not(.active) {\n  cursor: pointer;\n}`),
+  "Every non-active page, view, and Stats filter button must use the pointer cursor.",
 );
-
 invariant(
-  /\.viewButton\.active,\s*\.mflStatsFilterButton,\s*\.mflStatsDistributionModeButton\s*\{[^}]*cursor:\s*default;/s.test(styles),
-  "Active views and Stats selection controls must keep the default cursor.",
+  styles.includes(`${sharedControlSelector}.active {\n  cursor: default;\n}`),
+  "Every active page, view, and Stats filter button must use the default cursor.",
+);
+invariant(
+  styles.includes(`${sharedControlSelector}:not(.active):hover:not(:disabled) {`),
+  "Only non-active page, view, and Stats filter buttons may receive the shared hover highlight.",
+);
+invariant(
+  styles.includes(`${sharedControlSelector}.active:hover {`),
+  "Active page, view, and Stats filter buttons must retain their active paint while hovered.",
 );
 
 const statsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\bwidth:\s*86px;[^}]*\bheight:\s*26px;/s;
@@ -46,11 +55,14 @@ const competingStatsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\b(?:width
 
 invariant(
   statsFilterSizeRule.test(stylesBase),
-  "styles-base.css must remain the single owner of the shared Stats Overall-filter intrinsic dimensions.",
+  "styles-base.css must remain the owner of the shared Stats Overall-filter intrinsic dimensions.",
+);
+invariant(
+  /\.mflStatsFilterButton\s*\{[^}]*flex:\s*1 1 86px;[^}]*min-width:\s*86px;/s.test(styles),
+  "Database Stats and MFL Stats Overall filters must share a fixed intrinsic flex basis while filling all available filter-box width.",
 );
 
 for (const [fileName, source] of [
-  ["styles.css", styles],
   ["responsive.css", responsive],
   ["dropdowns.css", dropdowns],
   ["scrollbars.css", scrollbars],
@@ -62,14 +74,17 @@ for (const [fileName, source] of [
 }
 
 invariant(
-  /\.mflStatsFilterButton\s*\{[^}]*flex:\s*1 1 auto;/s.test(styles),
-  "Database Stats and MFL Stats Overall filters must share the same flex-growth rule and fill the available filter-box width.",
+  controlInteractions.includes('"#sidebar .navButton.active[data-page]"')
+    && controlInteractions.includes('".viewButton.active[data-view]"')
+    && controlInteractions.includes('".mflStatsFilterButton.active"')
+    && controlInteractions.includes('".mflStatsDistributionModeButton.active"')
+    && controlInteractions.includes("event.stopImmediatePropagation();"),
+  "The universal interaction runtime must consume active page, view, and filter controls as no-op interactions.",
 );
-
 invariant(
-  filterControls.includes('".mflStatsFilterButton.active, .mflStatsDistributionModeButton.active"')
-    && filterControls.includes("event.stopImmediatePropagation();"),
-  "Active Overall filters and Overall/Age controls must be consumed as no-op interactions.",
+  !filterControls.includes("consumeActiveStatsControlEvent")
+    && !filterControls.includes("installActiveStatsViewNoop"),
+  "Stats-specific active-control blocking must not compete with the universal interaction owner.",
 );
 
-console.log("MFL Stats data, shared filter layout, control interaction, and view-button cursors are canonical.");
+console.log("MFL Stats data, stable filter geometry, and global page/view/filter interaction behavior are canonical.");
