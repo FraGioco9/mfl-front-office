@@ -5,10 +5,11 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, tableWidthRuntime, tableLoadingRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
+const [styles, tableWidthRuntime, tableLoadingRuntime, staticUiRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
   read("./styles.css"),
   read("./table-width-runtime.js"),
   read("./table-loading-runtime.js"),
+  read("./static-ui-runtime.js"),
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./index.html"),
@@ -146,6 +147,12 @@ invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not s
 invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(bootstrap.includes("function primeInitialTableStructure(page, view) {"), "Bootstrap must build first-paint table structure synchronously.");
 invariant(bootstrap.includes('selectionCol.className = "col-select";'), "First-paint colgroup must include the selection column.");
+invariant(bootstrap.includes('selectionHeader.className = "selectionCell";'), "First-paint selection header must not carry a column-width class.");
+invariant(!bootstrap.includes('selectionHeader.className = "selectionCell col-select";'), "Selection width must belong to the colgroup, not the header cell.");
+invariant(
+  bootstrap.includes('const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([\n    "overall",\n    "active_contract_revenue_share",\n    "active_contract_club_name",\n    "active_contract_club_division",\n  ]);'),
+  "Contracts first paint must use the same semantic column order as the application core.",
+);
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
 invariant(!bootstrap.includes("cell.colSpan = 16"), "First-paint loading rows must not collapse the table into one colspan cell.");
 invariant(bootstrap.includes('row.className = "mflTableLoadingRow";'), "First-paint loading rows must use the canonical loading-row class.");
@@ -173,6 +180,19 @@ invariant(
   && tableLoadingRuntime.includes("document.documentElement.dataset.initialTablePage")
   && tableLoadingRuntime.includes("document.documentElement.dataset.initialTableView"),
   "Loading/header ownership must preserve the first-paint header until the application core reaches the requested page and view.",
+);
+
+invariant(
+  !staticUiRuntime.includes("STATIC_TABLE_COLUMN_WIDTHS")
+  && !staticUiRuntime.includes("applyStaticTableColumnWidth")
+  && !staticUiRuntime.includes("__mflTableWidthRuntime")
+  && !staticUiRuntime.includes("table.style.width")
+  && !staticUiRuntime.includes("table.style.minWidth"),
+  "Static UI must not own or apply player table widths during startup.",
+);
+invariant(
+  staticUiRuntime.includes('selectionColumn.className = "col-select";'),
+  "Static UI colgroup reconstruction must preserve the Uniform Width selection class.",
 );
 
 invariant(
