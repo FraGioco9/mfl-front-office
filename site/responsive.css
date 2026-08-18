@@ -372,10 +372,6 @@ html:not(.mflInitialRouteResolved):is(
     -webkit-overflow-scrolling: touch;
   }
 
-  #progressionPage .tableScroller table {
-    min-width: 1240px !important;
-  }
-
   .pager {
     left: 0;
     width: 100%;
@@ -760,10 +756,6 @@ html:not(.mflInitialRouteResolved):is(
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
-  }
-
-  #progressionPage .tableScroller > table {
-    min-width: 1240px !important;
   }
 
   .advancedPlayerTableSection,
