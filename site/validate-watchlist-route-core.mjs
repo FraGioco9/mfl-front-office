@@ -104,6 +104,16 @@ includes(
   "The global loading bridge must wrap direct Watchlist switches as well as page and view owners, so loading starts before the active-list mutation regardless of cache state.",
 );
 includes(
+  bootstrapCore,
+  'Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });',
+  "Uniform Loading Workflow wrappers must expose their delegate so route runtimes can recognize an already-wrapped owner without wrapping it recursively.",
+);
+includes(
+  bootstrapCore,
+  "window.__mflTableLoadingRuntime?.sync?.();",
+  "The Uniform Loading Workflow must synchronize table loading presentation at the same time as its loading token state changes.",
+);
+includes(
   tableLoading,
   'document.documentElement.classList.contains("mflDataLoading")',
   "Table loading must be driven only by the global data-loading state.",
@@ -116,8 +126,28 @@ includes(
 
 includes(
   watchlistRouteRuntime,
-  "await originalSetPage.call(this, pageName, updateHash, nextOptions);",
-  "Watchlist route coordination must delegate its actual page transition to the shared setPage owner.",
+  "function interactionBusyChainIncludes(candidate, target) {",
+  "Watchlist/My Players coordination must recognize the Uniform Loading Workflow wrapper chain instead of treating it as a new route owner.",
+);
+includes(
+  watchlistRouteRuntime,
+  "candidate === wrappedSetPage || interactionBusyChainIncludes(candidate, wrappedSetPage)",
+  "Revisiting Watchlist or My Players must not install a second setPage wrapper around the existing Watchlist coordinator.",
+);
+includes(
+  watchlistRouteRuntime,
+  "const delegatedSetPage = candidate;",
+  "Each Watchlist setPage wrapper must capture an immutable delegate rather than reading a mutable outer originalSetPage reference.",
+);
+includes(
+  watchlistRouteRuntime,
+  "await delegatedSetPage.call(this, pageName, updateHash, nextOptions);",
+  "Watchlist route coordination must delegate its actual page transition through its immutable shared setPage owner.",
+);
+includes(
+  watchlistRouteRuntime,
+  "await reconcile(latestIntent, delegatedSetPage);",
+  "Watchlist reconciliation must use the same immutable setPage delegate as the navigation that created the intent.",
 );
 includes(
   watchlistRouteRuntime,
@@ -126,8 +156,23 @@ includes(
 );
 includes(
   watchlistRouteRuntime,
+  "candidate === wrappedSwitchWatchlist || interactionBusyChainIncludes(candidate, wrappedSwitchWatchlist)",
+  "Direct Watchlist switching must also reject duplicate installation through an outer Uniform Loading Workflow wrapper.",
+);
+includes(
+  watchlistRouteRuntime,
+  "const delegatedSwitchWatchlist = candidate;",
+  "The direct Watchlist switch wrapper must capture an immutable delegate and cannot be redirected into itself by a later install attempt.",
+);
+includes(
+  watchlistRouteRuntime,
   "wrappedSwitchWatchlist = function switchWatchlistWithSingleLoad(...args) {",
   "Direct Watchlist changes may retain request deduping, but their final owner must be wrapped by the Uniform Loading Workflow.",
+);
+excludes(
+  watchlistRouteRuntime,
+  "await originalSetPage.call(this, pageName, updateHash, nextOptions);",
+  "Watchlist setPage wrappers must not call a mutable originalSetPage reference that can be reassigned during a later route-runtime install.",
 );
 const watchlistRuntimeInstall = appEntry.indexOf("runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();");
 const globalBridgeReinstall = appEntry.indexOf("installCoreBridges();", watchlistRuntimeInstall);
@@ -158,4 +203,4 @@ invariant(
   "Generated Watchlist runtime must exactly match the Watchlist build artifact.",
 );
 
-console.log("Watchlist route-core splitting and canonical Uniform Loading Workflow ownership validation passed.");
+console.log("Watchlist route-core splitting, stable route delegates, and canonical Uniform Loading Workflow ownership validation passed.");
