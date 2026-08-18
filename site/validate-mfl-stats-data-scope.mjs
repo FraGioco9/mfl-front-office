@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 
-const [dataPage, dataQuery, styles] = await Promise.all([
+const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbars, filterControls] = await Promise.all([
   readFile(new URL("./api/_data-page.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_data-query.js", import.meta.url), "utf8"),
   readFile(new URL("./styles.css", import.meta.url), "utf8"),
+  readFile(new URL("./styles-base.css", import.meta.url), "utf8"),
+  readFile(new URL("./responsive.css", import.meta.url), "utf8"),
+  readFile(new URL("./dropdowns.css", import.meta.url), "utf8"),
+  readFile(new URL("./scrollbars.css", import.meta.url), "utf8"),
+  readFile(new URL("./filter-controls-runtime.js", import.meta.url), "utf8"),
 ]);
 
 const invariant = (condition, message) => {
@@ -27,8 +32,34 @@ invariant(
 );
 
 invariant(
-  styles.includes('.viewButton:not([hidden]) {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  line-height: 1;\n  text-align: center;\n  cursor: default;\n}'),
-  "View buttons must define the default cursor in their canonical rule instead of through an active-state override.",
+  /:is\(\.viewButton:not\(\[hidden\]\), \.mflStatsFilterButton, \.mflStatsDistributionModeButton\)\s*\{[^}]*cursor:\s*default;/s.test(styles),
+  "View and Stats buttons must define the default cursor in their shared canonical rule.",
 );
 
-console.log("MFL Stats loads the complete canonical population and view buttons keep their canonical default cursor.");
+const statsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\bwidth:\s*86px;[^}]*\bheight:\s*26px;/s;
+const competingStatsFilterSizeRule = /\.mflStatsFilterButton\s*\{[^}]*\b(?:width|height|min-width|max-width)\s*:/s;
+
+invariant(
+  statsFilterSizeRule.test(stylesBase),
+  "styles-base.css must remain the single owner of MFL Stats Overall-filter button dimensions.",
+);
+
+for (const [fileName, source] of [
+  ["styles.css", styles],
+  ["responsive.css", responsive],
+  ["dropdowns.css", dropdowns],
+  ["scrollbars.css", scrollbars],
+]) {
+  invariant(
+    !competingStatsFilterSizeRule.test(source),
+    `${fileName} must not assign a second size to MFL Stats Overall-filter buttons.`,
+  );
+}
+
+invariant(
+  filterControls.includes('".mflStatsFilterButton.active, .mflStatsDistributionModeButton.active"')
+    && filterControls.includes("event.stopImmediatePropagation();"),
+  "Active Overall filters and Overall/Age controls must be consumed as no-op interactions.",
+);
+
+console.log("MFL Stats data, control interaction, cursor behavior, and filter sizing ownership are canonical.");
