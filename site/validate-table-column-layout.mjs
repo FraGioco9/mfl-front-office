@@ -5,8 +5,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, tableWidthRuntime, tableLoadingRuntime, staticUiRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
+const [styles, stylesBase, tableWidthRuntime, tableLoadingRuntime, staticUiRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
   read("./styles.css"),
+  read("./styles-base.css"),
   read("./table-width-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./static-ui-runtime.js"),
@@ -96,6 +97,34 @@ invariant(
   styles.includes("#tableBody > .mflTableLoadingRow > td {")
   && styles.includes("height: var(--mfl-table-row-height);"),
   "Loading rows must inherit the same global row height as loaded rows.",
+);
+
+const legacyBaseColumnSelector = /\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b[^,{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s;
+invariant(
+  !legacyBaseColumnSelector.test(stylesBase),
+  "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
+);
+invariant(
+  !/\.nameCell\s*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase),
+  "The player Name cell must not own column geometry.",
+);
+invariant(
+  !/\.advancedPlayerTable\s+(?:th|td)[^{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase)
+  && !/\.advancedPlayerTable[^,{]*(?:first-child|tbody\s+th)[^{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase),
+  "Advanced table column widths must come only from Uniform Width.",
+);
+invariant(
+  !/\.evaluation(?:Summary)?Table[^,{]*:nth-child\([^)]*\)[^{]*\{[^}]*\bwidth\s*:/s.test(stylesBase),
+  "Evaluation column widths must come only from Uniform Width.",
+);
+invariant(!stylesBase.includes("1240px"), "Legacy 1240px player-table width must not return to styles-base.css.");
+invariant(!stylesBase.includes("900px"), "Legacy 900px Evaluation table floor must not return to styles-base.css.");
+invariant(!stylesBase.includes("tableWidthsReady"), "Legacy table-width readiness gating must not return.");
+invariant(
+  !stylesBase.includes("col-shared-width-filler")
+  && !stylesBase.includes("col-stable-width-filler")
+  && !stylesBase.includes("col-exact-width-filler"),
+  "Legacy table width filler columns must not return.",
 );
 
 invariant(tableWidthRuntime.includes('name: "Uniform Width"'), "The canonical width contract must be named Uniform Width.");
