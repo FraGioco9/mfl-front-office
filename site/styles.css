@@ -98,8 +98,7 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 @supports (appearance: base-select) {
   select[data-mfl-dropdown-enhanced="true"]::picker(select),
   #pageSizeSelect::picker(select),
-  .filtersDialog select::picker-icon,
-  .filtersDialog select:open::picker-icon {
+  .filtersDialog select::picker(select) {
     max-height: var(--mfl-dropdown-max-height);
     overflow-y: auto;
     overscroll-behavior: contain;
