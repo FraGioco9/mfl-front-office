@@ -218,6 +218,11 @@ includes(
 );
 includes(
   bootstrapCore,
+  '"startup", "interaction-loading", "setPage", "setView", "route-runtime",',
+  "Page transitions, view transitions, and lazy route-runtime loading must all participate in the same data-loading lifecycle.",
+);
+includes(
+  bootstrapCore,
   'html.${NAVIGATION_PENDING_CLASS} #progressionPage nav.pager,',
   "Pagination must be hidden from navigation intent, before the route transition handler begins.",
 );
@@ -228,8 +233,8 @@ includes(
 );
 includes(
   bootstrapCore,
-  '"setPage", "ensureProgressionData", "requestIncrementalRoute"',
-  "Every page and view transition must enter the uniform interaction-busy lifecycle before setPage mutates the destination shell.",
+  '"setPage", "setView", "ensureProgressionData", "requestIncrementalRoute"',
+  "Every page and view transition must be wrapped by the uniform interaction-busy owner regardless of cache state.",
 );
 includes(
   bootstrapCore,
@@ -278,4 +283,4 @@ includes(
   "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, uniform loading, placeholders, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, uniform page/view data loading, placeholders, and startup ownership validation passed.");
