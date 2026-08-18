@@ -2,6 +2,16 @@
   "use strict";
 
   /** @type {Window & {
+   * __mflAppConfig?: {
+   *   routes?: {
+   *     corePaths?: Record<string, string>,
+   *     normalizePageName?: (pageName: string) => string,
+   *     normalizeView?: (options?: Record<string, unknown>) => string,
+   *     usesTableInfrastructure?: (pageName: string) => boolean,
+   *     initialRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
+   *     clubPath?: (clubId: string, view?: string) => string,
+   *   },
+   * },
    * __mflReleaseVersion?: string,
    * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
    * __mflEnsureRouteRuntime?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
@@ -45,26 +55,18 @@
     return;
   }
 
-  const ROUTE_CORE_PATHS = Object.freeze({
-    evaluation: "/modules/app-core-evaluation-runtime.js",
-    mflstats: "/modules/app-core-mfl-stats-runtime.js",
-    club: "/modules/app-core-club-runtime.js",
-    settings: "/modules/app-core-settings-runtime.js",
-    player: "/modules/app-core-player-runtime.js",
-    table: "/modules/app-core-table-runtime.js",
-    wallet: "/modules/app-core-wallet-runtime.js",
-    watchlist: "/modules/app-core-watchlist-runtime.js",
-  });
-  const TABLE_INFRASTRUCTURE_PAGES = new Set(["database", "mfl", "agents", "progression", "watchlist", "myplayers", "club"]);
-  const VIEW_BY_SLUG = Object.freeze({
-    attributes: "attributes",
-    squad: "attributes",
-    stats: "stats",
-    "next-overall": "next",
-    contracts: "contracts",
-    "current-season": "current",
-    "all-time": "all",
-  });
+  const routeConfig = runtimeWindow.__mflAppConfig?.routes;
+  if (!routeConfig
+    || !routeConfig.corePaths
+    || typeof routeConfig.normalizePageName !== "function"
+    || typeof routeConfig.normalizeView !== "function"
+    || typeof routeConfig.usesTableInfrastructure !== "function"
+    || typeof routeConfig.initialRequest !== "function"
+    || typeof routeConfig.clubPath !== "function") {
+    throw new Error("Canonical route configuration is unavailable.");
+  }
+
+  const ROUTE_CORE_PATHS = routeConfig.corePaths;
   const routeCorePromises = new Map();
   let fallbackArtifactsPromise = null;
 
@@ -171,47 +173,10 @@
     return pending;
   }
 
-  function normalizeRoutePageName(pageName) {
-    const page = String(pageName || "").trim().toLowerCase();
-    if (page === "my-players") return "myplayers";
-    if (page === "databasestats") return "database";
-    if (page === "clubs") return "club";
-    return page || "home";
-  }
-
-  function viewOptionsFromSegments(segments) {
-    const slug = String(segments.at(-1) || "").toLowerCase();
-    const view = VIEW_BY_SLUG[slug] || "";
-    return view ? { view } : {};
-  }
-
-  function initialRouteRuntimeRequest(pathname = location.pathname) {
-    const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    if (!path.startsWith("/")) return { pageName: "home", options: {} };
-
-    const segments = path.split("/");
-    const pageSegment = String(segments[1] || "").toLowerCase();
-    if (pageSegment === "evaluation" && segments.length === 2) return { pageName: "evaluation", options: {} };
-    if (pageSegment === "changelog" && segments.length === 2) return { pageName: "changelog", options: {} };
-    if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "mfl") return { pageName: "mfl", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "progression") return { pageName: "progression", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "watchlist") return { pageName: "watchlist", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "my-players") return { pageName: "myplayers", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "agents") return { pageName: "agents", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "clubs" || pageSegment === "club") return { pageName: "club", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
-    if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
-    return { pageName: "home", options: {} };
-  }
-
-  function routeView(options = {}) {
-    return String(options?.view || "").trim().toLowerCase();
-  }
-
-  function routeUsesTableInfrastructure(pageName) {
-    return TABLE_INFRASTRUCTURE_PAGES.has(normalizeRoutePageName(pageName));
-  }
+  const normalizeRoutePageName = (pageName) => routeConfig.normalizePageName(pageName);
+  const routeView = (options = {}) => routeConfig.normalizeView(options);
+  const initialRouteRuntimeRequest = (pathname = location.pathname) => routeConfig.initialRequest(pathname);
+  const routeUsesTableInfrastructure = (pageName) => routeConfig.usesTableInfrastructure(pageName);
 
   function routeCoreDependencies(pageName, options = {}) {
     const page = normalizeRoutePageName(pageName);
@@ -233,17 +198,7 @@
   }
 
   function clubRoutePath(clubId, view = "attributes") {
-    const slugByView = {
-      attributes: "squad",
-      squad: "squad",
-      contracts: "contracts",
-      current: "current-season",
-      "current-season": "current-season",
-      all: "all-time",
-      "all-time": "all-time",
-    };
-    const slug = slugByView[String(view || "attributes").toLowerCase()] || "squad";
-    return `/clubs/${encodeURIComponent(clubId)}/${slug}`;
+    return routeConfig.clubPath(clubId, view);
   }
 
   function installClubRouteGate() {
