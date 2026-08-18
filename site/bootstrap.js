@@ -16,6 +16,68 @@
     "all-time": "all",
   });
   const TABLE_VIEW_SLUGS = new Set(Object.keys(TABLE_VIEW_BY_SLUG));
+  const FIRST_PAINT_BASE_COLUMNS = Object.freeze([
+    "player_id",
+    "nationality_flag",
+    "name",
+    "nationality",
+    "age",
+    "positions",
+    "player_seasons",
+  ]);
+  const FIRST_PAINT_STAT_COLUMNS = Object.freeze([
+    "overall",
+    "pace",
+    "shooting",
+    "passing",
+    "dribbling",
+    "defense",
+    "physical",
+  ]);
+  const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([
+    "overall",
+    "active_contract_revenue_share",
+    "active_contract_club_name",
+    "active_contract_club_division",
+  ]);
+  const FIRST_PAINT_AGENT_PAGES = new Set(["myplayers", "agents", "mfl"]);
+  const FIRST_PAINT_COLUMN_CLASSES = Object.freeze({
+    player_id: "col-id",
+    nationality_flag: "col-flag",
+    name: "col-name",
+    nationality: "col-nationality",
+    age: "col-age",
+    positions: "col-positions",
+    player_seasons: "col-seasons",
+    wallet_name: "col-agent",
+    owned_since: "col-agent",
+    active_contract_revenue_share: "col-contract-revenue",
+    active_contract_club_name: "col-contract-club",
+    active_contract_club_division: "col-contract-division",
+    player_link: "col-link",
+  });
+  const FIRST_PAINT_COLUMN_LABELS = Object.freeze({
+    player_id: "ID",
+    nationality_flag: "",
+    name: "Name",
+    nationality: "Nationality",
+    age: "Age",
+    positions: "Positions",
+    player_seasons: "Seasons",
+    overall: "Overall",
+    pace: "Pace",
+    shooting: "Shooting",
+    passing: "Passing",
+    dribbling: "Dribbling",
+    defense: "Defense",
+    physical: "Physical",
+    wallet_name: "Agent",
+    owned_since: "Joined Agency",
+    active_contract_revenue_share: "Rev. Share",
+    active_contract_club_name: "Club Name",
+    active_contract_club_division: "Division",
+    player_link: "",
+  });
   const MFL_STATS_FILTER_LABELS = Object.freeze([
     ["all", "All"],
     ["90-94", "90-94"],
@@ -206,7 +268,7 @@
 
   function primeTableChrome(page, urlLike = window.location.href) {
     const normalizedPage = String(page || "").toLowerCase();
-    if (!normalizedPage) return;
+    if (!normalizedPage) return "";
 
     const config = tableViewConfig()[normalizedPage];
     const requestedView = tableViewFromUrl(normalizedPage, urlLike);
@@ -262,28 +324,85 @@
     if (pager instanceof HTMLElement) pager.hidden = true;
     const watchlistCount = document.getElementById("watchlistPlayerCount");
     if (watchlistCount instanceof HTMLElement) watchlistCount.hidden = true;
+    return view;
   }
 
   Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);
   Reflect.set(window, "__mflTableTitleForPageFallback", firstPaintTableTitle);
 
+  function firstPaintTableColumns(page, view) {
+    const normalizedPage = String(page || "").toLowerCase();
+    const normalizedView = String(view || "").toLowerCase();
+    const viewColumns = normalizedView === "contracts" ? FIRST_PAINT_CONTRACT_COLUMNS : FIRST_PAINT_STAT_COLUMNS;
+    const agentColumn = FIRST_PAINT_AGENT_PAGES.has(normalizedPage) ? "owned_since" : "wallet_name";
+    return [...FIRST_PAINT_BASE_COLUMNS, ...viewColumns, agentColumn, "player_link"];
+  }
+
+  function firstPaintTableColumnClass(column) {
+    if (column === "overall") return "col-stat col-overall";
+    if (FIRST_PAINT_STAT_COLUMNS.includes(column)) return "col-stat";
+    return FIRST_PAINT_COLUMN_CLASSES[column] || "";
+  }
+
+  function primeInitialTableStructure(page, view) {
+    const colGroup = document.getElementById("tableColGroup");
+    const head = document.getElementById("tableHead");
+    if (!(colGroup instanceof HTMLTableColElement) && !(colGroup instanceof HTMLElement)) return 0;
+    if (!(head instanceof HTMLTableSectionElement)) return 0;
+
+    const columns = firstPaintTableColumns(page, view);
+    const colFragment = document.createDocumentFragment();
+    const selectionCol = document.createElement("col");
+    selectionCol.className = "col-select";
+    colFragment.appendChild(selectionCol);
+    columns.forEach((column) => {
+      const col = document.createElement("col");
+      const className = firstPaintTableColumnClass(column);
+      if (className) col.className = className;
+      colFragment.appendChild(col);
+    });
+    colGroup.replaceChildren(colFragment);
+
+    const row = document.createElement("tr");
+    const selectionHeader = document.createElement("th");
+    selectionHeader.className = "selectionCell col-select";
+    selectionHeader.setAttribute("aria-label", "Selection");
+    row.appendChild(selectionHeader);
+    columns.forEach((column) => {
+      const header = document.createElement("th");
+      const className = firstPaintTableColumnClass(column);
+      if (className) header.className = className;
+      header.textContent = FIRST_PAINT_COLUMN_LABELS[column] || "";
+      row.appendChild(header);
+    });
+    head.replaceChildren(row);
+    head.dataset.mflStaticHeader = "true";
+    delete head.dataset.mflHeaderSignature;
+    return row.cells.length;
+  }
+
+  Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);
+
   function primeInitialTableRows(replaceExisting = false) {
     const body = document.getElementById("tableBody");
+    const colGroup = document.getElementById("tableColGroup");
     if (!(body instanceof HTMLTableSectionElement)) return;
     if (!replaceExisting && body.rows.length) return;
 
+    const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);
     const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
     const fragment = document.createDocumentFragment();
     opacities.forEach((opacity, index) => {
       const row = document.createElement("tr");
-      row.className = "staticTableBlankRow";
+      row.className = "mflTableLoadingRow";
       row.dataset.loadingRow = String(index + 1);
       row.setAttribute("aria-hidden", "true");
       row.style.opacity = String(opacity);
-      const cell = document.createElement("td");
-      cell.colSpan = 16;
-      cell.textContent = BLANK_TABLE_LOADING_TEXT;
-      row.appendChild(cell);
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+        const cell = document.createElement("td");
+        cell.textContent = BLANK_TABLE_LOADING_TEXT;
+        row.appendChild(cell);
+      }
       fragment.appendChild(row);
     });
     body.replaceChildren(fragment);
@@ -441,7 +560,9 @@
     if (!(target instanceof HTMLElement)) return;
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
     if (target.id === "progressionPage" && tablePage) {
-      primeTableChrome(tablePage, window.location.href);
+      const view = primeTableChrome(tablePage, window.location.href);
+      primeInitialTableStructure(tablePage, view);
+      window.__mflTableWidthRuntime?.apply?.(true);
       primeInitialTableRows();
     } else {
       primeRouteSkeleton(target);
