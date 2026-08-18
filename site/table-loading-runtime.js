@@ -61,6 +61,18 @@
         const ownerReady = (typeof __mflTableBuildHeaderOwner === "function") || buildHeader.__mflSingleRenderOwner === true;
         const staticHeader = head.dataset.mflStaticHeader === "true";
         const staticSignature = String(head.dataset.mflHeaderSignature || "");
+        const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+        const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
+        const currentPage = String(page || "").toLowerCase();
+        const currentView = String(state.view || "").toLowerCase();
+        const staticRoutePending = staticHeader
+          && staticPage
+          && staticView
+          && (currentPage !== staticPage || currentView !== staticView);
+        if (staticRoutePending) {
+          window.__mflTableWidthRuntime?.apply?.();
+          return true;
+        }
         if (staticHeader && staticSignature && staticSignature !== signature) {
           window.__mflTableWidthRuntime?.apply?.();
           return true;
@@ -151,6 +163,18 @@
             const head = document.getElementById("tableHead");
             const staticHeader = head instanceof HTMLTableSectionElement && head.dataset.mflStaticHeader === "true";
             const staticSignature = head instanceof HTMLTableSectionElement ? String(head.dataset.mflHeaderSignature || "") : "";
+            const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+            const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
+            const currentPage = String(page || "").toLowerCase();
+            const currentView = String(state.view || "").toLowerCase();
+            const staticRoutePending = staticHeader
+              && staticPage
+              && staticView
+              && (currentPage !== staticPage || currentView !== staticView);
+            if (staticRoutePending) {
+              window.__mflTableWidthRuntime?.apply?.();
+              return undefined;
+            }
             if (staticHeader && staticSignature && staticSignature !== signature) {
               window.__mflTableWidthRuntime?.apply?.();
               return undefined;
