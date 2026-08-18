@@ -16,7 +16,21 @@ const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");
 const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");
 const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");
 
-const source = await readFile(sourcePath, "utf8");
+function removeResidualLegacyWidthCall(source) {
+  const normalized = String(source || "").replace(/\r\n?/g, "\n");
+  const residualWidthCall = [
+    '      if (typeof window.applyExactPlayerTableWidths === "function") {',
+    "        window.applyExactPlayerTableWidths();",
+    "      }",
+    "      return true;",
+  ].join("\n");
+  if (!normalized.includes(residualWidthCall)) {
+    throw new Error("Could not remove residual post-render table width call from app-core source.");
+  }
+  return normalized.replace(residualWidthCall, "      return true;");
+}
+
+const source = removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8"));
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = String(artifacts.core || "").replace(/\s*$/, "");
 const evaluationRuntime = String(artifacts.routeChunks?.evaluation || "").replace(/\s*$/, "");
