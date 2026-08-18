@@ -262,7 +262,7 @@
     const startControl = gestureStartControl;
     const dragged = gestureDragged;
     const releaseControl = buttonGestureFromTarget(event.target);
-    const invalidButtonRelease = Boolean(releaseControl && (dragged || releaseControl !== startControl));
+    const invalidButtonRelease = Boolean(startControl && (dragged || releaseControl !== startControl));
     clearGesture();
     if (!invalidButtonRelease) return;
 
