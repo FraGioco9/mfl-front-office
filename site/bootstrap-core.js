@@ -161,7 +161,7 @@
       } catch {}
       syncStoredAccessFlags();
       [
-        "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
+        "setPage", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
         "openSavedEvaluationsModal", "createSharedEvaluationFromPayload", "createSharedEvaluation",
         "createSavedEvaluation", "linkWallet",
       ].forEach((name) => {
