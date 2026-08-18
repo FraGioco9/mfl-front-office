@@ -63,7 +63,7 @@
         const staticSignature = String(head.dataset.mflHeaderSignature || "");
         const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
         const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
-        const currentPage = String(page || "").toLowerCase();
+        const currentPage = String(state.currentPage || "").toLowerCase();
         const currentView = String(state.view || "").toLowerCase();
         const staticRoutePending = staticHeader
           && staticPage
@@ -165,7 +165,7 @@
             const staticSignature = head instanceof HTMLTableSectionElement ? String(head.dataset.mflHeaderSignature || "") : "";
             const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
             const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
-            const currentPage = String(page || "").toLowerCase();
+            const currentPage = String(state.currentPage || "").toLowerCase();
             const currentView = String(state.view || "").toLowerCase();
             const staticRoutePending = staticHeader
               && staticPage
