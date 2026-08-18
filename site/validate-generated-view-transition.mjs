@@ -65,12 +65,18 @@ const pageRunner = section(
   "async function runViewTransition",
   "global page transition runner",
 );
+const pageRunnerNavigation = pageRunner.indexOf('navigation.begin("page-transition")');
 const pageRunnerCommit = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
 const pageRunnerPaint = pageRunner.indexOf("await waitForViewTransitionPaint();", pageRunnerCommit);
-const pageRunnerLoad = pageRunner.indexOf('typeof loader === "function" ? loader(transition)', pageRunnerPaint);
+const pageRunnerLoad = pageRunner.indexOf('typeof loader === "function" ? await loader(transition)', pageRunnerPaint);
+const pageRunnerRelease = pageRunner.indexOf("navigation?.end?.(navigationToken)", pageRunnerLoad);
 invariant(
-  pageRunnerCommit >= 0 && pageRunnerPaint > pageRunnerCommit && pageRunnerLoad > pageRunnerPaint,
-  "The global page transition runner must commit and paint before any loader callback starts.",
+  pageRunnerNavigation >= 0
+    && pageRunnerCommit > pageRunnerNavigation
+    && pageRunnerPaint > pageRunnerCommit
+    && pageRunnerLoad > pageRunnerPaint
+    && pageRunnerRelease > pageRunnerLoad,
+  "The global page transition runner must own navigation state through commit, paint, and its loader callback.",
 );
 
 const viewRunner = section(
@@ -79,12 +85,18 @@ const viewRunner = section(
   'Reflect.set(window, "__mflCommitViewTransition"',
   "global view transition runner",
 );
+const viewRunnerNavigation = viewRunner.indexOf('navigation.begin("view-transition")');
 const viewRunnerStage = viewRunner.indexOf("stageViewTransition(pageName, viewName, options)");
 const viewRunnerPaint = viewRunner.indexOf("await waitForViewTransitionPaint();", viewRunnerStage);
 const viewRunnerLoad = viewRunner.indexOf('typeof loader === "function"', viewRunnerPaint);
+const viewRunnerRelease = viewRunner.indexOf("navigation?.end?.(navigationToken)", viewRunnerLoad);
 invariant(
-  viewRunnerStage >= 0 && viewRunnerPaint > viewRunnerStage && viewRunnerLoad > viewRunnerPaint,
-  "The global view transition runner must commit and paint before any loader callback starts.",
+  viewRunnerNavigation >= 0
+    && viewRunnerStage > viewRunnerNavigation
+    && viewRunnerPaint > viewRunnerStage
+    && viewRunnerLoad > viewRunnerPaint
+    && viewRunnerRelease > viewRunnerLoad,
+  "The global view transition runner must own navigation state through commit, paint, and its loader callback.",
 );
 
 const pageLoaderOwner = sourceContaining("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {", "incremental page loader");
@@ -226,5 +238,5 @@ invariant(
 );
 
 console.log(
-  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: active views no-op uniformly, and MFL Stats uses the shared incremental loading pipeline before its renderer.`,
+  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: shared navigation state spans transition work, active views no-op uniformly, and MFL Stats uses the shared incremental loading pipeline before its renderer.`,
 );

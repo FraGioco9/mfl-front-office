@@ -15,17 +15,6 @@
     'input[type="checkbox"]',
     'input[type="radio"]',
   ].join(", ");
-  const ACTIVE_PAGE_VIEW_FILTER_SELECTOR = [
-    "#sidebar .navButton.active[data-page]",
-    ".viewButton.active[data-view]",
-    ".mflStatsFilterButton.active",
-    ".mflStatsDistributionModeButton.active",
-  ].join(", ");
-  const NAVIGATION_INTENT_SELECTOR = [
-    "#sidebar .navButton[data-page]:not(.active)",
-    ".viewButton[data-view]:not(.active)",
-  ].join(", ");
-  const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
 
   let pointerFocusedControl = null;
@@ -36,7 +25,12 @@
   let gestureDragged = false;
   let suppressClickControl = null;
   let suppressClickTimer = 0;
-  let navigationIntentPagerState = null;
+  let navigationIntentToken = "";
+
+  function navigationController() {
+    const controller = window.__mflNavigation;
+    return controller && typeof controller === "object" ? controller : null;
+  }
 
   function addFilterSelect() {
     const select = document.getElementById("addFilterSelect");
@@ -49,11 +43,8 @@
   }
 
   function activePageViewFilterControl(target) {
-    if (!(target instanceof Element)) return null;
-    const control = target.closest(ACTIVE_PAGE_VIEW_FILTER_SELECTOR);
-    if (!(control instanceof HTMLElement) || control.hidden) return null;
-    if (control instanceof HTMLButtonElement && control.disabled) return null;
-    return control;
+    const control = navigationController()?.activeControl?.(target);
+    return control instanceof HTMLElement ? control : null;
   }
 
   function consumeActivePageViewFilterEvent(event) {
@@ -65,45 +56,23 @@
     return true;
   }
 
-  function navigationIntentControl(target) {
-    if (!(target instanceof Element)) return null;
-    const control = target.closest(NAVIGATION_INTENT_SELECTOR);
-    if (!(control instanceof HTMLElement) || control.hidden) return null;
-    if (control instanceof HTMLButtonElement && control.disabled) return null;
-    return control;
-  }
-
   function beginNavigationIntent(target) {
-    const control = navigationIntentControl(target);
-    if (!control) return false;
-
-    if (!(navigationIntentPagerState instanceof Map)) {
-      navigationIntentPagerState = new Map();
-      document.querySelectorAll("#progressionPage nav.pager").forEach((pager) => {
-        if (!(pager instanceof HTMLElement)) return;
-        navigationIntentPagerState.set(pager, pager.hidden);
-      });
-    }
-
-    document.documentElement.classList.add(NAVIGATION_PENDING_CLASS);
-    navigationIntentPagerState.forEach((_, pager) => {
-      if (pager.isConnected) pager.hidden = true;
-    });
-    return true;
+    if (navigationIntentToken) return true;
+    const token = navigationController()?.beginIntent?.(target, "control-intent") || "";
+    navigationIntentToken = token;
+    return Boolean(token);
   }
 
   function endNavigationIntent() {
-    document.documentElement.classList.remove(NAVIGATION_PENDING_CLASS);
-    const pagerState = navigationIntentPagerState;
-    navigationIntentPagerState = null;
-    if (!(pagerState instanceof Map)) return;
-    pagerState.forEach((wasHidden, pager) => {
-      if (pager.isConnected) pager.hidden = wasHidden;
-    });
+    const token = navigationIntentToken;
+    navigationIntentToken = "";
+    if (token) navigationController()?.end?.(token);
   }
 
   function handOffNavigationIntent() {
-    queueMicrotask(endNavigationIntent);
+    const token = navigationIntentToken;
+    navigationIntentToken = "";
+    if (token) navigationController()?.handoff?.(token);
   }
 
   function buttonGestureFromTarget(target) {

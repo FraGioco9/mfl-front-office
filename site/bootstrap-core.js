@@ -6,6 +6,7 @@
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
   const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";
+  const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -45,6 +46,84 @@
     document.documentElement.dataset.storedWalletOptIn = storedOptIn ? "true" : "false";
     document.documentElement.dataset.storedProgressionAccess = storedAccess ? "true" : "false";
     return { storedOptIn, storedAccess };
+  }
+
+  function createNavigationController() {
+    const PENDING_CLASS = "mflNavigationPending";
+    const ACTIVE_CONTROL_SELECTOR = [
+      "#sidebar .navButton.active[data-page]",
+      ".viewButton.active[data-view]",
+      ".mflStatsFilterButton.active",
+      ".mflStatsDistributionModeButton.active",
+    ].join(", ");
+    const NAVIGATION_CONTROL_SELECTOR = [
+      "#sidebar .navButton[data-page]:not(.active)",
+      ".viewButton[data-view]:not(.active)",
+    ].join(", ");
+    const activeTokens = new Map();
+    let sequence = 0;
+
+    function eligibleControl(target, selector) {
+      if (!(target instanceof Element)) return null;
+      const control = target.closest(selector);
+      if (!(control instanceof HTMLElement) || control.hidden) return null;
+      if (control instanceof HTMLButtonElement && control.disabled) return null;
+      return control;
+    }
+
+    function activeControl(target) {
+      return eligibleControl(target, ACTIVE_CONTROL_SELECTOR);
+    }
+
+    function navigationControl(target) {
+      return eligibleControl(target, NAVIGATION_CONTROL_SELECTOR);
+    }
+
+    function applyState() {
+      document.documentElement.classList.toggle(PENDING_CLASS, activeTokens.size > 0);
+    }
+
+    function begin(reason = "navigation") {
+      const normalizedReason = String(reason || "navigation");
+      const token = `${normalizedReason}-${++sequence}`;
+      activeTokens.set(token, normalizedReason);
+      applyState();
+      return token;
+    }
+
+    function beginIntent(target, reason = "navigation-intent") {
+      return navigationControl(target) ? begin(reason) : "";
+    }
+
+    function end(token) {
+      if (token && activeTokens.delete(token)) applyState();
+    }
+
+    function handoff(token) {
+      if (!token) return;
+      queueMicrotask(() => end(token));
+    }
+
+    async function run(callback, reason = "navigation") {
+      const token = begin(reason);
+      try {
+        return await callback();
+      } finally {
+        end(token);
+      }
+    }
+
+    return Object.freeze({
+      name: UNIFORM_NAVIGATION_WORKFLOW_NAME,
+      activeControl,
+      navigationControl,
+      begin,
+      beginIntent,
+      end,
+      handoff,
+      run,
+      isPending: () => activeTokens.size > 0,
+    });
   }
 
   function createInteractionBusyController() {
@@ -225,6 +304,8 @@
 
   syncStoredAccessFlags();
 
+  window.__mflNavigation = createNavigationController();
+  window.__mflUniformNavigationWorkflow = window.__mflNavigation;
   window.__mflInteractionBusy = createInteractionBusyController();
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
   const startupToken = window.__mflInteractionBusy.begin("startup");

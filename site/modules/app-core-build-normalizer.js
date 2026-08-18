@@ -230,24 +230,40 @@ function waitForViewTransitionPaint() {
 }
 
 async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
-  const sequence = ++navigationTransitionSequence;
-  const transition = commitPageTransition(pageName, updateHash, options);
-  await waitForViewTransitionPaint();
-  if (sequence !== navigationTransitionSequence) return null;
-  if (transition.targetPath && currentNavigationPath() !== transition.targetPath) return null;
-  return typeof loader === "function" ? loader(transition) : transition;
+  const navigation = Reflect.get(window, "__mflNavigation");
+  const navigationToken = typeof navigation?.begin === "function"
+    ? navigation.begin("page-transition")
+    : "";
+  try {
+    const sequence = ++navigationTransitionSequence;
+    const transition = commitPageTransition(pageName, updateHash, options);
+    await waitForViewTransitionPaint();
+    if (sequence !== navigationTransitionSequence) return null;
+    if (transition.targetPath && currentNavigationPath() !== transition.targetPath) return null;
+    return typeof loader === "function" ? await loader(transition) : transition;
+  } finally {
+    if (navigationToken) navigation?.end?.(navigationToken);
+  }
 }
 
 async function runViewTransition(pageName, viewName, options = {}, loader = null) {
-  const transition = stageViewTransition(pageName, viewName, options);
-  if (!transition) return null;
-  await waitForViewTransitionPaint();
-  if (!stagedViewTransitionIsCurrent(transition)) return null;
-  if (typeof loader === "function") {
-    pendingViewTransition = null;
-    return loader(transition);
+  const navigation = Reflect.get(window, "__mflNavigation");
+  const navigationToken = typeof navigation?.begin === "function"
+    ? navigation.begin("view-transition")
+    : "";
+  try {
+    const transition = stageViewTransition(pageName, viewName, options);
+    if (!transition) return null;
+    await waitForViewTransitionPaint();
+    if (!stagedViewTransitionIsCurrent(transition)) return null;
+    if (typeof loader === "function") {
+      pendingViewTransition = null;
+      return await loader(transition);
+    }
+    return transition;
+  } finally {
+    if (navigationToken) navigation?.end?.(navigationToken);
   }
-  return transition;
 }
 
 Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);

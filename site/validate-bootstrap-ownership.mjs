@@ -7,10 +7,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [bootstrap, bootstrapCore, controlInteractions] = await Promise.all([
+const [bootstrap, bootstrapCore, controlInteractions, appCoreBuildNormalizer] = await Promise.all([
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./control-interactions-runtime.js"),
+  read("./modules/app-core-build-normalizer.js"),
 ]);
 
 includes(
@@ -273,39 +274,96 @@ excludes(
 );
 
 includes(
-  controlInteractions,
-  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
-  "Universal control interactions must retain the pre-transition navigation-intent marker until navigation ownership is consolidated.",
+  bootstrapCore,
+  'const UNIFORM_NAVIGATION_WORKFLOW_NAME = "Uniform Navigation Workflow";',
+  "Navigation must have one named project-wide workflow.",
 );
 includes(
-  controlInteractions,
+  bootstrapCore,
+  "function createNavigationController() {",
+  "bootstrap-core.js must own the navigation-intent state machine.",
+);
+includes(
+  bootstrapCore,
   '"#sidebar .navButton[data-page]:not(.active)"',
-  "Non-active page navigation must enter navigation-pending state at the gesture boundary.",
+  "The shared navigation owner must classify page-navigation controls.",
 );
 includes(
-  controlInteractions,
+  bootstrapCore,
   '".viewButton[data-view]:not(.active)"',
-  "Non-active view navigation must enter navigation-pending state at the gesture boundary.",
+  "The shared navigation owner must classify view-navigation controls.",
 );
 includes(
-  controlInteractions,
-  'document.documentElement.classList.add(NAVIGATION_PENDING_CLASS);',
-  "Navigation intent must synchronously hide pagination before page/view handlers execute.",
+  bootstrapCore,
+  'document.documentElement.classList.toggle(PENDING_CLASS, activeTokens.size > 0);',
+  "Only the shared navigation owner may publish navigation-pending state.",
 );
 includes(
-  controlInteractions,
-  'document.querySelectorAll("#progressionPage nav.pager")',
-  "Navigation intent must also set the pager hidden state directly so no authored display rule can expose it between events.",
+  bootstrapCore,
+  "window.__mflNavigation = createNavigationController();",
+  "The canonical navigation controller must be published before application runtimes execute.",
 );
 includes(
-  controlInteractions,
-  "beginNavigationIntent(event.target);",
-  "Pointer navigation must hide pagination during pointerdown capture, before click navigation begins.",
-);
-includes(
-  controlInteractions,
-  "if (beginNavigationIntent(event.target)) handOffNavigationIntent();",
-  "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
+  bootstrapCore,
+  "window.__mflUniformNavigationWorkflow = window.__mflNavigation;",
+  "The canonical Uniform Navigation Workflow name must point at the shared navigation controller.",
 );
 
-console.log("Bootstrap first-paint shells, canonical Uniform Loading Workflow snapshots, placeholders, and startup ownership validation passed.");
+includes(
+  controlInteractions,
+  "const controller = window.__mflNavigation;",
+  "Control interactions must delegate navigation classification to the shared controller.",
+);
+includes(
+  controlInteractions,
+  'controller.beginIntent?.(target, "control-intent")',
+  "Pointer/click intent must begin through the shared navigation controller.",
+);
+includes(
+  controlInteractions,
+  "navigationController()?.handoff?.(token);",
+  "Control intent must hand off to the generated transition owner through the shared controller.",
+);
+excludes(
+  controlInteractions,
+  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
+  "Control interactions must not own the navigation-pending class.",
+);
+excludes(
+  controlInteractions,
+  'document.documentElement.classList.add(NAVIGATION_PENDING_CLASS);',
+  "Control interactions must not mutate navigation state directly.",
+);
+excludes(
+  controlInteractions,
+  'document.querySelectorAll("#progressionPage nav.pager")',
+  "Control interactions must not own pager visibility or snapshot state.",
+);
+excludes(
+  controlInteractions,
+  '"#sidebar .navButton[data-page]:not(.active)"',
+  "Control interactions must not duplicate shared navigation selectors.",
+);
+
+includes(
+  appCoreBuildNormalizer,
+  'navigation.begin("page-transition")',
+  "Generated page transitions must acquire the shared navigation lifecycle.",
+);
+includes(
+  appCoreBuildNormalizer,
+  'navigation.begin("view-transition")',
+  "Generated view transitions must acquire the shared navigation lifecycle.",
+);
+includes(
+  appCoreBuildNormalizer,
+  "return typeof loader === \"function\" ? await loader(transition) : transition;",
+  "Page transition navigation state must remain active until its owned loader settles.",
+);
+includes(
+  appCoreBuildNormalizer,
+  "if (navigationToken) navigation?.end?.(navigationToken);",
+  "Generated transitions must release shared navigation state in finally blocks.",
+);
+
+console.log("Bootstrap first-paint shells, canonical loading state, and canonical navigation lifecycle ownership validation passed.");
