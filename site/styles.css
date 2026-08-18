@@ -10,7 +10,7 @@
   --mfl-pager-block-padding: 12px;
 }
 
-:is(.viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton) {
+:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -18,18 +18,28 @@
   text-align: center;
 }
 
-.viewButton:not([hidden]):not(.active) {
+:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton):not(.active) {
   cursor: pointer;
 }
 
-.viewButton.active,
-.mflStatsFilterButton,
-.mflStatsDistributionModeButton {
+:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton).active {
   cursor: default;
 }
 
+:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton):not(.active):hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+}
+
+:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton).active:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
 .mflStatsFilterButton {
-  flex: 1 1 auto;
+  flex: 1 1 86px;
+  min-width: 86px;
 }
 
 @supports (appearance: base-select) {
