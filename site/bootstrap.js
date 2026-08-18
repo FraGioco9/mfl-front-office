@@ -106,16 +106,6 @@
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
 
-  function primePlayerTableScroller() {
-    const scroller = document.querySelector("#progressionPage .playerTableScroller, #progressionPage .tableScroller");
-    if (!(scroller instanceof HTMLElement)) return null;
-    scroller.classList.remove("tableScroller");
-    scroller.classList.add("playerTableScroller");
-    return scroller;
-  }
-
-  primePlayerTableScroller();
-
   function setLoadingValue(target) {
     const element = typeof target === "string" ? document.getElementById(target) : target;
     if (element instanceof HTMLElement) element.textContent = LOADING_VALUE_TEXT;
@@ -572,7 +562,6 @@
     if (target.id === "progressionPage" && tablePage) {
       const view = primeTableChrome(tablePage, window.location.href);
       primeInitialTableStructure(tablePage, view);
-      window.__mflTableWidthRuntime?.apply?.(true);
       primeInitialTableRows();
     } else {
       primeRouteSkeleton(target);
