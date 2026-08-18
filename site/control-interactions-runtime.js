@@ -21,6 +21,11 @@
     ".mflStatsFilterButton.active",
     ".mflStatsDistributionModeButton.active",
   ].join(", ");
+  const NAVIGATION_INTENT_SELECTOR = [
+    "#sidebar .navButton[data-page]:not(.active)",
+    ".viewButton[data-view]:not(.active)",
+  ].join(", ");
+  const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
 
   let pointerFocusedControl = null;
@@ -31,6 +36,7 @@
   let gestureDragged = false;
   let suppressClickControl = null;
   let suppressClickTimer = 0;
+  let navigationIntentPagerState = null;
 
   function addFilterSelect() {
     const select = document.getElementById("addFilterSelect");
@@ -57,6 +63,47 @@
     event.stopImmediatePropagation();
     if (document.activeElement === control) control.blur();
     return true;
+  }
+
+  function navigationIntentControl(target) {
+    if (!(target instanceof Element)) return null;
+    const control = target.closest(NAVIGATION_INTENT_SELECTOR);
+    if (!(control instanceof HTMLElement) || control.hidden) return null;
+    if (control instanceof HTMLButtonElement && control.disabled) return null;
+    return control;
+  }
+
+  function beginNavigationIntent(target) {
+    const control = navigationIntentControl(target);
+    if (!control) return false;
+
+    if (!(navigationIntentPagerState instanceof Map)) {
+      navigationIntentPagerState = new Map();
+      document.querySelectorAll("#progressionPage nav.pager").forEach((pager) => {
+        if (!(pager instanceof HTMLElement)) return;
+        navigationIntentPagerState.set(pager, pager.hidden);
+      });
+    }
+
+    document.documentElement.classList.add(NAVIGATION_PENDING_CLASS);
+    navigationIntentPagerState.forEach((_, pager) => {
+      if (pager.isConnected) pager.hidden = true;
+    });
+    return true;
+  }
+
+  function endNavigationIntent() {
+    document.documentElement.classList.remove(NAVIGATION_PENDING_CLASS);
+    const pagerState = navigationIntentPagerState;
+    navigationIntentPagerState = null;
+    if (!(pagerState instanceof Map)) return;
+    pagerState.forEach((wasHidden, pager) => {
+      if (pager.isConnected) pager.hidden = wasHidden;
+    });
+  }
+
+  function handOffNavigationIntent() {
+    queueMicrotask(endNavigationIntent);
   }
 
   function buttonGestureFromTarget(target) {
@@ -137,7 +184,12 @@
 
   function onClick(event) {
     if (consumeActivePageViewFilterEvent(event)) return;
-    if (suppressDraggedClick(event)) return;
+    if (suppressDraggedClick(event)) {
+      endNavigationIntent();
+      return;
+    }
+
+    if (beginNavigationIntent(event.target)) handOffNavigationIntent();
 
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#showAddFilterButton")) return;
@@ -183,9 +235,11 @@
     if (event.isPrimary === false || event.button !== 0) return;
     if (consumeActivePageViewFilterEvent(event)) {
       pointerFocusedControl = null;
+      endNavigationIntent();
       return;
     }
 
+    beginNavigationIntent(event.target);
     pointerFocusedControl = pointerControlFromTarget(event.target);
     gestureStartControl = buttonGestureFromTarget(event.target);
     gesturePointerId = event.pointerId;
@@ -212,6 +266,7 @@
     clearGesture();
     if (!invalidButtonRelease) return;
 
+    endNavigationIntent();
     suppressClickControl = releaseControl;
     event.preventDefault();
     event.stopPropagation();
@@ -222,6 +277,7 @@
     if (gesturePointerId === null || event.pointerId !== gesturePointerId) return;
     clearGesture();
     clearClickSuppression();
+    endNavigationIntent();
   }
 
   function onKeyDown(event) {
@@ -235,6 +291,7 @@
       const active = document.activeElement;
       if (active instanceof HTMLElement && active !== document.body) active.blur();
       pointerFocusedControl = null;
+      endNavigationIntent();
     } else if (!event.metaKey && !event.ctrlKey && !event.altKey) {
       pointerFocusedControl = null;
     }
@@ -259,6 +316,7 @@
     pointerFocusedControl = null;
     clearGesture();
     clearClickSuppression();
+    endNavigationIntent();
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
