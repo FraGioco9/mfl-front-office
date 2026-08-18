@@ -85,6 +85,21 @@ includes(
   'button.dataset.mflStatsBound !== "true"',
   "Existing static MFL Stats buttons must be hydrated with interaction only once.",
 );
+includes(
+  hydration,
+  "const currentButton = mflStatsOverallFilters.children[index];",
+  "MFL Stats hydration must compare the existing button position before touching the DOM.",
+);
+includes(
+  hydration,
+  "if (currentButton !== button)",
+  "Correctly ordered first-paint MFL Stats filters must not be moved during hydration.",
+);
+excludes(
+  hydration,
+  "mflStatsOverallFilters.appendChild(button);",
+  "Hydration must not move every existing MFL Stats filter and trigger intermediate layouts.",
+);
 excludes(
   hydration,
   "replaceChildren",
@@ -98,8 +113,8 @@ includes(
 );
 includes(
   styles,
-  ".mflStatsFilterButton {\n  flex: 1 1 auto;\n}",
-  "Both Stats pages must use the same shared flex-growth rule so Overall filters fill the available box width from first paint.",
+  ".mflStatsFilterButton {\n  flex: 1 1 86px;\n  min-width: 86px;\n}",
+  "Both Stats pages must use the same label-independent flex basis so filter spacing cannot shift when fonts or runtime bindings settle.",
 );
 excludes(
   responsive,
@@ -117,4 +132,4 @@ excludes(
   "MFL Stats first paint must not depend on a container-query sizing patch.",
 );
 
-console.log("Database Stats and MFL Stats share the same full-width Overall-filter layout from first paint through hydration.");
+console.log("Database Stats and MFL Stats share stable full-width Overall-filter geometry from first paint through hydration.");
