@@ -38,7 +38,7 @@ function normalizeMflStatsStaticFilters(source) {
   );
   const expectedButtons = new Set();
 
-  mflStatsOverallFilterOptions.forEach((filter) => {
+  mflStatsOverallFilterOptions.forEach((filter, index) => {
     let button = existingButtons.get(filter.id);
     if (!(button instanceof HTMLButtonElement)) {
       button = document.createElement("button");
@@ -57,7 +57,11 @@ function normalizeMflStatsStaticFilters(source) {
         renderMflStatsPage();
       });
     }
-    mflStatsOverallFilters.appendChild(button);
+
+    const currentButton = mflStatsOverallFilters.children[index];
+    if (currentButton !== button) {
+      mflStatsOverallFilters.insertBefore(button, currentButton || null);
+    }
   });
 
   Array.from(mflStatsOverallFilters.children).forEach((button) => {
@@ -108,8 +112,8 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
       const name = String(getValue(row, "active_contract_club_name") || "").trim();
       if (!clubId || !name || clubs.has(clubId)) return;
       const searchable = typeof normalizeSearchText === "function"
-        ? normalizeSearchText(\`\${name} \${clubId}\`)
-        : \`\${name} \${clubId}\`.toLowerCase();
+        ? normalizeSearchText(`${name} ${clubId}`)
+        : `${name} ${clubId}`.toLowerCase();
       if (!searchable.includes(normalizedQuery)) return;
       const divisionRank = typeof contractDivisionSortValue === "function"
         ? contractDivisionSortValue(getValue(row, "active_contract_club_division"))
@@ -141,7 +145,7 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
       button.dataset.searchKey = recentClubKey(clubId);
       const safeName = typeof escapeHtml === "function" ? escapeHtml(name) : name;
       const safeId = typeof escapeHtml === "function" ? escapeHtml(clubId) : clubId;
-      button.innerHTML = \`<strong>\${safeName}</strong><span>Club &middot; #\${safeId}</span>\`;
+      button.innerHTML = `<strong>${safeName}</strong><span>Club &middot; #${safeId}</span>`;
       button.addEventListener("click", () => {
         if (typeof closeSearch === "function") closeSearch();
         if (typeof window.mflOpenClubPage === "function") {
