@@ -51,7 +51,7 @@
     const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set([
-      "startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
+      "startup", "interaction-loading", "setPage", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
       "evaluationRouteLoading", "loadSharedEvaluation", "loadSavedEvaluation", "openSavedEvaluationsModal",
     ]);
     const blockedEvents = [
