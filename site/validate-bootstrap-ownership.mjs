@@ -248,6 +248,16 @@ includes(
 );
 includes(
   bootstrapCore,
+  'Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });',
+  "Uniform Loading Workflow wrappers must expose their immutable delegate so route-specific runtimes can detect an already-wrapped owner without recursively wrapping it.",
+);
+includes(
+  bootstrapCore,
+  "window.__mflTableLoadingRuntime?.sync?.();",
+  "Table loading presentation must synchronize in the same turn as Uniform Loading Workflow token changes rather than waiting only for a MutationObserver.",
+);
+includes(
+  bootstrapCore,
   'html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }',
   "Watchlist count can remain data-loading scoped while pagination follows the full Uniform Loading Workflow.",
 );
@@ -293,4 +303,4 @@ includes(
   "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, named Uniform Loading Workflow, placeholders, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, named Uniform Loading Workflow, synchronous table loading, placeholders, and startup ownership validation passed.");
