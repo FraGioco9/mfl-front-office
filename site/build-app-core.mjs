@@ -33,35 +33,6 @@ function removeResidualLegacyWidthCall(source) {
   return normalized.replace(residualWidthCall, "      return true;");
 }
 
-function removeLegacyEvaluationRouteStability(source) {
-  const normalized = String(source || "").replace(/\r\n?/g, "\n");
-  const signature = 'window.__mflEvaluationRouteStability?.destroy?.();';
-  const signatureIndex = normalized.lastIndexOf(signature);
-  if (signatureIndex < 0) {
-    throw new Error("Could not locate the legacy Evaluation route-stability owner in app-core source.");
-  }
-
-  const blockStart = normalized.lastIndexOf("(() => {", signatureIndex);
-  if (blockStart < 0) {
-    throw new Error("Could not locate the start of the legacy Evaluation route-stability block.");
-  }
-
-  const legacyTail = normalized.slice(blockStart);
-  for (const requiredMarker of [
-    'window.__mflEvaluationRouteStability = {',
-    'window.eval("renderEvaluationPage = window.__mflStableEvaluationRender")',
-    'style.id = "evaluationRouteStabilityStyles";',
-    'observer = new MutationObserver(schedule);',
-    'interval = window.setInterval(schedule, 200);',
-  ]) {
-    if (!legacyTail.includes(requiredMarker)) {
-      throw new Error(`Legacy Evaluation route-stability tail no longer matches expected ownership: ${requiredMarker}`);
-    }
-  }
-
-  return `${normalized.slice(0, blockStart).replace(/\s*$/, "")}\n`;
-}
-
 function normalizeRetirementCalendarIcon(source) {
   let normalized = String(source || "").replace(/\r\n?/g, "\n");
 
@@ -115,10 +86,8 @@ const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "")
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
-const source = removeLegacyEvaluationRouteStability(
-  normalizeRetirementCalendarIcon(
-    removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
-  ),
+const source = normalizeRetirementCalendarIcon(
+  removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
 );
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = String(artifacts.core || "").replace(/\s*$/, "");
