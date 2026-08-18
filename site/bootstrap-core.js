@@ -202,23 +202,10 @@
     document.querySelector("main")?.prepend(message);
   }
 
-  function ensureFirstPaintTableWidths() {
-    if (window.__mflTableWidthRuntime?.canonical === true) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[data-mfl-first-paint-table-widths="true"]');
-      if (existing instanceof HTMLScriptElement) {
-        existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener("error", () => reject(new Error("Could not load table width contract.")), { once: true });
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = "/table-width-runtime.js";
-      script.async = false;
-      script.dataset.mflFirstPaintTableWidths = "true";
-      script.addEventListener("load", () => resolve(), { once: true });
-      script.addEventListener("error", () => reject(new Error("Could not load table width contract.")), { once: true });
-      document.head.appendChild(script);
-    });
+  function assertUniformWidthContract() {
+    if (window.__mflUniformWidth?.name !== "Uniform Width") {
+      throw new Error("Uniform Width must be loaded before the application core.");
+    }
   }
 
   syncStoredAccessFlags();
@@ -287,7 +274,7 @@
   if (footer) footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
   void (async () => {
-    await ensureFirstPaintTableWidths();
+    assertUniformWidthContract();
     await import(new URL("/modules/app-entry.js", location.origin).href);
   })().catch((error) => {
     document.documentElement.dataset.mflReady = "error";
