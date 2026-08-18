@@ -109,19 +109,5 @@
     groups,
   });
 
-  /* Compatibility only. Widths are CSS-owned and are never applied by JS. */
-  const apply = () => true;
-  const destroy = () => {};
-
-  window.__mflTableWidthRuntime?.destroy?.();
   window.__mflUniformWidth = contract;
-  window.__mflTableWidthConfig = contract;
-  window.__mflTableWidthRuntime = Object.freeze({
-    canonical: true,
-    name: UNIFORM_WIDTH_NAME,
-    config: contract,
-    apply,
-    takeOwnership: apply,
-    destroy,
-  });
 })();
