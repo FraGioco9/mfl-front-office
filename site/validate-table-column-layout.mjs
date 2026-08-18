@@ -142,6 +142,12 @@ invariant(
   && !tableWidthRuntime.includes('endsWith("px")'),
   "Uniform Width must never convert column percentages into runtime pixel widths.",
 );
+invariant(
+  !tableWidthRuntime.includes("__mflTableWidthRuntime")
+  && !tableWidthRuntime.includes("takeOwnership")
+  && !tableWidthRuntime.includes("const apply ="),
+  "Uniform Width must not expose a compatibility width owner or apply API.",
+);
 
 const directWidthScriptIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
 const bootstrapScriptIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
@@ -200,25 +206,28 @@ invariant(
   !/\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive),
   "Responsive CSS must not override Uniform Width column percentages.",
 );
+invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed table width.");
 invariant(
   !responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive),
   "Responsive styling must not assign a conflicting height to canonical loading rows.",
 );
 
 invariant(
-  appCoreNormalizer.includes("tableColGroup.replaceChildren(fragment);\\n  window.__mflTableWidthRuntime?.apply?.();"),
-  "Raw app-core legacy width ownership must remain explicitly recognized by the normalizer until the source core is rebuilt.",
-);
-invariant(
   appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"),
   "Generated application core must remove its raw legacy table-width owner before execution.",
 );
 
-const widthLoadIndex = bootstrapCore.indexOf("await ensureFirstPaintTableWidths();");
+const widthAssertIndex = bootstrapCore.indexOf("assertUniformWidthContract();");
 const appImportIndex = bootstrapCore.indexOf('await import(new URL("/modules/app-entry.js"');
 invariant(
-  widthLoadIndex >= 0 && appImportIndex > widthLoadIndex,
-  "Uniform Width validation must remain loaded before the application core can render a table.",
+  widthAssertIndex >= 0 && appImportIndex > widthAssertIndex,
+  "Uniform Width must be asserted before the application core can render a table.",
+);
+invariant(
+  bootstrapCore.includes('window.__mflUniformWidth?.name !== "Uniform Width"')
+  && !bootstrapCore.includes("ensureFirstPaintTableWidths")
+  && !bootstrapCore.includes("__mflTableWidthRuntime"),
+  "Bootstrap core must consume Uniform Width as a read-only contract and must not load or call a width owner.",
 );
 
 console.log("Uniform Width and synchronous first-paint table validation passed.");
