@@ -19,9 +19,18 @@
     return viewName === "stats" && (pageName === "database" || pageName === "mfl") ? pageName : "";
   }
 
-  function consumeActiveStatsViewEvent(event) {
+  function consumeActiveStatsControlEvent(event) {
     if (event.type === "pointerdown" && (event.isPrimary === false || event.button !== 0)) return;
     const target = event.target instanceof Element ? event.target : null;
+    const activeControl = target?.closest?.(
+      ".mflStatsFilterButton.active, .mflStatsDistributionModeButton.active",
+    );
+    if (activeControl instanceof HTMLButtonElement && !activeControl.disabled && !activeControl.hidden) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     const button = target?.closest?.('.viewButton[data-view="stats"]');
     if (!(button instanceof HTMLButtonElement) || button.disabled || button.hidden) return;
 
@@ -38,8 +47,8 @@
   function installActiveStatsViewNoop() {
     if (window.__mflActiveStatsViewNoopInstalled === true) return;
     window.__mflActiveStatsViewNoopInstalled = true;
-    document.addEventListener("pointerdown", consumeActiveStatsViewEvent, true);
-    document.addEventListener("click", consumeActiveStatsViewEvent, true);
+    document.addEventListener("pointerdown", consumeActiveStatsControlEvent, true);
+    document.addEventListener("click", consumeActiveStatsControlEvent, true);
   }
 
   function installSelectedLinksDirectOpen() {
@@ -186,8 +195,8 @@
     destroyed = true;
     coreObserver?.disconnect();
     coreObserver = null;
-    document.removeEventListener("pointerdown", consumeActiveStatsViewEvent, true);
-    document.removeEventListener("click", consumeActiveStatsViewEvent, true);
+    document.removeEventListener("pointerdown", consumeActiveStatsControlEvent, true);
+    document.removeEventListener("click", consumeActiveStatsControlEvent, true);
     window.removeEventListener("mfl:ready", sync);
   }
 
