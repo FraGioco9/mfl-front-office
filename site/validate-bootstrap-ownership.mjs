@@ -213,13 +213,23 @@ includes(
 );
 includes(
   bootstrapCore,
-  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
-  "The uniform loading controller must own the pre-transition navigation-pending state.",
+  'const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";',
+  "The project-wide loading contract must have the canonical name Uniform Loading Workflow.",
 );
 includes(
   bootstrapCore,
-  '"startup", "interaction-loading", "setPage", "setView", "route-runtime",',
-  "Page transitions, view transitions, and lazy route-runtime loading must all participate in the same data-loading lifecycle.",
+  "window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;",
+  "The canonical Uniform Loading Workflow name must point at the existing global loading controller rather than creating a competing owner.",
+);
+includes(
+  bootstrapCore,
+  'const NAVIGATION_PENDING_CLASS = "mflNavigationPending";',
+  "The Uniform Loading Workflow must own the pre-transition navigation-pending state.",
+);
+includes(
+  bootstrapCore,
+  '"startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime",',
+  "Page transitions, view transitions, Watchlist switches, and lazy route-runtime loading must all participate in the same data-loading lifecycle.",
 );
 includes(
   bootstrapCore,
@@ -229,17 +239,17 @@ includes(
 includes(
   bootstrapCore,
   'html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }',
-  "Pagination must remain hidden for the entire uniform interaction-busy lifecycle and appear only after loading ends.",
+  "Pagination must remain hidden for the entire Uniform Loading Workflow and appear only after loading ends.",
 );
 includes(
   bootstrapCore,
-  '"setPage", "setView", "ensureProgressionData", "requestIncrementalRoute"',
-  "Every page and view transition must be wrapped by the uniform interaction-busy owner regardless of cache state.",
+  '"setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"',
+  "Every page/view transition and direct Watchlist switch must be wrapped by the Uniform Loading Workflow regardless of cache state.",
 );
 includes(
   bootstrapCore,
   'html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }',
-  "Watchlist count can remain data-loading scoped while pagination follows the full uniform loading workflow.",
+  "Watchlist count can remain data-loading scoped while pagination follows the full Uniform Loading Workflow.",
 );
 excludes(
   bootstrapCore,
@@ -283,4 +293,4 @@ includes(
   "Keyboard/click navigation must hide pagination during click capture and hand off to the normal busy lifecycle.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, uniform page/view data loading, placeholders, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, pre-transition pager hiding, named Uniform Loading Workflow, placeholders, and startup ownership validation passed.");
