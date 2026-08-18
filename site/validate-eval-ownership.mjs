@@ -12,6 +12,8 @@ const [
   watchlistRuntime,
   evaluationRateRuntime,
   tableLoadingRuntime,
+  globalSearchRuntime,
+  appEntry,
   routeRuntimeNormalizer,
   appCoreSource,
 ] = await Promise.all([
@@ -19,6 +21,8 @@ const [
   read("./watchlist-myplayers-route-runtime.js"),
   read("./evaluation-discount-rate-runtime.js"),
   read("./table-loading-runtime.js"),
+  read("./global-search-runtime.js"),
+  read("./modules/app-entry.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./modules/app-core.js"),
 ]);
@@ -40,19 +44,56 @@ invariant(
   "Evaluation discount-rate authority must replace its global function explicitly.",
 );
 
-invariant(!tableLoadingRuntime.includes("window.eval"), "Table loading must not inspect lexical core state through window.eval.");
-invariant(!tableLoadingRuntime.includes("eval("), "Table loading must not use string evaluation.");
+for (const [name, source] of [
+  ["table-loading-runtime.js", tableLoadingRuntime],
+  ["global-search-runtime.js", globalSearchRuntime],
+  ["modules/app-entry.js", appEntry],
+]) {
+  invariant(!source.includes("window.eval"), `${name} must not inspect application-core lexical state through window.eval.`);
+  invariant(!source.includes("eval("), `${name} must not use string evaluation.`);
+}
+
 invariant(
   tableLoadingRuntime.includes('Reflect.get(window, "__mflCoreContracts")'),
   "Table loading must consume the explicit application-core contract.",
 );
 invariant(
   tableLoadingRuntime.includes("coreContracts()?.installTableLoadingOwners"),
-  "Table loading must delegate lexical header/loading ownership to the application core.",
+  "Table loading must delegate lexical header ownership to the application core.",
 );
 invariant(
   tableLoadingRuntime.includes("coreContracts()?.ensureCanonicalTableHeader"),
   "Table loading must ask the application core to reconcile canonical header state.",
+);
+
+invariant(
+  globalSearchRuntime.includes('Reflect.get(window, "__mflCoreContracts")'),
+  "Global Search must consume the explicit application-core contract.",
+);
+for (const contractCall of [
+  "installSearchMatching",
+  "renderGlobalSearchResults",
+  "renderCurrentEvaluationSearchResults",
+  "resetCurrentEvaluationSelection",
+  "applySearchPayload",
+  "invalidateDatabaseSearch",
+]) {
+  invariant(globalSearchRuntime.includes(contractCall), `Global Search must use the core contract for ${contractCall}.`);
+}
+for (const removedBridge of [
+  "__mflAuthoritativeGlobalSearchPayload",
+  "__mflAuthoritativeEvaluationSearchPayload",
+]) {
+  invariant(!globalSearchRuntime.includes(removedBridge), `Global Search must not restore temporary payload bridge ${removedBridge}.`);
+}
+
+invariant(
+  appEntry.includes('Reflect.get(window, "__mflCoreContracts")'),
+  "app-entry must consume the explicit application-core contract for Evaluation recent-state ownership.",
+);
+invariant(
+  appEntry.includes("contracts.installEvaluationRecentStateOwnership"),
+  "app-entry must delegate Evaluation recent-state ownership into the core lexical scope.",
 );
 
 invariant(!routeRuntimeNormalizer.includes("window.eval"), "The application-core contract must not be implemented through window.eval.");
@@ -76,9 +117,14 @@ for (const contractMethod of [
     `Application-core contract must expose ${contractMethod}.`,
   );
 }
+invariant(
+  !routeRuntimeNormalizer.includes("stableRenderTableLoadingShell"),
+  "Core contracts must not recreate the obsolete renderTableLoadingShell monkey patch; showTableBusyState already owns loading presentation.",
+);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const sharedCore = String(artifacts.core || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
 invariant(
   sharedCore.includes("window.__mflCoreContracts = Object.freeze({"),
   "The generated shared application core must retain the explicit lexical-owner contract after route splitting.",
@@ -87,7 +133,12 @@ invariant(
   sharedCore.indexOf("window.__mflCoreContracts = Object.freeze({") < sharedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();"),
   "The core contract must exist before application-core loaded state is published.",
 );
+invariant(
+  tableCore.includes('if (window.__mflTableLoadingRuntime?.show?.()) return;'),
+  "The Table chunk must retain direct busy-state delegation to the table-loading runtime after removing the shell monkey patch.",
+);
 new Function(sharedCore);
+new Function(tableCore);
 
 for (const legacyBridge of [
   "__mflInteractionBusyTargetName",
@@ -116,4 +167,4 @@ for (const legacyBridge of [
   invariant(!watchlistRuntime.includes(legacyBridge), `Watchlist route runtime must not restore legacy eval bridge ${legacyBridge}.`);
 }
 
-console.log("Direct core ownership validation passed without table or global-function eval bridges.");
+console.log("Direct core ownership validation passed without table, search, app-entry, or global-function eval bridges.");
