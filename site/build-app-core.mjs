@@ -30,7 +30,25 @@ function removeResidualLegacyWidthCall(source) {
   return normalized.replace(residualWidthCall, "      return true;");
 }
 
-const source = removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8"));
+function removeLegacyRetirementHourglass(source) {
+  const normalized = String(source || "").replace(/\r\n?/g, "\n");
+  const markerAssignment = "  markerElement.textContent = marker.emoji;";
+  if (!normalized.includes(markerAssignment)) {
+    throw new Error("Could not locate the name-marker emoji assignment in app-core source.");
+  }
+  return normalized.replace(
+    markerAssignment,
+    [
+      '  if (marker.emoji !== "⏳") {',
+      "    markerElement.textContent = marker.emoji;",
+      "  }",
+    ].join("\n"),
+  );
+}
+
+const source = removeLegacyRetirementHourglass(
+  removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
+);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = String(artifacts.core || "").replace(/\s*$/, "");
 const evaluationRuntime = String(artifacts.routeChunks?.evaluation || "").replace(/\s*$/, "");
