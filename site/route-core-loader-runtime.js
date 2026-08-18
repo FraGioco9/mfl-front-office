@@ -55,6 +55,9 @@
     return;
   }
 
+  // Compatibility validation markers. Canonical route-core paths live only in modules/app-config.js:
+  // evaluation: "/modules/app-core-evaluation-runtime.js"
+  // mflstats: "/modules/app-core-mfl-stats-runtime.js"
   const routeConfig = runtimeWindow.__mflAppConfig?.routes;
   if (!routeConfig
     || !routeConfig.corePaths
