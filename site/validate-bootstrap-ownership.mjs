@@ -217,6 +217,11 @@ includes(
 );
 includes(
   bootstrapCore,
+  '"setPage", "ensureProgressionData", "requestIncrementalRoute"',
+  "Every page and view transition must enter the uniform interaction-busy lifecycle before setPage mutates the destination shell.",
+);
+includes(
+  bootstrapCore,
   'html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }',
   "Watchlist count can remain data-loading scoped while pagination follows the full uniform loading workflow.",
 );
@@ -226,4 +231,4 @@ excludes(
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, uniform pager loading, placeholders, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, route-entry loading, uniform pager loading, placeholders, and startup ownership validation passed.");
