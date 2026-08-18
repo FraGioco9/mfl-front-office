@@ -36,9 +36,9 @@
   ]);
   const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([
     "overall",
-    "active_contract_revenue_share",
     "active_contract_club_name",
     "active_contract_club_division",
+    "active_contract_revenue_share",
   ]);
   const FIRST_PAINT_AGENT_PAGES = new Set(["myplayers", "agents", "mfl"]);
   const FIRST_PAINT_COLUMN_CLASSES = Object.freeze({
