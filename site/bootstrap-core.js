@@ -48,6 +48,7 @@
 
   function createInteractionBusyController() {
     const BUSY_CLASS = "mflInteractionBusy";
+    const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set([
       "startup", "interaction-loading", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
@@ -80,6 +81,7 @@
         content: ""; position: fixed; inset: 0; z-index: 2147483647; background: transparent;
         pointer-events: auto; cursor: wait; transition: none; animation: none;
       }
+      html.${NAVIGATION_PENDING_CLASS} #progressionPage nav.pager,
       html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }
       html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }
     `;
