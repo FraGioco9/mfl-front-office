@@ -557,3 +557,40 @@ html.mflInteractionBusy body::after {
 html.mflDataLoading #progressionPage #watchlistPlayerCount {
   display: none;
 }
+
+.retirementMarker[data-tooltip="1 year left"],
+.retirementMarker[data-tooltip="2 years left"],
+.retirementMarker[data-tooltip="3 years left"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  font-size: 0;
+  line-height: 0;
+}
+
+.retirementMarker[data-tooltip="1 year left"]::before,
+.retirementMarker[data-tooltip="2 years left"]::before,
+.retirementMarker[data-tooltip="3 years left"]::before {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("/retirement-calendar-clock.svg") center / 16px 16px no-repeat;
+  mask: url("/retirement-calendar-clock.svg") center / 16px 16px no-repeat;
+}
+
+.retirementMarker[data-tooltip="1 year left"] {
+  color: #ff2020;
+}
+
+.retirementMarker[data-tooltip="2 years left"] {
+  color: #ff7a00;
+}
+
+.retirementMarker[data-tooltip="3 years left"] {
+  color: #ffdd33;
+}
