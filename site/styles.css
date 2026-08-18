@@ -8,6 +8,23 @@
   --mfl-popup-close-size: 36px;
   --mfl-popup-close-glyph-size: 12px;
   --mfl-pager-block-padding: 12px;
+  --mfl-page-title-margin-block-start: 14px;
+  --mfl-page-title-margin-block-end: 12px;
+  --mfl-page-title-line-height: 1.2;
+}
+
+.tablePageTitle {
+  margin: var(--mfl-page-title-margin-block-start) 0 var(--mfl-page-title-margin-block-end);
+  line-height: var(--mfl-page-title-line-height);
+}
+
+.pageView > :has(> .tablePageTitle) {
+  align-items: flex-start;
+  margin: var(--mfl-page-title-margin-block-start) 0 var(--mfl-page-title-margin-block-end);
+}
+
+.pageView > :has(> .tablePageTitle) > .tablePageTitle {
+  margin: 0;
 }
 
 :is(.viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton) {
@@ -81,7 +98,8 @@ select[data-mfl-dropdown-enhanced="true"]:open,
 @supports (appearance: base-select) {
   select[data-mfl-dropdown-enhanced="true"]::picker(select),
   #pageSizeSelect::picker(select),
-  .filtersDialog select::picker(select) {
+  .filtersDialog select::picker-icon,
+  .filtersDialog select:open::picker-icon {
     max-height: var(--mfl-dropdown-max-height);
     overflow-y: auto;
     overscroll-behavior: contain;
