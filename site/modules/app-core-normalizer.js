@@ -326,6 +326,7 @@ ${linkColumnBranch}`;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         if (typeof buildTableColGroup === "function") buildTableColGroup();
+        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
         document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
         setClubSwitching(false);
         resolve();
@@ -386,7 +387,7 @@ function removeLegacyTableWidthOwnership(source) {
   const applyWidthStart = normalized.indexOf("function applyTableColWidth(");
   const headerStart = normalized.indexOf("function buildHeader()", applyWidthStart);
   if (applyWidthStart >= 0 && headerStart > applyWidthStart) {
-    const canonicalBuilder = `function buildTableColGroup() {\n  const fragment = document.createDocumentFragment();\n  const selectionCol = document.createElement("col");\n  selectionCol.className = "col-select";\n  fragment.appendChild(selectionCol);\n\n  currentViewColumns().forEach((column) => {\n    const col = document.createElement("col");\n    const columnClass = tableColumnClass(column);\n    if (columnClass) col.classList.add(...columnClass.split(" "));\n    fragment.appendChild(col);\n  });\n\n  tableColGroup.replaceChildren(fragment);\n}\n`;
+    const canonicalBuilder = `function buildTableColGroup() {\n  const fragment = document.createDocumentFragment();\n  const selectionCol = document.createElement("col");\n  selectionCol.className = "col-select";\n  fragment.appendChild(selectionCol);\n\n  currentViewColumns().forEach((column) => {\n    const col = document.createElement("col");\n    const columnClass = tableColumnClass(column);\n    if (columnClass) col.classList.add(...columnClass.split(" "));\n    fragment.appendChild(col);\n  });\n\n  tableColGroup.replaceChildren(fragment);\n  window.__mflTableWidthRuntime?.apply?.();\n}\n`;
     normalized = `${normalized.slice(0, applyWidthStart)}${canonicalBuilder}${normalized.slice(headerStart)}`;
   }
 
@@ -422,7 +423,6 @@ function removeLegacyTableWidthOwnership(source) {
     "renderTableWithSharedWidths",
     "updateViewButtonsWithSharedWidths",
     "clubWidthHardLock",
-    "applyExactPlayerTableWidths",
   ];
   const remainingOwner = staleWidthOwners.find((name) => normalized.includes(name));
   if (remainingOwner) {
@@ -542,6 +542,7 @@ function normalizeWatchlistViewAuthority(source) {
       '      if (pageName === "watchlist" && routeView) enforceWatchlistRouteView(true);',
       '      return result;',
       '    };',
+    ],
     "watchlist explicit view precedence",
   );
 
