@@ -1,10 +1,9 @@
 @import url("/scrollbars.css");
 @import url("/styles-base.css");
 @import url("/dropdowns.css");
+@import url("/controls.css");
 
 :root {
-  --mfl-popup-close-size: 36px;
-  --mfl-popup-close-glyph-size: 12px;
   --mfl-pager-block-padding: 12px;
   --mfl-page-title-margin-block-start: 14px;
   --mfl-page-title-margin-block-end: 12px;
@@ -156,33 +155,6 @@
   margin: 0;
 }
 
-:is(.viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  text-align: center;
-}
-
-:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton):not(.active) {
-  cursor: pointer;
-}
-
-:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton).active {
-  cursor: default;
-}
-
-:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton):not(.active):hover:not(:disabled) {
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-}
-
-:is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton).active:hover {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
 .mflStatsFilterButton {
   flex: 1 1 86px;
   min-width: 86px;
@@ -204,102 +176,6 @@
     padding-right: 5px;
     white-space: nowrap;
   }
-}
-
-.modalBackdrop .filtersHeader > .popupCloseButton {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 var(--mfl-popup-close-size);
-  width: var(--mfl-popup-close-size);
-  min-width: var(--mfl-popup-close-size);
-  max-width: var(--mfl-popup-close-size);
-  height: var(--mfl-popup-close-size);
-  min-height: var(--mfl-popup-close-size);
-  max-height: var(--mfl-popup-close-size);
-  margin: 0;
-  padding: 0;
-  border-color: var(--border-strong);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0;
-  line-height: 0;
-  text-align: center;
-  box-shadow: none;
-}
-
-.modalBackdrop .filtersHeader > .popupCloseButton::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--mfl-popup-close-glyph-size);
-  height: var(--mfl-popup-close-glyph-size);
-  margin: 0;
-  border: 0;
-  background: currentColor;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2L10 10M10 2L2 10' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 100% 100%;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2L10 10M10 2L2 10' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 100% 100%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.modalBackdrop .filtersHeader > .popupCloseButton::after {
-  content: none;
-  display: none;
-}
-
-.modalBackdrop .filtersHeader > .popupCloseButton:hover:not(:disabled),
-.modalBackdrop .filtersHeader > .popupCloseButton:focus-visible:not(:disabled) {
-  outline: 0;
-  border-color: var(--primary-hover);
-  background: var(--row-hover);
-  color: var(--text);
-  box-shadow: none;
-}
-
-.trainingStatControls .popupAddButton::before,
-.trainingStatControls .popupMinusButton::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 10px;
-  height: 10px;
-  border: 0;
-  border-radius: 0;
-  background: currentColor;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 10px 10px;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 10px 10px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.trainingStatControls .popupAddButton::before {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9M5 1V9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9M5 1V9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-.trainingStatControls .popupMinusButton::before {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 5H9' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-.trainingStatControls .popupAddButton::after,
-.trainingStatControls .popupMinusButton::after {
-  content: none;
-  display: none;
 }
 
 #tablePageTitle[data-agent-wallet-copy] {

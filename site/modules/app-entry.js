@@ -123,9 +123,7 @@ const TABLE_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/table-width-runtime.js",
   "/filter-controls-runtime.js",
   "/desktop-table-style-runtime.js",
-  "/table-view-runtime.js",
   "/shared-table-ui-runtime.js",
-  "/table-navigation-chrome-runtime.js",
   "/nationality-filter-options-runtime.js",
   "/table-loading-runtime.js",
 ]);
