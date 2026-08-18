@@ -10,9 +10,9 @@
   const MOBILE_LAYOUT = "(max-width: 900px)";
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
 
-  /* Percentages are owned by styles.css. This runtime only resolves that one
-   * render-blocking contract so cold startup and later route switches use the
-   * exact same geometry. */
+  /* Percentages are owned by styles.css. The live player table uses its own
+   * scroller class, so historical .tableScroller !important rules are not part
+   * of this cascade and the runtime does not need priority escalation. */
   const COLUMN_VARIABLES = Object.freeze([
     Object.freeze(["col-overall", "--mfl-table-col-overall"]),
     Object.freeze(["col-select", "--mfl-table-col-select"]),
@@ -126,7 +126,7 @@
   function tableElements() {
     const page = document.querySelector("#progressionPage");
     const shell = page?.querySelector(".tableShell");
-    const scroller = page?.querySelector(".tableScroller");
+    const scroller = page?.querySelector(".playerTableScroller");
     const table = scroller?.querySelector("table");
     if (!(page instanceof HTMLElement)
       || !(shell instanceof HTMLElement)
@@ -167,27 +167,27 @@
     const { columns, percentages } = geometry;
 
     [shell, scroller].forEach((element) => {
-      element.style.setProperty("width", "100%", "important");
-      element.style.setProperty("min-width", "0", "important");
-      element.style.setProperty("max-width", "100%", "important");
-      element.style.setProperty("box-sizing", "border-box", "important");
+      element.style.setProperty("width", "100%");
+      element.style.setProperty("min-width", "0");
+      element.style.setProperty("max-width", "100%");
+      element.style.setProperty("box-sizing", "border-box");
     });
 
     columns.forEach((column, index) => {
-      column.style.setProperty("width", `${percentages[index]}%`, "important");
-      column.style.setProperty("min-width", "0", "important");
-      column.style.setProperty("max-width", "none", "important");
-      column.style.setProperty("transition", "none", "important");
+      column.style.setProperty("width", `${percentages[index]}%`);
+      column.style.setProperty("min-width", "0");
+      column.style.setProperty("max-width", "none");
+      column.style.setProperty("transition", "none");
     });
 
-    table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", "100%", "important");
-    table.style.setProperty("min-width", "100%", "important");
-    table.style.setProperty("max-width", "100%", "important");
-    table.style.setProperty("box-sizing", "border-box", "important");
-    table.style.setProperty("border-spacing", "0", "important");
-    scroller.style.setProperty("overflow-x", "hidden", "important");
-    scroller.style.setProperty("overflow-y", "hidden", "important");
+    table.style.setProperty("table-layout", "fixed");
+    table.style.setProperty("width", "100%");
+    table.style.setProperty("min-width", "100%");
+    table.style.setProperty("max-width", "100%");
+    table.style.setProperty("box-sizing", "border-box");
+    table.style.setProperty("border-spacing", "0");
+    scroller.style.setProperty("overflow-x", "hidden");
+    scroller.style.setProperty("overflow-y", "hidden");
     delete scroller.dataset.mobileTableScroll;
     scroller.classList.add("tableWidthsReady");
     return true;
@@ -198,31 +198,31 @@
     const { columns, percentages } = geometry;
 
     [shell, scroller].forEach((element) => {
-      element.style.setProperty("width", "100%", "important");
-      element.style.setProperty("min-width", "0", "important");
-      element.style.setProperty("max-width", "100%", "important");
-      element.style.setProperty("box-sizing", "border-box", "important");
+      element.style.setProperty("width", "100%");
+      element.style.setProperty("min-width", "0");
+      element.style.setProperty("max-width", "100%");
+      element.style.setProperty("box-sizing", "border-box");
     });
 
     columns.forEach((column, index) => {
       const width = `${(MOBILE_TABLE_WIDTH * percentages[index] / 100).toFixed(2)}px`;
-      column.style.setProperty("width", width, "important");
-      column.style.setProperty("min-width", width, "important");
-      column.style.setProperty("max-width", width, "important");
-      column.style.setProperty("transition", "none", "important");
+      column.style.setProperty("width", width);
+      column.style.setProperty("min-width", width);
+      column.style.setProperty("max-width", width);
+      column.style.setProperty("transition", "none");
     });
 
     const tableWidth = `${MOBILE_TABLE_WIDTH}px`;
-    table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", tableWidth, "important");
-    table.style.setProperty("min-width", tableWidth, "important");
-    table.style.setProperty("max-width", tableWidth, "important");
-    table.style.setProperty("box-sizing", "border-box", "important");
-    table.style.setProperty("border-spacing", "0", "important");
-    scroller.style.setProperty("overflow-x", "auto", "important");
-    scroller.style.setProperty("overflow-y", "hidden", "important");
-    scroller.style.setProperty("overscroll-behavior-x", "contain", "important");
-    scroller.style.setProperty("touch-action", "pan-x pan-y", "important");
+    table.style.setProperty("table-layout", "fixed");
+    table.style.setProperty("width", tableWidth);
+    table.style.setProperty("min-width", tableWidth);
+    table.style.setProperty("max-width", tableWidth);
+    table.style.setProperty("box-sizing", "border-box");
+    table.style.setProperty("border-spacing", "0");
+    scroller.style.setProperty("overflow-x", "auto");
+    scroller.style.setProperty("overflow-y", "hidden");
+    scroller.style.setProperty("overscroll-behavior-x", "contain");
+    scroller.style.setProperty("touch-action", "pan-x pan-y");
     scroller.style.setProperty("-webkit-overflow-scrolling", "touch");
     scroller.dataset.mobileTableScroll = "true";
     scroller.classList.add("tableWidthsReady");
