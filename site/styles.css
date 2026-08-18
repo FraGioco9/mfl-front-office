@@ -29,8 +29,6 @@
   --mfl-table-col-contract-club: 16%;
   --mfl-table-col-contract-division: 8.5%;
   --mfl-table-col-agent: 10.5%;
-  --mfl-table-col-joined-agency: 10.5%;
-  --mfl-table-col-owned-since: 10.5%;
   --mfl-table-col-link: 2.5%;
 
   --mfl-evaluation-summary-col-name: 24%;
@@ -70,8 +68,6 @@
 #progressionPage .playerTableScroller :is(col, th, td).col-contract-club { width: var(--mfl-table-col-contract-club); min-width: 0; max-width: none; }
 #progressionPage .playerTableScroller :is(col, th, td).col-contract-division { width: var(--mfl-table-col-contract-division); min-width: 0; max-width: none; }
 #progressionPage .playerTableScroller :is(col, th, td).col-agent { width: var(--mfl-table-col-agent); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-joined-agency { width: var(--mfl-table-col-joined-agency); min-width: 0; max-width: none; }
-#progressionPage .playerTableScroller :is(col, th, td).col-owned-since { width: var(--mfl-table-col-owned-since); min-width: 0; max-width: none; }
 #progressionPage .playerTableScroller :is(col, th, td).col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
 
 /* The player table has a dedicated scroller so historical generic
