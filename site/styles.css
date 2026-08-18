@@ -76,13 +76,30 @@ table col.col-joined-agency { width: var(--mfl-table-col-joined-agency); min-wid
 table col.col-owned-since { width: var(--mfl-table-col-owned-since); min-width: 0; max-width: none; }
 table col.col-link { width: var(--mfl-table-col-link); min-width: 0; max-width: none; }
 
-#progressionPage .tableScroller th {
+/* The player table uses a dedicated scroller so historical generic
+ * .tableScroller rules cannot become a second geometry owner. */
+#progressionPage .playerTableScroller {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#progressionPage .playerTableScroller table {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-spacing: 0;
+}
+
+#progressionPage .playerTableScroller th {
   height: var(--mfl-table-header-height);
   min-height: var(--mfl-table-header-height);
   line-height: var(--mfl-table-header-height);
 }
 
-#progressionPage .tableScroller td {
+#progressionPage .playerTableScroller td {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
 }
