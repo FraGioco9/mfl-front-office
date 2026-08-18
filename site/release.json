@@ -1,4 +1,4 @@
 {
-  "version": "1.124.54",
-  "description": "Uniform active view navigation and MFL Stats loading"
+  "version": "1.124.55",
+  "description": "Load the complete MFL Stats population and align active view hover"
 }

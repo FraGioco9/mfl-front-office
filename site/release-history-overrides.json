@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.54",
+    "Uniform active view navigation and MFL Stats loading"
+  ],
+  [
     "v1.124.53",
     "Restore MFL Stats loading for cold and cached visits"
   ],

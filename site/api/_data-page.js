@@ -306,13 +306,15 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
   const allRows = ["player", "players", "evaluation", "club", "mflstats"].includes(scope);
   const maximumPageSize = allRows ? 5000 : 250;
   const requestedPageSize = Number(query.pageSize);
-  const pageSize = Math.max(
-    1,
-    Math.min(
-      maximumPageSize,
-      Number.isFinite(requestedPageSize) ? Math.trunc(requestedPageSize) : 100,
-    ),
-  );
+  const pageSize = scope === "mflstats"
+    ? Math.max(1, totalRows)
+    : Math.max(
+      1,
+      Math.min(
+        maximumPageSize,
+        Number.isFinite(requestedPageSize) ? Math.trunc(requestedPageSize) : 100,
+      ),
+    );
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const requestedPage = Number(query.page);
   const page = Math.max(

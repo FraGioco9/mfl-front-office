@@ -10,12 +10,13 @@
   --mfl-pager-block-padding: 12px;
 }
 
-.viewButton:not([hidden]) {
+:is(.viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   text-align: center;
+  cursor: default;
 }
 
 @supports (appearance: base-select) {

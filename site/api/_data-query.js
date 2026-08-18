@@ -22,7 +22,7 @@ const POSITION_ORDER = [
   "GK", "RB", "CB", "LB", "RWB", "LWB", "CDM", "RM", "CM", "LM", "CAM", "RW", "CF", "LW", "ST",
 ];
 const TABLE_SCOPES = new Set([
-  "database", "progression", "mfl", "mflstats", "agent", "myplayers", "watchlist",
+  "database", "progression", "mfl", "agent", "myplayers", "watchlist",
 ]);
 
 function placeholders(values) {
