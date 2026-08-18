@@ -51,7 +51,7 @@
     const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set([
-      "startup", "interaction-loading", "setPage", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
+      "startup", "interaction-loading", "setPage", "setView", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
       "evaluationRouteLoading", "loadSharedEvaluation", "loadSavedEvaluation", "openSavedEvaluationsModal",
     ]);
     const blockedEvents = [
@@ -163,7 +163,7 @@
       } catch {}
       syncStoredAccessFlags();
       [
-        "setPage", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
+        "setPage", "setView", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
         "openSavedEvaluationsModal", "createSharedEvaluationFromPayload", "createSharedEvaluation",
         "createSavedEvaluation", "linkWallet",
       ].forEach((name) => {
