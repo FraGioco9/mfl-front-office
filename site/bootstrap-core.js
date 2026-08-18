@@ -5,6 +5,7 @@
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
   const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
+  const UNIFORM_LOADING_WORKFLOW_NAME = "Uniform Loading Workflow";
 
   function normalizeWalletAddress(value) {
     const address = String(value || "").trim().toLowerCase();
@@ -51,7 +52,7 @@
     const NAVIGATION_PENDING_CLASS = "mflNavigationPending";
     const DATA_LOADING_CLASS = "mflDataLoading";
     const DATA_LOADING_REASONS = new Set([
-      "startup", "interaction-loading", "setPage", "setView", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
+      "startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData", "requestIncrementalRoute", "databaseStatsData", "mflStatsData",
       "evaluationRouteLoading", "loadSharedEvaluation", "loadSavedEvaluation", "openSavedEvaluationsModal",
     ]);
     const blockedEvents = [
@@ -163,7 +164,7 @@
       } catch {}
       syncStoredAccessFlags();
       [
-        "setPage", "setView", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
+        "setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute", "loadSharedEvaluation", "loadSavedEvaluation",
         "openSavedEvaluationsModal", "createSharedEvaluationFromPayload", "createSharedEvaluation",
         "createSavedEvaluation", "linkWallet",
       ].forEach((name) => {
@@ -179,7 +180,14 @@
       });
     }
 
-    return Object.freeze({ begin, end, run, isBusy: () => activeTokens.size > 0, installCoreBridge });
+    return Object.freeze({
+      name: UNIFORM_LOADING_WORKFLOW_NAME,
+      begin,
+      end,
+      run,
+      isBusy: () => activeTokens.size > 0,
+      installCoreBridge,
+    });
   }
 
   function ensureFatalStartupMessage() {
@@ -195,6 +203,7 @@
   syncStoredAccessFlags();
 
   window.__mflInteractionBusy = createInteractionBusyController();
+  window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
   const startupToken = window.__mflInteractionBusy.begin("startup");
   let startupFinished = false;
   let startupStateObserver = null;
