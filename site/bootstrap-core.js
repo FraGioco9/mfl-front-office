@@ -80,7 +80,7 @@
         content: ""; position: fixed; inset: 0; z-index: 2147483647; background: transparent;
         pointer-events: auto; cursor: wait; transition: none; animation: none;
       }
-      html.${DATA_LOADING_CLASS} #progressionPage nav.pager,
+      html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }
       html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }
     `;
     document.head.appendChild(style);
