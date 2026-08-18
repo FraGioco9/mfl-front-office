@@ -9,13 +9,26 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, splitter, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
+const [
+  coreSource,
+  splitter,
+  routeLoader,
+  routeNormalizer,
+  buildCore,
+  appEntry,
+  bootstrapCore,
+  tableLoading,
+  watchlistRouteRuntime,
+] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-watchlist-route-chunk.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-entry.js"),
+  read("./bootstrap-core.js"),
+  read("./table-loading-runtime.js"),
+  read("./watchlist-myplayers-route-runtime.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -70,6 +83,58 @@ includes(routeNormalizer, 'await window.__mflEnsureRouteCore("watchlist");', "Di
 includes(buildCore, 'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");', "The build must emit a generated Watchlist runtime.");
 includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");
 
+includes(
+  bootstrapCore,
+  '"startup", "interaction-loading", "setPage", "setView", "route-runtime",',
+  "Watchlist page, view and lazy-route transitions must inherit the same global data-loading lifecycle as every other route.",
+);
+includes(
+  bootstrapCore,
+  '"setPage", "setView", "ensureProgressionData", "requestIncrementalRoute"',
+  "The global loading bridge must wrap both page and view owners so Watchlist behavior cannot depend on cache hits.",
+);
+includes(
+  tableLoading,
+  'document.documentElement.classList.contains("mflDataLoading")',
+  "Table loading must be driven only by the global data-loading state.",
+);
+includes(
+  tableLoading,
+  '["database", "mfl", "progression", "watchlist", "myplayers", "agents", "club"]',
+  "Watchlist must participate in the canonical table-loading route classification.",
+);
+
+includes(
+  watchlistRouteRuntime,
+  "await originalSetPage.call(this, pageName, updateHash, nextOptions);",
+  "Watchlist route coordination must delegate its actual page transition to the shared setPage owner.",
+);
+includes(
+  watchlistRouteRuntime,
+  "if (watchlistNavigation && walletPreferencesSyncActive()) await waitForWalletPreferencesSettled();",
+  "Watchlist navigation must not finish until its required wallet-preference synchronization has settled.",
+);
+const watchlistRuntimeInstall = appEntry.indexOf("runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();");
+const globalBridgeReinstall = appEntry.indexOf("installCoreBridges();", watchlistRuntimeInstall);
+invariant(
+  watchlistRuntimeInstall >= 0 && globalBridgeReinstall > watchlistRuntimeInstall,
+  "After installing the Watchlist route wrapper, app-entry must re-install the global loading bridge so the full Watchlist operation remains inside uniform loading.",
+);
+for (const forbidden of [
+  'classList.add("mflDataLoading"',
+  'classList.remove("mflDataLoading"',
+  'classList.add("mflInteractionBusy"',
+  'classList.remove("mflInteractionBusy"',
+  "nav.pager",
+  "__mflTableLoadingRuntime",
+]) {
+  excludes(
+    watchlistRouteRuntime,
+    forbidden,
+    `Watchlist route coordination must not own loading presentation directly (${forbidden}); the global loading workflow is the sole owner.`,
+  );
+}
+
 const generatedWatchlist = await read("./modules/app-core-watchlist-runtime.js");
 const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedWatchlist.startsWith(watchlistBanner), "Generated Watchlist runtime must carry the build ownership banner.");
@@ -78,4 +143,4 @@ invariant(
   "Generated Watchlist runtime must exactly match the Watchlist build artifact.",
 );
 
-console.log("Watchlist route-core splitting validation passed.");
+console.log("Watchlist route-core splitting and uniform loading ownership validation passed.");
