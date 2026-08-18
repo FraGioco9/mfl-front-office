@@ -210,10 +210,20 @@ includes(
   'document.getElementById("mflStartupError")?.remove();',
   "A recovered post-core error must remove its false fatal message.",
 );
+includes(
+  bootstrapCore,
+  'html.${BUSY_CLASS} #progressionPage nav.pager { display: none; }',
+  "Pagination must stay hidden for the entire uniform interaction-busy lifecycle and appear only after loading ends.",
+);
+includes(
+  bootstrapCore,
+  'html.${DATA_LOADING_CLASS} #progressionPage #watchlistPlayerCount { display: none; }',
+  "Watchlist count can remain data-loading scoped while pagination follows the full uniform loading workflow.",
+);
 excludes(
   bootstrapCore,
   "!important",
   "The bootstrap busy controller must not depend on CSS priority overrides.",
 );
 
-console.log("Bootstrap complete first-paint shells, deterministic controls, loading placeholders, and startup ownership validation passed.");
+console.log("Bootstrap complete first-paint shells, deterministic controls, uniform pager loading, placeholders, and startup ownership validation passed.");
