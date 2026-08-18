@@ -134,7 +134,6 @@ const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
 
 const EVALUATION_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-layout-runtime.js",
-  "/evaluation-load-intent-runtime.js",
   "/evaluation-mfl-usd-input-runtime.js",
   "/evaluation-discount-rate-runtime.js",
   "/evaluation-discount-rate-ui-runtime.js",
