@@ -2,6 +2,7 @@
 @import url("/styles-base.css");
 @import url("/dropdowns.css");
 @import url("/controls.css");
+@import url("/footer.css");
 
 :root {
   --mfl-pager-block-padding: 12px;

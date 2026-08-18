@@ -66,14 +66,129 @@
   color: #ffffff;
 }
 
-.trainingStatControls button {
+.popupCloseButton,
+.popupAddButton,
+.popupMinusButton {
+  position: relative;
+  font-size: 0;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
+.popupCloseButton::before,
+.popupCloseButton::after,
+.popupAddButton::before,
+.popupAddButton::after,
+.popupMinusButton::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.popupCloseButton::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.popupCloseButton::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.popupAddButton::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.popupCloseButton:hover:not(:disabled),
+.popupAddButton:hover:not(:disabled),
+.popupMinusButton:hover:not(:disabled),
 .trainingStatControls button:hover:not(:disabled) {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
+}
+
+.trainingStatControls button {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog [data-filter-value],
+#evaluationSearchInput,
+.globalSearchControl #playerSearchInput,
+#pageSizeSelect {
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filtersDialog [data-filter-value]:hover:not(:disabled),
+.filtersDialog [data-filter-value]:focus:not(:disabled),
+.filtersDialog [data-filter-value]:focus-visible:not(:disabled),
+#evaluationSearchInput:hover:not(:disabled),
+#evaluationSearchInput:focus:not(:disabled),
+#evaluationSearchInput:focus-visible:not(:disabled),
+.globalSearchControl #playerSearchInput:hover:not(:disabled),
+.globalSearchControl #playerSearchInput:focus:not(:disabled),
+.globalSearchControl #playerSearchInput:focus-visible:not(:disabled),
+#pageSizeSelect:hover:not(:disabled),
+#pageSizeSelect:focus:not(:disabled),
+#pageSizeSelect:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.evaluationSearchControl,
+.globalSearchControl {
+  position: relative;
+}
+
+.evaluationSearchControl #evaluationSearchInput,
+.globalSearchControl #playerSearchInput {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.evaluationSearchClearButton,
+.playerSearchClearButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  outline: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.evaluationSearchClearButton:hover:not(:disabled),
+.evaluationSearchClearButton:focus:not(:disabled),
+.evaluationSearchClearButton:focus-visible:not(:disabled),
+.playerSearchClearButton:hover:not(:disabled),
+.playerSearchClearButton:focus:not(:disabled),
+.playerSearchClearButton:focus-visible:not(:disabled) {
+  outline: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.evaluationSearch .field::after {
+  content: none;
+  display: none;
 }
 
 .modalBackdrop .filtersHeader > .popupCloseButton {
