@@ -69,14 +69,8 @@
           && staticPage
           && staticView
           && (currentPage !== staticPage || currentView !== staticView);
-        if (staticRoutePending) {
-          window.__mflTableWidthRuntime?.apply?.();
-          return true;
-        }
-        if (staticHeader && staticSignature && staticSignature !== signature) {
-          window.__mflTableWidthRuntime?.apply?.();
-          return true;
-        }
+        if (staticRoutePending) return true;
+        if (staticHeader && staticSignature && staticSignature !== signature) return true;
         const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
         if (needsCanonicalBuild && ownerReady) buildHeader();
         if (!head.rows[0]) return false;
@@ -84,9 +78,7 @@
           head.dataset.mflHeaderSignature = signature;
           delete head.dataset.mflStaticHeader;
         }
-        if (head.dataset.mflStaticHeader !== "true" && head.dataset.mflHeaderSignature !== signature) return false;
-        window.__mflTableWidthRuntime?.apply?.();
-        return true;
+        return head.dataset.mflStaticHeader === "true" || head.dataset.mflHeaderSignature === signature;
       })()`));
     } catch {
       return false;
@@ -171,24 +163,14 @@
               && staticPage
               && staticView
               && (currentPage !== staticPage || currentView !== staticView);
-            if (staticRoutePending) {
-              window.__mflTableWidthRuntime?.apply?.();
-              return undefined;
-            }
-            if (staticHeader && staticSignature && staticSignature !== signature) {
-              window.__mflTableWidthRuntime?.apply?.();
-              return undefined;
-            }
-            if (!staticHeader && head instanceof HTMLTableSectionElement && staticSignature === signature && head.rows[0]) {
-              window.__mflTableWidthRuntime?.apply?.();
-              return undefined;
-            }
+            if (staticRoutePending) return undefined;
+            if (staticHeader && staticSignature && staticSignature !== signature) return undefined;
+            if (!staticHeader && head instanceof HTMLTableSectionElement && staticSignature === signature && head.rows[0]) return undefined;
             const result = originalBuildHeader.apply(this, arguments);
             if (head instanceof HTMLTableSectionElement) {
               head.dataset.mflHeaderSignature = signature;
               delete head.dataset.mflStaticHeader;
             }
-            window.__mflTableWidthRuntime?.apply?.();
             return result;
           };
           Object.defineProperty(stableBuildHeader, "__mflSingleRenderOwner", { value: true });
