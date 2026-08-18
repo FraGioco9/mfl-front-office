@@ -8,40 +8,86 @@
 
   const TABLE_ROUTE = /^\/(?:database(?:\/|$)|mfl(?:\/|$)|agents?(?:\/|$)|progression(?:\/|$)|watchlist(?:\/|$)|my-players(?:\/|$)|clubs?\/[^/]+(?:\/|$)|club\/[^/]+(?:\/|$))/i;
   const MOBILE_LAYOUT = "(max-width: 900px)";
-  const MOBILE_TABLE_WIDTH = 1560;
   const FILLER_SELECTOR = ".col-shared-width-filler, .col-stable-width-filler, .col-exact-width-filler";
 
-  const COLUMN_LAYOUT = Object.freeze([
-    Object.freeze(["col-overall", 5.5]),
-    Object.freeze(["col-select", 2.75]),
-    Object.freeze(["col-id", 3.75]),
-    Object.freeze(["col-flag", 2.5]),
-    Object.freeze(["col-name", 15]),
-    Object.freeze(["col-nationality", 8.5]),
-    Object.freeze(["col-age", 4.5]),
-    Object.freeze(["col-positions", 7]),
-    Object.freeze(["col-seasons", 5.5]),
-    Object.freeze(["col-stat", 32 / 6]),
-    Object.freeze(["col-contract-revenue", 7.5]),
-    Object.freeze(["col-contract-club", 16]),
-    Object.freeze(["col-contract-division", 8.5]),
-    Object.freeze(["col-agent", 10.5]),
-    Object.freeze(["col-joined-agency", 10.5]),
-    Object.freeze(["col-owned-since", 10.5]),
-    Object.freeze(["col-link", 2.5]),
+  /* Percentages are owned by styles.css. This runtime only resolves that one
+   * render-blocking contract so cold startup and later route switches use the
+   * exact same geometry. */
+  const COLUMN_VARIABLES = Object.freeze([
+    Object.freeze(["col-overall", "--mfl-table-col-overall"]),
+    Object.freeze(["col-select", "--mfl-table-col-select"]),
+    Object.freeze(["col-id", "--mfl-table-col-id"]),
+    Object.freeze(["col-flag", "--mfl-table-col-flag"]),
+    Object.freeze(["col-name", "--mfl-table-col-name"]),
+    Object.freeze(["col-nationality", "--mfl-table-col-nationality"]),
+    Object.freeze(["col-age", "--mfl-table-col-age"]),
+    Object.freeze(["col-positions", "--mfl-table-col-positions"]),
+    Object.freeze(["col-seasons", "--mfl-table-col-seasons"]),
+    Object.freeze(["col-stat", "--mfl-table-col-stat"]),
+    Object.freeze(["col-contract-revenue", "--mfl-table-col-contract-revenue"]),
+    Object.freeze(["col-contract-club", "--mfl-table-col-contract-club"]),
+    Object.freeze(["col-contract-division", "--mfl-table-col-contract-division"]),
+    Object.freeze(["col-agent", "--mfl-table-col-agent"]),
+    Object.freeze(["col-joined-agency", "--mfl-table-col-joined-agency"]),
+    Object.freeze(["col-owned-since", "--mfl-table-col-owned-since"]),
+    Object.freeze(["col-link", "--mfl-table-col-link"]),
   ]);
+
+  function rootStyle() {
+    return window.getComputedStyle(document.documentElement);
+  }
+
+  function percentageVariable(style, variableName) {
+    const raw = String(style.getPropertyValue(variableName) || "").trim();
+    if (!raw.endsWith("%")) {
+      throw new Error(`Global table width ${variableName} must be a percentage.`);
+    }
+    const value = Number.parseFloat(raw);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Global table width ${variableName} is invalid.`);
+    }
+    return value;
+  }
+
+  function pixelVariable(style, variableName) {
+    const raw = String(style.getPropertyValue(variableName) || "").trim();
+    if (!raw.endsWith("px")) {
+      throw new Error(`Global table width ${variableName} must be in pixels.`);
+    }
+    const value = Number.parseFloat(raw);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Global table width ${variableName} is invalid.`);
+    }
+    return value;
+  }
+
+  const style = rootStyle();
+  const COLUMN_LAYOUT = Object.freeze(COLUMN_VARIABLES.map(([className, variableName]) => (
+    Object.freeze([className, percentageVariable(style, variableName)])
+  )));
+  const MOBILE_TABLE_WIDTH = pixelVariable(style, "--mfl-table-mobile-width");
   const TABLE_WIDTH_CONFIG = Object.freeze({
     columnLayout: COLUMN_LAYOUT,
     mobileTableWidth: MOBILE_TABLE_WIDTH,
+    source: "styles.css",
   });
 
-  const SHARED_WIDTH = 68;
-  const SIX_STATS_WIDTH = 32;
-  const CONTRACTS_WIDTH = 7.5 + 16 + 8.5;
-  if (Math.abs(SHARED_WIDTH + SIX_STATS_WIDTH - 100) > 0.0001
-    || Math.abs(SHARED_WIDTH + CONTRACTS_WIDTH - 100) > 0.0001
-    || Math.abs(SIX_STATS_WIDTH - CONTRACTS_WIDTH) > 0.0001) {
-    throw new Error("Player table width contract is invalid.");
+  const widths = new Map(COLUMN_LAYOUT);
+  const sharedWidth = [
+    "col-select", "col-id", "col-flag", "col-name", "col-nationality", "col-age",
+    "col-positions", "col-seasons", "col-overall", "col-agent", "col-link",
+  ].reduce((sum, className) => sum + Number(widths.get(className) || 0), 0);
+  const sixStatsWidth = Number(widths.get("col-stat") || 0) * 6;
+  const contractsWidth = ["col-contract-revenue", "col-contract-club", "col-contract-division"]
+    .reduce((sum, className) => sum + Number(widths.get(className) || 0), 0);
+  const alternateAgentWidths = ["col-joined-agency", "col-owned-since"]
+    .map((className) => Number(widths.get(className) || 0));
+  const agentWidth = Number(widths.get("col-agent") || 0);
+  if (Math.abs(sharedWidth + sixStatsWidth - 100) > 0.0001
+    || Math.abs(sharedWidth + contractsWidth - 100) > 0.0001
+    || Math.abs(sixStatsWidth - contractsWidth) > 0.0001
+    || alternateAgentWidths.some((value) => Math.abs(value - agentWidth) > 0.0001)) {
+    throw new Error("Global player table width contract is invalid.");
   }
 
   window.__mflTableWidthRuntime?.destroy?.();
