@@ -468,8 +468,35 @@ window.__mflAppStartPromise = (async () => {
   return startApp();
 })();`;
 
+function removeLegacyEvaluationRouteStability(source) {
+  const normalized = String(source || "").replace(/\r\n?/g, "\n");
+  const signature = 'window.__mflEvaluationRouteStability?.destroy?.();';
+  const signatureIndex = normalized.lastIndexOf(signature);
+  if (signatureIndex < 0) return normalized;
+
+  const blockStart = normalized.lastIndexOf("(() => {", signatureIndex);
+  if (blockStart < 0) {
+    throw new Error("Could not locate the start of the legacy Evaluation route-stability block.");
+  }
+
+  const legacyTail = normalized.slice(blockStart);
+  for (const requiredMarker of [
+    'window.__mflEvaluationRouteStability = {',
+    'window.eval("renderEvaluationPage = window.__mflStableEvaluationRender")',
+    'style.id = "evaluationRouteStabilityStyles";',
+    'observer = new MutationObserver(schedule);',
+    'interval = window.setInterval(schedule, 200);',
+  ]) {
+    if (!legacyTail.includes(requiredMarker)) {
+      throw new Error(`Legacy Evaluation route-stability tail no longer matches expected ownership: ${requiredMarker}`);
+    }
+  }
+
+  return `${normalized.slice(0, blockStart).replace(/\s*$/, "")}\n`;
+}
+
 export function normalizeRouteRuntimeGate(source) {
-  let text = String(source || "");
+  let text = removeLegacyEvaluationRouteStability(source);
   if (!text.includes(MFL_STATS_FIRST_LOAD_DATA_BARRIER)) {
     if (!text.includes(FIRST_LOAD_DATA_BARRIER)) {
       throw new Error("Could not locate the first-load data barrier for MFL Stats.");
