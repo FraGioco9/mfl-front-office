@@ -202,6 +202,25 @@
     document.querySelector("main")?.prepend(message);
   }
 
+  function ensureFirstPaintTableWidths() {
+    if (window.__mflTableWidthRuntime?.canonical === true) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-mfl-first-paint-table-widths="true"]');
+      if (existing instanceof HTMLScriptElement) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Could not load table width contract.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "/table-width-runtime.js";
+      script.async = false;
+      script.dataset.mflFirstPaintTableWidths = "true";
+      script.addEventListener("load", () => resolve(), { once: true });
+      script.addEventListener("error", () => reject(new Error("Could not load table width contract.")), { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
   syncStoredAccessFlags();
 
   window.__mflInteractionBusy = createInteractionBusyController();
@@ -267,7 +286,10 @@
   const footer = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
   if (footer) footer.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
-  void import(new URL("/modules/app-entry.js", location.origin).href).catch((error) => {
+  void (async () => {
+    await ensureFirstPaintTableWidths();
+    await import(new URL("/modules/app-entry.js", location.origin).href);
+  })().catch((error) => {
     document.documentElement.dataset.mflReady = "error";
     console.error("Could not import MFL Front Office.", error);
   });
