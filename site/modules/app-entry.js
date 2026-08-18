@@ -25,9 +25,7 @@ function installApiFetchPolicy({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   window.__mflApiFetchPolicyInstalled = true;
 
   window.fetch = async (input, init = {}) => {
-    if (!isSameOriginApiRequest(input)) {
-      return nativeFetch(input, init);
-    }
+    if (!isSameOriginApiRequest(input)) return nativeFetch(input, init);
 
     const requestInit = { ...init };
     const headers = new Headers(input instanceof Request ? input.headers : undefined);
@@ -97,10 +95,7 @@ async function loadScriptGroup(paths) {
   await Promise.all(loaders);
 }
 
-/**
- * Preload a later classic script without executing it yet.
- * @param {string} path
- */
+/** @param {string} path */
 function preloadClassicScript(path) {
   if (document.querySelector(`link[data-mfl-runtime-preload="${path}"]`)) return;
   const link = document.createElement("link");
@@ -166,18 +161,14 @@ const initialPathname = String(window.location.pathname || "/");
 /** @param {string} pageName */
 function normalizeRoutePageName(pageName) {
   const normalizer = Reflect.get(window, "__mflNormalizeRoutePageName");
-  if (typeof normalizer !== "function") {
-    throw new Error("Route page-name normalizer is unavailable.");
-  }
+  if (typeof normalizer !== "function") throw new Error("Route page-name normalizer is unavailable.");
   return String(normalizer(pageName) || "home");
 }
 
 /** @param {Record<string, unknown>} [options] */
 function routeView(options = {}) {
   const normalizer = Reflect.get(window, "__mflNormalizeRouteView");
-  if (typeof normalizer !== "function") {
-    throw new Error("Route view normalizer is unavailable.");
-  }
+  if (typeof normalizer !== "function") throw new Error("Route view normalizer is unavailable.");
   return String(normalizer(options) || "");
 }
 
@@ -185,9 +176,7 @@ function routeView(options = {}) {
 function routeNeedsTable(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const classifier = Reflect.get(window, "__mflRouteUsesTableInfrastructure");
-  if (typeof classifier !== "function") {
-    throw new Error("Table-route classifier is unavailable.");
-  }
+  if (typeof classifier !== "function") throw new Error("Table-route classifier is unavailable.");
   if (!classifier(page)) return false;
   return page !== "database" || routeView(options) !== "stats";
 }
@@ -236,9 +225,7 @@ function postCoreScriptsForRoute(pageName, options = {}) {
 
 function initialRouteRuntimeRequest() {
   const classifier = Reflect.get(window, "__mflInitialRouteRuntimeRequest");
-  if (typeof classifier !== "function") {
-    throw new Error("Initial route runtime classifier is unavailable.");
-  }
+  if (typeof classifier !== "function") throw new Error("Initial route runtime classifier is unavailable.");
   const request = classifier(initialPathname);
   const options = request?.options && typeof request.options === "object" && !Array.isArray(request.options)
     ? request.options
@@ -282,9 +269,7 @@ const runtimeWindow = window;
 
 function releaseFromBootstrap() {
   const version = String(runtimeWindow.__mflReleaseVersion || "").trim();
-  if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    throw new Error("The application bootstrap is missing a valid release version.");
-  }
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("The application bootstrap is missing a valid release version.");
   return Object.freeze({ version, description: "" });
 }
 
@@ -377,9 +362,7 @@ async function loadApplicationCore() {
 
   console.warn("Prebuilt application core is unavailable; using source normalization fallback.", prebuiltLoadError);
   const fallbackLoader = Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts");
-  if (typeof fallbackLoader !== "function") {
-    throw new Error("Application core fallback artifact loader is unavailable.");
-  }
+  if (typeof fallbackLoader !== "function") throw new Error("Application core fallback artifact loader is unavailable.");
   const artifacts = await fallbackLoader();
   const source = String(artifacts?.core || "").trim();
   if (!source) throw new Error("Application core source fallback is unavailable.");
@@ -411,77 +394,13 @@ function installCoreBridges() {
 
 function installEvaluationRecentStateBridge() {
   if (evaluationRecentStateBridgeInstalled) return true;
-  try {
-    const installed = Boolean(window.eval(`(() => {
-      if (typeof restoreRecentEvaluationState !== "function"
-        || typeof persistRecentSearchStates !== "function"
-        || typeof saveTableStateLocally !== "function") return false;
-      if (restoreRecentEvaluationState.__mflRecentStateOnly) return true;
-
-      state.recentEvaluationPlayerIds = [];
-
-      const recentStateOnlyRestore = function(savedState) {
-        const incoming = savedState && typeof savedState === "object" && !Array.isArray(savedState)
-          && Array.isArray(savedState.recentEvaluationPlayerIds)
-          ? savedState.recentEvaluationPlayerIds
-          : [];
-        state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
-        if (/^\\/evaluation\\/?$/i.test(window.location.pathname)) {
-          void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
-        }
-      };
-      Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
-      restoreRecentEvaluationState = recentStateOnlyRestore;
-
-      persistRecentSearchStates = function persistSearchStatesWithoutEvaluationLocalStorage() {
-        saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
-        saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
-        saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
-      };
-
-      const originalSaveTableStateLocally = saveTableStateLocally;
-      saveTableStateLocally = function saveTableStateWithoutEvaluationRecents(tableState) {
-        if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
-          return originalSaveTableStateLocally(tableState);
-        }
-        const localState = { ...tableState };
-        delete localState.recentEvaluationPlayerIds;
-        return originalSaveTableStateLocally(localState);
-      };
-
-      if (typeof primeEmptyEvaluationSearch === "function"
-        && !primeEmptyEvaluationSearch.__mflDataOnly) {
-        const dataOnlyPrimeEmptyEvaluationSearch = function() {
-          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-          if (typeof prime === "function") return prime(true);
-          return Promise.resolve(true);
-        };
-        Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
-        primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
-      }
-
-      if (typeof finishEvaluationReadiness === "function"
-        && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
-        const originalFinishEvaluationReadiness = finishEvaluationReadiness;
-        const finishEvaluationReadinessWithRecents = async function() {
-          if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
-            const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
-            if (typeof prime === "function") await prime(false);
-          }
-          return originalFinishEvaluationReadiness.apply(this, arguments);
-        };
-        Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
-        finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
-      }
-
-      return true;
-    })();`));
-    evaluationRecentStateBridgeInstalled = installed;
-    return installed;
-  } catch (error) {
-    console.warn("Could not install Evaluation recent-state ownership.", error);
-    return false;
-  }
+  const contracts = Reflect.get(window, "__mflCoreContracts");
+  const install = contracts && typeof contracts === "object"
+    ? contracts.installEvaluationRecentStateOwnership
+    : null;
+  const installed = typeof install === "function" && Boolean(install());
+  evaluationRecentStateBridgeInstalled = installed;
+  return installed;
 }
 
 /** @param {string} clubId @param {string} view */
@@ -547,22 +466,14 @@ async function ensureRouteRuntimeNow(pageName, options = {}) {
     runtimeWindow.__mflFilterControlsRuntime?.sync?.();
     runtimeWindow.__mflSelectionStartupResetRuntime?.rebind?.();
   }
-  if (routeNeedsWatchlist(page)) {
-    runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
-  }
-  if (routeNeedsDatabaseStatsBridge(page)) {
-    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  }
-  if (routeNeedsDatabaseStats(page, options)) {
-    runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
-  }
+  if (routeNeedsWatchlist(page)) runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
+  if (routeNeedsDatabaseStatsBridge(page)) runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+  if (routeNeedsDatabaseStats(page, options)) runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
   if (page === "evaluation") {
     runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
     runtimeWindow.__mflEvaluationSearchStateRuntime?.sync?.();
   }
-  if (page === "changelog" && runtimeWindow.__mflChangelogHistoryReady) {
-    await runtimeWindow.__mflChangelogHistoryReady;
-  }
+  if (page === "changelog" && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
 
   installCoreBridges();
 }
@@ -602,9 +513,7 @@ async function start() {
   await responsiveStylesReady;
   await loadScriptGroup(initialPreCoreRuntimeScripts);
 
-  if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) {
-    await runtimeWindow.__mflChangelogHistoryReady;
-  }
+  if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
 
   await loadApplicationCore();
   installCoreBridges();
@@ -615,9 +524,7 @@ async function start() {
     await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
 
-  if (databaseStatsStartup) {
-    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  }
+  if (databaseStatsStartup) runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
 
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
