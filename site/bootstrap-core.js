@@ -97,6 +97,7 @@
       document.documentElement.classList.toggle(DATA_LOADING_CLASS, dataLoading);
       document.documentElement.dataset.interactionBusy = busy ? "true" : "false";
       document.body.setAttribute("aria-busy", busy ? "true" : "false");
+      window.__mflTableLoadingRuntime?.sync?.();
     }
 
     function begin(reason = "loading") {
@@ -174,6 +175,7 @@
             const original = ${name};
             const wrapped = window.__mflWrapInteractionBusyFunction(original, ${JSON.stringify(name)});
             Object.defineProperty(wrapped, "__mflInteractionBusyWrapped", { value: true });
+            Object.defineProperty(wrapped, "__mflInteractionBusyOriginal", { value: original });
             ${name} = wrapped;
           })()`);
         } catch {}
