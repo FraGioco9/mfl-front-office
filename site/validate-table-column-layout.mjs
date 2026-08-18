@@ -84,9 +84,18 @@ invariant(Math.abs(advancedPlayer - 100) < 0.0001, "Advanced player table column
 invariant(pixelVariable("--mfl-table-header-height") === 38, "Player table headers must use the global 38px height.");
 invariant(pixelVariable("--mfl-table-row-height") === 38, "Player table rows must use the global 38px height.");
 invariant(
-  styles.includes("#progressionPage .tableScroller th {\n  height: var(--mfl-table-header-height);")
-  && styles.includes("#progressionPage .tableScroller td {\n  height: var(--mfl-table-row-height);"),
-  "Header and row height must be driven directly by the global table geometry contract.",
+  styles.includes("#progressionPage .playerTableScroller th {\n  height: var(--mfl-table-header-height);")
+  && styles.includes("#progressionPage .playerTableScroller td {\n  height: var(--mfl-table-row-height);"),
+  "Header and row height must be driven directly by the dedicated player-table geometry contract.",
+);
+invariant(
+  !styles.includes("#progressionPage .tableScroller"),
+  "Canonical player-table CSS must not re-enter the historical generic tableScroller cascade.",
+);
+invariant(
+  styles.includes("#progressionPage .playerTableScroller table {")
+  && styles.includes("table-layout: fixed;"),
+  "The dedicated player scroller must own fixed table geometry before runtime hydration.",
 );
 invariant(
   styles.includes("#tableBody > .mflTableLoadingRow > td {")
@@ -110,6 +119,15 @@ invariant(
   !tableWidthRuntime.includes("if (!elements || elements.page.hidden) return false;"),
   "Canonical table widths must be applicable while the destination page is still hidden before first reveal.",
 );
+invariant(
+  tableWidthRuntime.includes('page?.querySelector(".playerTableScroller")')
+  && !tableWidthRuntime.includes('page?.querySelector(".tableScroller")'),
+  "The width runtime must target only the dedicated player scroller.",
+);
+invariant(
+  !tableWidthRuntime.includes(', "important")'),
+  "The player-table width runtime must not escalate inline styles with !important.",
+);
 
 const directWidthScriptIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
 const bootstrapScriptIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
@@ -118,6 +136,13 @@ invariant(
   "The canonical table width runtime must execute before synchronous bootstrap first-paint rendering.",
 );
 
+invariant(bootstrap.includes("function primePlayerTableScroller() {"), "Bootstrap must isolate the player scroller before first reveal.");
+invariant(
+  bootstrap.includes('scroller.classList.remove("tableScroller");')
+  && bootstrap.includes('scroller.classList.add("playerTableScroller");'),
+  "Bootstrap must remove the legacy generic scroller class rather than add a competing override.",
+);
+invariant(bootstrap.indexOf("primePlayerTableScroller();") < bootstrap.indexOf("function setLoadingValue"), "Player scroller isolation must happen before first-paint table work.");
 invariant(bootstrap.includes("function primeInitialTableStructure(page, view) {"), "Bootstrap must build first-paint table structure synchronously.");
 invariant(bootstrap.includes('selectionCol.className = "col-select";'), "First-paint colgroup must include the selection column.");
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
@@ -126,6 +151,10 @@ invariant(bootstrap.includes('row.className = "mflTableLoadingRow";'), "First-pa
 invariant(
   bootstrap.includes("const columnCount = Math.max(1, colGroup?.children.length || document.getElementById(\"tableHead\")?.querySelector(\"tr\")?.cells.length || 1);"),
   "First-paint loading rows must use the actual rendered column count.",
+);
+invariant(
+  bootstrap.includes(`const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([\n    "overall",\n    "active_contract_club_name",\n    "active_contract_club_division",\n    "active_contract_revenue_share",\n  ]);`),
+  "First-paint Contracts columns must use the same order as the normalized application core.",
 );
 
 const initialStructureIndex = bootstrap.indexOf("primeInitialTableStructure(tablePage, view);");
@@ -144,6 +173,12 @@ invariant(tableLoadingRuntime.includes('const BLANK_ROW_CLASS = "mflTableLoading
 invariant(!tableLoadingRuntime.includes("TABLE_ROW_HEIGHT = 39"), "Loading runtime must not own a conflicting 39px row height.");
 invariant(!tableLoadingRuntime.includes("installStyles()"), "Loading runtime must not inject a second table geometry stylesheet.");
 invariant(
+  (tableLoadingRuntime.match(/const staticRoutePending = staticHeader/g) || []).length >= 2
+  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTablePage")
+  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTableView"),
+  "Loading/header ownership must preserve the first-paint header until the application core reaches the requested page and view.",
+);
+invariant(
   !responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive),
   "Responsive styling must not assign a conflicting height to canonical loading rows.",
 );
@@ -155,4 +190,4 @@ invariant(
   "The global table width contract must remain loaded before the application core can render a table.",
 );
 
-console.log("Global table percentage, height, and synchronous first-paint geometry validation passed.");
+console.log("Conflict-free table percentage, height, and synchronous first-paint geometry validation passed.");
