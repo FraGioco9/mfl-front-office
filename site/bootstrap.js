@@ -36,9 +36,9 @@
   ]);
   const FIRST_PAINT_CONTRACT_COLUMNS = Object.freeze([
     "overall",
-    "active_contract_revenue_share",
     "active_contract_club_name",
     "active_contract_club_division",
+    "active_contract_revenue_share",
   ]);
   const FIRST_PAINT_AGENT_PAGES = new Set(["myplayers", "agents", "mfl"]);
   const FIRST_PAINT_COLUMN_CLASSES = Object.freeze({
@@ -105,6 +105,16 @@
   ]);
   const root = document.documentElement;
   window.__mflReleaseVersion = STATIC_RELEASE_VERSION;
+
+  function primePlayerTableScroller() {
+    const scroller = document.querySelector("#progressionPage .playerTableScroller, #progressionPage .tableScroller");
+    if (!(scroller instanceof HTMLElement)) return null;
+    scroller.classList.remove("tableScroller");
+    scroller.classList.add("playerTableScroller");
+    return scroller;
+  }
+
+  primePlayerTableScroller();
 
   function setLoadingValue(target) {
     const element = typeof target === "string" ? document.getElementById(target) : target;
