@@ -274,7 +274,6 @@ initialPreCoreRuntimeScripts.forEach(preloadClassicScript);
  * __mflReleaseVersion?: string,
  * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
- * __mflTableWidthRuntime?: { takeOwnership?: () => boolean },
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsReloadBootstrap?: { restoreRoute?: () => void, finalize?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
@@ -419,7 +418,6 @@ function installCoreBridges() {
   runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
-  runtimeWindow.__mflTableWidthRuntime?.takeOwnership?.();
   installClubRouteRuntimeGate();
 }
 
