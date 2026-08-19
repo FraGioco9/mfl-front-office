@@ -96,6 +96,14 @@ for (const [fileName, key, expectedPath, label] of [
   await migrateRoutePathOwnership(fileName, key, expectedPath, label);
 }
 
+const tableValidatorPath = new URL("./validate-table-route-core.mjs", import.meta.url);
+let tableValidator = await readFile(tableValidatorPath, "utf8");
+const oldMflStatsDependency = 'includes(routeLoader, \'if (page === "mfl" && view === "stats") return ["mflstats"];\', "MFL Stats must keep its independent core.");';
+const newMflStatsDependency = 'includes(routeLoader, \'if (page === "mfl" && view === "stats") return ["table", "mflstats"];\', "MFL Stats must load the shared Table core before its Stats core.");';
+if (!tableValidator.includes(oldMflStatsDependency)) throw new Error("Table validator legacy MFL Stats dependency assertion was not found.");
+tableValidator = tableValidator.replace(oldMflStatsDependency, newMflStatsDependency);
+await writeFile(tableValidatorPath, tableValidator, "utf8");
+
 await migrateGenericStartupOwnership("validate-club-route-core.mjs", "Club", [
   "Direct Club startup must load the Club route owner before startApp.",
   "Application startup must begin only after an initial Club owner is ready.",
