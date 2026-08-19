@@ -146,7 +146,7 @@ includes(normalizedCore, "window.__mflCancelIncrementalRouteRequest = invalidate
 includes(normalizedCore, "if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;", "Stale route responses must never commit application state.");
 includes(normalizedCore, "if (error?.name === \"AbortError\" && !timedOut) return null;", "Intentional route aborts must remain silent.");
 includes(normalizedCore, "if (result === false) return false;", "Obsolete page renders must stop before scroll or final commit work.");
-includes(normalizedCore, "if (!dataPayload) return;", "Obsolete Club payloads must not commit a Club render.");
+includes(normalizedArtifacts.routeChunks.club, "if (!dataLoaded) return;", "Obsolete Club loads must not commit a Club render.");
 includes(evaluationCore, "if (!playerPayload) return;", "Obsolete saved-Evaluation hydration must not commit Evaluation state.");
 excludes(normalizedCore, "      await requestIncrementalRoute(route, page);\n      state.incrementalApplying = true;", "Pagination must not render after an obsolete request.");
 excludes(tableCore, "        await requestIncrementalRoute(route, 1);\n        state.incrementalApplying = true;", "View switches must not render after an obsolete request.");
