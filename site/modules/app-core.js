@@ -2573,7 +2573,9 @@ function tableTitleForPage(pageName) {
   }
 
   if (pageName === "agents") {
-    return agentNameForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+    const walletAddress = normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    const agentName = agentNameForWallet(walletAddress);
+    return walletAddress ? `${agentName} - ${walletAddress}` : agentName;
   }
 
   return "Progression";
@@ -5791,6 +5793,9 @@ function openAgentPage(walletAddress) {
   if (!normalizedWalletAddress) {
     return;
   }
+
+  removePlayerNoteTooltip();
+  window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
 
   if (normalizedWalletAddress === normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()) {
     setPage("myplayers", true);
@@ -9624,6 +9629,9 @@ async function setView(viewName) {
 
   updateViewButtons();
   buildHeader();
+  if (state.currentPage === "agents" && tablePageTitle) {
+    tablePageTitle.textContent = tableTitleForPage("agents");
+  }
 
   applyFilters();
 }
