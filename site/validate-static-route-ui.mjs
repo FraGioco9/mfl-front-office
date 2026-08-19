@@ -11,7 +11,6 @@ const [
   indexHtml,
   bootstrap,
   staticUi,
-  tableView,
   tableLoading,
   controlInteractions,
   databaseStatsState,
@@ -24,7 +23,6 @@ const [
   read("./index.html"),
   read("./bootstrap.js"),
   read("./static-ui-runtime.js"),
-  read("./table-view-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./control-interactions-runtime.js"),
   read("./database-stats-state-runtime.js"),
@@ -49,6 +47,7 @@ for (const canonicalConfig of [
 }
 
 includes(entry, '"/static-ui-runtime.js"', "Static route chrome must load universally before the application core.");
+excludes(entry, "/table-view-runtime.js", "The retired table-view runtime must stay out of the browser runtime graph.");
 includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reuse first-paint view configuration.");
 includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
 includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must be rendered by passive route chrome.");
@@ -60,6 +59,10 @@ includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The appl
 includes(staticUi, "function showRouteShell(state) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
+includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");
+includes(staticUi, "contracts.ensureCanonicalTableHeader", "Static table chrome must request canonical headers through the core contract.");
+excludes(staticUi, "window.eval", "Static route chrome must not inspect application-core lexical state through window.eval.");
+excludes(staticUi, "eval(", "Static route chrome must not use string evaluation.");
 for (const forbidden of [
   'document.addEventListener("click", onClick, true);',
   "function sameOriginRouteFromLink",
@@ -76,9 +79,6 @@ for (const forbidden of ['document.createElement("style")', "!important", "Mutat
   excludes(staticUi, forbidden, `Static route chrome must not use repair ownership via ${forbidden}.`);
 }
 
-for (const forbidden of ['classList.toggle("active"', 'document.createElement("style")', 'addEventListener("pointerdown"']) {
-  excludes(tableView, forbidden, `Auxiliary table-view runtime must not own view state via ${forbidden}.`);
-}
 for (const forbidden of ["function onSharedViewButtonClick", "clubRouteActive", 'viewButtonsContainer?.addEventListener("click"']) {
   excludes(controlInteractions, forbidden, `Control interaction helpers must not own Club navigation via ${forbidden}.`);
 }
@@ -198,4 +198,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("One global painted navigation flow, passive specialized Stats/Club rendering, route-authoritative chrome, canonical view order, pager, dropdown, tooltip, and first-paint validation passed.");
+console.log("Static route validation passed with passive route chrome, explicit core contracts, canonical navigation ownership, and no retired table-view or eval bridge.");
