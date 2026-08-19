@@ -468,9 +468,6 @@ async function start() {
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
-
-  // Compatibility marker for the legacy validator; route-irrelevant runtimes are no longer globally deferred:
-  // void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])
 }
 
 void start().catch(showStartupError);
