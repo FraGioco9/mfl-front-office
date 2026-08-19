@@ -158,13 +158,30 @@ invariant(
   "The Evaluation discount tooltip must not retain its former local gap contract.",
 );
 invariant(
-  desktopTableUi.includes('title.dataset.noteTooltip = "Click to copy wallet address";'),
-  "Agent copy tooltips must use an attribute recognized by the global tooltip owner.",
+  desktopTableUi.includes('addressTarget.dataset.noteTooltip = "Click to copy wallet address";'),
+  "Agent copy tooltips must put the global tooltip attribute on the clickable wallet-address target.",
 );
 invariant(
-  !desktopTableUi.includes('title.dataset.tooltip = "Click to copy wallet address";'),
+  !desktopTableUi.includes('addressTarget.dataset.tooltip = "Click to copy wallet address";'),
   "Agent copy tooltips must not retain duplicate generic tooltip ownership.",
 );
+invariant(
+  desktopTableUi.includes('window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });'),
+  "Agent wallet copying must dismiss its tooltip through the global tooltip owner.",
+);
+for (const localAgentTooltipOwner of [
+  "showPlayerNoteTooltip(",
+  "hidePlayerNoteTooltip(",
+  'document.addEventListener("pointerover", onPointerOver, true);',
+  'document.addEventListener("pointerout", onPointerOut, true);',
+  'document.addEventListener("focusin", onFocusIn, true);',
+  'document.addEventListener("focusout", onFocusOut, true);',
+]) {
+  invariant(
+    !desktopTableUi.includes(localAgentTooltipOwner),
+    `Agent wallet copy must not retain local tooltip ownership through ${localAgentTooltipOwner}`,
+  );
+}
 
 invariant(
   !stylesBase.includes("#tableBody .copyPlayerIdButton[data-tooltip]::after"),
