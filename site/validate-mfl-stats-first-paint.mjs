@@ -56,7 +56,7 @@ for (const [value, label] of expectedFilters) {
   previousIndex = index;
 }
 invariant(
-  (filterHtml.match(/class="mflStatsFilterButton/g) || []).length === expectedFilters.length,
+  (filterHtml.match(/<button class="mflStatsFilterButton(?: active)?"/g) || []).length === expectedFilters.length,
   "The base HTML must contain exactly the canonical 15 MFL Stats filter buttons.",
 );
 
