@@ -35,4 +35,16 @@ replaceRequired(
   "Global Search matching ownership",
 );
 
+replaceRequired(
+  'invariant(localJsRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Local JavaScript must use the no-store cache policy.");',
+  'invariant(localJsRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=0, must-revalidate"), "Local JavaScript must use the cacheable revalidation policy.");',
+  "local JavaScript cache policy",
+);
+
+replaceRequired(
+  'invariant(productionJsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "no-store, max-age=0"), "Production unversioned JavaScript must retain the no-store cache policy.");',
+  'invariant(productionJsNoStoreRule?.headers?.some((header) => header.key === "Cache-Control" && header.value === "public, max-age=0, must-revalidate"), "Production unversioned JavaScript must use mandatory revalidation.");',
+  "production JavaScript cache policy",
+);
+
 await writeFile(validationPath, source, "utf8");
