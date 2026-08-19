@@ -155,15 +155,25 @@ for (const required of [
   "iconRect.top - tooltipRect.height - tooltipHeight",
   "iconRect.bottom + tooltipHeight",
   'button.dataset.noteTooltip = "Click to copy";',
+  'button.addEventListener("focus", () => showPlayerNoteTooltip(button));',
   "markerElement.dataset.noteTooltip = marker.label;",
   'data-note-tooltip=\"Click to copy\" aria-label=\"Click to copy player ID\"',
+  "if (playerAgentLink.dataset.noteTooltip) {",
   "link.dataset.noteTooltip = tooltip;",
 ]) {
   invariant(coreBuild.includes(required), `Generated application-core tooltips are missing Tooltip Height ownership through ${required}.`);
 }
 invariant(
+  coreBuild.includes("legacyManualTooltipTokens"),
+  "The core build must reject duplicate manual tooltip attributes after generation.",
+);
+invariant(
   coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
   "The core build must reject legacy tooltip spacing ownership after generation.",
+);
+invariant(
+  coreBuild.includes("Generated application core does not position manual tooltips from the real generator rectangle."),
+  "The build must verify that the real generator rectangle owns manual tooltip positioning.",
 );
 
 for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtime.js"]) {
