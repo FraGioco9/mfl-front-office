@@ -1,15 +1,18 @@
 import { readFile } from "node:fs/promises";
 
-const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([
-  readFile(new URL("./api/_data-page.js", import.meta.url), "utf8"),
-  readFile(new URL("./api/_data-query.js", import.meta.url), "utf8"),
-  readFile(new URL("./styles.css", import.meta.url), "utf8"),
-  readFile(new URL("./styles-base.css", import.meta.url), "utf8"),
-  readFile(new URL("./responsive.css", import.meta.url), "utf8"),
-  readFile(new URL("./dropdowns.css", import.meta.url), "utf8"),
-  readFile(new URL("./scrollbars.css", import.meta.url), "utf8"),
-  readFile(new URL("./control-interactions-runtime.js", import.meta.url), "utf8"),
-  readFile(new URL("./filter-controls-runtime.js", import.meta.url), "utf8"),
+const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+
+const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([
+  read("./api/_data-page.js"),
+  read("./api/_data-query.js"),
+  read("./styles.css"),
+  read("./styles-base.css"),
+  read("./controls.css"),
+  read("./responsive.css"),
+  read("./dropdowns.css"),
+  read("./scrollbars.css"),
+  read("./control-interactions-runtime.js"),
+  read("./filter-controls-runtime.js"),
 ]);
 
 const invariant = (condition, message) => {
@@ -32,21 +35,28 @@ invariant(
   "MFL Stats must load its complete MFL-wallet population instead of inheriting a fixed page-size cap.",
 );
 
-const sharedControlSelector = ":is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton)";
+for (const selector of [
+  ".navButton,",
+  ".viewButton:not([hidden]),",
+  ".mflStatsFilterButton,",
+  ".mflStatsDistributionModeButton,",
+]) {
+  invariant(controls.includes(selector), `controls.css must keep ${selector} in the shared page/view/Stats control group.`);
+}
 invariant(
-  styles.includes(`${sharedControlSelector}:not(.active) {\n  cursor: pointer;\n}`),
-  "Every non-active page, view, and Stats filter button must use the pointer cursor.",
+  controls.includes('):not(.active) {\n  cursor: pointer;\n}'),
+  "Canonical shared controls must define the non-active cursor in controls.css.",
 );
 invariant(
-  styles.includes(`${sharedControlSelector}.active {\n  cursor: default;\n}`),
-  "Every active page, view, and Stats filter button must use the default cursor.",
+  controls.includes(').active {\n  cursor: default;\n}'),
+  "Canonical shared controls must define the active cursor in controls.css.",
 );
 invariant(
-  styles.includes(`${sharedControlSelector}:not(.active):hover:not(:disabled) {`),
+  controls.includes('):not(.active):hover:not(:disabled) {'),
   "Only non-active page, view, and Stats filter buttons may receive the shared hover highlight.",
 );
 invariant(
-  styles.includes(`${sharedControlSelector}.active:hover {`),
+  controls.includes(').active:hover {'),
   "Active page, view, and Stats filter buttons must retain their active paint while hovered.",
 );
 
