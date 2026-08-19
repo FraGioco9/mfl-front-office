@@ -55,8 +55,8 @@ includes(clubCore, "function applyClubPresentation()", "The Club chunk must own 
 includes(clubCore, "if (!dataPayload) return;", "Obsolete Club payloads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "await withInteractionBusy(loadClubData);", "Club data loads must run through the Uniform Loading workflow.");
 includes(clubCore, "renderIncrementalLoadingState(CLUB_PAGE, dataRoute);", "Club data loads must render the canonical table loading state.");
-includes(clubCore, "return openClubPage(clubId, view, false);", "The private Club route owner must return the complete Club loading/render promise.");
-excludes(clubCore, "void openClubPage(clubId, view, false);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
+includes(clubCore, "return openClubPage(clubId, view, true);", "The private Club route owner must return the complete Club loading/render promise.");
+excludes(clubCore, "void openClubPage(clubId, view, true);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
