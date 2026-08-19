@@ -6,7 +6,7 @@ README.md
 supabase-schema.sql
 
 # Site development and validation assets.
-site/validate.mjs
+site/validate*.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types
