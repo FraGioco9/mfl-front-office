@@ -71,7 +71,7 @@
   }
 
   async function copyWalletAddress(target, event) {
-    const address = normalizeWalletAddress(target?.dataset?.agentWalletCopy);
+    const address = normalizeAgentAddress(target?.dataset?.agentWalletCopy);
     if (!address) return;
     event?.preventDefault?.();
     event?.stopPropagation?.();
