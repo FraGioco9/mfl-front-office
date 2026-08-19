@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 
-const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
