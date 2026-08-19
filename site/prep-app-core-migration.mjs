@@ -80,4 +80,29 @@ const canonicalSourceValidation = [
 ].join("\n");
 if (!validationSource.includes(legacyNormalizerValidation)) throw new Error("Legacy build-normalizer validation block was not found.");
 validationSource = validationSource.replace(legacyNormalizerValidation, canonicalSourceValidation);
+
+const legacyFallbackValidation = [
+  'includes(entry, "const PREBUILT_CORE_PATH = \\"/modules/app-core-runtime.js\\"", "app-entry.js must prefer the build-time application core.");',
+  'includes(entry, "const SOURCE_CORE_PATH = \\"/modules/app-core.js\\"", "app-entry.js must retain a source fallback for unprepared local environments.");',
+  'includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \\"mfl_core\\"", "The prebuilt core must use its dedicated cache-key query parameter.");',
+  'includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading before critical runtime execution completes.");',
+  'includes(entry, "await loadClassicScript(prebuiltPath);", "The production core must execute as an external classic script.");',
+  'includes(entry, \'Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts")\', "Unprepared local environments must retain the shared source fallback.");',
+  'includes(routeCoreLoader, \'fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" })\', "The shared source fallback must fetch the raw application core.");',
+  'includes(routeCoreLoader, \'import(assetUrl("/modules/app-core-build-normalizer.js"))\', "The shared source fallback must use the complete build-time normalizer.");',
+  'includes(routeCoreLoader, "normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource)", "The shared source fallback must match the deployed build transform.");',
+].join("\n");
+const prebuiltOnlyValidation = [
+  'includes(entry, "const PREBUILT_CORE_PATH = \\"/modules/app-core-runtime.js\\"", "app-entry.js must load the prebuilt application core.");',
+  'excludes(entry, "SOURCE_CORE_PATH", "app-entry.js must not retain a raw application-core source fallback.");',
+  'includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \\"mfl_core\\"", "The prebuilt core must use its dedicated cache-key query parameter.");',
+  'includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading before critical runtime execution completes.");',
+  'includes(entry, "await loadClassicScript(prebuiltApplicationCorePath());", "The production core must execute only as its prebuilt external classic script.");',
+  'excludes(entry, "__mflLoadFallbackApplicationCoreArtifacts", "app-entry.js must not retain application-core fallback ownership.");',
+  'excludes(routeCoreLoader, \'fetch(assetUrl("/modules/app-core.js")\', "Route-core loading must not fetch raw application-core source.");',
+  'excludes(routeCoreLoader, \'import(assetUrl("/modules/app-core-build-normalizer.js"))\', "Route-core loading must not import the build normalizer in the browser.");',
+  'excludes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Route-core loading must not normalize source in the browser.");',
+].join("\n");
+if (!validationSource.includes(legacyFallbackValidation)) throw new Error("Legacy application-core fallback validation block was not found.");
+validationSource = validationSource.replace(legacyFallbackValidation, prebuiltOnlyValidation);
 await writeFile(validationPath, validationSource, "utf8");
