@@ -92,7 +92,8 @@ const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\s*$/,
 invariant(normalizedCore.length > 300_000, "Canonical core normalization produced an unexpectedly small runtime.");
 invariant(normalizedCore !== coreSource.replace(/\s*$/, ""), "The canonical normalizer must still apply the required source migrations.");
 includes(normalizedCore, "const shellFirstTablePages = new Set();", "The generated core must keep destination shell-first rendering disabled.");
-includes(normalizedCore, "squad|contracts|attributes|current-season|all-time", "The generated core must own the canonical Club Squad route.");
+includes(normalizedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The generated core must delegate Club view URLs to the canonical route configuration.");
+excludes(normalizedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The generated core must not duplicate the Club view-to-slug mapping.");
 excludes(normalizedCore, "      renderIncrementalLoadingState(pageName, route);", "The generated core must not render a destination loading phase before canonical data.");
 includes(normalizedCore, "function copyDelegatedPlayerId(button, event)", "The generated core must own player-ID copying through table delegation.");
 includes(normalizedCore, 'tableBody?.addEventListener("click", (event) => {', "The generated core must have one delegated player-table click owner.");
