@@ -48,3 +48,34 @@ replaceRequired(
 );
 
 await writeFile(validationPath, source, "utf8");
+
+const appConfigValidationPath = new URL("./validate-app-config.mjs", import.meta.url);
+let appConfigValidation = await readFile(appConfigValidationPath, "utf8");
+const oldSame = `function same(actual, expected, label) {
+  invariant(
+    JSON.stringify(plain(actual)) === JSON.stringify(plain(expected)),
+    \`${"${label}"} must match modules/app-config.js.\`,
+  );
+}`;
+const newSame = `function canonical(value) {
+  const normalized = plain(value);
+  if (Array.isArray(normalized)) return normalized.map(canonical);
+  if (normalized && typeof normalized === "object") {
+    return Object.fromEntries(
+      Object.entries(normalized)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, canonical(entry)]),
+    );
+  }
+  return normalized;
+}
+
+function same(actual, expected, label) {
+  invariant(
+    JSON.stringify(canonical(actual)) === JSON.stringify(canonical(expected)),
+    \`${"${label}"} must match modules/app-config.js.\`,
+  );
+}`;
+if (!appConfigValidation.includes(oldSame)) throw new Error("Order-sensitive app-config comparison helper was not found.");
+appConfigValidation = appConfigValidation.replace(oldSame, newSame);
+await writeFile(appConfigValidationPath, appConfigValidation, "utf8");
