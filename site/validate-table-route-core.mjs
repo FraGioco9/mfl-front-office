@@ -90,7 +90,8 @@ includes(appConfig, 'table: "/modules/app-core-table-runtime.js"', "Canonical ap
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club must load the Table core before the Club core.");
 includes(routeLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must not load the Table core.");
-includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["mflstats"];', "MFL Stats must keep its independent core.");
+includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["table", "mflstats"];', "MFL Stats must load the shared Table core before its route renderer.");
+includes(routeLoader, 'if (page === "mflstats") return ["table", "mflstats"];', "The internal MFL Stats route alias must retain the same Table-first dependency order.");
 includes(routeLoader, "for (const dependency of dependencies)", "Route-core dependencies must execute in declared order.");
 
 const routeNeedsTableStart = appEntry.indexOf("function routeNeedsTable(pageName, options = {}) {");
