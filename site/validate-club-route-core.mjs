@@ -71,26 +71,34 @@ excludes(
   "Club URLs must not hijack Database or Progression incremental data routing.",
 );
 
+includes(sharedCore, "function activateViewButton(button) {", "Club view switching must use the shared table view-button activation owner.");
+excludes(sharedCore, 'if (pageName === "club") return;', "Shared view activation must never discard Club view buttons.");
+includes(sharedCore, 'const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;', "Shared Club view switching must resolve the current Club identity from the canonical route.");
+includes(sharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "Shared Club view switching must preserve the canonical Squad slug.");
+includes(sharedCore, '...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {})', "The shared incremental view route must carry the Club ID explicitly.");
+excludes(sharedCore, 'if (!state.incrementalMode || state.currentPage === "club")', "Club must not bypass the shared incremental setView owner.");
+includes(sharedCore, "setView = async function setIncrementalView(viewName) {", "Club must share the incremental setView owner with all table pages.");
+
 includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
-includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk must own per-view render caching.");
+includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk may retain its route-local snapshot state without owning view activation.");
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
 includes(clubCore, "if (!dataLoaded) return;", "Obsolete Club loads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Initial Club hydration must use the canonical incremental loader.");
 includes(clubCore, "clubId: activeClubId,", "Initial Club hydration must carry the explicit Club ID into the canonical loader.");
-includes(clubCore, "ignoreCurrentClubRoute: true,", "Club hydration must use explicit route identity rather than reparsing the committed URL.");
+includes(clubCore, "ignoreCurrentClubRoute: true,", "Initial Club hydration must use explicit route identity rather than reparsing the committed URL.");
 excludes(clubCore, "await withInteractionBusy(loadClubData);", "Club must not retain a second private interaction-busy data loader.");
 excludes(clubCore, "renderIncrementalLoadingState(CLUB_PAGE, dataRoute);", "Club must not render a second private loading state outside Uniform Loading.");
 excludes(clubCore, "const loadClubData = async () => {", "Club must not retain a bespoke initial data request owner.");
 includes(
   clubCore,
   'incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })',
-  "Club view caches must share the same explicit Club route identity as network requests.",
+  "Club route-local snapshots must use the same explicit Club route identity as network requests.",
 );
-includes(
+excludes(
   clubCore,
   'mflLoadIncrementalRoutePage("club", { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true })',
-  "Every Club view switch must carry Club ID and view explicitly into the canonical incremental loader.",
+  "Club view changes must not bypass shared setView with a private direct incremental loader.",
 );
 includes(clubCore, 'state.dataAccess = "public";', "Club final state must preserve its public entity-data access contract.");
 includes(clubCore, "return openClubPage(clubId, view, true);", "The private Club route owner must return the complete Club loading/render promise.");
@@ -100,7 +108,8 @@ excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club ch
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
 excludes(clubCore, "renderSearchResultsNowWithClubs", "The Club chunk must not patch Global Search after navigation.");
 includes(clubCore, "runPageTransition(CLUB_PAGE, updateHistory", "Club page entry must use the global page transition runner.");
-includes(clubCore, "runViewTransition(CLUB_PAGE, nextView", "Club same-page views must use the global view transition runner.");
+excludes(clubCore, "runViewTransition(CLUB_PAGE, nextView", "Club same-page views must not retain a private transition owner.");
+excludes(clubCore, 'document.addEventListener("click", (event) => {\n    if (state.currentPage !== CLUB_PAGE) return;', "Club must not retain a capture-phase view-button listener.");
 excludes(clubCore, "commitViewTransition(CLUB_PAGE", "Club must not retain a private direct view commit.");
 excludes(clubCore, "setClubSwitching", "Club must not retain its retired private loading lifecycle.");
 excludes(clubCore, "clubViewSwitching", "Club must never hide the destination page with its retired private loading class.");
@@ -148,4 +157,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club global-navigation, canonical Uniform Loading, explicit data routing, API contract, and route-core splitting validation passed.");
+console.log("Club shared view switching, canonical Uniform Loading, explicit data routing, API contract, and route-core splitting validation passed.");

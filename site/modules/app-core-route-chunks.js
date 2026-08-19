@@ -223,6 +223,53 @@ export function splitApplicationCoreRuntime(source) {
     "explicit Club incremental route identity",
   );
 
+  core = replaceRequired(
+    core,
+    '    if (!state.incrementalMode || state.currentPage === "club") {',
+    '    if (!state.incrementalMode) {',
+    "Club shared incremental view switching",
+  );
+  core = replaceRequired(
+    core,
+    '  if (pageName === "club") return;\n\n',
+    "",
+    "Club shared view-button activation",
+  );
+  core = replaceRequired(
+    core,
+    `    const routeOptions = {
+      view: nextView,
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+    };`,
+    `    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
+    const routeOptions = {
+      view: nextView,
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+      ...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {}),
+    };`,
+    "Club shared incremental route identity",
+  );
+  core = replaceRequired(
+    core,
+    `    const transition = await runViewTransition(pageName, viewName, {
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+    });`,
+    `    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
+    if (pageName === "club" && !clubTarget?.clubId) return;
+    const transition = await runViewTransition(pageName, viewName, {
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+      ...(clubTarget?.clubId ? {
+        clubId: clubTarget.clubId,
+        path: \`/clubs/\${encodeURIComponent(clubTarget.clubId)}/\${viewName === "attributes" ? "squad" : viewSlug(viewName)}\`,
+      } : {}),
+    });`,
+    "Club shared view transition identity",
+  );
+
   const evaluationParts = [];
   const mflStatsParts = [];
 
@@ -413,6 +460,14 @@ export function splitApplicationCoreRuntime(source) {
       captureClubView(nextView);`,
     "Club page canonical render ownership",
   );
+
+  const privateClubViewListener = extractRequiredSection(
+    club,
+    '  document.addEventListener("click", (event) => {\n    if (state.currentPage !== CLUB_PAGE) return;',
+    '  window.addEventListener("popstate", () => {',
+    "Club private view-button listener",
+  );
+  club = privateClubViewListener.core;
 
   club = club.replace(
     '      state.dataAccess = typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public";',

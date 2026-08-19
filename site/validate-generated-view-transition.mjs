@@ -149,6 +149,15 @@ invariant(
   !activation.includes('setPage("mflstats"'),
   "MFL Stats view activation must stay on the canonical MFL page/view navigation path.",
 );
+invariant(
+  !activation.includes('if (pageName === "club") return;'),
+  "Club view buttons must not be excluded from the shared view activation owner.",
+);
+invariant(
+  activation.includes('const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;')
+    && activation.includes('viewName === "attributes" ? "squad" : viewSlug(viewName)'),
+  "Shared Club view activation must preserve the current Club identity and canonical Squad route.",
+);
 for (const [transitionMarker, loaderMarker, label] of [
   ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
@@ -176,6 +185,15 @@ invariant(
   stagedTake >= 0 && fallbackTransition > stagedTake && request > fallbackTransition,
   "Programmatic generated view switches must use the global transition runner before requesting data.",
 );
+invariant(
+  !incrementalView.includes('state.currentPage === "club"'),
+  "Club must use the same incremental setView owner as the other table pages.",
+);
+invariant(
+  incrementalView.includes('const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;')
+    && incrementalView.includes('...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {})'),
+  "Shared incremental view loading must carry explicit Club identity into the data route.",
+);
 
 const databaseStatsBranch = pageLoader.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {');
 const databaseStatsRuntime = pageLoader.indexOf('await window.__mflEnsureRouteRuntime("database", { view: "stats" });', databaseStatsBranch);
@@ -196,20 +214,17 @@ invariant(
 const clubOwner = sourceContaining("runPageTransition(CLUB_PAGE, updateHistory", "Club transition owner");
 const clubPageTransition = clubOwner.text.indexOf("runPageTransition(CLUB_PAGE, updateHistory");
 const clubPageLoading = clubOwner.text.indexOf("window.mflLoadIncrementalRoutePage(CLUB_PAGE", clubPageTransition);
-const clubViewTransition = clubOwner.text.indexOf("runViewTransition(CLUB_PAGE, nextView");
-const clubViewLoading = clubOwner.text.indexOf('window.mflLoadIncrementalRoutePage("club"', clubViewTransition);
-const clubActiveViewNoOp = clubOwner.text.indexOf("if (nextView === state.view) return;");
 invariant(
   clubPageTransition >= 0 && clubPageLoading > clubPageTransition,
   "Generated Club page entry must use the global page transition before canonical Club loading starts.",
 );
 invariant(
-  clubActiveViewNoOp >= 0 && clubViewTransition > clubActiveViewNoOp,
-  "Club active view buttons must keep the same no-op behavior as all shared active view buttons.",
+  !clubOwner.text.includes("runViewTransition(CLUB_PAGE, nextView"),
+  "Club must not retain a private view-transition owner outside the shared view-button pipeline.",
 );
 invariant(
-  clubViewTransition >= 0 && clubViewLoading > clubViewTransition,
-  "Generated Club view switching must use the global view transition before canonical Club loading starts.",
+  !clubOwner.text.includes('document.addEventListener("click", (event) => {\n    if (state.currentPage !== CLUB_PAGE) return;'),
+  "Club must not retain a capture-phase view-button listener outside the shared activation owner.",
 );
 invariant(
   !clubOwner.text.includes("commitViewTransition(CLUB_PAGE"),
@@ -242,5 +257,5 @@ invariant(
 );
 
 console.log(
-  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: shared navigation state spans transition work, active views no-op uniformly, and MFL Stats uses the shared incremental loading pipeline before its renderer.`,
+  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: Club and the other table pages share one view activation, transition, incremental loading, and active-view no-op pipeline.`,
 );
