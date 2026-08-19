@@ -89,7 +89,10 @@ def _is_retryable_flow_error(error: RuntimeError) -> bool:
 
 def _is_computation_limit_error(error: RuntimeError) -> bool:
     message = str(error).lower()
-    return "computation exceeds limit" in message
+    return (
+        "computation exceeds limit" in message
+        or "computation limit exceeded" in message
+    )
 
 
 def _execute_script_with_network_retries(
