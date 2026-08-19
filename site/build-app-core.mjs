@@ -115,6 +115,19 @@ function normalizeTooltipHeightOwnership(source) {
   return normalized;
 }
 
+function removeTableIdLocalTooltipOwnership(source) {
+  const normalized = String(source || "").replace(/\r\n?/g, "\n");
+  const localOwner = [
+    '  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
+    '  button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
+    '  button.addEventListener("blur", hidePlayerNoteTooltip);',
+  ].join("\n");
+  if (!normalized.includes(localOwner)) {
+    throw new Error("Could not remove the table player-ID local tooltip owner.");
+  }
+  return normalized.replace(localOwner, "");
+}
+
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "");
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
@@ -130,7 +143,9 @@ const mflStatsRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeCh
 const clubRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.club || "")).replace(/\s*$/, "");
 const settingsRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.settings || "")).replace(/\s*$/, "");
 const playerRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.player || "")).replace(/\s*$/, "");
-const tableRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table || "")).replace(/\s*$/, "");
+const tableRuntime = removeTableIdLocalTooltipOwnership(
+  normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table || "")),
+).replace(/\s*$/, "");
 const walletRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.wallet || "")).replace(/\s*$/, "");
 const watchlistRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.watchlist || "")).replace(/\s*$/, "");
 if (!normalized) throw new Error("Application core normalization produced an empty runtime.");
@@ -164,6 +179,9 @@ if (leakedHourglassArtifact) {
 }
 if (!playerRuntime.includes('ageMarker.icon === "calendar-clock" ? "" : ageMarker.emoji')) {
   throw new Error("Player runtime does not use the calendar-clock retirement marker contract.");
+}
+if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);")) {
+  throw new Error("Table player-ID tooltips must be owned only by the global Tooltip Height runtime.");
 }
 
 for (const [path, artifact] of generatedArtifacts) {
