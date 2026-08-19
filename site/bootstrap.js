@@ -263,9 +263,9 @@
       }
       const agentNames = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
       const storedName = agentNames && typeof agentNames === "object" ? String(agentNames[normalizedWallet] || "").trim() : "";
-      return storedName || normalizedWallet;
+      return storedName || "Agent";
     } catch {
-      return normalizedWallet;
+      return "Agent";
     }
   }
 
