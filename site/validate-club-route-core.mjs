@@ -33,6 +33,7 @@ const [
 const appConfig = await read("./modules/app-config.js");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
 
 invariant(sharedCore.length > 300_000, "The shared application core became unexpectedly small after the Club split.");
@@ -75,7 +76,7 @@ includes(sharedCore, '...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {
 excludes(sharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "Shared Club switching must not duplicate Club slug mapping.");
 excludes(sharedCore, 'if (!state.incrementalMode || state.currentPage === "club")', "Club must not bypass the shared incremental setView owner.");
 includes(sharedCore, "setView = async function setIncrementalView(viewName) {", "Club must share the incremental setView owner with all table pages.");
-includes(sharedCore, 'else if (pageName !== "club") {', "Shared view rendering must not rewrite the Club title during a view switch.");
+includes(tableCore, 'else if (pageName !== "club") {', "The shared Table view renderer must not rewrite the Club title during a view switch.");
 excludes(sharedCore, 'tablePageTitle.textContent = club?.name || "Club";', "Incremental Club payloads must not replace the loaded Club title.");
 
 includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
