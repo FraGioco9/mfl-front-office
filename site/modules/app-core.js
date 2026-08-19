@@ -333,6 +333,7 @@ const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
+const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
 const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
@@ -967,6 +968,28 @@ function saveAgentNameForWallet(address, name) {
   const agentName = normalizedAgentName(name);
   if (!normalizedAddress || !agentName) {
     return;
+  }
+
+  function loadAgentDisplayNames() {
+    try {
+      const value = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveAgentDisplayName(address, name) {
+    const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+    const agentName = normalizedAgentName(name);
+    if (!normalizedAddress || !agentName) return;
+    try {
+      const next = loadAgentDisplayNames();
+      next[normalizedAddress] = agentName;
+      localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore storage failures; runtime can still resolve names from loaded rows.
+    }
   }
 
   try {
@@ -5794,6 +5817,9 @@ function openAgentPage(walletAddress) {
     return;
   }
 
+  const result = agentSearchResultByWallet(normalizedWalletAddress);
+  if (result?.name) saveAgentDisplayName(normalizedWalletAddress, result.name);
+
   removePlayerNoteTooltip();
   window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
 
@@ -8009,6 +8035,8 @@ function rememberAgentSearchResult(walletAddress) {
 
   state.recentSearchAgentWallets = mergeRecentIdLists([normalizedWalletAddress], state.recentSearchAgentWallets);
   state.recentSearchItems = mergeRecentIdLists([recentAgentKey(normalizedWalletAddress)], state.recentSearchItems);
+  const result = agentSearchResultByWallet(normalizedWalletAddress);
+  if (result?.name) saveAgentDisplayName(normalizedWalletAddress, result.name);
   persistRecentSearchStates();
   saveTableState();
 }
