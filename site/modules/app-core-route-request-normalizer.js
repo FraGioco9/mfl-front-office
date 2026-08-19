@@ -92,15 +92,6 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   const generation = beginIncrementalRouteRequest(cacheKey, force);
   if (force) state.incrementalPayloadCache.delete(cacheKey);
 
-  const dedicatedClubPayload = !force && route.scope === "club" ? cachedClubViewPayload(route) : null;
-  if (dedicatedClubPayload) {
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
-    applyIncrementalPayload(route, dedicatedClubPayload);
-    state.incrementalLastKey = requestKey;
-    state.incrementalLastLoadedAt = Date.now();
-    return dedicatedClubPayload;
-  }
-
   const cachedPayload = !force ? state.incrementalPayloadCache.get(cacheKey) : null;
   if (cachedPayload) {
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
