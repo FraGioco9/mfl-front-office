@@ -12,7 +12,7 @@
   });
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
-    gap: 8,
+    gap: 6,
   });
   const SPECIALIZED_TOOLTIP_SELECTOR = [
     ".evaluationMetric.evaluationDiscountRate",
