@@ -1,0 +1,28 @@
+name: Reset 1.124 history
+
+on:
+  push:
+    branches:
+      - chore/reset-1.124-patch-history
+
+permissions:
+  contents: write
+
+jobs:
+  reset:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/reset-1.124-patch-history
+      - name: Apply version history reset
+        run: python3 site/reset-1.124-history.py
+      - name: Remove temporary patch files and commit
+        run: |
+          rm -f site/reset-1.124-history.py .github/workflows/reset-1.124-history.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- site/bootstrap.js site/bootstrap-core.js site/release-history-overrides.json site/reset-1.124-history.py .github/workflows/reset-1.124-history.yml
+          git commit -m "Reset 1.124 patch history"
+          git push origin HEAD:chore/reset-1.124-patch-history
