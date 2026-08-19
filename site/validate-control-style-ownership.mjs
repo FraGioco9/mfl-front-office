@@ -158,11 +158,11 @@ invariant(
   "The Evaluation discount tooltip must not retain its former local gap contract.",
 );
 invariant(
-  desktopTableUi.includes('title.dataset.noteTooltip = "Click to copy wallet address";'),
+  desktopTableUi.includes('addressTarget.dataset.noteTooltip = "Click to copy wallet address";'),
   "Agent copy tooltips must use an attribute recognized by the global tooltip owner.",
 );
 invariant(
-  !desktopTableUi.includes('title.dataset.tooltip = "Click to copy wallet address";'),
+  !desktopTableUi.includes('addressTarget.dataset.tooltip = "Click to copy wallet address";'),
   "Agent copy tooltips must not retain duplicate generic tooltip ownership.",
 );
 
