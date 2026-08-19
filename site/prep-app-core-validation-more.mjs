@@ -1,17 +1,17 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const path = new URL("./validate-database-stats-lazy-runtime.mjs", import.meta.url);
-let source = await readFile(path, "utf8");
+const databaseStatsPath = new URL("./validate-database-stats-lazy-runtime.mjs", import.meta.url);
+let databaseStats = await readFile(databaseStatsPath, "utf8");
 
 const importMarker = 'import { readFile } from "node:fs/promises";\n';
 const canonicalImport = `${importMarker}import vm from "node:vm";\n\nimport { browserConfigRuntimeSource } from "./modules/app-config.js";\n`;
-if (!source.includes(importMarker)) throw new Error("Database Stats validator import marker was not found.");
-source = source.replace(importMarker, canonicalImport);
+if (!databaseStats.includes(importMarker)) throw new Error("Database Stats validator import marker was not found.");
+databaseStats = databaseStats.replace(importMarker, canonicalImport);
 
 const legacyBuildRead = 'const buildNormalizer = await read("./modules/app-core-build-normalizer.js");';
 const canonicalCoreRead = 'const appCoreSource = await read("./modules/app-core.js");';
-if (!source.includes(legacyBuildRead)) throw new Error("Database Stats validator build-normalizer read was not found.");
-source = source.replace(legacyBuildRead, canonicalCoreRead);
+if (!databaseStats.includes(legacyBuildRead)) throw new Error("Database Stats validator build-normalizer read was not found.");
+databaseStats = databaseStats.replace(legacyBuildRead, canonicalCoreRead);
 
 const legacyRouteChecks = [
   "includes(",
@@ -29,9 +29,35 @@ const canonicalRouteChecks = [
   'invariant(databaseStatsRoute.pageName === "database", "Canonical startup routing must classify /database/stats as Database.");',
   'invariant(databaseStatsRoute.options?.view === "stats", "Canonical startup routing must preserve the Database Stats view slug.");',
 ].join("\n");
-if (!source.includes(legacyRouteChecks)) throw new Error("Legacy Database Stats route-parser checks were not found.");
-source = source.replace(legacyRouteChecks, canonicalRouteChecks);
+if (!databaseStats.includes(legacyRouteChecks)) throw new Error("Legacy Database Stats route-parser checks were not found.");
+databaseStats = databaseStats.replace(legacyRouteChecks, canonicalRouteChecks);
+databaseStats = databaseStats.replaceAll("buildNormalizer.indexOf(", "appCoreSource.indexOf(");
+await writeFile(databaseStatsPath, databaseStats, "utf8");
 
-source = source.replaceAll("buildNormalizer.indexOf(", "appCoreSource.indexOf(");
+const staticUiPath = new URL("./validate-static-route-ui.mjs", import.meta.url);
+let staticUi = await readFile(staticUiPath, "utf8");
 
-await writeFile(path, source, "utf8");
+const readHelper = 'const read = (path) => readFile(new URL(path, import.meta.url), "utf8");\n';
+const readWithExists = `${readHelper}const exists = async (path) => {\n  try {\n    await read(path);\n    return true;\n  } catch (error) {\n    if (error?.code === "ENOENT") return false;\n    throw error;\n  }\n};\n`;
+if (!staticUi.includes(readHelper)) throw new Error("Static route UI read helper was not found.");
+staticUi = staticUi.replace(readHelper, readWithExists);
+staticUi = staticUi.replace("  tableView,\n", "  tableViewRuntimeExists,\n");
+staticUi = staticUi.replace('  read("./table-view-runtime.js"),\n', '  exists("./table-view-runtime.js"),\n');
+staticUi = staticUi.replace("  buildNormalizer,\n", "  appCoreSource,\n");
+staticUi = staticUi.replace('  read("./modules/app-core-build-normalizer.js"),\n', '  read("./modules/app-core.js"),\n');
+
+const legacyTableViewChecks = [
+  "for (const forbidden of ['classList.toggle(\"active\"', 'document.createElement(\"style\")', 'addEventListener(\"pointerdown\"']) {",
+  "  excludes(tableView, forbidden, `Auxiliary table-view runtime must not own view state via ${forbidden}.`);",
+  "}",
+].join("\n");
+const retiredTableViewCheck = 'invariant(!tableViewRuntimeExists, "Retired table-view-runtime.js must remain absent; passive static UI owns view state.");';
+if (!staticUi.includes(legacyTableViewChecks)) throw new Error("Legacy table-view runtime validation block was not found.");
+staticUi = staticUi.replace(legacyTableViewChecks, retiredTableViewCheck);
+staticUi = staticUi.replaceAll("buildNormalizer", "appCoreSource");
+staticUi = staticUi.replace(
+  'typeof loader === "function" ? loader(transition)',
+  'typeof loader === "function" ? await loader(transition)',
+);
+
+await writeFile(staticUiPath, staticUi, "utf8");
