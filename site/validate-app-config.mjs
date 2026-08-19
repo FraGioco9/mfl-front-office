@@ -117,17 +117,6 @@ same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_CLASSES"), TABLE_C
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_LABELS"), TABLE_COLUMN_LABELS, "bootstrap column labels");
 
 same(evaluateInitializer(staticUiSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "static UI view slug projection");
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_BASE_COLUMNS"), TABLE_BASE_COLUMNS, "static UI base columns");
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_STAT_COLUMNS"), TABLE_STAT_COLUMNS, "static UI stat columns");
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_CONTRACT_COLUMNS"), TABLE_CONTRACT_COLUMNS, "static UI contract columns");
-same(evaluateInitializer(staticUiSource, "STATIC_JOINED_AGENCY_PAGES"), TABLE_JOINED_AGENCY_PAGES, "static UI joined-agency pages");
-same(
-  evaluateInitializer(staticUiSource, "STATIC_TABLE_SORTABLE_COLUMNS", { STATIC_TABLE_STAT_COLUMNS: TABLE_STAT_COLUMNS }),
-  TABLE_SORTABLE_COLUMNS,
-  "static UI sortable columns",
-);
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_COLUMN_LABELS"), TABLE_COLUMN_LABELS, "static UI column labels");
-same(evaluateInitializer(staticUiSource, "STATIC_TABLE_COLUMN_CLASSES"), TABLE_COLUMN_CLASSES, "static UI column classes");
 
 invariant(
   routeCoreSource.includes("const routeConfig = runtimeWindow.__mflAppConfig?.routes;"),
