@@ -44,5 +44,20 @@ const newBlock = [
 ].join("\n");
 if (!source.includes(oldBlock)) throw new Error("Table layout validator legacy normalizer ownership block was not found.");
 source = source.replace(oldBlock, newBlock);
-
 await writeFile(path, source, "utf8");
+
+const stylesBasePath = new URL("./styles-base.css", import.meta.url);
+let stylesBase = await readFile(stylesBasePath, "utf8");
+let removedEvaluationWidths = 0;
+stylesBase = stylesBase.replace(
+  /\.evaluation(?:Summary)?Table[^,{]*:nth-child\([^)]*\)[^{]*\{[^}]*\bwidth\s*:[^}]*\}/gs,
+  (rule) => {
+    removedEvaluationWidths += 1;
+    const cleaned = rule.replace(/\s*\bwidth\s*:[^;}]+;?/g, "");
+    return /\{\s*\}/s.test(cleaned) ? "" : cleaned;
+  },
+);
+if (!removedEvaluationWidths) {
+  throw new Error("No legacy Evaluation nth-child width ownership was found in styles-base.css.");
+}
+await writeFile(stylesBasePath, stylesBase, "utf8");
