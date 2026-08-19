@@ -224,7 +224,6 @@ function initialRouteRuntimeRequest() {
 
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
 const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
-const changelogStartup = initialRouteRuntime.pageName === "changelog";
 const homeStartup = initialRouteRuntime.pageName === "home";
 const playerStartup = initialRouteRuntime.pageName === "player";
 const tableStartup = routeNeedsTable(initialRouteRuntime.pageName, initialRouteRuntime.options);
@@ -433,14 +432,6 @@ function ensureRouteRuntime(pageName, options = {}) {
 
 runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
 
-function runPostStartupSync(label, callback) {
-  try {
-    callback?.();
-  } catch (error) {
-    console.warn(`Post-start ${label} synchronization failed.`, error);
-  }
-}
-
 async function start() {
   const release = entryRelease;
   window.__mflRelease = release;
@@ -448,8 +439,6 @@ async function start() {
 
   installApiFetchPolicy();
   await loadScriptGroup(initialPreCoreRuntimeScripts);
-
-  if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
 
   await loadApplicationCore();
   await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);
@@ -462,8 +451,6 @@ async function start() {
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
-
-  runPostStartupSync("Evaluation layout", () => runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.());
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
