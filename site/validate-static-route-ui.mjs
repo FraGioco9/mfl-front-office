@@ -55,7 +55,7 @@ includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view
 includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The application core must be able to reuse passive route chrome.");
+includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must reuse passive route chrome and its global tooltip cleanup API.");
 includes(staticUi, "function showRouteShell(state) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
@@ -146,10 +146,11 @@ invariant(viewStateIndex >= 0 && viewUrlIndex > viewStateIndex && viewButtonInde
 const pageRunnerStart = buildNormalizer.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
 const pageRunnerEnd = buildNormalizer.indexOf("async function runViewTransition", pageRunnerStart);
 const pageRunner = buildNormalizer.slice(pageRunnerStart, pageRunnerEnd);
+const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
+const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
+const pageLoadIndex = pageRunner.indexOf('return typeof loader === "function" ? await loader(transition) : transition;');
 invariant(
-  pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)") >= 0
-    && pageRunner.indexOf("await waitForViewTransitionPaint();") > pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)")
-    && pageRunner.indexOf('typeof loader === "function" ? loader(transition)') > pageRunner.indexOf("await waitForViewTransitionPaint();"),
+  pageCommitIndex >= 0 && pagePaintIndex > pageCommitIndex && pageLoadIndex > pagePaintIndex,
   "Global page transitions must commit, paint, then load.",
 );
 
@@ -168,7 +169,7 @@ const setPagePrepareIndex = buildNormalizer.indexOf('const requestedMflView = pa
 invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransitionIndex, "Every setPage path must settle the global transition before route-specific work starts.");
 
 for (const [transitionMarker, loaderMarker, label] of [
-  ['runViewTransition("mfl", "stats"', 'setPage("mflstats", false', "MFL Stats"],
+  ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
   ["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],
   ["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],

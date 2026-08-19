@@ -12,6 +12,7 @@ const excludes = (source, value, message) => invariant(!source.includes(value), 
 const [
   coreSource,
   splitter,
+  appConfig,
   routeLoader,
   routeNormalizer,
   buildCore,
@@ -22,6 +23,7 @@ const [
 ] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-watchlist-route-chunk.js"),
+  read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
@@ -74,7 +76,8 @@ excludes(appEntry, "/watchlist-ui-runtime.js", "The retired Watchlist UI compati
 includes(appEntry, "const WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([", "Watchlist/My Players route coordination must remain shared between both pages.");
 includes(appEntry, "if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);", "Watchlist/My Players route coordination must still load on both pages.");
 
-includes(routeLoader, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Route loader must map the Watchlist core.");
+includes(appConfig, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Canonical app config must map the Watchlist core.");
+includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist routes must load Table before Watchlist UI ownership.");
 includes(routeNormalizer, "const directWatchlistRoute =", "Direct startup must identify Watchlist routes separately.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("watchlist");', "Direct Watchlist startup must load Table and Watchlist ownership before startApp.");

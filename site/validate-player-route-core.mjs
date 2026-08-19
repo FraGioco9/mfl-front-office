@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, playerSplitter, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, playerSplitter, appConfig, routeLoader, routeNormalizer, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-player-chunk.js"),
+  read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
@@ -57,16 +58,31 @@ excludes(playerCore, "function primaryPreciseOverall(row) {", "Shared overall ma
 excludes(playerCore, "async function copyPlayerId(id) {", "Shared copy behavior must not become Player-only.");
 excludes(playerCore, "function renderPlayerPage(playerId) {", "The stable Player renderer name must remain shared for existing wrappers and refresh owners.");
 
-includes(routeLoader, 'player: "/modules/app-core-player-runtime.js"', "The route-core loader must map Player to its generated chunk.");
+includes(appConfig, 'player: "/modules/app-core-player-runtime.js"', "Canonical app config must map Player to its generated chunk.");
+includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("player");', "Direct Player startup must load Player helpers before startApp.");
 includes(routeNormalizer, '/^\\\\/players\\\\/[^/]+\\\\/?$/i', "Direct Player startup must recognize canonical /players/<id> routes.");
 
 includes(buildCore, 'const playerRuntimePath = resolve(siteRoot, "modules/app-core-player-runtime.js");', "The build must emit a generated Player runtime.");
 includes(buildCore, "artifacts.routeChunks?.player", "The build must consume the Player artifact.");
+includes(buildCore, "normalizeRetirementMarkerContract", "The build must apply the canonical retirement-marker preprocessing before route splitting.");
+includes(buildCore, "normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.player", "The built Player runtime must receive canonical tooltip normalization.");
 
 const generatedPlayer = await read("./modules/app-core-player-runtime.js");
 const playerBanner = "// Generated Player core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedPlayer.startsWith(playerBanner), "Generated Player runtime must carry the build ownership banner.");
-invariant(generatedPlayer.slice(playerBanner.length).replace(/\s*$/, "") === playerCore.replace(/\s*$/, ""), "Generated Player runtime must exactly match the Player build artifact.");
+const generatedPlayerBody = generatedPlayer.slice(playerBanner.length).replace(/\s*$/, "");
+invariant(generatedPlayerBody.length > 12_000, "Generated Player runtime is unexpectedly small.");
+new Function(generatedPlayerBody);
+for (const owner of [
+  "function renderPitch(row) {",
+  "function playerTrainingKey(row) {",
+  "function renderPlayerAttributePanel(row) {",
+  "function renderPlayerPageOwner(playerId) {",
+  "window.__mflRenderPlayerPageOwner = renderPlayerPageOwner;",
+]) {
+  includes(generatedPlayerBody, owner, `Generated Player runtime must retain route owner ${owner}.`);
+}
+includes(generatedPlayerBody, 'retirementMarker--${escapeHtml(ageMarker.status || "default")}', "Generated Player runtime must contain the build-time retirement marker contract.");
 
 console.log("Player route-core splitting validation passed.");

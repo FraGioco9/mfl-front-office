@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, walletSplitter, routeLoader, buildCore] = await Promise.all([
+const [coreSource, walletSplitter, appConfig, routeLoader, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-wallet-chunk.js"),
+  read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
 ]);
@@ -55,7 +56,8 @@ includes(walletCore, "__mflWalletLinkOwner = walletLinkOwner;", "The Wallet chun
 excludes(walletCore, "function restoreLinkedWalletProof() {", "Startup wallet-proof restoration must not become Wallet-chunk-only.");
 excludes(walletCore, "function optOutWallet() {", "Opt-out must not depend on loading the Wallet opt-in chunk.");
 
-includes(routeLoader, 'wallet: "/modules/app-core-wallet-runtime.js"', "The route-core loader must map the Wallet action chunk.");
+includes(appConfig, 'wallet: "/modules/app-core-wallet-runtime.js"', "Canonical app config must map the Wallet action chunk.");
+includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'ensure("wallet")', "The Wallet chunk must not be eagerly primed during startup.");
 
 includes(buildCore, 'const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");', "The build must emit a generated Wallet runtime.");

@@ -316,7 +316,7 @@ includes(
 );
 includes(
   controlInteractions,
-  'controller.beginIntent?.(target, "control-intent")',
+  'navigationController()?.beginIntent?.(target, "control-intent")',
   "Pointer/click intent must begin through the shared navigation controller.",
 );
 includes(

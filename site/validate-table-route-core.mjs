@@ -10,9 +10,10 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const matches = (source, pattern, message) => invariant(pattern.test(source), message);
 
-const [coreSource, tableSplitter, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
+const [coreSource, tableSplitter, appConfig, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
+  read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
@@ -85,10 +86,12 @@ excludes(sharedCore, "function showTableBusyState() {", "Table busy-state render
 includes(sharedCore, "function formatCellValue(row, column) {", "Cross-route player/search formatting must remain shared.");
 includes(sharedCore, "function rowByPlayerId(playerId) {", "Cross-route player lookup must remain shared.");
 
-includes(routeLoader, 'table: "/modules/app-core-table-runtime.js"', "The route-core loader must map the Table chunk.");
+includes(appConfig, 'table: "/modules/app-core-table-runtime.js"', "Canonical app config must map the Table chunk.");
+includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club must load the Table core before the Club core.");
 includes(routeLoader, 'if (page === "database" && view === "stats") return [];', "Database Stats must not load the Table core.");
-includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["mflstats"];', "MFL Stats must keep its independent core.");
+includes(routeLoader, 'if (page === "mfl" && view === "stats") return ["table", "mflstats"];', "MFL Stats must load the shared Table core before its route renderer.");
+includes(routeLoader, 'if (page === "mflstats") return ["table", "mflstats"];', "The internal MFL Stats route alias must retain the same Table-first dependency order.");
 includes(routeLoader, "for (const dependency of dependencies)", "Route-core dependencies must execute in declared order.");
 
 const routeNeedsTableStart = appEntry.indexOf("function routeNeedsTable(pageName, options = {}) {");
@@ -103,9 +106,22 @@ includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct
 matches(routeNormalizer, /!\/\^.*database.*stats.*test\(initialRoutePath\)/, "Direct Database Stats startup must stay outside the Table core.");
 
 includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
+includes(buildCore, "normalizeRetirementMarkerContract", "The build must apply the canonical retirement-marker preprocessing before route splitting.");
+includes(buildCore, "normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table", "The built Table runtime must receive canonical tooltip normalization.");
 const generatedTable = await read("./modules/app-core-table-runtime.js");
 const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");
-invariant(generatedTable.slice(tableBanner.length).replace(/\s*$/, "") === tableCore.replace(/\s*$/, ""), "Generated Table runtime must exactly match the Table build artifact.");
+const generatedTableBody = generatedTable.slice(tableBanner.length).replace(/\s*$/, "");
+invariant(generatedTableBody.length > 20_000, "Generated Table runtime is unexpectedly small.");
+new Function(generatedTableBody);
+for (const owner of [
+  "function tableTitleForPageOwner(pageName) {",
+  "function tableBuildHeaderOwner(",
+  "function tableApplyFiltersOwner(",
+  "function tableRenderTableOwner(",
+  "function tableSetViewOwner(",
+]) {
+  includes(generatedTableBody, owner, `Generated Table runtime must retain route owner ${owner}.`);
+}
 
 console.log("Table route-core splitting and globally placed facade validation passed.");
