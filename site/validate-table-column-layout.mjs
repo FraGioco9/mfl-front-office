@@ -183,7 +183,12 @@ const canonicalContractBlock = canonicalContractColumns.map((column) => `    "${
 invariant(!bootstrap.includes("primePlayerTableScroller"), "Bootstrap must not switch table scroller classes after first paint.");
 invariant(!bootstrap.includes("__mflTableWidthRuntime?.apply"), "Bootstrap must not apply or rewrite table widths.");
 invariant(bootstrap.includes("function primeInitialTableStructure(page, view) {"), "Bootstrap must build first-paint table structure synchronously.");
-invariant(bootstrap.includes('selectionCol.className = "col-select";'), "First-paint colgroup must include the selection column.");
+invariant(bootstrap.includes('const FIRST_PAINT_SORTABLE_COLUMNS = new Set(['), "Bootstrap must own first-paint sortable-column metadata.");
+invariant(bootstrap.includes('selectionInput.id = "selectVisiblePlayersInput";'), "First-paint selection header must include the canonical checkbox.");
+invariant(bootstrap.includes('const label = document.createElement("span");'), "First-paint labels must use the canonical header markup.");
+invariant(bootstrap.includes('head.dataset.mflHeaderSignature = signature;'), "Bootstrap must stamp the route/sort signature on static headers.");
+invariant(bootstrap.includes('Reflect.set(window, "__mflPrimeTableHeaderSignature", firstPaintTableHeaderSignature);'), "Bootstrap must expose its static header signature owner.");
+invariant(bootstrap.includes('Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);'), "Bootstrap must expose its static header renderer.");
 invariant(bootstrap.includes('selectionHeader.className = "selectionCell";'), "First-paint selection header must not carry a column-width class.");
 invariant(!bootstrap.includes('selectionHeader.className = "selectionCell col-select";'), "Selection width must belong to the colgroup, not the header cell.");
 invariant(
@@ -191,6 +196,12 @@ invariant(
   "Contracts first paint must use the canonical semantic column order.",
 );
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
+invariant(
+  bootstrap.includes('const targetClasses = ["col-select", ...columns.map((column) => firstPaintTableColumnClass(column))];')
+  && bootstrap.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
+  && bootstrap.includes("if (!alreadyCanonical) {"),
+  "Bootstrap must preserve an already-canonical colgroup while owning static header rendering.",
+);
 invariant(!bootstrap.includes("cell.colSpan = 16"), "First-paint loading rows must not collapse the table into one colspan cell.");
 invariant(bootstrap.includes('row.className = "mflTableLoadingRow";'), "First-paint loading rows must use the canonical loading-row class.");
 invariant(
@@ -218,22 +229,23 @@ invariant(!tableLoadingRuntime.includes("TABLE_ROW_HEIGHT = 39"), "Loading runti
 invariant(!tableLoadingRuntime.includes("installStyles()"), "Loading runtime must not inject a second table geometry stylesheet.");
 
 invariant(
-  !staticUiRuntime.includes("STATIC_TABLE_COLUMN_WIDTHS")
-  && !staticUiRuntime.includes("applyStaticTableColumnWidth")
-  && !staticUiRuntime.includes("__mflTableWidthRuntime")
+  !staticUiRuntime.includes("STATIC_TABLE_")
+  && !staticUiRuntime.includes("FILTER_STORAGE_KEY")
+  && !staticUiRuntime.includes('document.createElement("th")')
+  && !staticUiRuntime.includes('document.createElement("col")'),
+  "Static UI must not duplicate bootstrap table schema, sort-state, header, or colgroup rendering.",
+);
+invariant(
+  staticUiRuntime.includes('Reflect.get(window, "__mflPrimeTableHeaderSignature")')
+  && staticUiRuntime.includes('Reflect.get(window, "__mflPrimeTableStructure")')
+  && staticUiRuntime.includes("return Boolean(primeStructure(state.page, state.view));"),
+  "Static UI must delegate non-canonical table headers to the bootstrap owner.",
+);
+invariant(
+  !staticUiRuntime.includes("__mflTableWidthRuntime")
   && !staticUiRuntime.includes("table.style.width")
   && !staticUiRuntime.includes("table.style.minWidth"),
   "Static UI must not own or apply player table widths during startup.",
-);
-invariant(
-  staticUiRuntime.includes(`const STATIC_TABLE_CONTRACT_COLUMNS = Object.freeze([\n${canonicalContractBlock}\n  ]);`),
-  "Static UI Contracts columns must use the same canonical order as bootstrap and core.",
-);
-invariant(
-  staticUiRuntime.includes('const targetClasses = ["col-select", ...columns.map((column) => staticTableColumnClass(column))];')
-  && staticUiRuntime.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
-  && staticUiRuntime.includes("if (!alreadyCanonical) {"),
-  "Static UI must not rebuild an already-canonical colgroup.",
 );
 
 invariant(
@@ -273,4 +285,4 @@ invariant(
   "Bootstrap core must consume Uniform Width as a marker and must not load or call a width owner.",
 );
 
-console.log("Uniform Width single-source, canonical loading-row rendering, and stable-colgroup validation passed.");
+console.log("Uniform Width single-source, bootstrap-owned static headers/loading rows, and stable-colgroup validation passed.");

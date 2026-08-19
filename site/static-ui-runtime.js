@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
     squad: "attributes",
@@ -10,65 +9,6 @@
     contracts: "contracts",
     "current-season": "current",
     "all-time": "all",
-  });
-  const STATIC_TABLE_BASE_COLUMNS = Object.freeze([
-    "player_id", "nationality_flag", "name", "nationality", "age", "positions", "player_seasons",
-  ]);
-  const STATIC_TABLE_STAT_COLUMNS = Object.freeze([
-    "overall", "pace", "shooting", "passing", "dribbling", "defense", "physical",
-  ]);
-  const STATIC_TABLE_CONTRACT_COLUMNS = Object.freeze([
-    "overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share",
-  ]);
-  const STATIC_TABLE_VIEW_COLUMNS = Object.freeze({
-    attributes: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-    current: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-    all: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-    next: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_STAT_COLUMNS, "wallet_name", "player_link"]),
-    contracts: Object.freeze([...STATIC_TABLE_BASE_COLUMNS, ...STATIC_TABLE_CONTRACT_COLUMNS, "wallet_name", "player_link"]),
-  });
-  const STATIC_JOINED_AGENCY_PAGES = new Set(["myplayers", "agents", "mfl"]);
-  const STATIC_TABLE_SORTABLE_COLUMNS = new Set([
-    "player_id", "name", "age", "player_seasons", "owned_since",
-    "active_contract_revenue_share", "active_contract_club_division",
-    ...STATIC_TABLE_STAT_COLUMNS,
-  ]);
-  const STATIC_TABLE_COLUMN_LABELS = Object.freeze({
-    player_id: "ID",
-    nationality_flag: "",
-    wallet_name: "Agent",
-    owned_since: "Joined Agency",
-    name: "Name",
-    nationality: "Nationality",
-    age: "Age",
-    positions: "Positions",
-    player_seasons: "Seasons",
-    overall: "Overall",
-    pace: "Pace",
-    shooting: "Shooting",
-    passing: "Passing",
-    dribbling: "Dribbling",
-    defense: "Defense",
-    physical: "Physical",
-    active_contract_revenue_share: "Rev. Share",
-    active_contract_club_name: "Club Name",
-    active_contract_club_division: "Division",
-    player_link: "",
-  });
-  const STATIC_TABLE_COLUMN_CLASSES = Object.freeze({
-    player_id: "col-id",
-    nationality_flag: "col-flag",
-    name: "col-name",
-    nationality: "col-nationality",
-    age: "col-age",
-    positions: "col-positions",
-    player_seasons: "col-seasons",
-    wallet_name: "col-agent",
-    owned_since: "col-agent",
-    active_contract_revenue_share: "col-contract-revenue",
-    active_contract_club_name: "col-contract-club",
-    active_contract_club_division: "col-contract-division",
-    player_link: "col-link",
   });
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
@@ -206,122 +146,33 @@
     return document.getElementById("homePage");
   }
 
-  function staticTableDisplayColumn(page, column) {
-    return column === "wallet_name" && STATIC_JOINED_AGENCY_PAGES.has(page) ? "owned_since" : column;
-  }
+  function syncDestinationTableHeader(state) {
+    const signatureFor = Reflect.get(window, "__mflPrimeTableHeaderSignature");
+    const primeStructure = Reflect.get(window, "__mflPrimeTableStructure");
+    if (typeof signatureFor !== "function" || typeof primeStructure !== "function") return false;
 
-  function staticTableColumns(page, view) {
-    const source = STATIC_TABLE_VIEW_COLUMNS[view] || STATIC_TABLE_VIEW_COLUMNS.attributes;
-    return source.map((column) => staticTableDisplayColumn(page, column));
-  }
+    const signature = String(signatureFor(state.page, state.view) || "");
+    if (!signature) return false;
+    const head = document.getElementById("tableHead");
+    if (!(head instanceof HTMLTableSectionElement)) return false;
+    const headerMatches = () => Boolean(head.rows[0]) && head.dataset.mflHeaderSignature === signature;
+    if (headerMatches() && head.dataset.mflStaticHeader !== "true") return true;
 
-  function staticTableColumnClass(column) {
-    if (column === "overall") return "col-stat col-overall";
-    if (STATIC_TABLE_STAT_COLUMNS.includes(column)) return "col-stat";
-    return STATIC_TABLE_COLUMN_CLASSES[column] || "";
-  }
-
-  function staticTableSortState(route) {
-    try {
-      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || "null");
-      const pageState = saved?.pages?.[route.page];
-      const viewState = pageState?.viewSortStates?.[route.view] || pageState || null;
-      const savedSortKey = String(viewState?.sortKey || "");
-      const savedSortDirection = String(viewState?.sortDirection || "");
-      if (STATIC_TABLE_SORTABLE_COLUMNS.has(savedSortKey)) {
-        return {
-          sortKey: savedSortKey,
-          sortDirection: savedSortDirection === "asc" ? "asc" : "desc",
-        };
-      }
-    } catch {
-      // Use canonical defaults when storage is unavailable.
-    }
-
-    if (route.page === "club") return { sortKey: "positions", sortDirection: "asc" };
-    return { sortKey: "overall", sortDirection: route.view === "next" ? "asc" : "desc" };
-  }
-
-  function tryCanonicalTableHeader(signature) {
     const contracts = Reflect.get(window, "__mflCoreContracts");
     const ensureHeader = contracts && typeof contracts === "object"
       ? contracts.ensureCanonicalTableHeader
       : null;
-    if (typeof ensureHeader !== "function" || !ensureHeader()) return false;
-    const head = document.getElementById("tableHead");
-    return head instanceof HTMLTableSectionElement
-      && Boolean(head.rows[0])
-      && head.dataset.mflStaticHeader !== "true"
-      && head.dataset.mflHeaderSignature === signature;
-  }
-
-  function primeStaticTableHeader(route) {
-    const head = document.getElementById("tableHead");
-    const colGroup = document.getElementById("tableColGroup");
-    if (!(head instanceof HTMLTableSectionElement) || !(colGroup instanceof HTMLTableColElement)) return false;
-
-    const columns = staticTableColumns(route.page, route.view);
-    const sort = staticTableSortState(route);
-    const signature = [route.page, route.view, sort.sortKey, sort.sortDirection].join("|");
-    if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader !== "true") {
-      return true;
+    if (typeof ensureHeader === "function" && ensureHeader()) {
+      if (headerMatches() && head.dataset.mflStaticHeader !== "true") return true;
     }
-    if (tryCanonicalTableHeader(signature)) return true;
-    if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader === "true") return true;
-
-    const headerRow = document.createElement("tr");
-    const selectionHeader = document.createElement("th");
-    selectionHeader.className = "selectionCell";
-    const selectionInput = document.createElement("input");
-    selectionInput.id = "selectVisiblePlayersInput";
-    selectionInput.type = "checkbox";
-    selectionInput.setAttribute("aria-label", "Select visible players");
-    selectionHeader.appendChild(selectionInput);
-    headerRow.appendChild(selectionHeader);
-
-    columns.forEach((column) => {
-      const cell = document.createElement("th");
-      const columnClass = staticTableColumnClass(column);
-      if (columnClass) cell.classList.add(...columnClass.split(" "));
-      const label = document.createElement("span");
-      label.textContent = STATIC_TABLE_COLUMN_LABELS[column] || "";
-      cell.appendChild(label);
-      if (STATIC_TABLE_SORTABLE_COLUMNS.has(column)) {
-        cell.classList.add("sortable");
-        if (sort.sortKey === column) {
-          const arrow = document.createElement("span");
-          arrow.className = `sortArrow ${sort.sortDirection}`;
-          arrow.setAttribute("aria-hidden", "true");
-          cell.appendChild(arrow);
-        }
-      }
-      headerRow.appendChild(cell);
-    });
-
-    const targetClasses = ["col-select", ...columns.map((column) => staticTableColumnClass(column))];
-    const existingCols = Array.from(colGroup.children);
-    const alreadyCanonical = existingCols.length === targetClasses.length
-      && existingCols.every((col, index) => col.className === targetClasses[index]);
-    if (!alreadyCanonical) {
-      const columnFragment = document.createDocumentFragment();
-      targetClasses.forEach((columnClass) => {
-        const col = document.createElement("col");
-        if (columnClass) col.classList.add(...columnClass.split(" "));
-        columnFragment.appendChild(col);
-      });
-      colGroup.replaceChildren(columnFragment);
-    }
-
-    head.replaceChildren(headerRow);
-    head.dataset.mflHeaderSignature = signature;
-    head.dataset.mflStaticHeader = "true";
-    return true;
+    if (headerMatches()) return true;
+    return Boolean(primeStructure(state.page, state.view));
   }
 
   function syncDestinationTableChrome(state) {
     const prime = Reflect.get(window, "__mflPrimeTableChrome");
     if (typeof prime === "function") prime(state.page, state.url || window.location.href);
-    primeStaticTableHeader(state);
+    syncDestinationTableHeader(state);
   }
 
   function routeIdentity(state) {
