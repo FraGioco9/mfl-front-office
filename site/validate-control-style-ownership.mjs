@@ -1,11 +1,13 @@
 import { access, readFile } from "node:fs/promises";
 
+import { normalizeApplicationCore } from "./modules/app-core-normalizer.js";
+
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, coreNormalizer] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, coreSource] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -13,8 +15,9 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./modules/app-entry.js"),
   read("./static-ui-runtime.js"),
   read("./evaluation-discount-rate-ui-runtime.js"),
-  read("./modules/app-core-normalizer.js"),
+  read("./modules/app-core.js"),
 ]);
+const normalizedCore = normalizeApplicationCore(coreSource);
 
 invariant(
   styles.includes('@import url("/controls.css");'),
@@ -123,10 +126,18 @@ invariant(
   discountTooltipUi.includes("Number(window.__mflTooltipSettings?.gap) || 6"),
   "The Evaluation discount tooltip must consume the global tooltip gap.",
 );
-const normalizedTooltipGapUses = coreNormalizer.split("Number(window.__mflTooltipSettings?.gap) || 6").length - 1;
+const normalizedTooltipGapUses = normalizedCore.split("Number(window.__mflTooltipSettings?.gap) || 6").length - 1;
 invariant(
   normalizedTooltipGapUses >= 2,
-  "Evaluation action and player-note tooltips must consume the global tooltip gap through core normalization.",
+  "Evaluation action and player-note tooltips must consume the global tooltip gap in generated core.",
+);
+invariant(
+  !normalizedCore.includes("rect.top - tooltipRect.height - 8"),
+  "The generated Evaluation action tooltip must not retain its old 8px local gap.",
+);
+invariant(
+  !normalizedCore.includes("anchorTop - tooltipRect.height - 10"),
+  "The generated player-note tooltip must not retain its old 10px local gap.",
 );
 
 for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtime.js"]) {
