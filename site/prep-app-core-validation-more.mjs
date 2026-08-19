@@ -65,3 +65,11 @@ staticUi = staticUi.replace(
 );
 
 await writeFile(staticUiPath, staticUi, "utf8");
+
+const mflStatsFirstPaintPath = new URL("./validate-mfl-stats-first-paint.mjs", import.meta.url);
+let mflStatsFirstPaint = await readFile(mflStatsFirstPaintPath, "utf8");
+const broadFilterCount = '(filterHtml.match(/class="mflStatsFilterButton/g) || []).length === expectedFilters.length';
+const exactFilterCount = '(filterHtml.match(/<button class="mflStatsFilterButton(?: active)?"/g) || []).length === expectedFilters.length';
+if (!mflStatsFirstPaint.includes(broadFilterCount)) throw new Error("Broad MFL Stats filter count assertion was not found.");
+mflStatsFirstPaint = mflStatsFirstPaint.replace(broadFilterCount, exactFilterCount);
+await writeFile(mflStatsFirstPaintPath, mflStatsFirstPaint, "utf8");
