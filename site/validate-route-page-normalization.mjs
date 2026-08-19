@@ -23,6 +23,7 @@ const sandbox = {
   Object,
   Set,
   encodeURIComponent,
+  decodeURIComponent,
 };
 vm.runInNewContext(browserConfigRuntimeSource(release), sandbox);
 const routeConfig = sandbox.window.__mflAppConfig?.routes;
@@ -55,6 +56,33 @@ for (const [options, expected] of [
 }
 invariant(routeConfig.normalizeView() === "", "Missing route view options must normalize to an empty view.");
 
+for (const [view, expectedPath] of [
+  ["attributes", "/clubs/123/squad"],
+  ["contracts", "/clubs/123/contracts"],
+  ["current", "/clubs/123/current-season"],
+  ["all", "/clubs/123/all-time"],
+]) {
+  invariant(
+    routeConfig.clubPath("123", view) === expectedPath,
+    `Club ${view} must use ${expectedPath}.`,
+  );
+}
+
+for (const [path, expectedView, expectedPath] of [
+  ["/clubs/123/squad", "attributes", "/clubs/123/squad"],
+  ["/clubs/123/contracts", "contracts", "/clubs/123/contracts"],
+  ["/clubs/123/current-season", "current", "/clubs/123/current-season"],
+  ["/clubs/123/all-time", "all", "/clubs/123/all-time"],
+  ["/clubs/123/attributes", "attributes", "/clubs/123/squad"],
+  ["/club/123/contracts", "contracts", "/clubs/123/contracts"],
+  ["/clubs/123", "attributes", "/clubs/123/squad"],
+]) {
+  const route = routeConfig.clubRoute(path);
+  invariant(route?.clubId === "123", `${path} must preserve Club ID 123.`);
+  invariant(route?.view === expectedView, `${path} must resolve to Club view ${expectedView}.`);
+  invariant(route?.path === expectedPath, `${path} must normalize to ${expectedPath}.`);
+}
+
 const routeCases = [
   ["/", "home", ""],
   ["/evaluation", "evaluation", ""],
@@ -73,6 +101,7 @@ const routeCases = [
   ["/my-players/all-time", "myplayers", "all"],
   ["/agents/0xabc/next-overall", "agents", "next"],
   ["/agents/0xabc/all-time", "agents", "all"],
+  ["/clubs/123/squad", "club", "attributes"],
   ["/clubs/123/current-season", "club", "current"],
   ["/club/123/contracts", "club", "contracts"],
   ["/players/42", "player", ""],
@@ -87,6 +116,13 @@ for (const [path, expectedPage, expectedView] of routeCases) {
   const result = routeConfig.initialRequest(path);
   invariant(result?.pageName === expectedPage, `${path} must classify as ${expectedPage}, received ${result?.pageName}.`);
   invariant(String(result?.options?.view || "") === expectedView, `${path} must preserve startup view ${expectedView || "default"}.`);
+  if (expectedPage === "club") {
+    invariant(result?.options?.clubId === "123", `${path} must retain Club ID 123 during startup classification.`);
+    invariant(
+      result?.options?.path === routeConfig.clubPath("123", expectedView || "attributes"),
+      `${path} must carry its canonical Club URL through refresh startup.`,
+    );
+  }
 }
 
 includes(
@@ -141,4 +177,11 @@ invariant(entryInitialStart >= 0 && entryInitialEnd > entryInitialStart, "app-en
 const entryInitialSection = entry.slice(entryInitialStart, entryInitialEnd);
 includes(entryInitialSection, 'Reflect.get(window, "__mflInitialRouteRuntimeRequest")', "app-entry must delegate initial-route classification.");
 
-console.log("Canonical route page-name, view, and initial-route validation passed.");
+const entryClubPathStart = entry.indexOf("function clubRoutePath(clubId, view) {");
+const entryClubPathEnd = entry.indexOf("function installClubRouteRuntimeGate()", entryClubPathStart);
+invariant(entryClubPathStart >= 0 && entryClubPathEnd > entryClubPathStart, "app-entry must retain the fallback Club route facade.");
+const entryClubPathSection = entry.slice(entryClubPathStart, entryClubPathEnd);
+includes(entryClubPathSection, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "app-entry fallback Club navigation must consume canonical route config.");
+excludes(entryClubPathSection, "new Map([", "app-entry must not duplicate Club view-to-slug mappings.");
+
+console.log("Canonical route page-name, view, initial-route, and Club URL validation passed.");
