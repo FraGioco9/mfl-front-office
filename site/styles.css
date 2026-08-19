@@ -59,6 +59,13 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   vertical-align: middle;
 }
 
+#tableBody .selectionCell input,
+#tableBody .flagCell .flagImage {
+  display: inline-block;
+  margin: 0;
+  vertical-align: middle;
+}
+
 /* Uniform Width is consumed by the player table only through its colgroup.
  * Headers, loading cells, and loaded cells never become width owners. */
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
