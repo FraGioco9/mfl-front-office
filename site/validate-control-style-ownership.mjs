@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, tableChunk] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, playerChunk] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -15,7 +15,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./desktop-table-style-runtime.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core-table-chunk.js"),
+  read("./modules/app-core-player-chunk.js"),
 ]);
 
 invariant(
@@ -192,17 +192,21 @@ for (const required of [
   'button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
   'button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
   'button.addEventListener("blur", hidePlayerNoteTooltip);',
-  "Table player-ID tooltip ownership leaked outside the global Tooltip Height runtime.",
+  "Could not remove Table player-ID local tooltip listener",
 ]) {
-  invariant(tableChunk.includes(required), `The Table core owner is missing player-ID tooltip cleanup through ${required}.`);
+  invariant(playerChunk.includes(required), `The owning Player core chunk is missing table-ID tooltip cleanup through ${required}.`);
 }
 invariant(
   !coreBuild.includes("function removeTableIdLocalTooltipOwnership(source)"),
   "The application-core builder must not own Table player-ID tooltip cleanup.",
 );
 invariant(
-  coreBuild.includes('if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);"))'),
+  coreBuild.includes("for (const localTableIdTooltipListener of ["),
   "The core build must reject local table-ID tooltip listeners after generation.",
+);
+invariant(
+  coreBuild.includes("if (playerRuntime.includes(localTableIdTooltipListener))"),
+  "The core build must validate the Player runtime that actually owns createCopyPlayerIdButton.",
 );
 
 for (const required of [
