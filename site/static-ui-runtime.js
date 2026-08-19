@@ -407,6 +407,13 @@
     syncRouteChrome(window.location.href);
   }
 
+  function hideTooltips(options = {}) {
+    hideGlobalTooltip({
+      immediate: Boolean(options.immediate),
+      restore: options.restore !== false,
+    });
+  }
+
   function destroy() {
     destroyed = true;
     hideGlobalTooltip({ immediate: true });
@@ -433,5 +440,5 @@
   window.addEventListener("scroll", positionTooltipPortal, true);
   window.addEventListener("popstate", onPopState);
 
-  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, destroy });
+  window.__mflStaticUiRuntime = Object.freeze({ sync, syncTableViews, hideTooltips, destroy });
 })();

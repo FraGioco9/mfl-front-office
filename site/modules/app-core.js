@@ -333,6 +333,7 @@ const GUEST_WATCHLIST_STORAGE_KEY = "mfl-guest-watchlist-v1";
 const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
 const LINKED_WALLET_PROOF_STORAGE_KEY = "mfl-linked-wallet-proof-v1";
 const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
+const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
 const WALLET_PERMISSION_CACHE_STORAGE_KEY = "mfl-wallet-permission-cache-v1";
 const WALLET_PERMISSION_CACHE_TTL_MS = 60 * 60 * 1000;
 const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
@@ -969,6 +970,33 @@ function saveAgentNameForWallet(address, name) {
     return;
   }
 
+  function loadAgentDisplayNames() {
+    try {
+      const value = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveAgentDisplayName(address, name) {
+    const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+    const agentName = normalizedAgentName(name);
+    if (!normalizedAddress || !agentName) return;
+    try {
+      const next = loadAgentDisplayNames();
+      next[normalizedAddress] = agentName;
+      localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore storage failures; runtime can still resolve names from loaded rows.
+    }
+    if (state.currentPage === "agents"
+      && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress
+      && tablePageTitle) {
+      tablePageTitle.textContent = `${agentName} - ${normalizedAddress}`;
+    }
+  }
+
   try {
     localStorage.setItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY, JSON.stringify({ address: normalizedAddress, name: agentName }));
   } catch {
@@ -1037,6 +1065,19 @@ function agentNameForWallet(address) {
   }
 
   return savedAgentNameForWallet(address) || normalizeWalletAddress(address);
+}
+
+function agentTitleForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  const agentName = savedAgentNameForWallet(normalizedAddress)
+    || normalizedAgentName(state.walletRows.find((row) => normalizeWalletAddress(row.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name)
+    || normalizedAgentName(state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress)?.wallet_name);
+
+  return agentName ? `${agentName} - ${normalizedAddress}` : normalizedAddress;
 }
 
 function accountName() {
@@ -2573,7 +2614,8 @@ function tableTitleForPage(pageName) {
   }
 
   if (pageName === "agents") {
-    return agentNameForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+    const walletAddress = normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    return agentTitleForWallet(walletAddress);
   }
 
   return "Progression";
@@ -5792,6 +5834,12 @@ function openAgentPage(walletAddress) {
     return;
   }
 
+  const result = agentSearchResultByWallet(normalizedWalletAddress);
+  if (result?.name) saveAgentDisplayName(normalizedWalletAddress, result.name);
+
+  removePlayerNoteTooltip();
+  window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
+
   if (normalizedWalletAddress === normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()) {
     setPage("myplayers", true);
     return;
@@ -5894,12 +5942,16 @@ function buildSearchIndex(options = {}) {
     }
 
     agentsByWallet.set(entry.walletAddress, entry);
+    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
   };
 
   state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
   state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));
   state.agentSearchIndex = Array.from(agentsByWallet.values());
   state.searchIndexesLoaded = true;
+  if (state.currentPage === "agents" && tablePageTitle) {
+    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
 }
 
 const databaseSearchSequences = new Map();
@@ -8004,6 +8056,8 @@ function rememberAgentSearchResult(walletAddress) {
 
   state.recentSearchAgentWallets = mergeRecentIdLists([normalizedWalletAddress], state.recentSearchAgentWallets);
   state.recentSearchItems = mergeRecentIdLists([recentAgentKey(normalizedWalletAddress)], state.recentSearchItems);
+  const result = agentSearchResultByWallet(normalizedWalletAddress);
+  if (result?.name) saveAgentDisplayName(normalizedWalletAddress, result.name);
   persistRecentSearchStates();
   saveTableState();
 }
@@ -9436,6 +9490,9 @@ function renderTable() {
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
+  if (state.currentPage === "agents" && tablePageTitle) {
+    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
 
   const pageRows = currentPageRows();
   const fragment = document.createDocumentFragment();

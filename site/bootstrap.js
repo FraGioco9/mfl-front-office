@@ -4,6 +4,8 @@
   const STATIC_RELEASE_VERSION = "1.124.55";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
+  const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
+  const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
@@ -233,10 +235,38 @@
     const parts = routeParts(urlLike);
     if (page === "agents") {
       const wallet = String(parts[1] || "").trim();
-      try { return wallet ? decodeURIComponent(wallet) : "Agents"; } catch { return wallet || "Agents"; }
+      try {
+        const decodedWallet = wallet ? decodeURIComponent(wallet) : "";
+        if (!decodedWallet) return "Agents";
+        const normalizedWallet = normalizeWalletAddress(decodedWallet).toLowerCase();
+        const agentName = firstPaintAgentNameForWallet(normalizedWallet);
+        return agentName ? `${agentName} - ${normalizedWallet}` : normalizedWallet;
+      } catch {
+        const normalizedWallet = normalizeWalletAddress(wallet).toLowerCase();
+        if (!normalizedWallet) return "Agents";
+        const agentName = firstPaintAgentNameForWallet(normalizedWallet);
+        return agentName ? `${agentName} - ${normalizedWallet}` : normalizedWallet;
+      }
     }
     if (page === "club") return "Club";
     return "Progression";
+  }
+
+  function firstPaintAgentNameForWallet(normalizedWallet) {
+    if (!normalizedWallet) return "";
+    try {
+      const linkedWallet = normalizeWalletAddress(localStorage.getItem(LINKED_WALLET_STORAGE_KEY)).toLowerCase();
+      const linkedDisplay = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
+      if (linkedWallet === normalizedWallet && normalizeWalletAddress(linkedDisplay?.address).toLowerCase() === normalizedWallet) {
+        const linkedName = String(linkedDisplay?.name || "").trim();
+        if (linkedName) return linkedName;
+      }
+      const agentNames = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+      const storedName = agentNames && typeof agentNames === "object" ? String(agentNames[normalizedWallet] || "").trim() : "";
+      return storedName;
+    } catch {
+      return "";
+    }
   }
 
   function primeViewButtons(page, view) {
