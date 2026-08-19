@@ -165,13 +165,36 @@ invariant(
   "Agent copy tooltips must not retain duplicate generic tooltip ownership.",
 );
 
+invariant(
+  !stylesBase.includes("#tableBody .copyPlayerIdButton[data-tooltip]::after"),
+  "Table player-ID copy buttons must not retain a CSS pseudo-tooltip owner.",
+);
+invariant(
+  !stylesBase.includes("#tableBody .playerIdText[data-tooltip]::after"),
+  "Table player-ID text must not retain a CSS pseudo-tooltip owner.",
+);
+invariant(
+  !stylesBase.includes(".copyPlayerIdButton[data-tooltip]::after"),
+  "Player-ID copy buttons must not regain generic CSS pseudo-tooltip ownership.",
+);
+invariant(
+  !stylesBase.includes(".playerIdText[data-tooltip]::after"),
+  "Player-ID text must not regain generic CSS pseudo-tooltip ownership.",
+);
+invariant(
+  !stylesBase.includes("#tableBody .copyPlayerIdButton {\n  width: 100%;\n  height: 38px;"),
+  "Table player-ID generators must not retain the former forced 38px height.",
+);
+
 for (const required of [
   "function normalizeTooltipHeightOwnership(source)",
   "Number(window.__mflTooltipHeight)",
   "iconRect.top - tooltipRect.height - tooltipHeight",
   "iconRect.bottom + tooltipHeight",
+  "function removeTableIdLocalTooltipOwnership(source)",
+  "Table player-ID tooltips must be owned only by the global Tooltip Height runtime.",
 ]) {
-  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height spacing through ${required}.`);
+  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height ownership through ${required}.`);
 }
 for (const reroute of [
   'button.dataset.noteTooltip = "Click to copy";',
@@ -185,6 +208,10 @@ for (const reroute of [
 invariant(
   coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
   "The core build must reject legacy specialized-tooltip spacing after generation.",
+);
+invariant(
+  coreBuild.includes('if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);"))'),
+  "The core build must reject local table-ID tooltip listeners after generation.",
 );
 invariant(
   coreBuild.includes("Generated application core does not position manual tooltips from the real generator rectangle."),
