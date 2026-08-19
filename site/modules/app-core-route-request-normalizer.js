@@ -224,10 +224,12 @@ export function normalizeRouteRequestCancellation(source) {
     "saved Evaluation player hydration",
   );
 
-  nextSource = replaceRequired(
+  nextSource = replaceInSection(
     nextSource,
-    "recoveryPromise = Promise.resolve(requestIncrementalRoute(route, 1, { force: true }))\n      .then(async () => {",
-    "recoveryPromise = Promise.resolve(requestIncrementalRoute(route, 1, { force: true }))\n      .then(async (payload) => {\n        if (!payload) return false;",
+    "  function recoverSelectedPlayer(playerId) {",
+    "  function sync() {",
+    "      .then(async () => {",
+    "      .then(async (payload) => {\n        if (!payload) return false;",
     "Evaluation route recovery",
   );
 
