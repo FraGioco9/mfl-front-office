@@ -10,9 +10,9 @@
     "current-season": "current",
     "all-time": "all",
   });
+  const TOOLTIP_HEIGHT = 6;
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
-    gap: 6,
   });
   const SPECIALIZED_TOOLTIP_SELECTOR = [
     ".evaluationMetric.evaluationDiscountRate",
@@ -21,12 +21,13 @@
   ].join(", ");
 
   window.__mflStaticUiRuntime?.destroy?.();
-  window.__mflTooltipSettings = TOOLTIP_SETTINGS;
+  window.__mflTooltipHeight = TOOLTIP_HEIGHT;
 
   let destroyed = false;
   let tooltipPortal = null;
   let activeTooltipTarget = null;
   let activeTooltipText = "";
+  let activeTooltipAttribute = "";
   let activeTooltipHovered = false;
   let activeTooltipFocused = false;
   let tooltipShowFrame = 0;
@@ -241,9 +242,17 @@
 
   function tooltipTargetFrom(target) {
     if (!(target instanceof Element)) return null;
-    const tooltipTarget = target.closest("[data-tooltip]");
+    const tooltipTarget = target.closest("[data-tooltip], [title]");
     if (!(tooltipTarget instanceof HTMLElement) || tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;
     return tooltipTarget;
+  }
+
+  function tooltipSource(target) {
+    if (!(target instanceof HTMLElement)) return null;
+    const dataText = String(target.getAttribute("data-tooltip") || "").trim();
+    if (dataText) return { attribute: "data-tooltip", text: dataText };
+    const titleText = String(target.getAttribute("title") || "").trim();
+    return titleText ? { attribute: "title", text: titleText } : null;
   }
 
   function ensureTooltipPortal() {
@@ -269,9 +278,8 @@
     if (!(tooltipPortal instanceof HTMLElement) || !(activeTooltipTarget instanceof HTMLElement)) return;
     const anchor = activeTooltipTarget.getBoundingClientRect();
     const tooltip = tooltipPortal.getBoundingClientRect();
-    const gap = TOOLTIP_SETTINGS.gap;
-    let top = anchor.top - tooltip.height - gap;
-    if (top < 8) top = anchor.bottom + gap;
+    let top = anchor.top - tooltip.height - TOOLTIP_HEIGHT;
+    if (top < 8) top = anchor.bottom + TOOLTIP_HEIGHT;
     const left = Math.min(
       window.innerWidth - tooltip.width - 8,
       Math.max(8, anchor.left + (anchor.width - tooltip.width) / 2),
@@ -281,8 +289,8 @@
   }
 
   function restoreActiveTooltipAttribute() {
-    if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipText) return;
-    activeTooltipTarget.dataset.tooltip = activeTooltipText;
+    if (!(activeTooltipTarget instanceof HTMLElement) || !activeTooltipText || !activeTooltipAttribute) return;
+    activeTooltipTarget.setAttribute(activeTooltipAttribute, activeTooltipText);
     activeTooltipTarget.removeAttribute("aria-describedby");
   }
 
@@ -298,6 +306,7 @@
     if (restore) restoreActiveTooltipAttribute();
     activeTooltipTarget = null;
     activeTooltipText = "";
+    activeTooltipAttribute = "";
     activeTooltipHovered = false;
     activeTooltipFocused = false;
     if (!(tooltipPortal instanceof HTMLElement)) return;
@@ -317,16 +326,17 @@
     if (!(target instanceof HTMLElement)) return;
     if (target !== activeTooltipTarget) {
       hideGlobalTooltip({ immediate: true });
-      const text = String(target.dataset.tooltip || "").trim();
-      if (!text) return;
+      const source = tooltipSource(target);
+      if (!source) return;
       const portal = ensureTooltipPortal();
       if (!portal) return;
       cancelTooltipMotion();
       activeTooltipTarget = target;
-      activeTooltipText = text;
-      target.removeAttribute("data-tooltip");
+      activeTooltipText = source.text;
+      activeTooltipAttribute = source.attribute;
+      target.removeAttribute(source.attribute);
       target.setAttribute("aria-describedby", portal.id);
-      portal.textContent = text;
+      portal.textContent = source.text;
       portal.hidden = false;
       portal.classList.remove("tooltipHiding");
       positionTooltipPortal();
