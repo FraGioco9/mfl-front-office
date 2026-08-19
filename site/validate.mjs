@@ -64,6 +64,8 @@ excludes(bootstrap, "loadRuntime(\"/filter-controls-runtime.js\")", "bootstrap.j
 includes(bootstrap, "loadRuntime(\"/bootstrap-core.js\")", "bootstrap.js must load bootstrap-core before app startup.");
 excludes(bootstrap, "club-squad-route-runtime", "bootstrap.js must not restore Club pre-render repair owners.");
 excludes(bootstrap, "primeStatic", "bootstrap.js must not own a second page renderer.");
+excludes(bootstrap, "preloadAsset", "bootstrap.js must not create app-entry preload hints after document parsing.");
+excludes(bootstrap, "data-mfl-bootstrap-preload", "bootstrap.js must not retain dynamic preload bookkeeping.");
 
 includes(bootstrapCore, "function createInteractionBusyController()", "bootstrap-core must own global startup interaction blocking.");
 includes(bootstrapCore, "function bindInteractionBlockers()", "Busy interaction listeners must be attached only while busy.");
@@ -210,6 +212,11 @@ matches(indexHtml, /<meta[^>]+name=["']viewport["'][^>]+viewport-fit=cover/i, "M
 includes(indexHtml, "data-mfl-responsive-layout=\"true\"", "responsive.css must be render-blocking.");
 includes(indexHtml, "<colgroup id=\"tableColGroup\"></colgroup>", "Shared player table shell must stay permanent in index.html.");
 includes(indexHtml, "id=\"evaluationDiscountRate\"", "Evaluation must keep a permanent discount-rate placeholder.");
+const appEntryModulePreload = '<link rel="modulepreload" href="/modules/app-entry.js">';
+const appEntryPreloadIndex = indexHtml.indexOf(appEntryModulePreload);
+const headEndIndex = indexHtml.indexOf("</head>");
+invariant(appEntryPreloadIndex >= 0 && headEndIndex > appEntryPreloadIndex, "app-entry.js must be parser-discovered through one static modulepreload in the document head.");
+invariant(indexHtml.indexOf(appEntryModulePreload, appEntryPreloadIndex + 1) === -1, "app-entry.js must have only one modulepreload owner.");
 const staticWidthIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
 const bootstrapIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
 invariant(staticWidthIndex >= 0 && bootstrapIndex > staticWidthIndex, "Uniform Width must load exactly once from static HTML before bootstrap.");
