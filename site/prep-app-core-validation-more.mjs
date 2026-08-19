@@ -73,3 +73,45 @@ const exactFilterCount = '(filterHtml.match(/<button class="mflStatsFilterButton
 if (!mflStatsFirstPaint.includes(broadFilterCount)) throw new Error("Broad MFL Stats filter count assertion was not found.");
 mflStatsFirstPaint = mflStatsFirstPaint.replace(broadFilterCount, exactFilterCount);
 await writeFile(mflStatsFirstPaintPath, mflStatsFirstPaint, "utf8");
+
+const mflStatsDataScopePath = new URL("./validate-mfl-stats-data-scope.mjs", import.meta.url);
+let mflStatsDataScope = await readFile(mflStatsDataScopePath, "utf8");
+const oldSources = 'const [dataPage, dataQuery, styles, stylesBase, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([';
+const newSources = 'const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([';
+if (!mflStatsDataScope.includes(oldSources)) throw new Error("MFL Stats data-scope source list was not found.");
+mflStatsDataScope = mflStatsDataScope.replace(oldSources, newSources);
+const stylesBaseRead = '  readFile(new URL("./styles-base.css", import.meta.url), "utf8"),\n';
+if (!mflStatsDataScope.includes(stylesBaseRead)) throw new Error("MFL Stats data-scope styles-base read was not found.");
+mflStatsDataScope = mflStatsDataScope.replace(stylesBaseRead, `${stylesBaseRead}  readFile(new URL("./controls.css", import.meta.url), "utf8"),\n`);
+
+const oldCursorChecks = [
+  'const sharedControlSelector = ":is(.navButton, .viewButton:not([hidden]), .mflStatsFilterButton, .mflStatsDistributionModeButton)";',
+  "invariant(",
+  '  styles.includes(`${sharedControlSelector}:not(.active) {\\n  cursor: pointer;\\n}`),',
+  '  "Every non-active page, view, and Stats filter button must use the pointer cursor.",',
+  ");",
+  "invariant(",
+  '  styles.includes(`${sharedControlSelector}.active {\\n  cursor: default;\\n}`),',
+  '  "Every active page, view, and Stats filter button must use the default cursor.",',
+  ");",
+  "invariant(",
+  '  styles.includes(`${sharedControlSelector}:not(.active):hover:not(:disabled) {`),',
+  '  "Only non-active page, view, and Stats filter buttons may receive the shared hover highlight.",',
+  ");",
+  "invariant(",
+  '  styles.includes(`${sharedControlSelector}.active:hover {`),',
+  '  "Active page, view, and Stats filter buttons must retain their active paint while hovered.",',
+  ");",
+].join("\n");
+const newCursorChecks = [
+  'for (const selector of [".navButton", ".viewButton:not([hidden])", ".mflStatsFilterButton", ".mflStatsDistributionModeButton"]) {',
+  '  invariant(controls.includes(selector), `controls.css must include ${selector} in the shared control owner.`);',
+  "}",
+  'invariant(controls.includes("):not(.active) {\\n  cursor: pointer;\\n}"), "Every non-active shared page/view/Stats control must use the pointer cursor.");',
+  'invariant(controls.includes(").active {\\n  cursor: default;\\n}"), "Every active shared page/view/Stats control must use the default cursor.");',
+  'invariant(controls.includes("):not(.active):hover:not(:disabled) {"), "Only non-active shared controls may receive the hover highlight.");',
+  'invariant(controls.includes(").active:hover {"), "Active shared controls must retain active paint while hovered.");',
+].join("\n");
+if (!mflStatsDataScope.includes(oldCursorChecks)) throw new Error("Legacy shared-control cursor validation block was not found.");
+mflStatsDataScope = mflStatsDataScope.replace(oldCursorChecks, newCursorChecks);
+await writeFile(mflStatsDataScopePath, mflStatsDataScope, "utf8");
