@@ -1,13 +1,11 @@
 import { access, readFile } from "node:fs/promises";
 
-import { normalizeApplicationCore } from "./modules/app-core-normalizer.js";
-
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, coreSource] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -15,9 +13,9 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./modules/app-entry.js"),
   read("./static-ui-runtime.js"),
   read("./evaluation-discount-rate-ui-runtime.js"),
-  read("./modules/app-core.js"),
+  read("./desktop-table-style-runtime.js"),
+  read("./build-app-core.mjs"),
 ]);
-const normalizedCore = normalizeApplicationCore(coreSource);
 
 invariant(
   styles.includes('@import url("/controls.css");'),
@@ -115,29 +113,57 @@ for (const removedRuntime of [
 }
 
 invariant(
-  staticUi.includes("gap: 6,"),
-  "The global tooltip contract must keep a 6px generator gap.",
+  staticUi.includes("const TOOLTIP_HEIGHT = 6;"),
+  "Tooltip Height must remain the single 6px global tooltip distance.",
 );
 invariant(
-  staticUi.includes("window.__mflTooltipSettings = TOOLTIP_SETTINGS;"),
-  "The canonical tooltip settings must remain exposed to specialized tooltip owners.",
+  staticUi.includes("window.__mflTooltipHeight = TOOLTIP_HEIGHT;"),
+  "Tooltip Height must be exposed to every specialized tooltip owner.",
 );
 invariant(
-  discountTooltipUi.includes("Number(window.__mflTooltipSettings?.gap) || 6"),
-  "The Evaluation discount tooltip must consume the global tooltip gap.",
-);
-const normalizedTooltipGapUses = normalizedCore.split("Number(window.__mflTooltipSettings?.gap) || 6").length - 1;
-invariant(
-  normalizedTooltipGapUses >= 2,
-  "Evaluation action and player-note tooltips must consume the global tooltip gap in generated core.",
+  staticUi.includes('target.closest("[data-tooltip], [title]")'),
+  "The global tooltip owner must include both application and native title tooltips.",
 );
 invariant(
-  !normalizedCore.includes("rect.top - tooltipRect.height - 8"),
-  "The generated Evaluation action tooltip must not retain its old 8px local gap.",
+  staticUi.includes("anchor.top - tooltip.height - TOOLTIP_HEIGHT"),
+  "Generic tooltips must consume Tooltip Height from the real generator rectangle.",
 );
 invariant(
-  !normalizedCore.includes("anchorTop - tooltipRect.height - 10"),
-  "The generated player-note tooltip must not retain its old 10px local gap.",
+  staticUi.includes("anchor.bottom + TOOLTIP_HEIGHT"),
+  "Generic tooltip viewport fallback must preserve Tooltip Height below its generator.",
+);
+invariant(
+  discountTooltipUi.includes("Number(window.__mflTooltipHeight)"),
+  "The Evaluation discount tooltip must consume Tooltip Height.",
+);
+invariant(
+  !discountTooltipUi.includes("__mflTooltipSettings?.gap"),
+  "The Evaluation discount tooltip must not retain its former local gap contract.",
+);
+invariant(
+  desktopTableUi.includes('title.dataset.noteTooltip = "Click to copy wallet address";'),
+  "Agent copy tooltips must use the specialized tooltip owner without data-tooltip duplication.",
+);
+invariant(
+  !desktopTableUi.includes('title.dataset.tooltip = "Click to copy wallet address";'),
+  "Agent copy tooltips must not retain duplicate generic tooltip ownership.",
+);
+
+for (const required of [
+  "function normalizeTooltipHeightOwnership(source)",
+  "Number(window.__mflTooltipHeight)",
+  "iconRect.top - tooltipRect.height - tooltipHeight",
+  "iconRect.bottom + tooltipHeight",
+  'button.dataset.noteTooltip = "Click to copy";',
+  "markerElement.dataset.noteTooltip = marker.label;",
+  'data-note-tooltip=\"Click to copy\" aria-label=\"Click to copy player ID\"',
+  "link.dataset.noteTooltip = tooltip;",
+]) {
+  invariant(coreBuild.includes(required), `Generated application-core tooltips are missing Tooltip Height ownership through ${required}.`);
+}
+invariant(
+  coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
+  "The core build must reject legacy tooltip spacing ownership after generation.",
 );
 
 for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtime.js"]) {
@@ -150,4 +176,4 @@ for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtim
   invariant(!exists, `${path} must remain deleted; its behavior is canonical static CSS or no-op.`);
 }
 
-console.log("Canonical shared-control, footer, tooltip, and static table chrome ownership validation passed.");
+console.log("Canonical shared-control, footer, Tooltip Height, and static table chrome ownership validation passed.");
