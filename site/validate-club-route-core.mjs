@@ -37,6 +37,16 @@ excludes(sharedCore, "async function openClubPage(clubId", "Club route hydration
 excludes(sharedCore, "function applyClubPresentation()", "Club-only presentation work must not remain in the shared core.");
 includes(sharedCore, "renderSearchResultsNowWithUniversalClubs", "Club search must remain available before the Club chunk is loaded.");
 includes(sharedCore, 'void window.mflOpenClubPage(clubId, "attributes")', "Shared Club search must navigate through the lazy public gate.");
+includes(
+  sharedCore,
+  'view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
+  "The canonical Squad URL must resolve to the internal Attributes data view.",
+);
+excludes(
+  sharedCore,
+  'view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
+  "Club data routing must not preserve Squad as a separate internal view.",
+);
 
 includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
 includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk must own per-view render caching.");
@@ -45,6 +55,8 @@ includes(clubCore, "function applyClubPresentation()", "The Club chunk must own 
 includes(clubCore, "if (!dataPayload) return;", "Obsolete Club payloads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "await withInteractionBusy(loadClubData);", "Club data loads must run through the Uniform Loading workflow.");
 includes(clubCore, "renderIncrementalLoadingState(CLUB_PAGE, dataRoute);", "Club data loads must render the canonical table loading state.");
+includes(clubCore, "return openClubPage(clubId, view, false);", "The private Club route owner must return the complete Club loading/render promise.");
+excludes(clubCore, "void openClubPage(clubId, view, false);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");

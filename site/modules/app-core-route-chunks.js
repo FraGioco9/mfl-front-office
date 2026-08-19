@@ -174,6 +174,15 @@ export function splitApplicationCoreRuntime(source) {
     throw new Error("Cannot split an empty application core.");
   }
 
+  const clubRouteView = '    view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,';
+  if (!core.includes(clubRouteView)) {
+    throw new Error("Could not normalize the Club incremental route view.");
+  }
+  core = core.replace(
+    clubRouteView,
+    '    view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
+  );
+
   const evaluationParts = [];
   const mflStatsParts = [];
 
@@ -269,6 +278,12 @@ export function splitApplicationCoreRuntime(source) {
     "Club route-local search wrapper",
   );
   club = clubSearch.core;
+
+  const detachedClubNavigation = "    void openClubPage(clubId, view, false);";
+  if (!club.includes(detachedClubNavigation)) {
+    throw new Error("Could not locate the detached Club route renderer.");
+  }
+  club = club.replace(detachedClubNavigation, "    return openClubPage(clubId, view, false);");
 
   const publicClubOwner = "  window.mflOpenClubPage = openClubImmediately;";
   if (!club.includes(publicClubOwner)) {
