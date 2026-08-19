@@ -52,4 +52,32 @@ const broadBootstrapOwnershipCheck = 'excludes(bootstrap, "primeStatic", "bootst
 const preciseBootstrapOwnershipCheck = 'excludes(bootstrap, "function setPage(", "bootstrap.js must not own a second page renderer.");';
 if (!validationSource.includes(broadBootstrapOwnershipCheck)) throw new Error("Broad bootstrap page-renderer validation was not found.");
 validationSource = validationSource.replace(broadBootstrapOwnershipCheck, preciseBootstrapOwnershipCheck);
+
+validationSource = validationSource.replace(
+  'includes(buildCore, "normalizeBuiltApplicationCore", "The core build must use the complete build-time normalizer.");',
+  'includes(buildCore, "normalizeBuiltApplicationCoreArtifacts", "The core build must split the canonical authored application core.");',
+);
+const legacyNormalizerValidation = [
+  'const normalizerSource = await readSite("modules/app-core-normalizer.js");',
+  'const tableEventNormalizerSource = await readSite("modules/app-core-table-events-normalizer.js");',
+  'const buildNormalizerSource = await readSite("modules/app-core-build-normalizer.js");',
+  'includes(normalizerSource, "export function normalizeApplicationCore(source)", "The base application core normalizer must expose its canonical transform.");',
+  'includes(tableEventNormalizerSource, "export function normalizeTableEventDelegation(source)", "Table event delegation must be a build-time core transform.");',
+  'includes(buildNormalizerSource, "normalizeTableEventDelegation(normalizeBaseApplicationCore(source))", "The build normalizer must apply table delegation after the base core transform.");',
+  'const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\\s*$/, "");',
+  'invariant(normalizedCore.length > 300_000, "Canonical core normalization produced an unexpectedly small runtime.");',
+  'invariant(normalizedCore !== coreSource.replace(/\\s*$/, ""), "The canonical normalizer must still apply the required source migrations.");',
+].join("\n");
+const canonicalSourceValidation = [
+  'const buildNormalizerSource = await readSite("modules/app-core-build-normalizer.js");',
+  'includes(coreSource, "// Canonical application core source. Build-time text normalization is retired.", "app-core.js must be the canonical authored runtime source.");',
+  'excludes(buildNormalizerSource, "normalizeBaseApplicationCore", "The build must not retain the legacy base source transform.");',
+  'excludes(buildNormalizerSource, "normalizeTableEventDelegation", "The build must not retain table event source rewriting.");',
+  'includes(buildNormalizerSource, "splitApplicationCoreRuntime(canonicalApplicationCoreSource(source))", "The build normalizer must begin by splitting canonical authored source.");',
+  'const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\\s*$/, "");',
+  'invariant(normalizedCore.length > 300_000, "Canonical shared core split produced an unexpectedly small runtime.");',
+  'invariant(normalizedCore !== coreSource.replace(/\\s*$/, ""), "The canonical build must split route-owned code from the shared runtime.");',
+].join("\n");
+if (!validationSource.includes(legacyNormalizerValidation)) throw new Error("Legacy build-normalizer validation block was not found.");
+validationSource = validationSource.replace(legacyNormalizerValidation, canonicalSourceValidation);
 await writeFile(validationPath, validationSource, "utf8");
