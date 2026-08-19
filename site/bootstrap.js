@@ -588,7 +588,7 @@
       <section class="playerHero" aria-hidden="true">
         <div>
           <button class="playerEyebrow playerIdText" style="visibility:hidden" type="button" disabled>ID #000000</button>
-          <h2 class="playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
+          <h2 class="tablePageTitle playerTitle"><span class="playerTitleName">&nbsp;</span></h2>
           <p>&nbsp;</p>
         </div>
         <div class="playerHeroActions" style="visibility:hidden">

@@ -20,7 +20,6 @@ function replaceCoreSourceIfPresent(source, beforeLines, afterLines, label) {
   const before = Array.isArray(beforeLines) ? beforeLines.join("\n") : String(beforeLines || "");
   const after = Array.isArray(afterLines) ? afterLines.join("\n") : String(afterLines || "");
   if (!before || !source.includes(before)) {
-    console.warn(`Core permission scope pattern not found: ${label}.`);
     return source;
   }
   return source.replace(before, after);
@@ -702,10 +701,10 @@ export function normalizeApplicationCore(source) {
     nextSource,
     ['  const top = Math.max(8, rect.top - tooltipRect.height - 8);'],
     [
-      '  const tooltipGap = Number(window.__mflTooltipSettings?.gap) || 6;',
-      '  const top = Math.max(8, rect.top - tooltipRect.height - tooltipGap);',
+      '  const tooltipHeight = Number(window.__mflTooltipHeight) || 6;',
+      '  const top = Math.max(8, rect.top - tooltipRect.height - tooltipHeight);',
     ],
-    "Evaluation load tooltip gap",
+    "Evaluation load tooltip height",
   );
   nextSource = replaceCoreSourceIfPresent(
     nextSource,
@@ -716,13 +715,13 @@ export function normalizeApplicationCore(source) {
       '  }',
     ],
     [
-      '  const tooltipGap = Number(window.__mflTooltipSettings?.gap) || 6;',
-      '  let top = anchorTop - tooltipRect.height - tooltipGap;',
+      '  const tooltipHeight = Number(window.__mflTooltipHeight) || 6;',
+      '  let top = anchorTop - tooltipRect.height - tooltipHeight;',
       '  if (top < margin) {',
-      '    top = anchorBottom + tooltipGap;',
+      '    top = anchorBottom + tooltipHeight;',
       '  }',
     ],
-    "Player note tooltip gap",
+    "Player note tooltip height",
   );
   nextSource = normalizeContextualAgentNavigation(nextSource);
   nextSource = normalizeWatchlistViewAuthority(nextSource);
