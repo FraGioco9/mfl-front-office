@@ -246,6 +246,10 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   min-width: 1.5em;
 }
 
+#tableBody td.col-age {
+  overflow: visible;
+}
+
 .retirementMarker > img {
   display: none;
 }
