@@ -115,15 +115,16 @@ if (generatedCore !== null) {
 
 const entry = await readSite("modules/app-entry.js");
 const routeCoreLoader = await readSite("route-core-loader-runtime.js");
-includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must prefer the build-time application core.");
-includes(entry, "const SOURCE_CORE_PATH = \"/modules/app-core.js\"", "app-entry.js must retain a source fallback for unprepared local environments.");
+includes(entry, "const PREBUILT_CORE_PATH = \"/modules/app-core-runtime.js\"", "app-entry.js must use the build-time application core.");
 includes(entry, "const PREBUILT_CORE_CACHE_QUERY = \"mfl_core\"", "The prebuilt core must use its dedicated cache-key query parameter.");
-includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading before critical runtime execution completes.");
-includes(entry, "await loadClassicScript(prebuiltPath);", "The production core must execute as an external classic script.");
-includes(entry, 'Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts")', "Unprepared local environments must retain the shared source fallback.");
-includes(routeCoreLoader, 'fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" })', "The shared source fallback must fetch the raw application core.");
-includes(routeCoreLoader, 'import(assetUrl("/modules/app-core-build-normalizer.js"))', "The shared source fallback must use the complete build-time normalizer.");
-includes(routeCoreLoader, "normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource)", "The shared source fallback must match the deployed build transform.");
+includes(entry, "preloadClassicScript(prebuiltApplicationCorePath());", "The versioned prebuilt core must start downloading while critical runtimes load.");
+includes(entry, "await loadClassicScript(prebuiltApplicationCorePath());", "The production core must execute as an external classic script.");
+excludes(entry, "SOURCE_CORE_PATH", "app-entry.js must not restore a raw source-core fallback.");
+excludes(entry, "__mflLoadFallbackApplicationCoreArtifacts", "app-entry.js must not restore browser-side core normalization fallback.");
+excludes(routeCoreLoader, "/modules/app-core.js", "Route-core loading must not fetch the raw application core.");
+excludes(routeCoreLoader, "app-core-build-normalizer.js", "Route-core loading must not import build-time normalizers in the browser.");
+excludes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Route-core loading must remain prebuilt-only.");
+excludes(entry, "initialPreCoreRuntimeScripts.forEach(preloadClassicScript)", "Initial runtime scripts must load directly instead of receiving same-tick preload links.");
 excludes(entry, "CORE_RUNTIME_CACHE_KEY", "The prebuilt core must not be copied into sessionStorage.");
 excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser HTTP caching instead of a duplicate string cache.");
 excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
@@ -141,9 +142,8 @@ for (const retiredRuntime of [
 }
 excludes(entry, "view-button-visibility-runtime", "app-entry.js must not restore deprecated view repair owners.");
 excludes(entry, "club-squad-route-runtime", "app-entry.js must not restore deprecated Club route repair owners.");
-const readyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:ready"');
-const deferredCompletionIndex = entry.indexOf("void Promise.all([deferredRuntimePromise, evaluationSearchRuntimePromise])");
-invariant(readyIndex >= 0 && deferredCompletionIndex > readyIndex, "Route-irrelevant runtimes must finish after active-route readiness.");
+excludes(entry, "deferredRuntimePromise", "app-entry.js must not retain legacy deferred runtime bookkeeping.");
+excludes(entry, "evaluationSearchRuntimePromise", "app-entry.js must not retain legacy Evaluation runtime bookkeeping.");
 
 const tableLoading = await readSite("table-loading-runtime.js");
 includes(tableLoading, "buildHeader.__mflSingleRenderOwner", "Table loading must make app-core buildHeader the single persistent header owner.");
