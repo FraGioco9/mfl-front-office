@@ -290,15 +290,6 @@ function prebuiltApplicationCorePath() {
 
 preloadClassicScript(prebuiltApplicationCorePath());
 
-function primeEvaluationDiscountRatePlaceholder() {
-  if (!evaluationStartup) return;
-  const discountRate = document.getElementById("evaluationDiscountRate");
-  if (!(discountRate instanceof HTMLElement)) return;
-  if (!String(discountRate.textContent || "").trim()) discountRate.textContent = "-";
-}
-
-primeEvaluationDiscountRatePlaceholder();
-
 async function loadApplicationCore() {
   await loadClassicScript(prebuiltApplicationCorePath());
   assertApplicationCoreInitialized("Prebuilt");
