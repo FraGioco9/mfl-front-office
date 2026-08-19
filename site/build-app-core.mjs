@@ -165,8 +165,14 @@ if (leakedHourglassArtifact) {
 if (!playerRuntime.includes('ageMarker.icon === "calendar-clock" ? "" : ageMarker.emoji')) {
   throw new Error("Player runtime does not use the calendar-clock retirement marker contract.");
 }
-if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);")) {
-  throw new Error("Table player-ID tooltips must be owned only by the global Tooltip Height runtime.");
+for (const localTableIdTooltipListener of [
+  'button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
+  'button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
+  'button.addEventListener("blur", hidePlayerNoteTooltip);',
+]) {
+  if (playerRuntime.includes(localTableIdTooltipListener)) {
+    throw new Error("Table player-ID tooltips must be owned only by the global Tooltip Height runtime.");
+  }
 }
 
 for (const [path, artifact] of generatedArtifacts) {
