@@ -43,20 +43,25 @@ includes(
   'assertApplicationCoreInitialized("Prebuilt");',
   "The prebuilt core must prove initialization after its script load event.",
 );
-includes(
+excludes(
   entry,
   'assertApplicationCoreInitialized("Fallback");',
-  "The source fallback must prove initialization after execution.",
+  "Browser startup must not retain a raw-source fallback initialization path.",
 );
 excludes(
   entry,
-  "await loadClassicScript(prebuiltPath);\n    markApplicationCoreLoaded();",
+  "executeApplicationCore(",
+  "Browser startup must not execute application-core source text.",
+);
+excludes(
+  entry,
+  "__mflLoadFallbackApplicationCoreArtifacts",
+  "Browser startup must not request fallback application-core artifacts.",
+);
+excludes(
+  entry,
+  "await loadClassicScript(prebuiltApplicationCorePath());\n  markApplicationCoreLoaded();",
   "A classic-script load event must never manufacture successful core initialization.",
-);
-excludes(
-  entry,
-  "executeApplicationCore(SOURCE_CORE_PATH, source);\n  markApplicationCoreLoaded();",
-  "Fallback execution must never manufacture successful core initialization.",
 );
 excludes(
   entry,
@@ -98,4 +103,4 @@ invariant(
   "Progression permission must settle before the initial route can run its authorization redirect.",
 );
 
-console.log("Application-core startup handshake validation passed.");
+console.log("Prebuilt application-core startup handshake validation passed.");
