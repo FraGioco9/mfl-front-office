@@ -233,7 +233,12 @@
     const parts = routeParts(urlLike);
     if (page === "agents") {
       const wallet = String(parts[1] || "").trim();
-      try { return wallet ? decodeURIComponent(wallet) : "Agents"; } catch { return wallet || "Agents"; }
+      try {
+        const decodedWallet = wallet ? decodeURIComponent(wallet) : "";
+        return decodedWallet ? `${decodedWallet} - ${decodedWallet.toLowerCase()}` : "Agents";
+      } catch {
+        return wallet ? `${wallet} - ${wallet.toLowerCase()}` : "Agents";
+      }
     }
     if (page === "club") return "Club";
     return "Progression";
