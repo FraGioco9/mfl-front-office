@@ -36,6 +36,12 @@ function removeResidualLegacyWidthCall(source) {
 function normalizeRetirementCalendarIcon(source) {
   let normalized = String(source || "").replace(/\r\n?/g, "\n");
 
+  const retiredMarker = '      emoji: "\\u{1F3C1}",';
+  if (!normalized.includes(retiredMarker)) {
+    throw new Error("Could not locate the legacy retired-player flag marker in app-core source.");
+  }
+  normalized = normalized.replace(retiredMarker, '      icon: "calendar-x-2",');
+
   const hourglassMarker = '      emoji: "\\u23F3",';
   if (!normalized.includes(hourglassMarker)) {
     throw new Error("Could not locate the legacy retirement hourglass marker in app-core source.");
@@ -55,7 +61,15 @@ function normalizeRetirementCalendarIcon(source) {
   normalized = normalized.replace(
     markerAssignment,
     [
-      '  if (marker.icon !== "calendar-clock") {',
+      "  if (marker.icon) {",
+      '    const markerIcon = document.createElement("img");',
+      "    markerIcon.src = `/retirement-${marker.icon}.svg`;",
+      "    markerIcon.width = 16;",
+      "    markerIcon.height = 16;",
+      '    markerIcon.alt = "";',
+      '    markerIcon.setAttribute("aria-hidden", "true");',
+      "    markerElement.appendChild(markerIcon);",
+      "  } else {",
       "    markerElement.textContent = marker.emoji;",
       "  }",
     ].join("\n"),
@@ -73,7 +87,7 @@ function normalizeRetirementCalendarIcon(source) {
     playerAgeMarker,
     [
       "  const ageMarkerHtml = ageMarker",
-      '    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.icon === "calendar-clock" ? "" : ageMarker.emoji}</span>`',
+      '    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.icon ? `<img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true">` : ageMarker.emoji}</span>`',
       '    : "";',
     ].join("\n"),
   );
@@ -155,15 +169,24 @@ const generatedArtifacts = [
   [watchlistRuntimePath, watchlistRuntime, "route-owned"],
 ];
 
-const legacyHourglassTokens = ["⏳", "\\u23F3", "\\u23f3"];
-const leakedHourglassArtifact = generatedArtifacts.find(([, artifact]) =>
-  legacyHourglassTokens.some((token) => artifact.includes(token)),
+const legacyRetirementTokens = ["🏁", "⏳", "\\u{1F3C1}", "\\u23F3", "\\u23f3"];
+const leakedLegacyRetirementArtifact = generatedArtifacts.find(([, artifact]) =>
+  legacyRetirementTokens.some((token) => artifact.includes(token)),
 );
-if (leakedHourglassArtifact) {
-  throw new Error(`Legacy retirement hourglass leaked into generated runtime: ${leakedHourglassArtifact[0]}.`);
+if (leakedLegacyRetirementArtifact) {
+  throw new Error(`Legacy retirement marker leaked into generated runtime: ${leakedLegacyRetirementArtifact[0]}.`);
 }
-if (!playerRuntime.includes('ageMarker.icon === "calendar-clock" ? "" : ageMarker.emoji')) {
-  throw new Error("Player runtime does not use the calendar-clock retirement marker contract.");
+if (!generatedArtifacts.some(([, artifact]) => artifact.includes('icon: "calendar-x-2"'))) {
+  throw new Error("Generated application core does not use the calendar-x-2 icon for retired players.");
+}
+if (!generatedArtifacts.some(([, artifact]) => artifact.includes('icon: "calendar-clock"'))) {
+  throw new Error("Generated application core does not use the calendar-clock icon for retiring players.");
+}
+if (!generatedArtifacts.some(([, artifact]) => artifact.includes("`/retirement-${marker.icon}.svg`"))) {
+  throw new Error("Generated application core does not render retirement marker SVG assets.");
+}
+if (!playerRuntime.includes('ageMarker.icon ? `<img src="/retirement-${escapeHtml(ageMarker.icon)}.svg"')) {
+  throw new Error("Player runtime does not render retirement SVG markers.");
 }
 
 for (const [path, artifact] of generatedArtifacts) {
