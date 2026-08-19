@@ -466,7 +466,6 @@ async function start() {
   }
 
   runPostStartupSync("Evaluation layout", () => runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.());
-  runPostStartupSync("Database Stats state", () => runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.());
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
