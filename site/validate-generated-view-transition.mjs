@@ -195,13 +195,13 @@ invariant(
 
 const clubOwner = sourceContaining("runPageTransition(CLUB_PAGE, updateHistory", "Club transition owner");
 const clubPageTransition = clubOwner.text.indexOf("runPageTransition(CLUB_PAGE, updateHistory");
-const clubPageLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubPageTransition);
+const clubPageLoading = clubOwner.text.indexOf("window.mflLoadIncrementalRoutePage(CLUB_PAGE", clubPageTransition);
 const clubViewTransition = clubOwner.text.indexOf("runViewTransition(CLUB_PAGE, nextView");
-const clubViewLoading = clubOwner.text.indexOf("setClubSwitching(true);", clubViewTransition);
+const clubViewLoading = clubOwner.text.indexOf('window.mflLoadIncrementalRoutePage("club"', clubViewTransition);
 const clubActiveViewNoOp = clubOwner.text.indexOf("if (nextView === state.view) return;");
 invariant(
   clubPageTransition >= 0 && clubPageLoading > clubPageTransition,
-  "Generated Club page entry must use the global page transition before Club loading starts.",
+  "Generated Club page entry must use the global page transition before canonical Club loading starts.",
 );
 invariant(
   clubActiveViewNoOp >= 0 && clubViewTransition > clubActiveViewNoOp,
@@ -209,11 +209,15 @@ invariant(
 );
 invariant(
   clubViewTransition >= 0 && clubViewLoading > clubViewTransition,
-  "Generated Club view switching must use the global view transition before Club loading starts.",
+  "Generated Club view switching must use the global view transition before canonical Club loading starts.",
 );
 invariant(
   !clubOwner.text.includes("commitViewTransition(CLUB_PAGE"),
   "Club must not retain a private direct view-transition commit.",
+);
+invariant(
+  !clubOwner.text.includes("setClubSwitching") && !clubOwner.text.includes("clubViewSwitching"),
+  "Club must not retain a private loading lifecycle outside Uniform Loading.",
 );
 
 const clubGateStart = routeCoreLoader.indexOf("const gated = async function mflOpenClubPageWithRouteCore");
