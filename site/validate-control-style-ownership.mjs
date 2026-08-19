@@ -126,7 +126,7 @@ invariant(
 );
 invariant(
   staticUi.includes('target.getAttribute("data-note-tooltip")'),
-  "The global tooltip source reader must recognize specialized note-tooltip attributes.",
+  "The global tooltip source reader must recognize note-tooltip attributes.",
 );
 invariant(
   staticUi.includes("anchor.top - tooltip.height - TOOLTIP_HEIGHT"),
@@ -158,7 +158,7 @@ invariant(
 );
 invariant(
   desktopTableUi.includes('title.dataset.noteTooltip = "Click to copy wallet address";'),
-  "Agent copy tooltips must use the specialized tooltip attribute without data-tooltip duplication.",
+  "Agent copy tooltips must use an attribute recognized by the global tooltip owner.",
 );
 invariant(
   !desktopTableUi.includes('title.dataset.tooltip = "Click to copy wallet address";'),
@@ -170,26 +170,25 @@ for (const required of [
   "Number(window.__mflTooltipHeight)",
   "iconRect.top - tooltipRect.height - tooltipHeight",
   "iconRect.bottom + tooltipHeight",
+]) {
+  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height spacing through ${required}.`);
+}
+for (const reroute of [
   'button.dataset.noteTooltip = "Click to copy";',
-  'button.addEventListener("focus", () => showPlayerNoteTooltip(button));',
   "markerElement.dataset.noteTooltip = marker.label;",
   'data-note-tooltip=\"Click to copy\" aria-label=\"Click to copy player ID\"',
   "if (playerAgentLink.dataset.noteTooltip) {",
   "link.dataset.noteTooltip = tooltip;",
 ]) {
-  invariant(coreBuild.includes(required), `Generated application-core tooltips are missing Tooltip Height ownership through ${required}.`);
+  invariant(!coreBuild.includes(reroute), `The core build must not reroute tooltip ownership through ${reroute}.`);
 }
 invariant(
-  coreBuild.includes("legacyManualTooltipTokens"),
-  "The core build must reject duplicate manual tooltip attributes after generation.",
-);
-invariant(
   coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
-  "The core build must reject legacy tooltip spacing ownership after generation.",
+  "The core build must reject legacy specialized-tooltip spacing after generation.",
 );
 invariant(
   coreBuild.includes("Generated application core does not position manual tooltips from the real generator rectangle."),
-  "The build must verify that the real generator rectangle owns manual tooltip positioning.",
+  "The build must verify that specialized manual tooltips use their real generator rectangle.",
 );
 
 for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtime.js"]) {
