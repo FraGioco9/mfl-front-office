@@ -96,7 +96,7 @@ const state = {
 };
 
 const flagColumn = "nationality_flag";
-const baseColumns = ["player_id", flagColumn, "name", "nationality", "age", "positions", "player_seasons"];
+const baseColumns = ["player_id", flagColumn, "name", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
 const contractColumns = ["overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division"];
 const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
@@ -242,7 +242,6 @@ const tableColumnClasses = {
   player_id: "col-id",
   nationality_flag: "col-flag",
   name: "col-name",
-  nationality: "col-nationality",
   age: "col-age",
   positions: "col-positions",
   player_seasons: "col-seasons",
@@ -303,7 +302,6 @@ const columnLabels = {
   wallet_name: "Agent",
   owned_since: "Joined Agency",
   name: "Name",
-  nationality: "Nationality",
   age: "Age",
   positions: "Positions",
   player_seasons: "Seasons",
@@ -7258,9 +7256,10 @@ function countryCodeForNationality(nationality) {
 
 function countryFlagHtml(nationality) {
   const code = countryCodeForNationality(nationality);
+  const label = escapeHtml(String(nationality || "Unknown nationality"));
 
   if (!code) {
-    return '<span class="flagText" aria-hidden="true">-</span>';
+    return `<span class="flagText" data-tooltip="${label}" aria-label="${label}">-</span>`;
   }
 
   const codepoints = code.includes("-")
@@ -7270,7 +7269,7 @@ function countryFlagHtml(nationality) {
       .split("")
       .map((character) => (127397 + character.charCodeAt(0)).toString(16))
       .join("-");
-  return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="">`;
+  return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="" data-tooltip="${label}" aria-label="${label}">`;
 }
 
 function rarityColorForOverall(overall) {

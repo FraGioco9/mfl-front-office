@@ -37,7 +37,6 @@ const playerVariables = Object.freeze({
   "col-id": "--mfl-table-col-id",
   "col-flag": "--mfl-table-col-flag",
   "col-name": "--mfl-table-col-name",
-  "col-nationality": "--mfl-table-col-nationality",
   "col-age": "--mfl-table-col-age",
   "col-positions": "--mfl-table-col-positions",
   "col-seasons": "--mfl-table-col-seasons",
@@ -78,6 +77,23 @@ Object.entries(playerVariables).forEach(([className, variableName]) => {
     `Uniform Width must be consumed only by the player colgroup for ${className}.`,
   );
 });
+
+function totalPlayerWidth(columnClasses) {
+  return columnClasses.reduce((total, className) => total + percentageVariable(playerVariables[className]), 0);
+}
+
+const attributeWidth = totalPlayerWidth([
+  "col-select", "col-id", "col-flag", "col-name", "col-age", "col-positions", "col-seasons",
+  "col-overall", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat", "col-stat",
+  "col-agent", "col-link",
+]);
+const contractsWidth = totalPlayerWidth([
+  "col-select", "col-id", "col-flag", "col-name", "col-age", "col-positions", "col-seasons",
+  "col-overall", "col-contract-revenue", "col-contract-club", "col-contract-division", "col-agent", "col-link",
+]);
+invariant(Math.abs(attributeWidth - 100) < 0.001, "Player attribute table columns must total 100%.");
+invariant(Math.abs(contractsWidth - 100) < 0.001, "Player contract table columns must total 100%.");
+
 invariant(
   !/#progressionPage \.playerTableScroller[^\n{]*(?:th|td)[^{]*\{[^}]*\bwidth\s*:/s.test(styles),
   "Player headers and data cells must never own column widths.",
@@ -99,7 +115,7 @@ invariant(
   "Loading rows must inherit the same global row height as loaded rows.",
 );
 
-const legacyBaseColumnSelector = /\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b[^,{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s;
+const legacyBaseColumnSelector = /\.col-(?:select|id|flag|name|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b[^,{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s;
 invariant(
   !legacyBaseColumnSelector.test(stylesBase),
   "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
@@ -249,7 +265,7 @@ invariant(
 );
 
 invariant(
-  !/\.col-(?:select|id|flag|name|nationality|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive),
+  !/\.col-(?:select|id|flag|name|age|positions|seasons|stat|overall|agent|contract-revenue|contract-club|contract-division|link)[^{]*\{[^}]*width\s*:/s.test(responsive),
   "Responsive CSS must not override Uniform Width column percentages.",
 );
 invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed table width.");
