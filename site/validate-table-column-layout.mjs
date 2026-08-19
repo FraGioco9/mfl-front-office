@@ -273,6 +273,11 @@ invariant(
   !responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive),
   "Responsive styling must not assign a conflicting height to canonical loading rows.",
 );
+invariant(
+  responsive.includes("html #tableBody > .mflTableLoadingRow > td {")
+  && responsive.includes("height: var(--mfl-table-row-height);"),
+  "First-paint loading rows must use the canonical row-height variable.",
+);
 
 invariant(
   appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"),
