@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, tableChunk] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -15,6 +15,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./desktop-table-style-runtime.js"),
   read("./build-app-core.mjs"),
+  read("./modules/app-core-table-chunk.js"),
 ]);
 
 invariant(
@@ -187,14 +188,30 @@ invariant(
 );
 
 for (const required of [
+  "function removeTableIdLocalTooltipOwner(source)",
+  'button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
+  'button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
+  'button.addEventListener("blur", hidePlayerNoteTooltip);',
+  "Table player-ID tooltip ownership leaked outside the global Tooltip Height runtime.",
+]) {
+  invariant(tableChunk.includes(required), `The Table core owner is missing player-ID tooltip cleanup through ${required}.`);
+}
+invariant(
+  !coreBuild.includes("function removeTableIdLocalTooltipOwnership(source)"),
+  "The application-core builder must not own Table player-ID tooltip cleanup.",
+);
+invariant(
+  coreBuild.includes('if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);"))'),
+  "The core build must reject local table-ID tooltip listeners after generation.",
+);
+
+for (const required of [
   "function normalizeTooltipHeightOwnership(source)",
   "Number(window.__mflTooltipHeight)",
   "iconRect.top - tooltipRect.height - tooltipHeight",
   "iconRect.bottom + tooltipHeight",
-  "function removeTableIdLocalTooltipOwnership(source)",
-  "Table player-ID tooltips must be owned only by the global Tooltip Height runtime.",
 ]) {
-  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height ownership through ${required}.`);
+  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height spacing through ${required}.`);
 }
 for (const reroute of [
   'button.dataset.noteTooltip = "Click to copy";',
@@ -208,10 +225,6 @@ for (const reroute of [
 invariant(
   coreBuild.includes('artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")'),
   "The core build must reject legacy specialized-tooltip spacing after generation.",
-);
-invariant(
-  coreBuild.includes('if (tableRuntime.includes("showPlayerNoteTooltip(button)") || tableRuntime.includes("hidePlayerNoteTooltip);"))'),
-  "The core build must reject local table-ID tooltip listeners after generation.",
 );
 invariant(
   coreBuild.includes("Generated application core does not position manual tooltips from the real generator rectangle."),
