@@ -36,7 +36,6 @@ for (const group of [
   "UNIVERSAL_RUNTIME_SCRIPTS",
   "TABLE_PRE_CORE_RUNTIME_SCRIPTS",
   "TABLE_POST_CORE_RUNTIME_SCRIPTS",
-  "WATCHLIST_UI_POST_CORE_RUNTIME_SCRIPTS",
   "WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS",
   "EVALUATION_PRE_CORE_RUNTIME_SCRIPTS",
   "EVALUATION_POST_CORE_RUNTIME_SCRIPTS",
@@ -79,7 +78,8 @@ includes(routeChunks, "MFL Stats renderer", "MFL Stats rendering must be split f
 includes(routeChunks, "MFL Stats distribution interaction", "MFL Stats distribution interaction must load with its renderer.");
 includes(routeCoreLoader, 'evaluation: "/modules/app-core-evaluation-runtime.js"', "The route-core loader must map Evaluation to its generated chunk.");
 includes(routeCoreLoader, 'mflstats: "/modules/app-core-mfl-stats-runtime.js"', "The route-core loader must map MFL Stats to its generated chunk.");
-includes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Unprepared local environments must be able to build the missing route chunk from source.");
+excludes(routeCoreLoader, "normalizeBuiltApplicationCoreArtifacts", "Route-core loading must not rebuild missing chunks from raw source in the browser.");
+excludes(routeCoreLoader, 'fetch(assetUrl("/modules/app-core.js")', "Route-core loading must not fetch the raw application core in the browser.");
 includes(routeCoreLoader, "runtimeWindow.__mflEnsureRouteCore = ensure", "The route-core loader must expose one route gate API.");
 includes(routeCoreLoader, "runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();", "Late route-core functions must receive the same interaction-busy wrappers as startup functions.");
 excludes(routeCoreLoader, 'ensure("mflstats")', "MFL Stats must not execute before the shared core has created its permanent DOM references.");
@@ -185,4 +185,4 @@ includes(normalizedCore, `      if (tablePages.has(pageName)) {
       }
       state.incrementalApplying = true;`, "The public incremental table renderer must consume staged controls only after its route data is ready.");
 
-console.log("Route runtime, route-core splitting, request cancellation, and pure table-state validation passed.");
+console.log("Route runtime, prebuilt route-core splitting, request cancellation, and pure table-state validation passed.");
