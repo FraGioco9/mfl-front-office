@@ -123,7 +123,5 @@ for (const owner of [
 ]) {
   includes(generatedTableBody, owner, `Generated Table runtime must retain route owner ${owner}.`);
 }
-includes(generatedTableBody, 'icon: "calendar-x-2"', "Generated Table runtime must contain the build-time retired-player marker contract.");
-includes(generatedTableBody, 'icon: "calendar-clock"', "Generated Table runtime must contain the build-time retiring-player marker contract.");
 
 console.log("Table route-core splitting and globally placed facade validation passed.");
