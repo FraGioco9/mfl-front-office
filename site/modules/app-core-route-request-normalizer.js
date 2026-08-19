@@ -226,15 +226,6 @@ export function normalizeRouteRequestCancellation(source) {
 
   nextSource = replaceInSection(
     nextSource,
-    "  function recoverSelectedPlayer(playerId) {",
-    "  function sync() {",
-    "      .then(async () => {",
-    "      .then(async (payload) => {\n        if (!payload) return false;",
-    "Evaluation route recovery",
-  );
-
-  nextSource = replaceInSection(
-    nextSource,
     "  async function renderLoadedIncrementalRoute(pageName, updateHash, options, route) {",
     "  applyFilters = function applyFiltersWithIncrementalData(options = {}) {",
     "    await requestIncrementalRoute(route, 1);\n    if (tablePages.has(pageName)) {",
