@@ -34,10 +34,19 @@ includes(
 );
 includes(
   routeCoreLoader,
-  'if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };',
-  "The central startup classifier must preserve Database view slugs through the generic view parser.",
+  "const routeView = (options = {}) => routeConfig.normalizeView(options);",
+  "Database Stats startup must resolve its view through the canonical route configuration.",
 );
-includes(routeCoreLoader, 'stats: "stats"', "The central startup view parser must preserve the Database Stats slug.");
+includes(
+  routeCoreLoader,
+  "const initialRouteRuntimeRequest = (pathname = location.pathname) => routeConfig.initialRequest(pathname);",
+  "Database startup classification must come from the canonical route configuration.",
+);
+includes(
+  routeCoreLoader,
+  'if (page === "database" && view === "stats") return [];',
+  "Database Stats route-core dependency classification must preserve the canonical Stats view.",
+);
 
 includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats state owner must expose passive rendering after navigation.");
 includes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats state owner must delegate final rendering to the domain renderer.");
