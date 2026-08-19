@@ -54,6 +54,11 @@ includes(universalBlock, "global-search-runtime.js", "Global Search must stay un
 includes(entry, "initialPreCoreRuntimeScripts", "Initial startup must preload only universal plus active-route owners.");
 includes(entry, "preCoreScriptsForRoute", "Route-specific pre-core owners must be resolved explicitly.");
 includes(entry, "postCoreScriptsForRoute", "Route-specific post-core owners must be resolved explicitly.");
+includes(entry, "async function finalizeRouteRuntimeNow(page, options = {})", "Route finalization must be separable from pre-core loading for the already-primed initial route.");
+includes(entry, "await loadScriptGroup(preCoreScriptsForRoute(page, options));\n  await finalizeRouteRuntimeNow(page, options);", "Lazy SPA routes must still load their pre-core owners before finalization.");
+includes(entry, "finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options)", "Initial startup must finalize its already-loaded route owners without rerunning pre-core resolution.");
+includes(entry, "trackRouteRuntimePromise(", "Initial and lazy route completion must share the same runtime promise cache.");
+excludes(entry, "await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);", "Initial startup must not rerun the full lazy route runtime path after pre-core owners are already loaded.");
 includes(entry, "runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime", "SPA navigation must expose the route runtime gate to app-core.");
 includes(entry, "runtimeWindow.__mflMarkApplicationCoreLoaded = markApplicationCoreLoaded", "app-core must be able to close the startup race before startApp runs.");
 includes(entry, "installClubRouteRuntimeGate", "Club navigation must use the same route runtime gate.");
