@@ -21,6 +21,13 @@ function insertBeforeRequiredMarker(source, marker, insertion, label) {
   return `${source.slice(0, index)}${insertion}\n\n${source.slice(index)}`;
 }
 
+function replaceRequired(source, before, after, label) {
+  if (!source.includes(before)) {
+    throw new Error(`Could not normalize application core before Club split: ${label}.`);
+  }
+  return source.replace(before, after);
+}
+
 function normalizeMflStatsStaticFilters(source) {
   const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
   if (!pattern.test(source)) {
@@ -175,12 +182,45 @@ export function splitApplicationCoreRuntime(source) {
   }
 
   const clubRouteView = '    view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,';
-  if (!core.includes(clubRouteView)) {
+  const canonicalClubRouteView = '    view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,';
+  if (core.includes(clubRouteView)) {
+    core = core.replace(clubRouteView, canonicalClubRouteView);
+  }
+  if (!core.includes(canonicalClubRouteView)) {
     throw new Error("Could not normalize the Club incremental route view.");
   }
-  core = core.replace(
-    clubRouteView,
-    '    view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
+
+  core = replaceRequired(
+    core,
+    `  const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
+  if (clubTarget && ["club", "database", "progression"].includes(pageName)) {
+    return {
+      ...clubTarget,
+      pageName,
+      access: "public",
+    };
+  }
+
+  const view = normalizeViewForPage(options.view || state.view || defaultViewForPage(pageName), pageName);`,
+    `  const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
+  if (pageName === "club") {
+    const requestedClubId = String(options.clubId || clubTarget?.clubId || "").trim();
+    if (!requestedClubId) return null;
+    const requestedClubView = String(options.view || clubTarget?.view || "attributes").toLowerCase();
+    const clubView = ["attributes", "contracts", "current", "all"].includes(requestedClubView)
+      ? requestedClubView
+      : "attributes";
+    return {
+      pageName: "club",
+      scope: "club",
+      clubId: requestedClubId,
+      view: clubView,
+      access: "public",
+    };
+  }
+
+  const view = normalizeViewForPage(options.view || state.view || defaultViewForPage(pageName), pageName);`,
+    "explicit Club incremental route identity",
   );
 
   const evaluationParts = [];
@@ -279,11 +319,35 @@ export function splitApplicationCoreRuntime(source) {
   );
   club = clubSearch.core;
 
+  club = club.replaceAll(
+    'incrementalRouteTarget("club", { view })',
+    'incrementalRouteTarget("club", { view, clubId: activeClubId, ignoreCurrentClubRoute: true })',
+  );
+  club = replaceRequired(
+    club,
+    'incrementalRouteTarget(CLUB_PAGE, { view: nextView })',
+    'incrementalRouteTarget(CLUB_PAGE, { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true })',
+    "Club page data route identity",
+  );
+  club = replaceRequired(
+    club,
+    'await window.mflLoadIncrementalRoutePage("club", { view: nextView });',
+    'await window.mflLoadIncrementalRoutePage("club", { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true });',
+    "Club view data route identity",
+  );
+  club = club.replace(
+    '      state.dataAccess = typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public";',
+    '      state.dataAccess = dataRoute?.access || "public";',
+  );
+
   const detachedClubNavigation = "    void openClubPage(clubId, view, true);";
-  if (!club.includes(detachedClubNavigation)) {
-    throw new Error("Could not locate the detached Club route renderer.");
+  const awaitedClubNavigation = "    return openClubPage(clubId, view, true);";
+  if (club.includes(detachedClubNavigation)) {
+    club = club.replace(detachedClubNavigation, awaitedClubNavigation);
   }
-  club = club.replace(detachedClubNavigation, "    return openClubPage(clubId, view, true);");
+  if (!club.includes(awaitedClubNavigation)) {
+    throw new Error("Could not locate the awaited Club route renderer.");
+  }
 
   const publicClubOwner = "  window.mflOpenClubPage = openClubImmediately;";
   if (!club.includes(publicClubOwner)) {
