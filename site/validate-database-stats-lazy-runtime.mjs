@@ -8,7 +8,7 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const entry = await read("./modules/app-entry.js");
-const routeCoreLoader = await read("./route-core-loader-runtime.js");
+const appConfig = await read("./modules/app-config.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 const statsRuntime = await read("./database-stats-runtime.js");
 const styles = await read("./styles.css");
@@ -35,11 +35,11 @@ includes(
   "Heavy Database Stats runtime loading must require the Stats view explicitly.",
 );
 includes(
-  routeCoreLoader,
+  appConfig,
   'if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };',
-  "The central startup classifier must preserve Database view slugs through the generic view parser.",
+  "The canonical startup classifier must preserve Database view slugs through the generic view parser.",
 );
-includes(routeCoreLoader, 'stats: "stats"', "The central startup view parser must preserve the Database Stats slug.");
+includes(appConfig, 'stats: "stats"', "The canonical startup view parser must preserve the Database Stats slug.");
 
 includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats persistence bridge must expose passive rendering after navigation.");
 includes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats persistence bridge must delegate final rendering to the heavy renderer.");
