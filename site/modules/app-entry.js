@@ -142,11 +142,8 @@ const EVALUATION_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-search-state-runtime.js",
 ]);
 
-const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object.freeze([
-  "/database-stats-state-runtime.js",
-]);
-
 const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
+  "/database-stats-state-runtime.js",
   "/database-stats-runtime.js",
 ]);
 
@@ -184,11 +181,6 @@ function routeNeedsWatchlist(pageName) {
   return ["watchlist", "myplayers"].includes(normalizeRoutePageName(pageName));
 }
 
-/** @param {string} pageName */
-function routeNeedsDatabaseStatsBridge(pageName) {
-  return normalizeRoutePageName(pageName) === "database";
-}
-
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
 function routeNeedsDatabaseStats(pageName, options = {}) {
   return normalizeRoutePageName(pageName) === "database" && routeView(options) === "stats";
@@ -204,7 +196,6 @@ function preCoreScriptsForRoute(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const scripts = [];
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_PRE_CORE_RUNTIME_SCRIPTS);
-  if (routeNeedsDatabaseStatsBridge(page)) scripts.push(...DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS);
   if (routeNeedsDatabaseStats(page, options)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_PRE_CORE_RUNTIME_SCRIPTS);
   if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
@@ -233,7 +224,6 @@ function initialRouteRuntimeRequest() {
 
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
 const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
-const databaseStatsStartup = initialRouteRuntime.pageName === "database" && routeView(initialRouteRuntime.options) === "stats";
 const changelogStartup = initialRouteRuntime.pageName === "changelog";
 const homeStartup = initialRouteRuntime.pageName === "home";
 const playerStartup = initialRouteRuntime.pageName === "player";
@@ -413,8 +403,10 @@ async function ensureRouteRuntimeNow(pageName, options = {}) {
     runtimeWindow.__mflSelectionStartupResetRuntime?.rebind?.();
   }
   if (routeNeedsWatchlist(page)) runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
-  if (routeNeedsDatabaseStatsBridge(page)) runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-  if (routeNeedsDatabaseStats(page, options)) runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
+  if (routeNeedsDatabaseStats(page, options)) {
+    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+    runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
+  }
   if (page === "evaluation") {
     runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
     runtimeWindow.__mflEvaluationSearchStateRuntime?.sync?.();
@@ -468,8 +460,6 @@ async function start() {
     await runtimeWindow.__mflAppStartPromise;
     await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
-
-  if (databaseStatsStartup) runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
 
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
