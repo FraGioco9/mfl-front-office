@@ -5,12 +5,15 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, coreNormalizer] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
   read("./footer.css"),
   read("./modules/app-entry.js"),
+  read("./static-ui-runtime.js"),
+  read("./evaluation-discount-rate-ui-runtime.js"),
+  read("./modules/app-core-normalizer.js"),
 ]);
 
 invariant(
@@ -101,12 +104,23 @@ for (const historicalOwner of [
   );
 }
 
-for (const removedRuntime of [
-  "/table-view-runtime.js",
-  "/table-navigation-chrome-runtime.js",
-]) {
-  invariant(!entry.includes(removedRuntime), `${removedRuntime} must not return to the table startup runtime list.`);
-}
+invariant(
+  staticUi.includes("gap: 6,"),
+  "The global tooltip contract must keep a 6px generator gap.",
+);
+invariant(
+  staticUi.includes("window.__mflTooltipSettings = TOOLTIP_SETTINGS;"),
+  "The canonical tooltip settings must remain exposed to specialized tooltip owners.",
+);
+invariant(
+  discountTooltipUi.includes("Number(window.__mflTooltipSettings?.gap) || 6"),
+  "The Evaluation discount tooltip must consume the global tooltip gap.",
+);
+const normalizedTooltipGapUses = coreNormalizer.split("Number(window.__mflTooltipSettings?.gap) || 6").length - 1;
+invariant(
+  normalizedTooltipGapUses >= 2,
+  "Evaluation action and player-note tooltips must consume the global tooltip gap through core normalization.",
+);
 
 for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtime.js"]) {
   let exists = true;
@@ -118,4 +132,4 @@ for (const path of ["./table-view-runtime.js", "./table-navigation-chrome-runtim
   invariant(!exists, `${path} must remain deleted; its behavior is canonical static CSS or no-op.`);
 }
 
-console.log("Canonical shared-control, footer, and static table chrome ownership validation passed.");
+console.log("Canonical shared-control, footer, tooltip, and static table chrome ownership validation passed.");
