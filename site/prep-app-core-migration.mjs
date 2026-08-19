@@ -45,3 +45,11 @@ const canonicalClubEndMarker = `  const clubEndMarker = '(() => {\\n  const VERS
 if (!routeChunksSource.includes(legacyClubEndMarker)) throw new Error("Legacy Club splitter release marker was not found.");
 routeChunksSource = routeChunksSource.replace(legacyClubEndMarker, canonicalClubEndMarker);
 await writeFile(routeChunksPath, routeChunksSource, "utf8");
+
+const validationPath = new URL("./validate.mjs", import.meta.url);
+let validationSource = await readFile(validationPath, "utf8");
+const broadBootstrapOwnershipCheck = 'excludes(bootstrap, "primeStatic", "bootstrap.js must not own a second page renderer.");';
+const preciseBootstrapOwnershipCheck = 'excludes(bootstrap, "function setPage(", "bootstrap.js must not own a second page renderer.");';
+if (!validationSource.includes(broadBootstrapOwnershipCheck)) throw new Error("Broad bootstrap page-renderer validation was not found.");
+validationSource = validationSource.replace(broadBootstrapOwnershipCheck, preciseBootstrapOwnershipCheck);
+await writeFile(validationPath, validationSource, "utf8");
