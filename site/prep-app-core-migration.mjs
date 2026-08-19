@@ -105,4 +105,18 @@ const prebuiltOnlyValidation = [
 ].join("\n");
 if (!validationSource.includes(legacyFallbackValidation)) throw new Error("Legacy application-core fallback validation block was not found.");
 validationSource = validationSource.replace(legacyFallbackValidation, prebuiltOnlyValidation);
+
+const legacyTableLoadingValidation = [
+  'includes(tableLoading, "buildHeader.__mflSingleRenderOwner", "Table loading must make app-core buildHeader the single persistent header owner.");',
+  'includes(tableLoading, "renderTableLoadingShell.__mflSingleRenderOwner", "Table loading must invoke the canonical header before data fetch.");',
+  'includes(tableLoading, "function ensureCanonicalHeader", "Table loading must ask app-core to build the initial header.");',
+].join("\n");
+const coreContractTableLoadingValidation = [
+  'includes(tableLoading, "coreContracts()?.ensureCanonicalTableHeader", "Table loading must ask the immutable core contract to reconcile the canonical header.");',
+  'includes(tableLoading, "coreContracts()?.installTableLoadingOwners", "Table loading must install its core-owned delegates through the immutable core contract.");',
+  'includes(tableLoading, "function ensureCanonicalHeader", "Table loading must keep one explicit canonical-header request boundary.");',
+  'excludes(tableLoading, "__mflSingleRenderOwner", "Table loading must not monkey-patch core render functions.");',
+].join("\n");
+if (!validationSource.includes(legacyTableLoadingValidation)) throw new Error("Legacy table-loading ownership validation block was not found.");
+validationSource = validationSource.replace(legacyTableLoadingValidation, coreContractTableLoadingValidation);
 await writeFile(validationPath, validationSource, "utf8");
