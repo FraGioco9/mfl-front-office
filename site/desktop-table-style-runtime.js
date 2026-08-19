@@ -24,6 +24,15 @@
     return title instanceof HTMLElement ? title : null;
   }
 
+  function clearAgentCopyTarget(target) {
+    if (!(target instanceof HTMLElement)) return;
+    target.removeAttribute("data-agent-wallet-copy");
+    target.removeAttribute("data-note-tooltip");
+    target.removeAttribute("role");
+    target.removeAttribute("tabindex");
+    target.removeAttribute("aria-label");
+  }
+
   function syncAgentTitleInteraction() {
     routeFrame = 0;
     const title = titleElement();
@@ -31,11 +40,8 @@
     const addressTarget = title.querySelector("[data-agent-wallet-copy]");
     const address = agentAddressFromPath();
     if (!(addressTarget instanceof HTMLElement) || !address) {
-      title.removeAttribute("data-agent-wallet-copy");
-      title.removeAttribute("data-note-tooltip");
-      title.removeAttribute("role");
-      title.removeAttribute("tabindex");
-      title.removeAttribute("aria-label");
+      clearAgentCopyTarget(addressTarget);
+      clearAgentCopyTarget(title);
       return;
     }
 
@@ -58,25 +64,12 @@
     return address && address === agentAddressFromPath() ? target : null;
   }
 
-  function showCopyTooltip(target) {
-    if (!(target instanceof HTMLElement)) return;
-    try {
-      if (typeof showPlayerNoteTooltip === "function") showPlayerNoteTooltip(target);
-    } catch {}
-  }
-
-  function hideCopyTooltip(immediate = false) {
-    try {
-      if (typeof hidePlayerNoteTooltip === "function") hidePlayerNoteTooltip({ immediate });
-    } catch {}
-  }
-
   async function copyWalletAddress(target, event) {
     const address = normalizeAgentAddress(target?.dataset?.agentWalletCopy);
     if (!address) return;
     event?.preventDefault?.();
     event?.stopPropagation?.();
-    hideCopyTooltip(true);
+    window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
     target.blur?.();
 
     try {
@@ -99,31 +92,8 @@
     if (target) void copyWalletAddress(target, event);
   }
 
-  function onPointerOver(event) {
-    const target = copyTargetFromEvent(event);
-    if (target && !target.contains(event.relatedTarget)) showCopyTooltip(target);
-  }
-
-  function onPointerOut(event) {
-    const target = copyTargetFromEvent(event);
-    if (target && !target.contains(event.relatedTarget)) hideCopyTooltip();
-  }
-
-  function onFocusIn(event) {
-    const target = copyTargetFromEvent(event);
-    if (target) showCopyTooltip(target);
-  }
-
-  function onFocusOut(event) {
-    if (copyTargetFromEvent(event)) hideCopyTooltip();
-  }
-
   document.addEventListener("click", onClick);
   document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("pointerover", onPointerOver, true);
-  document.addEventListener("pointerout", onPointerOut, true);
-  document.addEventListener("focusin", onFocusIn, true);
-  document.addEventListener("focusout", onFocusOut, true);
   window.addEventListener("mfl:ready", scheduleRouteSync);
   window.addEventListener("pageshow", scheduleRouteSync);
   window.addEventListener("popstate", scheduleRouteSync);
