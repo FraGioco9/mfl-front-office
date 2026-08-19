@@ -675,10 +675,6 @@
     return loader;
   }
 
-  // Route-owned validation markers; these are intentionally not executed by bootstrap:
-  // loadRuntime("/table-width-runtime.js")
-  // loadRuntime("/filter-controls-runtime.js")
-
   preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
 
   void (async () => {
