@@ -253,18 +253,6 @@ export function normalizeRouteRequestCancellation(source) {
 
   nextSource = replaceRequired(
     nextSource,
-    `      if (dataRoute && typeof requestIncrementalRoute === "function") {
-        await requestIncrementalRoute(dataRoute, 1);
-      }`,
-    `      if (dataRoute && typeof requestIncrementalRoute === "function") {
-        const dataPayload = await requestIncrementalRoute(dataRoute, 1);
-        if (!dataPayload) return;
-      }`,
-    "Club route data hydration",
-  );
-
-  nextSource = replaceRequired(
-    nextSource,
     "      await requestIncrementalRoute(route, 1);\n      if (tablePages.has(pageName)) {",
     "      const payload = await requestIncrementalRoute(route, 1);\n      if (!payload) return false;\n      if (tablePages.has(pageName)) {",
     "public incremental route loader",

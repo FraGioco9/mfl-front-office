@@ -266,9 +266,14 @@ ${linkColumnBranch}`;
     '      const dataRoute = typeof incrementalRouteTarget === "function"',
     '        ? incrementalRouteTarget(CLUB_PAGE, { view: nextView })',
     "        : null;",
-    '      if (dataRoute && typeof requestIncrementalRoute === "function") {',
-    "        await requestIncrementalRoute(dataRoute, 1);",
-    "      }",
+    "      let dataPayload = true;",
+    "      const loadClubData = async () => {",
+    '        if (dataRoute && typeof requestIncrementalRoute === "function") {',
+    "          dataPayload = await requestIncrementalRoute(dataRoute, 1);",
+    "        }",
+    "      };",
+    "      await withInteractionBusy(loadClubData);",
+    "      if (!dataPayload) return;",
     "",
   ].join("\n");
   nextSource = replaceRequired(nextSource, stagedClubLoad, singlePhaseClubLoad, "staged Club page load");
