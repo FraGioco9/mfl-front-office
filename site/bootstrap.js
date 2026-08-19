@@ -240,12 +240,12 @@
         if (!decodedWallet) return "Agents";
         const normalizedWallet = normalizeWalletAddress(decodedWallet).toLowerCase();
         const agentName = firstPaintAgentNameForWallet(normalizedWallet);
-        return `${agentName} - ${normalizedWallet}`;
+        return agentName ? `${agentName} - ${normalizedWallet}` : normalizedWallet;
       } catch {
         const normalizedWallet = normalizeWalletAddress(wallet).toLowerCase();
         if (!normalizedWallet) return "Agents";
         const agentName = firstPaintAgentNameForWallet(normalizedWallet);
-        return `${agentName} - ${normalizedWallet}`;
+        return agentName ? `${agentName} - ${normalizedWallet}` : normalizedWallet;
       }
     }
     if (page === "club") return "Club";
@@ -263,9 +263,9 @@
       }
       const agentNames = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
       const storedName = agentNames && typeof agentNames === "object" ? String(agentNames[normalizedWallet] || "").trim() : "";
-      return storedName || normalizedWallet;
+      return storedName;
     } catch {
-      return normalizedWallet;
+      return "";
     }
   }
 

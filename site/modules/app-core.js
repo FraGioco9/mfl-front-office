@@ -1062,6 +1062,19 @@ function agentNameForWallet(address) {
   return savedAgentNameForWallet(address) || normalizeWalletAddress(address);
 }
 
+function agentTitleForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  const agentName = savedAgentNameForWallet(normalizedAddress)
+    || normalizedAgentName(state.walletRows.find((row) => normalizeWalletAddress(row.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name)
+    || normalizedAgentName(state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress)?.wallet_name);
+
+  return agentName ? `${agentName} - ${normalizedAddress}` : normalizedAddress;
+}
+
 function accountName() {
   return state.linkedWalletAddress ? agentNameForWallet(state.linkedWalletAddress) : "Guest";
 }
@@ -2597,8 +2610,7 @@ function tableTitleForPage(pageName) {
 
   if (pageName === "agents") {
     const walletAddress = normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
-    const agentName = agentNameForWallet(walletAddress);
-    return walletAddress ? `${agentName} - ${walletAddress}` : agentName;
+    return agentTitleForWallet(walletAddress);
   }
 
   return "Progression";
