@@ -1724,7 +1724,6 @@ td {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  height: 38px;
   line-height: 1;
   vertical-align: middle;
 }
@@ -1890,9 +1889,7 @@ td a {
 
 .retirementMarker[data-tooltip]::after,
 .newMintMarker[data-tooltip]::after,
-.playerNoteIcon[data-tooltip]::after,
-.copyPlayerIdButton[data-tooltip]::after,
-.playerIdText[data-tooltip]::after {
+.playerNoteIcon[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
@@ -1924,11 +1921,7 @@ td a {
 .newMintMarker[data-tooltip]:hover::after,
 .newMintMarker[data-tooltip]:focus::after,
 .playerNoteIcon[data-tooltip]:hover::after,
-.playerNoteIcon[data-tooltip]:focus::after,
-.copyPlayerIdButton[data-tooltip]:hover::after,
-.copyPlayerIdButton[data-tooltip]:focus::after,
-.playerIdText[data-tooltip]:hover::after,
-.playerIdText[data-tooltip]:focus::after {
+.playerNoteIcon[data-tooltip]:focus::after {
   opacity: 1;
   transform: translate(-50%, 0);
 }
@@ -3921,19 +3914,8 @@ td a {
   transition: none !important;
 }
 
-#tableBody .copyPlayerIdButton[data-tooltip]::after {
-  transform: translate(-50%, 0) !important;
-  transition: opacity 80ms linear !important;
-}
-
-#tableBody .copyPlayerIdButton[data-tooltip]:hover::after,
-#tableBody .copyPlayerIdButton[data-tooltip]:focus::after {
-  transform: translate(-50%, 0) !important;
-}
-
 #tableBody .retirementMarker[data-tooltip]::after,
-#tableBody .newMintMarker[data-tooltip]::after,
-#tableBody .copyPlayerIdButton[data-tooltip]::after {
+#tableBody .newMintMarker[data-tooltip]::after {
   display: none;
 }
 
@@ -4426,10 +4408,6 @@ td a {
 .settingsCheckbox input {
   width: 15px;
   height: 15px;
-}
-
-.playerIdText[data-tooltip]::after {
-  display: none;
 }
 
 /* Compact individual player notes panel. */
