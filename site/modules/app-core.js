@@ -5942,12 +5942,16 @@ function buildSearchIndex(options = {}) {
     }
 
     agentsByWallet.set(entry.walletAddress, entry);
+    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
   };
 
   state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
   state.rows.forEach((row) => addAgent(getValue(row, "wallet_address"), getValue(row, "wallet_name")));
   state.agentSearchIndex = Array.from(agentsByWallet.values());
   state.searchIndexesLoaded = true;
+  if (state.currentPage === "agents" && tablePageTitle) {
+    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
 }
 
 const databaseSearchSequences = new Map();
