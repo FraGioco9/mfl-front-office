@@ -13,24 +13,6 @@ function extractRequiredPlayerSection(source, startMarker, endMarker, label) {
   };
 }
 
-function removeTableIdLocalTooltipOwner(source) {
-  let normalized = String(source || "");
-  const localListeners = [
-    '  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
-    '  button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
-    '  button.addEventListener("blur", hidePlayerNoteTooltip);',
-  ];
-
-  for (const listener of localListeners) {
-    if (!normalized.includes(listener)) {
-      throw new Error(`Could not remove Table player-ID local tooltip listener: ${listener}`);
-    }
-    normalized = normalized.replace(listener, "");
-  }
-
-  return normalized.replace(/\n{3,}/g, "\n\n");
-}
-
 export function splitPlayerApplicationCoreRuntime(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
   const routeChunks = input.routeChunks && typeof input.routeChunks === "object" ? input.routeChunks : {};
@@ -101,7 +83,7 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   }
   core = core.replace(modalMarker, `${sharedPlayerFacade}${modalMarker}`);
 
-  const player = removeTableIdLocalTooltipOwner(playerParts.join("\n\n").replace(/\s*$/, ""));
+  const player = playerParts.join("\n\n").replace(/\s*$/, "");
   const normalizedCore = core.replace(/\s*$/, "");
   if (!player || !normalizedCore) {
     throw new Error("Player application core split produced an empty artifact.");
