@@ -133,6 +133,7 @@ jobs:
           node prep-app-core-validation-tail.mjs
           node prep-app-core-validation-more.mjs
           node prep-app-core-validation-routes.mjs
+          node prep-app-core-validation-final.mjs
           node migrate-app-core-source.mjs
 
       - name: Install site dependencies
@@ -162,7 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           git checkout origin/main -- .github/workflows/site-quality.yml
-          rm -f site/migrate-app-core-source.mjs site/prep-app-core-migration.mjs site/prep-app-core-validation.mjs site/prep-app-core-validation-late.mjs site/prep-app-core-validation-tail.mjs site/prep-app-core-validation-more.mjs site/prep-app-core-validation-routes.mjs
+          rm -f site/migrate-app-core-source.mjs site/prep-app-core-migration.mjs site/prep-app-core-validation.mjs site/prep-app-core-validation-late.mjs site/prep-app-core-validation-tail.mjs site/prep-app-core-validation-more.mjs site/prep-app-core-validation-routes.mjs site/prep-app-core-validation-final.mjs
           git add -A
           git diff --cached --check
           if git diff --cached --quiet; then
