@@ -89,5 +89,16 @@ invariant(
   !tableLoading.includes('window.addEventListener("popstate", sync)'),
   "Table loading must not use route events as a second loading-state owner.",
 );
+invariant(
+  tableLoading.includes('Reflect.get(window, "__mflPrimeTableRows")')
+  && tableLoading.includes("primeRows(true);"),
+  "Table loading must delegate skeleton row creation to the bootstrap first-paint owner.",
+);
+invariant(
+  !tableLoading.includes("BLANK_ROW_OPACITIES")
+  && !tableLoading.includes("document.createDocumentFragment()")
+  && !tableLoading.includes('document.createElement("td")'),
+  "Table loading must not retain a second loading-row renderer.",
+);
 
-console.log("Canonical loading-state ownership, static presentation, and direct subscribers validation passed.");
+console.log("Canonical loading-state ownership, bootstrap-owned loading rows, static presentation, and direct subscribers validation passed.");
