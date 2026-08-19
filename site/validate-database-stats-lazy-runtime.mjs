@@ -14,12 +14,10 @@ const statsRuntime = await read("./database-stats-runtime.js");
 const styles = await read("./styles.css");
 const buildNormalizer = await read("./modules/app-core-build-normalizer.js");
 
-const bridgeBlock = entry.match(/const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
-const heavyBlock = entry.match(/const DATABASE_STATS_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
+const statsBlock = entry.match(/const DATABASE_STATS_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
 
-includes(bridgeBlock, "/database-stats-state-runtime.js", "Database routes must keep the lightweight Stats persistence bridge available.");
-excludes(bridgeBlock, "/database-stats-runtime.js", "Database Stats data/render code must not load on ordinary Database table views.");
-includes(heavyBlock, "/database-stats-runtime.js", "The Stats route must load the single Database Stats domain runtime.");
+includes(statsBlock, "/database-stats-state-runtime.js", "The Database Stats route must load its lightweight state owner with the domain runtime.");
+includes(statsBlock, "/database-stats-runtime.js", "The Database Stats route must load the single Database Stats domain runtime.");
 for (const retiredRuntime of [
   "/database-stats-tooltip-portal-runtime.js",
   "/database-stats-reload-bootstrap-runtime.js",
@@ -27,12 +25,12 @@ for (const retiredRuntime of [
 ]) {
   excludes(entry, retiredRuntime, `${retiredRuntime} must stay retired from the route runtime graph.`);
 }
-excludes(heavyBlock, "/database-stats-state-runtime.js", "The Stats persistence bridge must not be duplicated in the heavy runtime group.");
+excludes(entry, "DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS", "Ordinary Database table routes must not preload a separate Stats bridge.");
 
 includes(
   entry,
   'return normalizeRoutePageName(pageName) === "database" && routeView(options) === "stats";',
-  "Heavy Database Stats runtime loading must require the Stats view explicitly.",
+  "Database Stats runtime loading must require the Stats view explicitly.",
 );
 includes(
   routeCoreLoader,
@@ -41,8 +39,8 @@ includes(
 );
 includes(routeCoreLoader, 'stats: "stats"', "The central startup view parser must preserve the Database Stats slug.");
 
-includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats persistence bridge must expose passive rendering after navigation.");
-includes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats persistence bridge must delegate final rendering to the heavy renderer.");
+includes(stateRuntime, "async function renderStatsRoute() {", "Database Stats state owner must expose passive rendering after navigation.");
+includes(stateRuntime, "await window.renderDatabaseStatsPage(false);", "Database Stats state owner must delegate final rendering to the domain renderer.");
 for (const forbiddenOwner of [
   "commitStatsTransition",
   "__mflCommitViewTransition",
@@ -54,7 +52,7 @@ for (const forbiddenOwner of [
   "history.replaceState",
   'addEventListener("popstate"',
 ]) {
-  excludes(stateRuntime, forbiddenOwner, `Database Stats state bridge must not own navigation via ${forbiddenOwner}.`);
+  excludes(stateRuntime, forbiddenOwner, `Database Stats state owner must not own navigation via ${forbiddenOwner}.`);
 }
 
 includes(statsRuntime, "async function showStatsPage() {", "Database Stats domain runtime must retain its data/render owner.");
