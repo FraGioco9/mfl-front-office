@@ -9657,9 +9657,6 @@ async function setView(viewName) {
 
   updateViewButtons();
   buildHeader();
-  if (state.currentPage === "agents" && tablePageTitle) {
-    tablePageTitle.textContent = tableTitleForPage("agents");
-  }
 
   applyFilters();
 }
