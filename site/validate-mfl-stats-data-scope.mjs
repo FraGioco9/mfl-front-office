@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns, scrollbars, controlInteractions, filterControls] = await Promise.all([
+const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./styles.css"),
@@ -11,6 +11,7 @@ const [dataPage, dataQuery, styles, stylesBase, controls, responsive, dropdowns,
   read("./responsive.css"),
   read("./dropdowns.css"),
   read("./scrollbars.css"),
+  read("./bootstrap-core.js"),
   read("./control-interactions-runtime.js"),
   read("./filter-controls-runtime.js"),
 ]);
@@ -83,14 +84,34 @@ for (const [fileName, source] of [
   );
 }
 
+for (const activeSelector of [
+  '"#sidebar .navButton.active[data-page]"',
+  '".viewButton.active[data-view]"',
+  '".mflStatsFilterButton.active"',
+  '".mflStatsDistributionModeButton.active"',
+]) {
+  invariant(
+    bootstrapCore.includes(activeSelector),
+    `The shared navigation controller must classify active control ${activeSelector}.`,
+  );
+}
 invariant(
-  controlInteractions.includes('"#sidebar .navButton.active[data-page]"')
-    && controlInteractions.includes('".viewButton.active[data-view]"')
-    && controlInteractions.includes('".mflStatsFilterButton.active"')
-    && controlInteractions.includes('".mflStatsDistributionModeButton.active"')
+  controlInteractions.includes("const control = navigationController()?.activeControl?.(target);")
+    && controlInteractions.includes("if (consumeActivePageViewFilterEvent(event)) return;")
     && controlInteractions.includes("event.stopImmediatePropagation();"),
-  "The universal interaction runtime must consume active page, view, and filter controls as no-op interactions.",
+  "The universal interaction runtime must consume active page, view, and filter controls through the shared navigation controller.",
 );
+for (const duplicateSelector of [
+  '"#sidebar .navButton.active[data-page]"',
+  '".viewButton.active[data-view]"',
+  '".mflStatsFilterButton.active"',
+  '".mflStatsDistributionModeButton.active"',
+]) {
+  invariant(
+    !controlInteractions.includes(duplicateSelector),
+    `Control interactions must not duplicate centralized active selector ${duplicateSelector}.`,
+  );
+}
 invariant(
   !filterControls.includes("consumeActiveStatsControlEvent")
     && !filterControls.includes("installActiveStatsViewNoop"),
