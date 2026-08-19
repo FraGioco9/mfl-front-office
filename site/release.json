@@ -1,4 +1,4 @@
 {
-  "version": "1.124.59",
-  "description": "Canonicalize Club view links across switching and refresh"
+  "version": "1.124.60",
+  "description": "Reject invalid Club routes and keep Club titles stable across views"
 }

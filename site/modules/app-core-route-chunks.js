@@ -207,6 +207,34 @@ export function splitApplicationCoreRuntime(source) {
     throw new Error("Cannot split an empty application core.");
   }
 
+  core = replaceRequired(
+    core,
+    `  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }`,
+    `  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else if (pageName !== "club") {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }`,
+    "Club view title stability",
+  );
+  core = replaceRequired(
+    core,
+    `      if (route.scope === "club") {
+        const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
+        tablePageTitle.textContent = club?.name || "Club";
+      } else {
+        tablePageTitle.textContent = tableTitleForPage(pageName);
+      }`,
+    `      if (route.scope !== "club") {
+        tablePageTitle.textContent = tableTitleForPage(pageName);
+      }`,
+    "Club incremental title stability",
+  );
+
   core = replaceFunction(
     core,
     "clubRouteTargetFromPath",
@@ -381,6 +409,84 @@ export function splitApplicationCoreRuntime(source) {
   );
   core = extracted.core;
   let club = extracted.chunk;
+
+  club = replaceRequired(
+    club,
+    '  let activeClubId = "";\n  let openingClub = false;',
+    '  let activeClubId = "";\n  let activeClubTitle = null;\n  let openingClub = false;',
+    "Club stable title state",
+  );
+  club = replaceFunction(
+    club,
+    "renderClubTitle",
+    `  function renderClubTitle() {
+    if (typeof tablePageTitle === "undefined" || !tablePageTitle) return;
+
+    if (!activeClubTitle || activeClubTitle.clubId !== String(activeClubId)) {
+      const division = clubDivision();
+      activeClubTitle = {
+        clubId: String(activeClubId),
+        name: clubName(),
+        division: division ? { name: division.name, color: division.color } : null,
+      };
+    }
+
+    if (!activeClubTitle.division) {
+      tablePageTitle.textContent = activeClubTitle.name;
+      return;
+    }
+
+    const divisionLabel = document.createElement("span");
+    divisionLabel.className = "clubPageTitleDivision";
+    divisionLabel.style.color = activeClubTitle.division.color;
+    divisionLabel.textContent = activeClubTitle.division.name;
+    tablePageTitle.replaceChildren(
+      document.createTextNode(\`\${activeClubTitle.name} - \`),
+      divisionLabel,
+    );
+  }`,
+    "stable Club title across views",
+  );
+  club = replaceRequired(
+    club,
+    '      activeClubId = String(clubId);\n      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";',
+    '      const nextClubId = String(clubId);\n      if (nextClubId !== activeClubId) activeClubTitle = null;\n      activeClubId = nextClubId;\n      const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";',
+    "Club title cache invalidation",
+  );
+  club = replaceRequired(
+    club,
+    `  window.addEventListener("popstate", () => {
+    const route = clubRoute();
+    if (route) void openClubPage(route.clubId, route.view, false);
+  });`,
+    `  window.addEventListener("popstate", () => {
+    const path = normalizedPath();
+    const route = clubRoute(path);
+    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+      window.location.replace("/");
+      return;
+    }
+    if (route) void openClubPage(route.clubId, route.view, false);
+  });`,
+    "invalid Club popstate redirect",
+  );
+  club = replaceFunction(
+    club,
+    "bootClubRoute",
+    `  function bootClubRoute() {
+    const path = normalizedPath();
+    const route = clubRoute(path);
+    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+      window.location.replace("/");
+      return;
+    }
+    if (!route || initialClubRoute) return;
+    const canonicalRoute = canonicalClubRoute(route.clubId, route.view);
+    if (path !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
+    void openClubPage(route.clubId, route.view, false);
+  }`,
+    "strict Club route boot",
+  );
 
   club = replaceFunction(
     club,

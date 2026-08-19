@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.59",
+    "Canonicalize Club view links across switching and refresh"
+  ],
+  [
     "v1.124.58",
     "Route Club view switching through the shared table navigation pipeline"
   ],
