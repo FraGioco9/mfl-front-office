@@ -1,3 +1,4 @@
+# Temporary one-shot workflow; removed after the cleanup commit lands.
 name: One-shot retirement marker source cleanup
 
 on:
