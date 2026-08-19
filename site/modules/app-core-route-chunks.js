@@ -28,6 +28,32 @@ function replaceRequired(source, before, after, label) {
   return source.replace(before, after);
 }
 
+function replaceFunction(source, functionName, replacement, label) {
+  const marker = `function ${functionName}(`;
+  const start = source.indexOf(marker);
+  const openBrace = start >= 0 ? source.indexOf("{", start + marker.length) : -1;
+  if (start < 0 || openBrace < 0) {
+    throw new Error(`Could not normalize application core function before Club split: ${label}.`);
+  }
+
+  let depth = 0;
+  let end = -1;
+  for (let index = openBrace; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = index + 1;
+        break;
+      }
+    }
+  }
+  if (end < 0) {
+    throw new Error(`Could not find the end of application core function before Club split: ${label}.`);
+  }
+  return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
+}
+
 function normalizeMflStatsStaticFilters(source) {
   const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
   if (!pattern.test(source)) {
@@ -93,7 +119,7 @@ async function openSavedEvaluationsModal() {
 
 const CLUB_SEARCH_BRIDGE = `;(() => {
   // Compatibility marker for legacy validation; route ownership lives in the Club chunk:
-  // squad|contracts|attributes|current-season|all-time
+  // squad|contracts|current-season|all-time
   // Compatibility marker; the executable stale-payload guard is route-owned: if (!dataLoaded) return;
   if (typeof renderSearchResultsNow !== "function" || renderSearchResultsNow.__mflUniversalClubSearch) return;
 
@@ -181,14 +207,17 @@ export function splitApplicationCoreRuntime(source) {
     throw new Error("Cannot split an empty application core.");
   }
 
-  const clubRouteView = '    view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,';
-  const canonicalClubRouteView = '    view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,';
-  if (core.includes(clubRouteView)) {
-    core = core.replace(clubRouteView, canonicalClubRouteView);
-  }
-  if (!core.includes(canonicalClubRouteView)) {
-    throw new Error("Could not normalize the Club incremental route view.");
-  }
+  core = replaceFunction(
+    core,
+    "clubRouteTargetFromPath",
+    `function clubRouteTargetFromPath() {
+  const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);
+  return route
+    ? { scope: "club", clubId: route.clubId, view: route.view }
+    : null;
+}`,
+    "canonical Club route parser",
+  );
 
   core = replaceRequired(
     core,
@@ -259,12 +288,15 @@ export function splitApplicationCoreRuntime(source) {
     });`,
     `    const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;
     if (pageName === "club" && !clubTarget?.clubId) return;
+    const clubPath = clubTarget?.clubId
+      ? window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName) || ""
+      : "";
     const transition = await runViewTransition(pageName, viewName, {
       walletAddress: state.currentAgentWalletAddress,
       watchlistId: state.currentWatchlistId,
       ...(clubTarget?.clubId ? {
         clubId: clubTarget.clubId,
-        path: \`/clubs/\${encodeURIComponent(clubTarget.clubId)}/\${viewName === "attributes" ? "squad" : viewSlug(viewName)}\`,
+        path: clubPath,
       } : {}),
     });`,
     "Club shared view transition identity",
@@ -349,6 +381,26 @@ export function splitApplicationCoreRuntime(source) {
   );
   core = extracted.core;
   let club = extracted.chunk;
+
+  club = replaceFunction(
+    club,
+    "clubRoute",
+    `  function clubRoute(pathname = normalizedPath()) {
+    const route = window.__mflAppConfig?.routes?.clubRoute?.(pathname);
+    return route ? { clubId: route.clubId, view: route.view } : null;
+  }`,
+    "Club chunk canonical route parser",
+  );
+  club = replaceFunction(
+    club,
+    "canonicalClubRoute",
+    `  function canonicalClubRoute(clubId = activeClubId, view = state.view) {
+    const path = window.__mflAppConfig?.routes?.clubPath?.(clubId, view);
+    if (!path) throw new Error("Canonical Club route configuration is unavailable.");
+    return path;
+  }`,
+    "Club chunk canonical route builder",
+  );
 
   let clubSearch = extractRequiredSection(
     club,

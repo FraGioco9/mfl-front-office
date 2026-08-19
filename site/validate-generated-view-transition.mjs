@@ -155,8 +155,13 @@ invariant(
 );
 invariant(
   activation.includes('const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;')
-    && activation.includes('viewName === "attributes" ? "squad" : viewSlug(viewName)'),
-  "Shared Club view activation must preserve the current Club identity and canonical Squad route.",
+    && activation.includes('window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)')
+    && activation.includes("path: clubPath,"),
+  "Shared Club view activation must preserve the current Club identity and use the canonical Club URL builder.",
+);
+invariant(
+  !activation.includes('viewName === "attributes" ? "squad" : viewSlug(viewName)'),
+  "Shared Club view activation must not duplicate the Club view-to-slug mapping.",
 );
 for (const [transitionMarker, loaderMarker, label] of [
   ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],

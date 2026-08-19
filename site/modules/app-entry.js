@@ -208,6 +208,7 @@ function postCoreScriptsForRoute(pageName, options = {}) {
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_POST_CORE_RUNTIME_SCRIPTS);
   if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYPLAYERS_POST_CORE_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_POST_CORE_RUNTIME_SCRIPTS);
+  if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
   return uniqueScripts(scripts);
 }
 
@@ -329,17 +330,10 @@ function installEvaluationRecentStateBridge() {
 
 /** @param {string} clubId @param {string} view */
 function clubRoutePath(clubId, view) {
-  const slugByView = new Map([
-    ["attributes", "squad"],
-    ["squad", "squad"],
-    ["contracts", "contracts"],
-    ["current", "current-season"],
-    ["current-season", "current-season"],
-    ["all", "all-time"],
-    ["all-time", "all-time"],
-  ]);
-  const slug = slugByView.get(String(view || "attributes").toLowerCase()) || "squad";
-  return `/clubs/${encodeURIComponent(clubId)}/${slug}`;
+  const appConfig = /** @type {{routes?: {clubPath?: (clubId: string, view?: string) => string}} | undefined} */ (Reflect.get(runtimeWindow, "__mflAppConfig"));
+  const routeBuilder = appConfig?.routes?.clubPath;
+  if (typeof routeBuilder !== "function") throw new Error("Canonical Club route configuration is unavailable.");
+  return routeBuilder(clubId, view);
 }
 
 function installClubRouteRuntimeGate() {

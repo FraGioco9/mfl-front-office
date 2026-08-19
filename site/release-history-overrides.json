@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.58",
+    "Route Club view switching through the shared table navigation pipeline"
+  ],
+  [
     "v1.124.57",
     "Make Club pages use canonical Uniform Loading"
   ],

@@ -1,4 +1,4 @@
 {
-  "version": "1.124.58",
-  "description": "Route Club view switching through the shared table navigation pipeline"
+  "version": "1.124.59",
+  "description": "Canonicalize Club view links across switching and refresh"
 }
