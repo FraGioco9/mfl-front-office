@@ -22,14 +22,12 @@
    * __mflNormalizeRouteView?: (options?: Record<string, unknown>) => string,
    * __mflRouteUsesTableInfrastructure?: (pageName: string) => boolean,
    * __mflInitialRouteRuntimeRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
-   * __mflLoadFallbackApplicationCoreArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * __mflRouteCoreRuntime?: {
    *   ensure?: (pageName: string, options?: Record<string, unknown>) => Promise<void>,
    *   normalizePageName?: (pageName: string) => string,
    *   normalizeView?: (options?: Record<string, unknown>) => string,
    *   usesTableInfrastructure?: (pageName: string) => boolean,
    *   initialRouteRequest?: (pathname?: string) => { pageName: string, options: Record<string, unknown> },
-   *   loadFallbackArtifacts?: () => Promise<{ core?: string, routeChunks?: Record<string, string> }>,
    * },
    * mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean },
    * }} */
@@ -48,9 +46,6 @@
     }
     if (typeof runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest === "function") {
       runtimeWindow.__mflInitialRouteRuntimeRequest = runtimeWindow.__mflRouteCoreRuntime.initialRouteRequest;
-    }
-    if (typeof runtimeWindow.__mflRouteCoreRuntime.loadFallbackArtifacts === "function") {
-      runtimeWindow.__mflLoadFallbackApplicationCoreArtifacts = runtimeWindow.__mflRouteCoreRuntime.loadFallbackArtifacts;
     }
     return;
   }
@@ -71,7 +66,6 @@
 
   const ROUTE_CORE_PATHS = routeConfig.corePaths;
   const routeCorePromises = new Map();
-  let fallbackArtifactsPromise = null;
 
   function assetUrl(path) {
     return new URL(String(path || "").replace(/^\/+/, ""), `${location.origin}/`).href;
@@ -95,14 +89,6 @@
     document.head.appendChild(link);
   }
 
-  function executeRouteCore(path, source) {
-    const script = document.createElement("script");
-    script.dataset.mflRouteCore = path;
-    script.textContent = `${source}\n//# sourceURL=${path}`;
-    document.head.appendChild(script);
-    script.remove();
-  }
-
   function loadExternalRouteCore(path) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -118,46 +104,10 @@
     });
   }
 
-  function loadFallbackApplicationCoreArtifacts() {
-    if (fallbackArtifactsPromise) return fallbackArtifactsPromise;
-
-    fallbackArtifactsPromise = (async () => {
-      const normalizerPromise = import(assetUrl("/modules/app-core-build-normalizer.js"));
-      const sourcePromise = fetch(assetUrl("/modules/app-core.js"), { cache: "no-store" });
-      const [normalizer, response] = await Promise.all([normalizerPromise, sourcePromise]);
-      if (!response.ok) throw new Error("Could not load the application core source fallback.");
-      if (typeof normalizer.normalizeBuiltApplicationCoreArtifacts !== "function") {
-        throw new Error("Application core artifact normalizer is unavailable.");
-      }
-
-      const rawSource = await response.text();
-      return normalizer.normalizeBuiltApplicationCoreArtifacts(rawSource);
-    })().catch((error) => {
-      fallbackArtifactsPromise = null;
-      throw error;
-    });
-
-    return fallbackArtifactsPromise;
-  }
-
-  async function loadFallbackRouteCore(pageName, path) {
-    const artifacts = await loadFallbackApplicationCoreArtifacts();
-    const source = String(artifacts?.routeChunks?.[pageName] || "").trim();
-    if (!source) throw new Error(`The ${pageName} application core chunk is unavailable.`);
-    executeRouteCore(path, source);
-  }
-
   async function loadRouteCore(pageName) {
     const path = ROUTE_CORE_PATHS[pageName];
     if (!path) return;
-
-    try {
-      await loadExternalRouteCore(path);
-    } catch (error) {
-      console.warn(`Prebuilt ${pageName} application core is unavailable; using source fallback.`, error);
-      await loadFallbackRouteCore(pageName, path);
-    }
-
+    await loadExternalRouteCore(path);
     runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   }
 
@@ -250,7 +200,6 @@
   runtimeWindow.__mflNormalizeRouteView = routeView;
   runtimeWindow.__mflRouteUsesTableInfrastructure = routeUsesTableInfrastructure;
   runtimeWindow.__mflInitialRouteRuntimeRequest = initialRouteRuntimeRequest;
-  runtimeWindow.__mflLoadFallbackApplicationCoreArtifacts = loadFallbackApplicationCoreArtifacts;
   runtimeWindow.__mflEnsureRouteCore = ensure;
   runtimeWindow.__mflRouteCoreRuntime = Object.freeze({
     ensure,
@@ -258,7 +207,6 @@
     normalizeView: routeView,
     usesTableInfrastructure: routeUsesTableInfrastructure,
     initialRouteRequest: initialRouteRuntimeRequest,
-    loadFallbackArtifacts: loadFallbackApplicationCoreArtifacts,
   });
   installClubRouteGate();
 
