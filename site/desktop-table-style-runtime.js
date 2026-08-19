@@ -28,8 +28,9 @@
     routeFrame = 0;
     const title = titleElement();
     if (!title) return;
+    const addressTarget = title.querySelector("[data-agent-wallet-copy]");
     const address = agentAddressFromPath();
-    if (!address) {
+    if (!(addressTarget instanceof HTMLElement) || !address) {
       title.removeAttribute("data-agent-wallet-copy");
       title.removeAttribute("data-note-tooltip");
       title.removeAttribute("role");
@@ -38,11 +39,11 @@
       return;
     }
 
-    title.dataset.agentWalletCopy = address;
-    title.dataset.noteTooltip = "Click to copy wallet address";
-    title.setAttribute("role", "button");
-    title.setAttribute("tabindex", "0");
-    title.setAttribute("aria-label", "Click to copy wallet address");
+    addressTarget.dataset.agentWalletCopy = address;
+    addressTarget.dataset.noteTooltip = "Click to copy wallet address";
+    addressTarget.setAttribute("role", "button");
+    addressTarget.setAttribute("tabindex", "0");
+    addressTarget.setAttribute("aria-label", "Click to copy wallet address");
   }
 
   function scheduleRouteSync() {
@@ -51,10 +52,10 @@
   }
 
   function copyTargetFromEvent(event) {
-    const title = event.target instanceof Element ? event.target.closest(TITLE_SELECTOR) : null;
-    if (!(title instanceof HTMLElement)) return null;
-    const address = normalizeAgentAddress(title.dataset.agentWalletCopy);
-    return address && address === agentAddressFromPath() ? title : null;
+    const target = event.target instanceof Element ? event.target.closest("[data-agent-wallet-copy]") : null;
+    if (!(target instanceof HTMLElement)) return null;
+    const address = normalizeAgentAddress(target.dataset.agentWalletCopy);
+    return address && address === agentAddressFromPath() ? target : null;
   }
 
   function showCopyTooltip(target) {

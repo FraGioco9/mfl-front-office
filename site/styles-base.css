@@ -561,7 +561,8 @@ body[data-page="home"] .topbar .stats {
   transition: width var(--menu-transition, 0ms ease), padding var(--menu-transition, 0ms ease), background 120ms ease, border-color 120ms ease;
 }
 
-.tablePageTitle {
+.tablePageTitle,
+.playerTitle {
   margin: 14px 0 12px;
   font-size: 20px;
   line-height: 1.2;
@@ -3433,7 +3434,7 @@ td a {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  line-height: 1.05;
+  min-height: 24px;
 }
 
 .playerTitleNoteIcon {

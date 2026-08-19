@@ -12,3 +12,5 @@ site/modules/app-core-*-runtime.js
 .env.*
 !.env.example
 .vercel/
+.vercel
+.env*

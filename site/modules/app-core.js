@@ -1080,6 +1080,41 @@ function agentTitleForWallet(address) {
   return agentName ? `${agentName} - ${normalizedAddress}` : normalizedAddress;
 }
 
+function renderAgentPageTitle(address) {
+  if (!tablePageTitle) {
+    return;
+  }
+
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    tablePageTitle.textContent = "";
+    return;
+  }
+
+  const agentName = savedAgentNameForWallet(normalizedAddress)
+    || normalizedAgentName(state.walletRows.find((row) => normalizeWalletAddress(row.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name)
+    || normalizedAgentName(state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress)?.wallet_name);
+
+  const addressButton = document.createElement("button");
+  addressButton.type = "button";
+  addressButton.className = "agentPageTitleWallet";
+  addressButton.dataset.agentWalletCopy = normalizedAddress;
+  addressButton.dataset.noteTooltip = "Click to copy wallet address";
+  addressButton.setAttribute("aria-label", "Click to copy wallet address");
+  addressButton.textContent = normalizedAddress;
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "agentPageTitleName";
+  nameSpan.textContent = agentName || "";
+
+  if (agentName) {
+    tablePageTitle.replaceChildren(nameSpan, document.createTextNode(" - "), addressButton);
+    return;
+  }
+
+  tablePageTitle.replaceChildren(addressButton);
+}
+
 function accountName() {
   return state.linkedWalletAddress ? agentNameForWallet(state.linkedWalletAddress) : "Guest";
 }
@@ -2630,9 +2665,13 @@ function renderTableLoadingShell(pageName) {
   }
 
   restoreSavedTableState(pageName);
-  syncQuickFilterLabels();
+  globalThis.syncQuickFilterLabels?.();
   updateViewButtons();
-  tablePageTitle.textContent = tableTitleForPage(pageName);
+  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }
   emptyState.hidden = true;
   emptyState.textContent = "";
   tableBody.replaceChildren();
@@ -2755,7 +2794,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     updateViewButtons();
     buildHeader();
   }
-  syncQuickFilterLabels();
+  globalThis.syncQuickFilterLabels?.();
   emptyState.textContent = pageName === "watchlist"
     ? "No players in your watchlist yet."
     : pageName === "myplayers"
@@ -3290,6 +3329,7 @@ function showPlayerNoteTooltip(icon) {
 
   const tableAgentCell = icon.classList.contains("agentTableLink") ? icon.closest("#tableBody td") : null;
   const agentTooltipAnchorWidth = measureTooltipAnchorWidth(icon);
+  const tooltipHeight = Number(window.__mflTooltipHeight) || 6;
   let left;
   if (tableAgentCell) {
     const cellRect = tableAgentCell.getBoundingClientRect();
@@ -3303,13 +3343,9 @@ function showPlayerNoteTooltip(icon) {
   }
   left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
 
-  const anchorHeight = 14;
-  const anchorTop = iconRect.top + Math.max(0, (iconRect.height - anchorHeight) / 2);
-  const anchorBottom = anchorTop + anchorHeight;
-
-  let top = anchorTop - tooltipRect.height - 10;
+  let top = iconRect.top - tooltipRect.height - tooltipHeight;
   if (top < margin) {
-    top = anchorBottom + 10;
+    top = iconRect.bottom + tooltipHeight;
   }
   if (top + tooltipRect.height > viewportHeight - margin) {
     top = Math.max(margin, viewportHeight - tooltipRect.height - margin);
@@ -5950,7 +5986,7 @@ function buildSearchIndex(options = {}) {
   state.agentSearchIndex = Array.from(agentsByWallet.values());
   state.searchIndexesLoaded = true;
   if (state.currentPage === "agents" && tablePageTitle) {
-    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+      renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   }
 }
 
@@ -9491,7 +9527,7 @@ function renderTable() {
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
   if (state.currentPage === "agents" && tablePageTitle) {
-    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
   }
 
   const pageRows = currentPageRows();
@@ -12418,7 +12454,7 @@ async function startApp() {
     });
 
     if (tableRoute) {
-      syncQuickFilterLabels();
+      globalThis.syncQuickFilterLabels?.();
       if (route.scope === "club") {
         const club = state.clubSearchIndex.find((entry) => entry.clubId === String(route.clubId || ""));
         tablePageTitle.textContent = club?.name || "Club";
@@ -12558,7 +12594,7 @@ async function startApp() {
     if (!shellFirst) {
       commitIncrementalLocation(pageName, updateHash, options);
     } else {
-      syncQuickFilterLabels();
+      globalThis.syncQuickFilterLabels?.();
       updateViewButtons();
       buildHeader();
     }
