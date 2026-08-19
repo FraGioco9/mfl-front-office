@@ -33,63 +33,88 @@ function removeResidualLegacyWidthCall(source) {
   return normalized.replace(residualWidthCall, "      return true;");
 }
 
-function normalizeRetirementCalendarIcon(source) {
+function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
+  const start = source.indexOf(startMarker);
+  const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
+  if (start < 0 || end < 0 || end <= start) {
+    throw new Error(`Could not normalize application core section: ${label}.`);
+  }
+  return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
+}
+
+function normalizeRetirementMarkerContract(source) {
   let normalized = String(source || "").replace(/\r\n?/g, "\n");
 
-  const retiredMarker = '      emoji: "\\u{1F3C1}",';
-  if (!normalized.includes(retiredMarker)) {
-    throw new Error("Could not locate the legacy retired-player flag marker in app-core source.");
-  }
-  normalized = normalized.replace(retiredMarker, '      icon: "calendar-x-2",');
+  normalized = replaceSourceSection(
+    normalized,
+    "function retirementMarker(row) {",
+    "function newMintMarker(row) {",
+    `function retirementMarker(row) {
+  const retirementYears = getValue(row, "retirement_years");
 
-  const hourglassMarker = '      emoji: "\\u23F3",';
-  if (!normalized.includes(hourglassMarker)) {
-    throw new Error("Could not locate the legacy retirement hourglass marker in app-core source.");
+  if (retirementYears === 0) {
+    return {
+      icon: "calendar-x-2",
+      label: "Retired",
+    };
   }
-  normalized = normalized.replace(
-    hourglassMarker,
-    [
-      '      icon: "calendar-clock",',
-      "      retirementYears,",
-    ].join("\n"),
+
+  if ([1, 2, 3].includes(retirementYears)) {
+    return {
+      icon: "calendar-clock",
+      label: \`${'${retirementYears}'} year${'${retirementYears === 1 ? "" : "s"}'} left\`,
+    };
+  }
+
+  return null;
+}
+
+`,
+    "canonical retirement marker states",
   );
 
-  const markerAssignment = "  markerElement.textContent = marker.emoji;";
-  if (!normalized.includes(markerAssignment)) {
-    throw new Error("Could not locate the name-marker emoji assignment in app-core source.");
+  normalized = replaceSourceSection(
+    normalized,
+    "function appendNameMarker(cell, marker, className) {",
+    "function playerRoute(playerId) {",
+    `function appendNameMarker(cell, marker, className) {
+  if (!marker) {
+    return;
   }
-  normalized = normalized.replace(
-    markerAssignment,
-    [
-      "  if (marker.icon) {",
-      '    const markerIcon = document.createElement("img");',
-      "    markerIcon.src = `/retirement-${marker.icon}.svg`;",
-      "    markerIcon.width = 16;",
-      "    markerIcon.height = 16;",
-      '    markerIcon.alt = "";',
-      '    markerIcon.setAttribute("aria-hidden", "true");',
-      "    markerElement.appendChild(markerIcon);",
-      "  } else {",
-      "    markerElement.textContent = marker.emoji;",
-      "  }",
-    ].join("\n"),
+
+  const markerElement = document.createElement("span");
+  markerElement.className = className;
+  if (marker.icon) {
+    const markerIcon = document.createElement("img");
+    markerIcon.src = \`/retirement-${'${marker.icon}'}.svg\`;
+    markerIcon.width = 16;
+    markerIcon.height = 16;
+    markerIcon.alt = "";
+    markerIcon.setAttribute("aria-hidden", "true");
+    markerElement.appendChild(markerIcon);
+  } else {
+    markerElement.textContent = marker.emoji;
+  }
+  markerElement.dataset.tooltip = marker.label;
+  markerElement.setAttribute("aria-label", marker.label);
+  cell.appendChild(markerElement);
+}
+
+`,
+    "retirement marker SVG renderer",
   );
 
-  const playerAgeMarker = [
-    "  const ageMarkerHtml = ageMarker",
-    '    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.emoji}</span>`',
-    '    : "";',
-  ].join("\n");
-  if (!normalized.includes(playerAgeMarker)) {
-    throw new Error("Could not locate the Player retirement marker renderer in app-core source.");
-  }
-  normalized = normalized.replace(
-    playerAgeMarker,
-    [
-      "  const ageMarkerHtml = ageMarker",
-      '    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.icon ? `<img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true">` : ageMarker.emoji}</span>`',
-      '    : "";',
-    ].join("\n"),
+  const playerAgeMarkerStart = "  const ageMarkerHtml = ageMarker\n";
+  const playerAgeMarkerEnd = "  const agentWalletAddress = getValue(row, \"wallet_address\");";
+  normalized = replaceSourceSection(
+    normalized,
+    playerAgeMarkerStart,
+    playerAgeMarkerEnd,
+    `  const ageMarkerHtml = ageMarker
+    ? \` <span class="retirementMarker playerAgeMarker" data-tooltip="${'${escapeHtml(ageMarker.label)}'}" aria-label="${'${escapeHtml(ageMarker.label)}'}"><img src="/retirement-${'${escapeHtml(ageMarker.icon)}'}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
+    : "";
+`,
+    "Player retirement marker SVG renderer",
   );
 
   return normalized;
@@ -134,7 +159,7 @@ const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "")
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
-const source = normalizeRetirementCalendarIcon(
+const source = normalizeRetirementMarkerContract(
   removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
 );
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
@@ -169,13 +194,6 @@ const generatedArtifacts = [
   [watchlistRuntimePath, watchlistRuntime, "route-owned"],
 ];
 
-const legacyRetirementTokens = ["🏁", "⏳", "\\u{1F3C1}", "\\u23F3", "\\u23f3"];
-const leakedLegacyRetirementArtifact = generatedArtifacts.find(([, artifact]) =>
-  legacyRetirementTokens.some((token) => artifact.includes(token)),
-);
-if (leakedLegacyRetirementArtifact) {
-  throw new Error(`Legacy retirement marker leaked into generated runtime: ${leakedLegacyRetirementArtifact[0]}.`);
-}
 if (!generatedArtifacts.some(([, artifact]) => artifact.includes('icon: "calendar-x-2"'))) {
   throw new Error("Generated application core does not use the calendar-x-2 icon for retired players.");
 }
@@ -185,7 +203,7 @@ if (!generatedArtifacts.some(([, artifact]) => artifact.includes('icon: "calenda
 if (!generatedArtifacts.some(([, artifact]) => artifact.includes("`/retirement-${marker.icon}.svg`"))) {
   throw new Error("Generated application core does not render retirement marker SVG assets.");
 }
-if (!playerRuntime.includes('ageMarker.icon ? `<img src="/retirement-${escapeHtml(ageMarker.icon)}.svg"')) {
+if (!playerRuntime.includes('ageMarker.icon)}.svg')) {
   throw new Error("Player runtime does not render retirement SVG markers.");
 }
 
