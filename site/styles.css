@@ -229,9 +229,7 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   overscroll-behavior: none;
 }
 
-.retirementMarker[data-tooltip="1 year left"],
-.retirementMarker[data-tooltip="2 years left"],
-.retirementMarker[data-tooltip="3 years left"] {
+.retirementMarker[data-tooltip] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -242,16 +240,31 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   line-height: 0;
 }
 
-.retirementMarker[data-tooltip="1 year left"]::before,
-.retirementMarker[data-tooltip="2 years left"]::before,
-.retirementMarker[data-tooltip="3 years left"]::before {
+.retirementMarker > img {
+  display: none;
+}
+
+.retirementMarker[data-tooltip]::before {
   content: "";
   display: block;
   width: 16px;
   height: 16px;
   background: currentColor;
+}
+
+.retirementMarker[data-tooltip="Retired"]::before {
+  -webkit-mask: url("/retirement-calendar-x-2.svg") center / 16px 16px no-repeat;
+  mask: url("/retirement-calendar-x-2.svg") center / 16px 16px no-repeat;
+}
+
+.retirementMarker[data-tooltip$="year left"]::before,
+.retirementMarker[data-tooltip$="years left"]::before {
   -webkit-mask: url("/retirement-calendar-clock.svg") center / 16px 16px no-repeat;
   mask: url("/retirement-calendar-clock.svg") center / 16px 16px no-repeat;
+}
+
+.retirementMarker[data-tooltip="Retired"] {
+  color: #b42318;
 }
 
 .retirementMarker[data-tooltip="1 year left"] {
