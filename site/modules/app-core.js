@@ -9493,7 +9493,6 @@ function renderTable() {
           noteIcon.addEventListener("blur", hidePlayerNoteTooltip);
           markerWrap.appendChild(noteIcon);
         }
-        appendNameMarker(markerWrap, retirementMarker(row), "retirementMarker");
         appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
         if (markerWrap.childElementCount) {
           nameWrap.appendChild(markerWrap);
@@ -9504,6 +9503,12 @@ function renderTable() {
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+      } else if (column === "age") {
+        const ageValue = document.createElement("span");
+        ageValue.className = "playerAgeValue";
+        ageValue.textContent = formatCellValue(row, column);
+        cell.appendChild(ageValue);
+        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
       } else if (column === "active_contract_club_division") {

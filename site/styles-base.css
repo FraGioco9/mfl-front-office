@@ -1887,7 +1887,6 @@ td a {
   cursor: help;
 }
 
-.retirementMarker[data-tooltip]::after,
 .newMintMarker[data-tooltip]::after,
 .playerNoteIcon[data-tooltip]::after {
   content: attr(data-tooltip);
@@ -1916,8 +1915,6 @@ td a {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.retirementMarker[data-tooltip]:hover::after,
-.retirementMarker[data-tooltip]:focus::after,
 .newMintMarker[data-tooltip]:hover::after,
 .newMintMarker[data-tooltip]:focus::after,
 .playerNoteIcon[data-tooltip]:hover::after,
@@ -3914,7 +3911,6 @@ td a {
   transition: none !important;
 }
 
-#tableBody .retirementMarker[data-tooltip]::after,
 #tableBody .newMintMarker[data-tooltip]::after {
   display: none;
 }

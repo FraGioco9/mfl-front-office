@@ -238,6 +238,12 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
   flex: 0 0 16px;
   font-size: 0;
   line-height: 0;
+  cursor: help;
+}
+
+.playerAgeValue {
+  display: inline-block;
+  min-width: 1.5em;
 }
 
 .retirementMarker > img {
