@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const filePath = new URL("./modules/app-core-route-request-normalizer.js", import.meta.url);
-let source = await readFile(filePath, "utf8");
+const routeRequestPath = new URL("./modules/app-core-route-request-normalizer.js", import.meta.url);
+let routeRequestSource = await readFile(routeRequestPath, "utf8");
 
 const current = [
   "function replaceRequired(source, before, after, label) {",
@@ -22,6 +22,18 @@ const migrationShape = [
   "}",
 ].join("\n");
 
-if (!source.includes(current)) throw new Error("Route request migration helper source was not found.");
-source = source.replace(current, migrationShape);
-await writeFile(filePath, source, "utf8");
+if (!routeRequestSource.includes(current)) throw new Error("Route request migration helper source was not found.");
+routeRequestSource = routeRequestSource.replace(current, migrationShape);
+await writeFile(routeRequestPath, routeRequestSource, "utf8");
+
+const globalSearchPath = new URL("./global-search-runtime.js", import.meta.url);
+let globalSearchSource = await readFile(globalSearchPath, "utf8");
+const deadReadinessHelper = [
+  "  function payloadApplierReady() {",
+  '    return typeof coreContracts()?.applySearchPayload === "function";',
+  "  }",
+  "",
+].join("\n");
+if (!globalSearchSource.includes(deadReadinessHelper)) throw new Error("Dead Global Search readiness helper was not found.");
+globalSearchSource = globalSearchSource.replace(deadReadinessHelper, "");
+await writeFile(globalSearchPath, globalSearchSource, "utf8");
