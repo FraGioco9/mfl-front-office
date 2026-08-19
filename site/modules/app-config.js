@@ -214,8 +214,8 @@ export function browserConfigRuntimeSource(release) {
   }
 
   function clubRoute(pathname = location.pathname) {
-    const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    const match = path.match(/^\/clubs\/([^/]+)\/(squad|contracts|current-season|all-time)$/i);
+    const path = String(pathname || "/").split("?")[0].replace(/\\/+$/, "") || "/";
+    const match = path.match(/^\\/clubs\\/([^/]+)\\/(squad|contracts|current-season|all-time)$/i);
     if (!match) return null;
 
     const clubId = decodedRoutePart(match[1]);
@@ -305,7 +305,7 @@ export function browserConfigRuntimeSource(release) {
   window.__mflTableViewConfig = data.routes.tableViews;
 
   const initialClubPath = String(location.pathname || "/");
-  const initialClubLikePath = /^\/(?:clubs|club)(?:\/|$)/i.test(initialClubPath);
+  const initialClubLikePath = /^\\/(?:clubs|club)(?:\\/|$)/i.test(initialClubPath);
   const initialClubRoute = routes.clubRoute(initialClubPath);
   if (initialClubLikePath && !initialClubRoute) {
     location.replace("/");

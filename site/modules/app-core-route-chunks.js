@@ -462,7 +462,7 @@ export function splitApplicationCoreRuntime(source) {
     `  window.addEventListener("popstate", () => {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
@@ -476,7 +476,7 @@ export function splitApplicationCoreRuntime(source) {
     `  function bootClubRoute() {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
