@@ -249,11 +249,14 @@
       item.className = "mflStatsHistogramItem";
       const bar = document.createElement("div");
       bar.className = "mflStatsHistogramBar";
-      bar.style.setProperty("--bar-height", `${Math.max(6, (count / maxCount) * 100)}%`);
-      bar.dataset.tooltip = `${formatCount(count)} (${total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"}%)`;
+      const fill = document.createElement("div");
+      fill.className = "mflStatsHistogramFill";
+      fill.style.setProperty("--bar-height", `${Math.max(6, (count / maxCount) * 100)}%`);
+      fill.dataset.tooltip = `${formatCount(count)} (${total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"}%)`;
       const label = document.createElement("span");
       label.className = "mflStatsHistogramLabel";
       label.textContent = String(value);
+      bar.appendChild(fill);
       item.append(bar, label);
       histogram.appendChild(item);
     });

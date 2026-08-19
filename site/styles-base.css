@@ -4119,10 +4119,10 @@ td a {
   flex: 1 1 auto;
   min-height: 120px;
   overflow: visible;
-  cursor: help;
+  cursor: default;
 }
 
-.mflStatsHistogramBar::after {
+.mflStatsHistogramFill {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -4131,9 +4131,9 @@ td a {
   min-height: 2px;
   border-radius: 6px 6px 3px 3px;
   background: #4db4ee;
-  content: "";
   transform-origin: bottom;
   animation: mflStatsBarRise 220ms ease-out;
+  cursor: help;
 }
 
 .mflStatsHistogramLabel {

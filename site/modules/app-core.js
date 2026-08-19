@@ -9101,7 +9101,7 @@ function renderMflStatsDistribution(packableRows) {
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
     const item = document.createElement("div");
     item.className = "mflStatsHistogramItem";
-    item.innerHTML = `<div class="mflStatsHistogramBar" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
     histogram.appendChild(item);
   });
 
