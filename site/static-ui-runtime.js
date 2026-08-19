@@ -242,25 +242,17 @@
     return { sortKey: "overall", sortDirection: route.view === "next" ? "asc" : "desc" };
   }
 
-  function tryCanonicalTableHeader(route, signature) {
-    try {
-      return Boolean(window.eval(`(() => {
-        if (typeof state !== "object" || !state || typeof buildHeader !== "function") return false;
-        const page = state.currentPage === "mflstats" ? "mfl" : String(state.currentPage || "");
-        const liveSignature = [page, String(state.view || ""), String(state.sortKey || ""), String(state.sortDirection || "")].join("|");
-        if (liveSignature !== ${JSON.stringify(signature)}) return false;
-        const ownerReady = (typeof __mflTableBuildHeaderOwner === "function") || buildHeader.__mflSingleRenderOwner === true;
-        if (!ownerReady) return false;
-        buildHeader();
-        const head = document.getElementById("tableHead");
-        if (!(head instanceof HTMLTableSectionElement) || !head.rows[0]) return false;
-        head.dataset.mflHeaderSignature = ${JSON.stringify(signature)};
-        delete head.dataset.mflStaticHeader;
-        return true;
-      })()`));
-    } catch {
-      return false;
-    }
+  function tryCanonicalTableHeader(signature) {
+    const contracts = Reflect.get(window, "__mflCoreContracts");
+    const ensureHeader = contracts && typeof contracts === "object"
+      ? contracts.ensureCanonicalTableHeader
+      : null;
+    if (typeof ensureHeader !== "function" || !ensureHeader()) return false;
+    const head = document.getElementById("tableHead");
+    return head instanceof HTMLTableSectionElement
+      && Boolean(head.rows[0])
+      && head.dataset.mflStaticHeader !== "true"
+      && head.dataset.mflHeaderSignature === signature;
   }
 
   function primeStaticTableHeader(route) {
@@ -274,7 +266,7 @@
     if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader !== "true") {
       return true;
     }
-    if (tryCanonicalTableHeader(route, signature)) return true;
+    if (tryCanonicalTableHeader(signature)) return true;
     if (head.rows[0] && head.dataset.mflHeaderSignature === signature && head.dataset.mflStaticHeader === "true") return true;
 
     const headerRow = document.createElement("tr");
