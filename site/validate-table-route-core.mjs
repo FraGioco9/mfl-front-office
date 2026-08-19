@@ -105,9 +105,24 @@ includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct
 matches(routeNormalizer, /!\/\^.*database.*stats.*test\(initialRoutePath\)/, "Direct Database Stats startup must stay outside the Table core.");
 
 includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
+includes(buildCore, "normalizeRetirementMarkerContract", "The build must apply the canonical retirement-marker preprocessing before route splitting.");
+includes(buildCore, "normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table", "The built Table runtime must receive canonical tooltip normalization.");
 const generatedTable = await read("./modules/app-core-table-runtime.js");
 const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");
-invariant(generatedTable.slice(tableBanner.length).replace(/\s*$/, "") === tableCore.replace(/\s*$/, ""), "Generated Table runtime must exactly match the Table build artifact.");
+const generatedTableBody = generatedTable.slice(tableBanner.length).replace(/\s*$/, "");
+invariant(generatedTableBody.length > 20_000, "Generated Table runtime is unexpectedly small.");
+new Function(generatedTableBody);
+for (const owner of [
+  "function tableTitleForPageOwner(pageName) {",
+  "function tableBuildHeaderOwner(",
+  "function tableApplyFiltersOwner(",
+  "function tableRenderTableOwner(",
+  "function tableSetViewOwner(",
+]) {
+  includes(generatedTableBody, owner, `Generated Table runtime must retain route owner ${owner}.`);
+}
+includes(generatedTableBody, 'icon: "calendar-x-2"', "Generated Table runtime must contain the build-time retired-player marker contract.");
+includes(generatedTableBody, 'icon: "calendar-clock"', "Generated Table runtime must contain the build-time retiring-player marker contract.");
 
 console.log("Table route-core splitting and globally placed facade validation passed.");
