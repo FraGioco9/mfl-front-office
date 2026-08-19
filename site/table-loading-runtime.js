@@ -2,7 +2,6 @@
   "use strict";
 
   const BLANK_ROW_CLASS = "mflTableLoadingRow";
-  const BLANK_ROW_OPACITIES = Object.freeze([0.82, 0.62, 0.44, 0.27, 0.13]);
   const controller = window.__mflInteractionBusy;
 
   window.__mflTableLoadingRuntime?.destroy?.();
@@ -24,11 +23,9 @@
   }
 
   function elements() {
-    const head = document.getElementById("tableHead");
     const body = document.getElementById("tableBody");
     const empty = document.getElementById("emptyState");
     return {
-      head: head instanceof HTMLTableSectionElement ? head : null,
       body: body instanceof HTMLTableSectionElement ? body : null,
       empty: empty instanceof HTMLElement ? empty : null,
     };
@@ -43,14 +40,6 @@
     return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
   }
 
-  function blankRowsReady(body, columnCount) {
-    const rows = Array.from(body.rows);
-    return rows.length === BLANK_ROW_OPACITIES.length
-      && rows.every((row, index) => row.classList.contains(BLANK_ROW_CLASS)
-        && row.cells.length === columnCount
-        && row.dataset.loadingRow === String(index + 1));
-  }
-
   function hasRealRows(body) {
     return Array.from(body.rows).some((row) => !row.classList.contains(BLANK_ROW_CLASS));
   }
@@ -61,10 +50,17 @@
     return typeof ensureHeader === "function" ? Boolean(ensureHeader()) : false;
   }
 
+  function primeLoadingRows() {
+    const primeRows = Reflect.get(window, "__mflPrimeTableRows");
+    if (typeof primeRows !== "function") return false;
+    primeRows(true);
+    return true;
+  }
+
   function show({ replaceExisting = false, forceRoute = false } = {}) {
     if (destroyed || (!forceRoute && !tableRouteActive())) return false;
     if (!forceRoute) ensureCanonicalHeader();
-    const { head, body, empty } = elements();
+    const { body, empty } = elements();
     if (!body) return false;
 
     const page = pager();
@@ -77,27 +73,8 @@
     const realRowsPresent = hasRealRows(body);
     if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
     if (realRowsPresent && !replaceExisting) return false;
-
-    const columnCount = Math.max(1, head?.rows[0]?.cells.length || 1);
-    if (!blankRowsReady(body, columnCount)) {
-      const fragment = document.createDocumentFragment();
-      BLANK_ROW_OPACITIES.forEach((opacity, index) => {
-        const row = document.createElement("tr");
-        row.className = BLANK_ROW_CLASS;
-        row.dataset.loadingRow = String(index + 1);
-        row.setAttribute("aria-hidden", "true");
-        row.style.opacity = String(opacity);
-        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-          const cell = document.createElement("td");
-          cell.textContent = "\u00a0";
-          row.appendChild(cell);
-        }
-        fragment.appendChild(row);
-      });
-      body.replaceChildren(fragment);
-    }
-    body.dataset.staticLoading = "true";
-    return true;
+    if (body.dataset.staticLoading !== "true" && !primeLoadingRows()) return false;
+    return body.dataset.staticLoading === "true";
   }
 
   function release() {
