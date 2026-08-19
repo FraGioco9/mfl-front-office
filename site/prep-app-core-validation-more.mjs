@@ -114,4 +114,22 @@ const newCursorChecks = [
 ].join("\n");
 if (!mflStatsDataScope.includes(oldCursorChecks)) throw new Error("Legacy shared-control cursor validation block was not found.");
 mflStatsDataScope = mflStatsDataScope.replace(oldCursorChecks, newCursorChecks);
+
+const legacyActiveControlCheck = [
+  "invariant(",
+  '  controlInteractions.includes(\'"#sidebar .navButton.active[data-page]"\')',
+  '    && controlInteractions.includes(\'".viewButton.active[data-view]"\')',
+  '    && controlInteractions.includes(\'".mflStatsFilterButton.active"\')',
+  '    && controlInteractions.includes(\'".mflStatsDistributionModeButton.active"\')',
+  '    && controlInteractions.includes("event.stopImmediatePropagation();"),',
+  '  "The universal interaction runtime must consume active page, view, and filter controls as no-op interactions.",',
+  ");",
+].join("\n");
+const canonicalActiveControlCheck = [
+  'invariant(controlInteractions.includes("function activePageViewFilterControl(target)"), "The universal interaction runtime must resolve active controls through the navigation controller.");',
+  'invariant(controlInteractions.includes("navigationController()?.activeControl?.(target)"), "Active page/view/Stats control detection must be delegated to canonical navigation ownership.");',
+  'invariant(controlInteractions.includes("event.stopImmediatePropagation();"), "Active-control events must be consumed as no-op interactions.");',
+].join("\n");
+if (!mflStatsDataScope.includes(legacyActiveControlCheck)) throw new Error("Legacy active-control selector validation block was not found.");
+mflStatsDataScope = mflStatsDataScope.replace(legacyActiveControlCheck, canonicalActiveControlCheck);
 await writeFile(mflStatsDataScopePath, mflStatsDataScope, "utf8");
