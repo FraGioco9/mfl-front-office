@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.55",
+    "Load the complete MFL Stats population and align active view hover"
+  ],
+  [
     "v1.124.54",
     "Uniform active view navigation and MFL Stats loading"
   ],
