@@ -253,8 +253,14 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 }
 
 .retirementMarker[data-tooltip="Retired"]::before {
-  -webkit-mask: url("/retirement-calendar-x-2.svg") center / 16px 16px no-repeat;
-  mask: url("/retirement-calendar-x-2.svg") center / 16px 16px no-repeat;
+  display: none;
+}
+
+.retirementMarker[data-tooltip="Retired"] > img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .retirementMarker[data-tooltip$="year left"]::before,
@@ -264,7 +270,7 @@ html:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
 }
 
 .retirementMarker[data-tooltip="Retired"] {
-  color: #b42318;
+  color: #910000;
 }
 
 .retirementMarker[data-tooltip="1 year left"] {
