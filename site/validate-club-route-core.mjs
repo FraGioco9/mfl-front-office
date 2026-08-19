@@ -52,14 +52,10 @@ includes(sharedCore, "renderSearchResultsNowWithUniversalClubs", "Club search mu
 includes(sharedCore, 'void window.mflOpenClubPage(clubId, "attributes")', "Shared Club search must navigate through the lazy public gate.");
 includes(
   sharedCore,
-  'view: routeView === "squad" ? "attributes" : routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
-  "The canonical Squad URL must resolve to the internal Attributes data view.",
+  'const route = window.__mflAppConfig?.routes?.clubRoute?.(window.location.pathname);',
+  "Shared Club route identity must be parsed by the canonical route config.",
 );
-excludes(
-  sharedCore,
-  'view: routeView === "current-season" ? "current" : routeView === "all-time" ? "all" : routeView,',
-  "Club data routing must not preserve Squad as a separate internal view.",
-);
+excludes(sharedCore, 'routeView === "squad" ? "attributes"', "Shared core must not duplicate the Club view-slug parser.");
 includes(sharedCore, 'if (pageName === "club") {', "The incremental router must have an explicit Club route branch.");
 includes(sharedCore, 'const requestedClubId = String(options.clubId || clubTarget?.clubId || "").trim();', "Club data routing must prefer the explicit Club ID.");
 includes(sharedCore, 'scope: "club",', "Club data routing must request the dedicated Club API scope.");
@@ -74,8 +70,9 @@ excludes(
 includes(sharedCore, "function activateViewButton(button) {", "Club view switching must use the shared table view-button activation owner.");
 excludes(sharedCore, 'if (pageName === "club") return;', "Shared view activation must never discard Club view buttons.");
 includes(sharedCore, 'const clubTarget = pageName === "club" ? clubRouteTargetFromPath() : null;', "Shared Club view switching must resolve the current Club identity from the canonical route.");
-includes(sharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "Shared Club view switching must preserve the canonical Squad slug.");
+includes(sharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "Shared Club view switching must build the destination URL from canonical route config.");
 includes(sharedCore, '...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {})', "The shared incremental view route must carry the Club ID explicitly.");
+excludes(sharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "Shared Club switching must not duplicate Club slug mapping.");
 excludes(sharedCore, 'if (!state.incrementalMode || state.currentPage === "club")', "Club must not bypass the shared incremental setView owner.");
 includes(sharedCore, "setView = async function setIncrementalView(viewName) {", "Club must share the incremental setView owner with all table pages.");
 
@@ -100,6 +97,9 @@ excludes(
   'mflLoadIncrementalRoutePage("club", { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true })',
   "Club view changes must not bypass shared setView with a private direct incremental loader.",
 );
+includes(clubCore, 'window.__mflAppConfig?.routes?.clubRoute?.(pathname)', "Club refresh parsing must use the canonical route config.");
+includes(clubCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubId, view)', "Club refresh canonicalization must use the same URL builder as view switching.");
+excludes(clubCore, "const safeView = view ===", "Club chunk must not duplicate its own view-to-slug mapping.");
 includes(clubCore, 'state.dataAccess = "public";', "Club final state must preserve its public entity-data access contract.");
 includes(clubCore, "return openClubPage(clubId, view, true);", "The private Club route owner must return the complete Club loading/render promise.");
 excludes(clubCore, "void openClubPage(clubId, view, true);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
@@ -124,10 +124,16 @@ excludes(
   "Club rosters must remain outside the generic hidden-MFL table exclusion scope.",
 );
 
+includes(appConfig, "export const CLUB_VIEW_SLUGS", "Canonical app config must own Club view-to-slug mapping.");
+includes(appConfig, 'attributes: "squad"', "Canonical Club Squad must map internal Attributes to /squad.");
+includes(appConfig, 'current: "current-season"', "Canonical Club Current Season must map to /current-season.");
+includes(appConfig, 'all: "all-time"', "Canonical Club All Time must map to /all-time.");
 includes(appConfig, 'club: "/modules/app-core-club-runtime.js"', "The route config must map Club to its generated chunk.");
 includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
 includes(routeLoader, 'runTransition("club", true', "The primary Club gate must enter the global page transition before lazy loading.");
+includes(routeLoader, 'path: clubRoutePath(normalizedClubId, view)', "Primary Club navigation must use the canonical app-config URL facade.");
+includes(routeLoader, 'return routeConfig.clubPath(clubId, view);', "The primary Club gate must delegate URL construction to canonical app config.");
 includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club loading must start its ordered route-core dependency request inside the global loader callback.");
 includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club loading must overlap core and table-runtime loading.");
 includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
@@ -139,6 +145,8 @@ excludes(routeLoader, "window.history.replaceState", "The primary Club lazy gate
 includes(appEntry, "function installClubRouteRuntimeGate()", "The fallback Club gate must remain compatible with lazy route-runtime loading.");
 includes(appEntry, "const runTransition = runtimeWindow.__mflRunPageTransition;", "The fallback Club gate must reuse the same global page transition runner.");
 includes(appEntry, 'return runTransition("club", true, {', "The fallback Club gate must commit through the global transition before its loader callback.");
+includes(appEntry, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "Fallback Club navigation must use canonical app config for URL construction.");
+excludes(appEntry, 'const slugByView = new Map([', "Fallback Club navigation must not duplicate Club view-to-slug mapping.");
 const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
 const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
 const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
@@ -157,4 +165,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club shared view switching, canonical Uniform Loading, explicit data routing, API contract, and route-core splitting validation passed.");
+console.log("Club canonical view links, shared switching, refresh routing, Uniform Loading, and API contract validation passed.");
