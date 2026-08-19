@@ -8,7 +8,11 @@ const ignoredPaths = new Set(
     .filter((line) => line && !line.startsWith("#")),
 );
 
-const requiredBuildOnlyPaths = [
+const requiredProductionIgnoredPaths = [
+  "site/validate*.mjs",
+  "site/eslint.config.mjs",
+  "site/jsconfig.json",
+  "site/types",
   "site/build-app-core.mjs",
   "site/modules/app-core.js",
   "site/modules/app-core-build-normalizer.js",
@@ -26,9 +30,9 @@ const requiredBuildOnlyPaths = [
   "site/modules/app-core-watchlist-route-chunk.js",
 ];
 
-for (const path of requiredBuildOnlyPaths) {
+for (const path of requiredProductionIgnoredPaths) {
   if (!ignoredPaths.has(path)) {
-    throw new Error(`Build-only application-core source must not ship in production: ${path}`);
+    throw new Error(`Development-only source must not ship in production: ${path}`);
   }
 }
 
@@ -48,4 +52,4 @@ for (const runtimePath of [
   }
 }
 
-console.log("Production application-core source boundary validation passed.");
+console.log("Production source boundary validation passed.");
