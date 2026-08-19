@@ -298,7 +298,6 @@ function promoteResponsiveStylesheet() {
 const entryRelease = releaseFromBootstrap();
 const responsiveStylesReady = installResponsiveStylesheet();
 const PREBUILT_CORE_PATH = "/modules/app-core-runtime.js";
-const SOURCE_CORE_PATH = "/modules/app-core.js";
 const PREBUILT_CORE_CACHE_QUERY = "mfl_core";
 let applicationCoreLoaded = false;
 /** @type {() => void} */
@@ -337,36 +336,9 @@ function primeEvaluationDiscountRatePlaceholder() {
 
 primeEvaluationDiscountRatePlaceholder();
 
-function executeApplicationCore(path, source) {
-  const script = document.createElement("script");
-  script.dataset.mflRuntime = path;
-  script.textContent = `${source}\n//# sourceURL=${path}`;
-  document.head.appendChild(script);
-  script.remove();
-}
-
 async function loadApplicationCore() {
-  const prebuiltPath = prebuiltApplicationCorePath();
-  let prebuiltLoadError = null;
-  try {
-    await loadClassicScript(prebuiltPath);
-  } catch (error) {
-    prebuiltLoadError = error;
-  }
-
-  if (!prebuiltLoadError) {
-    assertApplicationCoreInitialized("Prebuilt");
-    return;
-  }
-
-  console.warn("Prebuilt application core is unavailable; using source normalization fallback.", prebuiltLoadError);
-  const fallbackLoader = Reflect.get(window, "__mflLoadFallbackApplicationCoreArtifacts");
-  if (typeof fallbackLoader !== "function") throw new Error("Application core fallback artifact loader is unavailable.");
-  const artifacts = await fallbackLoader();
-  const source = String(artifacts?.core || "").trim();
-  if (!source) throw new Error("Application core source fallback is unavailable.");
-  executeApplicationCore(SOURCE_CORE_PATH, source);
-  assertApplicationCoreInitialized("Fallback");
+  await loadClassicScript(prebuiltApplicationCorePath());
+  assertApplicationCoreInitialized("Prebuilt");
 }
 
 function showStartupError(error) {
