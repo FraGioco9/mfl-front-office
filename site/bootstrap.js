@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STATIC_RELEASE_VERSION = "1.124.55";
+  const STATIC_RELEASE_VERSION = "1.124.56";
   const FILTER_STORAGE_KEY = "mfl-table-filters-v1";
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
@@ -11,6 +11,7 @@
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const TABLE_VIEW_BY_SLUG = Object.freeze({
     attributes: "attributes",
+    squad: "attributes",
     stats: "stats",
     "next-overall": "next",
     contracts: "contracts",
