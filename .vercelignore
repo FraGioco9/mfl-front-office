@@ -1,16 +1,18 @@
 # Repository/CI files are not part of the production Vercel artifact.
 .github
+.gitignore
 supabase
 README.md
 *.py
 supabase-schema.sql
 
-# Site development and validation assets.
+# Site development, validation, and deployment configuration assets.
 site/validate*.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types
 site/vercel.json
+site/vercel.production.json
 
 # Application-core compiler sources are build-only. Production serves the generated
 # shared core and route runtime artifacts created before Vercel packaging.
