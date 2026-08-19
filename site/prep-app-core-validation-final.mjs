@@ -44,6 +44,25 @@ const newBlock = [
 ].join("\n");
 if (!source.includes(oldBlock)) throw new Error("Table layout validator legacy normalizer ownership block was not found.");
 source = source.replace(oldBlock, newBlock);
+
+const oldHeaderPreservation = [
+  "invariant(",
+  '  (tableLoadingRuntime.match(/const staticRoutePending = staticHeader/g) || []).length >= 2',
+  '  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTablePage")',
+  '  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTableView"),',
+  '  "Loading/header ownership must preserve the first-paint header until the application core reaches the requested page and view.",',
+  ");",
+].join("\n");
+const canonicalHeaderPreservation = [
+  "invariant(",
+  '  tableLoadingRuntime.includes("const ensureHeader = coreContracts()?.ensureCanonicalTableHeader;")',
+  '  && tableLoadingRuntime.includes("if (!forceRoute) ensureCanonicalHeader();")',
+  '  && !tableLoadingRuntime.includes("head.replaceChildren"),',
+  '  "Loading/header ownership must preserve first-paint header structure and reconcile it only through the canonical core contract.",',
+  ");",
+].join("\n");
+if (!source.includes(oldHeaderPreservation)) throw new Error("Legacy first-paint header preservation assertion was not found.");
+source = source.replace(oldHeaderPreservation, canonicalHeaderPreservation);
 await writeFile(path, source, "utf8");
 
 const stylesBasePath = new URL("./styles-base.css", import.meta.url);
