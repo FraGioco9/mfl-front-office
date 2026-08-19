@@ -10,10 +10,13 @@ site/validate*.mjs
 site/eslint.config.mjs
 site/jsconfig.json
 site/types
+site/vercel.json
 
 # Application-core compiler sources are build-only. Production serves the generated
 # shared core and route runtime artifacts created before Vercel packaging.
 site/build-app-core.mjs
+site/modules/app-config.js
+site/modules/package.json
 site/modules/app-core.js
 site/modules/app-core-build-normalizer.js
 site/modules/app-core-normalizer.js
