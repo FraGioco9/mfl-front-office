@@ -9481,6 +9481,9 @@ function renderTable() {
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
+  if (state.currentPage === "agents" && tablePageTitle) {
+    tablePageTitle.textContent = agentTitleForWallet(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
 
   const pageRows = currentPageRows();
   const fragment = document.createDocumentFragment();
