@@ -53,7 +53,7 @@
       if (!portal || !activeMetric?.isConnected || !evaluationActive()) return;
       const rect = activeMetric.getBoundingClientRect();
       const tooltipRect = portal.getBoundingClientRect();
-      const gap = 8;
+      const gap = Number(window.__mflTooltipSettings?.gap) || 6;
       let top = rect.top - tooltipRect.height - gap;
       if (top < 8) top = rect.bottom + gap;
       const left = Math.min(
