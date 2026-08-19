@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, playerSplitter, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, playerSplitter, appConfig, routeLoader, routeNormalizer, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-player-chunk.js"),
+  read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
@@ -57,7 +58,8 @@ excludes(playerCore, "function primaryPreciseOverall(row) {", "Shared overall ma
 excludes(playerCore, "async function copyPlayerId(id) {", "Shared copy behavior must not become Player-only.");
 excludes(playerCore, "function renderPlayerPage(playerId) {", "The stable Player renderer name must remain shared for existing wrappers and refresh owners.");
 
-includes(routeLoader, 'player: "/modules/app-core-player-runtime.js"', "The route-core loader must map Player to its generated chunk.");
+includes(appConfig, 'player: "/modules/app-core-player-runtime.js"', "Canonical app config must map Player to its generated chunk.");
+includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeNormalizer, 'await window.__mflEnsureRouteCore("player");', "Direct Player startup must load Player helpers before startApp.");
 includes(routeNormalizer, '/^\\\\/players\\\\/[^/]+\\\\/?$/i', "Direct Player startup must recognize canonical /players/<id> routes.");
 
