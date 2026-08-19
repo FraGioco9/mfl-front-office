@@ -4635,16 +4635,6 @@ body[data-page="watchlist"] #progressionPage .views {
   text-align: left !important;
 }
 
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="attributes"] { order: 1 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="next"] { order: 2 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="contracts"] { order: 3 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="current"] { order: 4 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="all"] { order: 5 !important; }
-body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
-  order: 10 !important;
-  margin-left: auto !important;
-}
-
 #progressionPage .tableShell,
 #progressionPage .tableScroller,
 #progressionPage .tableScroller table {
@@ -4695,16 +4685,6 @@ body[data-page="club"] #progressionPage,
 body[data-page="club"] #progressionPage * {
   transition: none !important;
   animation: none !important;
-}
-
-body[data-page="mfl"] #progressionPage .viewButton[data-view="attributes"],
-body[data-page="mflstats"] #progressionPage .viewButton[data-view="attributes"] {
-  order: 1 !important;
-}
-
-body[data-page="mfl"] #progressionPage .viewButton[data-view="stats"],
-body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
-  order: 2 !important;
 }
 
 #progressionPage .tableShell {

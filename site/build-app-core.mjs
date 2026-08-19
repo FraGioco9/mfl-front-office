@@ -19,20 +19,6 @@ const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");
 const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");
 const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");
 
-function removeResidualLegacyWidthCall(source) {
-  const normalized = String(source || "").replace(/\r\n?/g, "\n");
-  const residualWidthCall = [
-    '      if (typeof window.applyExactPlayerTableWidths === "function") {',
-    "        window.applyExactPlayerTableWidths();",
-    "      }",
-    "      return true;",
-  ].join("\n");
-  if (!normalized.includes(residualWidthCall)) {
-    throw new Error("Could not remove residual post-render table width call from app-core source.");
-  }
-  return normalized.replace(residualWidthCall, "      return true;");
-}
-
 function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
   const start = source.indexOf(startMarker);
   const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
@@ -159,9 +145,7 @@ const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "")
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
-const source = normalizeRetirementMarkerContract(
-  removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
-);
+const source = normalizeRetirementMarkerContract(await readFile(sourcePath, "utf8"));
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = normalizeTooltipHeightOwnership(String(artifacts.core || "")).replace(/\s*$/, "");
 const evaluationRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.evaluation || "")).replace(/\s*$/, "");

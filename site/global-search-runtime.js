@@ -140,10 +140,6 @@
     }
   }
 
-  function payloadApplierReady() {
-    return typeof coreContracts()?.applySearchPayload === "function";
-  }
-
   function applyPayload(payload, normalizedQuery = "") {
     installCoreSearchMatching();
     const applySearchPayload = coreContracts()?.applySearchPayload;

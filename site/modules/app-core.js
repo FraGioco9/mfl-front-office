@@ -5093,11 +5093,6 @@ function syncRecentSearchStateFromStorage(event = null) {
   }
 }
 
-function normalizeWalletAddress(address) {
-  const value = String(address || "").trim();
-  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
-}
-
 function restoreLinkedWalletState(savedState) {
   const savedAddress = normalizeWalletAddress(savedState?.linkedWalletAddress);
   if (savedAddress) {
@@ -9917,9 +9912,6 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
         applyFilters({ save: options.save !== false });
       } finally {
         state.incrementalApplying = false;
-      }
-      if (typeof window.applyExactPlayerTableWidths === "function") {
-        window.applyExactPlayerTableWidths();
       }
       return true;
     } catch (error) {
