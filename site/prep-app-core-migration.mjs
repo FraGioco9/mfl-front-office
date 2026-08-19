@@ -37,3 +37,11 @@ const deadReadinessHelper = [
 if (!globalSearchSource.includes(deadReadinessHelper)) throw new Error("Dead Global Search readiness helper was not found.");
 globalSearchSource = globalSearchSource.replace(deadReadinessHelper, "");
 await writeFile(globalSearchPath, globalSearchSource, "utf8");
+
+const routeChunksPath = new URL("./modules/app-core-route-chunks.js", import.meta.url);
+let routeChunksSource = await readFile(routeChunksPath, "utf8");
+const legacyClubEndMarker = `  const clubEndMarker = '(() => {\\n  const VERSION = "1.122.0";';`;
+const canonicalClubEndMarker = `  const clubEndMarker = '(() => {\\n  const VERSION = String(window.__mflReleaseVersion || "");';`;
+if (!routeChunksSource.includes(legacyClubEndMarker)) throw new Error("Legacy Club splitter release marker was not found.");
+routeChunksSource = routeChunksSource.replace(legacyClubEndMarker, canonicalClubEndMarker);
+await writeFile(routeChunksPath, routeChunksSource, "utf8");
