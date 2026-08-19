@@ -690,6 +690,32 @@ export function normalizeApplicationCore(source) {
     'agents: ["attributes", "next", "contracts", "current", "all"]',
     'agents: ["attributes", "contracts", "next", "current", "all"]',
   );
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    ['  const top = Math.max(8, rect.top - tooltipRect.height - 8);'],
+    [
+      '  const tooltipGap = Number(window.__mflTooltipSettings?.gap) || 6;',
+      '  const top = Math.max(8, rect.top - tooltipRect.height - tooltipGap);',
+    ],
+    "Evaluation load tooltip gap",
+  );
+  nextSource = replaceCoreSourceIfPresent(
+    nextSource,
+    [
+      '  let top = anchorTop - tooltipRect.height - 10;',
+      '  if (top < margin) {',
+      '    top = anchorBottom + 10;',
+      '  }',
+    ],
+    [
+      '  const tooltipGap = Number(window.__mflTooltipSettings?.gap) || 6;',
+      '  let top = anchorTop - tooltipRect.height - tooltipGap;',
+      '  if (top < margin) {',
+      '    top = anchorBottom + tooltipGap;',
+      '  }',
+    ],
+    "Player note tooltip gap",
+  );
   nextSource = normalizeContextualAgentNavigation(nextSource);
   nextSource = normalizeWatchlistViewAuthority(nextSource);
   nextSource = scopeProgressionPermissionToProgressionPage(nextSource);
