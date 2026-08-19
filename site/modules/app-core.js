@@ -990,6 +990,11 @@ function saveAgentNameForWallet(address, name) {
     } catch {
       // Ignore storage failures; runtime can still resolve names from loaded rows.
     }
+    if (state.currentPage === "agents"
+      && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress
+      && tablePageTitle) {
+      tablePageTitle.textContent = `${agentName} - ${normalizedAddress}`;
+    }
   }
 
   try {
