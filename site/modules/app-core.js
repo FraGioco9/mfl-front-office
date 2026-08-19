@@ -12210,13 +12210,12 @@ async function startApp() {
 /* Layout-centered feedback and transition-free shared views */
 (() => {
   function syncLayoutCenter() {
-    const toast = document.querySelector("#toastMessage");
     const selection = document.querySelector("#selectionBar");
     const pageLayout = document.querySelector("main");
     if (!pageLayout) return;
     const bounds = pageLayout.getBoundingClientRect();
     const center = `${bounds.left + (bounds.width / 2)}px`;
-    toast?.style.setProperty("--toast-center-x", center);
+    window.__mflToastPosition?.sync?.();
     selection?.style.setProperty("--selection-center-x", center);
   }
 

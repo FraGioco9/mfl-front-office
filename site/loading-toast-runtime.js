@@ -11,27 +11,41 @@
   let unsubscribe = null;
   let tableScrollTimer = 0;
 
-  function positionToast(toast) {
-    if (!(toast instanceof HTMLElement)) return;
+  function setToastPosition(centerX) {
+    if (!Number.isFinite(centerX)) return;
+    document.documentElement.style.setProperty("--toast-center-x", `${centerX}px`);
+  }
+
+  function toastCenterX() {
     const mobile = window.matchMedia("(max-width: 900px)").matches;
     const viewport = window.visualViewport;
     if (mobile && viewport) {
-      toast.style.left = `${viewport.offsetLeft + viewport.width / 2}px`;
+      return viewport.offsetLeft + viewport.width / 2;
+    }
+
+    const main = document.querySelector("main");
+    if (!(main instanceof HTMLElement)) return window.innerWidth / 2;
+    const rect = main.getBoundingClientRect();
+    return rect.width > 0 ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  }
+
+  function syncToastPosition() {
+    setToastPosition(toastCenterX());
+  }
+
+  function positionToast(toast) {
+    if (!(toast instanceof HTMLElement)) return;
+    syncToastPosition();
+    const mobile = window.matchMedia("(max-width: 900px)").matches;
+    const viewport = window.visualViewport;
+    if (mobile && viewport) {
       const layoutHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
       const obscuredBottom = Math.max(0, layoutHeight - viewport.offsetTop - viewport.height);
       toast.style.setProperty("--mfl-visual-viewport-bottom", `${obscuredBottom}px`);
-      return;
+    } else {
+      toast.style.removeProperty("--mfl-visual-viewport-bottom");
     }
-
-    toast.style.removeProperty("--mfl-visual-viewport-bottom");
-    const main = document.querySelector("main");
-    if (!(main instanceof HTMLElement)) {
-      toast.style.removeProperty("left");
-      return;
-    }
-
-    const rect = main.getBoundingClientRect();
-    if (rect.width > 0) toast.style.left = `${rect.left + rect.width / 2}px`;
+    toast.style.removeProperty("left");
   }
 
   function retireApplicationToast(snapshot) {
@@ -184,5 +198,9 @@
     }
   }
 
+  window.__mflToastPosition = Object.freeze({
+    name: "Toast Position",
+    sync: syncToastPosition,
+  });
   window.__mflLoadingToastRuntime = Object.freeze({ sync, destroy });
 })();
