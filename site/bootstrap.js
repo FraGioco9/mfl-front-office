@@ -618,7 +618,6 @@
   // loadRuntime("/filter-controls-runtime.js")
 
   preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
-  preloadAsset("/responsive.css", { as: "style" });
 
   void (async () => {
     try {
