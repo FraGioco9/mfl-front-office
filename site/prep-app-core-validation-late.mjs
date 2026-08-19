@@ -12,8 +12,8 @@ async function replaceInFile(path, replacements) {
 
 await replaceInFile("./validate-bootstrap-ownership.mjs", [
   [
-    '  "controller.beginIntent?.(target, \\"control-intent\\")",',
-    '  "navigationController()?.beginIntent?.(target, \\"control-intent\\")",',
+    "controller.beginIntent?.(target",
+    "navigationController()?.beginIntent?.(target",
     "navigation intent delegation",
   ],
 ]);
