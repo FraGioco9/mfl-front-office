@@ -12,6 +12,32 @@ function replaceRequired(source, before, after, label) {
   return source.replace(before, after);
 }
 
+async function tolerateRetiredEvaluationRecoveryRule() {
+  const filePath = new URL("./modules/app-core-route-request-normalizer.js", import.meta.url);
+  let source = await readFile(filePath, "utf8");
+  const before = [
+    "function replaceRequired(source, before, after, label) {",
+    "  const text = String(source || \"\");",
+    "  if (!text.includes(before)) {",
+    "    throw new Error(`Could not normalize route request pattern: ${label}.`);",
+    "  }",
+    "  return text.replace(before, after);",
+    "}",
+  ].join("\n");
+  const after = [
+    "function replaceRequired(source, before, after, label) {",
+    "  const text = String(source || \"\");",
+    "  if (!text.includes(before)) {",
+    '    if (label === "Evaluation route recovery") return text;',
+    "    throw new Error(`Could not normalize route request pattern: ${label}.`);",
+    "  }",
+    "  return text.replace(before, after);",
+    "}",
+  ].join("\n");
+  source = replaceRequired(source, before, after, "retired Evaluation recovery normalizer rule");
+  await writeFile(filePath, source, "utf8");
+}
+
 function applyBuildOnlySourceTransforms(source) {
   let normalized = String(source || "").replace(/\r\n?/g, "\n");
   const residualWidthCall = [
@@ -136,6 +162,8 @@ async function preserveLegacyValidatorEntrypoints() {
     await writeFile(filePath, source, "utf8");
   }
 }
+
+await tolerateRetiredEvaluationRecoveryRule();
 
 const buildNormalizerSource = await readFile(buildNormalizerPath, "utf8");
 if (!buildNormalizerSource.includes("function normalizeCompleteApplicationCore(source)")) {
