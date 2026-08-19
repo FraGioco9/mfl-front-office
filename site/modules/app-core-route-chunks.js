@@ -279,11 +279,11 @@ export function splitApplicationCoreRuntime(source) {
   );
   club = clubSearch.core;
 
-  const detachedClubNavigation = "    void openClubPage(clubId, view, false);";
+  const detachedClubNavigation = "    void openClubPage(clubId, view, true);";
   if (!club.includes(detachedClubNavigation)) {
     throw new Error("Could not locate the detached Club route renderer.");
   }
-  club = club.replace(detachedClubNavigation, "    return openClubPage(clubId, view, false);");
+  club = club.replace(detachedClubNavigation, "    return openClubPage(clubId, view, true);");
 
   const publicClubOwner = "  window.mflOpenClubPage = openClubImmediately;";
   if (!club.includes(publicClubOwner)) {
