@@ -5,7 +5,18 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, stylesBase, tableWidthRuntime, tableLoadingRuntime, staticUiRuntime, bootstrap, bootstrapCore, indexHtml, responsive, appCoreNormalizer] = await Promise.all([
+const [
+  styles,
+  stylesBase,
+  tableWidthRuntime,
+  tableLoadingRuntime,
+  staticUiRuntime,
+  bootstrap,
+  bootstrapCore,
+  indexHtml,
+  responsive,
+  appCoreNormalizer,
+] = await Promise.all([
   read("./styles.css"),
   read("./styles-base.css"),
   read("./table-width-runtime.js"),
@@ -19,7 +30,8 @@ const [styles, stylesBase, tableWidthRuntime, tableLoadingRuntime, staticUiRunti
 ]);
 
 function percentageVariable(name) {
-  const match = styles.match(new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*([0-9.]+)%`));
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = styles.match(new RegExp(`${escaped}\\s*:\\s*([0-9.]+)%`));
   invariant(match, `Missing Uniform Width percentage ${name}.`);
   const value = Number(match[1]);
   invariant(Number.isFinite(value) && value > 0, `Invalid Uniform Width percentage ${name}.`);
@@ -27,9 +39,24 @@ function percentageVariable(name) {
 }
 
 function pixelVariable(name) {
-  const match = styles.match(new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*([0-9.]+)px`));
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = styles.match(new RegExp(`${escaped}\\s*:\\s*([0-9.]+)px`));
   invariant(match, `Missing global table pixel dimension ${name}.`);
   return Number(match[1]);
+}
+
+function cssRules(source) {
+  const rules = [];
+  const pattern = /([^{}]+)\{([^{}]*)\}/g;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    rules.push({ selector: match[1].trim(), declarations: match[2] });
+  }
+  return rules;
+}
+
+function ownsWidth(declarations) {
+  return /(?:^|;)\s*(?:width|min-width|max-width)\s*:/m.test(declarations);
 }
 
 const playerVariables = Object.freeze({
@@ -98,39 +125,34 @@ invariant(
   !/#progressionPage \.playerTableScroller[^\n{]*(?:th|td)[^{]*\{[^}]*\bwidth\s*:/s.test(styles),
   "Player headers and data cells must never own column widths.",
 );
-invariant(
-  !styles.includes("--mfl-table-mobile-width"),
-  "Uniform Width must contain percentages only; table pixel width is not part of the contract.",
-);
+invariant(!styles.includes("--mfl-table-mobile-width"), "Uniform Width must contain percentages only; table pixel width is not part of the contract.");
 invariant(pixelVariable("--mfl-table-header-height") === 38, "Player table headers must use the global 38px height.");
 invariant(pixelVariable("--mfl-table-row-height") === 38, "Player table rows must use the global 38px height.");
 invariant(
-  styles.includes("#progressionPage .playerTableScroller table {")
-  && styles.includes("table-layout: fixed;"),
+  styles.includes("#progressionPage .playerTableScroller table {") && styles.includes("table-layout: fixed;"),
   "The dedicated player scroller must own stable table layout before runtime hydration.",
 );
 invariant(
-  styles.includes("#tableBody > .mflTableLoadingRow > td {")
-  && styles.includes("height: var(--mfl-table-row-height);"),
+  styles.includes("#tableBody > .mflTableLoadingRow > td {") && styles.includes("height: var(--mfl-table-row-height);"),
   "Loading rows must inherit the same global row height as loaded rows.",
 );
 
-const legacyBaseColumnSelector = /\.col-(?:select|id|flag|name|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b[^,{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s;
+const baseRules = cssRules(stylesBase);
+const playerGeometryClasses = /\.col-(?:select|id|flag|name|age|positions|seasons|stat|agent|contract-revenue|contract-club|contract-division|link)\b/;
 invariant(
-  !legacyBaseColumnSelector.test(stylesBase),
+  !baseRules.some((rule) => playerGeometryClasses.test(rule.selector) && ownsWidth(rule.declarations)),
   "styles-base.css must not own player column geometry; use Uniform Width in styles.css.",
 );
 invariant(
-  !/\.nameCell\s*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase),
+  !baseRules.some((rule) => /\.nameCell\b/.test(rule.selector) && ownsWidth(rule.declarations)),
   "The player Name cell must not own column geometry.",
 );
 invariant(
-  !/\.advancedPlayerTable\s+(?:th|td)[^{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase)
-  && !/\.advancedPlayerTable[^,{]*(?:first-child|tbody\s+th)[^{]*\{[^}]*\b(?:width|min-width|max-width)\s*:/s.test(stylesBase),
+  !baseRules.some((rule) => /\.advancedPlayerTable\b/.test(rule.selector) && ownsWidth(rule.declarations)),
   "Advanced table column widths must come only from Uniform Width.",
 );
 invariant(
-  !/\.evaluation(?:Summary)?Table[^,{]*:nth-child\([^)]*\)[^{]*\{[^}]*\bwidth\s*:/s.test(stylesBase),
+  !baseRules.some((rule) => /\.evaluation(?:Summary)?Table\b/.test(rule.selector) && /:nth-child\(/.test(rule.selector) && ownsWidth(rule.declarations)),
   "Evaluation column widths must come only from Uniform Width.",
 );
 invariant(!stylesBase.includes("1240px"), "Legacy 1240px player-table width must not return to styles-base.css.");
@@ -138,8 +160,8 @@ invariant(!stylesBase.includes("900px"), "Legacy 900px Evaluation table floor mu
 invariant(!stylesBase.includes("tableWidthsReady"), "Legacy table-width readiness gating must not return.");
 invariant(
   !stylesBase.includes("col-shared-width-filler")
-  && !stylesBase.includes("col-stable-width-filler")
-  && !stylesBase.includes("col-exact-width-filler"),
+    && !stylesBase.includes("col-stable-width-filler")
+    && !stylesBase.includes("col-exact-width-filler"),
   "Legacy table width filler columns must not return.",
 );
 
@@ -149,26 +171,26 @@ invariant(tableWidthRuntime.includes('unit: "%"'), "Uniform Width must use perce
 invariant(tableWidthRuntime.includes('window.__mflUniformWidth = Object.freeze({'), "Uniform Width must be exposed as the canonical global marker.");
 invariant(
   !tableWidthRuntime.includes("getComputedStyle")
-  && !tableWidthRuntime.includes("GROUP_VARIABLES")
-  && !tableWidthRuntime.includes("evaluationSummary")
-  && !tableWidthRuntime.includes("evaluationSeason")
-  && !tableWidthRuntime.includes("advancedContracts")
-  && !tableWidthRuntime.includes("statsTotal")
-  && !tableWidthRuntime.includes("contractsTotal"),
+    && !tableWidthRuntime.includes("GROUP_VARIABLES")
+    && !tableWidthRuntime.includes("evaluationSummary")
+    && !tableWidthRuntime.includes("evaluationSeason")
+    && !tableWidthRuntime.includes("advancedContracts")
+    && !tableWidthRuntime.includes("statsTotal")
+    && !tableWidthRuntime.includes("contractsTotal"),
   "Uniform Width runtime must not contain table layouts, grouped widths, or computed width values.",
 );
 invariant(
   !tableWidthRuntime.includes("setProperty(")
-  && !tableWidthRuntime.includes("removeProperty(")
-  && !tableWidthRuntime.includes("requestAnimationFrame(")
-  && !tableWidthRuntime.includes("matchMedia(")
-  && !tableWidthRuntime.includes("querySelector("),
+    && !tableWidthRuntime.includes("removeProperty(")
+    && !tableWidthRuntime.includes("requestAnimationFrame(")
+    && !tableWidthRuntime.includes("matchMedia(")
+    && !tableWidthRuntime.includes("querySelector("),
   "Uniform Width runtime must never mutate table geometry after paint.",
 );
 invariant(
   !tableWidthRuntime.includes("__mflTableWidthRuntime")
-  && !tableWidthRuntime.includes("takeOwnership")
-  && !tableWidthRuntime.includes("const apply ="),
+    && !tableWidthRuntime.includes("takeOwnership")
+    && !tableWidthRuntime.includes("const apply ="),
   "Uniform Width must not expose a compatibility width owner or apply API.",
 );
 
@@ -179,14 +201,8 @@ invariant(
   "The Uniform Width marker must exist before synchronous bootstrap rendering.",
 );
 const playerTableShell = indexHtml.match(/<section class="tableShell" aria-label="Players table">([\s\S]*?)<div id="emptyState"/)?.[1] || "";
-invariant(
-  playerTableShell.includes('<div class="playerTableScroller">'),
-  "The static Players table must be born with its final Uniform Width scroller class.",
-);
-invariant(
-  !playerTableShell.includes('class="tableScroller"'),
-  "The Players table must never enter the historical generic tableScroller width cascade, even before bootstrap.",
-);
+invariant(playerTableShell.includes('<div class="playerTableScroller">'), "The static Players table must be born with its final Uniform Width scroller class.");
+invariant(!playerTableShell.includes('class="tableScroller"'), "The Players table must never enter the historical generic tableScroller width cascade, even before bootstrap.");
 
 const canonicalContractColumns = [
   "overall",
@@ -214,14 +230,14 @@ invariant(
 invariant(bootstrap.includes('head.dataset.mflStaticHeader = "true";'), "The synchronous first-paint header must be marked for canonical takeover.");
 invariant(
   bootstrap.includes('const targetClasses = ["col-select", ...columns.map((column) => firstPaintTableColumnClass(column))];')
-  && bootstrap.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
-  && bootstrap.includes("if (!alreadyCanonical) {"),
+    && bootstrap.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
+    && bootstrap.includes("if (!alreadyCanonical) {"),
   "Bootstrap must preserve an already-canonical colgroup while owning static header rendering.",
 );
 invariant(!bootstrap.includes("cell.colSpan = 16"), "First-paint loading rows must not collapse the table into one colspan cell.");
 invariant(bootstrap.includes('row.className = "mflTableLoadingRow";'), "First-paint loading rows must use the canonical loading-row class.");
 invariant(
-  bootstrap.includes("const columnCount = Math.max(1, colGroup?.children.length || document.getElementById(\"tableHead\")?.querySelector(\"tr\")?.cells.length || 1);"),
+  bootstrap.includes('const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);'),
   "First-paint loading rows must use the actual rendered column count.",
 );
 
@@ -229,9 +245,7 @@ const initialStructureIndex = bootstrap.indexOf("primeInitialTableStructure(tabl
 const initialRowsIndex = bootstrap.indexOf("primeInitialTableRows();", initialStructureIndex);
 const revealIndex = bootstrap.indexOf('document.querySelectorAll("main > .pageView")', initialStructureIndex);
 invariant(
-  initialStructureIndex >= 0
-  && initialRowsIndex > initialStructureIndex
-  && revealIndex > initialRowsIndex,
+  initialStructureIndex >= 0 && initialRowsIndex > initialStructureIndex && revealIndex > initialRowsIndex,
   "First paint must build columns/header, build loading rows, then reveal the table in that order.",
 );
 
@@ -246,21 +260,21 @@ invariant(!tableLoadingRuntime.includes("installStyles()"), "Loading runtime mus
 
 invariant(
   !staticUiRuntime.includes("STATIC_TABLE_")
-  && !staticUiRuntime.includes("FILTER_STORAGE_KEY")
-  && !staticUiRuntime.includes('document.createElement("th")')
-  && !staticUiRuntime.includes('document.createElement("col")'),
+    && !staticUiRuntime.includes("FILTER_STORAGE_KEY")
+    && !staticUiRuntime.includes('document.createElement("th")')
+    && !staticUiRuntime.includes('document.createElement("col")'),
   "Static UI must not duplicate bootstrap table schema, sort-state, header, or colgroup rendering.",
 );
 invariant(
   staticUiRuntime.includes('Reflect.get(window, "__mflPrimeTableHeaderSignature")')
-  && staticUiRuntime.includes('Reflect.get(window, "__mflPrimeTableStructure")')
-  && staticUiRuntime.includes("return Boolean(primeStructure(state.page, state.view));"),
+    && staticUiRuntime.includes('Reflect.get(window, "__mflPrimeTableStructure")')
+    && staticUiRuntime.includes("return Boolean(primeStructure(state.page, state.view));"),
   "Static UI must delegate non-canonical table headers to the bootstrap owner.",
 );
 invariant(
   !staticUiRuntime.includes("__mflTableWidthRuntime")
-  && !staticUiRuntime.includes("table.style.width")
-  && !staticUiRuntime.includes("table.style.minWidth"),
+    && !staticUiRuntime.includes("table.style.width")
+    && !staticUiRuntime.includes("table.style.minWidth"),
   "Static UI must not own or apply player table widths during startup.",
 );
 
@@ -269,23 +283,16 @@ invariant(
   "Responsive CSS must not override Uniform Width column percentages.",
 );
 invariant(!responsive.includes("1240px"), "Responsive CSS must not own a fixed table width.");
+invariant(!responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive), "Responsive styling must not assign a conflicting height to canonical loading rows.");
 invariant(
-  !responsive.includes(".mflTableLoadingRow") || !/\.mflTableLoadingRow[^}]*39px/s.test(responsive),
-  "Responsive styling must not assign a conflicting height to canonical loading rows.",
-);
-invariant(
-  responsive.includes("html #tableBody > .mflTableLoadingRow > td {")
-  && responsive.includes("height: var(--mfl-table-row-height);"),
+  responsive.includes("html #tableBody > .mflTableLoadingRow > td {") && responsive.includes("height: var(--mfl-table-row-height);"),
   "First-paint loading rows must use the canonical row-height variable.",
 );
 
-invariant(
-  appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"),
-  "Generated application core must remove its raw legacy table-width owner before execution.",
-);
+invariant(appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"), "Generated application core must remove its raw legacy table-width owner before execution.");
 invariant(
   appCoreNormalizer.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
-  && appCoreNormalizer.includes("if (alreadyCanonical) return;"),
+    && appCoreNormalizer.includes("if (alreadyCanonical) return;"),
   "Canonical colgroup ownership must be idempotent and preserve an already-correct first-paint colgroup.",
 );
 invariant(
@@ -295,14 +302,11 @@ invariant(
 
 const widthAssertIndex = bootstrapCore.indexOf("assertUniformWidthContract();");
 const appImportIndex = bootstrapCore.indexOf('await import(new URL("/modules/app-entry.js"');
-invariant(
-  widthAssertIndex >= 0 && appImportIndex > widthAssertIndex,
-  "Uniform Width must be asserted before the application core can render a table.",
-);
+invariant(widthAssertIndex >= 0 && appImportIndex > widthAssertIndex, "Uniform Width must be asserted before the application core can render a table.");
 invariant(
   bootstrapCore.includes('window.__mflUniformWidth?.name !== "Uniform Width"')
-  && !bootstrapCore.includes("ensureFirstPaintTableWidths")
-  && !bootstrapCore.includes("__mflTableWidthRuntime"),
+    && !bootstrapCore.includes("ensureFirstPaintTableWidths")
+    && !bootstrapCore.includes("__mflTableWidthRuntime"),
   "Bootstrap core must consume Uniform Width as a marker and must not load or call a width owner.",
 );
 
