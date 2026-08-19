@@ -16,7 +16,7 @@ function replaceRequired(source, before, after, label) {
   return source.replace(before, after);
 }
 
-function replaceCoreSourceIfPresent(source, beforeLines, afterLines, label) {
+function replaceCoreSourceIfPresent(source, beforeLines, afterLines, _label) {
   const before = Array.isArray(beforeLines) ? beforeLines.join("\n") : String(beforeLines || "");
   const after = Array.isArray(afterLines) ? afterLines.join("\n") : String(afterLines || "");
   if (!before || !source.includes(before)) {
