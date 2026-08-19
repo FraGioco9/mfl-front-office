@@ -242,7 +242,7 @@
 
   function tooltipTargetFrom(target) {
     if (!(target instanceof Element)) return null;
-    const tooltipTarget = target.closest("[data-tooltip], [title]");
+    const tooltipTarget = target.closest("[data-tooltip], [data-note-tooltip], [title]");
     if (!(tooltipTarget instanceof HTMLElement) || tooltipTarget.matches(SPECIALIZED_TOOLTIP_SELECTOR)) return null;
     return tooltipTarget;
   }
@@ -251,6 +251,8 @@
     if (!(target instanceof HTMLElement)) return null;
     const dataText = String(target.getAttribute("data-tooltip") || "").trim();
     if (dataText) return { attribute: "data-tooltip", text: dataText };
+    const noteText = String(target.getAttribute("data-note-tooltip") || "").trim();
+    if (noteText) return { attribute: "data-note-tooltip", text: noteText };
     const titleText = String(target.getAttribute("title") || "").trim();
     return titleText ? { attribute: "title", text: titleText } : null;
   }
@@ -414,8 +416,8 @@
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("pointerover", onTooltipPointerOver, true);
     document.removeEventListener("pointerout", onTooltipPointerOut, true);
-    document.removeEventListener("focusin", onTooltipFocusIn, true);
-    document.removeEventListener("focusout", onTooltipFocusOut, true);
+    document.removeEventListener("focus", onTooltipFocusIn, true);
+    document.removeEventListener("blur", onTooltipFocusOut, true);
     window.removeEventListener("resize", positionTooltipPortal);
     window.removeEventListener("scroll", positionTooltipPortal, true);
     window.removeEventListener("popstate", onPopState);
@@ -425,8 +427,8 @@
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("pointerover", onTooltipPointerOver, true);
   document.addEventListener("pointerout", onTooltipPointerOut, true);
-  document.addEventListener("focusin", onTooltipFocusIn, true);
-  document.addEventListener("focusout", onTooltipFocusOut, true);
+  document.addEventListener("focus", onTooltipFocusIn, true);
+  document.addEventListener("blur", onTooltipFocusOut, true);
   window.addEventListener("resize", positionTooltipPortal);
   window.addEventListener("scroll", positionTooltipPortal, true);
   window.addEventListener("popstate", onPopState);
