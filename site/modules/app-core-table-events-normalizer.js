@@ -38,17 +38,15 @@ export function normalizeTableEventDelegation(source) {
     "player ID copy listeners",
   );
 
-  nextSource = replaceRequired(
-    nextSource,
-    [
-      '  markerElement.addEventListener("mouseenter", () => showPlayerNoteTooltip(markerElement));',
-      '  markerElement.addEventListener("focus", () => showPlayerNoteTooltip(markerElement));',
-      '  markerElement.addEventListener("mouseleave", hidePlayerNoteTooltip);',
-      '  markerElement.addEventListener("blur", hidePlayerNoteTooltip);',
-    ].join("\n"),
-    "",
-    "name marker tooltip listeners",
-  );
+  const nameMarkerTooltipListeners = [
+    '  markerElement.addEventListener("mouseenter", () => showPlayerNoteTooltip(markerElement));',
+    '  markerElement.addEventListener("focus", () => showPlayerNoteTooltip(markerElement));',
+    '  markerElement.addEventListener("mouseleave", hidePlayerNoteTooltip);',
+    '  markerElement.addEventListener("blur", hidePlayerNoteTooltip);',
+  ].join("\n");
+  if (nextSource.includes(nameMarkerTooltipListeners)) {
+    nextSource = nextSource.replace(nameMarkerTooltipListeners, "");
+  }
 
   nextSource = replaceRequired(
     nextSource,

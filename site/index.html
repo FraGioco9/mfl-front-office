@@ -112,6 +112,28 @@
       html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
         display: none !important;
       }
+      html:not(.mflInitialRouteResolved):is(
+        [data-initial-table-page="database"],
+        [data-initial-table-page="mfl"],
+        [data-initial-table-page="progression"],
+        [data-initial-table-page="watchlist"],
+        [data-initial-table-page="myplayers"]
+      ) #sidebar .navButton[data-page] {
+        border-color: var(--border-strong);
+        background: var(--surface);
+        color: var(--text);
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="database"] #sidebar .navButton[data-page="database"],
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="mfl"] #sidebar .navButton[data-page="mfl"],
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="progression"] #sidebar .navButton[data-page="progression"],
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #sidebar .navButton[data-page="watchlist"],
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="myplayers"] #sidebar .navButton[data-page="myplayers"],
+      html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"],
+      html:not(.mflInitialRouteResolved)[data-initial-page="settings"] #sidebar .navButton[data-page="settings"] {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
       html[data-stored-wallet-opt-in="true"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: none !important;
       }

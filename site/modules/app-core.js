@@ -96,7 +96,7 @@ const state = {
 };
 
 const flagColumn = "nationality_flag";
-const baseColumns = ["player_id", flagColumn, "name", "nationality", "age", "positions", "player_seasons"];
+const baseColumns = ["player_id", flagColumn, "name", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
 const contractColumns = ["overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division"];
 const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
@@ -242,7 +242,6 @@ const tableColumnClasses = {
   player_id: "col-id",
   nationality_flag: "col-flag",
   name: "col-name",
-  nationality: "col-nationality",
   age: "col-age",
   positions: "col-positions",
   player_seasons: "col-seasons",
@@ -303,7 +302,6 @@ const columnLabels = {
   wallet_name: "Agent",
   owned_since: "Joined Agency",
   name: "Name",
-  nationality: "Nationality",
   age: "Age",
   positions: "Positions",
   player_seasons: "Seasons",
@@ -5093,11 +5091,6 @@ function syncRecentSearchStateFromStorage(event = null) {
   }
 }
 
-function normalizeWalletAddress(address) {
-  const value = String(address || "").trim();
-  return value ? (value.startsWith("0x") ? value : `0x${value}`) : "";
-}
-
 function restoreLinkedWalletState(savedState) {
   const savedAddress = normalizeWalletAddress(savedState?.linkedWalletAddress);
   if (savedAddress) {
@@ -7263,9 +7256,10 @@ function countryCodeForNationality(nationality) {
 
 function countryFlagHtml(nationality) {
   const code = countryCodeForNationality(nationality);
+  const label = escapeHtml(String(nationality || "Unknown nationality"));
 
   if (!code) {
-    return '<span class="flagText" aria-hidden="true">-</span>';
+    return `<span class="flagText" data-tooltip="${label}" aria-label="${label}">-</span>`;
   }
 
   const codepoints = code.includes("-")
@@ -7275,7 +7269,7 @@ function countryFlagHtml(nationality) {
       .split("")
       .map((character) => (127397 + character.charCodeAt(0)).toString(16))
       .join("-");
-  return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="">`;
+  return `<img class="flagImage" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg" alt="" data-tooltip="${label}" aria-label="${label}">`;
 }
 
 function rarityColorForOverall(overall) {
@@ -9107,7 +9101,7 @@ function renderMflStatsDistribution(packableRows) {
     const totalPercent = totalPackable > 0 ? ((count / totalPackable) * 100).toFixed(1) : "0.0";
     const item = document.createElement("div");
     item.className = "mflStatsHistogramItem";
-    item.innerHTML = `<div class="mflStatsHistogramBar" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
+    item.innerHTML = `<div class="mflStatsHistogramBar"><div class="mflStatsHistogramFill" data-tooltip="${escapeHtml(formatCount(count))} (${escapeHtml(totalPercent)}%)" style="--bar-height:${barHeight}%"></div></div><span class="mflStatsHistogramLabel">${escapeHtml(value)}</span>`;
     histogram.appendChild(item);
   });
 
@@ -9498,7 +9492,6 @@ function renderTable() {
           noteIcon.addEventListener("blur", hidePlayerNoteTooltip);
           markerWrap.appendChild(noteIcon);
         }
-        appendNameMarker(markerWrap, retirementMarker(row), "retirementMarker");
         appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
         if (markerWrap.childElementCount) {
           nameWrap.appendChild(markerWrap);
@@ -9509,6 +9502,12 @@ function renderTable() {
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
       } else if (column === "player_id") {
         cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+      } else if (column === "age") {
+        const ageValue = document.createElement("span");
+        ageValue.className = "playerAgeValue";
+        ageValue.textContent = formatCellValue(row, column);
+        cell.appendChild(ageValue);
+        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
       } else if (column === "active_contract_club_division") {
@@ -9853,14 +9852,6 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return payload;
   }
 
-  const dedicatedClubPayload = route.scope === "club" ? cachedClubViewPayload(route) : null;
-  if (dedicatedClubPayload) {
-    applyIncrementalPayload(route, dedicatedClubPayload);
-    state.incrementalLastKey = incrementalRequestDetails(route, page).requestKey;
-    state.incrementalLastLoadedAt = Date.now();
-    return dedicatedClubPayload;
-  }
-
   const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
   const cachedPayload = state.incrementalPayloadCache.get(cacheKey);
   if (cachedPayload) {
@@ -9917,9 +9908,6 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
         applyFilters({ save: options.save !== false });
       } finally {
         state.incrementalApplying = false;
-      }
-      if (typeof window.applyExactPlayerTableWidths === "function") {
-        window.applyExactPlayerTableWidths();
       }
       return true;
     } catch (error) {
@@ -12218,13 +12206,12 @@ async function startApp() {
 /* Layout-centered feedback and transition-free shared views */
 (() => {
   function syncLayoutCenter() {
-    const toast = document.querySelector("#toastMessage");
     const selection = document.querySelector("#selectionBar");
     const pageLayout = document.querySelector("main");
     if (!pageLayout) return;
     const bounds = pageLayout.getBoundingClientRect();
     const center = `${bounds.left + (bounds.width / 2)}px`;
-    toast?.style.setProperty("--toast-center-x", center);
+    window.__mflToastPosition?.sync?.();
     selection?.style.setProperty("--selection-center-x", center);
   }
 

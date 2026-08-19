@@ -92,15 +92,6 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   const generation = beginIncrementalRouteRequest(cacheKey, force);
   if (force) state.incrementalPayloadCache.delete(cacheKey);
 
-  const dedicatedClubPayload = !force && route.scope === "club" ? cachedClubViewPayload(route) : null;
-  if (dedicatedClubPayload) {
-    if (!incrementalRouteRequestIsCurrent(generation)) return null;
-    applyIncrementalPayload(route, dedicatedClubPayload);
-    state.incrementalLastKey = requestKey;
-    state.incrementalLastLoadedAt = Date.now();
-    return dedicatedClubPayload;
-  }
-
   const cachedPayload = !force ? state.incrementalPayloadCache.get(cacheKey) : null;
   if (cachedPayload) {
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
@@ -249,18 +240,6 @@ export function normalizeRouteRequestCancellation(source) {
     "        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);\n        if (previousPage !== incrementalLoadingPageName(pageName, route)) {",
     "        const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);\n        if (result === false) return false;\n        if (previousPage !== incrementalLoadingPageName(pageName, route)) {",
     "incremental page stale completion",
-  );
-
-  nextSource = replaceRequired(
-    nextSource,
-    `      if (dataRoute && typeof requestIncrementalRoute === "function") {
-        await requestIncrementalRoute(dataRoute, 1);
-      }`,
-    `      if (dataRoute && typeof requestIncrementalRoute === "function") {
-        const dataPayload = await requestIncrementalRoute(dataRoute, 1);
-        if (!dataPayload) return;
-      }`,
-    "Club route data hydration",
   );
 
   nextSource = replaceRequired(

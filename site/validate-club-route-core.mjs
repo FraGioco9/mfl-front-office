@@ -17,6 +17,7 @@ const [coreSource, routeChunksSource, routeLoader, appEntry, routeNormalizer, bu
   read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
 ]);
+const appConfig = await read("./modules/app-config.js");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
@@ -42,6 +43,8 @@ includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk mus
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
 includes(clubCore, "if (!dataPayload) return;", "Obsolete Club payloads must stop inside the Club route chunk before render commit.");
+includes(clubCore, "await withInteractionBusy(loadClubData);", "Club data loads must run through the Uniform Loading workflow.");
+includes(clubCore, "renderIncrementalLoadingState(CLUB_PAGE, dataRoute);", "Club data loads must render the canonical table loading state.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
@@ -50,7 +53,7 @@ includes(clubCore, "runPageTransition(CLUB_PAGE, updateHistory", "Club page entr
 includes(clubCore, "runViewTransition(CLUB_PAGE, nextView", "Club same-page views must use the global view transition runner.");
 excludes(clubCore, "commitViewTransition(CLUB_PAGE", "Club must not retain a private direct view commit.");
 
-includes(routeLoader, 'club: "/modules/app-core-club-runtime.js"', "The route-core loader must map Club to its generated chunk.");
+includes(appConfig, 'club: "/modules/app-core-club-runtime.js"', "The route config must map Club to its generated chunk.");
 includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
 includes(routeLoader, 'runTransition("club", true', "The primary Club gate must enter the global page transition before lazy loading.");

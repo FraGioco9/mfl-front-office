@@ -19,20 +19,6 @@ const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");
 const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");
 const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");
 
-function removeResidualLegacyWidthCall(source) {
-  const normalized = String(source || "").replace(/\r\n?/g, "\n");
-  const residualWidthCall = [
-    '      if (typeof window.applyExactPlayerTableWidths === "function") {',
-    "        window.applyExactPlayerTableWidths();",
-    "      }",
-    "      return true;",
-  ].join("\n");
-  if (!normalized.includes(residualWidthCall)) {
-    throw new Error("Could not remove residual post-render table width call from app-core source.");
-  }
-  return normalized.replace(residualWidthCall, "      return true;");
-}
-
 function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
   const start = source.indexOf(startMarker);
   const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
@@ -50,12 +36,18 @@ function normalizeRetirementMarkerContract(source) {
     "function retirementMarker(row) {",
     "function newMintMarker(row) {",
     `function retirementMarker(row) {
-  const retirementYears = getValue(row, "retirement_years");
+      const rawRetirementYears = getValue(row, "retirement_years");
+      const retirementYears = rawRetirementYears === null
+        || rawRetirementYears === undefined
+        || String(rawRetirementYears).trim() === ""
+        ? null
+        : Number(rawRetirementYears);
 
   if (retirementYears === 0) {
     return {
       icon: "calendar-x-2",
       label: "Retired",
+      status: "retired",
     };
   }
 
@@ -63,6 +55,7 @@ function normalizeRetirementMarkerContract(source) {
     return {
       icon: "calendar-clock",
       label: \`${'${retirementYears}'} year${'${retirementYears === 1 ? "" : "s"}'} left\`,
+      status: \`retiring-${'${retirementYears}'}\`,
     };
   }
 
@@ -83,7 +76,7 @@ function normalizeRetirementMarkerContract(source) {
   }
 
   const markerElement = document.createElement("span");
-  markerElement.className = className;
+  markerElement.className = \`${'${className}'} retirementMarker--${'${marker.status || "default"}'}\`;
   if (marker.icon) {
     const markerIcon = document.createElement("img");
     markerIcon.src = \`/retirement-${'${marker.icon}'}.svg\`;
@@ -111,7 +104,7 @@ function normalizeRetirementMarkerContract(source) {
     playerAgeMarkerStart,
     playerAgeMarkerEnd,
     `  const ageMarkerHtml = ageMarker
-    ? \` <span class="retirementMarker playerAgeMarker" data-tooltip="${'${escapeHtml(ageMarker.label)}'}" aria-label="${'${escapeHtml(ageMarker.label)}'}"><img src="/retirement-${'${escapeHtml(ageMarker.icon)}'}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
+    ? \` <span class="retirementMarker playerAgeMarker retirementMarker--${'${escapeHtml(ageMarker.status || "default")}' }" data-tooltip="${'${escapeHtml(ageMarker.label)}'}" aria-label="${'${escapeHtml(ageMarker.label)}'}"><img src="/retirement-${'${escapeHtml(ageMarker.icon)}'}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
     : "";
 `,
     "Player retirement marker SVG renderer",
@@ -159,9 +152,7 @@ const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "")
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
-const source = normalizeRetirementMarkerContract(
-  removeResidualLegacyWidthCall(await readFile(sourcePath, "utf8")),
-);
+const source = normalizeRetirementMarkerContract(await readFile(sourcePath, "utf8"));
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
 const normalized = normalizeTooltipHeightOwnership(String(artifacts.core || "")).replace(/\s*$/, "");
 const evaluationRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.evaluation || "")).replace(/\s*$/, "");

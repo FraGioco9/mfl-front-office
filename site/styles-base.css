@@ -1887,7 +1887,6 @@ td a {
   cursor: help;
 }
 
-.retirementMarker[data-tooltip]::after,
 .newMintMarker[data-tooltip]::after,
 .playerNoteIcon[data-tooltip]::after {
   content: attr(data-tooltip);
@@ -1916,8 +1915,6 @@ td a {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.retirementMarker[data-tooltip]:hover::after,
-.retirementMarker[data-tooltip]:focus::after,
 .newMintMarker[data-tooltip]:hover::after,
 .newMintMarker[data-tooltip]:focus::after,
 .playerNoteIcon[data-tooltip]:hover::after,
@@ -3469,7 +3466,8 @@ td a {
 
 .playerNameCell .playerNameLink {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .playerNameMarkers {
@@ -3914,7 +3912,6 @@ td a {
   transition: none !important;
 }
 
-#tableBody .retirementMarker[data-tooltip]::after,
 #tableBody .newMintMarker[data-tooltip]::after {
   display: none;
 }
@@ -4125,7 +4122,7 @@ td a {
   cursor: default;
 }
 
-.mflStatsHistogramBar::after {
+.mflStatsHistogramFill {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -4134,39 +4131,9 @@ td a {
   min-height: 2px;
   border-radius: 6px 6px 3px 3px;
   background: #4db4ee;
-  content: "";
   transform-origin: bottom;
   animation: mflStatsBarRise 220ms ease-out;
-}
-
-.mflStatsHistogramBar::before {
-  position: absolute;
-  left: 50%;
-  bottom: min(calc(var(--bar-height, 0%) + 8px), calc(100% - 28px));
-  z-index: 10;
-  width: max-content;
-  max-width: 140px;
-  padding: 4px 7px;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
-  content: attr(data-tooltip);
-  font-size: clamp(8px, 0.58vw, 11px);
-  font-weight: 800;
-  line-height: 1.1;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  white-space: nowrap;
-}
-
-.mflStatsHistogramBar:hover::before,
-.mflStatsHistogramBar:focus-visible::before {
-  opacity: 1;
-  transform: translate(-50%, 0);
+  cursor: help;
 }
 
 .mflStatsHistogramLabel {
@@ -4635,16 +4602,6 @@ body[data-page="watchlist"] #progressionPage .views {
   text-align: left !important;
 }
 
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="attributes"] { order: 1 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="next"] { order: 2 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="contracts"] { order: 3 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="current"] { order: 4 !important; }
-body[data-page="watchlist"] #progressionPage .viewButton[data-view="all"] { order: 5 !important; }
-body[data-page="watchlist"] #progressionPage .watchlistSwitcher {
-  order: 10 !important;
-  margin-left: auto !important;
-}
-
 #progressionPage .tableShell,
 #progressionPage .tableScroller,
 #progressionPage .tableScroller table {
@@ -4695,16 +4652,6 @@ body[data-page="club"] #progressionPage,
 body[data-page="club"] #progressionPage * {
   transition: none !important;
   animation: none !important;
-}
-
-body[data-page="mfl"] #progressionPage .viewButton[data-view="attributes"],
-body[data-page="mflstats"] #progressionPage .viewButton[data-view="attributes"] {
-  order: 1 !important;
-}
-
-body[data-page="mfl"] #progressionPage .viewButton[data-view="stats"],
-body[data-page="mflstats"] #progressionPage .viewButton[data-view="stats"] {
-  order: 2 !important;
 }
 
 #progressionPage .tableShell {
