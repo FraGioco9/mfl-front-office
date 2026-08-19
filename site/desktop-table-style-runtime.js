@@ -31,7 +31,7 @@
     const address = agentAddressFromPath();
     if (!address) {
       title.removeAttribute("data-agent-wallet-copy");
-      title.removeAttribute("data-tooltip");
+      title.removeAttribute("data-note-tooltip");
       title.removeAttribute("role");
       title.removeAttribute("tabindex");
       title.removeAttribute("aria-label");
@@ -39,7 +39,7 @@
     }
 
     title.dataset.agentWalletCopy = address;
-    title.dataset.tooltip = "Click to copy wallet address";
+    title.dataset.noteTooltip = "Click to copy wallet address";
     title.setAttribute("role", "button");
     title.setAttribute("tabindex", "0");
     title.setAttribute("aria-label", "Click to copy wallet address");
@@ -71,7 +71,7 @@
   }
 
   async function copyWalletAddress(target, event) {
-    const address = normalizeAgentAddress(target?.dataset?.agentWalletCopy);
+    const address = normalizeWalletAddress(target?.dataset?.agentWalletCopy);
     if (!address) return;
     event?.preventDefault?.();
     event?.stopPropagation?.();
