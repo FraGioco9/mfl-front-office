@@ -55,7 +55,7 @@ includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view
 includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, destroy })", "The application core must be able to reuse passive route chrome.");
+includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must be able to reuse passive route chrome.");
 includes(staticUi, "function showRouteShell(state) {", "Static route chrome must reveal an already-committed route shell.");
 includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChrome(state);', "Committed table routes must synchronize view chrome before page reveal.");
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
