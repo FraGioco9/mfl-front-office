@@ -169,7 +169,7 @@ const setPagePrepareIndex = buildNormalizer.indexOf('const requestedMflView = pa
 invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransitionIndex, "Every setPage path must settle the global transition before route-specific work starts.");
 
 for (const [transitionMarker, loaderMarker, label] of [
-  ['runViewTransition("mfl", "stats"', 'setPage("mflstats", false', "MFL Stats"],
+  ['runViewTransition("mfl", "stats"', 'setPage("mfl", false, { view: "stats"', "MFL Stats"],
   ['runViewTransition("database", "stats"', 'setPage("database", false, { view: "stats"', "Database Stats"],
   ["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],
   ["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],
