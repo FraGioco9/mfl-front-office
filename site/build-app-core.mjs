@@ -112,26 +112,6 @@ function normalizeTooltipHeightOwnership(source) {
   ].join("\n");
   if (normalized.includes(manualAnchor)) normalized = normalized.replace(manualAnchor, canonicalAnchor);
 
-  normalized = normalized.replaceAll('button.dataset.tooltip = "Click to copy";', 'button.dataset.noteTooltip = "Click to copy";');
-  normalized = normalized.replaceAll("markerElement.dataset.tooltip = marker.label;", "markerElement.dataset.noteTooltip = marker.label;");
-  normalized = normalized.replaceAll('data-tooltip="Click to copy" aria-label="Click to copy player ID"', 'data-note-tooltip="Click to copy" aria-label="Click to copy player ID"');
-  normalized = normalized.replaceAll("` data-tooltip=\"${escapeHtml(agentTooltip)}\" aria-label=\"${escapeHtml(agentTooltip)}\"`", "` data-note-tooltip=\"${escapeHtml(agentTooltip)}\" aria-label=\"${escapeHtml(agentTooltip)}\"`");
-  normalized = normalized.replaceAll("if (playerAgentLink.dataset.tooltip) {", "if (playerAgentLink.dataset.noteTooltip) {");
-  normalized = normalized.replaceAll("link.dataset.tooltip = tooltip;", "link.dataset.noteTooltip = tooltip;");
-
-  const copyIdMouseOwner = [
-    '  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
-    '  button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
-  ].join("\n");
-  const copyIdPointerAndKeyboardOwner = [
-    '  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
-    '  button.addEventListener("focus", () => showPlayerNoteTooltip(button));',
-    '  button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
-  ].join("\n");
-  if (normalized.includes(copyIdMouseOwner)) {
-    normalized = normalized.replace(copyIdMouseOwner, copyIdPointerAndKeyboardOwner);
-  }
-
   return normalized;
 }
 
@@ -186,13 +166,6 @@ if (!playerRuntime.includes('ageMarker.icon === "calendar-clock" ? "" : ageMarke
   throw new Error("Player runtime does not use the calendar-clock retirement marker contract.");
 }
 
-const legacyManualTooltipTokens = [
-  'button.dataset.tooltip = "Click to copy";',
-  "markerElement.dataset.tooltip = marker.label;",
-  'data-tooltip="Click to copy" aria-label="Click to copy player ID"',
-  "if (playerAgentLink.dataset.tooltip) {",
-  "link.dataset.tooltip = tooltip;",
-];
 for (const [path, artifact] of generatedArtifacts) {
   if (artifact.includes("window.eval") || artifact.includes("eval(")) {
     throw new Error(`String evaluation leaked into generated application core: ${path}.`);
@@ -202,10 +175,6 @@ for (const [path, artifact] of generatedArtifacts) {
   }
   if (artifact.includes("__mflTooltipSettings?.gap") || artifact.includes("anchorHeight = 14")) {
     throw new Error(`Legacy tooltip spacing ownership leaked into generated application core: ${path}.`);
-  }
-  const legacyManualTooltipOwner = legacyManualTooltipTokens.find((token) => artifact.includes(token));
-  if (legacyManualTooltipOwner) {
-    throw new Error(`Duplicate manual tooltip ownership leaked into generated application core: ${path}.`);
   }
 }
 if (!generatedArtifacts.some(([, artifact]) => artifact.includes("iconRect.top - tooltipRect.height - tooltipHeight"))) {
