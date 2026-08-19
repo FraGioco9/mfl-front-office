@@ -59,5 +59,9 @@ staticUi = staticUi.replace(
   'typeof loader === "function" ? loader(transition)',
   'typeof loader === "function" ? await loader(transition)',
 );
+staticUi = staticUi.replace(
+  '[\'runViewTransition("mfl", "stats"\', \'setPage("mflstats", false\', "MFL Stats"]',
+  '[\'runViewTransition("mfl", "stats"\', \'setPage("mfl", false, { view: "stats"\', "MFL Stats"]',
+);
 
 await writeFile(staticUiPath, staticUi, "utf8");
