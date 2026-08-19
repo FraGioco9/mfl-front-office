@@ -8,6 +8,11 @@ const canonicalImport = `${importMarker}import vm from "node:vm";\n\nimport { br
 if (!source.includes(importMarker)) throw new Error("Database Stats validator import marker was not found.");
 source = source.replace(importMarker, canonicalImport);
 
+const legacyBuildRead = 'const buildNormalizer = await read("./modules/app-core-build-normalizer.js");';
+const canonicalCoreRead = 'const appCoreSource = await read("./modules/app-core.js");';
+if (!source.includes(legacyBuildRead)) throw new Error("Database Stats validator build-normalizer read was not found.");
+source = source.replace(legacyBuildRead, canonicalCoreRead);
+
 const legacyRouteChecks = [
   "includes(",
   "  routeCoreLoader,",
@@ -26,5 +31,7 @@ const canonicalRouteChecks = [
 ].join("\n");
 if (!source.includes(legacyRouteChecks)) throw new Error("Legacy Database Stats route-parser checks were not found.");
 source = source.replace(legacyRouteChecks, canonicalRouteChecks);
+
+source = source.replaceAll("buildNormalizer.indexOf(", "appCoreSource.indexOf(");
 
 await writeFile(path, source, "utf8");
