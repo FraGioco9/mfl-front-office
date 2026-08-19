@@ -149,7 +149,7 @@ const pageRunner = buildNormalizer.slice(pageRunnerStart, pageRunnerEnd);
 invariant(
   pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)") >= 0
     && pageRunner.indexOf("await waitForViewTransitionPaint();") > pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)")
-    && pageRunner.indexOf('typeof loader === "function" ? loader(transition)') > pageRunner.indexOf("await waitForViewTransitionPaint();"),
+    && pageRunner.indexOf('typeof loader === "function" ? await loader(transition)') > pageRunner.indexOf("await waitForViewTransitionPaint();"),
   "Global page transitions must commit, paint, then load.",
 );
 
