@@ -39,7 +39,11 @@ function plain(value) {
   }
   if (Array.isArray(value)) return Array.from(value, plain);
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, plain(entry)]));
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, plain(entry)]),
+    );
   }
   return value;
 }

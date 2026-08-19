@@ -15,7 +15,7 @@
     {
       "source": "/(.*\\.js)",
       "missing": [{ "type": "query", "key": "mfl_core" }],
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
       "source": "/modules/app-core-runtime.js",
