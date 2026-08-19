@@ -9,11 +9,13 @@ const ignoredPaths = new Set(
 );
 
 const requiredProductionIgnoredPaths = [
+  ".gitignore",
   "site/validate*.mjs",
   "site/eslint.config.mjs",
   "site/jsconfig.json",
   "site/types",
   "site/vercel.json",
+  "site/vercel.production.json",
   "site/build-app-core.mjs",
   "site/modules/app-config.js",
   "site/modules/package.json",
