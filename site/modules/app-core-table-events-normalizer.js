@@ -132,20 +132,12 @@ export function normalizeTableEventDelegation(source) {
     "club table listener",
   );
 
-  const delegatedTableEvents = `function tableTooltipTarget(event) {
-  const target = event.target instanceof Element
-    ? event.target.closest("#tableBody [data-note-tooltip], #tableBody [data-tooltip]")
-    : null;
-  return target instanceof HTMLElement ? target : null;
-}
-
-function copyDelegatedPlayerId(button, event) {
+  const delegatedTableEvents = `function copyDelegatedPlayerId(button, event) {
   const playerId = String(button.dataset.playerId || "").trim();
   if (!playerId) return;
   event.preventDefault();
   event.stopPropagation();
   state.tooltipSuppressedUntil = Date.now() + 350;
-  hidePlayerNoteTooltip({ immediate: true });
   button.blur();
   copyPlayerId(playerId);
 }
@@ -196,32 +188,6 @@ tableBody?.addEventListener("click", (event) => {
     event.preventDefault();
     window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");
   }
-});
-
-tableBody?.addEventListener("pointerover", (event) => {
-  const tooltip = tableTooltipTarget(event);
-  if (!tooltip) return;
-  if (event.relatedTarget instanceof Node && tooltip.contains(event.relatedTarget)) return;
-  showPlayerNoteTooltip(tooltip);
-});
-
-tableBody?.addEventListener("pointerout", (event) => {
-  const tooltip = tableTooltipTarget(event);
-  if (!tooltip) return;
-  if (event.relatedTarget instanceof Node && tooltip.contains(event.relatedTarget)) return;
-  hidePlayerNoteTooltip();
-});
-
-tableBody?.addEventListener("focusin", (event) => {
-  const tooltip = tableTooltipTarget(event);
-  if (tooltip) showPlayerNoteTooltip(tooltip);
-});
-
-tableBody?.addEventListener("focusout", (event) => {
-  const tooltip = tableTooltipTarget(event);
-  if (!tooltip) return;
-  if (event.relatedTarget instanceof Node && tooltip.contains(event.relatedTarget)) return;
-  hidePlayerNoteTooltip();
 });
 
 tableBody?.addEventListener("pointermove", (event) => {
