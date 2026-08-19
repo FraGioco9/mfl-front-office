@@ -1,4 +1,4 @@
 {
-  "version": "1.124.60",
-  "description": "Reject invalid Club routes and keep Club titles stable across views"
+  "version": "1.124.1",
+  "description": "Optimize loading, routing, caching, and navigation across the application"
 }
