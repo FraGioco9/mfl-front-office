@@ -61,6 +61,9 @@ includes(staticUi, 'if (target.id === "progressionPage") syncDestinationTableChr
 includes(staticUi, 'page.hidden = page !== target;', "Committed page state must reveal the destination shell directly.");
 includes(staticUi, 'Reflect.get(window, "__mflCoreContracts")', "Static table chrome must use the explicit application-core contract.");
 includes(staticUi, "contracts.ensureCanonicalTableHeader", "Static table chrome must request canonical headers through the core contract.");
+includes(staticUi, 'Reflect.get(window, "__mflPrimeTableHeaderSignature")', "Static table chrome must reuse the bootstrap header signature owner.");
+includes(staticUi, 'Reflect.get(window, "__mflPrimeTableStructure")', "Static table chrome must reuse the bootstrap header renderer.");
+excludes(staticUi, "STATIC_TABLE_", "Static route chrome must not duplicate bootstrap table schema ownership.");
 excludes(staticUi, "window.eval", "Static route chrome must not inspect application-core lexical state through window.eval.");
 excludes(staticUi, "eval(", "Static route chrome must not use string evaluation.");
 for (const forbidden of [
@@ -97,13 +100,17 @@ invariant(primeTableChromeStart >= 0 && primeTableChromeEnd > primeTableChromeSt
 const primeTableChrome = bootstrap.slice(primeTableChromeStart, primeTableChromeEnd);
 excludes(primeTableChrome, "root.dataset.initialTableView", "SPA navigation must never reuse page-load-only initial view state.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', "Navigation must reuse route-authoritative table chrome.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableHeaderSignature", firstPaintTableHeaderSignature);', "Bootstrap must own static table-header signatures.");
+includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableStructure", primeInitialTableStructure);', "Bootstrap must own static table-header rendering.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeTableRows", primeInitialTableRows);', "Bootstrap must retain its first-paint table skeleton owner.");
 includes(bootstrap, 'Reflect.set(window, "__mflPrimeRouteSkeleton", primeRouteSkeleton);', "Bootstrap must retain non-table first-paint skeleton ownership.");
 
 includes(tableLoading, "function show({ replaceExisting = false, forceRoute = false } = {}) {", "Table loading must remain available only after navigation commits.");
 includes(tableLoading, 'if (destroyed || (!forceRoute && !tableRouteActive())) return false;', "Passive route detection must guard table loading.");
 includes(tableLoading, 'if (body.dataset.staticLoading === "true" && realRowsPresent)', "Final real rows must not be overwritten while busy state unwinds.");
-includes(tableLoading, "BLANK_ROW_OPACITIES.length", "The loading shell must retain its fixed row structure.");
+includes(tableLoading, 'Reflect.get(window, "__mflPrimeTableRows")', "Table loading must reuse the bootstrap skeleton renderer.");
+includes(tableLoading, "primeRows(true);", "Table loading must request the canonical bootstrap skeleton when replacing rows.");
+excludes(tableLoading, "BLANK_ROW_OPACITIES", "Table loading must not duplicate bootstrap loading-row data.");
 
 for (const marker of [
   'Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);',
@@ -198,4 +205,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with passive route chrome, explicit core contracts, canonical navigation ownership, and no retired table-view or eval bridge.");
+console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
