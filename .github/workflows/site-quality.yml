@@ -126,7 +126,9 @@ jobs:
 
       - name: Migrate canonical application-core source
         if: github.event_name == 'pull_request' && github.head_ref == 'optimization/app-core-source-migration'
-        run: node migrate-app-core-source.mjs
+        run: |
+          node prep-app-core-migration.mjs
+          node migrate-app-core-source.mjs
 
       - name: Install site dependencies
         if: steps.changes.outputs.quality == 'true'
@@ -155,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           git checkout origin/main -- .github/workflows/site-quality.yml
-          rm -f site/migrate-app-core-source.mjs
+          rm -f site/migrate-app-core-source.mjs site/prep-app-core-migration.mjs
           git add -A
           git diff --cached --check
           if git diff --cached --quiet; then
