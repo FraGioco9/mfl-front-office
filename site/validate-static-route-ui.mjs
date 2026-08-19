@@ -146,10 +146,11 @@ invariant(viewStateIndex >= 0 && viewUrlIndex > viewStateIndex && viewButtonInde
 const pageRunnerStart = buildNormalizer.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
 const pageRunnerEnd = buildNormalizer.indexOf("async function runViewTransition", pageRunnerStart);
 const pageRunner = buildNormalizer.slice(pageRunnerStart, pageRunnerEnd);
+const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
+const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
+const pageLoadIndex = pageRunner.indexOf('return typeof loader === "function" ? await loader(transition) : transition;');
 invariant(
-  pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)") >= 0
-    && pageRunner.indexOf("await waitForViewTransitionPaint();") > pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)")
-    && pageRunner.indexOf('typeof loader === "function" ? loader(transition)') > pageRunner.indexOf("await waitForViewTransitionPaint();"),
+  pageCommitIndex >= 0 && pagePaintIndex > pageCommitIndex && pageLoadIndex > pagePaintIndex,
   "Global page transitions must commit, paint, then load.",
 );
 
