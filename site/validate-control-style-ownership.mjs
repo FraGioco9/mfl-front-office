@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, playerChunk] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, tableEvents] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -15,7 +15,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./desktop-table-style-runtime.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core-player-chunk.js"),
+  read("./modules/app-core-table-events-normalizer.js"),
 ]);
 
 invariant(
@@ -187,26 +187,25 @@ invariant(
   "Table player-ID generators must not retain the former forced 38px height.",
 );
 
-for (const required of [
-  "function removeTableIdLocalTooltipOwner(source)",
-  'button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
-  'button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
-  'button.addEventListener("blur", hidePlayerNoteTooltip);',
-  "Could not remove Table player-ID local tooltip listener",
-]) {
-  invariant(playerChunk.includes(required), `The owning Player core chunk is missing table-ID tooltip cleanup through ${required}.`);
-}
 invariant(
-  !coreBuild.includes("function removeTableIdLocalTooltipOwnership(source)"),
-  "The application-core builder must not own Table player-ID tooltip cleanup.",
+  tableEvents.includes('button.dataset.tooltip = "Click to copy";'),
+  "Table player-ID copy buttons must expose their tooltip only to the global tooltip owner.",
 );
 invariant(
-  coreBuild.includes("for (const localTableIdTooltipListener of ["),
-  "The core build must reject local table-ID tooltip listeners after generation.",
+  !tableEvents.includes("function tableTooltipTarget(event)"),
+  "The table event runtime must not install a delegated tooltip target owner.",
 );
 invariant(
-  coreBuild.includes("if (playerRuntime.includes(localTableIdTooltipListener))"),
-  "The core build must validate the Player runtime that actually owns createCopyPlayerIdButton.",
+  !tableEvents.includes("showPlayerNoteTooltip(tooltip)"),
+  "The table event runtime must not position delegated tooltips locally.",
+);
+invariant(
+  !tableEvents.includes('tableBody?.addEventListener("pointerover", (event) => {'),
+  "The table event runtime must not own tooltip pointerover handling.",
+);
+invariant(
+  !tableEvents.includes('tableBody?.addEventListener("focusin", (event) => {'),
+  "The table event runtime must not own tooltip focus handling.",
 );
 
 for (const required of [
@@ -217,6 +216,10 @@ for (const required of [
 ]) {
   invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height spacing through ${required}.`);
 }
+invariant(
+  coreBuild.includes('artifact.includes("function tableTooltipTarget(event)") || artifact.includes("showPlayerNoteTooltip(tooltip)")'),
+  "The core build must reject delegated table tooltip ownership after generation.",
+);
 for (const reroute of [
   'button.dataset.noteTooltip = "Click to copy";',
   "markerElement.dataset.noteTooltip = marker.label;",
