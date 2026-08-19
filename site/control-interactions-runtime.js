@@ -58,7 +58,9 @@
 
   function beginNavigationIntent(target) {
     if (navigationIntentToken) return true;
-    const token = navigationController()?.beginIntent?.(target, "control-intent") || "";
+    const controller = navigationController();
+    if (!controller) return false;
+    const token = controller.beginIntent?.(target, "control-intent") || "";
     navigationIntentToken = token;
     return Boolean(token);
   }
