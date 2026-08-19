@@ -61,6 +61,7 @@ includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Clu
 includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club loading must overlap core and table-runtime loading.");
 includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
 includes(routeLoader, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
+includes(routeLoader, "return await routeOwner.call(runtimeWindow, normalizedClubId, view);", "The primary Club gate must keep Uniform Loading active until the Club route renderer settles.");
 excludes(routeLoader, "window.history.pushState", "The primary Club lazy gate must not own history outside the global transition.");
 excludes(routeLoader, "window.history.replaceState", "The primary Club lazy gate must not own history outside the global transition.");
 
@@ -70,6 +71,7 @@ includes(appEntry, 'return runTransition("club", true, {', "The fallback Club ga
 const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
 const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
 const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
+includes(fallbackGate, "return await current.call(runtimeWindow, normalizedClubId, view);", "The fallback Club gate must keep Uniform Loading active until the Club route renderer settles.");
 excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
 excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
 

@@ -174,7 +174,7 @@
           if (typeof routeOwner !== "function") {
             throw new Error("Club route owner is unavailable.");
           }
-          return routeOwner.call(runtimeWindow, normalizedClubId, view);
+          return await routeOwner.call(runtimeWindow, normalizedClubId, view);
         } finally {
           if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
         }
