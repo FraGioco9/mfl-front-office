@@ -104,6 +104,13 @@ for (const historicalOwner of [
   );
 }
 
+for (const removedRuntime of [
+  "/table-view-runtime.js",
+  "/table-navigation-chrome-runtime.js",
+]) {
+  invariant(!entry.includes(removedRuntime), `${removedRuntime} must not return to the table startup runtime list.`);
+}
+
 invariant(
   staticUi.includes("gap: 6,"),
   "The global tooltip contract must keep a 6px generator gap.",
