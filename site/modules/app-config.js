@@ -20,6 +20,13 @@ export const VIEW_BY_SLUG = Object.freeze({
   "all-time": "all",
 });
 
+export const CLUB_VIEW_SLUGS = Object.freeze({
+  attributes: "squad",
+  contracts: "contracts",
+  current: "current-season",
+  all: "all-time",
+});
+
 export const ROUTE_CORE_PATHS = Object.freeze({
   evaluation: "/modules/app-core-evaluation-runtime.js",
   mflstats: "/modules/app-core-mfl-stats-runtime.js",
@@ -129,6 +136,7 @@ const BROWSER_DATA = Object.freeze({
   routes: Object.freeze({
     tableViews: TABLE_VIEW_CONFIG,
     viewBySlug: VIEW_BY_SLUG,
+    clubViewSlugs: CLUB_VIEW_SLUGS,
     corePaths: ROUTE_CORE_PATHS,
     tableInfrastructurePages: TABLE_INFRASTRUCTURE_PAGES,
   }),
@@ -190,6 +198,30 @@ export function browserConfigRuntimeSource(release) {
     return view ? { view } : {};
   }
 
+  function clubPath(clubId, view = "attributes") {
+    const normalizedView = String(view || "attributes").trim().toLowerCase();
+    const slug = data.routes.clubViewSlugs[normalizedView] || data.routes.clubViewSlugs.attributes;
+    return "/clubs/" + encodeURIComponent(String(clubId || "").trim()) + "/" + slug;
+  }
+
+  function clubRoute(pathname = location.pathname) {
+    const path = String(pathname || "/").split("?")[0].replace(/\\/+$/, "") || "/";
+    const match = path.match(/^\\/(?:clubs|club)\\/([^/]+)(?:\\/([^/]+))?$/i);
+    if (!match) return null;
+
+    const clubId = decodedRoutePart(match[1]);
+    if (!clubId) return null;
+    const requestedSlug = decodedRoutePart(match[2] || "").toLowerCase();
+    const requestedView = data.routes.viewBySlug[requestedSlug] || "";
+    const clubConfig = data.routes.tableViews.club;
+    const view = clubConfig.order.includes(requestedView) ? requestedView : clubConfig.fallback;
+    return Object.freeze({
+      clubId,
+      view,
+      path: clubPath(clubId, view),
+    });
+  }
+
   function initialRequest(pathname = location.pathname) {
     const path = String(pathname || "/").split("?")[0].replace(/\\/+$/, "") || "/";
     if (!path.startsWith("/")) return { pageName: "home", options: {} };
@@ -204,7 +236,12 @@ export function browserConfigRuntimeSource(release) {
     if (pageSegment === "watchlist") return { pageName: "watchlist", options: viewOptionsFromSegments(segments) };
     if (pageSegment === "my-players") return { pageName: "myplayers", options: viewOptionsFromSegments(segments) };
     if (pageSegment === "agents") return { pageName: "agents", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "clubs" || pageSegment === "club") return { pageName: "club", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "clubs" || pageSegment === "club") {
+      const route = clubRoute(path);
+      return route
+        ? { pageName: "club", options: { clubId: route.clubId, view: route.view, path: route.path } }
+        : { pageName: "home", options: {} };
+    }
     if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
     if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
     return { pageName: "home", options: {} };
@@ -214,18 +251,12 @@ export function browserConfigRuntimeSource(release) {
     return tablePageSet.has(normalizePageName(pageName));
   }
 
-  function clubPath(clubId, view = "attributes") {
-    const slugByView = {
-      attributes: "squad",
-      squad: "squad",
-      contracts: "contracts",
-      current: "current-season",
-      "current-season": "current-season",
-      all: "all-time",
-      "all-time": "all-time",
-    };
-    const slug = slugByView[String(view || "attributes").toLowerCase()] || "squad";
-    return "/clubs/" + encodeURIComponent(clubId) + "/" + slug;
+  function decodedRoutePart(value) {
+    try {
+      return decodeURIComponent(String(value || ""));
+    } catch {
+      return String(value || "");
+    }
   }
 
   function displayColumn(page, column) {
@@ -250,6 +281,7 @@ export function browserConfigRuntimeSource(release) {
     initialRequest,
     usesTableInfrastructure,
     clubPath,
+    clubRoute,
   });
   const table = Object.freeze({
     ...data.table,
