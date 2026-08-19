@@ -452,7 +452,6 @@ async function start() {
   if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
 
   await loadApplicationCore();
-  installCoreBridges();
   await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);
 
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
