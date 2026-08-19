@@ -26,16 +26,27 @@ async function migrateRoutePathOwnership(fileName, key, expectedPath, label) {
   await writeFile(path, source, "utf8");
 }
 
-async function migrateGenericStartupOwnership(fileName, oldBlock, routeLabel) {
+async function migrateGenericStartupOwnership(fileName, routeLabel, obsoleteMessages) {
   const path = new URL(`./${fileName}`, import.meta.url);
   let source = await readFile(path, "utf8");
+  const lines = source.split("\n");
+  for (const message of obsoleteMessages) {
+    const index = lines.findIndex((line) => line.includes(message));
+    if (index < 0) throw new Error(`${fileName}: legacy direct-startup assertion was not found: ${message}`);
+    lines.splice(index, 1);
+  }
+  source = lines.join("\n");
+
+  const buildMarker = "includes(buildCore,";
+  const insertionIndex = source.indexOf(buildMarker);
+  if (insertionIndex < 0) throw new Error(`${fileName}: build validation marker was not found.`);
   const genericBlock = [
     'includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must classify the initial route before startApp.");',
     `includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct ${routeLabel} startup must load its canonical route-core dependency chain before startApp.");`,
     'includes(coreSource, "return startApp();", "Application startup must begin only after the initial route-core owner is ready.");',
+    "",
   ].join("\n");
-  if (!source.includes(oldBlock)) throw new Error(`${fileName}: legacy direct-startup block was not found.`);
-  source = source.replace(oldBlock, genericBlock);
+  source = `${source.slice(0, insertionIndex)}${genericBlock}${source.slice(insertionIndex)}`;
   await writeFile(path, source, "utf8");
 }
 
@@ -85,48 +96,24 @@ for (const [fileName, key, expectedPath, label] of [
   await migrateRoutePathOwnership(fileName, key, expectedPath, label);
 }
 
-await migrateGenericStartupOwnership(
-  "validate-club-route-core.mjs",
-  [
-    'includes(coreSource, \'await window.__mflEnsureRouteCore("club");\', "Direct Club startup must load the Club route owner before startApp.");',
-    'includes(coreSource, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");',
-  ].join("\n"),
-  "Club",
-);
-
-await migrateGenericStartupOwnership(
-  "validate-settings-route-core.mjs",
-  [
-    'includes(coreSource, \'await window.__mflEnsureRouteCore("settings");\', "Direct Settings startup must load Settings rendering before startApp.");',
-    'includes(coreSource, "return startApp();", "Application startup must begin only after any direct Settings owner is ready.");',
-  ].join("\n"),
-  "Settings",
-);
-
-await migrateGenericStartupOwnership(
-  "validate-player-route-core.mjs",
-  [
-    'includes(coreSource, \'await window.__mflEnsureRouteCore("player");\', "Direct Player startup must load Player helpers before startApp.");',
-    'includes(coreSource, \'/^\\\\/players\\\\/[^/]+\\\\/?$/i\', "Direct Player startup must recognize canonical /players/<id> routes.");',
-  ].join("\n"),
-  "Player",
-);
-
-await migrateGenericStartupOwnership(
-  "validate-table-route-core.mjs",
-  [
-    'includes(coreSource, "const directTableRoute = (", "Direct startup must classify table routes before startApp.");',
-    'includes(coreSource, \'await window.__mflEnsureRouteCore("table");\', "Direct table startup must load the Table core before startApp.");',
-    'matches(coreSource, /!\\/\\^.*database.*stats.*test\\(initialRoutePath\\)/, "Direct Database Stats startup must stay outside the Table core.");',
-  ].join("\n"),
-  "Table",
-);
-
-await migrateGenericStartupOwnership(
-  "validate-watchlist-route-core.mjs",
-  [
-    'includes(coreSource, "const directWatchlistRoute =", "Direct startup must identify Watchlist routes separately.");',
-    'includes(coreSource, \'await window.__mflEnsureRouteCore("watchlist");\', "Direct Watchlist startup must load Table and Watchlist ownership before startApp.");',
-  ].join("\n"),
-  "Watchlist",
-);
+await migrateGenericStartupOwnership("validate-club-route-core.mjs", "Club", [
+  "Direct Club startup must load the Club route owner before startApp.",
+  "Application startup must begin only after an initial Club owner is ready.",
+]);
+await migrateGenericStartupOwnership("validate-settings-route-core.mjs", "Settings", [
+  "Direct Settings startup must load Settings rendering before startApp.",
+  "Application startup must begin only after any direct Settings owner is ready.",
+]);
+await migrateGenericStartupOwnership("validate-player-route-core.mjs", "Player", [
+  "Direct Player startup must load Player helpers before startApp.",
+  "Direct Player startup must recognize canonical /players/<id> routes.",
+]);
+await migrateGenericStartupOwnership("validate-table-route-core.mjs", "Table", [
+  "Direct startup must classify table routes before startApp.",
+  "Direct table startup must load the Table core before startApp.",
+  "Direct Database Stats startup must stay outside the Table core.",
+]);
+await migrateGenericStartupOwnership("validate-watchlist-route-core.mjs", "Watchlist", [
+  "Direct startup must identify Watchlist routes separately.",
+  "Direct Watchlist startup must load Table and Watchlist ownership before startApp.",
+]);
