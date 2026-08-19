@@ -232,7 +232,6 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
   ...UNIVERSAL_RUNTIME_SCRIPTS,
   ...preCoreScriptsForRoute(initialRouteRuntime.pageName, initialRouteRuntime.options),
 ]));
-initialPreCoreRuntimeScripts.forEach(preloadClassicScript);
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
