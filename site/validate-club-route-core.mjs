@@ -33,6 +33,7 @@ const [
 const appConfig = await read("./modules/app-config.js");
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
 const clubCore = String(artifacts.routeChunks?.club || "");
 
 invariant(sharedCore.length > 300_000, "The shared application core became unexpectedly small after the Club split.");
@@ -75,11 +76,17 @@ includes(sharedCore, '...(clubTarget?.clubId ? { clubId: clubTarget.clubId } : {
 excludes(sharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "Shared Club switching must not duplicate Club slug mapping.");
 excludes(sharedCore, 'if (!state.incrementalMode || state.currentPage === "club")', "Club must not bypass the shared incremental setView owner.");
 includes(sharedCore, "setView = async function setIncrementalView(viewName) {", "Club must share the incremental setView owner with all table pages.");
+includes(tableCore, 'else if (pageName !== "club") {', "The shared Table view renderer must not rewrite the Club title during a view switch.");
+excludes(sharedCore, 'tablePageTitle.textContent = club?.name || "Club";', "Incremental Club payloads must not replace the loaded Club title.");
 
 includes(clubCore, 'const CLUB_PAGE = "club";', "The Club chunk must own Club route data/render state.");
 includes(clubCore, "const clubViewRenderCache = new Map();", "The Club chunk may retain its route-local snapshot state without owning view activation.");
 includes(clubCore, "async function openClubPage(clubId", "The Club chunk must own Club route hydration.");
 includes(clubCore, "function applyClubPresentation()", "The Club chunk must own Club presentation.");
+includes(clubCore, "let activeClubTitle = null;", "The Club chunk must retain the loaded Club title identity across view switches.");
+includes(clubCore, "if (nextClubId !== activeClubId) activeClubTitle = null;", "The stable Club title must reset only when navigating to another Club.");
+includes(clubCore, "activeClubTitle.clubId !== String(activeClubId)", "Club title rendering must reuse the same Club identity across views.");
+includes(clubCore, 'window.location.replace("/");', "Invalid Club history or boot routes must redirect to the homepage.");
 includes(clubCore, "if (!dataLoaded) return;", "Obsolete Club loads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Initial Club hydration must use the canonical incremental loader.");
 includes(clubCore, "clubId: activeClubId,", "Initial Club hydration must carry the explicit Club ID into the canonical loader.");
@@ -125,6 +132,8 @@ excludes(
 );
 
 includes(appConfig, "export const CLUB_VIEW_SLUGS", "Canonical app config must own Club view-to-slug mapping.");
+includes(appConfig, "squad|contracts|current-season|all-time", "Club routing must expose only the four canonical public view slugs.");
+includes(appConfig, 'initialClubLikePath && !initialClubRoute', "Invalid Club startup paths must redirect before loading begins.");
 includes(appConfig, 'attributes: "squad"', "Canonical Club Squad must map internal Attributes to /squad.");
 includes(appConfig, 'current: "current-season"', "Canonical Club Current Season must map to /current-season.");
 includes(appConfig, 'all: "all-time"', "Canonical Club All Time must map to /all-time.");

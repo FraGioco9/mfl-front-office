@@ -81,16 +81,24 @@ for (const [path, expectedView, expectedPath] of [
   ["/clubs/123/contracts", "contracts", "/clubs/123/contracts"],
   ["/clubs/123/current-season", "current", "/clubs/123/current-season"],
   ["/clubs/123/all-time", "all", "/clubs/123/all-time"],
-  ["/clubs/123/attributes", "attributes", "/clubs/123/squad"],
-  ["/clubs/123/current", "current", "/clubs/123/current-season"],
-  ["/clubs/123/all", "all", "/clubs/123/all-time"],
-  ["/club/123/contracts", "contracts", "/clubs/123/contracts"],
-  ["/clubs/123", "attributes", "/clubs/123/squad"],
 ]) {
   const route = routeConfig.clubRoute(path);
   invariant(route?.clubId === "123", `${path} must preserve Club ID 123.`);
   invariant(route?.view === expectedView, `${path} must resolve to Club view ${expectedView}.`);
-  invariant(route?.path === expectedPath, `${path} must normalize to ${expectedPath}.`);
+  invariant(route?.path === expectedPath, `${path} must remain ${expectedPath}.`);
+}
+
+for (const path of [
+  "/clubs/123",
+  "/clubs/123/attributes",
+  "/clubs/123/current",
+  "/clubs/123/all",
+  "/clubs/123/unknown",
+  "/club/123/contracts",
+  "/clubs",
+  "/club",
+]) {
+  invariant(routeConfig.clubRoute(path) === null, `${path} must be rejected as an invalid Club route.`);
 }
 
 function firstRuntimeClubPath(pathname) {
@@ -100,6 +108,10 @@ function firstRuntimeClubPath(pathname) {
     origin: "https://example.test",
     search: "?keep=1",
     hash: "#club",
+    replace(target) {
+      replacedPath = String(target || "");
+      runtimeLocation.pathname = replacedPath.split(/[?#]/, 1)[0];
+    },
   };
   const runtimeSandbox = {
     window: {},
@@ -120,10 +132,13 @@ function firstRuntimeClubPath(pathname) {
 }
 
 for (const [path, expectedReplacement] of [
-  ["/clubs/123", "/clubs/123/squad?keep=1#club"],
-  ["/clubs/123/attributes", "/clubs/123/squad?keep=1#club"],
-  ["/clubs/123/current", "/clubs/123/current-season?keep=1#club"],
-  ["/club/123/all-time", "/clubs/123/all-time?keep=1#club"],
+  ["/clubs/123", "/"],
+  ["/clubs/123/attributes", "/"],
+  ["/clubs/123/current", "/"],
+  ["/clubs/123/unknown", "/"],
+  ["/club/123/all-time", "/"],
+  ["/clubs", "/"],
+  ["/club", "/"],
   ["/clubs/123/squad", ""],
   ["/clubs/123/contracts", ""],
   ["/clubs/123/current-season", ""],
@@ -131,7 +146,7 @@ for (const [path, expectedReplacement] of [
 ]) {
   invariant(
     firstRuntimeClubPath(path) === expectedReplacement,
-    `${path} must ${expectedReplacement ? `be replaced immediately with ${expectedReplacement}` : "already be canonical before loading"}.`,
+    `${path} must ${expectedReplacement ? `redirect immediately to ${expectedReplacement}` : "already be a valid canonical Club route before loading"}.`,
   );
 }
 
@@ -155,7 +170,10 @@ const routeCases = [
   ["/agents/0xabc/all-time", "agents", "all"],
   ["/clubs/123/squad", "club", "attributes"],
   ["/clubs/123/current-season", "club", "current"],
-  ["/club/123/contracts", "club", "contracts"],
+  ["/clubs/123", "home", ""],
+  ["/clubs/123/attributes", "home", ""],
+  ["/clubs/123/unknown", "home", ""],
+  ["/club/123/contracts", "home", ""],
   ["/players/42", "player", ""],
   ["/players/42/contracts", "home", ""],
   ["/settings", "settings", ""],
@@ -236,4 +254,4 @@ const entryClubPathSection = entry.slice(entryClubPathStart, entryClubPathEnd);
 includes(entryClubPathSection, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "app-entry fallback Club navigation must consume canonical route config.");
 excludes(entryClubPathSection, "new Map([", "app-entry must not duplicate Club view-to-slug mappings.");
 
-console.log("Canonical route page-name, view, initial-route, and always-canonical Club URL validation passed.");
+console.log("Canonical route page-name, view, strict Club redirects, and canonical Club URL validation passed.");

@@ -215,13 +215,14 @@ export function browserConfigRuntimeSource(release) {
 
   function clubRoute(pathname = location.pathname) {
     const path = String(pathname || "/").split("?")[0].replace(/\\/+$/, "") || "/";
-    const match = path.match(/^\\/(?:clubs|club)\\/([^/]+)(?:\\/([^/]+))?$/i);
+    const match = path.match(/^\\/clubs\\/([^/]+)\\/(squad|contracts|current-season|all-time)$/i);
     if (!match) return null;
 
     const clubId = decodedRoutePart(match[1]);
     if (!clubId) return null;
-    const requestedView = decodedRoutePart(match[2] || "").toLowerCase();
-    const view = normalizeClubView(requestedView || "attributes");
+    const requestedSlug = decodedRoutePart(match[2]).toLowerCase();
+    const view = data.routes.viewBySlug[requestedSlug] || "";
+    if (!data.routes.tableViews.club.order.includes(view)) return null;
     return Object.freeze({
       clubId,
       view,
@@ -303,8 +304,12 @@ export function browserConfigRuntimeSource(release) {
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
 
-  const initialClubRoute = routes.clubRoute(location.pathname);
-  if (initialClubRoute && location.pathname !== initialClubRoute.path) {
+  const initialClubPath = String(location.pathname || "/");
+  const initialClubLikePath = /^\\/(?:clubs|club)(?:\\/|$)/i.test(initialClubPath);
+  const initialClubRoute = routes.clubRoute(initialClubPath);
+  if (initialClubLikePath && !initialClubRoute) {
+    location.replace("/");
+  } else if (initialClubRoute && initialClubPath !== initialClubRoute.path) {
     history.replaceState({}, "", initialClubRoute.path + location.search + location.hash);
   }
 })();
