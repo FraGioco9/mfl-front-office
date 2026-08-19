@@ -128,6 +128,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'optimization/app-core-source-migration'
         run: |
           node prep-app-core-migration.mjs
+          node prep-app-core-validation.mjs
           node migrate-app-core-source.mjs
 
       - name: Install site dependencies
@@ -157,7 +158,7 @@ jobs:
         run: |
           set -euo pipefail
           git checkout origin/main -- .github/workflows/site-quality.yml
-          rm -f site/migrate-app-core-source.mjs site/prep-app-core-migration.mjs
+          rm -f site/migrate-app-core-source.mjs site/prep-app-core-migration.mjs site/prep-app-core-validation.mjs
           git add -A
           git diff --cached --check
           if git diff --cached --quiet; then
