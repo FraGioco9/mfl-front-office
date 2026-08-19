@@ -108,7 +108,6 @@ function preloadClassicScript(path) {
 
 const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
   "/loading-toast-runtime.js",
-  "/mobile-ui-runtime.js",
   "/static-ui-runtime.js",
   "/control-interactions-runtime.js",
   "/global-search-runtime.js",
@@ -272,31 +271,7 @@ function releaseFromBootstrap() {
   return Object.freeze({ version, description: "" });
 }
 
-function installResponsiveStylesheet() {
-  const existing = document.querySelector('link[data-mfl-responsive-layout="true"]');
-  if (existing instanceof HTMLLinkElement) return Promise.resolve();
-
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.dataset.mflResponsiveLayout = "true";
-  link.href = "/responsive.css";
-
-  const ready = new Promise((resolve, reject) => {
-    link.addEventListener("load", () => resolve(undefined), { once: true });
-    link.addEventListener("error", () => reject(new Error("Could not load the responsive layout stylesheet.")), { once: true });
-  });
-  document.head.appendChild(link);
-  return ready;
-}
-
-function promoteResponsiveStylesheet() {
-  const link = document.querySelector('link[data-mfl-responsive-layout="true"]');
-  if (!(link instanceof HTMLLinkElement) || link.parentElement !== document.head) return;
-  document.head.appendChild(link);
-}
-
 const entryRelease = releaseFromBootstrap();
-const responsiveStylesReady = installResponsiveStylesheet();
 const PREBUILT_CORE_PATH = "/modules/app-core-runtime.js";
 const PREBUILT_CORE_CACHE_QUERY = "mfl_core";
 let applicationCoreLoaded = false;
@@ -481,7 +456,6 @@ async function start() {
   window.__mflAssetUrl = (path) => new URL(String(path || "").replace(/^\/+/, ""), `${window.location.origin}/`).href;
 
   installApiFetchPolicy();
-  await responsiveStylesReady;
   await loadScriptGroup(initialPreCoreRuntimeScripts);
 
   if (changelogStartup && runtimeWindow.__mflChangelogHistoryReady) await runtimeWindow.__mflChangelogHistoryReady;
@@ -500,8 +474,6 @@ async function start() {
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
-
-  promoteResponsiveStylesheet();
 
   runPostStartupSync("Evaluation layout", () => runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.());
   runPostStartupSync("Database Stats state", () => runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.());
