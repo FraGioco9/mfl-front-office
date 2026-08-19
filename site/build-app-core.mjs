@@ -36,7 +36,7 @@ function normalizeRetirementMarkerContract(source) {
     "function retirementMarker(row) {",
     "function newMintMarker(row) {",
     `function retirementMarker(row) {
-  const retirementYears = getValue(row, "retirement_years");
+  const retirementYears = Number(getValue(row, "retirement_years"));
 
   if (retirementYears === 0) {
     return {
