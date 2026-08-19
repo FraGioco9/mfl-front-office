@@ -58,9 +58,9 @@ const bootstrapCoreFallbackVersion = bootstrapCore.match(/window\.__mflReleaseVe
 invariant(staticVersion === release.version, `bootstrap.js release ${staticVersion || "<missing>"} must match ${release.version}.`);
 invariant(bootstrapCoreFallbackVersion === release.version, `bootstrap-core.js fallback ${bootstrapCoreFallbackVersion || "<missing>"} must match ${release.version}.`);
 includes(bootstrap, "window.__mflReleaseVersion = STATIC_RELEASE_VERSION", "bootstrap.js must own the release version synchronously.");
-includes(bootstrap, "loadRuntime(\"/table-width-runtime.js\")", "bootstrap.js must load the canonical table width owner before app startup.");
+excludes(bootstrap, "loadRuntime(\"/table-width-runtime.js\")", "bootstrap.js must not pretend to own the static Uniform Width marker.");
 includes(bootstrap, "loadRuntime(\"/dropdowns-runtime.js\")", "bootstrap.js must load dropdown ownership before app startup.");
-includes(bootstrap, "loadRuntime(\"/filter-controls-runtime.js\")", "bootstrap.js must load filter behavior before app startup.");
+excludes(bootstrap, "loadRuntime(\"/filter-controls-runtime.js\")", "bootstrap.js must not pretend to own route-scoped filter behavior.");
 includes(bootstrap, "loadRuntime(\"/bootstrap-core.js\")", "bootstrap.js must load bootstrap-core before app startup.");
 excludes(bootstrap, "club-squad-route-runtime", "bootstrap.js must not restore Club pre-render repair owners.");
 excludes(bootstrap, "primeStatic", "bootstrap.js must not own a second page renderer.");
@@ -129,7 +129,9 @@ excludes(entry, "CORE_RUNTIME_CACHE_KEY", "The prebuilt core must not be copied 
 excludes(entry, "cachedApplicationCore", "The prebuilt core must rely on browser HTTP caching instead of a duplicate string cache.");
 excludes(entry, "cacheApplicationCore", "The prebuilt core must not write a second full source copy to sessionStorage.");
 excludes(entry, "fetchApplicationCoreSource(PREBUILT_CORE_PATH)", "The production prebuilt core must not be fetched as text.");
+includes(entry, "\"/filter-controls-runtime.js\"", "app-entry.js must own route-scoped filter behavior.");
 includes(entry, "\"/table-loading-runtime.js\"", "app-entry.js must load the canonical table-loading owner.");
+excludes(entry, "\"/table-width-runtime.js\"", "Uniform Width must stay static-only and must not be dynamically loaded again by app-entry.js.");
 for (const retiredRuntime of [
   "table-view-runtime.js",
   "evaluation-discount-rate-display-runtime.js",
@@ -208,6 +210,10 @@ matches(indexHtml, /<meta[^>]+name=["']viewport["'][^>]+viewport-fit=cover/i, "M
 includes(indexHtml, "data-mfl-responsive-layout=\"true\"", "responsive.css must be render-blocking.");
 includes(indexHtml, "<colgroup id=\"tableColGroup\"></colgroup>", "Shared player table shell must stay permanent in index.html.");
 includes(indexHtml, "id=\"evaluationDiscountRate\"", "Evaluation must keep a permanent discount-rate placeholder.");
+const staticWidthIndex = indexHtml.indexOf('<script src="/table-width-runtime.js"></script>');
+const bootstrapIndex = indexHtml.indexOf('<script src="/bootstrap.js"></script>');
+invariant(staticWidthIndex >= 0 && bootstrapIndex > staticWidthIndex, "Uniform Width must load exactly once from static HTML before bootstrap.");
+invariant(indexHtml.indexOf('<script src="/table-width-runtime.js"></script>', staticWidthIndex + 1) === -1, "Uniform Width must have only one static script owner.");
 
 const vercelLocal = JSON.parse(await readSite("vercel.json"));
 const vercelProduction = JSON.parse(await readSite("vercel.production.json"));
