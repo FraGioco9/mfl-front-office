@@ -645,17 +645,6 @@
   const footerVersion = document.querySelector('.siteFooter a[href="/changelog"], .siteFooter a[data-page="changelog"]');
   if (footerVersion) footerVersion.textContent = `MFL Front Office v${STATIC_RELEASE_VERSION}`;
 
-  function preloadAsset(path, options = {}) {
-    const key = `${options.rel || "preload"}:${path}`;
-    if (document.querySelector(`link[data-mfl-bootstrap-preload="${key}"]`)) return;
-    const link = document.createElement("link");
-    link.rel = options.rel || "preload";
-    link.href = path;
-    if (options.as) link.as = options.as;
-    link.dataset.mflBootstrapPreload = key;
-    document.head.appendChild(link);
-  }
-
   function loadRuntime(path) {
     /** @type {Promise<void>} */
     const loader = new Promise((resolve, reject) => {
@@ -674,8 +663,6 @@
     });
     return loader;
   }
-
-  preloadAsset("/modules/app-entry.js", { rel: "modulepreload" });
 
   void (async () => {
     try {
