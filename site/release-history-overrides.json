@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.57",
+    "Make Club pages use canonical Uniform Loading"
+  ],
+  [
     "v1.124.56",
     "Make Club data loading explicit and consistent across all views"
   ],
