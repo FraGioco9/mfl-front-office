@@ -2,19 +2,20 @@
 name: One-shot retirement marker source cleanup
 
 on:
-  push:
-    branches: [main]
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   cleanup:
-    if: github.actor != 'github-actions[bot]'
+    if: github.event.issue.title == 'Trigger retirement marker cleanup'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Rewrite retirement marker source directly
