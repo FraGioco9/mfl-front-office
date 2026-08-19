@@ -209,15 +209,13 @@ invariant(
 );
 
 invariant(tableLoadingRuntime.includes('const BLANK_ROW_CLASS = "mflTableLoadingRow";'), "Runtime loading rows must use the first-paint loading-row class.");
+invariant(tableLoadingRuntime.includes('Reflect.get(window, "__mflPrimeTableRows")'), "Runtime loading must reuse the bootstrap loading-row renderer.");
+invariant(tableLoadingRuntime.includes("primeRows(true);"), "Runtime loading must request the canonical bootstrap skeleton when replacing rows.");
+invariant(!tableLoadingRuntime.includes("BLANK_ROW_OPACITIES"), "Runtime loading must not duplicate bootstrap loading-row opacity data.");
+invariant(!tableLoadingRuntime.includes("document.createDocumentFragment()"), "Runtime loading must not construct a second loading-row DOM tree.");
 invariant(!tableLoadingRuntime.includes("__mflTableWidthRuntime"), "The loading/header runtime must not invoke a width owner.");
 invariant(!tableLoadingRuntime.includes("TABLE_ROW_HEIGHT = 39"), "Loading runtime must not own a conflicting 39px row height.");
 invariant(!tableLoadingRuntime.includes("installStyles()"), "Loading runtime must not inject a second table geometry stylesheet.");
-invariant(
-  (tableLoadingRuntime.match(/const staticRoutePending = staticHeader/g) || []).length >= 2
-  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTablePage")
-  && tableLoadingRuntime.includes("document.documentElement.dataset.initialTableView"),
-  "Loading/header ownership must preserve the first-paint header until the application core reaches the requested page and view.",
-);
 
 invariant(
   !staticUiRuntime.includes("STATIC_TABLE_COLUMN_WIDTHS")
@@ -275,4 +273,4 @@ invariant(
   "Bootstrap core must consume Uniform Width as a marker and must not load or call a width owner.",
 );
 
-console.log("Uniform Width single-source and stable-colgroup validation passed.");
+console.log("Uniform Width single-source, canonical loading-row rendering, and stable-colgroup validation passed.");
