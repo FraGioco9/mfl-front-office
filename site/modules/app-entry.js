@@ -114,7 +114,6 @@ const UNIVERSAL_RUNTIME_SCRIPTS = Object.freeze([
 ]);
 
 const TABLE_PRE_CORE_RUNTIME_SCRIPTS = Object.freeze([
-  "/table-width-runtime.js",
   "/filter-controls-runtime.js",
   "/desktop-table-style-runtime.js",
   "/shared-table-ui-runtime.js",
