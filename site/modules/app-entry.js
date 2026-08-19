@@ -377,10 +377,8 @@ function installClubRouteRuntimeGate() {
   return true;
 }
 
-/** @param {string} pageName @param {Record<string, unknown>} [options] */
-async function ensureRouteRuntimeNow(pageName, options = {}) {
-  const page = normalizeRoutePageName(pageName);
-  await loadScriptGroup(preCoreScriptsForRoute(page, options));
+/** @param {string} page @param {Record<string, unknown>} [options] */
+async function finalizeRouteRuntimeNow(page, options = {}) {
   if (!applicationCoreLoaded) await applicationCoreLoadedPromise;
 
   if (page === "evaluation") installEvaluationRecentStateBridge();
@@ -405,19 +403,35 @@ async function ensureRouteRuntimeNow(pageName, options = {}) {
 }
 
 /** @param {string} pageName @param {Record<string, unknown>} [options] */
-function ensureRouteRuntime(pageName, options = {}) {
+async function ensureRouteRuntimeNow(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
-  const view = routeView(options);
-  const key = `${page}:${view === "stats" ? "stats" : "default"}`;
-  const existing = routeRuntimeEnsurePromises.get(key);
-  if (existing) return existing;
+  await loadScriptGroup(preCoreScriptsForRoute(page, options));
+  await finalizeRouteRuntimeNow(page, options);
+}
 
-  const pending = ensureRouteRuntimeNow(page, options).catch((error) => {
+/** @param {string} page @param {Record<string, unknown>} [options] */
+function routeRuntimeKey(page, options = {}) {
+  const view = routeView(options);
+  return `${page}:${view === "stats" ? "stats" : "default"}`;
+}
+
+/** @param {string} key @param {Promise<void>} promise */
+function trackRouteRuntimePromise(key, promise) {
+  const pending = promise.catch((error) => {
     routeRuntimeEnsurePromises.delete(key);
     throw error;
   });
   routeRuntimeEnsurePromises.set(key, pending);
   return pending;
+}
+
+/** @param {string} pageName @param {Record<string, unknown>} [options] */
+function ensureRouteRuntime(pageName, options = {}) {
+  const page = normalizeRoutePageName(pageName);
+  const key = routeRuntimeKey(page, options);
+  const existing = routeRuntimeEnsurePromises.get(key);
+  if (existing) return existing;
+  return trackRouteRuntimePromise(key, ensureRouteRuntimeNow(page, options));
 }
 
 runtimeWindow.__mflEnsureRouteRuntime = ensureRouteRuntime;
@@ -431,7 +445,11 @@ async function start() {
   await loadScriptGroup(initialPreCoreRuntimeScripts);
 
   await loadApplicationCore();
-  await ensureRouteRuntime(initialRouteRuntime.pageName, initialRouteRuntime.options);
+  const initialRouteKey = routeRuntimeKey(initialRouteRuntime.pageName, initialRouteRuntime.options);
+  await trackRouteRuntimePromise(
+    initialRouteKey,
+    finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options),
+  );
 
   if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
