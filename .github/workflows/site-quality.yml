@@ -26,11 +26,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f site/apply-club-route-title-fix.py ]; then
+          if [ ! -f site/apply-club-route-title-fix-v2.py ]; then
             exit 0
           fi
-          python3 site/apply-club-route-title-fix.py
-          rm -f site/apply-club-route-title-fix.py site/.trigger-club-route-title-fix .github/workflows/apply-club-route-title-fix.yml
+          python3 site/apply-club-route-title-fix-v2.py
+          rm -f site/apply-club-route-title-fix.py site/apply-club-route-title-fix-v2.py site/.trigger-club-route-title-fix .github/workflows/apply-club-route-title-fix.yml
           git checkout origin/main -- .github/workflows/site-quality.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
