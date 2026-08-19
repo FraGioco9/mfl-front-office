@@ -20,13 +20,14 @@ const invariant = (condition, message) => {
 };
 
 function initializer(source, name) {
+  const normalizedSource = String(source || "").replace(/\r\n?/g, "\n");
   const marker = `const ${name} = `;
-  const start = source.indexOf(marker);
+  const start = normalizedSource.indexOf(marker);
   invariant(start >= 0, `Could not find ${name}.`);
   const valueStart = start + marker.length;
-  const end = source.indexOf(";\n", valueStart);
+  const end = normalizedSource.indexOf(";\n", valueStart);
   invariant(end >= 0, `Could not find the end of ${name}.`);
-  return source.slice(valueStart, end);
+  return normalizedSource.slice(valueStart, end);
 }
 
 function evaluateInitializer(source, name, context = {}) {
@@ -102,9 +103,7 @@ invariant(
   "bootstrap first-paint release projection must match release.json.",
 );
 const bootstrapViewBySlug = plain(evaluateInitializer(bootstrapSource, "TABLE_VIEW_BY_SLUG"));
-const canonicalBootstrapViewBySlug = { ...VIEW_BY_SLUG };
-delete canonicalBootstrapViewBySlug.squad;
-same(bootstrapViewBySlug, canonicalBootstrapViewBySlug, "bootstrap first-paint view slug projection");
+same(bootstrapViewBySlug, VIEW_BY_SLUG, "bootstrap first-paint view slug projection");
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_BASE_COLUMNS"), TABLE_BASE_COLUMNS, "bootstrap base columns");
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_STAT_COLUMNS"), TABLE_STAT_COLUMNS, "bootstrap stat columns");
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_CONTRACT_COLUMNS"), TABLE_CONTRACT_COLUMNS, "bootstrap contract columns");
