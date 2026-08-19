@@ -1,4 +1,4 @@
 {
-  "version": "1.124.57",
-  "description": "Make Club pages use canonical Uniform Loading"
+  "version": "1.124.58",
+  "description": "Route Club view switching through the shared table navigation pipeline"
 }
