@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { normalizeClubUrlStability } from "./modules/app-core-club-url-normalizer.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(siteRoot, "modules/app-core.js");
@@ -153,7 +154,7 @@ if (!appConfigRuntime) throw new Error("Canonical app configuration produced an 
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
 const source = normalizeRetirementMarkerContract(await readFile(sourcePath, "utf8"));
-const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+const artifacts = normalizeClubUrlStability(normalizeBuiltApplicationCoreArtifacts(source));
 const normalized = normalizeTooltipHeightOwnership(String(artifacts.core || "")).replace(/\s*$/, "");
 const evaluationRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.evaluation || "")).replace(/\s*$/, "");
 const mflStatsRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.mflstats || "")).replace(/\s*$/, "");
