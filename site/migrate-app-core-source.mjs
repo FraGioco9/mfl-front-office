@@ -6,6 +6,14 @@ const corePath = new URL("./modules/app-core.js", import.meta.url);
 const buildNormalizerPath = new URL("./modules/app-core-build-normalizer.js", import.meta.url);
 const temporaryNormalizerPath = new URL("./modules/.app-core-migration-normalizer.mjs", import.meta.url);
 const buildPath = new URL("./build-app-core.mjs", import.meta.url);
+const retiredNormalizerPaths = [
+  "./modules/app-core-normalizer.js",
+  "./modules/app-core-route-request-normalizer.js",
+  "./modules/app-core-route-runtime-normalizer.js",
+  "./modules/app-core-startup-data-normalizer.js",
+  "./modules/app-core-table-events-normalizer.js",
+  "./modules/app-core-table-state-normalizer.js",
+].map((path) => new URL(path, import.meta.url));
 
 function replaceRequired(source, before, after, label) {
   if (!source.includes(before)) throw new Error(`Migration pattern missing: ${label}`);
@@ -141,28 +149,6 @@ async function makeCanonicalBuildDirect() {
   await writeFile(buildPath, buildSource, "utf8");
 }
 
-async function preserveLegacyValidatorEntrypoints() {
-  const entries = [
-    ["app-core-normalizer.js", "normalizeApplicationCore"],
-    ["app-core-route-request-normalizer.js", "normalizeRouteRequestCancellation"],
-    ["app-core-route-runtime-normalizer.js", "normalizeRouteRuntimeGate"],
-    ["app-core-startup-data-normalizer.js", "normalizeStartupDataDependencies"],
-    ["app-core-table-events-normalizer.js", "normalizeTableEventDelegation"],
-    ["app-core-table-state-normalizer.js", "normalizePureTableStateRestoration"],
-  ];
-
-  for (const [fileName, functionName] of entries) {
-    const filePath = new URL(`./modules/${fileName}`, import.meta.url);
-    let source = await readFile(filePath, "utf8");
-    const pattern = new RegExp(`((?:export\\s+)?function\\s+${functionName}\\s*\\(source[^)]*\\)\\s*\\{)`);
-    const match = source.match(pattern);
-    if (!match) throw new Error(`Normalizer entrypoint not found: ${functionName}`);
-    const guard = `\n  if (String(source || "").startsWith(${JSON.stringify(MARKER)})) {\n    return String(source || "").replace(/\\r\\n?/g, "\\n");\n  }`;
-    source = source.replace(pattern, `${match[1]}${guard}`);
-    await writeFile(filePath, source, "utf8");
-  }
-}
-
 await tolerateRetiredEvaluationRecoveryRule();
 
 const buildNormalizerSource = await readFile(buildNormalizerPath, "utf8");
@@ -200,6 +186,6 @@ try {
 
 await writeFile(buildNormalizerPath, canonicalBuildNormalizerSource(), "utf8");
 await makeCanonicalBuildDirect();
-await preserveLegacyValidatorEntrypoints();
+await Promise.all(retiredNormalizerPaths.map((path) => unlink(path)));
 
-console.log("Application core source migration completed.");
+console.log("Application core source migration completed and behavioral normalizer modules retired.");
