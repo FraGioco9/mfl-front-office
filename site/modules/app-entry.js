@@ -141,8 +141,11 @@ const EVALUATION_POST_CORE_RUNTIME_SCRIPTS = Object.freeze([
   "/evaluation-search-state-runtime.js",
 ]);
 
-const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
+const DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-state-runtime.js",
+]);
+
+const DATABASE_STATS_RUNTIME_SCRIPTS = Object.freeze([
   "/database-stats-runtime.js",
 ]);
 
@@ -195,6 +198,7 @@ function preCoreScriptsForRoute(pageName, options = {}) {
   const page = normalizeRoutePageName(pageName);
   const scripts = [];
   if (routeNeedsTable(page, options)) scripts.push(...TABLE_PRE_CORE_RUNTIME_SCRIPTS);
+  if (page === "database") scripts.push(...DATABASE_STATS_BRIDGE_RUNTIME_SCRIPTS);
   if (routeNeedsDatabaseStats(page, options)) scripts.push(...DATABASE_STATS_RUNTIME_SCRIPTS);
   if (page === "evaluation") scripts.push(...EVALUATION_PRE_CORE_RUNTIME_SCRIPTS);
   if (page === "changelog") scripts.push(...CHANGELOG_RUNTIME_SCRIPTS);
@@ -389,10 +393,8 @@ async function finalizeRouteRuntimeNow(page, options = {}) {
     runtimeWindow.__mflSelectionStartupResetRuntime?.rebind?.();
   }
   if (routeNeedsWatchlist(page)) runtimeWindow.__mflWatchlistMyPlayersRouteRuntime?.install?.();
-  if (routeNeedsDatabaseStats(page, options)) {
-    runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
-    runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
-  }
+  if (page === "database") runtimeWindow.__mflDatabaseStatsStateRuntime?.sync?.();
+  if (routeNeedsDatabaseStats(page, options)) runtimeWindow.__mflDatabaseStatsRuntime?.sync?.();
   if (page === "evaluation") {
     runtimeWindow.__mflEvaluationLayoutRuntime?.sync?.();
     runtimeWindow.__mflEvaluationSearchStateRuntime?.sync?.();
