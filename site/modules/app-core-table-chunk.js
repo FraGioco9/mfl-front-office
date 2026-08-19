@@ -25,6 +25,18 @@ function renameRequiredTableOwner(source, functionName, ownerName) {
   throw new Error(`Could not delegate Table application core owner: ${functionName}.`);
 }
 
+function removeTableIdLocalTooltipOwner(source) {
+  const localOwner = [
+    '  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));',
+    '  button.addEventListener("mouseleave", hidePlayerNoteTooltip);',
+    '  button.addEventListener("blur", hidePlayerNoteTooltip);',
+  ].join("\n");
+  if (!source.includes(localOwner)) {
+    throw new Error("Could not remove Table player-ID local tooltip ownership.");
+  }
+  return source.replace(localOwner, "");
+}
+
 const TABLE_FACADE_BLOCK = `let __mflTableTitleForPageOwner = null;
 let __mflTableBuildTableColGroupOwner = null;
 let __mflTableBuildHeaderOwner = null;
@@ -253,7 +265,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     `${TABLE_FACADE_BLOCK}\n\n${TABLE_FACADE_INSERTION_MARKER}`,
   );
 
-  let table = tableParts.join("\n\n").replace(/\s*$/, "");
+  let table = removeTableIdLocalTooltipOwner(tableParts.join("\n\n").replace(/\s*$/, ""));
   table = renameRequiredTableOwner(table, "tableTitleForPage", "tableTitleForPageOwner");
   table = renameRequiredTableOwner(table, "buildTableColGroup", "tableBuildTableColGroupOwner");
   table = renameRequiredTableOwner(table, "buildHeader", "tableBuildHeaderOwner");
@@ -277,6 +289,9 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   const normalizedCore = core.replace(/\s*$/, "");
   if (!table.trim() || !normalizedCore) {
     throw new Error("Table application core split produced an empty artifact.");
+  }
+  if (table.includes("showPlayerNoteTooltip(button)") || table.includes("hidePlayerNoteTooltip);")) {
+    throw new Error("Table player-ID tooltip ownership leaked outside the global Tooltip Height runtime.");
   }
 
   return Object.freeze({
