@@ -49,3 +49,20 @@ if (!source.includes(transitionBlock)) throw new Error("Bootstrap validator gene
 source = source.replace(transitionBlock, canonicalBlock);
 
 await writeFile(path, source, "utf8");
+
+const startupRoutingPath = new URL("./validate-route-core-startup-routing.mjs", import.meta.url);
+let startupRouting = await readFile(startupRoutingPath, "utf8");
+const oldStartupOwner = [
+  'const routeNormalizer = await read("./modules/app-core-route-runtime-normalizer.js");',
+  'const routeNormalizerExecution = routeNormalizer.replace(/\\/\\/[^\\n]*/g, "");',
+  'const routeCoreLoader = await read("./route-core-loader-runtime.js");',
+].join("\n");
+const newStartupOwner = [
+  'const appCoreSource = await read("./modules/app-core.js");',
+  'const appCoreExecution = appCoreSource.replace(/\\/\\/[^\\n]*/g, "");',
+  'const routeCoreLoader = await read("./route-core-loader-runtime.js");',
+].join("\n");
+if (!startupRouting.includes(oldStartupOwner)) throw new Error("Startup-routing normalizer ownership read was not found.");
+startupRouting = startupRouting.replace(oldStartupOwner, newStartupOwner);
+startupRouting = startupRouting.replaceAll("routeNormalizerExecution", "appCoreExecution");
+await writeFile(startupRoutingPath, startupRouting, "utf8");
