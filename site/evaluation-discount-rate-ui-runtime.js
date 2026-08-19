@@ -53,9 +53,10 @@
       if (!portal || !activeMetric?.isConnected || !evaluationActive()) return;
       const rect = activeMetric.getBoundingClientRect();
       const tooltipRect = portal.getBoundingClientRect();
-      const gap = Number(window.__mflTooltipSettings?.gap) || 6;
-      let top = rect.top - tooltipRect.height - gap;
-      if (top < 8) top = rect.bottom + gap;
+      const tooltipHeight = Number(window.__mflTooltipHeight);
+      if (!Number.isFinite(tooltipHeight)) return;
+      let top = rect.top - tooltipRect.height - tooltipHeight;
+      if (top < 8) top = rect.bottom + tooltipHeight;
       const left = Math.min(
         window.innerWidth - tooltipRect.width - 8,
         Math.max(8, rect.left + (rect.width - tooltipRect.width) / 2),
