@@ -94,7 +94,7 @@ async function openSavedEvaluationsModal() {
 const CLUB_SEARCH_BRIDGE = `;(() => {
   // Compatibility marker for legacy validation; route ownership lives in the Club chunk:
   // squad|contracts|attributes|current-season|all-time
-  // Compatibility marker; the executable stale-payload guard is route-owned: if (!dataPayload) return;
+  // Compatibility marker; the executable stale-payload guard is route-owned: if (!dataLoaded) return;
   if (typeof renderSearchResultsNow !== "function" || renderSearchResultsNow.__mflUniversalClubSearch) return;
 
   const CLUB_SEARCH_ID_COLUMNS = [
@@ -335,9 +335,80 @@ export function splitApplicationCoreRuntime(source) {
     'await window.mflLoadIncrementalRoutePage("club", { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true });',
     "Club view data route identity",
   );
+
+  club = replaceRequired(
+    club,
+    `      const dataRoute = typeof incrementalRouteTarget === "function"
+        ? incrementalRouteTarget(CLUB_PAGE, { view: nextView, clubId: activeClubId, ignoreCurrentClubRoute: true })
+        : null;
+      let dataPayload = true;
+      const loadClubData = async () => {
+        if (dataRoute && typeof requestIncrementalRoute === "function") {
+          if (!incrementalRouteIsCached(dataRoute, 1)) {
+            renderIncrementalLoadingState(CLUB_PAGE, dataRoute);
+          }
+          dataPayload = await requestIncrementalRoute(dataRoute, 1);
+        }
+      };
+      await withInteractionBusy(loadClubData);
+      if (!dataPayload) return;`,
+    `      const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
+        ? await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {
+            view: nextView,
+            clubId: activeClubId,
+            ignoreCurrentClubRoute: true,
+          })
+        : false;
+      if (!dataLoaded) return;`,
+    "Club page canonical incremental loader",
+  );
+
+  club = replaceRequired(
+    club,
+    `  function setClubSwitching(active) {
+    document.body.classList.toggle("clubViewSwitching", active);
+    if (active) {
+      document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+    }
+  }
+`,
+    "",
+    "Club private loading class owner",
+  );
+  club = club.replace("  if (initialClubRoute) setClubSwitching(true);\n", "");
+  club = club.replaceAll("      setClubSwitching(true);\n", "");
+
+  club = replaceRequired(
+    club,
+    `  function finishClubSwitch() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+        setClubSwitching(false);
+        resolve();
+      });
+    });
+  }`,
+    `  function finishClubSwitch() {
+    return Promise.resolve();
+  }`,
+    "Club private loading completion",
+  );
+
+  club = replaceRequired(
+    club,
+    `      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      applyClubPresentation();
+      captureClubView(nextView);`,
+    `      applyClubPresentation();
+      captureClubView(nextView);`,
+    "Club page canonical render ownership",
+  );
+
   club = club.replace(
     '      state.dataAccess = typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public";',
-    '      state.dataAccess = dataRoute?.access || "public";',
+    '      state.dataAccess = "public";',
   );
 
   const detachedClubNavigation = "    void openClubPage(clubId, view, true);";
