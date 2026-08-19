@@ -121,8 +121,12 @@ invariant(
   "Tooltip Height must be exposed to every specialized tooltip owner.",
 );
 invariant(
-  staticUi.includes('target.closest("[data-tooltip], [title]")'),
-  "The global tooltip owner must include both application and native title tooltips.",
+  staticUi.includes('target.closest("[data-tooltip], [data-note-tooltip], [title]")'),
+  "The global tooltip owner must include data-tooltip, data-note-tooltip, and native title tooltips.",
+);
+invariant(
+  staticUi.includes('target.getAttribute("data-note-tooltip")'),
+  "The global tooltip source reader must recognize specialized note-tooltip attributes.",
 );
 invariant(
   staticUi.includes("anchor.top - tooltip.height - TOOLTIP_HEIGHT"),
@@ -131,6 +135,18 @@ invariant(
 invariant(
   staticUi.includes("anchor.bottom + TOOLTIP_HEIGHT"),
   "Generic tooltip viewport fallback must preserve Tooltip Height below its generator.",
+);
+invariant(
+  staticUi.includes('document.addEventListener("focus", onTooltipFocusIn, true);'),
+  "The global tooltip owner must capture keyboard focus before target-local tooltip listeners.",
+);
+invariant(
+  staticUi.includes('document.addEventListener("blur", onTooltipFocusOut, true);'),
+  "The global tooltip owner must capture keyboard blur before target-local tooltip listeners.",
+);
+invariant(
+  !staticUi.includes('document.addEventListener("focusin", onTooltipFocusIn, true);'),
+  "Tooltip focus ownership must not fall back to the later focusin phase.",
 );
 invariant(
   discountTooltipUi.includes("Number(window.__mflTooltipHeight)"),
@@ -142,7 +158,7 @@ invariant(
 );
 invariant(
   desktopTableUi.includes('title.dataset.noteTooltip = "Click to copy wallet address";'),
-  "Agent copy tooltips must use the specialized tooltip owner without data-tooltip duplication.",
+  "Agent copy tooltips must use the specialized tooltip attribute without data-tooltip duplication.",
 );
 invariant(
   !desktopTableUi.includes('title.dataset.tooltip = "Click to copy wallet address";'),
