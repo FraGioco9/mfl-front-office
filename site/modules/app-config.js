@@ -198,10 +198,19 @@ export function browserConfigRuntimeSource(release) {
     return view ? { view } : {};
   }
 
+  function normalizeClubView(view = "attributes") {
+    const requested = String(view || "attributes").trim().toLowerCase();
+    const clubConfig = data.routes.tableViews.club;
+    if (clubConfig.order.includes(requested)) return requested;
+    const slugView = data.routes.viewBySlug[requested] || "";
+    return clubConfig.order.includes(slugView) ? slugView : clubConfig.fallback;
+  }
+
   function clubPath(clubId, view = "attributes") {
-    const normalizedView = String(view || "attributes").trim().toLowerCase();
-    const slug = data.routes.clubViewSlugs[normalizedView] || data.routes.clubViewSlugs.attributes;
-    return "/clubs/" + encodeURIComponent(String(clubId || "").trim()) + "/" + slug;
+    const normalizedClubId = String(clubId || "").trim();
+    const normalizedView = normalizeClubView(view);
+    const slug = data.routes.clubViewSlugs[normalizedView];
+    return "/clubs/" + encodeURIComponent(normalizedClubId) + "/" + slug;
   }
 
   function clubRoute(pathname = location.pathname) {
@@ -211,10 +220,8 @@ export function browserConfigRuntimeSource(release) {
 
     const clubId = decodedRoutePart(match[1]);
     if (!clubId) return null;
-    const requestedSlug = decodedRoutePart(match[2] || "").toLowerCase();
-    const requestedView = data.routes.viewBySlug[requestedSlug] || "";
-    const clubConfig = data.routes.tableViews.club;
-    const view = clubConfig.order.includes(requestedView) ? requestedView : clubConfig.fallback;
+    const requestedView = decodedRoutePart(match[2] || "").toLowerCase();
+    const view = normalizeClubView(requestedView || "attributes");
     return Object.freeze({
       clubId,
       view,
@@ -280,6 +287,7 @@ export function browserConfigRuntimeSource(release) {
     normalizeView,
     initialRequest,
     usesTableInfrastructure,
+    normalizeClubView,
     clubPath,
     clubRoute,
   });
@@ -294,6 +302,11 @@ export function browserConfigRuntimeSource(release) {
   window.__mflAppConfig = appConfig;
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
+
+  const initialClubRoute = routes.clubRoute(location.pathname);
+  if (initialClubRoute && location.pathname !== initialClubRoute.path) {
+    history.replaceState({}, "", initialClubRoute.path + location.search + location.hash);
+  }
 })();
 `;
 }

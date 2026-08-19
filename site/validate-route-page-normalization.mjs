@@ -19,7 +19,8 @@ const [entry, routeCoreLoader, releaseSource] = await Promise.all([
 const release = JSON.parse(releaseSource);
 const sandbox = {
   window: {},
-  location: { pathname: "/", origin: "https://example.test" },
+  location: { pathname: "/", origin: "https://example.test", search: "", hash: "" },
+  history: { replaceState() {} },
   Object,
   Set,
   encodeURIComponent,
@@ -56,12 +57,19 @@ for (const [options, expected] of [
 }
 invariant(routeConfig.normalizeView() === "", "Missing route view options must normalize to an empty view.");
 
-for (const [view, expectedPath] of [
-  ["attributes", "/clubs/123/squad"],
-  ["contracts", "/clubs/123/contracts"],
-  ["current", "/clubs/123/current-season"],
-  ["all", "/clubs/123/all-time"],
+for (const [view, expectedView, expectedPath] of [
+  ["attributes", "attributes", "/clubs/123/squad"],
+  ["squad", "attributes", "/clubs/123/squad"],
+  ["contracts", "contracts", "/clubs/123/contracts"],
+  ["current", "current", "/clubs/123/current-season"],
+  ["current-season", "current", "/clubs/123/current-season"],
+  ["all", "all", "/clubs/123/all-time"],
+  ["all-time", "all", "/clubs/123/all-time"],
 ]) {
+  invariant(
+    routeConfig.normalizeClubView(view) === expectedView,
+    `Club view ${view} must normalize to internal view ${expectedView}.`,
+  );
   invariant(
     routeConfig.clubPath("123", view) === expectedPath,
     `Club ${view} must use ${expectedPath}.`,
@@ -74,6 +82,8 @@ for (const [path, expectedView, expectedPath] of [
   ["/clubs/123/current-season", "current", "/clubs/123/current-season"],
   ["/clubs/123/all-time", "all", "/clubs/123/all-time"],
   ["/clubs/123/attributes", "attributes", "/clubs/123/squad"],
+  ["/clubs/123/current", "current", "/clubs/123/current-season"],
+  ["/clubs/123/all", "all", "/clubs/123/all-time"],
   ["/club/123/contracts", "contracts", "/clubs/123/contracts"],
   ["/clubs/123", "attributes", "/clubs/123/squad"],
 ]) {
@@ -81,6 +91,48 @@ for (const [path, expectedView, expectedPath] of [
   invariant(route?.clubId === "123", `${path} must preserve Club ID 123.`);
   invariant(route?.view === expectedView, `${path} must resolve to Club view ${expectedView}.`);
   invariant(route?.path === expectedPath, `${path} must normalize to ${expectedPath}.`);
+}
+
+function firstRuntimeClubPath(pathname) {
+  let replacedPath = "";
+  const runtimeLocation = {
+    pathname,
+    origin: "https://example.test",
+    search: "?keep=1",
+    hash: "#club",
+  };
+  const runtimeSandbox = {
+    window: {},
+    location: runtimeLocation,
+    history: {
+      replaceState(_state, _title, target) {
+        replacedPath = String(target || "");
+        runtimeLocation.pathname = replacedPath.split(/[?#]/, 1)[0];
+      },
+    },
+    Object,
+    Set,
+    encodeURIComponent,
+    decodeURIComponent,
+  };
+  vm.runInNewContext(browserConfigRuntimeSource(release), runtimeSandbox);
+  return replacedPath;
+}
+
+for (const [path, expectedReplacement] of [
+  ["/clubs/123", "/clubs/123/squad?keep=1#club"],
+  ["/clubs/123/attributes", "/clubs/123/squad?keep=1#club"],
+  ["/clubs/123/current", "/clubs/123/current-season?keep=1#club"],
+  ["/club/123/all-time", "/clubs/123/all-time?keep=1#club"],
+  ["/clubs/123/squad", ""],
+  ["/clubs/123/contracts", ""],
+  ["/clubs/123/current-season", ""],
+  ["/clubs/123/all-time", ""],
+]) {
+  invariant(
+    firstRuntimeClubPath(path) === expectedReplacement,
+    `${path} must ${expectedReplacement ? `be replaced immediately with ${expectedReplacement}` : "already be canonical before loading"}.`,
+  );
 }
 
 const routeCases = [
@@ -184,4 +236,4 @@ const entryClubPathSection = entry.slice(entryClubPathStart, entryClubPathEnd);
 includes(entryClubPathSection, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "app-entry fallback Club navigation must consume canonical route config.");
 excludes(entryClubPathSection, "new Map([", "app-entry must not duplicate Club view-to-slug mappings.");
 
-console.log("Canonical route page-name, view, initial-route, and Club URL validation passed.");
+console.log("Canonical route page-name, view, initial-route, and always-canonical Club URL validation passed.");
