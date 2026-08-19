@@ -37,8 +37,8 @@ for (const [name, config] of [
 
 const developmentJsPolicy = cacheControl(headerRule(developmentConfig, "/(.*\\.js)"));
 invariant(
-  developmentJsPolicy === "public, max-age=0, must-revalidate",
-  "Development JavaScript must be cacheable with mandatory revalidation instead of no-store.",
+  developmentJsPolicy === "no-store, max-age=0",
+  "Development JavaScript must remain uncached so local runtime edits cannot reuse stale code.",
 );
 
 const productionJsRule = headerRule(
@@ -48,8 +48,8 @@ const productionJsRule = headerRule(
 );
 invariant(productionJsRule, "Production JavaScript must keep the generic non-versioned cache rule.");
 invariant(
-  cacheControl(productionJsRule) === "public, max-age=0, must-revalidate",
-  "Non-versioned production JavaScript must be cacheable with mandatory revalidation.",
+  cacheControl(productionJsRule) === "no-store, max-age=0",
+  "Non-versioned production JavaScript must remain uncached.",
 );
 
 const versionedCoreRule = headerRule(
