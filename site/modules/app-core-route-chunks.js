@@ -377,6 +377,14 @@ export function splitApplicationCoreRuntime(source) {
   );
   club = club.replace("  if (initialClubRoute) setClubSwitching(true);\n", "");
   club = club.replaceAll("      setClubSwitching(true);\n", "");
+  club = replaceRequired(
+    club,
+    `    body.clubViewSwitching #progressionPage,
+    body.clubViewSwitching #progressionPage * { transition: none !important; animation: none !important; }
+`,
+    "",
+    "Club private loading transition style",
+  );
 
   club = replaceRequired(
     club,
