@@ -1,5 +1,9 @@
 [
   [
+    "v1.124.56",
+    "Make Club data loading explicit and consistent across all views"
+  ],
+  [
     "v1.124.55",
     "Load the complete MFL Stats population and align active view hover"
   ],
