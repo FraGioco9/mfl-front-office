@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase, appCoreSource] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource, tableRuntime] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-table-runtime.js"),
 ]);
 
 for (const required of [
@@ -35,13 +36,16 @@ invariant(
   "The first-paint header selector must be neutral before the table is revealed, including when static header DOM is reused.",
 );
 
-invariant(
-  appCoreSource.includes('if (document.documentElement.classList.contains("mflDataLoading")) {')
-    && appCoreSource.includes('selectVisibleInput.checked = false;')
-    && appCoreSource.includes('selectVisibleInput.indeterminate = false;')
-    && appCoreSource.includes('selectVisibleInput.disabled = false;'),
-  "The canonical selection-header owner must refuse checked, indeterminate, or disabled visual states while table data is loading.",
-);
+const loadingGuardMarkers = [
+  'if (document.documentElement.classList.contains("mflDataLoading")) {',
+  'selectVisibleInput.checked = false;',
+  'selectVisibleInput.indeterminate = false;',
+  'selectVisibleInput.disabled = false;',
+];
+for (const marker of loadingGuardMarkers) {
+  invariant(appCoreSource.includes(marker), `Canonical selection-header loading guard is missing ${marker}`);
+  invariant(tableRuntime.includes(marker), `Generated table runtime selection-header loading guard is missing ${marker}`);
+}
 
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
@@ -69,4 +73,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selector stays visually neutral and five-row geometry is synchronous at first paint.");
+console.log("Table loading header selector stays visually neutral in source and generated runtime, with synchronous first-paint row geometry.");
