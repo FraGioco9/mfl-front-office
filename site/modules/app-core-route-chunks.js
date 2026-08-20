@@ -404,7 +404,7 @@ export function splitApplicationCoreRuntime(source) {
     divisionLabel.style.color = activeClubTitle.division.color;
     divisionLabel.textContent = activeClubTitle.division.name;
     tablePageTitle.replaceChildren(
-      document.createTextNode(\`${activeClubTitle.name} - \`),
+      document.createTextNode(\`\${activeClubTitle.name} - \`),
       divisionLabel,
     );
   }`,
@@ -425,7 +425,7 @@ export function splitApplicationCoreRuntime(source) {
     `  window.addEventListener("popstate", () => {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
@@ -439,7 +439,7 @@ export function splitApplicationCoreRuntime(source) {
     `  function bootClubRoute() {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
+    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
@@ -538,7 +538,8 @@ export function splitApplicationCoreRuntime(source) {
     if (active) {
       document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
     }
-  }`,
+  }
+`,
     "",
     "Club private loading class owner",
   );
