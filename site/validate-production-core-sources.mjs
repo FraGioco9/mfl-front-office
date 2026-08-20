@@ -1,12 +1,16 @@
 import { readFile } from "node:fs/promises";
 
-const ignoreSource = await readFile(new URL("../.vercelignore", import.meta.url), "utf8");
+const [ignoreSource, productionConfigSource] = await Promise.all([
+  readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
+  readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
+]);
 const ignoredPaths = new Set(
   ignoreSource
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#")),
 );
+const productionConfig = JSON.parse(productionConfigSource);
 
 const requiredProductionIgnoredPaths = [
   ".gitignore",
@@ -57,4 +61,12 @@ for (const runtimePath of [
   }
 }
 
-console.log("Production source boundary validation passed.");
+const productionBuildCommand = String(productionConfig.buildCommand || "").trim();
+if (!productionBuildCommand) {
+  throw new Error("Production Vercel config must explicitly override the package build script because compiler sources are excluded from deployment.");
+}
+if (/build-app-core|npm\s+(?:run\s+)?build\b/i.test(productionBuildCommand)) {
+  throw new Error("Production Vercel build must deploy the prebuilt application core instead of invoking an excluded compiler source.");
+}
+
+console.log("Production source boundary and prebuilt Vercel deployment validation passed.");
