@@ -73,7 +73,6 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
       "clampEvaluationRewardRate",
       "normalizeEvaluationRewardRateDraft",
       "formatEvaluationRewardRate",
-      "clearEvaluationSearchFocus",
       "clearEvaluationSearch",
       "handleEvaluationSearchInput",
       "queueEvaluationSettingsSave",
