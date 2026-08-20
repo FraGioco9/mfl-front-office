@@ -638,11 +638,10 @@ body[data-page="home"] .topbar .stats {
   display: flex;
   align-items: center;
   align-self: center;
-  height: 18px;
+  min-height: 20px;
   max-width: 112px;
-  overflow: hidden;
   opacity: 1;
-  line-height: 1;
+  line-height: 1.2;
   white-space: nowrap;
   transition: none;
 }
