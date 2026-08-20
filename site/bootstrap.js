@@ -406,7 +406,17 @@
     return [normalizedPage, normalizedView, sort.sortKey, sort.sortDirection].join("|");
   }
 
-  function primeInitialTableStructure(page, view) {
+  function neutralizeFirstPaintSelectionHeader(head) {
+  const input = head.querySelector("#selectVisiblePlayersInput");
+  if (!(input instanceof HTMLInputElement)) return false;
+  input.checked = false;
+  input.indeterminate = false;
+  input.disabled = false;
+  if (document.activeElement === input) input.blur();
+  return true;
+}
+
+function primeInitialTableStructure(page, view) {
     const colGroup = document.getElementById("tableColGroup");
     const head = document.getElementById("tableHead");
     if (!(colGroup instanceof HTMLTableColElement) && !(colGroup instanceof HTMLElement)) return 0;
@@ -418,6 +428,7 @@
     const sort = firstPaintTableSortState(normalizedPage, normalizedView);
     const signature = [normalizedPage, normalizedView, sort.sortKey, sort.sortDirection].join("|");
     if (head.rows[0] && head.dataset.mflStaticHeader === "true" && head.dataset.mflHeaderSignature === signature) {
+      neutralizeFirstPaintSelectionHeader(head);
       return head.rows[0].cells.length;
     }
 
@@ -441,6 +452,9 @@
     const selectionInput = document.createElement("input");
     selectionInput.id = "selectVisiblePlayersInput";
     selectionInput.type = "checkbox";
+    selectionInput.checked = false;
+    selectionInput.indeterminate = false;
+    selectionInput.disabled = false;
     selectionInput.setAttribute("aria-label", "Select visible players");
     selectionHeader.appendChild(selectionInput);
     row.appendChild(selectionHeader);

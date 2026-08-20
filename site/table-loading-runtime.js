@@ -54,7 +54,7 @@
     if (!(input instanceof HTMLInputElement)) return false;
     input.checked = false;
     input.indeterminate = false;
-    input.disabled = true;
+    input.disabled = false;
     if (document.activeElement === input) input.blur();
     return true;
   }

@@ -5,21 +5,39 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
+  read("./modules/app-core.js"),
 ]);
 
 for (const required of [
   'input.checked = false;',
   'input.indeterminate = false;',
-  'input.disabled = true;',
+  'input.disabled = false;',
   'if (document.activeElement === input) input.blur();',
   'neutralizeSelectionHeader();',
 ]) {
   invariant(runtime.includes(required), `Loading header selection must stay neutral through ${required}`);
 }
+
+invariant(
+  bootstrap.includes('function neutralizeFirstPaintSelectionHeader(head) {')
+    && bootstrap.includes('neutralizeFirstPaintSelectionHeader(head);')
+    && bootstrap.includes('selectionInput.checked = false;')
+    && bootstrap.includes('selectionInput.indeterminate = false;')
+    && bootstrap.includes('selectionInput.disabled = false;'),
+  "The first-paint header selector must be neutral before the table is revealed, including when static header DOM is reused.",
+);
+
+invariant(
+  appCoreSource.includes('if (document.documentElement.classList.contains("mflDataLoading")) {')
+    && appCoreSource.includes('selectVisibleInput.checked = false;')
+    && appCoreSource.includes('selectVisibleInput.indeterminate = false;')
+    && appCoreSource.includes('selectVisibleInput.disabled = false;'),
+  "The canonical selection-header owner must refuse checked, indeterminate, or disabled visual states while table data is loading.",
+);
 
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
