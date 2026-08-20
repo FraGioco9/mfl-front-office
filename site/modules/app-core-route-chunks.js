@@ -7,6 +7,7 @@ import {
   replaceRequired,
   replaceRequiredFunction,
 } from "./app-core-splitter-utils.js";
+import { normalizePinnedSidebarApplicationCoreRuntime } from "./app-core-sidebar-lifecycle.js";
 
 function normalizeMflStatsStaticFilters(source) {
   const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
@@ -156,7 +157,7 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
 })();`;
 
 export function splitApplicationCoreRuntime(source) {
-  let core = String(source || "").replace(/\r\n?/g, "\n");
+  let core = normalizePinnedSidebarApplicationCoreRuntime(source);
   if (!core.trim()) {
     throw new Error("Cannot split an empty application core.");
   }
