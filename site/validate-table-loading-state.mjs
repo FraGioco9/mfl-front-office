@@ -27,7 +27,7 @@ invariant(
     && bootstrap.includes('if (columnIndex === nameColumnIndex) {')
     && bootstrap.includes('nameCell.className = "playerNameCell";')
     && bootstrap.includes('cell.appendChild(nameCell);'),
-  "The synchronous bootstrap must render loading rows with loaded-row player-name geometry before first paint.",
+  "The synchronous bootstrap must render all blank loading rows with final loaded-row player-name geometry before first paint.",
 );
 
 invariant(
@@ -47,4 +47,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selection and first-paint five-row geometry validation passed.");
+console.log("Table loading header selection and synchronous first-paint five-row geometry validation passed.");
