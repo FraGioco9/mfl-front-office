@@ -46,6 +46,7 @@ const startupAndDependencyClosedFunctions = [
   "normalizeEvaluationRewardRateDraft",
   "formatEvaluationRewardRate",
   "clearEvaluationSearchFocus",
+  "queueEvaluationSettingsSave",
   "renderEvaluationMflPerUsdControl",
   "commitEvaluationMflPerUsd",
   "resetEvaluationMflPerUsd",
@@ -71,6 +72,14 @@ const evaluationBindings = [
   'resetAdvancedSettingsButton.addEventListener("click", resetAdvancedSettingsDraft);',
   'discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);',
   'applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);',
+  'evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);',
+  'evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);',
+  'evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);',
+  'ignoreDiscountRateInput.addEventListener("change", () => {',
+  'ignoreFirstSeasonInput.addEventListener("change", () => {',
+  'evaluationMflUsdEditButton.addEventListener("click", () => {',
+  'evaluationMflUsdResetButton.addEventListener("click", resetEvaluationMflPerUsd);',
+  'evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);',
   "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);",
 ];
 
@@ -119,4 +128,4 @@ invariant(
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation startup UI, advanced settings, and dependency-closed helpers are lazy route-owned while persistence hydration remains shared.");
+console.log("Evaluation startup UI, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while persistence hydration remains shared.");
