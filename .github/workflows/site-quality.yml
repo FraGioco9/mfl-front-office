@@ -31,15 +31,8 @@ jobs:
 
           path = Path("site/validate-table-column-layout.mjs")
           text = path.read_text(encoding="utf-8")
-          old = '''invariant(
-  bootstrap.includes('const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);'),
-  "First-paint loading rows must use the rendered column count.",
-);'''
-          new = '''invariant(
-  bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
-    && bootstrap.includes('const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);'),
-  "First-paint loading rows must use the rendered column count.",
-);'''
+          old = 'invariant(\n  bootstrap.includes(\'const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);\'),\n  "First-paint loading rows must use the rendered column count.",\n);'
+          new = 'invariant(\n  bootstrap.includes(\'const renderedColumns = Array.from(colGroup?.children || []);\')\n    && bootstrap.includes(\'const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);\'),\n  "First-paint loading rows must use the rendered column count.",\n);'
           if text.count(old) != 1:
               raise SystemExit(f"table-column validator anchor count: {text.count(old)}")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
