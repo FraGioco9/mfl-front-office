@@ -9,12 +9,13 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, tableSplitter, playerSplitter, buildNormalizer, bootstrap] = await Promise.all([
+const [coreSource, tableSplitter, playerSplitter, buildNormalizer, bootstrap, styles] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-player-chunk.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./bootstrap.js"),
+  read("./styles.css"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -50,6 +51,11 @@ includes(sharedCore, "await agentTitleReady;", "Agent page loading must not fini
 includes(sharedCore, "renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());", "Agent title must be rendered after its name readiness gate.");
 includes(sharedCore, "localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY", "Resolved Agent names must be cached for future navigation and first paint.");
 includes(sharedCore, "localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY)", "Agent title resolution must consume the per-Agent name cache.");
+includes(
+  sharedCore,
+  'tablePageTitle.replaceChildren(nameSpan, document.createTextNode(" - "), addressButton);',
+  "Hydrated Agent titles must retain the same literal spaces around the separator as first paint.",
+);
 excludes(sharedCore, "function saveAgentDisplayName(", "The retired duplicate Agent display-name cache helper definition must not remain in generated core.");
 excludes(sharedCore, "saveAgentDisplayName(entry.walletAddress, entry.name);", "Search-index generation must not call the retired Agent display-name cache helper.");
 excludes(sharedCore, 'type: "recent",', "The exact Agent lookup implementation must stay lazy in the Table core.");
@@ -66,6 +72,16 @@ includes(playerCore, 'openAgentPage(agentWalletAddress, formatCellValue(row, "wa
 
 includes(bootstrap, "const AGENT_DISPLAY_NAMES_STORAGE_KEY = \"mfl-agent-display-names-v1\";", "First paint must share the canonical Agent display-name cache.");
 includes(bootstrap, "String(agentNames[normalizedWallet] || \"\").trim()", "Direct Agent first paint must reuse a previously cached Agent name.");
+includes(
+  styles,
+  ".tablePageTitle {\n  display: flex;\n  align-items: center;\n  gap: 0;",
+  "Agent title spacing must not depend on a flex gap that appears only after hydration.",
+);
+includes(
+  styles,
+  "line-height: var(--mfl-page-title-line-height);\n  white-space: pre;",
+  "Agent title literal separator spaces must be preserved before and after hydration.",
+);
 
 excludes(
   tableSplitter,
@@ -89,4 +105,4 @@ invariant(
   "Agent name readiness must settle before the page can finish its loading lifecycle.",
 );
 
-console.log("Agent title name reuse, lazy exact fallback lookup, cache, and loading readiness validation passed.");
+console.log("Agent title name reuse, stable separator spacing, lazy exact fallback lookup, cache, and loading readiness validation passed.");
