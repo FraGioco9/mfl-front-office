@@ -90,9 +90,10 @@ def progression_url(player_ids: list[int], interval: str) -> str:
 
 
 def prepare_progression_batches(
-    active_players: list[dict[str, Any]],
+    players: list[dict[str, Any]],
+    interval: str,
 ) -> tuple[tuple[int, ...], ...]:
-    """Build batches whose longest progression URL is at most 5,000 characters."""
+    """Build interval-specific batches whose progression URL stays under 5,000 characters."""
     excluded_wallets = {
         pipeline.MFL_WALLET_ADDRESS.lower(),
         pipeline.MFL_TRADE_WALLET_ADDRESS.lower(),
@@ -100,7 +101,7 @@ def prepare_progression_batches(
     eligible_ids = sorted(
         {
             pipeline.player_id(player)
-            for player in active_players
+            for player in players
             if paged._owner_wallet_address(player) not in excluded_wallets
         }
     )
@@ -109,7 +110,7 @@ def prepare_progression_batches(
     current: list[int] = []
     for player_id in eligible_ids:
         candidate = [*current, player_id]
-        candidate_url_length = len(progression_url(candidate, "CURRENT_SEASON"))
+        candidate_url_length = len(progression_url(candidate, interval))
         if current and (
             len(candidate) > pipeline.PROGRESSION_BATCH_SIZE
             or candidate_url_length > PROGRESSION_MAX_URL_LENGTH
@@ -119,25 +120,25 @@ def prepare_progression_batches(
         else:
             current = candidate
 
-        if len(progression_url(current, "CURRENT_SEASON")) > PROGRESSION_MAX_URL_LENGTH:
+        if len(progression_url(current, interval)) > PROGRESSION_MAX_URL_LENGTH:
             raise RuntimeError(
-                f"Progression URL exceeds {PROGRESSION_MAX_URL_LENGTH} characters "
+                f"Progression {interval} URL exceeds {PROGRESSION_MAX_URL_LENGTH} characters "
                 f"for player {player_id}"
             )
 
     if current:
         batches.append(tuple(current))
 
-    excluded_count = len(active_players) - len(eligible_ids)
+    excluded_count = len(players) - len(eligible_ids)
     longest_url = max(
-        (len(progression_url(list(batch), "CURRENT_SEASON")) for batch in batches),
+        (len(progression_url(list(batch), interval)) for batch in batches),
         default=0,
     )
     pipeline.log(
-        f"Progression batches ready: {len(batches)} batches from "
-        f"{len(eligible_ids)} active players; longest URL {longest_url}/"
+        f"Progression {interval} batches ready: {len(batches)} batches from "
+        f"{len(eligible_ids)} players; longest URL {longest_url}/"
         f"{PROGRESSION_MAX_URL_LENGTH} characters; excluded {excluded_count} "
-        "MFL/MFL Trade players and all retired players"
+        "MFL/MFL Trade players"
     )
     return tuple(batches)
 
