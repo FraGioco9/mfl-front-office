@@ -20,6 +20,18 @@ const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");
 const walletRuntimePath = resolve(siteRoot, "modules/app-core-wallet-runtime.js");
 const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");
 
+async function writeFileIfChanged(path, content) {
+  let current = null;
+  try {
+    current = await readFile(path, "utf8");
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
+  }
+  if (current === content) return false;
+  await writeFile(path, content, "utf8");
+  return true;
+}
+
 function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
   const start = source.indexOf(startMarker);
   const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
@@ -226,22 +238,22 @@ const playerBanner = "// Generated Player core chunk from modules/app-core.js. D
 const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
 const walletBanner = "// Generated Wallet core chunk from modules/app-core.js. Do not edit directly.\n";
 const watchlistBanner = "// Generated Watchlist core chunk from modules/app-core.js. Do not edit directly.\n";
-await Promise.all([
-  writeFile(tableWidthRuntimePath, `${preBootstrapRuntime}\n`, "utf8"),
-  writeFile(runtimePath, `${banner}${normalized}\n`, "utf8"),
-  writeFile(evaluationRuntimePath, `${evaluationBanner}${evaluationRuntime}\n`, "utf8"),
-  writeFile(mflStatsRuntimePath, `${mflStatsBanner}${mflStatsRuntime}\n`, "utf8"),
-  writeFile(clubRuntimePath, `${clubBanner}${clubRuntime}\n`, "utf8"),
-  writeFile(settingsRuntimePath, `${settingsBanner}${settingsRuntime}\n`, "utf8"),
-  writeFile(playerRuntimePath, `${playerBanner}${playerRuntime}\n`, "utf8"),
-  writeFile(tableRuntimePath, `${tableBanner}${tableRuntime}\n`, "utf8"),
-  writeFile(walletRuntimePath, `${walletBanner}${walletRuntime}\n`, "utf8"),
-  writeFile(watchlistRuntimePath, `${watchlistBanner}${watchlistRuntime}\n`, "utf8"),
+const writeResults = await Promise.all([
+  writeFileIfChanged(tableWidthRuntimePath, `${preBootstrapRuntime}\n`),
+  writeFileIfChanged(runtimePath, `${banner}${normalized}\n`),
+  writeFileIfChanged(evaluationRuntimePath, `${evaluationBanner}${evaluationRuntime}\n`),
+  writeFileIfChanged(mflStatsRuntimePath, `${mflStatsBanner}${mflStatsRuntime}\n`),
+  writeFileIfChanged(clubRuntimePath, `${clubBanner}${clubRuntime}\n`),
+  writeFileIfChanged(settingsRuntimePath, `${settingsBanner}${settingsRuntime}\n`),
+  writeFileIfChanged(playerRuntimePath, `${playerBanner}${playerRuntime}\n`),
+  writeFileIfChanged(tableRuntimePath, `${tableBanner}${tableRuntime}\n`),
+  writeFileIfChanged(walletRuntimePath, `${walletBanner}${walletRuntime}\n`),
+  writeFileIfChanged(watchlistRuntimePath, `${watchlistBanner}${watchlistRuntime}\n`),
 ]);
 
 if (process.env.MFL_BUILD_VERBOSE === "1") {
-  console.log(`Generated ${tableWidthRuntimePath} (${Buffer.byteLength(preBootstrapRuntime, "utf8")} canonical config + Uniform Width bytes).`);
-  generatedArtifacts.forEach(([path, artifact, ownership]) => {
-    console.log(`Generated ${path} (${Buffer.byteLength(artifact, "utf8")} ${ownership} bytes).`);
+  console.log(`${writeResults[0] ? "Generated" : "Unchanged"} ${tableWidthRuntimePath} (${Buffer.byteLength(preBootstrapRuntime, "utf8")} canonical config + Uniform Width bytes).`);
+  generatedArtifacts.forEach(([path, artifact, ownership], index) => {
+    console.log(`${writeResults[index + 1] ? "Generated" : "Unchanged"} ${path} (${Buffer.byteLength(artifact, "utf8")} ${ownership} bytes).`);
   });
 }
