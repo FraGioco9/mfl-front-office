@@ -156,6 +156,13 @@ export function normalizeAgentPageTitleLoading(source) {
     "Agent display-name cache write",
   );
 
+  core = replaceRequired(
+    core,
+    "saveAgentDisplayName(entry.walletAddress, entry.name);",
+    "saveAgentNameForWallet(entry.walletAddress, entry.name);",
+    "Agent search-index cache ownership",
+  );
+
   core = insertBeforeRequiredMarker(
     core,
     "function tableTitleForPage(pageName) {",
