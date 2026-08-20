@@ -32,6 +32,25 @@
     return controller && typeof controller === "object" ? controller : null;
   }
 
+  function syncWatchlistSelectorNavigationIntent(target) {
+    if (!(target instanceof Element)) return;
+    const control = target.closest("#sidebar .navButton[data-page]");
+    if (!(control instanceof HTMLElement)) return;
+
+    const switcher = document.getElementById("watchlistSwitcher");
+    if (!(switcher instanceof HTMLElement)) return;
+
+    const show = String(control.dataset.page || "") === "watchlist"
+      && document.documentElement.dataset.storedWalletOptIn === "true";
+    switcher.hidden = !show;
+    if (show) return;
+
+    const dropdown = document.getElementById("watchlistDropdown");
+    if (dropdown instanceof HTMLElement) dropdown.hidden = true;
+    const button = document.getElementById("watchlistButton");
+    if (button instanceof HTMLButtonElement) button.setAttribute("aria-expanded", "false");
+  }
+
   function addFilterSelect() {
     const select = document.getElementById("addFilterSelect");
     return select instanceof HTMLSelectElement ? select : null;
@@ -158,6 +177,7 @@
       return;
     }
 
+    syncWatchlistSelectorNavigationIntent(event.target);
     if (beginNavigationIntent(event.target)) handOffNavigationIntent();
 
     const target = event.target instanceof Element ? event.target : null;
