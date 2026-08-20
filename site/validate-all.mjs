@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
+const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-read-preload.mjs")).href;
 
 const validators = [
+  "validate-text-read-normalization.mjs",
   "validate.mjs",
   "validate-release-history.mjs",
   "validate-release-runtime-ownership.mjs",
@@ -39,10 +41,14 @@ const validators = [
 ];
 
 for (const validator of validators) {
-  const result = spawnSync(process.execPath, [resolve(siteRoot, validator)], {
-    cwd: siteRoot,
-    stdio: "inherit",
-  });
+  const result = spawnSync(
+    process.execPath,
+    ["--import", validationTextPreload, resolve(siteRoot, validator)],
+    {
+      cwd: siteRoot,
+      stdio: "inherit",
+    },
+  );
 
   if (result.error) {
     throw result.error;
