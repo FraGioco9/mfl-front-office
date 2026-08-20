@@ -22,6 +22,8 @@ for (const staleOwner of [
   'classList.add("menuOpen")',
   '"sidebarClosed"',
   '"sidebarCollapsed"',
+  "menuButton.style.pointerEvents",
+  "menuButton.style.cursor",
 ]) {
   invariant(!coreSource.includes(staleOwner), `Legacy sidebar runtime ownership must be removed: ${staleOwner}`);
   invariant(!shared.includes(staleOwner), `Generated shared core must not contain legacy sidebar ownership: ${staleOwner}`);
@@ -67,4 +69,4 @@ invariant(
 );
 
 new Function(shared);
-console.log("Pinned sidebar state is canonical and no longer relies on runtime monkey-patching or animation ownership.");
+console.log("Pinned sidebar state is canonical and no longer relies on runtime monkey-patching, animation, or inline presentation ownership.");
