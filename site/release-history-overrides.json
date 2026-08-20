@@ -36,10 +36,6 @@
     "Consolidate the post-SQLite application architecture into the first stable v1.123 release"
   ],
   [
-    "v1.122.0",
-    "Remove legacy loading, JSON compatibility, and dead runtime code"
-  ],
-  [
     "v1.121.0",
     "Query the runtime SQLite database for every site data request"
   ],
