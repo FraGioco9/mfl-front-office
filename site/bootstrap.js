@@ -479,7 +479,9 @@
     if (!(body instanceof HTMLTableSectionElement)) return;
     if (!replaceExisting && body.rows.length) return;
 
-    const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);
+    const renderedColumns = Array.from(colGroup?.children || []);
+    const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);
+    const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));
     const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];
     const fragment = document.createDocumentFragment();
     opacities.forEach((opacity, index) => {
@@ -490,7 +492,14 @@
       row.style.opacity = String(opacity);
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
         const cell = document.createElement("td");
-        cell.textContent = BLANK_TABLE_LOADING_TEXT;
+        if (columnIndex === nameColumnIndex) {
+          const nameCell = document.createElement("span");
+          nameCell.className = "playerNameCell";
+          nameCell.textContent = BLANK_TABLE_LOADING_TEXT;
+          cell.appendChild(nameCell);
+        } else {
+          cell.textContent = BLANK_TABLE_LOADING_TEXT;
+        }
         row.appendChild(cell);
       }
       fragment.appendChild(row);

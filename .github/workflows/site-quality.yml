@@ -22,48 +22,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Apply first-paint loading row geometry
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/table-loading-selection-row-height'
-        working-directory: .
-        shell: python
-        run: |
-          from pathlib import Path
-
-          path = Path("site/bootstrap.js")
-          text = path.read_text(encoding="utf-8")
-
-          old = '    const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);\n    const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];'
-          new = '    const renderedColumns = Array.from(colGroup?.children || []);\n    const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);\n    const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));\n    const opacities = [0.82, 0.62, 0.44, 0.27, 0.13];'
-          if text.count(old) != 1:
-              raise SystemExit(f"column geometry anchor count: {text.count(old)}")
-          text = text.replace(old, new, 1)
-
-          old = '      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {\n        const cell = document.createElement("td");\n        cell.textContent = BLANK_TABLE_LOADING_TEXT;\n        row.appendChild(cell);\n      }'
-          new = '      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {\n        const cell = document.createElement("td");\n        if (columnIndex === nameColumnIndex) {\n          const nameCell = document.createElement("span");\n          nameCell.className = "playerNameCell";\n          nameCell.textContent = BLANK_TABLE_LOADING_TEXT;\n          cell.appendChild(nameCell);\n        } else {\n          cell.textContent = BLANK_TABLE_LOADING_TEXT;\n        }\n        row.appendChild(cell);\n      }'
-          if text.count(old) != 1:
-              raise SystemExit(f"loading cell anchor count: {text.count(old)}")
-          text = text.replace(old, new, 1)
-          path.write_text(text, encoding="utf-8")
-
-      - name: Commit first-paint loading row geometry
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/table-loading-selection-row-height'
-        working-directory: .
-        shell: bash
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          git checkout origin/main -- .github/workflows/site-quality.yml
-          git add -- site/bootstrap.js .github/workflows/site-quality.yml
-          if git diff --cached --quiet; then
-            echo "First-paint loading row geometry is already applied."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Render loading rows at final first-paint height"
-          git push origin "HEAD:$HEAD_BRANCH"
-
       - name: Detect relevant changes
         id: changes
         working-directory: .
