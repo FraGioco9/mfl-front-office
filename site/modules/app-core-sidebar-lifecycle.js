@@ -61,7 +61,7 @@ export function normalizePinnedSidebarApplicationCoreRuntime(source) {
 
   core = replaceRequired(
     core,
-    "  menuAnimationTimer: null;\n".replace(";", ","),
+    "  menuAnimationTimer: null,\n",
     "",
     "obsolete sidebar animation state",
   );
