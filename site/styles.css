@@ -208,6 +208,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   border: 0;
   background: transparent;
   display: inline;
+  height: 24px;
   color: inherit;
   font: inherit;
   padding: 0;
