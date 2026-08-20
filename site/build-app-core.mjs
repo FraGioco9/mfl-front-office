@@ -67,8 +67,8 @@ function normalizeRetirementMarkerContract(source) {
   if ([1, 2, 3].includes(retirementYears)) {
     return {
       icon: "calendar-clock",
-      label: \`${retirementYears} year${retirementYears === 1 ? "" : "s"} left\`,
-      status: \`retiring-${retirementYears}\`,
+      label: \`${'${retirementYears}'} year${'${retirementYears === 1 ? "" : "s"}'} left\`,
+      status: \`retiring-${'${retirementYears}'}\`,
     };
   }
 
@@ -89,10 +89,10 @@ function normalizeRetirementMarkerContract(source) {
   }
 
   const markerElement = document.createElement("span");
-  markerElement.className = \`${className} retirementMarker--${marker.status || "default"}\`;
+  markerElement.className = \`${'${className}'} retirementMarker--${'${marker.status || "default"}'}\`;
   if (marker.icon) {
     const markerIcon = document.createElement("img");
-    markerIcon.src = \`/retirement-${marker.icon}.svg\`;
+    markerIcon.src = \`/retirement-${'${marker.icon}'}.svg\`;
     markerIcon.width = 16;
     markerIcon.height = 16;
     markerIcon.alt = "";
@@ -117,7 +117,7 @@ function normalizeRetirementMarkerContract(source) {
     playerAgeMarkerStart,
     playerAgeMarkerEnd,
     `  const ageMarkerHtml = ageMarker
-    ? \` <span class="retirementMarker playerAgeMarker retirementMarker--${escapeHtml(ageMarker.status || "default")}" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
+    ? \` <span class="retirementMarker playerAgeMarker retirementMarker--${'${escapeHtml(ageMarker.status || "default")}' }" data-tooltip="${'${escapeHtml(ageMarker.label)}'}" aria-label="${'${escapeHtml(ageMarker.label)}'}"><img src="/retirement-${'${escapeHtml(ageMarker.icon)}'}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
     : "";
 `,
     "Player retirement marker SVG renderer",
