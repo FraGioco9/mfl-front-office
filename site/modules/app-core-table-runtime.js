@@ -1108,7 +1108,7 @@ function tableOpenFiltersOwner() {
   }
 }
 
-function tableCloseFiltersOwner(commitChanges = false) {
+function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = true) {
   if (!commitChanges && state.filterDraftRules) {
     restoreFilterDraftRules(state.filterDraftRules);
   }
@@ -1116,7 +1116,7 @@ function tableCloseFiltersOwner(commitChanges = false) {
   state.filterDraftRules = null;
   hideModal(filtersModal, () => {
     document.body.classList.remove("filtersOpen");
-    openFiltersButton.focus();
+    if (restoreTriggerFocus) openFiltersButton.focus();
   });
 }
 
