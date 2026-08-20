@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 
+// Runtime code may update CSS variables and state classes, but must not inject priority overrides.
 const siteRoot = new URL("./", import.meta.url);
 
 async function sourceFiles(directory = siteRoot) {
