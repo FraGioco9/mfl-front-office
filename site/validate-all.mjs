@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
-const validationTextPreload = resolve(siteRoot, "validate-text-read-preload.mjs");
+const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-read-preload.mjs")).href;
 
 const validators = [
   "validate-text-read-normalization.mjs",
