@@ -28,7 +28,6 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          from textwrap import dedent
 
           helper = Path(".github/workflows/patch-filter-selection-lifecycle.yml").read_text(encoding="utf-8")
           marker = "      - name: Apply canonical filter and selection lifecycle\n"
@@ -39,7 +38,9 @@ jobs:
           run_marker = "        run: |\n"
           if run_marker not in block:
               raise SystemExit("Could not locate helper migration run block.")
-          exec(compile(dedent(block.split(run_marker, 1)[1]), "filter-selection-migration", "exec"), {"__name__": "__main__"})
+          raw_script = block.split(run_marker, 1)[1]
+          script = "\n".join(line[10:] if line.startswith("          ") else line for line in raw_script.splitlines())
+          exec(compile(script, "filter-selection-migration", "exec"), {"__name__": "__main__"})
 
       - name: Commit filter and selection lifecycle source migration
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/reset-filters-and-selection'
