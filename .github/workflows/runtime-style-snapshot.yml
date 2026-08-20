@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chore/runtime-style-ownership
+  pull_request:
 
 permissions:
   contents: read
