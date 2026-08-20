@@ -8,6 +8,7 @@ const invariant = (condition, message) => {
 const utilityPath = "./modules/app-core-splitter-utils.js";
 const splitterPaths = [
   "./modules/app-core-route-chunks.js",
+  "./modules/app-core-evaluation-chunk.js",
   "./modules/app-core-settings-chunk.js",
   "./modules/app-core-player-chunk.js",
   "./modules/app-core-table-chunk.js",
