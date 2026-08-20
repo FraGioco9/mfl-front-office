@@ -8,7 +8,6 @@ const invariant = (condition, message) => {
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
-const matches = (source, pattern, message) => invariant(pattern.test(source), message);
 
 const [coreSource, tableSplitter, appConfig, routeLoader, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
