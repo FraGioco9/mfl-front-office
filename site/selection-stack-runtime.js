@@ -426,7 +426,14 @@
     schedule();
   }
 
-  function rebind() {
+  function clearForRouteTransition() {
+  if (destroyed || applicationSelectionCount() <= 0) return false;
+  clearApplicationSelection(null);
+  schedule();
+  return true;
+}
+
+function rebind() {
     if (destroyed) return;
     schedule();
   }
@@ -463,6 +470,7 @@
   }
 
   window.__mflSelectionStackRuntime = Object.freeze({
+    clearForRouteTransition,
     version: VERSION,
     sync: schedule,
     rebind,

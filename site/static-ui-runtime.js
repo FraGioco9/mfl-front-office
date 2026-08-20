@@ -14,6 +14,7 @@
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
   });
+  const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
   const SPECIALIZED_TOOLTIP_SELECTOR = [
     ".evaluationMetric.evaluationDiscountRate",
     "#evaluationLoadModal .evaluationLoadIconButton",
@@ -33,6 +34,8 @@
   let tooltipShowFrame = 0;
   let tooltipHideTimer = 0;
   let lastPrimedRouteIdentity = "";
+  let lastRoutePage = "";
+  let lastRouteView = "";
 
   function tableViewConfig() {
     const configured = window.__mflTableViewConfig;
@@ -170,11 +173,11 @@
     return Boolean(primeStructure(state.page, state.view));
   }
 
-  function syncDestinationTableChrome(state) {
-    const prime = Reflect.get(window, "__mflPrimeTableChrome");
-    if (typeof prime === "function") prime(state.page, state.url || window.location.href);
-    syncDestinationTableHeader(state);
-  }
+  function syncDestinationTableChrome(state, options = {}) {
+  const prime = Reflect.get(window, "__mflPrimeTableChrome");
+  if (typeof prime === "function") prime(state.page, state.url || window.location.href, options);
+  syncDestinationTableHeader(state);
+}
 
   function routeIdentity(state) {
     try {
@@ -220,25 +223,42 @@
     lastPrimedRouteIdentity = identity;
   }
 
-  function showRouteShell(state) {
-    const target = shellForRoute(state);
-    if (!(target instanceof HTMLElement)) return;
-    if (target.id === "progressionPage") syncDestinationTableChrome(state);
-    primeDestinationRouteShell(state, target);
+  function showRouteShell(state, options = {}) {
+  const target = shellForRoute(state);
+  if (!(target instanceof HTMLElement)) return;
+  if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
+  primeDestinationRouteShell(state, target);
 
-    document.querySelectorAll("main > .pageView").forEach((page) => {
-      if (page instanceof HTMLElement) page.hidden = page !== target;
-    });
-  }
+  document.querySelectorAll("main > .pageView").forEach((page) => {
+    if (page instanceof HTMLElement) page.hidden = page !== target;
+  });
+}
 
   function syncRouteChrome(urlLike = window.location.href) {
-    const state = routeState(urlLike);
-    syncFooter();
-    setActiveNavigation(state.page);
-    syncTableViews(state.page, state.view);
-    showRouteShell(state);
-    return state;
+  const state = routeState(urlLike);
+  const previousPage = lastRoutePage;
+  const previousView = lastRouteView;
+  const pageChanged = Boolean(previousPage && previousPage !== state.page);
+  const viewChanged = Boolean(previousPage && !pageChanged && previousView !== state.view);
+  const resetFilters = pageChanged && FILTERED_TABLE_PAGES.has(state.page);
+  lastRoutePage = state.page;
+  lastRouteView = state.view;
+
+  if (resetFilters) {
+    document.documentElement.dataset.mflResetTableFilters = state.page;
+  } else if (pageChanged) {
+    delete document.documentElement.dataset.mflResetTableFilters;
   }
+  if (pageChanged || viewChanged) {
+    window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
+  }
+
+  syncFooter();
+  setActiveNavigation(state.page);
+  syncTableViews(state.page, state.view);
+  showRouteShell(state, { resetFilters });
+  return state;
+}
 
   function tooltipTargetFrom(target) {
     if (!(target instanceof Element)) return null;
