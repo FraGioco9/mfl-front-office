@@ -39,6 +39,10 @@ invariant(
   controls.includes('button.setAttribute("aria-expanded", "false")'),
   "Leaving Watchlist must reset the selector button expanded state immediately.",
 );
+invariant(
+  controls.includes('document.addEventListener("click", onClick, true);'),
+  "Watchlist selector navigation intent must run in the capture phase before route click handlers.",
+);
 const visibilityIntent = controls.indexOf("syncWatchlistSelectorNavigationIntent(event.target);");
 const navigationHandoff = controls.indexOf("if (beginNavigationIntent(event.target)) handOffNavigationIntent();");
 invariant(
