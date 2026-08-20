@@ -994,9 +994,26 @@ function normalizedSavedTableControlState(pageName, savedState) {
   };
 }
 
+function tableStateWithoutPageFilters(pageName, savedState) {
+  const defaults = defaultTablePageState(pageName);
+  return {
+    ...savedState,
+    hideRetired: defaults.hideRetired,
+    hideRetiring: defaults.hideRetiring,
+    hideMflPlayers: defaults.hideMflPlayers,
+    mflPackable: defaults.mflPackable,
+    newMints: defaults.newMints,
+    rules: [],
+    selectedPlayerIds: [],
+  };
+}
+
 function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
-  const savedState = state.tablePageStates?.[pageName]
+  const storedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
+  const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+  const savedState = resetFilters ? tableStateWithoutPageFilters(pageName, storedState) : storedState;
+  if (resetFilters) state.tablePageStates[pageName] = savedState;
 
   state.view = normalizeViewForPage(options.view || savedState.view, pageName);
 
@@ -1041,6 +1058,9 @@ function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
   populateAddFilterSelect(pageName);
   refreshRuleColumnSelects(pageName);
   updateFilterSummary();
+  if (document.documentElement.dataset.mflResetTableFilters === pageName) {
+    delete document.documentElement.dataset.mflResetTableFilters;
+  }
   state.pendingTableControlRestore = null;
   return true;
 }
@@ -1319,8 +1339,28 @@ function syncQuickFilterLabels() {
   newMintsLabel.textContent = state.currentPage === "mfl" ? "Only aged players" : "Only new mints";
 }
 
+let lastAppliedTableFilterSignature = "";
+
+function appliedTableFilterSignature(rules) {
+  return JSON.stringify([
+    state.currentPage,
+    Boolean(hideRetiredInput?.checked),
+    Boolean(hideRetiringInput?.checked),
+    Boolean(hideMflPlayersInput?.checked),
+    Boolean(packablePlayersInput?.checked),
+    Boolean(newMintsInput?.checked),
+    rules,
+  ]);
+}
+
 function tableApplyFiltersOwner(options = {}) {
   const rules = readFilterRules();
+  const filterSignature = appliedTableFilterSignature(rules);
+  if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
+    state.selectedPlayerIds.clear();
+    state.selectionAnchorPlayerId = null;
+  }
+  lastAppliedTableFilterSignature = filterSignature;
   const retirementIndex = state.columns.indexOf("retirement_years");
   const seasonsIndex = state.columns.indexOf("player_seasons");
 
