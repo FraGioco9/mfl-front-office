@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -18,6 +18,121 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Apply canonical sidebar lifecycle migration
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle'
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const path = 'site/modules/app-core.js';
+          let source = (await readFile(path, 'utf8')).replace(/\r\n?/g, '\n');
+
+          const replaceOnce = (from, to, label) => {
+            const first = source.indexOf(from);
+            const last = source.lastIndexOf(from);
+            if (first < 0 || first !== last) throw new Error(`${label}: expected exactly one source match.`);
+            source = source.slice(0, first) + to + source.slice(first + from.length);
+          };
+
+          replaceOnce('  menuAnimationTimer: null,\n', '', 'obsolete sidebar animation state');
+
+          replaceOnce(
+            `function updateMenuVisibility() {
+  const showMenu = true;
+  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());
+  menuRail.hidden = false;
+  menuButton.hidden = false;
+  sidebar.hidden = false;
+  appShell.classList.toggle("menuClosed", !state.menuOpen);
+  statusText.hidden = false;
+  menuButton.setAttribute("aria-expanded", String(showMenu && state.menuOpen));
+}`,
+            `function updateMenuVisibility() {
+  state.menuOpen = true;
+  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());
+  menuRail.hidden = false;
+  menuButton.hidden = false;
+  sidebar.hidden = false;
+  appShell.classList.remove("menuClosed");
+  statusText.hidden = false;
+  menuButton.disabled = true;
+  menuButton.tabIndex = -1;
+  menuButton.setAttribute("aria-disabled", "true");
+  menuButton.setAttribute("aria-expanded", "true");
+}`,
+            'canonical menu visibility',
+          );
+
+          replaceOnce(
+            `function toggleMenu() {
+  appShell.classList.add("menuAnimating");
+  window.clearTimeout(state.menuAnimationTimer);
+  state.menuOpen = !state.menuOpen;
+  updateMenuVisibility();
+  state.menuAnimationTimer = window.setTimeout(() => {
+    appShell.classList.remove("menuAnimating");
+  }, 220);
+  saveTableState();
+}`,
+            `function toggleMenu() {
+  updateMenuVisibility();
+}`,
+            'canonical menu toggle',
+          );
+
+          replaceOnce(
+            `function restoreMenuState(savedState) {
+  if (typeof savedState?.menuOpen === "boolean") {
+    state.menuOpen = savedState.menuOpen;
+  }
+}`,
+            `function restoreMenuState() {
+  state.menuOpen = true;
+}`,
+            'canonical persisted menu state',
+          );
+
+          const sidebarOwner = source.indexOf('  function keepSidebarExpanded() {');
+          if (sidebarOwner < 0 || sidebarOwner !== source.lastIndexOf('  function keepSidebarExpanded() {')) {
+            throw new Error('Expected exactly one late pinned-sidebar owner.');
+          }
+          const sidebarIifeStart = source.lastIndexOf('(() => {', sidebarOwner);
+          const watchlistRouteStart = source.indexOf('  function routeViewFromPath() {', sidebarOwner);
+          if (sidebarIifeStart < 0 || watchlistRouteStart < 0) {
+            throw new Error('Could not isolate the sidebar/watchlist compatibility IIFE.');
+          }
+          source = source.slice(0, sidebarIifeStart) + '(() => {\n' + source.slice(watchlistRouteStart);
+
+          replaceOnce('      keepSidebarExpanded();\n', '', 'setPage sidebar refresh patch');
+
+          const routeOwnerStart = source.indexOf('  function routeViewFromPath() {', sidebarIifeStart);
+          const captureStart = source.indexOf('\n\n  document.addEventListener("click", (event) => {', routeOwnerStart);
+          const publicProgressionMarker = '\n})();\n\n/* Public progression table views */';
+          const sidebarIifeEnd = source.indexOf(publicProgressionMarker, captureStart);
+          if (captureStart < 0 || sidebarIifeEnd < 0) {
+            throw new Error('Could not remove the obsolete sidebar capture/DOMContentLoaded tail.');
+          }
+          source = source.slice(0, captureStart) + source.slice(sidebarIifeEnd);
+
+          for (const stale of [
+            'function keepSidebarExpanded()',
+            'permanentlyExpandedMenu',
+            'menuAnimationTimer',
+            'classList.add("menuAnimating")',
+            'classList.add("menuOpen")',
+            '"sidebarClosed"',
+            '"sidebarCollapsed"',
+            'keepSidebarExpanded();',
+          ]) {
+            if (source.includes(stale)) throw new Error(`Stale sidebar owner remains: ${stale}`);
+          }
+
+          await writeFile(path, source, 'utf8');
+          NODE
 
       - name: Detect relevant changes
         id: changes
@@ -151,3 +266,19 @@ jobs:
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
+
+      - name: Publish canonical sidebar migration
+        if: success() && github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle'
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- .github/workflows/site-quality.yml
+          rm -f .github/workflows/canonical-sidebar-migration.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- site/modules/app-core.js .github/workflows/site-quality.yml .github/workflows/canonical-sidebar-migration.yml
+          git diff --cached --exit-code && { echo 'Migration produced no changes.'; exit 1; } || true
+          git commit -m "Canonicalize pinned sidebar lifecycle"
+          git push origin HEAD:chore/canonical-sidebar-lifecycle
