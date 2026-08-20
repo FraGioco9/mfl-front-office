@@ -49,6 +49,16 @@
     return typeof ensureHeader === "function" ? Boolean(ensureHeader()) : false;
   }
 
+  function neutralizeSelectionHeader() {
+    const input = document.getElementById("selectVisiblePlayersInput");
+    if (!(input instanceof HTMLInputElement)) return false;
+    input.checked = false;
+    input.indeterminate = false;
+    input.disabled = false;
+    if (document.activeElement === input) input.blur();
+    return true;
+  }
+
   function primeLoadingRows() {
     const primeRows = Reflect.get(window, "__mflPrimeTableRows");
     if (typeof primeRows !== "function") return false;
@@ -59,6 +69,7 @@
   function show({ replaceExisting = false, forceRoute = false } = {}) {
     if (destroyed || (!forceRoute && !tableRouteActive())) return false;
     if (!forceRoute) ensureCanonicalHeader();
+    neutralizeSelectionHeader();
     const { body, empty } = elements();
     if (!body) return false;
 
