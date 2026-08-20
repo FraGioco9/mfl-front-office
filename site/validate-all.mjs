@@ -48,6 +48,7 @@ const validators = [
   "validate-progression-retired-filter.mjs",
   "validate-wallet-core.mjs",
   "validate-watchlist-route-core.mjs",
+  "validate-watchlist-progression-access.mjs",
   "validate-watchlist-selector-navigation.mjs",
   "validate-app-core-startup-handshake.mjs",
   "validate-generated-core-bindings.mjs",

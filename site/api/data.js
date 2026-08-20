@@ -31,8 +31,10 @@ module.exports = async function handler(request, response) {
     const view = String(query.view || "").toLowerCase();
     const publicEntityProgression = ["agent", "club"].includes(scope)
       && ["current", "all"].includes(view);
+    const publicWatchlistProgression = scope === "watchlist"
+      && ["current", "all"].includes(view);
     const signedWallet = await signedWalletFromRequest(request);
-    const fullAccess = publicEntityProgression || (
+    const fullAccess = publicEntityProgression || publicWatchlistProgression || (
       accessMode === "full-progression"
       && Boolean(signedWallet)
       && await walletAllowed(signedWallet)
