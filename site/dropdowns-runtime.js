@@ -112,14 +112,18 @@
     if (filtersModal.contains(active)) active.blur();
   }
 
-  function blurFilterSelectAfterChange(target) {
+  function blurFilterSelectAfterCommit(target) {
     if (!(target instanceof HTMLSelectElement)) return;
     const filtersModal = document.getElementById("filtersModal");
     if (!(filtersModal instanceof HTMLElement) || !filtersModal.contains(target)) return;
 
-    queueMicrotask(() => {
-      if (target.isConnected && document.activeElement === target) target.blur();
-    });
+    window.setTimeout(() => {
+      if (!target.isConnected) return;
+      target.blur();
+      window.requestAnimationFrame(() => {
+        if (target.isConnected && document.activeElement === target) target.blur();
+      });
+    }, 0);
   }
 
   function beginNeutralFiltersOpen() {
@@ -177,7 +181,7 @@
   }, true);
 
   document.addEventListener("change", (event) => {
-    blurFilterSelectAfterChange(event.target);
+    blurFilterSelectAfterCommit(event.target);
   });
 
   document.addEventListener("keydown", (event) => {
