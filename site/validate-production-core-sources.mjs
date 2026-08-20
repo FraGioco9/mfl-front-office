@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 
-const [ignoreSource, productionConfigSource, developmentConfigSource] = await Promise.all([
+const [ignoreSource, canonicalConfigSource, productionConfigSource] = await Promise.all([
   readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
-  readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
   readFile(new URL("./vercel.json", import.meta.url), "utf8"),
+  readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
   ignoreSource
@@ -11,8 +11,8 @@ const ignoredPaths = new Set(
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#")),
 );
+const canonicalConfig = JSON.parse(canonicalConfigSource);
 const productionConfig = JSON.parse(productionConfigSource);
-const developmentConfig = JSON.parse(developmentConfigSource);
 
 const requiredProductionIgnoredPaths = [
   ".gitignore",
@@ -20,7 +20,6 @@ const requiredProductionIgnoredPaths = [
   "site/eslint.config.mjs",
   "site/jsconfig.json",
   "site/types",
-  "site/vercel.json",
   "site/vercel.production.json",
   "site/build-app-core.mjs",
   "site/modules/app-config.js",
@@ -47,6 +46,10 @@ for (const path of requiredProductionIgnoredPaths) {
   }
 }
 
+if (ignoredPaths.has("site/vercel.json")) {
+  throw new Error("Canonical site/vercel.json must ship from the configured Vercel project root so production routing rules are applied.");
+}
+
 for (const runtimePath of [
   "site/modules/app-core-runtime.js",
   "site/modules/app-core-evaluation-runtime.js",
@@ -63,12 +66,14 @@ for (const runtimePath of [
   }
 }
 
-const productionBuildCommand = String(productionConfig.buildCommand || "").trim();
-if (!productionBuildCommand) {
-  throw new Error("Production Vercel config must explicitly override the package build script because compiler sources are excluded from deployment.");
-}
-if (/build-app-core|npm\s+(?:run\s+)?build\b/i.test(productionBuildCommand)) {
-  throw new Error("Production Vercel build must deploy the prebuilt application core instead of invoking an excluded compiler source.");
+function validatePrebuiltBuild(config, label) {
+  const buildCommand = String(config.buildCommand || "").trim();
+  if (!buildCommand) {
+    throw new Error(`${label} Vercel config must explicitly override the package build script because compiler sources are excluded from deployment.`);
+  }
+  if (/build-app-core|npm\s+(?:run\s+)?build\b/i.test(buildCommand)) {
+    throw new Error(`${label} Vercel build must deploy the prebuilt application core instead of invoking an excluded compiler source.`);
+  }
 }
 
 function validateSpaRouting(config, label) {
@@ -104,7 +109,9 @@ function validateSpaRouting(config, label) {
   }
 }
 
+validatePrebuiltBuild(canonicalConfig, "Canonical");
+validatePrebuiltBuild(productionConfig, "Production");
+validateSpaRouting(canonicalConfig, "Canonical");
 validateSpaRouting(productionConfig, "Production");
-validateSpaRouting(developmentConfig, "Development");
 
-console.log("Production source boundary, prebuilt deployment, and SPA deep-link routing validation passed.");
+console.log("Shipped project-root Vercel config, prebuilt deployment, and SPA deep-link routing validation passed.");
