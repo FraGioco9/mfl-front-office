@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+// Keep both external stylesheets and render-blocking first-paint CSS free of priority overrides.
 const canonicalCssSources = [
   "styles.css",
   "styles-base.css",
