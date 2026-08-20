@@ -14,7 +14,6 @@ const [
   splitter,
   appConfig,
   routeLoader,
-  routeNormalizer,
   buildCore,
   appEntry,
   bootstrapCore,
@@ -25,7 +24,6 @@ const [
   read("./modules/app-core-watchlist-route-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-entry.js"),
   read("./bootstrap-core.js"),
@@ -79,8 +77,8 @@ includes(appEntry, "if (routeNeedsWatchlist(page)) scripts.push(...WATCHLIST_MYP
 includes(appConfig, 'watchlist: "/modules/app-core-watchlist-runtime.js"', "Canonical app config must map the Watchlist core.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 includes(routeLoader, 'if (page === "watchlist") return ["table", "watchlist"];', "Watchlist routes must load Table before Watchlist UI ownership.");
-includes(routeNormalizer, "const directWatchlistRoute =", "Direct startup must identify Watchlist routes separately.");
-includes(routeNormalizer, 'await window.__mflEnsureRouteCore("watchlist");', "Direct Watchlist startup must load Table and Watchlist ownership before startApp.");
+includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical Watchlist route before startApp.");
+includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct Watchlist startup must load Table and Watchlist dependencies before startApp.");
 
 includes(buildCore, 'const watchlistRuntimePath = resolve(siteRoot, "modules/app-core-watchlist-runtime.js");', "The build must emit a generated Watchlist runtime.");
 includes(buildCore, "artifacts.routeChunks?.watchlist", "The build must consume the Watchlist artifact.");

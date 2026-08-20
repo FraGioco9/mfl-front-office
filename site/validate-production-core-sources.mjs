@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 const [ignoreSource, canonicalConfigSource, productionConfigSource] = await Promise.all([
   readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
@@ -26,12 +26,6 @@ const requiredProductionIgnoredPaths = [
   "site/modules/package.json",
   "site/modules/app-core.js",
   "site/modules/app-core-build-normalizer.js",
-  "site/modules/app-core-normalizer.js",
-  "site/modules/app-core-route-request-normalizer.js",
-  "site/modules/app-core-route-runtime-normalizer.js",
-  "site/modules/app-core-startup-data-normalizer.js",
-  "site/modules/app-core-table-events-normalizer.js",
-  "site/modules/app-core-table-state-normalizer.js",
   "site/modules/app-core-route-chunks.js",
   "site/modules/app-core-settings-chunk.js",
   "site/modules/app-core-player-chunk.js",
@@ -43,6 +37,28 @@ const requiredProductionIgnoredPaths = [
 for (const path of requiredProductionIgnoredPaths) {
   if (!ignoredPaths.has(path)) {
     throw new Error(`Development-only source must not ship in production: ${path}`);
+  }
+}
+
+const retiredNormalizerPaths = [
+  "modules/app-core-normalizer.js",
+  "modules/app-core-club-url-normalizer.js",
+  "modules/app-core-route-request-normalizer.js",
+  "modules/app-core-route-runtime-normalizer.js",
+  "modules/app-core-startup-data-normalizer.js",
+  "modules/app-core-table-events-normalizer.js",
+  "modules/app-core-table-state-normalizer.js",
+];
+for (const path of retiredNormalizerPaths) {
+  const productionPath = `site/${path}`;
+  if (ignoredPaths.has(productionPath)) {
+    throw new Error(`Retired app-core normalizer must not leave a stale deployment-ignore entry: ${productionPath}`);
+  }
+  try {
+    await access(new URL(`./${path}`, import.meta.url));
+    throw new Error(`Retired app-core normalizer must stay deleted: ${path}`);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
   }
 }
 

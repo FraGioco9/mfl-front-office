@@ -10,12 +10,11 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 const matches = (source, pattern, message) => invariant(pattern.test(source), message);
 
-const [coreSource, tableSplitter, appConfig, routeLoader, routeNormalizer, buildCore, appEntry] = await Promise.all([
+const [coreSource, tableSplitter, appConfig, routeLoader, buildCore, appEntry] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
   read("./modules/app-entry.js"),
 ]);
@@ -101,13 +100,14 @@ const routeNeedsTableSection = appEntry.slice(routeNeedsTableStart, routeNeedsTa
 includes(routeNeedsTableSection, 'Reflect.get(window, "__mflRouteUsesTableInfrastructure")', "app-entry must reuse central table-route membership.");
 excludes(routeNeedsTableSection, '["mfl", "agents", "progression", "watchlist", "myplayers", "club"]', "app-entry must not duplicate the table-capable page list.");
 
-includes(routeNormalizer, "const directTableRoute = (", "Direct startup must classify table routes before startApp.");
-includes(routeNormalizer, 'await window.__mflEnsureRouteCore("table");', "Direct table startup must load the Table core before startApp.");
-matches(routeNormalizer, /!\/\^.*database.*stats.*test\(initialRoutePath\)/, "Direct Database Stats startup must stay outside the Table core.");
+includes(coreSource, "const initialRouteTarget = pageTargetFromPath(window.location.pathname);", "Direct startup must resolve the canonical initial route before startApp.");
+includes(coreSource, "await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});", "Direct table startup must load canonical route dependencies before startApp.");
 
 includes(buildCore, 'const tableRuntimePath = resolve(siteRoot, "modules/app-core-table-runtime.js");', "The build must emit a generated Table runtime.");
-includes(buildCore, "normalizeRetirementMarkerContract", "The build must apply the canonical retirement-marker preprocessing before route splitting.");
-includes(buildCore, "normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table", "The built Table runtime must receive canonical tooltip normalization.");
+includes(coreSource, 'icon: "calendar-x-2"', "Canonical app-core source must own retired-player marker presentation directly.");
+includes(coreSource, 'icon: "calendar-clock"', "Canonical app-core source must own retiring-player marker presentation directly.");
+excludes(buildCore, "normalizeRetirementMarkerContract", "The build must not restore retirement-marker preprocessing.");
+excludes(buildCore, "normalizeTooltipHeightOwnership", "The build must not restore post-split tooltip rewriting.");
 const generatedTable = await read("./modules/app-core-table-runtime.js");
 const tableBanner = "// Generated Table core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(generatedTable.startsWith(tableBanner), "Generated Table runtime must carry the build ownership banner.");

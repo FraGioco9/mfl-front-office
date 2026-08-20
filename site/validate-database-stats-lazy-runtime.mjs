@@ -12,7 +12,7 @@ const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 const statsRuntime = await read("./database-stats-runtime.js");
 const styles = await read("./styles.css");
-const buildNormalizer = await read("./modules/app-core-build-normalizer.js");
+const coreSource = await read("./modules/app-core.js");
 
 const statsBlock = entry.match(/const DATABASE_STATS_RUNTIME_SCRIPTS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || "";
 
@@ -86,10 +86,10 @@ invariant(
   "Database Stats Custom panel static styling must not depend on !important overrides.",
 );
 
-const setPageIndex = buildNormalizer.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
-const transitionIndex = buildNormalizer.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)", setPageIndex);
-const statsBranchIndex = buildNormalizer.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {', transitionIndex);
-const statsRuntimeIndex = buildNormalizer.indexOf('await window.__mflEnsureRouteRuntime("database", { view: "stats" });', statsBranchIndex);
+const setPageIndex = coreSource.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
+const transitionIndex = coreSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)", setPageIndex);
+const statsBranchIndex = coreSource.indexOf('if (pageName === "database" && requestedDatabaseView === "stats") {', transitionIndex);
+const statsRuntimeIndex = coreSource.indexOf('await window.__mflEnsureRouteRuntime("database", { view: "stats" });', statsBranchIndex);
 invariant(
   setPageIndex >= 0 && transitionIndex > setPageIndex && statsBranchIndex > transitionIndex && statsRuntimeIndex > statsBranchIndex,
   "Database Stats runtime loading must occur only after the canonical global page transition.",

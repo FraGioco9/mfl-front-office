@@ -26,7 +26,6 @@ const [
   globalSearchRuntime,
   appEntry,
   buildAppCore,
-  routeRuntimeNormalizer,
   appCoreSource,
   retiredEvaluationLoadRuntimeExists,
 ] = await Promise.all([
@@ -39,7 +38,6 @@ const [
   read("./global-search-runtime.js"),
   read("./modules/app-entry.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
   read("./modules/app-core.js"),
   exists("./evaluation-load-intent-runtime.js"),
 ]);
@@ -157,8 +155,8 @@ invariant(
 );
 
 invariant(
-  routeRuntimeNormalizer.includes("window.__mflCoreContracts = Object.freeze({"),
-  "The route normalizer must publish one immutable application-core contract before startup.",
+  appCoreSource.includes("window.__mflCoreContracts = Object.freeze({"),
+  "Canonical app-core must publish one immutable application-core contract before startup.",
 );
 invariant(
   !appCoreSource.includes("__mflEvaluationRouteStability")
@@ -166,8 +164,8 @@ invariant(
   "Application core source must not retain the legacy Evaluation route-stability owner or its injected CSS.",
 );
 invariant(
-  !routeRuntimeNormalizer.includes("removeLegacyEvaluationRouteStability"),
-  "The shared route normalizer must not carry a sanitizer for deleted Evaluation route-stability source.",
+  !appCoreSource.includes("removeLegacyEvaluationRouteStability"),
+  "Canonical app-core must not carry a sanitizer for deleted Evaluation route-stability source.",
 );
 for (const contractMethod of [
   "ensureCanonicalTableHeader",
@@ -189,12 +187,12 @@ for (const contractMethod of [
   "installEvaluationRecentStateOwnership",
 ]) {
   invariant(
-    routeRuntimeNormalizer.includes(contractMethod),
-    `Application-core contract must expose ${contractMethod}.`,
+    appCoreSource.includes(contractMethod),
+    `Canonical application-core contract must expose ${contractMethod}.`,
   );
 }
 invariant(
-  !routeRuntimeNormalizer.includes("stableRenderTableLoadingShell"),
+  !appCoreSource.includes("stableRenderTableLoadingShell"),
   "Core contracts must not recreate the obsolete renderTableLoadingShell monkey patch; showTableBusyState already owns loading presentation.",
 );
 invariant(

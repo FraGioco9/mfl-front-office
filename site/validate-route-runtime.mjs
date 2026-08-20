@@ -12,11 +12,8 @@ const excludes = (source, value, message) => invariant(!source.includes(value), 
 const bootstrap = await read("./bootstrap.js");
 const entry = await read("./modules/app-entry.js");
 const buildNormalizer = await read("./modules/app-core-build-normalizer.js");
-const requestNormalizer = await read("./modules/app-core-route-request-normalizer.js");
-const routeNormalizer = await read("./modules/app-core-route-runtime-normalizer.js");
 const routeChunks = await read("./modules/app-core-route-chunks.js");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
-const tableStateNormalizer = await read("./modules/app-core-table-state-normalizer.js");
 const filterControls = await read("./filter-controls-runtime.js");
 const coreSource = await read("./modules/app-core.js");
 const normalizedArtifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -68,13 +65,12 @@ excludes(entry, "const SPECIALIZED_RUNTIME_SCRIPTS =", "Specialized runtimes mus
 excludes(entry, "const LATE_RUNTIME_SCRIPTS =", "Late runtimes must be route-owned.");
 excludes(entry, "const deferredRuntimePromise =", "Inactive specialized runtimes must not start after every initial route.");
 
-includes(routeNormalizer, "export function normalizeRouteRuntimeGate(source)", "The route gate must be a build-time core transform.");
-includes(routeNormalizer, "setPageWithRouteRuntime", "The generated core must gate setPage before destination commit.");
-includes(routeNormalizer, "ownerBeforeRuntime", "The gate must redispatch when a loaded runtime replaces setPage.");
-includes(routeNormalizer, "window.__mflCancelIncrementalRouteRequest?.();", "A new SPA route intent must cancel obsolete route data before lazy runtime loading.");
-includes(routeNormalizer, "window.__mflEnsureRouteCore", "The route gate must await route-owned core code before committing its destination.");
-includes(routeNormalizer, "routeCorePromise", "Route-core download must overlap route-runtime loading.");
-includes(routeNormalizer, "window.__mflMarkApplicationCoreLoaded?.();", "The generated core must mark itself loaded before startApp.");
+includes(coreSource, "setPageWithRouteRuntime", "Canonical app-core must gate setPage before destination commit.");
+includes(coreSource, "ownerBeforeRuntime", "The canonical route gate must redispatch when a loaded runtime replaces setPage.");
+includes(coreSource, "window.__mflCancelIncrementalRouteRequest?.();", "Canonical app-core must cancel obsolete route data before lazy runtime loading.");
+includes(coreSource, "window.__mflEnsureRouteCore", "Canonical app-core must await route-owned core code before committing its destination.");
+includes(coreSource, "routeCorePromise", "Canonical app-core must overlap route-core download with route-runtime loading.");
+includes(coreSource, "window.__mflMarkApplicationCoreLoaded?.();", "Canonical app-core must mark itself loaded before startApp.");
 
 includes(routeChunks, "export function splitApplicationCoreRuntime(source)", "Application core route splitting must be a build-time transform.");
 includes(routeChunks, "Evaluation save and share services", "The first split must move Evaluation services out of the universal core.");
@@ -90,22 +86,26 @@ includes(routeCoreLoader, "runtimeWindow.__mflInteractionBusy?.installCoreBridge
 excludes(routeCoreLoader, 'ensure("mflstats")', "MFL Stats must not execute before the shared core has created its permanent DOM references.");
 excludes(routeCoreLoader, "setInterval", "Route-core loading must remain event/promise driven.");
 
-includes(tableStateNormalizer, "export function normalizePureTableStateRestoration(source)", "Table-state restoration must be a build-time core transform.");
-includes(tableStateNormalizer, "state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);", "Saved controls must stage in JavaScript state instead of mutating the page during route preparation.");
-includes(tableStateNormalizer, "function syncRestoredTableControls(", "The final table renderer must own one explicit restored-control sync.");
+includes(coreSource, "state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);", "Canonical app-core must stage saved controls in JavaScript state instead of mutating the page during route preparation.");
+includes(coreSource, "function syncRestoredTableControls(", "Canonical app-core must own one explicit restored-control sync.");
 
-includes(requestNormalizer, "export function normalizeRouteRequestCancellation(source)", "Route request cancellation must be a build-time core transform.");
-includes(requestNormalizer, "activeIncrementalNetworkRequest", "The route request transform must own one abortable active network request.");
-includes(requestNormalizer, "incrementalRouteRequestGeneration", "The route request transform must reject stale async completions by generation.");
-includes(requestNormalizer, "signal: controller.signal", "Incremental route requests must be actually abortable.");
-includes(requestNormalizer, "ROUTE_REQUEST_TIMEOUT_MS = 60_000", "Abortable route requests must retain the bounded API timeout.");
-includes(requestNormalizer, "let requestPromise = force ? null", "Forced route refreshes must bypass in-flight request reuse.");
-includes(requestNormalizer, "if (force) state.incrementalPayloadCache.delete(cacheKey);", "Forced route refreshes must bypass cached payloads.");
+includes(coreSource, "activeIncrementalNetworkRequest", "Canonical app-core must own one abortable active network request.");
+includes(coreSource, "incrementalRouteRequestGeneration", "Canonical app-core must reject stale async completions by generation.");
+includes(coreSource, "signal: controller.signal", "Incremental route requests must be actually abortable.");
+includes(coreSource, "ROUTE_REQUEST_TIMEOUT_MS = 60_000", "Abortable route requests must retain the bounded API timeout.");
+includes(coreSource, "let requestPromise = force ? null", "Forced route refreshes must bypass in-flight request reuse.");
+includes(coreSource, "if (force) state.incrementalPayloadCache.delete(cacheKey);", "Forced route refreshes must bypass cached payloads.");
 
-includes(buildNormalizer, "normalizeRouteRuntimeGate(startupDataSource)", "The build must apply the route runtime gate after startup-data normalization.");
-includes(buildNormalizer, "normalizePureTableStateRestoration(routeRuntimeSource)", "The build must make saved table-state restoration pure before route request cancellation is applied.");
-includes(buildNormalizer, "normalizeRouteRequestCancellation(tableStateSource)", "The build must apply route cancellation after pure table-state restoration.");
-includes(buildNormalizer, "splitApplicationCoreRuntime(normalizeCompleteApplicationCore(source))", "The complete normalized core must be split only after all behavior transforms are applied.");
+includes(buildNormalizer, "splitApplicationCoreRuntime(canonicalSource)", "The build must split canonical app-core source directly.");
+for (const retiredNormalizer of [
+  "normalizeRouteRuntimeGate",
+  "normalizePureTableStateRestoration",
+  "normalizeRouteRequestCancellation",
+  "normalizeStartupDataDependencies",
+  "normalizeTableEventDelegation",
+]) {
+  excludes(buildNormalizer, retiredNormalizer, `The build must not restore pre-split patch ownership through ${retiredNormalizer}.`);
+}
 includes(filterControls, "Object.freeze({ sync, destroy })", "Filter controls must expose an explicit late-load sync hook.");
 
 invariant(normalizedCore.length > 300_000, "The shared application core became unexpectedly small.");

@@ -14,7 +14,6 @@ const [
   routeChunksSource,
   routeLoader,
   appEntry,
-  routeNormalizer,
   buildCore,
   dataHandler,
   dataPage,
@@ -24,7 +23,6 @@ const [
   read("./modules/app-core-route-chunks.js"),
   read("./route-core-loader-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
   read("./api/data.js"),
   read("./api/_data-page.js"),
@@ -163,8 +161,9 @@ includes(fallbackGate, "return await current.call(runtimeWindow, normalizedClubI
 excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
 excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
 
-includes(routeNormalizer, 'await window.__mflEnsureRouteCore("club");', "Direct Club startup must load the Club route owner before startApp.");
-includes(routeNormalizer, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");
+includes(coreSource, 'const initialRouteTarget = pageTargetFromPath(window.location.pathname);', "Direct startup must classify the initial Club route through the canonical parser.");
+includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Club startup must load its route owner through the canonical dependency gate before startApp.");
+includes(coreSource, "return startApp();", "Application startup must begin only after an initial Club owner is ready.");
 
 includes(buildCore, 'const clubRuntimePath = resolve(siteRoot, "modules/app-core-club-runtime.js");', "The build must emit a generated Club runtime.");
 includes(buildCore, "artifacts.routeChunks?.club", "The build must consume the Club artifact.");

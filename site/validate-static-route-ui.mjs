@@ -15,7 +15,7 @@ const [
   controlInteractions,
   databaseStatsState,
   entry,
-  buildNormalizer,
+  coreSource,
   routeCoreLoader,
   styles,
   dropdowns,
@@ -27,7 +27,7 @@ const [
   read("./control-interactions-runtime.js"),
   read("./database-stats-state-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core.js"),
   read("./route-core-loader-runtime.js"),
   read("./styles.css"),
   read("./dropdowns.css"),
@@ -120,32 +120,32 @@ for (const marker of [
   'Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);',
   "requestAnimationFrame(() => requestAnimationFrame(resolve));",
 ]) {
-  includes(buildNormalizer, marker, `Canonical navigation owner must retain ${marker}.`);
+  includes(coreSource, marker, `Canonical navigation owner must retain ${marker}.`);
 }
-excludes(buildNormalizer, "normalizeWatchlistShellFirstNavigation", "Watchlist must not retain a separate page-change shell flow.");
+excludes(coreSource, "normalizeWatchlistShellFirstNavigation", "Watchlist must not retain a separate page-change shell flow.");
 
-const pageTransitionStart = buildNormalizer.indexOf("function commitPageTransition(pageName, updateHash = true, options = {}) {");
-const pageTransitionEnd = pageTransitionStart >= 0 ? buildNormalizer.indexOf("function stageViewTransition", pageTransitionStart) : -1;
+const pageTransitionStart = coreSource.indexOf("function commitPageTransition(pageName, updateHash = true, options = {}) {");
+const pageTransitionEnd = pageTransitionStart >= 0 ? coreSource.indexOf("function stageViewTransition", pageTransitionStart) : -1;
 invariant(pageTransitionStart >= 0 && pageTransitionEnd > pageTransitionStart, "Canonical page transition implementation must exist.");
-const pageTransition = buildNormalizer.slice(pageTransitionStart, pageTransitionEnd);
+const pageTransition = coreSource.slice(pageTransitionStart, pageTransitionEnd);
 const pageStateIndex = pageTransition.indexOf("state.currentPage = statePageName;");
 const pageUrlIndex = pageTransition.indexOf('window.history[replaceRoute ? "replaceState" : "pushState"]');
 const pageChromeIndex = pageTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
 invariant(pageStateIndex >= 0 && pageUrlIndex > pageStateIndex && pageChromeIndex > pageUrlIndex, "Page transitions must commit state, then URL, then sidebar/view/page chrome.");
 
-const viewTransitionStart = buildNormalizer.indexOf("function commitViewTransition(pageName, viewName, options = {}) {");
-const viewTransitionEnd = viewTransitionStart >= 0 ? buildNormalizer.indexOf("function commitPageTransition", viewTransitionStart) : -1;
+const viewTransitionStart = coreSource.indexOf("function commitViewTransition(pageName, viewName, options = {}) {");
+const viewTransitionEnd = viewTransitionStart >= 0 ? coreSource.indexOf("function commitPageTransition", viewTransitionStart) : -1;
 invariant(viewTransitionStart >= 0 && viewTransitionEnd > viewTransitionStart, "Canonical view transition implementation must exist.");
-const viewTransition = buildNormalizer.slice(viewTransitionStart, viewTransitionEnd);
+const viewTransition = coreSource.slice(viewTransitionStart, viewTransitionEnd);
 const viewStateIndex = viewTransition.indexOf("state.view = nextView;");
 const viewUrlIndex = viewTransition.indexOf('window.history[options.replace ? "replaceState" : "pushState"]');
 const viewButtonIndex = viewTransition.indexOf("updateViewButtons();");
 const viewShellIndex = viewTransition.indexOf("window.__mflStaticUiRuntime?.sync?.();");
 invariant(viewStateIndex >= 0 && viewUrlIndex > viewStateIndex && viewButtonIndex > viewUrlIndex && viewShellIndex > viewButtonIndex, "View transitions must commit state, URL, active button, then destination shell.");
 
-const pageRunnerStart = buildNormalizer.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
-const pageRunnerEnd = buildNormalizer.indexOf("async function runViewTransition", pageRunnerStart);
-const pageRunner = buildNormalizer.slice(pageRunnerStart, pageRunnerEnd);
+const pageRunnerStart = coreSource.indexOf("async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {");
+const pageRunnerEnd = coreSource.indexOf("async function runViewTransition", pageRunnerStart);
+const pageRunner = coreSource.slice(pageRunnerStart, pageRunnerEnd);
 const pageCommitIndex = pageRunner.indexOf("commitPageTransition(pageName, updateHash, options)");
 const pagePaintIndex = pageRunner.indexOf("await waitForViewTransitionPaint();");
 const pageLoadIndex = pageRunner.indexOf('return typeof loader === "function" ? await loader(transition) : transition;');
@@ -154,9 +154,9 @@ invariant(
   "Global page transitions must commit, paint, then load.",
 );
 
-const viewRunnerStart = buildNormalizer.indexOf("async function runViewTransition(pageName, viewName, options = {}, loader = null) {");
-const viewRunnerEnd = buildNormalizer.indexOf('Reflect.set(window, "__mflCommitViewTransition"', viewRunnerStart);
-const viewRunner = buildNormalizer.slice(viewRunnerStart, viewRunnerEnd);
+const viewRunnerStart = coreSource.indexOf("async function runViewTransition(pageName, viewName, options = {}, loader = null) {");
+const viewRunnerEnd = coreSource.indexOf('Reflect.set(window, "__mflCommitViewTransition"', viewRunnerStart);
+const viewRunner = coreSource.slice(viewRunnerStart, viewRunnerEnd);
 invariant(
   viewRunner.indexOf("stageViewTransition(pageName, viewName, options)") >= 0
     && viewRunner.indexOf("await waitForViewTransitionPaint();") > viewRunner.indexOf("stageViewTransition(pageName, viewName, options)")
@@ -164,8 +164,8 @@ invariant(
   "Global view transitions must commit, paint, then load.",
 );
 
-const setPageTransitionIndex = buildNormalizer.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
-const setPagePrepareIndex = buildNormalizer.indexOf('const requestedMflView = pageName === "mfl"', setPageTransitionIndex);
+const setPageTransitionIndex = coreSource.indexOf("await runPageTransition(pageName, navigationUpdatesHistory, options)");
+const setPagePrepareIndex = coreSource.indexOf('const requestedMflView = pageName === "mfl"', setPageTransitionIndex);
 invariant(setPageTransitionIndex >= 0 && setPagePrepareIndex > setPageTransitionIndex, "Every setPage path must settle the global transition before route-specific work starts.");
 
 for (const [transitionMarker, loaderMarker, label] of [
@@ -174,8 +174,8 @@ for (const [transitionMarker, loaderMarker, label] of [
   ["runViewTransition(CLUB_PAGE, nextView", "setClubSwitching(true);", "Club view"],
   ["runPageTransition(CLUB_PAGE, updateHistory", "setClubSwitching(true);", "Club page"],
 ]) {
-  const transitionIndex = buildNormalizer.indexOf(transitionMarker);
-  const loaderIndex = buildNormalizer.indexOf(loaderMarker, transitionIndex);
+  const transitionIndex = coreSource.indexOf(transitionMarker);
+  const loaderIndex = coreSource.indexOf(loaderMarker, transitionIndex);
   invariant(transitionIndex >= 0 && loaderIndex > transitionIndex, `${label} must enter the global transition runner before specialized loading starts.`);
 }
 
