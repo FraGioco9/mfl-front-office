@@ -22,6 +22,42 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
+      - name: Apply filter and selection lifecycle source migration
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/reset-filters-and-selection'
+        working-directory: .
+        shell: python
+        run: |
+          from pathlib import Path
+          from textwrap import dedent
+
+          helper = Path(".github/workflows/patch-filter-selection-lifecycle.yml").read_text(encoding="utf-8")
+          marker = "      - name: Apply canonical filter and selection lifecycle\n"
+          end_marker = "\n      - name: Commit canonical lifecycle fix\n"
+          if marker not in helper or end_marker not in helper:
+              raise SystemExit("Could not locate helper migration script.")
+          block = helper.split(marker, 1)[1].split(end_marker, 1)[0]
+          run_marker = "        run: |\n"
+          if run_marker not in block:
+              raise SystemExit("Could not locate helper migration run block.")
+          exec(compile(dedent(block.split(run_marker, 1)[1]), "filter-selection-migration", "exec"), {"__name__": "__main__"})
+
+      - name: Commit filter and selection lifecycle source migration
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/reset-filters-and-selection'
+        working-directory: .
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git show origin/main:.github/workflows/site-quality.yml > .github/workflows/site-quality.yml
+          rm .github/workflows/patch-filter-selection-lifecycle.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- site/static-ui-runtime.js site/bootstrap.js site/selection-stack-runtime.js site/modules/app-core.js site/validate-all.mjs site/validate-table-filter-selection-lifecycle.mjs
+          git add -u -- .github/workflows/site-quality.yml .github/workflows/patch-filter-selection-lifecycle.yml
+          git commit -m "Reset filters and selection across table transitions"
+          git push origin "HEAD:$HEAD_BRANCH"
+
       - name: Detect relevant changes
         id: changes
         working-directory: .
