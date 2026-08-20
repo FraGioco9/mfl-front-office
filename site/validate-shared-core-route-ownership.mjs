@@ -54,7 +54,7 @@ for (const name of protectedSharedFunctions) {
 }
 
 const sharedBytes = Buffer.byteLength(shared);
-invariant(sharedBytes < 303_500, `Shared application core is too large after canonical Table header ownership: ${sharedBytes} bytes.`);
+invariant(sharedBytes < 301_000, `Shared application core is too large after final Player contract-link ownership cleanup: ${sharedBytes} bytes.`);
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 
