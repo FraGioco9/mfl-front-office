@@ -22,66 +22,76 @@ jobs:
         run: |
           from pathlib import Path
 
-          def replace_once(path, old, new):
-              file = Path(path)
-              text = file.read_text(encoding="utf-8")
+          def read(path):
+              return Path(path).read_text(encoding="utf-8")
+
+          def write(path, text):
+              Path(path).write_text(text, encoding="utf-8")
+
+          def replace_once(path, old, new, label):
+              text = read(path)
               count = text.count(old)
               if count != 1:
-                  raise SystemExit(f"{path}: expected one match, found {count}")
-              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+                  raise SystemExit(f"{path}: {label}: expected one match, found {count}")
+              write(path, text.replace(old, new, 1))
 
-          # Route chrome owns immediate page/view transitions. Track page identity
-          # separately from view identity so page changes reset filters while
-          # same-page view changes only reset selection.
+          def replace_section(path, start, end, replacement, label):
+              text = read(path)
+              start_index = text.find(start)
+              end_index = text.find(end, start_index + len(start)) if start_index >= 0 else -1
+              if start_index < 0 or end_index < 0:
+                  raise SystemExit(f"{path}: could not locate {label}")
+              write(path, text[:start_index] + replacement + text[end_index:])
+
+          # Route chrome owns immediate page/view identity. Different pages reset
+          # filters; same-page view changes retain filters but clear selection.
           replace_once(
               "site/static-ui-runtime.js",
-              '  const SPECIALIZED_TOOLTIP_SELECTOR = [\n',
-              '  const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);\n  const SPECIALIZED_TOOLTIP_SELECTOR = [\n',
+              '  const SPECIALIZED_TOOLTIP_SELECTOR = [',
+              '  const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);\n  const SPECIALIZED_TOOLTIP_SELECTOR = [',
+              "filtered table page set",
           )
           replace_once(
               "site/static-ui-runtime.js",
-              '  let lastPrimedRouteIdentity = "";\n',
-              '  let lastPrimedRouteIdentity = "";\n  let lastRoutePage = "";\n  let lastRouteView = "";\n',
+              '  let lastPrimedRouteIdentity = "";',
+              '  let lastPrimedRouteIdentity = "";\n  let lastRoutePage = "";\n  let lastRouteView = "";',
+              "route identity state",
           )
-          replace_once(
+          replace_section(
               "site/static-ui-runtime.js",
-              '''  function syncDestinationTableChrome(state) {
-            const prime = Reflect.get(window, "__mflPrimeTableChrome");
-            if (typeof prime === "function") prime(state.page, state.url || window.location.href);
-            syncDestinationTableHeader(state);
-          }
-''',
+              "  function syncDestinationTableChrome(state) {",
+              "  function routeIdentity(state) {",
               '''  function syncDestinationTableChrome(state, options = {}) {
             const prime = Reflect.get(window, "__mflPrimeTableChrome");
             if (typeof prime === "function") prime(state.page, state.url || window.location.href, options);
             syncDestinationTableHeader(state);
           }
+
 ''',
+              "destination table chrome",
           )
-          replace_once(
+          replace_section(
               "site/static-ui-runtime.js",
-              '''  function showRouteShell(state) {
-            const target = shellForRoute(state);
-            if (!(target instanceof HTMLElement)) return;
-            if (target.id === "progressionPage") syncDestinationTableChrome(state);
-''',
+              "  function showRouteShell(state) {",
+              "  function syncRouteChrome(urlLike = window.location.href) {",
               '''  function showRouteShell(state, options = {}) {
             const target = shellForRoute(state);
             if (!(target instanceof HTMLElement)) return;
             if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
-''',
-          )
-          replace_once(
-              "site/static-ui-runtime.js",
-              '''  function syncRouteChrome(urlLike = window.location.href) {
-            const state = routeState(urlLike);
-            syncFooter();
-            setActiveNavigation(state.page);
-            syncTableViews(state.page, state.view);
-            showRouteShell(state);
-            return state;
+            primeDestinationRouteShell(state, target);
+
+            document.querySelectorAll("main > .pageView").forEach((page) => {
+              if (page instanceof HTMLElement) page.hidden = page !== target;
+            });
           }
+
 ''',
+              "route shell",
+          )
+          replace_section(
+              "site/static-ui-runtime.js",
+              "  function syncRouteChrome(urlLike = window.location.href) {",
+              "  function tooltipTargetFrom(target) {",
               '''  function syncRouteChrome(urlLike = window.location.href) {
             const state = routeState(urlLike);
             const previousPage = lastRoutePage;
@@ -107,55 +117,53 @@ jobs:
             showRouteShell(state, { resetFilters });
             return state;
           }
+
 ''',
+              "route chrome sync",
           )
 
-          # Bootstrap must paint destination filter defaults synchronously so the
-          # source page's controls/rule count never flash on the next page.
-          replace_once(
-              "site/bootstrap.js",
-              '  function primeTableChrome(page, urlLike = window.location.href) {\n',
-              '  function primeTableChrome(page, urlLike = window.location.href, options = {}) {\n',
+          # Bootstrap paints destination defaults before the page is revealed.
+          bootstrap_path = "site/bootstrap.js"
+          bootstrap = read(bootstrap_path)
+          start = bootstrap.find('  function primeTableChrome(page, urlLike = window.location.href) {')
+          end = bootstrap.find('  Reflect.set(window, "__mflPrimeTableChrome", primeTableChrome);', start)
+          if start < 0 or end < 0:
+              raise SystemExit("site/bootstrap.js: could not locate primeTableChrome")
+          section = bootstrap[start:end]
+          section = section.replace(
+              '  function primeTableChrome(page, urlLike = window.location.href) {',
+              '  function primeTableChrome(page, urlLike = window.location.href, options = {}) {',
+              1,
           )
-          replace_once(
-              "site/bootstrap.js",
-              '    const savedState = storedTablePageState(normalizedPage) || {};\n',
-              '    const resetFilters = Boolean(options.resetFilters);\n    const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};\n',
+          saved_marker = '    const savedState = storedTablePageState(normalizedPage) || {};'
+          if saved_marker not in section:
+              raise SystemExit("site/bootstrap.js: saved table state marker missing")
+          section = section.replace(
+              saved_marker,
+              '    const resetFilters = Boolean(options.resetFilters);\n    const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};',
+              1,
           )
-          replace_once(
-              "site/bootstrap.js",
-              '''    const newMintsLabel = document.getElementById("newMintsLabel");
-            if (newMintsLabel instanceof HTMLElement) {
-              newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
-            }
+          pager_marker = '    const pager = document.querySelector("#progressionPage nav.pager");'
+          if pager_marker not in section:
+              raise SystemExit("site/bootstrap.js: pager marker missing")
+          section = section.replace(
+              pager_marker,
+              '''    if (resetFilters) {
+                const filterRules = document.getElementById("filterRules");
+                if (filterRules instanceof HTMLElement) filterRules.replaceChildren();
+                const filterSummary = document.getElementById("filterSummary");
+                if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0 active";
+              }
 
-            const pager = document.querySelector("#progressionPage nav.pager");
-''',
-              '''    const newMintsLabel = document.getElementById("newMintsLabel");
-            if (newMintsLabel instanceof HTMLElement) {
-              newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
-            }
-
-            if (resetFilters) {
-              const filterRules = document.getElementById("filterRules");
-              if (filterRules instanceof HTMLElement) filterRules.replaceChildren();
-              const filterSummary = document.getElementById("filterSummary");
-              if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0 active";
-            }
-
-            const pager = document.querySelector("#progressionPage nav.pager");
-''',
+          ''' + pager_marker,
+              1,
           )
+          write(bootstrap_path, bootstrap[:start] + section + bootstrap[end:])
 
-          # Selection stack is the canonical visual/lifecycle owner for selected
-          # players. Route chrome calls this before a destination page/view paints.
+          # Existing selection-stack runtime is the single selection lifecycle owner.
           replace_once(
               "site/selection-stack-runtime.js",
-              '''  function rebind() {
-            if (destroyed) return;
-            schedule();
-          }
-''',
+              "  function rebind() {",
               '''  function clearForRouteTransition() {
             if (destroyed || applicationSelectionCount() <= 0) return false;
             clearApplicationSelection(null);
@@ -163,30 +171,31 @@ jobs:
             return true;
           }
 
-          function rebind() {
-            if (destroyed) return;
-            schedule();
-          }
-''',
+          function rebind() {''',
+              "route transition selection clear",
           )
           replace_once(
               "site/selection-stack-runtime.js",
-              '''  window.__mflSelectionStackRuntime = Object.freeze({
-''',
-              '''  window.__mflSelectionStackRuntime = Object.freeze({
-            clearForRouteTransition,
-''',
+              "  window.__mflSelectionStackRuntime = Object.freeze({",
+              "  window.__mflSelectionStackRuntime = Object.freeze({\n    clearForRouteTransition,",
+              "selection runtime export",
           )
 
-          # Table route ownership resets only filter fields on page entry. View,
-          # sort, and page-size preferences remain page-specific and intact.
-          replace_once(
-              "site/modules/app-core.js",
-              '''function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {
-            const savedState = state.tablePageStates?.[pageName]
-              || defaultTablePageState(pageName);
-''',
-              '''function tableStateWithoutPageFilters(pageName, savedState) {
+          # Table route state resets only filter fields on a new page. Page-specific
+          # view/sort/page-size state stays intact. Applied filter changes clear
+          # selection, while unchanged filters during sorting do not.
+          app_path = "site/modules/app-core.js"
+          app = read(app_path)
+
+          restore_start = app.find('function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {')
+          restore_end = app.find('function syncRestoredTableControls(', restore_start)
+          if restore_start < 0 or restore_end < 0:
+              raise SystemExit("site/modules/app-core.js: could not locate saved table restore owner")
+          restore_section = app[restore_start:restore_end]
+          state_tail = restore_section.find("  state.view =")
+          if state_tail < 0:
+              raise SystemExit("site/modules/app-core.js: saved table restore state tail missing")
+          restore_replacement = '''function tableStateWithoutPageFilters(pageName, savedState) {
             const defaults = defaultTablePageState(pageName);
             return {
               ...savedState,
@@ -206,34 +215,48 @@ jobs:
             const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
             const savedState = resetFilters ? tableStateWithoutPageFilters(pageName, storedState) : storedState;
             if (resetFilters) state.tablePageStates[pageName] = savedState;
-''',
-          )
-          replace_once(
-              "site/modules/app-core.js",
-              '''  updateFilterSummary();
-            state.pendingTableControlRestore = null;
-            return true;
-          }
 
-          function readFilterDraftRules() {
-''',
-              '''  updateFilterSummary();
-            if (document.documentElement.dataset.mflResetTableFilters === pageName) {
+          ''' + restore_section[state_tail:]
+          app = app[:restore_start] + restore_replacement + app[restore_end:]
+
+          sync_start = app.find('function syncRestoredTableControls(')
+          sync_end = app.find('function readFilterDraftRules()', sync_start)
+          if sync_start < 0 or sync_end < 0:
+              raise SystemExit("site/modules/app-core.js: could not locate restored controls owner")
+          sync_section = app[sync_start:sync_end]
+          pending_marker = "  state.pendingTableControlRestore = null;"
+          if pending_marker not in sync_section:
+              raise SystemExit("site/modules/app-core.js: pending control restore marker missing")
+          sync_section = sync_section.replace(
+              pending_marker,
+              '''  if (document.documentElement.dataset.mflResetTableFilters === pageName) {
               delete document.documentElement.dataset.mflResetTableFilters;
             }
-            state.pendingTableControlRestore = null;
-            return true;
-          }
-
-          function readFilterDraftRules() {
-''',
+            state.pendingTableControlRestore = null;''',
+              1,
           )
-          replace_once(
-              "site/modules/app-core.js",
-              '''function applyFilters(options = {}) {
-            const rules = readFilterRules();
-''',
-              '''let lastAppliedTableFilterSignature = "";
+          app = app[:sync_start] + sync_section + app[sync_end:]
+
+          apply_start = app.find("function applyFilters(options = {}) {")
+          apply_end = app.find("function currentPageRows() {", apply_start)
+          if apply_start < 0 or apply_end < 0:
+              raise SystemExit("site/modules/app-core.js: could not locate filter apply owner")
+          apply_section = app[apply_start:apply_end]
+          rules_marker = "  const rules = readFilterRules();"
+          if rules_marker not in apply_section:
+              raise SystemExit("site/modules/app-core.js: filter rules marker missing")
+          apply_section = apply_section.replace(
+              rules_marker,
+              '''  const rules = readFilterRules();
+            const filterSignature = appliedTableFilterSignature(rules);
+            if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
+              state.selectedPlayerIds.clear();
+              state.selectionAnchorPlayerId = null;
+            }
+            lastAppliedTableFilterSignature = filterSignature;''',
+              1,
+          )
+          apply_replacement = '''let lastAppliedTableFilterSignature = "";
 
           function appliedTableFilterSignature(rules) {
             return JSON.stringify([
@@ -247,16 +270,9 @@ jobs:
             ]);
           }
 
-          function applyFilters(options = {}) {
-            const rules = readFilterRules();
-            const filterSignature = appliedTableFilterSignature(rules);
-            if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
-              state.selectedPlayerIds.clear();
-              state.selectionAnchorPlayerId = null;
-            }
-            lastAppliedTableFilterSignature = filterSignature;
-''',
-          )
+          ''' + apply_section
+          app = app[:apply_start] + apply_replacement + app[apply_end:]
+          write(app_path, app)
 
           validator = Path("site/validate-table-filter-selection-lifecycle.mjs")
           validator.write_text('''import { readFile } from "node:fs/promises";
@@ -308,8 +324,7 @@ jobs:
             "Applied filter changes must clear player selection in the canonical generated table owner.",
           );
           invariant(
-            appCore.includes('cell.addEventListener("click", () => {')
-              && appCore.includes('buildHeader();\\n      applyFilters();'),
+            appCore.includes('buildHeader();\\n      applyFilters();'),
             "Sorting must continue to reapply unchanged filters without an unconditional selection reset.",
           );
 
@@ -318,8 +333,9 @@ jobs:
 
           replace_once(
               "site/validate-all.mjs",
-              '  "validate-table-loading-state.mjs",\n',
-              '  "validate-table-loading-state.mjs",\n  "validate-table-filter-selection-lifecycle.mjs",\n',
+              '  "validate-table-loading-state.mjs",',
+              '  "validate-table-loading-state.mjs",\n  "validate-table-filter-selection-lifecycle.mjs",',
+              "validator registration",
           )
 
       - name: Commit canonical lifecycle fix
