@@ -29,10 +29,12 @@ module.exports = async function handler(request, response) {
     const accessMode = String(query.access || "");
     const scope = String(query.scope || "").toLowerCase();
     const view = String(query.view || "").toLowerCase();
-    const publicProgressionView = ["agent", "club", "watchlist"].includes(scope)
+    const publicEntityProgression = ["agent", "club"].includes(scope)
+      && ["current", "all"].includes(view);
+    const publicWatchlistProgression = scope === "watchlist"
       && ["current", "all"].includes(view);
     const signedWallet = await signedWalletFromRequest(request);
-    const fullAccess = publicProgressionView || (
+    const fullAccess = publicEntityProgression || publicWatchlistProgression || (
       accessMode === "full-progression"
       && Boolean(signedWallet)
       && await walletAllowed(signedWallet)
