@@ -46,7 +46,8 @@ includes(sharedCore, "await agentTitleReady;", "Agent page loading must not fini
 includes(sharedCore, "renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());", "Agent title must be rendered after its name readiness gate.");
 includes(sharedCore, "localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY", "Resolved Agent names must be cached for future navigation and first paint.");
 includes(sharedCore, "localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY)", "Agent title resolution must consume the per-Agent name cache.");
-excludes(sharedCore, "saveAgentDisplayName(", "The retired duplicate Agent display-name cache helper must not remain in generated core.");
+excludes(sharedCore, "function saveAgentDisplayName(", "The retired duplicate Agent display-name cache helper definition must not remain in generated core.");
+excludes(sharedCore, "saveAgentDisplayName(entry.walletAddress, entry.name);", "Search-index generation must not call the retired Agent display-name cache helper.");
 excludes(sharedCore, 'type: "recent",', "The exact Agent lookup implementation must stay lazy in the Table core.");
 excludes(sharedCore, "const agentPageTitleNamePromises = new Map();", "Agent lookup deduplication state must stay lazy with the Table core.");
 
