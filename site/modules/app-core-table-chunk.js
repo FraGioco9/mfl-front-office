@@ -1,29 +1,12 @@
 // @ts-check
 
-function extractRequiredTableSection(source, startMarker, endMarker, label) {
-  const start = source.indexOf(startMarker);
-  const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
-  if (start < 0 || end < 0 || end <= start) {
-    throw new Error(`Could not split Table application core section: ${label}.`);
-  }
-
-  return {
-    core: `${source.slice(0, start)}${source.slice(end)}`,
-    chunk: source.slice(start, end).replace(/^\s+|\s+$/g, ""),
-  };
-}
-
-function renameRequiredTableOwner(source, functionName, ownerName) {
-  const asyncMarker = `async function ${functionName}(`;
-  const marker = `function ${functionName}(`;
-  if (source.includes(asyncMarker)) {
-    return source.replace(asyncMarker, `async function ${ownerName}(`);
-  }
-  if (source.includes(marker)) {
-    return source.replace(marker, `function ${ownerName}(`);
-  }
-  throw new Error(`Could not delegate Table application core owner: ${functionName}.`);
-}
+import {
+  extractRequiredSections,
+  finalizeSplitArtifacts,
+  insertBeforeRequiredMarker,
+  normalizeSplitterInput,
+  renameRequiredFunctionOwner,
+} from "./app-core-splitter-utils.js";
 
 const TABLE_FACADE_BLOCK = `let __mflTableTitleForPageOwner = null;
 let __mflTableBuildTableColGroupOwner = null;
@@ -182,105 +165,60 @@ __mflTableSetViewOwner = tableSetViewOwner;`;
 
 const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";
 
+const TABLE_SECTIONS = [
+  ["function tableTitleForPage(pageName) {", TABLE_FACADE_INSERTION_MARKER, "Table destination shell"],
+  ["function tableNextOverallInfo(row, statColumn) {", "function formatCellValue(row, column) {", "Table cell presentation helpers"],
+  ["function appendNameMarker(cell, marker, className) {", "function playerRoute(playerId) {", "Table name marker renderer"],
+  ["function tableNextOverallPreciseValue(row) {", "function activeFilterCount() {", "Table sorting and header owner"],
+  ["function activeFilterCount() {", "function linkedWalletAddressesForOwnedPlayers() {", "Table filter controls and matching"],
+  ["function rowIsHiddenFromTableAsMflPlayer(row) {", "function currentPageRows() {", "Table row filtering owner"],
+  ["function currentPageRows() {", "function escapeHtml(value) {", "Table selection owner"],
+  ["function openSelectedPlayerLinks() {", "function csvEscape(value) {", "Table row renderer"],
+  ["function showTableBusyState() {", "function mflChunkFromPublicData(chunk) {", "Table view switching owner"],
+];
+
+const TABLE_OWNERS = [
+  ["tableTitleForPage", "tableTitleForPageOwner"],
+  ["buildTableColGroup", "tableBuildTableColGroupOwner"],
+  ["buildHeader", "tableBuildHeaderOwner"],
+  ["buildOperatorSelect", "tableBuildOperatorSelectOwner"],
+  ["ruleMatches", "tableRuleMatchesOwner"],
+  ["addFilterRule", "tableAddFilterRuleOwner"],
+  ["restoreSavedTableState", "tableRestoreSavedTableStateOwner"],
+  ["applyFilters", "tableApplyFiltersOwner"],
+  ["renderTable", "tableRenderTableOwner"],
+  ["openFilters", "tableOpenFiltersOwner"],
+  ["clearAdvancedFilters", "tableClearAdvancedFiltersOwner"],
+  ["closeFilters", "tableCloseFiltersOwner"],
+  ["applyAdvancedFilters", "tableApplyAdvancedFiltersOwner"],
+  ["clearSelection", "tableClearSelectionOwner"],
+  ["addSelectedToWatchlist", "tableAddSelectedToWatchlistOwner"],
+  ["moveSelectedToWatchlist", "tableMoveSelectedToWatchlistOwner"],
+  ["openSelectedPlayerLinks", "tableOpenSelectedPlayerLinksOwner"],
+  ["setView", "tableSetViewOwner"],
+];
+
 export function splitTableApplicationCoreRuntime(artifacts) {
-  const input = artifacts && typeof artifacts === "object" ? artifacts : {};
-  const routeChunks = input.routeChunks && typeof input.routeChunks === "object" ? input.routeChunks : {};
-  if (String(routeChunks.table || "").trim()) return artifacts;
+  const { alreadySplit, routeChunks, core: inputCore } = normalizeSplitterInput(
+    artifacts,
+    "table",
+    "Table ownership",
+  );
+  if (alreadySplit) return artifacts;
 
-  let core = String(input.core || "").replace(/\r\n?/g, "\n");
-  if (!core.trim()) {
-    throw new Error("Cannot split Table ownership from an empty application core.");
-  }
-
-  const tableParts = [];
-  const extract = (startMarker, endMarker, label) => {
-    const extracted = extractRequiredTableSection(core, startMarker, endMarker, label);
-    core = extracted.core;
-    tableParts.push(extracted.chunk);
-  };
-
-  extract(
-    "function tableTitleForPage(pageName) {",
+  const extracted = extractRequiredSections(inputCore, TABLE_SECTIONS);
+  let core = insertBeforeRequiredMarker(
+    extracted.core,
     TABLE_FACADE_INSERTION_MARKER,
-    "Table destination shell",
-  );
-  extract(
-    "function tableNextOverallInfo(row, statColumn) {",
-    "function formatCellValue(row, column) {",
-    "Table cell presentation helpers",
-  );
-  extract(
-    "function appendNameMarker(cell, marker, className) {",
-    "function playerRoute(playerId) {",
-    "Table name marker renderer",
-  );
-  extract(
-    "function tableNextOverallPreciseValue(row) {",
-    "function activeFilterCount() {",
-    "Table sorting and header owner",
-  );
-  extract(
-    "function activeFilterCount() {",
-    "function linkedWalletAddressesForOwnedPlayers() {",
-    "Table filter controls and matching",
-  );
-  extract(
-    "function rowIsHiddenFromTableAsMflPlayer(row) {",
-    "function currentPageRows() {",
-    "Table row filtering owner",
-  );
-  extract(
-    "function currentPageRows() {",
-    "function escapeHtml(value) {",
-    "Table selection owner",
-  );
-  extract(
-    "function openSelectedPlayerLinks() {",
-    "function csvEscape(value) {",
-    "Table row renderer",
-  );
-  extract(
-    "function showTableBusyState() {",
-    "function mflChunkFromPublicData(chunk) {",
-    "Table view switching owner",
+    TABLE_FACADE_BLOCK,
+    "Table facade",
   );
 
-  if (!core.includes(TABLE_FACADE_INSERTION_MARKER)) {
-    throw new Error("Could not locate the stable Table facade insertion marker.");
+  let table = extracted.chunks.join("\n\n").replace(/\s*$/, "");
+  for (const [functionName, ownerName] of TABLE_OWNERS) {
+    table = renameRequiredFunctionOwner(table, functionName, ownerName, `Table ${functionName}`);
   }
-  core = core.replace(
-    TABLE_FACADE_INSERTION_MARKER,
-    `${TABLE_FACADE_BLOCK}\n\n${TABLE_FACADE_INSERTION_MARKER}`,
-  );
-
-  let table = tableParts.join("\n\n").replace(/\s*$/, "");
-  table = renameRequiredTableOwner(table, "tableTitleForPage", "tableTitleForPageOwner");
-  table = renameRequiredTableOwner(table, "buildTableColGroup", "tableBuildTableColGroupOwner");
-  table = renameRequiredTableOwner(table, "buildHeader", "tableBuildHeaderOwner");
-  table = renameRequiredTableOwner(table, "buildOperatorSelect", "tableBuildOperatorSelectOwner");
-  table = renameRequiredTableOwner(table, "ruleMatches", "tableRuleMatchesOwner");
-  table = renameRequiredTableOwner(table, "addFilterRule", "tableAddFilterRuleOwner");
-  table = renameRequiredTableOwner(table, "restoreSavedTableState", "tableRestoreSavedTableStateOwner");
-  table = renameRequiredTableOwner(table, "applyFilters", "tableApplyFiltersOwner");
-  table = renameRequiredTableOwner(table, "renderTable", "tableRenderTableOwner");
-  table = renameRequiredTableOwner(table, "openFilters", "tableOpenFiltersOwner");
-  table = renameRequiredTableOwner(table, "clearAdvancedFilters", "tableClearAdvancedFiltersOwner");
-  table = renameRequiredTableOwner(table, "closeFilters", "tableCloseFiltersOwner");
-  table = renameRequiredTableOwner(table, "applyAdvancedFilters", "tableApplyAdvancedFiltersOwner");
-  table = renameRequiredTableOwner(table, "clearSelection", "tableClearSelectionOwner");
-  table = renameRequiredTableOwner(table, "addSelectedToWatchlist", "tableAddSelectedToWatchlistOwner");
-  table = renameRequiredTableOwner(table, "moveSelectedToWatchlist", "tableMoveSelectedToWatchlistOwner");
-  table = renameRequiredTableOwner(table, "openSelectedPlayerLinks", "tableOpenSelectedPlayerLinksOwner");
-  table = renameRequiredTableOwner(table, "setView", "tableSetViewOwner");
   table = `${table}\n\n${TABLE_OWNER_ASSIGNMENTS}`;
 
-  const normalizedCore = core.replace(/\s*$/, "");
-  if (!table.trim() || !normalizedCore) {
-    throw new Error("Table application core split produced an empty artifact.");
-  }
-
-  return Object.freeze({
-    core: normalizedCore,
-    routeChunks: Object.freeze({ ...routeChunks, table: table.replace(/\s*$/, "") }),
-  });
+  return finalizeSplitArtifacts(core, routeChunks, "table", table, "Table");
 }

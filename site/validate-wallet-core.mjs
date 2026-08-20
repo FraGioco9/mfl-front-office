@@ -27,7 +27,8 @@ new Function(walletCore);
 
 includes(walletSplitter, '"Wallet account-proof and signing helpers"', "The Wallet splitter must extract account-proof/signing helpers.");
 includes(walletSplitter, '"Wallet Flow authentication and opt-in owner"', "The Wallet splitter must extract Flow authentication and opt-in ownership.");
-includes(walletSplitter, "routeChunks: Object.freeze({ ...routeChunks, wallet:", "The artifact map must expose the Wallet chunk.");
+includes(walletSplitter, "finalizeSplitArtifacts(", "The Wallet splitter must use canonical split-result finalization.");
+includes(walletSplitter, '"wallet"', "The Wallet splitter must publish the Wallet chunk through canonical finalization.");
 
 includes(sharedCore, "function walletAccessMessage() {", "The shared core must retain the stable wallet proof message used during startup restoration.");
 includes(sharedCore, "function restoreLinkedWalletProof() {", "Saved wallet-proof restoration must remain in shared startup core.");

@@ -28,7 +28,8 @@ new Function(tableCore);
 
 includes(tableSplitter, 'const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";', "Table facade insertion must use a stable source marker rather than a stale numeric offset.");
 excludes(tableSplitter, "firstSectionStart", "Table facade insertion must not reuse an index captured before extraction mutates the shared core.");
-includes(tableSplitter, "core = core.replace(\n    TABLE_FACADE_INSERTION_MARKER,", "The shared Table facade must be inserted at the stable setPage boundary.");
+includes(tableSplitter, "insertBeforeRequiredMarker(", "The shared Table facade must use canonical marker insertion.");
+includes(tableSplitter, "TABLE_FACADE_INSERTION_MARKER,", "The shared Table facade must still target the stable setPage boundary.");
 includes(tableSplitter, '"Table destination shell"', "The Table splitter must extract the table destination shell.");
 includes(tableSplitter, '"Table sorting and header owner"', "The Table splitter must extract sorting and header ownership.");
 includes(tableSplitter, '"Table filter controls and matching"', "The Table splitter must extract filter controls and matching.");

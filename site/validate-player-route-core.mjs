@@ -29,7 +29,8 @@ includes(playerSplitter, '"Player pitch renderer"', "The Player splitter must ex
 includes(playerSplitter, '"Player training and attribute configuration"', "The Player splitter must extract training and attribute configuration.");
 includes(playerSplitter, '"Player attribute panel renderer"', "The Player splitter must extract Player attribute-card rendering.");
 includes(playerSplitter, '"Player page renderer owner"', "The Player splitter must extract the heavy Player page renderer.");
-includes(playerSplitter, "routeChunks: Object.freeze({ ...routeChunks, player })", "The artifact map must expose the Player chunk.");
+includes(playerSplitter, "finalizeSplitArtifacts(", "The Player splitter must use canonical split-result finalization.");
+includes(playerSplitter, '"player"', "The Player splitter must publish the Player chunk through canonical finalization.");
 
 includes(sharedCore, "function renderPlayerPage(playerId) {", "The shared core must retain the stable Player page renderer facade called by shared refresh paths.");
 includes(sharedCore, "const owner = window.__mflRenderPlayerPageOwner;", "The stable shared Player renderer must dispatch to the route-owned implementation.");
