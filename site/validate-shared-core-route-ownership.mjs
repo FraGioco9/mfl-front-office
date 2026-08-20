@@ -54,7 +54,7 @@ for (const name of protectedSharedFunctions) {
 }
 
 const sharedBytes = Buffer.byteLength(shared);
-invariant(sharedBytes < 313_000, `Shared application core is too large after Evaluation event ownership extraction: ${sharedBytes} bytes.`);
+invariant(sharedBytes < 306_000, `Shared application core is too large after Evaluation startup ownership extraction: ${sharedBytes} bytes.`);
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 
