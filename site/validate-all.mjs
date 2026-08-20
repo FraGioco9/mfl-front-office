@@ -12,6 +12,7 @@ const validators = [
   "validate-release-runtime-ownership.mjs",
   "validate-app-config.mjs",
   "validate-css-priority.mjs",
+  "validate-runtime-style-ownership.mjs",
   "validate-dropdown-style-ownership.mjs",
   "validate-control-style-ownership.mjs",
   "validate-loading-ownership.mjs",

@@ -82,8 +82,18 @@ html.mflTableScrolling #progressionPage .tableScroller tbody {
   outline: none;
 }
 
-.toastMessage {
+.toastMessage:not(#mflLoadingToast) {
+  bottom: var(--mfl-toast-bottom, 88px);
+  z-index: 2147483635;
+}
+
+#mflLoadingToast {
   z-index: 2147483647;
+}
+
+html.mflSelectionStartupResetPending #selectionBar {
+  opacity: 0;
+  pointer-events: none;
 }
 
 #mflLoadingToast,

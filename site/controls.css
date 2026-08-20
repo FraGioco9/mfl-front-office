@@ -301,3 +301,39 @@ body[aria-busy="true"] #pageSizeSelect {
   pointer-events: none;
   cursor: default;
 }
+
+/* Table chrome interaction ownership. */
+.quickFilters label {
+  cursor: default;
+}
+
+.quickFilters input {
+  cursor: pointer;
+}
+
+#pageSizeSelect:focus:not(:focus-visible):not(:hover),
+#openFiltersButton:focus:not(:focus-visible):not(:hover),
+#quickClearFiltersButton:focus:not(:focus-visible):not(:hover),
+.quickFilters input:focus:not(:focus-visible):not(:hover),
+#sidebar .navButton[data-page]:focus:not(:focus-visible):not(:hover) {
+  outline: none;
+  box-shadow: none;
+}
+
+#addWatchlistNameInput:focus,
+#addWatchlistNameInput:focus-visible,
+#sidebar .navButton:focus,
+#sidebar .navButton:focus-visible {
+  outline: none;
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+#sidebar .navButton.active:focus,
+#sidebar .navButton.active:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}

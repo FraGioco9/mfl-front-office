@@ -484,19 +484,27 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   position: relative;
   z-index: 1;
   width: var(--mfl-row-selector-slot-width);
+  min-width: 0;
   flex: 0 0 var(--mfl-row-selector-slot-width);
   justify-self: end;
   justify-content: flex-end;
+  pointer-events: none;
+}
+
+.controlsBar > .field.compact.rowsField > span {
+  flex: 0 0 auto;
+  pointer-events: none;
 }
 
 #pageSizeSelect {
   box-sizing: border-box;
-  width: var(--mfl-row-selector-width);
-  min-width: var(--mfl-row-selector-width);
+  width: 0;
+  min-width: 0;
   max-width: var(--mfl-row-selector-width);
   height: 40px;
-  flex: 0 0 var(--mfl-row-selector-width);
+  flex: 1 1 0;
   margin: 0;
+  pointer-events: auto;
   padding-left: 11px;
   padding-right: 10px;
   line-height: 1;
