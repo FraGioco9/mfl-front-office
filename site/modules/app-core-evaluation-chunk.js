@@ -1,6 +1,7 @@
 // @ts-check
 
 import {
+  extractRequiredFunctions,
   extractRequiredSection,
   finalizeSplitArtifacts,
   normalizeApplicationCoreSource,
@@ -8,6 +9,8 @@ import {
 } from "./app-core-splitter-utils.js";
 
 const ADVANCED_SETTINGS_BACKDROP_BINDING = "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);";
+const EVALUATION_ROUTE_INITIALIZATION = `renderEvaluationMflPerUsdControl(false);
+evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());`;
 
 export function splitEvaluationApplicationCoreRuntime(artifacts) {
   const input = artifacts && typeof artifacts === "object" ? artifacts : {};
@@ -20,11 +23,77 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
   let core = normalizeApplicationCoreSource(input.core, "Evaluation ownership");
   const evaluationParts = [existingEvaluation];
 
+  core = replaceRequired(
+    core,
+    `  loadEvaluationMflPerUsd();
+  loadEvaluationLateSeasonRewardRates();
+  renderEvaluationMflPerUsdControl(false);
+  evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());`,
+    `  loadEvaluationMflPerUsd();
+  loadEvaluationLateSeasonRewardRates();`,
+    "Evaluation startup UI initialization",
+  );
+
+  core = replaceRequired(
+    core,
+    `      if (data.evaluationSettings) {
+        applyEvaluationSettingsPayload(data.evaluationSettings);
+        saveEvaluationSettingsLocally();
+        renderEvaluationMflPerUsdControl(false);
+        if (state.currentPage === "evaluation") {
+          renderEvaluationPage();
+        }
+      }`,
+    `      if (data.evaluationSettings) {
+        applyEvaluationSettingsPayload(data.evaluationSettings);
+        saveEvaluationSettingsLocally();
+        if (state.currentPage === "evaluation" && typeof renderEvaluationMflPerUsdControl === "function") {
+          renderEvaluationMflPerUsdControl(false);
+          renderEvaluationPage();
+        }
+      }`,
+    "Evaluation wallet-preference UI refresh",
+  );
+
   let extracted = extractRequiredSection(
+    core,
+    "const evaluationConversions = {",
+    "function evaluationDiscountRateValue(",
+    "Evaluation discount-rate conversion data",
+  );
+  core = extracted.core;
+  evaluationParts.push(extracted.chunk);
+
+  const routeOnlyHelpers = extractRequiredFunctions(
+    core,
+    [
+      "evaluationDiscountRateValue",
+      "formatEvaluationRate",
+      "formatEvaluationMflPerUsd",
+      "clampEvaluationRewardRate",
+      "normalizeEvaluationRewardRateDraft",
+      "formatEvaluationRewardRate",
+      "clearEvaluationSearchFocus",
+    ],
+    "Evaluation startup and dependency-closed helper",
+  );
+  core = routeOnlyHelpers.core;
+  evaluationParts.push(...routeOnlyHelpers.chunks);
+
+  extracted = extractRequiredSection(
     core,
     "function formatAdvancedPlayerTableValue(value) {",
     "function renderEvaluationMflPerUsdControl(",
     "Evaluation advanced-settings UI owner",
+  );
+  core = extracted.core;
+  evaluationParts.push(extracted.chunk);
+
+  extracted = extractRequiredSection(
+    core,
+    "function renderEvaluationMflPerUsdControl(",
+    "function evaluationMflMultiplierForSeason(",
+    "Evaluation MFL-per-USD control owner",
   );
   core = extracted.core;
   evaluationParts.push(extracted.chunk);
@@ -53,7 +122,7 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
     "",
     "Evaluation advanced-settings backdrop binding",
   );
-  evaluationParts.push(ADVANCED_SETTINGS_BACKDROP_BINDING);
+  evaluationParts.push(ADVANCED_SETTINGS_BACKDROP_BINDING, EVALUATION_ROUTE_INITIALIZATION);
 
   return finalizeSplitArtifacts(
     core,
