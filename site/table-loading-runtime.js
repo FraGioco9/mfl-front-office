@@ -8,7 +8,6 @@
 
   let destroyed = false;
   let unsubscribe = null;
-  let coreBridgeInstalled = false;
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -87,19 +86,6 @@
     if (page && !loadingSnapshot().dataLoading) page.hidden = false;
   }
 
-  function installCoreBridge() {
-    if (destroyed || coreBridgeInstalled) {
-      sync();
-      return;
-    }
-
-    const installOwners = coreContracts()?.installTableLoadingOwners;
-    coreBridgeInstalled = typeof installOwners === "function" && Boolean(installOwners());
-    if (!coreBridgeInstalled) return;
-    ensureCanonicalHeader();
-    sync();
-  }
-
   function sync(snapshot = loadingSnapshot()) {
     if (destroyed) return;
     if (!tableRouteActive()) {
@@ -108,6 +94,13 @@
     }
     if (snapshot.dataLoading) show({ replaceExisting: true });
     else release();
+  }
+
+  function installCoreBridge() {
+    if (destroyed) return false;
+    ensureCanonicalHeader();
+    sync();
+    return true;
   }
 
   if (typeof controller?.subscribe === "function") {
