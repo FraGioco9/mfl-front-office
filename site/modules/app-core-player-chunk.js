@@ -61,13 +61,19 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
     "Player page renderer owner",
   );
   core = renderer.core;
-  const playerRenderer = renderer.chunk.replace(
+  let playerRenderer = renderer.chunk.replace(
     "function renderPlayerPage(playerId) {",
     "function renderPlayerPageOwner(playerId) {",
   );
   if (!playerRenderer.includes("function renderPlayerPageOwner(playerId) {")) {
     throw new Error("Could not rename the Player page renderer owner.");
   }
+  playerRenderer = replaceRequired(
+    playerRenderer,
+    "      openAgentPage(agentWalletAddress);",
+    '      openAgentPage(agentWalletAddress, formatCellValue(row, "wallet_name"));',
+    "Player Agent name handoff",
+  );
 
   const contractLink = extractRequiredFunctions(
     core,
