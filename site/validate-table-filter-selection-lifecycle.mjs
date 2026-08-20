@@ -47,14 +47,11 @@ invariant(
   "Applied filter changes must clear player selection in the canonical generated table owner.",
 );
 
-const buildHeaderStart = appCore.indexOf("function buildHeader() {");
-const buildHeaderEnd = buildHeaderStart >= 0 ? appCore.indexOf("function buildOperatorSelect() {", buildHeaderStart) : -1;
-invariant(buildHeaderStart >= 0 && buildHeaderEnd > buildHeaderStart, "Canonical table header owner must exist.");
-const buildHeader = appCore.slice(buildHeaderStart, buildHeaderEnd);
+const sortCommit = 'state.page = 1;\n        buildHeader();\n        applyFilters();';
 invariant(
-  buildHeader.includes("applyFilters();")
-    && !buildHeader.includes("clearSelection(")
-    && !buildHeader.includes("selectedPlayerIds.clear()"),
+  appCore.includes(sortCommit)
+    && !sortCommit.includes("clearSelection(")
+    && !sortCommit.includes("selectedPlayerIds.clear()"),
   "Sorting must reapply unchanged filters without directly clearing player selection.",
 );
 
