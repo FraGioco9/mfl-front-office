@@ -66,8 +66,8 @@ includes(
 );
 includes(
   bootstrap,
-  "function primeTableChrome(page, urlLike = window.location.href) {",
-  "bootstrap.js must synchronously prime route-authoritative table title, view, and quickfilters.",
+  "function primeTableChrome(page, urlLike = window.location.href, options = {}) {",
+  "bootstrap.js must synchronously prime route-authoritative table title, view, quickfilters, and explicit page-reset state.",
 );
 includes(
   bootstrap,
