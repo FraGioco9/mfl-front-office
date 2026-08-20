@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chore/css-ownership-optimization
+  pull_request:
 
 permissions:
   contents: read
