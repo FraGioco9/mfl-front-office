@@ -98,7 +98,7 @@ const state = {
 const flagColumn = "nationality_flag";
 const baseColumns = ["player_id", flagColumn, "name", "age", "positions", "player_seasons"];
 const statColumns = ["overall", "pace", "shooting", "passing", "dribbling", "defense", "physical"];
-const contractColumns = ["overall", "active_contract_revenue_share", "active_contract_club_name", "active_contract_club_division"];
+const contractColumns = ["overall", "active_contract_club_name", "active_contract_club_division", "active_contract_revenue_share"];
 const advancedPlayerTableTsv = `OVR	GK	LB	CB	RB	LWB	RWB	CDM	LM	CM	RM	CAM	CF	LW	RW	ST
 99	84000	84000	84000	112000	56000	56000	70000	112000	112000	112000	70000	42000	84000	84000	112000
 98	78000	78000	78000	104000	52000	52000	65000	104000	104000	104000	65000	39000	78000	78000	104000
@@ -179,7 +179,7 @@ const tablePages = new Set(["database", "mfl", "agents", "progression", "watchli
 const pageViewOptions = {
   database: ["attributes", "contracts", "stats"],
   mfl: ["attributes", "stats"],
-  agents: ["attributes", "next", "contracts", "current", "all"],
+  agents: ["attributes", "contracts", "next", "current", "all"],
   progression: ["current", "all"],
   watchlist: ["attributes", "next", "contracts", "current", "all"],
   myplayers: ["attributes", "next", "contracts", "current", "all"],
@@ -251,30 +251,6 @@ const tableColumnClasses = {
   active_contract_club_name: "col-contract-club",
   active_contract_club_division: "col-contract-division",
   player_link: "col-link",
-};
-
-const tableColumnWidths = {
-  selection: 51.09,
-  player_id: 68.13,
-  nationality_flag: 45.41,
-  name: 212.89,
-  nationality: 141.92,
-  age: 65.28,
-  positions: 119.22,
-  player_seasons: 82.31,
-  overall: 107.86,
-  pace: 107.86,
-  shooting: 107.86,
-  passing: 107.86,
-  dribbling: 107.86,
-  defense: 107.86,
-  physical: 107.86,
-  wallet_name: 187.34,
-  owned_since: 187.34,
-  active_contract_revenue_share: 140,
-  active_contract_club_name: 227.16,
-  active_contract_club_division: 280,
-  player_link: 48.39,
 };
 
 function joinedAgencyPages() {
@@ -625,7 +601,7 @@ function progressionAccessMessage() {
 
 function updateMenuVisibility() {
   const showMenu = true;
-  document.body.classList.toggle("guest", !hasProgressionAccess());
+  document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());
   menuRail.hidden = false;
   menuButton.hidden = false;
   sidebar.hidden = false;
@@ -866,14 +842,11 @@ function currentDataAccess(pageName = state.currentPage) {
   }
 
   if (pageName === "player") {
-    if (hasProgressionAccess()) {
-      return "full";
-    }
-    return hasWalletOptIn() ? "owned" : "public";
+    return "public";
   }
 
   if (pageName === "watchlist") {
-    return hasProgressionAccess() ? "full" : "public";
+    return "public";
   }
 
   return "public";
@@ -2076,13 +2049,14 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     const data = await response.json();
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
     if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
-      await requestIncrementalRoute({
+      const playerPayload = await requestIncrementalRoute({
         pageName: "evaluation",
         scope: "evaluation",
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
       }, 1, { force: true });
+      if (!playerPayload) return;
     }
     state.evaluationSavedId = id;
     state.evaluationShareId = "";
@@ -2197,7 +2171,8 @@ function showEvaluationLoadActionTooltip(button) {
     ? rect.right - tooltipRect.width + 8
     : rect.left + rect.width / 2 - tooltipRect.width / 2;
   const left = Math.min(Math.max(preferredLeft, 8), window.innerWidth - tooltipRect.width - 8);
-  const top = Math.max(8, rect.top - tooltipRect.height - 8);
+  const tooltipHeight = Number(window.__mflTooltipHeight) || 6;
+  const top = Math.max(8, rect.top - tooltipRect.height - tooltipHeight);
 
   tooltip.style.left = `${left}px`;
   tooltip.style.top = `${top}px`;
@@ -2494,8 +2469,8 @@ function pageTargetFromPath(path) {
 
   if (cleanPath === "/mfl/stats") {
     return {
-      pageName: "mflstats",
-      options: {},
+      pageName: "mfl",
+      options: { view: "stats" },
     };
   }
 
@@ -2563,6 +2538,14 @@ function pageTargetFromPath(path) {
 }
 
 function pagePath(pageName, options = {}) {
+  if (pageName === "club") {
+    const routeConfig = window.__mflAppConfig?.routes;
+    const currentClubRoute = routeConfig?.clubRoute?.(window.location.pathname);
+    const clubId = String(options.clubId || currentClubRoute?.clubId || "").trim();
+    const clubView = String(options.view || currentClubRoute?.view || state.view || "attributes").trim().toLowerCase();
+    const clubPath = clubId ? routeConfig?.clubPath?.(clubId, clubView) : "";
+    return clubPath || window.location.pathname;
+  }
   if (pageName === "player") {
     const playerId = options.playerId || playerIdFromUrl();
     return playerId ? `/players/${encodeURIComponent(playerId)}` : window.location.pathname;
@@ -2614,6 +2597,9 @@ function pagePath(pageName, options = {}) {
 }
 
 function updatePageUrl(pageName, options = {}) {
+  if (state.currentPage === "club" && pageName !== "club") {
+    return;
+  }
   if (!options.updateUrl) {
     return;
   }
@@ -2623,6 +2609,179 @@ function updatePageUrl(pageName, options = {}) {
     window.history.pushState({}, "", targetPath);
   }
 }
+let pendingViewTransition = null;
+let navigationTransitionSequence = 0;
+
+function currentNavigationPath() {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+function commitViewTransition(pageName, viewName, options = {}) {
+  const nextView = String(viewName || "");
+  if (!nextView) return "";
+
+  const statePageName = String(
+    options.statePageName
+    || (pageName === "mfl" && nextView === "stats" ? "mflstats" : pageName)
+    || state.currentPage
+  );
+
+  state.currentPage = statePageName;
+  state.view = nextView;
+  state.page = 1;
+
+  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+
+  let targetPath = String(options.path || "");
+  if (!targetPath) {
+    targetPath = pageName === "mfl" && nextView === "stats"
+      ? "/mfl/stats"
+      : pagePath(pageName, {
+          ...options,
+          view: nextView,
+          walletAddress: options.walletAddress || state.currentAgentWalletAddress,
+          watchlistId: options.watchlistId || state.currentWatchlistId,
+        });
+  }
+
+  if (targetPath && currentNavigationPath() !== targetPath) {
+    window.history[options.replace ? "replaceState" : "pushState"]({}, "", targetPath);
+  }
+
+  updateViewButtons();
+  window.__mflStaticUiRuntime?.sync?.();
+  return nextView;
+}
+
+function commitPageTransition(pageName, updateHash = true, options = {}) {
+  const requestedPageName = String(pageName || "home");
+  const routePageName = requestedPageName === "mflstats" ? "mfl" : requestedPageName;
+  const viewConfig = Reflect.get(window, "__mflTableViewConfig");
+  const configuredViews = viewConfig && typeof viewConfig === "object" && Array.isArray(viewConfig?.[routePageName]?.order)
+    ? viewConfig[routePageName].order
+    : null;
+  const nextView = requestedPageName === "mflstats"
+    ? "stats"
+    : configuredViews
+      ? normalizeViewForPage(options.view || preferredViewForPage(routePageName), routePageName)
+      : "";
+  const statePageName = routePageName === "mfl" && nextView === "stats" ? "mflstats" : requestedPageName;
+
+  pendingViewTransition = null;
+  state.currentPage = statePageName;
+  if (nextView) state.view = nextView;
+  state.page = 1;
+  if (Object.prototype.hasOwnProperty.call(options, "sortKey")) state.sortKey = options.sortKey;
+  if (Object.prototype.hasOwnProperty.call(options, "sortDirection")) state.sortDirection = options.sortDirection;
+  document.body.dataset.page = routePageName;
+
+  const targetPath = String(options.path || options.replaceUrl || pagePath(routePageName, {
+    ...options,
+    ...(nextView ? { view: nextView } : {}),
+  }));
+  const replaceRoute = Boolean(options.replace || options.replaceUrl);
+  const currentPath = currentNavigationPath();
+  if (targetPath && currentPath !== targetPath && (updateHash || replaceRoute)) {
+    window.history[replaceRoute ? "replaceState" : "pushState"]({}, "", targetPath);
+  }
+
+  window.__mflStaticUiRuntime?.sync?.();
+  return { pageName: routePageName, viewName: nextView, targetPath };
+}
+
+function stageViewTransition(pageName, viewName, options = {}) {
+  const nextView = String(viewName || "");
+  if (!nextView) return null;
+
+  const transition = {
+    sequence: ++navigationTransitionSequence,
+    pageName: String(pageName || ""),
+    viewName: nextView,
+    previousCurrentPage: state.currentPage,
+    previousView: state.view,
+    previousPage: state.page,
+    previousSortKey: state.sortKey,
+    previousSortDirection: state.sortDirection,
+    previousPath: currentNavigationPath(),
+    targetPath: "",
+  };
+  pendingViewTransition = transition;
+  commitViewTransition(pageName, nextView, options);
+  transition.targetPath = currentNavigationPath();
+  return transition;
+}
+
+function stagedViewTransitionIsCurrent(transition) {
+  return Boolean(
+    transition
+    && transition.sequence === navigationTransitionSequence
+    && pendingViewTransition === transition
+    && state.view === transition.viewName
+    && currentNavigationPath() === transition.targetPath
+  );
+}
+
+function takeStagedViewTransition(pageName, viewName) {
+  const transition = pendingViewTransition;
+  if (
+    !transition
+    || transition.pageName !== String(pageName || "")
+    || transition.viewName !== String(viewName || "")
+  ) return null;
+  pendingViewTransition = null;
+  return transition;
+}
+
+function waitForViewTransitionPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
+async function runPageTransition(pageName, updateHash = true, options = {}, loader = null) {
+  const navigation = Reflect.get(window, "__mflNavigation");
+  const navigationToken = typeof navigation?.begin === "function"
+    ? navigation.begin("page-transition")
+    : "";
+  try {
+    const sequence = ++navigationTransitionSequence;
+    const transition = commitPageTransition(pageName, updateHash, options);
+    await waitForViewTransitionPaint();
+    if (sequence !== navigationTransitionSequence) return null;
+    if (transition.targetPath && currentNavigationPath() !== transition.targetPath) return null;
+    return typeof loader === "function" ? await loader(transition) : transition;
+  } finally {
+    if (navigationToken) navigation?.end?.(navigationToken);
+  }
+}
+
+async function runViewTransition(pageName, viewName, options = {}, loader = null) {
+  const navigation = Reflect.get(window, "__mflNavigation");
+  const navigationToken = typeof navigation?.begin === "function"
+    ? navigation.begin("view-transition")
+    : "";
+  try {
+    const transition = stageViewTransition(pageName, viewName, options);
+    if (!transition) return null;
+    await waitForViewTransitionPaint();
+    if (!stagedViewTransitionIsCurrent(transition)) return null;
+    if (typeof loader === "function") {
+      pendingViewTransition = null;
+      return await loader(transition);
+    }
+    return transition;
+  } finally {
+    if (navigationToken) navigation?.end?.(navigationToken);
+  }
+}
+
+Reflect.set(window, "__mflCommitViewTransition", commitViewTransition);
+Reflect.set(window, "__mflCommitPageTransition", commitPageTransition);
+Reflect.set(window, "__mflRunViewTransition", runViewTransition);
+Reflect.set(window, "__mflRunPageTransition", runPageTransition);
+Reflect.set(window, "__mflWaitForViewTransitionPaint", waitForViewTransitionPaint);
+
 function resetPageScroll() {
   window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 
@@ -2746,7 +2905,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
 
-  if ((tablePage || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
+  if ((tablePage || mflStatsActive || playerPageActive || evaluationPageActive) && !state.dataLoaded) {
     state.currentPage = pageName;
     homePage.hidden = true;
     progressionPage.hidden = !tablePage;
@@ -2791,6 +2950,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   renderWatchlistSwitcher();
   if (tablePage) {
     restoreSavedTableState(pageName, { view: options.view });
+    syncRestoredTableControls(pageName);
     updateViewButtons();
     buildHeader();
   }
@@ -2945,19 +3105,19 @@ function tablePageKey(pageName = state.currentPage) {
 }
 
 function allowedViewsForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return ["attributes", "next", "contracts"];
-  }
-
-  return pageViewOptions[pageName] || pageViewOptions.progression;
+  const viewConfig = Reflect.get(window, "__mflTableViewConfig");
+  const configuredOrder = viewConfig && typeof viewConfig === "object" && Array.isArray(viewConfig?.[pageName]?.order)
+    ? Array.from(viewConfig[pageName].order)
+    : null;
+  return configuredOrder || pageViewOptions[pageName] || pageViewOptions.progression;
 }
 
 function defaultViewForPage(pageName = tablePageKey() || "progression") {
-  if (pageName === "watchlist" && !hasProgressionAccess()) {
-    return "attributes";
-  }
-
-  return defaultPageViews[pageName] || "current";
+  const viewConfig = Reflect.get(window, "__mflTableViewConfig");
+  const configuredFallback = viewConfig && typeof viewConfig === "object"
+    ? String(viewConfig?.[pageName]?.fallback || "")
+    : "";
+  return configuredFallback || defaultPageViews[pageName] || "current";
 }
 
 function normalizeViewForPage(viewName, pageName = tablePageKey() || "progression") {
@@ -2965,10 +3125,11 @@ function normalizeViewForPage(viewName, pageName = tablePageKey() || "progressio
 }
 
 function pageNameForViewButton(button) {
-  // Runtime/static helpers may leave data-page behind while the SPA has already
-  // moved to another shared table page. The live application page is the
-  // authoritative owner; data-page is only a first-paint fallback.
-  const currentPage = state.currentPage === "mflstats" ? "mfl" : tablePageKey();
+  const currentPage = state.currentPage === "mflstats"
+    ? "mfl"
+    : state.currentPage === "club"
+      ? "club"
+      : tablePageKey();
   return currentPage || button?.dataset?.page || "progression";
 }
 
@@ -3009,15 +3170,13 @@ function updateNavigationLinks() {
 }
 
 function updateViewButtons() {
-  viewButtons.forEach((button) => {
-    const pageName = pageNameForViewButton(button);
-    const allowedViews = allowedViewsForPage(pageName);
-    const buttonView = button.dataset.view;
-    const activeView = state.currentPage === "mflstats" && pageName === "mfl" ? "stats" : state.view;
-    const allowed = allowedViews.includes(buttonView);
-    button.hidden = !allowed;
-    button.classList.toggle("active", allowed && buttonView === activeView);
-  });
+  const pageName = state.currentPage === "mflstats"
+    ? "mfl"
+    : state.currentPage === "club"
+      ? "club"
+      : (tablePageKey() || "progression");
+  const activeView = state.currentPage === "mflstats" ? "stats" : state.view;
+  window.__mflStaticUiRuntime?.syncTableViews?.(pageName, activeView);
   updateNavigationLinks();
 }
 
@@ -4044,12 +4203,15 @@ function showGenericToast(message) {
 }
 
 
-function updateWatchlistUrl(replace = false, force = false) {
+function updateWatchlistUrl(replace = false, force = false, view = "") {
   if ((!force && state.currentPage !== "watchlist") || !state.currentWatchlistId) {
     return;
   }
 
-  const targetPath = pagePath("watchlist", { watchlistId: state.currentWatchlistId });
+  const targetPath = pagePath("watchlist", {
+    watchlistId: state.currentWatchlistId,
+    ...(view ? { view } : {}),
+  });
   if (`${window.location.pathname}${window.location.search}` === targetPath) {
     return;
   }
@@ -4074,7 +4236,7 @@ async function ensureWatchlistRoute(options = {}) {
     setActiveWatchlistIds(firstWatchlist?.playerIds || []);
     renderWatchlistSwitcher();
     showToast("Watchlist not found.");
-    updateWatchlistUrl(true, true);
+    updateWatchlistUrl(true, true, options.view);
     return;
   }
 
@@ -4082,7 +4244,7 @@ async function ensureWatchlistRoute(options = {}) {
   state.currentWatchlistId = nextWatchlist?.id || "";
   setActiveWatchlistIds(nextWatchlist?.playerIds || []);
   renderWatchlistSwitcher();
-  updateWatchlistUrl(!routeId, true);
+  updateWatchlistUrl(!routeId, true, options.view);
   queueCloudTableStateSave();
 }
 
@@ -5728,34 +5890,10 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.type = "button";
   button.className = "copyPlayerIdButton";
   button.textContent = label;
+  button.dataset.playerId = String(playerId);
   button.dataset.tooltip = "Click to copy";
   button.setAttribute("aria-label", "Click to copy");
   markTableInteractiveHover(button, "id", playerId);
-  button.addEventListener("mouseenter", () => showPlayerNoteTooltip(button));
-  button.addEventListener("mouseleave", hidePlayerNoteTooltip);
-  button.addEventListener("blur", hidePlayerNoteTooltip);
-  const copyFromButton = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    state.tooltipSuppressedUntil = Date.now() + 350;
-    hidePlayerNoteTooltip({ immediate: true });
-    button.blur();
-    copyPlayerId(playerId);
-  };
-  button.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) {
-      return;
-    }
-    copyFromButton(event);
-  });
-  button.addEventListener("click", (event) => {
-    if (Date.now() < state.tooltipSuppressedUntil) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    copyFromButton(event);
-  });
   return button;
 }
 
@@ -5804,19 +5942,26 @@ function formatCellValue(row, column) {
 }
 
 function retirementMarker(row) {
-  const retirementYears = getValue(row, "retirement_years");
+      const rawRetirementYears = getValue(row, "retirement_years");
+      const retirementYears = rawRetirementYears === null
+        || rawRetirementYears === undefined
+        || String(rawRetirementYears).trim() === ""
+        ? null
+        : Number(rawRetirementYears);
 
   if (retirementYears === 0) {
     return {
-      emoji: "\u{1F3C1}",
+      icon: "calendar-x-2",
       label: "Retired",
+      status: "retired",
     };
   }
 
   if ([1, 2, 3].includes(retirementYears)) {
     return {
-      emoji: "\u23F3",
+      icon: "calendar-clock",
       label: `${retirementYears} year${retirementYears === 1 ? "" : "s"} left`,
+      status: `retiring-${retirementYears}`,
     };
   }
 
@@ -5840,14 +5985,20 @@ function appendNameMarker(cell, marker, className) {
   }
 
   const markerElement = document.createElement("span");
-  markerElement.className = className;
-  markerElement.textContent = marker.emoji;
+  markerElement.className = `${className} retirementMarker--${marker.status || "default"}`;
+  if (marker.icon) {
+    const markerIcon = document.createElement("img");
+    markerIcon.src = `/retirement-${marker.icon}.svg`;
+    markerIcon.width = 16;
+    markerIcon.height = 16;
+    markerIcon.alt = "";
+    markerIcon.setAttribute("aria-hidden", "true");
+    markerElement.appendChild(markerIcon);
+  } else {
+    markerElement.textContent = marker.emoji;
+  }
   markerElement.dataset.tooltip = marker.label;
   markerElement.setAttribute("aria-label", marker.label);
-  markerElement.addEventListener("mouseenter", () => showPlayerNoteTooltip(markerElement));
-  markerElement.addEventListener("focus", () => showPlayerNoteTooltip(markerElement));
-  markerElement.addEventListener("mouseleave", hidePlayerNoteTooltip);
-  markerElement.addEventListener("blur", hidePlayerNoteTooltip);
   cell.appendChild(markerElement);
 }
 
@@ -5861,7 +6012,7 @@ function agentRoute(walletAddress) {
     return pagePath("mfl", { view: preferredViewForPage("mfl") });
   }
 
-  return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: preferredViewForPage("agents") }) : "#";
+  return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: "attributes" }) : "#";
 }
 
 function openAgentPage(walletAddress) {
@@ -5886,7 +6037,7 @@ function openAgentPage(walletAddress) {
     return;
   }
 
-  setPage("agents", true, { walletAddress: normalizedWalletAddress });
+  setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes" });
 }
 
 function rowByPlayerId(playerId) {
@@ -6834,7 +6985,8 @@ function renderEvaluationSearchResults() {
       try {
         const route = incrementalRouteTarget("evaluation", { playerId });
         const loadAndRender = async () => {
-          await requestIncrementalRoute(route, 1);
+          const payload = await requestIncrementalRoute(route, 1);
+          if (!payload) return false;
           const row = rowByPlayerId(playerId);
           if (row) {
             renderEvaluationTable(row);
@@ -7756,7 +7908,7 @@ function renderPlayerPage(playerId) {
   const heightLabel = height === "NULL" ? height : `${height} cm`;
   const ageMarker = retirementMarker(row);
   const ageMarkerHtml = ageMarker
-    ? ` <span class="retirementMarker playerAgeMarker" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}">${ageMarker.emoji}</span>`
+    ? ` <span class="retirementMarker playerAgeMarker retirementMarker--${escapeHtml(ageMarker.status || "default")}" data-tooltip="${escapeHtml(ageMarker.label)}" aria-label="${escapeHtml(ageMarker.label)}"><img src="/retirement-${escapeHtml(ageMarker.icon)}.svg" width="16" height="16" alt="" aria-hidden="true"></span>`
     : "";
   const agentWalletAddress = getValue(row, "wallet_address");
   const agentTooltip = joinedAgencyTooltip(row);
@@ -7767,7 +7919,7 @@ function renderPlayerPage(playerId) {
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();
   const contractTeamHtml = contractClubId
-    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/attributes" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
+    ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="/clubs/${encodeURIComponent(contractClubId)}/squad" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
     : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;
   const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;
   const revenueShare = rowHasActiveContract(row) ? formatContractRevenueShare(getValue(row, "active_contract_revenue_share")) : "";
@@ -7869,7 +8021,9 @@ function renderPlayerPage(playerId) {
   }
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.playerAttributeView = button.dataset.playerAttributeView;
+      const nextView = button.dataset.playerAttributeView;
+      if (!nextView || nextView === state.playerAttributeView) return;
+      state.playerAttributeView = nextView;
       saveTableState();
       renderPlayerPage(id);
     });
@@ -8252,42 +8406,22 @@ function sortableValue(row, column) {
   return getValue(row, column);
 }
 
-function applyTableColWidth(col, width) {
-  if (!Number.isFinite(width)) {
-    return 0;
-  }
-
-  const pixelWidth = `${width}px`;
-  col.style.width = pixelWidth;
-  col.style.minWidth = pixelWidth;
-  col.style.maxWidth = pixelWidth;
-  return width;
-}
-
 function buildTableColGroup() {
-  const fragment = document.createDocumentFragment();
-  const selectionCol = document.createElement("col");
-  let totalWidth = 0;
-  selectionCol.className = "col-select";
-  totalWidth += applyTableColWidth(selectionCol, tableColumnWidths.selection);
-  fragment.appendChild(selectionCol);
+  const targetClasses = [
+    "col-select",
+    ...currentViewColumns().map((column) => tableColumnClass(column)),
+  ];
+  const existingCols = Array.from(tableColGroup.children);
+  const alreadyCanonical = existingCols.length === targetClasses.length
+    && existingCols.every((col, index) => col.className === targetClasses[index]);
+  if (alreadyCanonical) return;
 
-  currentViewColumns().forEach((column) => {
+  const fragment = document.createDocumentFragment();
+  targetClasses.forEach((columnClass) => {
     const col = document.createElement("col");
-    const columnClass = tableColumnClass(column);
-    if (columnClass) {
-      col.classList.add(...columnClass.split(" "));
-    }
-    totalWidth += applyTableColWidth(col, tableColumnWidths[column]);
+    if (columnClass) col.classList.add(...columnClass.split(" "));
     fragment.appendChild(col);
   });
-
-  const table = tableColGroup.closest("table");
-  if (table) {
-    const pixelWidth = `${totalWidth}px`;
-    table.style.width = pixelWidth;
-    table.style.minWidth = pixelWidth;
-  }
 
   tableColGroup.replaceChildren(fragment);
 }
@@ -8727,16 +8861,35 @@ function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage
   }
 }
 
+function normalizedSavedTableControlState(pageName, savedState) {
+  const newMints = Boolean(savedState.newMints);
+  const mflPackable = pageName === "mfl"
+    ? (newMints ? false : (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true))
+    : false;
+
+  return {
+    pageName,
+    hideRetired: savedState.hideRetired !== false,
+    hideRetiring: Boolean(savedState.hideRetiring),
+    hideMflPlayers: pageName === "database"
+      ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+      : false,
+    mflPackable,
+    newMints,
+    rules: Array.isArray(savedState.rules)
+      ? savedState.rules.map((rule) => ({ ...rule }))
+      : [],
+  };
+}
+
 function restoreSavedTableState(pageName = tablePageKey() || "progression", options = {}) {
   const savedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
 
   state.view = normalizeViewForPage(options.view || savedState.view, pageName);
-  updateViewButtons();
 
   if (Number(savedState.pageSize)) {
     state.pageSize = Number(savedState.pageSize);
-    pageSizeSelect.value = String(state.pageSize);
   }
 
   const viewSortState = normalizedViewSortState(
@@ -8745,48 +8898,39 @@ function restoreSavedTableState(pageName = tablePageKey() || "progression", opti
   );
   state.sortKey = viewSortState.sortKey;
   state.sortDirection = viewSortState.sortDirection;
-
-  hideRetiredInput.checked = savedState.hideRetired !== false;
-  hideRetiringInput.checked = Boolean(savedState.hideRetiring);
-  if (hideMflPlayersInput) {
-    hideMflPlayersInput.checked = pageName === "database"
-      ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
-      : false;
-  }
-  if (packablePlayersInput) {
-    packablePlayersInput.checked = pageName === "mfl"
-      ? (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true)
-      : false;
-  }
-  newMintsInput.checked = Boolean(savedState.newMints);
-  if (pageName === "mfl" && newMintsInput.checked && packablePlayersInput) {
-    packablePlayersInput.checked = false;
-  }
   state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
+  state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
+}
 
-  if (options.deferRules) {
-    updateFilterSummary(activeFilterCountFromSavedRules(savedState.rules));
-    return;
-  }
+function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  const restored = state.pendingTableControlRestore;
+  if (!restored || restored.pageName !== pageName) return false;
+
+  pageSizeSelect.value = String(state.pageSize);
+  hideRetiredInput.checked = restored.hideRetired;
+  hideRetiringInput.checked = restored.hideRetiring;
+  if (hideMflPlayersInput) hideMflPlayersInput.checked = restored.hideMflPlayers;
+  if (packablePlayersInput) packablePlayersInput.checked = restored.mflPackable;
+  newMintsInput.checked = restored.newMints;
 
   const allowedColumns = new Set(availableFilterColumns(pageName));
   filterRules.replaceChildren();
-
-  for (const rule of savedState.rules || []) {
-    if (allowedColumns.has(rule.column)) {
-      addFilterRule(rule.column, {
-        connector: rule.connector,
-        operator: rule.operator,
-        value: rule.value,
-        valueTo: rule.valueTo,
-        focus: false,
-      });
-    }
+  for (const rule of restored.rules) {
+    if (!allowedColumns.has(rule.column)) continue;
+    addFilterRule(rule.column, {
+      connector: rule.connector,
+      operator: rule.operator,
+      value: rule.value,
+      valueTo: rule.valueTo,
+      focus: false,
+    });
   }
 
   populateAddFilterSelect(pageName);
   refreshRuleColumnSelects(pageName);
   updateFilterSummary();
+  state.pendingTableControlRestore = null;
+  return true;
 }
 
 function readFilterDraftRules() {
@@ -9223,6 +9367,7 @@ function renderMflStatsPage() {
 }
 
 function rowHasHiddenMflJoinedAgencyDate(row) {
+  if (state?.currentPage === "club" || /^\/(?:clubs|club)\/[^/]+(?:\/|$)/i.test(window.location.pathname)) return false;
   if (!rowIsMflWalletPlayer(row)) {
     return false;
   }
@@ -9538,6 +9683,7 @@ function renderTable() {
     const selectionCell = document.createElement("td");
     const selectionInput = document.createElement("input");
     const playerId = getValue(row, "player_id");
+    tableRow.dataset.playerId = String(playerId);
     if (state.hoveredTablePlayerId && String(playerId) === state.hoveredTablePlayerId) {
       tableRow.classList.add("tableRowHovered");
     }
@@ -9546,7 +9692,7 @@ function renderTable() {
     selectionInput.type = "checkbox";
     selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
     selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
-    selectionInput.addEventListener("click", (event) => setPlayerSelected(playerId, selectionInput.checked, event.shiftKey));
+    selectionInput.dataset.playerId = String(playerId);
     selectionCell.appendChild(selectionInput);
     tableRow.appendChild(selectionCell);
 
@@ -9566,10 +9712,7 @@ function renderTable() {
         nameLink.className = "playerNameLink";
         markTableInteractiveHover(nameLink, "name", playerId);
         nameLink.textContent = formatCellValue(row, column);
-        nameLink.addEventListener("click", (event) => {
-          event.preventDefault();
-          openPlayerPage(playerId);
-        });
+        nameLink.dataset.playerId = String(playerId);
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");
         markerWrap.className = "playerNameMarkers";
@@ -9579,10 +9722,7 @@ function renderTable() {
           noteIcon.dataset.noteTooltip = playerNote(playerId);
           noteIcon.setAttribute("aria-label", "Player note");
           noteIcon.textContent = "\u{1F4DD}";
-          noteIcon.addEventListener("mouseenter", () => showPlayerNoteTooltip(noteIcon));
-          noteIcon.addEventListener("focus", () => showPlayerNoteTooltip(noteIcon));
-          noteIcon.addEventListener("mouseleave", hidePlayerNoteTooltip);
-          noteIcon.addEventListener("blur", hidePlayerNoteTooltip);
+
           markerWrap.appendChild(noteIcon);
         }
         appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
@@ -9624,18 +9764,25 @@ function renderTable() {
           markTableInteractiveHover(link, "agent", walletAddress);
           link.textContent = agentLabel;
           const tooltip = joinedAgencyTooltip(row);
+          link.dataset.walletAddress = String(walletAddress || "");
           if (tooltip) {
             link.dataset.tooltip = tooltip;
-            link.addEventListener("mouseenter", () => showPlayerNoteTooltip(link));
-            link.addEventListener("focus", () => showPlayerNoteTooltip(link));
-            link.addEventListener("mouseleave", hidePlayerNoteTooltip);
-            link.addEventListener("blur", hidePlayerNoteTooltip);
           }
-          link.addEventListener("click", (event) => {
-            event.preventDefault();
-            openAgentPage(walletAddress);
-          });
           cell.appendChild(link);
+        }
+      } else if (column === "active_contract_club_name") {
+        const clubId = String(getValue(row, "active_contract_club_id") || "").trim();
+        const clubName = formatContractClubName(row);
+        if (state.currentPage !== "club" && clubId && rowHasActiveContract(row)) {
+          const clubLink = document.createElement("a");
+          clubLink.href = `/clubs/${encodeURIComponent(clubId)}/squad`;
+          clubLink.className = "agentTableLink";
+          markTableInteractiveHover(clubLink, "club", clubId);
+          clubLink.textContent = clubName;
+          clubLink.dataset.clubId = clubId;
+          cell.appendChild(clubLink);
+        } else {
+          cell.textContent = clubName;
         }
       } else if (column === linkColumn) {
         const link = document.createElement("a");
@@ -9745,7 +9892,7 @@ function progressionDataColumns(manifest) {
 }
 
 function clubRouteTargetFromPath() {
-  const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(contracts|attributes|current-season|all-time))?\/?$/i);
+  const match = window.location.pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(squad|contracts|attributes|current-season|all-time))?\/?$/i);
   if (!match) {
     return null;
   }
@@ -9770,7 +9917,7 @@ function incrementalRouteTarget(pageName, options = {}) {
     return {
       ...clubTarget,
       pageName,
-      access: currentDataAccess(["current", "all"].includes(clubTarget.view) ? "progression" : "database"),
+      access: "public",
     };
   }
 
@@ -9783,7 +9930,7 @@ function incrementalRouteTarget(pageName, options = {}) {
 
   if (pageName === "database") return { ...base, scope: "database" };
   if (pageName === "progression") return { ...base, scope: "progression" };
-  if (pageName === "mfl") return { ...base, scope: "mfl" };
+  if (pageName === "mfl") return { ...base, scope: view === "stats" ? "mflstats" : "mfl" };
   if (pageName === "agents") {
     return {
       ...base,
@@ -9825,7 +9972,7 @@ function incrementalDataQuery(route, page = 1) {
     page: String(page),
     pageSize: String(["player", "evaluation"].includes(route.scope)
       ? 1
-      : route.scope === "club"
+      : ["club", "mflstats"].includes(route.scope)
         ? 5000
         : state.pageSize),
     sortKey: route.scope === "club" ? "positions" : state.sortKey,
@@ -9929,8 +10076,46 @@ function applyIncrementalPayload(route, payload) {
   }
 }
 
+const ROUTE_REQUEST_TIMEOUT_MS = 60_000;
+let incrementalRouteRequestGeneration = 0;
+let activeIncrementalNetworkRequest = null;
+
+function stopActiveIncrementalNetworkRequest() {
+  const active = activeIncrementalNetworkRequest;
+  if (!active) return;
+  activeIncrementalNetworkRequest = null;
+  if (!active.controller.signal.aborted) active.controller.abort();
+  if (state.incrementalRequestPromises.get(active.cacheKey) === active.promise) {
+    state.incrementalRequestPromises.delete(active.cacheKey);
+  }
+}
+
+function invalidateIncrementalRouteRequest() {
+  incrementalRouteRequestGeneration += 1;
+  stopActiveIncrementalNetworkRequest();
+  return incrementalRouteRequestGeneration;
+}
+
+function beginIncrementalRouteRequest(cacheKey, force = false) {
+  const generation = ++incrementalRouteRequestGeneration;
+  const active = activeIncrementalNetworkRequest;
+  if (active && (force || active.cacheKey !== cacheKey)) {
+    stopActiveIncrementalNetworkRequest();
+  }
+  return generation;
+}
+
+function incrementalRouteRequestIsCurrent(generation) {
+  return generation === incrementalRouteRequestGeneration;
+}
+
+window.__mflCancelIncrementalRouteRequest = invalidateIncrementalRouteRequest;
+
 async function requestIncrementalRoute(route, page = 1, options = {}) {
+  const force = Boolean(options.force);
+
   if (route.scope === "empty") {
+    const generation = beginIncrementalRouteRequest("empty", force);
     const payload = {
       columns: state.manifest?.files?.public?.columns || state.columns || [],
       rows: [],
@@ -9940,40 +10125,79 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
       sourceRows: 0,
       generatedAt: state.manifest?.generated_at || null,
     };
+    if (!incrementalRouteRequestIsCurrent(generation)) return null;
     applyIncrementalPayload(route, payload);
     state.incrementalMode = false;
     return payload;
   }
 
-  const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
-  const cachedPayload = state.incrementalPayloadCache.get(cacheKey);
+  const { requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const generation = beginIncrementalRouteRequest(cacheKey, force);
+  if (force) state.incrementalPayloadCache.delete(cacheKey);
+
+  const cachedPayload = !force ? state.incrementalPayloadCache.get(cacheKey) : null;
   if (cachedPayload) {
+    if (!incrementalRouteRequestIsCurrent(generation)) return null;
     applyIncrementalPayload(route, cachedPayload);
     state.incrementalLastKey = requestKey;
     state.incrementalLastLoadedAt = Date.now();
     return cachedPayload;
   }
 
-  let requestPromise = state.incrementalRequestPromises.get(cacheKey);
+  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
-    requestPromise = (async () => {
-      const response = await fetch(`/api/data?${requestKey}`, {
-        cache: "no-store",
-        headers: walletProofHeaders(true),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not load this page.");
+    const controller = new AbortController();
+    let timedOut = false;
+    let timeout = 0;
+    let requestRecord = null;
+    const networkPromise = (async () => {
+      timeout = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, ROUTE_REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetch("/api/data?" + requestKey, {
+          cache: "no-store",
+          headers: walletProofHeaders(true),
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Could not load this page.");
+        }
+        if (controller.signal.aborted) return null;
+        state.incrementalPayloadCache.set(cacheKey, payload);
+        return payload;
+      } catch (error) {
+        if (error?.name === "AbortError" && !timedOut) return null;
+        if (timedOut) throw new Error("Could not load this page.");
+        throw error;
+      } finally {
+        if (timeout) window.clearTimeout(timeout);
       }
-      state.incrementalPayloadCache.set(cacheKey, payload);
-      return payload;
-    })().finally(() => {
-      state.incrementalRequestPromises.delete(cacheKey);
+    })();
+
+    requestPromise = networkPromise.finally(() => {
+      if (state.incrementalRequestPromises.get(cacheKey) === requestPromise) {
+        state.incrementalRequestPromises.delete(cacheKey);
+      }
+      if (activeIncrementalNetworkRequest === requestRecord) {
+        activeIncrementalNetworkRequest = null;
+      }
     });
+    requestRecord = { cacheKey, controller, promise: requestPromise };
+    activeIncrementalNetworkRequest = requestRecord;
     state.incrementalRequestPromises.set(cacheKey, requestPromise);
   }
 
-  const payload = await requestPromise;
+  let payload;
+  try {
+    payload = await requestPromise;
+  } catch (error) {
+    if (!incrementalRouteRequestIsCurrent(generation)) return null;
+    throw error;
+  }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
   applyIncrementalPayload(route, payload);
   state.incrementalLastKey = requestKey;
   state.incrementalLastLoadedAt = Date.now();
@@ -9994,7 +10218,8 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
 
   const loadAndRender = async () => {
     try {
-      await requestIncrementalRoute(route, page);
+      const payload = await requestIncrementalRoute(route, page);
+      if (!payload) return false;
       state.incrementalApplying = true;
       try {
         buildHeader();
@@ -10014,10 +10239,7 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
   }
 
   state.page = page;
-  return withInteractionBusy(async () => {
-    showTableBusyState();
-    return loadAndRender();
-  });
+  return withInteractionBusy(loadAndRender);
 }
 
 window.mflReloadIncrementalPage = reloadIncrementalPage;
@@ -10042,19 +10264,43 @@ function activateViewButton(button) {
   const viewName = button.dataset.view;
   if (!viewName) return;
 
+  const activePageName = state.currentPage === "mflstats" ? "mfl" : state.currentPage;
+  const activeViewName = state.currentPage === "mflstats" ? "stats" : state.view;
+  if (pageName === activePageName && viewName === activeViewName) return;
+
+  if (pageName === "club") return;
+
   if (pageName === "mfl" && viewName === "stats") {
-    void setPage("mflstats", true, { skipNavigationLoading: true });
+    void runViewTransition("mfl", "stats", { statePageName: "mflstats" }, async () => {
+      await setPage("mfl", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
+    });
     return;
   }
   if (state.currentPage === "mflstats" && pageName === "mfl" && viewName === "attributes") {
-    void setPage("mfl", true, { view: "attributes", skipNavigationLoading: true });
+    void runViewTransition("mfl", "attributes", { statePageName: "mfl" }, async () => {
+      await setPage("mfl", false, { view: "attributes", skipNavigationTransition: true, skipNavigationLoading: true });
+    });
+    return;
+  }
+  if (pageName === "database" && viewName === "stats") {
+    void runViewTransition("database", "stats", {}, async () => {
+      await setPage("database", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
+    });
     return;
   }
   if (pageName !== state.currentPage && tablePages.has(pageName)) {
     state.currentPage = pageName;
     document.body.dataset.page = pageName;
   }
-  void setView(viewName);
+  void (async () => {
+    const transition = await runViewTransition(pageName, viewName, {
+      walletAddress: state.currentAgentWalletAddress,
+      watchlistId: state.currentWatchlistId,
+    });
+    if (!transition) return;
+    if (!state.incrementalMode) pendingViewTransition = null;
+    await setView(viewName);
+  })();
 }
 
 function clearPointerCommittedViewButton() {
@@ -10546,10 +10792,67 @@ navButtons.forEach((button) => {
 });
 
 
+function copyDelegatedPlayerId(button, event) {
+  const playerId = String(button.dataset.playerId || "").trim();
+  if (!playerId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  state.tooltipSuppressedUntil = Date.now() + 350;
+  button.blur();
+  copyPlayerId(playerId);
+}
+
+tableBody?.addEventListener("pointerdown", (event) => {
+  if (event.isPrimary === false || event.button !== 0 || !(event.target instanceof Element)) return;
+  const button = event.target.closest(".copyPlayerIdButton[data-player-id]");
+  if (!(button instanceof HTMLButtonElement) || !tableBody.contains(button)) return;
+  copyDelegatedPlayerId(button, event);
+});
+
+tableBody?.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+
+  const copyButton = event.target.closest(".copyPlayerIdButton[data-player-id]");
+  if (copyButton instanceof HTMLButtonElement && tableBody.contains(copyButton)) {
+    if (Date.now() < state.tooltipSuppressedUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    copyDelegatedPlayerId(copyButton, event);
+    return;
+  }
+
+  const selectionInput = event.target.closest('.selectionCell input[type="checkbox"][data-player-id]');
+  if (selectionInput instanceof HTMLInputElement && tableBody.contains(selectionInput)) {
+    setPlayerSelected(selectionInput.dataset.playerId || "", selectionInput.checked, event.shiftKey);
+    return;
+  }
+
+  const playerLink = event.target.closest(".playerNameLink[data-player-id]");
+  if (playerLink instanceof HTMLAnchorElement && tableBody.contains(playerLink)) {
+    event.preventDefault();
+    openPlayerPage(playerLink.dataset.playerId || "");
+    return;
+  }
+
+  const agentLink = event.target.closest(".agentTableLink[data-wallet-address]");
+  if (agentLink instanceof HTMLAnchorElement && tableBody.contains(agentLink)) {
+    event.preventDefault();
+    openAgentPage(agentLink.dataset.walletAddress || "");
+    return;
+  }
+
+  const clubLink = event.target.closest(".agentTableLink[data-club-id]");
+  if (clubLink instanceof HTMLAnchorElement && tableBody.contains(clubLink) && typeof window.mflOpenClubPage === "function") {
+    event.preventDefault();
+    window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");
+  }
+});
+
 tableBody?.addEventListener("pointermove", (event) => {
   const row = event.target?.closest?.("#tableBody tr");
-  const idButton = row?.querySelector?.(".copyPlayerIdButton");
-  const nextId = String(idButton?.textContent || "").trim();
+  const nextId = String(row?.dataset?.playerId || "").trim();
   const interactive = event.target?.closest?.("[data-table-interactive-key]");
   const interactiveKey = String(interactive?.dataset?.tableInteractiveKey || "");
 
@@ -10692,9 +10995,17 @@ function setupChangelogSections() {
 async function startApp() {
   loadTheme();
   setupChangelogSections();
-  const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   loadSavedTableState();
+  const initialTarget = pageTargetFromPath(`${location.pathname}${location.search}`);
   const earlyGlobalSearch = primeGlobalSearchIndexes();
+  const startupSummaryPromise = loadSummary();
+  const startupWalletPreferencesPromise = loadWalletPreferences();
+  const startupProgressionPermissionPromise = (
+    pageRequiresProgressionPermission(initialTarget.pageName)
+    && hasWalletOptIn()
+  )
+    ? loadWalletPermissions({ force: true })
+    : null;
   applyStoredWalletPermission();
   loadEvaluationMflPerUsd();
   loadEvaluationLateSeasonRewardRates();
@@ -10702,11 +11013,23 @@ async function startApp() {
   evaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());
   updateMenuVisibility();
   showAppShell();
-  void ensureFlowWallet();
-  await Promise.allSettled([earlyGlobalSearch, loadSummary(), loadWalletPreferences()]);
+
+  const startupDependencies = [earlyGlobalSearch];
+  if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);
+  if (initialTarget.pageName === "home") startupDependencies.push(startupSummaryPromise);
+  if (["watchlist", "myplayers", "settings", "player"].includes(initialTarget.pageName)) {
+    startupDependencies.push(startupWalletPreferencesPromise);
+  }
+  await Promise.allSettled(startupDependencies);
   applyStoredWalletPermission();
   updateAccountState();
+  updateMenuVisibility();
   await showHomeShell(initialTarget.pageName, false, initialTarget.options);
+
+  void Promise.allSettled([startupSummaryPromise, startupWalletPreferencesPromise]).then(() => {
+    applyStoredWalletPermission();
+    updateAccountState();
+  });
 }
 
 (() => {
@@ -10938,7 +11261,7 @@ async function startApp() {
   if (typeof restoreSavedTableState === "function") {
     const originalRestoreSavedTableState = restoreSavedTableState;
     restoreSavedTableState = function restoreSavedTableStateWithRoute(pageName, options = {}) {
-      const routeView = routeViewFromPath();
+      const routeView = pageName === "watchlist" && !options.view ? routeViewFromPath() : "";
       const result = originalRestoreSavedTableState.call(
         this,
         pageName,
@@ -10956,7 +11279,8 @@ async function startApp() {
   if (typeof setPage === "function") {
     const originalSetPage = setPage;
     setPage = async function setPageWithWatchlistRoute(pageName, updateHash = true, options = {}) {
-      const routeView = pageName === "watchlist" ? routeViewFromPath() : "";
+      const requestedView = pageName === "watchlist" ? String(options?.view || "") : "";
+      const routeView = pageName === "watchlist" && !requestedView ? routeViewFromPath() : "";
       const nextOptions = routeView ? { ...options, view: routeView } : options;
       const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
       keepSidebarExpanded();
@@ -10981,125 +11305,6 @@ async function startApp() {
     keepSidebarExpanded();
       }, { once: true });
 })();
-
-(() => {
-  const removedAgentViews = new Set(["current", "all"]);
-  const removedAgentSlugs = new Set(["current-season", "all-time"]);
-
-  function isAgentsPage() {
-    if (typeof state === "object" && state?.currentPage === "agents") return true;
-    return /^\/agents?(?:\/|$)/i.test(window.location.pathname);
-  }
-
-  function normalizedAgentView(viewName) {
-    return removedAgentViews.has(String(viewName || "").toLowerCase()) ? "attributes" : viewName;
-  }
-
-  function hideRemovedAgentViewButtons() {
-    if (!isAgentsPage()) return;
-
-    document.querySelectorAll("button,a,[role='button']").forEach((element) => {
-      const view = String(
-        element.dataset?.view
-        || element.dataset?.tableView
-        || element.getAttribute("data-page-view")
-        || "",
-      ).toLowerCase();
-      const text = String(element.textContent || "").trim().toLowerCase();
-      const removed = removedAgentViews.has(view)
-        || removedAgentSlugs.has(view)
-        || text === "current season"
-        || text === "all time";
-
-      if (removed) element.remove();
-    });
-  }
-
-  function replaceRemovedAgentRoute() {
-    if (!isAgentsPage()) return;
-    const pathname = window.location.pathname;
-    const nextPath = pathname.replace(/\/(current-season|all-time)\/?$/i, "/attributes");
-    if (nextPath !== pathname) window.history.replaceState(window.history.state, "", `${nextPath}${window.location.search}${window.location.hash}`);
-  }
-
-  function enforceAllowedAgentView(render = true) {
-    if (!isAgentsPage() || typeof state !== "object" || !state) return false;
-    if (!removedAgentViews.has(String(state.view || "").toLowerCase())) {
-      hideRemovedAgentViewButtons();
-      return false;
-    }
-
-    state.view = "attributes";
-    state.page = 1;
-    replaceRemovedAgentRoute();
-
-    if (render) {
-      if (typeof updateViewButtons === "function") updateViewButtons();
-      if (typeof buildTableColGroup === "function") buildTableColGroup();
-      if (typeof buildHeader === "function") buildHeader();
-      if (typeof applyFilters === "function") applyFilters({ save: false });
-      else if (typeof renderTable === "function") renderTable();
-    }
-
-    hideRemovedAgentViewButtons();
-    return true;
-  }
-
-  if (typeof normalizeViewForPage === "function") {
-    const originalNormalizeViewForPage = normalizeViewForPage;
-    normalizeViewForPage = function normalizeViewWithoutRemovedAgentViews(viewName, pageName) {
-      const nextView = pageName === "agents" ? normalizedAgentView(viewName) : viewName;
-      return originalNormalizeViewForPage.call(this, nextView, pageName);
-    };
-  }
-
-  if (typeof restoreSavedTableState === "function") {
-    const originalRestoreSavedTableState = restoreSavedTableState;
-    restoreSavedTableState = function restoreAgentStateWithoutRemovedViews(pageName, options = {}) {
-      const nextOptions = pageName === "agents" && removedAgentViews.has(String(options?.view || "").toLowerCase())
-        ? { ...options, view: "attributes" }
-        : options;
-      const result = originalRestoreSavedTableState.call(this, pageName, nextOptions);
-      if (pageName === "agents") enforceAllowedAgentView(false);
-      return result;
-    };
-  }
-
-  if (typeof setPage === "function") {
-    const originalSetPage = setPage;
-    setPage = async function setPageWithoutRemovedAgentViews(pageName, updateHash = true, options = {}) {
-      const nextOptions = pageName === "agents" && removedAgentViews.has(String(options?.view || "").toLowerCase())
-        ? { ...options, view: "attributes" }
-        : options;
-      const result = await originalSetPage.call(this, pageName, updateHash, nextOptions);
-      if (pageName === "agents") enforceAllowedAgentView(true);
-      hideRemovedAgentViewButtons();
-      return result;
-    };
-  }
-
-  if (typeof updateViewButtons === "function") {
-    const originalUpdateViewButtons = updateViewButtons;
-    updateViewButtons = function updateAgentViewButtonsWithoutRemovedViews() {
-      const result = originalUpdateViewButtons.apply(this, arguments);
-      hideRemovedAgentViewButtons();
-      return result;
-    };
-  }
-
-  const observer = new MutationObserver(() => {
-    if (!isAgentsPage()) return;
-    enforceAllowedAgentView(false);
-    hideRemovedAgentViewButtons();
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  replaceRemovedAgentRoute();
-  requestAnimationFrame(() => enforceAllowedAgentView(true));
-  document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(() => enforceAllowedAgentView(true)), { once: true });
-  window.addEventListener("pageshow", () => requestAnimationFrame(() => enforceAllowedAgentView(true)));
-})();
-
 
 /* Public progression table views */
 (() => {
@@ -11137,7 +11342,7 @@ async function startApp() {
     const originalCurrentDataAccess = currentDataAccess;
     currentDataAccess = function currentPublicProgressionDataAccess(pageName = state.currentPage) {
       if (PUBLIC_TABLE_PAGES.has(pageName) && PUBLIC_PROGRESSION_VIEWS.includes(state.view)) {
-        return originalCurrentDataAccess.call(this, "progression");
+        return "public";
       }
       return originalCurrentDataAccess.apply(this, arguments);
     };
@@ -11240,7 +11445,7 @@ async function startApp() {
   }
 
   function clubRoute(pathname = normalizedPath()) {
-    const match = pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(contracts|attributes|current-season|all-time))?$/i);
+    const match = pathname.match(/^\/(?:clubs|club)\/([^/]+)(?:\/(squad|contracts|attributes|current-season|all-time))?$/i);
     if (!match) return null;
     const routeView = String(match[2] || "").toLowerCase();
     const view = routeView === "current-season"
@@ -11261,7 +11466,7 @@ async function startApp() {
         ? "all-time"
         : view === "contracts"
           ? "contracts"
-          : "attributes";
+          : "squad";
     return `/clubs/${encodeURIComponent(clubId)}/${safeView}`;
   }
 
@@ -11335,17 +11540,9 @@ async function startApp() {
   function finishClubSwitch() {
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
-        if (typeof buildTableColGroup === "function") buildTableColGroup();
-        if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-        applyClubPresentation();
-
-        requestAnimationFrame(() => {
-          if (typeof window.applyExactPlayerTableWidths === "function") window.applyExactPlayerTableWidths();
-          applyClubPresentation();
-          document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
-          setClubSwitching(false);
-          resolve();
-        });
+        document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
+        setClubSwitching(false);
+        resolve();
       });
     });
   }
@@ -11390,51 +11587,12 @@ async function startApp() {
     document.querySelectorAll(".navButton").forEach((link) => link.classList.remove("active"));
     renderClubTitle();
     hideClubPageControls();
-    updateClubLinks();
   }
 
   function openClubImmediately(clubId, view = "attributes") {
-    const route = canonicalClubRoute(clubId, view);
-    if (`${window.location.pathname}${window.location.search}` !== route) {
-      window.history.pushState({}, "", route);
-    }
-    void openClubPage(clubId, view, false);
+    void openClubPage(clubId, view, true);
   }
   window.mflOpenClubPage = openClubImmediately;
-
-  function updateClubLinks() {
-    const idColumn = clubIdColumn();
-    if (!idColumn || typeof currentViewColumns !== "function" || typeof currentPageRows !== "function") return;
-
-    const columns = currentViewColumns();
-    const clubNameIndex = columns.indexOf("active_contract_club_name");
-    if (clubNameIndex < 0 || typeof tableBody === "undefined" || !tableBody) return;
-
-    const rows = currentPageRows();
-    Array.from(tableBody.rows).forEach((tableRow, rowIndex) => {
-      if (
-        tableRow.classList.contains("staticTableBlankRow")
-        || tableRow.hasAttribute("data-loading-row")
-      ) return;
-
-      const row = rows[rowIndex];
-      const cell = tableRow.cells[clubNameIndex + 1];
-      if (!row || !cell) return;
-      const clubId = String(getValue(row, idColumn) || "").trim();
-      const name = String(getValue(row, "active_contract_club_name") || "").trim();
-      if (!clubId || !name) return;
-
-      const link = document.createElement("a");
-      link.href = canonicalClubRoute(clubId, "attributes");
-      link.className = "clubPageLink";
-      link.textContent = name;
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        openClubImmediately(clubId, "attributes");
-      });
-      cell.replaceChildren(link);
-    });
-  }
 
   function clubSearchEntries(query) {
     const idColumn = clubIdColumn();
@@ -11495,24 +11653,54 @@ async function startApp() {
   async function openClubPage(clubId, view = "attributes", updateHistory = true) {
     if (!clubId || openingClub) return;
     openingClub = true;
-    setClubSwitching(true);
     try {
       activeClubId = String(clubId);
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
-      if (updateHistory && `${window.location.pathname}${window.location.search}` !== route) {
-        window.history.pushState({}, "", route);
-      } else if (!updateHistory && normalizedPath() !== route) {
-        window.history.replaceState({}, "", route);
+      const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
+      if (!routeAlreadyCommitted) {
+        const transition = await runPageTransition(CLUB_PAGE, updateHistory, {
+          view: nextView,
+          clubId: activeClubId,
+          path: route,
+          replace: !updateHistory,
+          sortKey: "positions",
+          sortDirection: "asc",
+        });
+        if (!transition) return;
+      } else {
+        state.sortKey = "positions";
+        state.sortDirection = "asc";
       }
+      setClubSwitching(true);
 
-      if (typeof setPage === "function") {
-        const sourcePage = ["current", "all"].includes(nextView) ? "progression" : "database";
-        await setPage(sourcePage, false, { view: nextView, skipNavigationLoading: false });
-      }
+      const dataRoute = typeof incrementalRouteTarget === "function"
+        ? incrementalRouteTarget(CLUB_PAGE, { view: nextView })
+        : null;
+      let dataPayload = true;
+      const loadClubData = async () => {
+        if (dataRoute && typeof requestIncrementalRoute === "function") {
+          if (!incrementalRouteIsCached(dataRoute, 1)) {
+            renderIncrementalLoadingState(CLUB_PAGE, dataRoute);
+          }
+          dataPayload = await requestIncrementalRoute(dataRoute, 1);
+        }
+      };
+      await withInteractionBusy(loadClubData);
+      if (!dataPayload) return;
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
+      state.dataAccess = typeof currentDataAccess === "function" ? currentDataAccess(CLUB_PAGE) : "public";
+      document.body.dataset.page = CLUB_PAGE;
+      homePage.hidden = true;
+      progressionPage.hidden = false;
+      mflStatsPage.hidden = true;
+      myPlayersLockedPage.hidden = true;
+      evaluationPage.hidden = true;
+      playerPage.hidden = true;
+      settingsPage.hidden = true;
+      changelogPage.hidden = true;
       state.page = 1;
       state.sortKey = "positions";
       state.sortDirection = "asc";
@@ -11549,7 +11737,6 @@ async function startApp() {
       if (state.currentPage !== CLUB_PAGE || !activeClubId) {
         const result = originalApplyFilters.apply(this, arguments);
         restoreStandardControls();
-        requestAnimationFrame(updateClubLinks);
         return result;
       }
 
@@ -11560,7 +11747,6 @@ async function startApp() {
       try {
         const result = originalApplyFilters.call(this, { ...options, save: false });
         state.tableSourceRowsCount = state.rows.length;
-        applyClubPresentation();
         return result;
       } finally {
         state.rows = originalRows;
@@ -11568,17 +11754,6 @@ async function startApp() {
     };
   }
 
-  if (typeof renderTable === "function") {
-    const originalRenderTable = renderTable;
-    renderTable = function renderTableWithClubLinks() {
-      const result = originalRenderTable.apply(this, arguments);
-      requestAnimationFrame(() => {
-        updateClubLinks();
-        applyClubPresentation();
-      });
-      return result;
-    };
-  }
 
   if (typeof renderSearchResultsNow === "function") {
     const originalRenderSearchResultsNow = renderSearchResultsNow;
@@ -11595,7 +11770,6 @@ async function startApp() {
     showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
       if (!initialClubHandled) {
         initialClubHandled = true;
-        await originalShowHomeShell.call(this, "database", false, { view: initialClubRoute.view });
         await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
         return;
       }
@@ -11612,16 +11786,17 @@ async function startApp() {
     event.stopImmediatePropagation();
     const nextView = viewButton.dataset.view;
     if (nextView === state.view) return;
+    if (nextView === state.view) return;
     captureClubView(state.view);
-    window.history.replaceState({}, "", canonicalClubRoute(activeClubId, nextView));
-    state.view = nextView;
-    state.page = 1;
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
-    if (restoreCachedClubView(nextView)) return;
-    setClubSwitching(true);
-    if (typeof updateViewButtons === "function") updateViewButtons();
-    void (async () => {
+    void runViewTransition(CLUB_PAGE, nextView, {
+      statePageName: CLUB_PAGE,
+      path: canonicalClubRoute(activeClubId, nextView),
+      replace: true,
+      sortKey: "positions",
+      sortDirection: "asc",
+    }, async () => {
+      if (restoreCachedClubView(nextView)) return;
+      setClubSwitching(true);
       try {
         if (typeof window.mflLoadIncrementalRoutePage === "function") {
           await window.mflLoadIncrementalRoutePage("club", { view: nextView });
@@ -11633,7 +11808,7 @@ async function startApp() {
         await finishClubSwitch();
         captureClubView(nextView);
       }
-    })();
+    });
   }, true);
 
   window.addEventListener("popstate", () => {
@@ -11662,7 +11837,7 @@ async function startApp() {
 })();
 
 (() => {
-  const VERSION = "1.122.0";
+  const VERSION = String(window.__mflReleaseVersion || "");
   const MAX_SEARCH_RESULTS = 5;
   const MAX_TYPED_SEARCH_RESULTS = 15;
   const RECENT_CLUBS_STORAGE_KEY = "mfl-recent-search-clubs";
@@ -11850,11 +12025,7 @@ async function startApp() {
   }, true);
 
   function setFooterVersion() {
-    const footerLink = document.querySelector(".siteFooter a[data-page='changelog']");
-    if (footerLink) footerLink.textContent = `MFL Front Office v${VERSION}`;
-    document.querySelectorAll("[data-app-version]").forEach((element) => {
-      element.textContent = `v${VERSION}`;
-    });
+    window.__mflStaticUiRuntime?.sync?.();
   }
 
   function createChangelogItem() {
@@ -12061,10 +12232,12 @@ async function startApp() {
   }
 
   function incrementalLoadingPageName(pageName, route) {
-    return route.scope === "club" ? "club" : pageName;
+    if (route.scope === "club") return "club";
+    if (route.scope === "agent") return "agents";
+    return pageName;
   }
 
-  const shellFirstTablePages = new Set(["database", "mfl", "progression", "agents"]);
+  const shellFirstTablePages = new Set();
 
   function renderTableDestinationShell(pageName, route = null) {
     if (!shellFirstTablePages.has(pageName)) {
@@ -12145,7 +12318,8 @@ async function startApp() {
   }
 
   async function renderLoadedIncrementalRoute(pageName, updateHash, options, route) {
-    await requestIncrementalRoute(route, 1);
+    const payload = await requestIncrementalRoute(route, 1);
+    if (!payload) return false;
     if (tablePages.has(pageName)) {
       restoreSavedTableState(pageName, { view: route.view || options.view });
     }
@@ -12177,58 +12351,139 @@ async function startApp() {
       return originalSetView.apply(this, arguments);
     }
 
-    state.incrementalApplying = true;
-    try {
-      await originalSetView.call(this, viewName);
-    } finally {
-      state.incrementalApplying = false;
-    }
+    const pageName = state.currentPage;
+    const nextView = normalizeViewForPage(viewName, pageName);
+    if (!allowedViewsForPage(pageName).includes(nextView)) return;
 
-    const route = incrementalRouteTarget(state.currentPage, {
-      view: state.view,
+    const routeOptions = {
+      view: nextView,
       walletAddress: state.currentAgentWalletAddress,
       watchlistId: state.currentWatchlistId,
-    });
-    if (!route) {
-      return;
+    };
+    const route = incrementalRouteTarget(pageName, routeOptions);
+    if (!route) return originalSetView.call(this, nextView);
+
+    const stagedTransition = takeStagedViewTransition(pageName, nextView);
+    const pageKey = tablePageKey();
+    const previousCurrentPage = stagedTransition?.previousCurrentPage || state.currentPage;
+    const previousView = stagedTransition?.previousView || state.view;
+    const previousPage = stagedTransition?.previousPage ?? state.page;
+    const previousSortKey = stagedTransition?.previousSortKey || state.sortKey;
+    const previousSortDirection = stagedTransition?.previousSortDirection || state.sortDirection;
+    const previousPath = stagedTransition?.previousPath || currentNavigationPath();
+
+    if (pageKey) {
+      const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
+      state.tablePageStates[pageKey] = {
+        ...existingPageState,
+        viewSortStates: {
+          ...(existingPageState.viewSortStates || {}),
+          [previousView]: {
+            sortKey: previousSortKey,
+            sortDirection: previousSortDirection,
+          },
+        },
+      };
+    }
+
+    const targetSortState = normalizedViewSortState(
+      pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[nextView] : null,
+      nextView,
+    );
+    if (stagedTransition) {
+      state.sortKey = targetSortState.sortKey;
+      state.sortDirection = targetSortState.sortDirection;
+    } else {
+      const transition = await runViewTransition(pageName, nextView, {
+        ...routeOptions,
+        sortKey: targetSortState.sortKey,
+        sortDirection: targetSortState.sortDirection,
+      });
+      if (!transition) return;
     }
 
     const loadAndRender = async () => {
       try {
-        await requestIncrementalRoute(route, 1);
+        const payload = await requestIncrementalRoute(route, 1);
+        if (!payload) return;
         state.incrementalApplying = true;
         try {
-          buildHeader();
-          originalApplyFilters.call(this, { save: false });
+          return await originalSetView.call(this, nextView);
         } finally {
           state.incrementalApplying = false;
         }
       } catch (error) {
+        state.currentPage = previousCurrentPage;
+        state.view = previousView;
+        state.page = previousPage;
+        state.sortKey = previousSortKey;
+        state.sortDirection = previousSortDirection;
+        if (`${window.location.pathname}${window.location.search}` !== previousPath) {
+          window.history.replaceState({}, "", previousPath);
+        }
+        updateViewButtons();
         showToast(error?.message || "Could not load this view.");
       }
     };
 
-    if (incrementalRouteIsCached(route, 1)) {
-      return loadAndRender();
-    }
-
-    return withInteractionBusy(async () => {
-      showTableBusyState();
-      return loadAndRender();
-    });
+    if (incrementalRouteIsCached(route, 1)) return loadAndRender();
+    return withInteractionBusy(loadAndRender);
   };
 
   setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {
+    const navigationUpdatesHistory = updateHash;
+    if (!options.skipNavigationTransition) {
+      const navigationTransition = await runPageTransition(pageName, navigationUpdatesHistory, options);
+      if (!navigationTransition) return;
+    }
+    updateHash = false;
+
     const requestedMflView = pageName === "mfl"
       ? normalizeViewForPage(options.view, "mfl")
       : "";
     if (pageName === "mfl" && requestedMflView === "stats") {
-      state.incrementalMode = false;
-      return originalSetPage.call(this, pageName, updateHash, {
+      const route = prepareIncrementalRoute(pageName, {
         ...options,
         view: "stats",
-        skipNavigationLoading: true,
+        ignoreCurrentClubRoute: navigationUpdatesHistory,
       });
+      if (!route) {
+        state.incrementalMode = false;
+        return originalSetPage.call(this, "mflstats", false, {
+          ...options,
+          replaceUrl: "",
+          view: "stats",
+          skipNavigationLoading: true,
+        });
+      }
+      const payload = await requestIncrementalRoute(route, 1);
+      if (!payload) return false;
+      state.dataAccess = currentDataAccess(pageName);
+      state.incrementalApplying = true;
+      try {
+        return await originalSetPage.call(this, "mflstats", false, {
+          ...options,
+          replaceUrl: "",
+          view: "stats",
+          skipNavigationLoading: true,
+        });
+      } finally {
+        state.incrementalApplying = false;
+      }
+    }
+
+    const requestedDatabaseView = pageName === "database"
+      ? normalizeViewForPage(options.view, "database")
+      : "";
+    if (pageName === "database" && requestedDatabaseView === "stats") {
+      state.incrementalMode = false;
+      if (typeof window.__mflEnsureRouteRuntime === "function") {
+        await window.__mflEnsureRouteRuntime("database", { view: "stats" });
+      }
+      const statsOwner = window.__mflDatabaseStatsStateRuntime;
+      if (typeof statsOwner?.render === "function") return statsOwner.render();
+      if (typeof window.renderDatabaseStatsPage === "function") return window.renderDatabaseStatsPage(false);
+      return;
     }
 
     const previousPage = state.currentPage;
@@ -12240,7 +12495,7 @@ async function startApp() {
 
     const route = prepareIncrementalRoute(pageName, {
       ...options,
-      ignoreCurrentClubRoute: updateHash,
+      ignoreCurrentClubRoute: navigationUpdatesHistory,
     });
     const shellFirst = shellFirstTablePages.has(pageName);
     if (shellFirst) {
@@ -12262,6 +12517,7 @@ async function startApp() {
     const loadAndRender = async () => {
       try {
         const result = await renderLoadedIncrementalRoute.call(this, pageName, updateHash, options, route);
+        if (result === false) return false;
         if (previousPage !== incrementalLoadingPageName(pageName, route)) {
           resetPageScroll();
         }
@@ -12276,10 +12532,7 @@ async function startApp() {
       return loadAndRender();
     }
 
-    return withInteractionBusy(async () => {
-      renderIncrementalLoadingState(pageName, route);
-      return loadAndRender();
-    });
+    return withInteractionBusy(loadAndRender);
   };
 
   function divisionInfo(divisionValue) {
@@ -12407,12 +12660,15 @@ async function startApp() {
       return false;
     }
     const loadAndRender = async () => {
-      await requestIncrementalRoute(route, 1);
+      const payload = await requestIncrementalRoute(route, 1);
+      if (!payload) return false;
       if (tablePages.has(pageName)) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
+        syncRestoredTableControls(pageName);
       }
       state.incrementalApplying = true;
       try {
+        updateViewButtons();
         buildHeader();
         originalApplyFilters.call(this, { save: false });
       } finally {
@@ -12425,14 +12681,447 @@ async function startApp() {
       return loadAndRender();
     }
 
-    return withInteractionBusy(async () => {
-      renderIncrementalLoadingState(pageName, route);
-      return loadAndRender();
-    });
+    return withInteractionBusy(loadAndRender);
   };
 })();
 
-window.__mflAppStartPromise = startApp();
+;(() => {
+  function tableHeaderContext() {
+    if (typeof buildHeader !== "function") return null;
+    const head = document.getElementById("tableHead");
+    if (!(head instanceof HTMLTableSectionElement)) return null;
+    const page = typeof tablePageKey === "function"
+      ? (tablePageKey() || state.currentPage || "")
+      : (state.currentPage || "");
+    const signature = [page, state.view, state.sortKey, state.sortDirection].join("|");
+    return { head, page, signature };
+  }
+
+  function ensureCanonicalTableHeader() {
+    const context = tableHeaderContext();
+    if (!context) return false;
+    const { head, signature } = context;
+    const staticHeader = head.dataset.mflStaticHeader === "true";
+    const staticSignature = String(head.dataset.mflHeaderSignature || "");
+    const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+    const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
+    const currentPage = String(state.currentPage || "").toLowerCase();
+    const currentView = String(state.view || "").toLowerCase();
+    const staticRoutePending = staticHeader
+      && staticPage
+      && staticView
+      && (currentPage !== staticPage || currentView !== staticView);
+    if (staticRoutePending) return true;
+    if (staticHeader && staticSignature && staticSignature !== signature) return true;
+    const needsCanonicalBuild = !head.rows[0] || staticHeader || staticSignature !== signature;
+    if (needsCanonicalBuild) buildHeader();
+    if (!head.rows[0]) return false;
+    if (needsCanonicalBuild) {
+      head.dataset.mflHeaderSignature = signature;
+      delete head.dataset.mflStaticHeader;
+    }
+    return head.dataset.mflStaticHeader === "true" || head.dataset.mflHeaderSignature === signature;
+  }
+
+  function installTableLoadingOwners() {
+    if (typeof buildHeader !== "function") return false;
+
+    if (!buildHeader.__mflSingleRenderOwner) {
+      const originalBuildHeader = buildHeader;
+      const stableBuildHeader = function() {
+        const context = tableHeaderContext();
+        if (!context) return originalBuildHeader.apply(this, arguments);
+        const { head, signature } = context;
+        const staticHeader = head.dataset.mflStaticHeader === "true";
+        const staticSignature = String(head.dataset.mflHeaderSignature || "");
+        const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+        const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
+        const currentPage = String(state.currentPage || "").toLowerCase();
+        const currentView = String(state.view || "").toLowerCase();
+        const staticRoutePending = staticHeader
+          && staticPage
+          && staticView
+          && (currentPage !== staticPage || currentView !== staticView);
+        if (staticRoutePending) return undefined;
+        if (staticHeader && staticSignature && staticSignature !== signature) return undefined;
+        if (!staticHeader && staticSignature === signature && head.rows[0]) return undefined;
+        const result = originalBuildHeader.apply(this, arguments);
+        head.dataset.mflHeaderSignature = signature;
+        delete head.dataset.mflStaticHeader;
+        return result;
+      };
+      Object.defineProperty(stableBuildHeader, "__mflSingleRenderOwner", { value: true });
+      buildHeader = stableBuildHeader;
+    }
+    return true;
+  }
+
+  const searchTokens = (value) => String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const orderedTokensMatch = (text, query) => {
+    const haystack = searchTokens(text).join(" ");
+    const tokens = searchTokens(query);
+    if (!tokens.length) return false;
+    let cursor = 0;
+    for (const token of tokens) {
+      const index = haystack.indexOf(token, cursor);
+      if (index < 0) return false;
+      cursor = index + token.length;
+    }
+    return true;
+  };
+
+  function installSearchMatching() {
+    if (typeof normalizeSearchText !== "function") return false;
+
+    if (!normalizeSearchText.__mflWhitespaceAware) {
+      const originalNormalizeSearchText = normalizeSearchText;
+      const whitespaceAwareNormalizeSearchText = function(value) {
+        return originalNormalizeSearchText(value).replace(/\s+/g, " ").trim();
+      };
+      Object.defineProperty(whitespaceAwareNormalizeSearchText, "__mflWhitespaceAware", { value: true });
+      normalizeSearchText = whitespaceAwareNormalizeSearchText;
+    }
+
+    if (typeof searchMatchScore === "function" && !searchMatchScore.__mflSurnameFirst) {
+      const surnameFirstSearchMatchScore = function(query, primaryText, secondaryText = "") {
+        const normalizedQuery = normalizeSearchText(query);
+        const primary = normalizeSearchText(primaryText);
+        const secondary = normalizeSearchText(secondaryText);
+        const primaryIsPlayerName = /^\d+$/.test(secondary) && primary && !/^\d+$/.test(primary);
+
+        if (primaryIsPlayerName) {
+          const surname = searchTokens(primary).at(-1) || "";
+          if (secondary === normalizedQuery) return 120;
+          if (surname === normalizedQuery) return 110;
+          if (surname.startsWith(normalizedQuery)) return 95;
+          if (primary === normalizedQuery) return 90;
+          if (secondary.startsWith(normalizedQuery)) return 85;
+          if (primary.startsWith(normalizedQuery)) return 75;
+          if (surname.includes(normalizedQuery)) return 65;
+          if (primary.includes(normalizedQuery)) return 50;
+          if (orderedTokensMatch(primary, normalizedQuery)) return 45;
+          if (secondary.includes(normalizedQuery)) return 40;
+          return 0;
+        }
+
+        if (primary === normalizedQuery || secondary === normalizedQuery) return 100;
+        if (primary.startsWith(normalizedQuery)) return 80;
+        if (secondary.startsWith(normalizedQuery)) return 70;
+        if (primary.includes(normalizedQuery)) return 50;
+        if (secondary.includes(normalizedQuery)) return 40;
+        if (orderedTokensMatch(primary, normalizedQuery)) return 45;
+        if (orderedTokensMatch(secondary, normalizedQuery)) return 35;
+        return 0;
+      };
+      Object.defineProperty(surnameFirstSearchMatchScore, "__mflSurnameFirst", { value: true });
+      searchMatchScore = surnameFirstSearchMatchScore;
+    }
+
+    if (typeof evaluationSearchMatches === "function" && !evaluationSearchMatches.__mflSurnameFirst) {
+      const surnameFirstEvaluationSearchMatches = function(query) {
+        if (!state.evaluationSearchIndex.length && state.rows.length) buildSearchIndex();
+        const results = [];
+        state.evaluationSearchIndex.forEach((entry) => {
+          if (entry.retired) return;
+          const score = searchMatchScore(query, entry.name, entry.id);
+          if (score <= 0) return;
+          results.push({ entry, score });
+        });
+        return results
+          .sort((a, b) => b.score - a.score
+            || b.entry.overall - a.entry.overall
+            || a.entry.nameDisplay.localeCompare(b.entry.nameDisplay))
+          .slice(0, 5)
+          .map((result) => result.entry);
+      };
+      Object.defineProperty(surnameFirstEvaluationSearchMatches, "__mflSurnameFirst", { value: true });
+      evaluationSearchMatches = surnameFirstEvaluationSearchMatches;
+    }
+    return true;
+  }
+
+  function renderGlobalSearchResults() {
+    if (typeof renderSearchResultsNow !== "function") return false;
+    renderSearchResultsNow();
+    return true;
+  }
+
+  function renderCurrentEvaluationSearchResults() {
+    if (typeof renderEvaluationSearchResults !== "function") return false;
+    renderEvaluationSearchResults();
+    return true;
+  }
+
+  function resetCurrentEvaluationSelection() {
+    if (typeof resetEvaluationSelection !== "function") return false;
+    resetEvaluationSelection();
+    return true;
+  }
+
+  function applySearchPayload(payload, type = "all") {
+    if (typeof applyDatabaseSearchPayload !== "function") return false;
+    applyDatabaseSearchPayload(payload, type);
+    return true;
+  }
+
+  function invalidateDatabaseSearch(type = "all") {
+    if (typeof databaseSearchAbortControllers !== "undefined") {
+      databaseSearchAbortControllers.get(type)?.abort?.();
+    }
+    if (typeof databaseSearchSequences !== "undefined") {
+      databaseSearchSequences.set(type, (databaseSearchSequences.get(type) || 0) + 1);
+    }
+  }
+
+  function evaluationRecentPlayerIds() {
+    return Array.isArray(state.recentEvaluationPlayerIds)
+      ? normalizeIdList(state.recentEvaluationPlayerIds, 5)
+      : [];
+  }
+
+  function setEvaluationRecentPlayerIds(ids) {
+    state.recentEvaluationPlayerIds = normalizeIdList(Array.isArray(ids) ? ids : [], 5);
+    return [...state.recentEvaluationPlayerIds];
+  }
+
+  function evaluationSearchEntry(playerId) {
+    const key = String(playerId || "").trim();
+    if (!key || !Array.isArray(state.evaluationSearchIndex)) return null;
+    return state.evaluationSearchIndex.find((item) => String(item?.playerId || "") === key) || null;
+  }
+
+  function buildEvaluationRecentEntries(payload) {
+    const columns = Array.isArray(payload?.columns) ? payload.columns : [];
+    const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+    if (typeof buildPlayerSearchEntryFromCompactRow !== "function") return [];
+    return rows
+      .map((row) => buildPlayerSearchEntryFromCompactRow(row, columns))
+      .filter((entry) => entry && !entry.retired);
+  }
+
+  async function persistEvaluationRecentPlayerIds(ids) {
+    setEvaluationRecentPlayerIds(ids);
+    if (state.walletPreferencesSaveTimer) {
+      window.clearTimeout(state.walletPreferencesSaveTimer);
+      state.walletPreferencesSaveTimer = null;
+    }
+    if (!state.linkedWalletAddress
+      || typeof hasWalletProof !== "function"
+      || !hasWalletProof()
+      || typeof saveWalletPreferencesNow !== "function") {
+      return false;
+    }
+    try {
+      await saveWalletPreferencesNow();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function installEvaluationRecentRowsOwner(provider) {
+    if (typeof recentEvaluationRows !== "function" || typeof provider !== "function") return false;
+    if (recentEvaluationRows.__mflSupabaseOnly) return true;
+    const supabaseRecentRows = function() {
+      const entries = provider();
+      return Array.isArray(entries) ? entries.slice(0, 5) : [];
+    };
+    Object.defineProperty(supabaseRecentRows, "__mflSupabaseOnly", { value: true });
+    recentEvaluationRows = supabaseRecentRows;
+    return true;
+  }
+
+  function installEvaluationEmptySearchOwner(restore) {
+    if (typeof requestDatabaseSearch !== "function" || typeof restore !== "function") return false;
+    if (requestDatabaseSearch.__mflEvaluationSupabaseOnly) return true;
+    const originalRequestDatabaseSearch = requestDatabaseSearch;
+    const supabaseOnlyRequestDatabaseSearch = function(rawQuery = "", type = "all", options = {}) {
+      if (type === "players" && !String(rawQuery || "").trim()) {
+        return Promise.resolve(restore(Boolean(options?.force)));
+      }
+      return originalRequestDatabaseSearch.apply(this, arguments);
+    };
+    Object.defineProperty(supabaseOnlyRequestDatabaseSearch, "__mflEvaluationSupabaseOnly", { value: true });
+    requestDatabaseSearch = supabaseOnlyRequestDatabaseSearch;
+    return true;
+  }
+
+  function installEvaluationRecentWriteOwner(commit) {
+    if (typeof rememberEvaluationResult !== "function" || typeof commit !== "function") return false;
+    if (rememberEvaluationResult.__mflSupabaseImmediate) return true;
+    const originalRememberEvaluationResult = rememberEvaluationResult;
+    const supabaseImmediateRememberEvaluationResult = function(playerId) {
+      const result = originalRememberEvaluationResult.apply(this, arguments);
+      commit(playerId);
+      return result;
+    };
+    Object.defineProperty(supabaseImmediateRememberEvaluationResult, "__mflSupabaseImmediate", { value: true });
+    rememberEvaluationResult = supabaseImmediateRememberEvaluationResult;
+    return true;
+  }
+
+  function installEvaluationRecentStateOwnership() {
+    if (typeof restoreRecentEvaluationState !== "function"
+      || typeof persistRecentSearchStates !== "function"
+      || typeof saveTableStateLocally !== "function") return false;
+    if (restoreRecentEvaluationState.__mflRecentStateOnly) return true;
+
+    state.recentEvaluationPlayerIds = [];
+
+    const recentStateOnlyRestore = function(savedState) {
+      const incoming = savedState && typeof savedState === "object" && !Array.isArray(savedState)
+        && Array.isArray(savedState.recentEvaluationPlayerIds)
+        ? savedState.recentEvaluationPlayerIds
+        : [];
+      state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
+      if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
+        void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
+      }
+    };
+    Object.defineProperty(recentStateOnlyRestore, "__mflRecentStateOnly", { value: true });
+    restoreRecentEvaluationState = recentStateOnlyRestore;
+
+    persistRecentSearchStates = function persistSearchStatesWithoutEvaluationLocalStorage() {
+      saveRecentIdsToStorage(RECENT_SEARCH_STORAGE_KEY, state.recentSearchPlayerIds);
+      saveRecentIdsToStorage(RECENT_AGENT_SEARCH_STORAGE_KEY, state.recentSearchAgentWallets);
+      saveRecentIdsToStorage(RECENT_MIXED_SEARCH_STORAGE_KEY, state.recentSearchItems);
+    };
+
+    const originalSaveTableStateLocally = saveTableStateLocally;
+    saveTableStateLocally = function saveTableStateWithoutEvaluationRecents(tableState) {
+      if (!tableState || typeof tableState !== "object" || Array.isArray(tableState)) {
+        return originalSaveTableStateLocally(tableState);
+      }
+      const localState = { ...tableState };
+      delete localState.recentEvaluationPlayerIds;
+      return originalSaveTableStateLocally(localState);
+    };
+
+    if (typeof primeEmptyEvaluationSearch === "function" && !primeEmptyEvaluationSearch.__mflDataOnly) {
+      const dataOnlyPrimeEmptyEvaluationSearch = function() {
+        const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+        if (typeof prime === "function") return prime(true);
+        return Promise.resolve(true);
+      };
+      Object.defineProperty(dataOnlyPrimeEmptyEvaluationSearch, "__mflDataOnly", { value: true });
+      primeEmptyEvaluationSearch = dataOnlyPrimeEmptyEvaluationSearch;
+    }
+
+    if (typeof finishEvaluationReadiness === "function" && !finishEvaluationReadiness.__mflAwaitsRecentEvaluation) {
+      const originalFinishEvaluationReadiness = finishEvaluationReadiness;
+      const finishEvaluationReadinessWithRecents = async function() {
+        if (isPlainEvaluationUrl() && !state.evaluationPlayerId && !evaluationSearchInput.value.trim()) {
+          const prime = window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults;
+          if (typeof prime === "function") await prime(false);
+        }
+        return originalFinishEvaluationReadiness.apply(this, arguments);
+      };
+      Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
+      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
+    }
+    return true;
+  }
+
+  window.__mflCoreContracts = Object.freeze({
+    ensureCanonicalTableHeader,
+    installTableLoadingOwners,
+    installSearchMatching,
+    renderGlobalSearchResults,
+    renderCurrentEvaluationSearchResults,
+    resetCurrentEvaluationSelection,
+    applySearchPayload,
+    invalidateDatabaseSearch,
+    evaluationRecentPlayerIds,
+    setEvaluationRecentPlayerIds,
+    evaluationSearchEntry,
+    buildEvaluationRecentEntries,
+    persistEvaluationRecentPlayerIds,
+    installEvaluationRecentRowsOwner,
+    installEvaluationEmptySearchOwner,
+    installEvaluationRecentWriteOwner,
+    installEvaluationRecentStateOwnership,
+  });
+})();
+;(() => {
+  if (typeof setPage !== "function" || setPage.__mflRouteRuntimeGate) return;
+  const originalRouteRuntimeSetPage = setPage;
+  const routeRuntimeSetPage = async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
+    const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+
+    if (!runtimeReady) {
+      const loadCommittedRoute = async () => {
+        const ownerBeforeRuntime = setPage;
+        const busyToken = window.__mflInteractionBusy?.begin
+          ? window.__mflInteractionBusy.begin("route-runtime")
+          : "";
+        try {
+          const waitForLoadingPaint = Reflect.get(window, "__mflWaitForViewTransitionPaint");
+          if (busyToken && typeof waitForLoadingPaint === "function") {
+            await waitForLoadingPaint();
+          }
+          window.__mflCancelIncrementalRouteRequest?.();
+          const routeCorePromise = typeof window.__mflEnsureRouteCore === "function"
+            ? window.__mflEnsureRouteCore(String(pageName || ""), incomingOptions)
+            : null;
+          if (typeof window.__mflEnsureRouteRuntime === "function") {
+            await window.__mflEnsureRouteRuntime(String(pageName || ""), incomingOptions);
+          }
+          if (routeCorePromise) await routeCorePromise;
+
+          const committedOptions = {
+            ...incomingOptions,
+            skipNavigationTransition: true,
+          };
+          if (setPage !== ownerBeforeRuntime) {
+            return setPage.call(this, pageName, updateHash, {
+              ...committedOptions,
+              __mflRouteRuntimeReady: true,
+            });
+          }
+          return originalRouteRuntimeSetPage.call(this, pageName, updateHash, committedOptions);
+        } finally {
+          if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
+        }
+      };
+
+      if (incomingOptions.skipNavigationTransition === true) {
+        return loadCommittedRoute();
+      }
+
+      const runTransition = Reflect.get(window, "__mflRunPageTransition");
+      if (typeof runTransition !== "function") {
+        throw new Error("Global page transition owner is unavailable.");
+      }
+      return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);
+    }
+
+    const cleanOptions = { ...incomingOptions };
+    delete cleanOptions.__mflRouteRuntimeReady;
+    return originalRouteRuntimeSetPage.call(this, pageName, updateHash, cleanOptions);
+  };
+  Object.defineProperty(routeRuntimeSetPage, "__mflRouteRuntimeGate", { value: true });
+  setPage = routeRuntimeSetPage;
+})();
+
+window.__mflMarkApplicationCoreLoaded?.();
+
+window.__mflAppStartPromise = (async () => {
+  if (typeof pageTargetFromPath === "function" && typeof window.__mflEnsureRouteCore === "function") {
+    const initialRouteTarget = pageTargetFromPath(window.location.pathname);
+    if (initialRouteTarget?.pageName) {
+      await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});
+    }
+  }
+  return startApp();
+})();
 
 ;(() => {
   if (window.__mflFooterSpaNavigationBound) return;
@@ -12460,7 +13149,7 @@ window.__mflAppStartPromise = startApp();
   });
 })();
 ;(() => {
-  const RELEASE_VERSION = "1.122.0";
+  const RELEASE_VERSION = String(window.__mflReleaseVersion || "");
 
   function contractClubId(playerId, teamName) {
     try {
@@ -12486,7 +13175,7 @@ window.__mflAppStartPromise = startApp();
     if (!teamName || /^(free agent|development center)$/i.test(teamName)) return;
     const clubId = contractClubId(playerId, teamName);
     if (!clubId) return;
-    const href = "/clubs/" + encodeURIComponent(clubId) + "/attributes";
+    const href = "/clubs/" + encodeURIComponent(clubId) + "/squad";
     const link = team instanceof HTMLAnchorElement ? team : document.createElement("a");
     if (link !== team) {
       link.className = String(team.className || "playerContractTeam");
