@@ -1417,6 +1417,16 @@ function updateSelectionHeader(pageRows = currentPageRows()) {
     return;
   }
 
+  if (document.documentElement.classList.contains("mflDataLoading")) {
+  selectVisibleInput.checked = false;
+  selectVisibleInput.indeterminate = false;
+  selectVisibleInput.disabled = false;
+  if (document.activeElement === selectVisibleInput) {
+    selectVisibleInput.blur();
+  }
+  return;
+}
+
   const visibleIds = pageRows.map((row) => String(getValue(row, "player_id")));
   const selectedVisibleCount = visibleIds.filter((playerId) => state.selectedPlayerIds.has(playerId)).length;
 
