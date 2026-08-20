@@ -42,6 +42,55 @@ export function extractRequiredSections(source, sections) {
   return { core, chunks };
 }
 
+function requiredFunctionRange(source, functionName, label) {
+  const asyncMarker = `async function ${functionName}(`;
+  const syncMarker = `function ${functionName}(`;
+  const asyncStart = source.indexOf(asyncMarker);
+  const syncStart = source.indexOf(syncMarker);
+  const start = asyncStart >= 0 ? asyncStart : syncStart;
+  const marker = asyncStart >= 0 ? asyncMarker : syncMarker;
+  const openBrace = start >= 0 ? source.indexOf("{", start + marker.length) : -1;
+  if (start < 0 || openBrace < 0) {
+    throw new Error(`Could not split application core function: ${label}.`);
+  }
+
+  let depth = 0;
+  let end = -1;
+  for (let index = openBrace; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = index + 1;
+        break;
+      }
+    }
+  }
+  if (end < 0) {
+    throw new Error(`Could not find the end of application core function: ${label}.`);
+  }
+  return { start, end };
+}
+
+export function extractRequiredFunction(source, functionName, label = functionName) {
+  const { start, end } = requiredFunctionRange(source, functionName, label);
+  return {
+    core: `${source.slice(0, start)}${source.slice(end)}`,
+    chunk: source.slice(start, end).replace(/^\s+|\s+$/g, ""),
+  };
+}
+
+export function extractRequiredFunctions(source, functionNames, label) {
+  let core = source;
+  const chunks = [];
+  for (const functionName of functionNames) {
+    const extracted = extractRequiredFunction(core, functionName, `${label}: ${functionName}`);
+    core = extracted.core;
+    chunks.push(extracted.chunk);
+  }
+  return { core, chunks };
+}
+
 export function insertBeforeRequiredMarker(source, marker, insertion, label) {
   const index = source.indexOf(marker);
   if (index < 0) {

@@ -2,6 +2,7 @@
 
 import {
   extractRequiredSections,
+  extractRequiredFunctions,
   finalizeSplitArtifacts,
   insertBeforeRequiredMarker,
   normalizeSplitterInput,
@@ -165,6 +166,23 @@ __mflTableSetViewOwner = tableSetViewOwner;`;
 
 const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";
 
+const TABLE_ROUTE_ONLY_FUNCTIONS = [
+  "currentViewColumns",
+  "tableColumnClass",
+  "agentTitleForWallet",
+  "selectedPlayerIdsArray",
+  "trackWatchlistChange",
+  "isNumericColumn",
+  "uniqueNationalityValues",
+  "uniquePositions",
+  "availableFilterColumns",
+  "contractStatusValue",
+  "precomputedValue",
+  "cachedRowSortValue",
+  "newMintMarker",
+  "rowIsOwnedByLinkedWallet",
+];
+
 const TABLE_SECTIONS = [
   ["function tableTitleForPage(pageName) {", TABLE_FACADE_INSERTION_MARKER, "Table destination shell"],
   ["function tableNextOverallInfo(row, statColumn) {", "function formatCellValue(row, column) {", "Table cell presentation helpers"],
@@ -206,7 +224,8 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   );
   if (alreadySplit) return artifacts;
 
-  const extracted = extractRequiredSections(inputCore, TABLE_SECTIONS);
+  const routeOnly = extractRequiredFunctions(inputCore, TABLE_ROUTE_ONLY_FUNCTIONS, "Table route-only helper");
+  const extracted = extractRequiredSections(routeOnly.core, TABLE_SECTIONS);
   let core = insertBeforeRequiredMarker(
     extracted.core,
     TABLE_FACADE_INSERTION_MARKER,
@@ -214,7 +233,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     "Table facade",
   );
 
-  let table = extracted.chunks.join("\n\n").replace(/\s*$/, "");
+  let table = [...routeOnly.chunks, ...extracted.chunks].join("\n\n").replace(/\s*$/, "");
   for (const [functionName, ownerName] of TABLE_OWNERS) {
     table = renameRequiredFunctionOwner(table, functionName, ownerName, `Table ${functionName}`);
   }

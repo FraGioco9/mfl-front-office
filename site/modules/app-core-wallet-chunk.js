@@ -2,6 +2,7 @@
 
 import {
   extractRequiredSections,
+  extractRequiredFunctions,
   finalizeSplitArtifacts,
   insertBeforeRequiredMarker,
   normalizeSplitterInput,
@@ -22,6 +23,18 @@ async function linkWallet() {
 
 const WALLET_OWNER_ASSIGNMENTS = `__mflWalletLinkOwner = walletLinkOwner;`;
 
+const WALLET_ROUTE_ONLY_FUNCTIONS = [
+  "appOrigin",
+  "recordWalletOptIn",
+  "loadWalletNames",
+  "refreshLinkedWalletAgentName",
+  "authenticatedWalletUser",
+  "signatureWalletAddress",
+  "mergeGuestWatchlistIntoAccount",
+  "refreshWatchlistPageAfterWalletSync",
+  "upgradeCurrentPageAfterWalletOptIn",
+];
+
 const WALLET_SECTIONS = [
   ["function walletAccessNonce() {", "function restoreLinkedWalletProof() {", "Wallet account-proof and signing helpers"],
   ["function configureFlowWallet(", "function openAccountMenu() {", "Wallet Flow authentication and opt-in owner"],
@@ -35,7 +48,8 @@ export function splitWalletApplicationCoreRuntime(artifacts) {
   );
   if (alreadySplit) return artifacts;
 
-  const extracted = extractRequiredSections(inputCore, WALLET_SECTIONS);
+  const routeOnly = extractRequiredFunctions(inputCore, WALLET_ROUTE_ONLY_FUNCTIONS, "Wallet route-only helper");
+  const extracted = extractRequiredSections(routeOnly.core, WALLET_SECTIONS);
   let core = insertBeforeRequiredMarker(
     extracted.core,
     "function restoreLinkedWalletProof() {",
@@ -43,7 +57,7 @@ export function splitWalletApplicationCoreRuntime(artifacts) {
     "Wallet facade",
   );
 
-  let wallet = extracted.chunks.join("\n\n").replace(/\s*$/, "");
+  let wallet = [...routeOnly.chunks, ...extracted.chunks].join("\n\n").replace(/\s*$/, "");
   wallet = renameRequiredFunctionOwner(wallet, "linkWallet", "walletLinkOwner", "Wallet linkWallet");
   wallet = `${wallet}\n\n${WALLET_OWNER_ASSIGNMENTS}`;
 

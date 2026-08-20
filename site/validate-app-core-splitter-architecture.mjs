@@ -21,6 +21,8 @@ for (const helper of [
   "normalizeSplitterInput",
   "extractRequiredSection",
   "extractRequiredSections",
+  "extractRequiredFunction",
+  "extractRequiredFunctions",
   "insertBeforeRequiredMarker",
   "replaceRequired",
   "replaceRequiredFunction",
@@ -49,6 +51,10 @@ splitterPaths.forEach((path, index) => {
 invariant(
   splitters.some((source) => source.includes("extractRequiredSections(")),
   "Declarative multi-section extraction must remain in active splitter use.",
+);
+invariant(
+  splitters.some((source) => source.includes("extractRequiredFunctions(")),
+  "Route-only function extraction must remain centralized in the shared splitter utility.",
 );
 invariant(
   splitters.some((source) => source.includes("finalizeSplitArtifacts(")),

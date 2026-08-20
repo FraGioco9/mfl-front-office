@@ -19,6 +19,7 @@ const validators = [
   "validate-eval-ownership.mjs",
   "validate-route-runtime.mjs",
   "validate-app-core-splitter-architecture.mjs",
+  "validate-shared-core-route-ownership.mjs",
   "validate-bootstrap-ownership.mjs",
   "validate-prebuilt-core-loading.mjs",
   "validate-asset-cache-policy.mjs",

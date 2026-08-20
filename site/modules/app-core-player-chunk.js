@@ -3,6 +3,7 @@
 import {
   extractRequiredSection,
   extractRequiredSections,
+  extractRequiredFunctions,
   finalizeSplitArtifacts,
   normalizeSplitterInput,
 } from "./app-core-splitter-utils.js";
@@ -13,6 +14,15 @@ const PLAYER_SECTIONS = [
   ["function nextOverallDetailHtml(row, column) {", "async function copyPlayerId(id) {", "Player attribute panel renderer"],
 ];
 
+const PLAYER_ROUTE_ONLY_FUNCTIONS = [
+  "showPlayerNoteTooltip",
+  "setPlayerNote",
+  "normalizePlayerAttributeView",
+  "formatFootedness",
+  "rarityColorForOverall",
+  "shortStatLabel",
+];
+
 export function splitPlayerApplicationCoreRuntime(artifacts) {
   const { alreadySplit, routeChunks, core: inputCore } = normalizeSplitterInput(
     artifacts,
@@ -21,9 +31,10 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   );
   if (alreadySplit) return artifacts;
 
-  const extractedSections = extractRequiredSections(inputCore, PLAYER_SECTIONS);
+  const routeOnly = extractRequiredFunctions(inputCore, PLAYER_ROUTE_ONLY_FUNCTIONS, "Player route-only helper");
+  const extractedSections = extractRequiredSections(routeOnly.core, PLAYER_SECTIONS);
   let core = extractedSections.core;
-  const playerParts = [...extractedSections.chunks];
+  const playerParts = [...routeOnly.chunks, ...extractedSections.chunks];
 
   const renderer = extractRequiredSection(
     core,
