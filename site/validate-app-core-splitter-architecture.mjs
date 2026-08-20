@@ -55,4 +55,4 @@ invariant(
   "Shared split-result finalization must remain in active splitter use.",
 );
 
-console.log("Application-core splitters share canonical extraction and owner-delegation primitives.");
+console.log("Canonical application-core splitter architecture validation passed.");
