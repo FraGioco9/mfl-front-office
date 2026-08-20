@@ -14,7 +14,8 @@ if (!flagRenderer.includes("const label = escapeHtml(formatNationality(nationali
 if (flagRenderer.includes('String(nationality || "Unknown nationality")')) {
   throw new Error("Nationality flag tooltips must not restore raw nationality labels.");
 }
-if ((flagRenderer.match(/data-tooltip=\\"\$\{label\}\\" aria-label=\\"\$\{label\}\\"/g) || []).length !== 2) {
+const formattedLabelBinding = 'data-tooltip="${label}" aria-label="${label}"';
+if (flagRenderer.split(formattedLabelBinding).length - 1 !== 2) {
   throw new Error("Both text and image flag renderers must expose the formatted nationality tooltip and accessible label.");
 }
 
