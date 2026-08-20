@@ -22,42 +22,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Update route chrome validation signatures
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/reset-filters-and-selection'
-        working-directory: .
-        shell: python
-        run: |
-          from pathlib import Path
-          path = Path("site/validate-static-route-ui.mjs")
-          text = path.read_text(encoding="utf-8")
-          replacements = [
-              ('function showRouteShell(state) {', 'function showRouteShell(state, options = {}) {'),
-              ('if (target.id === "progressionPage") syncDestinationTableChrome(state);', 'if (target.id === "progressionPage") syncDestinationTableChrome(state, options);'),
-              ('function primeTableChrome(page, urlLike = window.location.href) {', 'function primeTableChrome(page, urlLike = window.location.href, options = {}) {'),
-          ]
-          for old, new in replacements:
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"validate-static-route-ui.mjs: expected one {old!r}, found {count}")
-              text = text.replace(old, new, 1)
-          path.write_text(text, encoding="utf-8")
-
-      - name: Commit route chrome validation signatures
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/reset-filters-and-selection'
-        working-directory: .
-        shell: bash
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          git show origin/main:.github/workflows/site-quality.yml > .github/workflows/site-quality.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- site/validate-static-route-ui.mjs
-          git add -u -- .github/workflows/site-quality.yml
-          git commit -m "Update route chrome lifecycle validation"
-          git push origin "HEAD:$HEAD_BRANCH"
-
       - name: Detect relevant changes
         id: changes
         working-directory: .
