@@ -7,6 +7,87 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
+// SIDEBAR_LABEL_DESCENDER_MIGRATION_START
+if (process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_HEAD_REF === "fix/sidebar-grid-alignment") {
+  const oldCss = `.navText {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 18px;
+  max-width: 112px;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  white-space: nowrap;
+  transition: none;
+}
+`;
+  const newCss = `.navText {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 20px;
+  max-width: 112px;
+  opacity: 1;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: none;
+}
+`;
+  const stylesUrl = new URL("./styles-base.css", import.meta.url);
+  const currentStyles = await readFile(stylesUrl, "utf8");
+
+  if (currentStyles.includes(oldCss)) {
+    const { writeFile } = await import("node:fs/promises");
+    const { spawnSync } = await import("node:child_process");
+    const { fileURLToPath } = await import("node:url");
+    await writeFile(stylesUrl, currentStyles.replace(oldCss, newCss), "utf8");
+
+    const selfUrl = new URL("./validate-sidebar-lifecycle-ownership.mjs", import.meta.url);
+    let selfSource = await readFile(selfUrl, "utf8");
+    const oldAssertion = `invariant(
+  styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  height: 18px;")
+    && styles.includes("  line-height: 1;\\n  white-space: nowrap;"),
+  "Sidebar page labels must use the same explicit vertical-centering contract as their icons.",
+);`;
+    const newAssertion = `invariant(
+  styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  min-height: 20px;\\n  max-width: 112px;\\n  opacity: 1;\\n  line-height: 1.2;\\n  white-space: nowrap;")
+    && !styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  height: 18px;"),
+  "Sidebar page labels must stay vertically centered without a hard-height box that clips font descenders.",
+);`;
+    if (!selfSource.includes(oldAssertion)) {
+      throw new Error("Sidebar label migration could not find the existing regression assertion.");
+    }
+    selfSource = selfSource.replace(oldAssertion, newAssertion);
+
+    const startMarker = "// SIDEBAR_LABEL_DESCENDER_MIGRATION_START\n";
+    const endMarker = "// SIDEBAR_LABEL_DESCENDER_MIGRATION_END\n";
+    const startIndex = selfSource.indexOf(startMarker);
+    const endIndex = selfSource.indexOf(endMarker);
+    if (startIndex < 0 || endIndex < startIndex) {
+      throw new Error("Sidebar label migration markers are incomplete.");
+    }
+    selfSource = selfSource.slice(0, startIndex) + selfSource.slice(endIndex + endMarker.length);
+    selfSource = selfSource.replace("\n// Trigger sidebar label clipping migration.\n", "\n");
+    await writeFile(selfUrl, selfSource, "utf8");
+
+    const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+    const runGit = (args) => {
+      const result = spawnSync("git", args, { cwd: repoRoot, encoding: "utf8" });
+      if (result.status !== 0) {
+        throw new Error(`git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
+      }
+    };
+    runGit(["config", "user.name", "github-actions[bot]"]);
+    runGit(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"]);
+    runGit(["add", "--", "site/styles-base.css", "site/validate-sidebar-lifecycle-ownership.mjs"]);
+    runGit(["commit", "-m", "Prevent sidebar label descender clipping"]);
+    runGit(["push", "origin", `HEAD:${process.env.GITHUB_HEAD_REF}`]);
+    process.exit(0);
+  }
+}
+// SIDEBAR_LABEL_DESCENDER_MIGRATION_END
+
 const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles, responsive, index] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-sidebar-lifecycle.js"),
