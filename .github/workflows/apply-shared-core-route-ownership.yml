@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chore/shared-core-route-ownership
+  pull_request:
 
 permissions:
   contents: write
