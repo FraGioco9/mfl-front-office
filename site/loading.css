@@ -13,6 +13,14 @@ html.mflInteractionBusy body *::after {
   animation: none;
 }
 
+html.mflInitialChromePreparing body:has(> #appShell),
+html.mflInitialChromePreparing body:has(> #appShell) *,
+html.mflInitialChromePreparing body:has(> #appShell) *::before,
+html.mflInitialChromePreparing body:has(> #appShell) *::after {
+  transition: none;
+  animation: none;
+}
+
 html.mflInteractionBusy body main,
 html.mflInteractionBusy body .tableScroller,
 html.mflInteractionBusy body .evaluationLoadList,
