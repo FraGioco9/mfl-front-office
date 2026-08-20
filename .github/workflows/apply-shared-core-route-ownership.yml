@@ -1,0 +1,69 @@
+name: Apply shared core route ownership
+
+on:
+  push:
+    branches:
+      - chore/shared-core-route-ownership
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/shared-core-route-ownership
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply route ownership migration
+        run: node .github/apply-shared-core-route-ownership.mjs
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install
+      - name: Run full site quality check
+        working-directory: site
+        run: npm run check
+      - name: Report optimized core sizes
+        working-directory: site
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+          const source = await readFile("./modules/app-core.js", "utf8");
+          const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+          console.log(`SHARED_BYTES ${Buffer.byteLength(String(artifacts.core || ""))}`);
+          for (const [name, chunk] of Object.entries(artifacts.routeChunks || {})) {
+            console.log(`CHUNK_BYTES ${name} ${Buffer.byteLength(String(chunk || ""))}`);
+          }
+          NODE
+      - name: Commit tested route ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/apply-shared-core-route-ownership.mjs \
+            .github/workflows/shared-core-analysis-snapshot.yml \
+            .github/workflows/apply-shared-core-route-ownership.yml
+          git config user.name "FraGioco9"
+          git config user.email "giocolifrancesco@gmail.com"
+          git add -- \
+            site/modules/app-core-splitter-utils.js \
+            site/modules/app-core-settings-chunk.js \
+            site/modules/app-core-player-chunk.js \
+            site/modules/app-core-table-chunk.js \
+            site/modules/app-core-wallet-chunk.js \
+            site/modules/app-core-watchlist-route-chunk.js \
+            site/validate-app-core-splitter-architecture.mjs \
+            site/validate-shared-core-route-ownership.mjs \
+            site/validate-all.mjs \
+            .github/apply-shared-core-route-ownership.mjs \
+            .github/workflows/shared-core-analysis-snapshot.yml \
+            .github/workflows/apply-shared-core-route-ownership.yml
+          git diff --cached --check
+          git commit -m "Move route-only helpers out of shared core"
+          git push origin HEAD:chore/shared-core-route-ownership
