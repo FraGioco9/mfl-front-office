@@ -34,6 +34,13 @@ jobs:
           const shared = String(artifacts.core || "");
           const names = [...shared.matchAll(/(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
           const count = (text, name) => (text.match(new RegExp(`\\b${name.replace(/[$]/g, "\\$")}\\b`, "g")) || []).length;
+          const section = (label, startMarker, endMarker) => {
+            const start = shared.indexOf(startMarker);
+            const end = start >= 0 ? shared.indexOf(endMarker, start + startMarker.length) : -1;
+            console.log(`SECTION ${label} start=${start} end=${end} bytes=${start >= 0 && end > start ? Buffer.byteLength(shared.slice(start, end)) : -1}`);
+            if (start >= 0 && end > start) console.log(shared.slice(start, end));
+            console.log(`END_SECTION ${label}`);
+          };
 
           console.log(`SHARED_BYTES ${Buffer.byteLength(shared)}`);
           for (const [name, chunk] of Object.entries(chunks)) {
@@ -56,4 +63,11 @@ jobs:
           candidates.sort((a, b) => a.owner.localeCompare(b.owner) || a.line - b.line);
           for (const item of candidates) console.log(`CANDIDATE ${item.owner} ${item.name} line=${item.line} chunkRefs=${item.refs}`);
           console.log(`CANDIDATE_COUNT ${candidates.length}`);
+
+          section("settings-email-edit", "function setSettingsEmailAddressDraft(", "function updateSettingsEmailDraftActions(");
+          section("watchlist-modal-helpers", "function openRenameWatchlistModal(", "function renderWatchlistSwitcher(");
+          section("wallet-preproof-helpers", "async function recordWalletOptIn(", "function restoreLinkedWalletProof(");
+          section("player-note-helpers", "function showPlayerNoteTooltip(", "function refreshPlayerNoteTooltip(");
+          section("player-view-helper", "function normalizePlayerAttributeView(", "function applyPlayerPageScrollTop(");
+          section("evaluation-invalid-link", "function resetInvalidEvaluationLinkToPlainEvaluation(", "function evaluationDiscountRateFromUrl(");
           NODE
