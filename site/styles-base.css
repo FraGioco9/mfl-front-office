@@ -1097,7 +1097,7 @@ button:hover:not(:disabled) {
   color: #ffffff;
 }
 
-button:disabled {
+button:disabled:not(.menuButton) {
   cursor: not-allowed;
   opacity: 0.45;
 }

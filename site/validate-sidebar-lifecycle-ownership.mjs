@@ -72,6 +72,11 @@ invariant(
   "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",
 );
 invariant(
+  styles.includes("button:disabled:not(.menuButton) {\n  cursor: not-allowed;\n  opacity: 0.45;\n}")
+    && !styles.includes("button:disabled {\n  cursor: not-allowed;\n  opacity: 0.45;\n}"),
+  "The global disabled-button fade must exclude the permanently disabled pinned Menu control.",
+);
+invariant(
   sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
   "Pinned-sidebar cleanup must use the dedicated structural owner.",
 );
