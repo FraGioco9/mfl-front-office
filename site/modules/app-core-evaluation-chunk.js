@@ -74,6 +74,8 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
       "normalizeEvaluationRewardRateDraft",
       "formatEvaluationRewardRate",
       "clearEvaluationSearchFocus",
+      "clearEvaluationSearch",
+      "handleEvaluationSearchInput",
       "queueEvaluationSettingsSave",
     ],
     "Evaluation startup and dependency-closed helper",
