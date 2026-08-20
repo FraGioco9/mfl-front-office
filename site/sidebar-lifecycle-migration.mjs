@@ -116,7 +116,12 @@ async function applyMigration() {
   if (setPageSidebarCall < routeOwnerStart) {
     throw new Error("Could not isolate the setPage sidebar refresh call.");
   }
-  source = source.slice(0, setPageSidebarCall) + source.slice(setPageSidebarCall + "keepSidebarExpanded();".length);
+  const setPageSidebarLineStart = source.lastIndexOf("\n", setPageSidebarCall) + 1;
+  const setPageSidebarLineEnd = source.indexOf("\n", setPageSidebarCall) + 1;
+  if (setPageSidebarLineStart <= 0 || setPageSidebarLineEnd <= setPageSidebarCall) {
+    throw new Error("Could not remove the setPage sidebar refresh line cleanly.");
+  }
+  source = source.slice(0, setPageSidebarLineStart) + source.slice(setPageSidebarLineEnd);
 
   const publicProgressionMarker = "\n})();\n\n/* Public progression table views */";
   const adjustedCaptureStart = source.indexOf('\n\n  document.addEventListener("click", (event) => {', routeOwnerStart);
