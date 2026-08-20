@@ -28,235 +28,90 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
+          def replace_text(path, old, new, label):
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          def replace_block(path, pattern, replacement, label):
+              text = path.read_text(encoding="utf-8")
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              path.write_text(updated, encoding="utf-8")
 
           styles = Path("site/styles-base.css")
           if ".sidebarGrid {\n  display: grid;" not in styles.read_text(encoding="utf-8"):
-              def replace_once(path, old, new, label):
-                  text = path.read_text(encoding="utf-8")
-                  count = text.count(old)
-                  if count != 1:
-                      raise SystemExit(f"{label}: expected exactly one match, found {count}")
-                  path.write_text(text.replace(old, new, 1), encoding="utf-8")
-
               index = Path("site/index.html")
-              replace_once(index, '        <aside id="sidebar" class="sidebar">\n', '        <aside id="sidebar" class="sidebar">\n          <div class="sidebarGrid">\n', "sidebar grid wrapper start")
-              replace_once(index, '          <a class="navButton settingsNavButton"', '          </div>\n          <a class="navButton settingsNavButton"', "sidebar grid wrapper end")
+              replace_text(index, '        <aside id="sidebar" class="sidebar">\n', '        <aside id="sidebar" class="sidebar">\n          <div class="sidebarGrid">\n', "sidebar grid wrapper start")
+              replace_text(index, '          <a class="navButton settingsNavButton"', '          </div>\n          <a class="navButton settingsNavButton"', "sidebar grid wrapper end")
 
-              replace_once(styles, '''.sidebar {
-            width: 162px;
-            margin-top: 12px;
-            min-height: calc(100vh - 188px);
-            max-height: none;
-            display: flex;
-            flex-direction: column;
-            opacity: 1;
-            transform: translateX(0);
-            transition: none;
-          }
-
-          .sidebar[hidden] {
-            display: none;
-          }
-
-
-          .settingsNavButton {
-            margin-top: auto;
-          }
-
-          .navButton {
-            display: inline-flex;
-            align-items: center;
-            justify-content: flex-start;
-            width: 100%;
-            height: 40px;
-            margin-bottom: 8px;
-            border: 1px solid var(--border-strong);
-            border-radius: 6px;
-            background: var(--surface);
-            color: var(--text);
-            gap: 8px;
-            padding: 0 14px;
-            text-align: left;
-            text-decoration: none;
-            cursor: pointer;
-            transition: background 120ms ease, border-color 120ms ease;
-          }
-          ''', '''.sidebar {
-            width: 162px;
-            margin-top: 12px;
-            min-height: calc(100vh - 188px);
-            max-height: none;
-            display: grid;
-            grid-template-rows: auto minmax(0, 1fr) auto;
-            opacity: 1;
-            transform: translateX(0);
-            transition: none;
-          }
-
-          .sidebar[hidden] {
-            display: none;
-          }
-
-          .sidebarGrid {
-            display: grid;
-            grid-auto-rows: 40px;
-            gap: 8px;
-            min-width: 0;
-          }
-
-          .settingsNavButton {
-            grid-row: 3;
-            align-self: end;
-            margin: 0 0 8px;
-          }
-
-          .navButton {
-            display: grid;
-            grid-template-columns: 18px minmax(0, 1fr);
-            align-items: center;
-            justify-items: start;
-            width: 100%;
-            height: 40px;
-            margin: 0;
-            border: 1px solid var(--border-strong);
-            border-radius: 6px;
-            background: var(--surface);
-            color: var(--text);
-            column-gap: 8px;
-            padding: 0 14px;
-            text-align: left;
-            text-decoration: none;
-            cursor: pointer;
-            transition: background 120ms ease, border-color 120ms ease;
-          }
-          ''', "desktop sidebar grid")
-
-              replace_once(styles, '''.navEmoji {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 18px;
-            flex: 0 0 18px;
-            color: currentColor;
-            font-family: "Titillium Web", Arial, Helvetica, sans-serif;
-            font-size: 18px;
-            line-height: 1;
-            text-align: center;
-            transition: none;
-          }
-          ''', '''.navEmoji {
-            display: grid;
-            place-items: center;
-            align-self: center;
-            justify-self: center;
-            width: 18px;
-            height: 18px;
-            color: currentColor;
-            font-family: "Titillium Web", Arial, Helvetica, sans-serif;
-            font-size: 18px;
-            line-height: 1;
-            text-align: center;
-            transition: none;
-          }
-          ''', "sidebar icon cell")
-
-              replace_once(styles, '''.navMflIcon {
-            width: 18px;
-            flex-basis: 18px;
-            height: auto;
-            fill: currentColor;
-            stroke: none;
-          }
-          ''', '''.navMflIcon {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-            stroke: none;
-          }
-          ''', "MFL sidebar icon geometry")
-
-              replace_once(styles, '''.navJerseyIcon {
-            width: 15px;
-            flex-basis: 15px;
-            transform: none;
-          }
-          ''', '''.navJerseyIcon {
-            width: 15px;
-            height: 18px;
-            transform: none;
-          }
-          ''', "jersey sidebar icon geometry")
-
-              replace_once(styles, '''.navText {
-            display: inline-block;
-            max-width: 112px;
-            overflow: hidden;
-            opacity: 1;
-            white-space: nowrap;
-            transition: none;
-          }
-          ''', '''.navText {
-            display: flex;
-            align-items: center;
-            align-self: center;
-            height: 18px;
-            max-width: 112px;
-            overflow: hidden;
-            opacity: 1;
-            line-height: 1;
-            white-space: nowrap;
-            transition: none;
-          }
-          ''', "sidebar label cell")
+              replace_block(
+                  styles,
+                  r"\.sidebar \{\n.*?\n\}",
+                  ".sidebar {\n  width: 162px;\n  margin-top: 12px;\n  min-height: calc(100vh - 188px);\n  max-height: none;\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr) auto;\n  opacity: 1;\n  transform: translateX(0);\n  transition: none;\n}",
+                  "desktop sidebar container",
+              )
+              replace_text(
+                  styles,
+                  ".sidebar[hidden] {\n  display: none;\n}\n",
+                  ".sidebar[hidden] {\n  display: none;\n}\n\n.sidebarGrid {\n  display: grid;\n  grid-auto-rows: 40px;\n  gap: 8px;\n  min-width: 0;\n}\n",
+                  "desktop sidebar grid",
+              )
+              replace_block(
+                  styles,
+                  r"\.settingsNavButton \{\n.*?\n\}",
+                  ".settingsNavButton {\n  grid-row: 3;\n  align-self: end;\n  margin: 0 0 8px;\n}",
+                  "desktop Settings placement",
+              )
+              replace_block(
+                  styles,
+                  r"\.navButton \{\n.*?\n\}",
+                  ".navButton {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr);\n  align-items: center;\n  justify-items: start;\n  width: 100%;\n  height: 40px;\n  margin: 0;\n  border: 1px solid var(--border-strong);\n  border-radius: 6px;\n  background: var(--surface);\n  color: var(--text);\n  column-gap: 8px;\n  padding: 0 14px;\n  text-align: left;\n  text-decoration: none;\n  cursor: pointer;\n  transition: background 120ms ease, border-color 120ms ease;\n}",
+                  "sidebar page box grid",
+              )
+              replace_block(
+                  styles,
+                  r"\.navEmoji \{\n.*?\n\}",
+                  ".navEmoji {\n  display: grid;\n  place-items: center;\n  align-self: center;\n  justify-self: center;\n  width: 18px;\n  height: 18px;\n  color: currentColor;\n  font-family: \"Titillium Web\", Arial, Helvetica, sans-serif;\n  font-size: 18px;\n  line-height: 1;\n  text-align: center;\n  transition: none;\n}",
+                  "sidebar icon cell",
+              )
+              replace_block(
+                  styles,
+                  r"\.navMflIcon \{\n.*?\n\}",
+                  ".navMflIcon {\n  width: 18px;\n  height: 18px;\n  fill: currentColor;\n  stroke: none;\n}",
+                  "MFL sidebar icon geometry",
+              )
+              replace_block(
+                  styles,
+                  r"\.navJerseyIcon \{\n  width: 15px;.*?\n\}",
+                  ".navJerseyIcon {\n  width: 15px;\n  height: 18px;\n  transform: none;\n}",
+                  "jersey sidebar icon geometry",
+              )
+              replace_block(
+                  styles,
+                  r"\.navText \{\n.*?\n\}",
+                  ".navText {\n  display: flex;\n  align-items: center;\n  align-self: center;\n  height: 18px;\n  max-width: 112px;\n  overflow: hidden;\n  opacity: 1;\n  line-height: 1;\n  white-space: nowrap;\n  transition: none;\n}",
+                  "sidebar label cell",
+              )
 
               responsive = Path("site/responsive.css")
-              replace_once(responsive, '''  .sidebar {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 6px;
-            width: 100%;
-            min-height: 0;
-            height: 42px;
-            margin: 0;
-            padding: 0;
-            overflow-x: auto;
-            overflow-y: hidden;
-            overscroll-behavior-x: contain;
-          }
-
-          .navButton {
-          ''', '''  .sidebar {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 6px;
-            width: 100%;
-            min-height: 0;
-            height: 42px;
-            margin: 0;
-            padding: 0;
-            overflow-x: auto;
-            overflow-y: hidden;
-            overscroll-behavior-x: contain;
-          }
-
-          .sidebarGrid {
-            display: contents;
-          }
-
-          .navButton {
-          ''', "mobile sidebar wrapper flattening")
-
-              replace_once(responsive, '''  .settingsNavButton {
-            margin-top: 0;
-            margin-left: auto;
-          }
-          ''', '''  .settingsNavButton {
-            align-self: center;
-            margin: 0 0 0 auto;
-          }
-          ''', "mobile Settings alignment")
+              replace_block(
+                  responsive,
+                  r"(  \.sidebar \{\n.*?\n  \})",
+                  r"\1\n\n  .sidebarGrid {\n    display: contents;\n  }",
+                  "mobile sidebar wrapper flattening",
+              )
+              replace_block(
+                  responsive,
+                  r"  \.settingsNavButton \{\n.*?\n  \}",
+                  "  .settingsNavButton {\n    align-self: center;\n    margin: 0 0 0 auto;\n  }",
+                  "mobile Settings alignment",
+              )
 
       - name: Commit sidebar grid source migration
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
