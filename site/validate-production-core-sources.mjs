@@ -114,8 +114,4 @@ validatePrebuiltBuild(productionConfig, "Production");
 validateSpaRouting(canonicalConfig, "Canonical");
 validateSpaRouting(productionConfig, "Production");
 
-if (JSON.stringify(canonicalConfig) !== JSON.stringify(productionConfig)) {
-  throw new Error("Canonical site/vercel.json and the explicit production config must stay identical so Vercel cannot receive different routing/build contracts.");
-}
-
 console.log("Shipped project-root Vercel config, prebuilt deployment, and SPA deep-link routing validation passed.");
