@@ -21,6 +21,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Keep structural Table marker shared
+        shell: bash
+        run: |
+          sed -i '/^  "playerRoute",$/d; s/, "playerRoute"//' .github/apply-shared-core-route-ownership.mjs
       - name: Apply route ownership migration
         run: node .github/apply-shared-core-route-ownership.mjs
       - name: Install site dependencies
