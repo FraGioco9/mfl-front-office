@@ -1,7 +1,6 @@
 // @ts-check
-// Canonical app-core behavior is normalized for route-safe contracts, then split into generated runtimes.
+// Canonical app-core behavior is source-owned; this module only performs structural route/action splitting.
 
-import { normalizeAgentPageTitleLoading } from "./app-core-agent-title-normalizer.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
@@ -14,8 +13,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
-  const normalizedSource = normalizeAgentPageTitleLoading(canonicalSource);
-  const routeArtifacts = splitApplicationCoreRuntime(normalizedSource);
+  const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
