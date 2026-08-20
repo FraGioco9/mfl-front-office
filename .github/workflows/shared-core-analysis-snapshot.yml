@@ -32,42 +32,30 @@ jobs:
           const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
           const chunks = artifacts.routeChunks || {};
           const shared = String(artifacts.core || "");
-          const names = [...shared.matchAll(/(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
           const count = (text, name) => (text.match(new RegExp(`\\b${name.replace(/[$]/g, "\\$")}\\b`, "g")) || []).length;
-          const section = (label, startMarker, endMarker) => {
-            const start = shared.indexOf(startMarker);
-            const end = start >= 0 ? shared.indexOf(endMarker, start + startMarker.length) : -1;
-            console.log(`SECTION ${label} start=${start} end=${end} bytes=${start >= 0 && end > start ? Buffer.byteLength(shared.slice(start, end)) : -1}`);
-            if (start >= 0 && end > start) console.log(shared.slice(start, end));
+          const section = (label, text, startMarker, endMarker) => {
+            const start = text.indexOf(startMarker);
+            const end = start >= 0 ? text.indexOf(endMarker, start + startMarker.length) : -1;
+            const value = start >= 0 && end > start ? text.slice(start, end) : "";
+            console.log(`SECTION ${label} bytes=${value ? Buffer.byteLength(value) : -1}`);
+            if (value) {
+              const declarations = [...value.matchAll(/(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
+              console.log(`FUNCTIONS ${label} ${declarations.join(",")}`);
+              for (const name of declarations) {
+                const sharedRefs = count(shared, name);
+                const owners = Object.entries(chunks).filter(([, chunk]) => count(String(chunk || ""), name) > 0).map(([chunkName]) => chunkName);
+                console.log(`OWNERSHIP ${label} ${name} sharedRefs=${sharedRefs} chunks=${owners.join(",")}`);
+              }
+            }
             console.log(`END_SECTION ${label}`);
           };
 
           console.log(`SHARED_BYTES ${Buffer.byteLength(shared)}`);
-          for (const [name, chunk] of Object.entries(chunks)) {
-            console.log(`CHUNK_BYTES ${name} ${Buffer.byteLength(String(chunk || ""))}`);
-          }
-          console.log("ROUTE_ONLY_SHARED_FUNCTIONS");
-          const candidates = [];
-          for (const name of names) {
-            const sharedRefs = count(shared, name);
-            if (sharedRefs !== 1) continue;
-            const owners = Object.entries(chunks)
-              .map(([chunkName, chunk]) => [chunkName, count(String(chunk || ""), name)])
-              .filter(([, refs]) => refs > 0);
-            if (owners.length !== 1) continue;
-            const marker = new RegExp(`(?:async\\s+)?function\\s+${name.replace(/[$]/g, "\\$")}\\s*\\(`);
-            const index = shared.search(marker);
-            const line = index >= 0 ? shared.slice(0, index).split("\n").length : 0;
-            candidates.push({ name, owner: owners[0][0], refs: owners[0][1], line });
-          }
-          candidates.sort((a, b) => a.owner.localeCompare(b.owner) || a.line - b.line);
-          for (const item of candidates) console.log(`CANDIDATE ${item.owner} ${item.name} line=${item.line} chunkRefs=${item.refs}`);
-          console.log(`CANDIDATE_COUNT ${candidates.length}`);
+          for (const [name, chunk] of Object.entries(chunks)) console.log(`CHUNK_BYTES ${name} ${Buffer.byteLength(String(chunk || ""))}`);
 
-          section("settings-email-edit", "function setSettingsEmailAddressDraft(", "function updateSettingsEmailDraftActions(");
-          section("watchlist-modal-helpers", "function openRenameWatchlistModal(", "function renderWatchlistSwitcher(");
-          section("wallet-preproof-helpers", "async function recordWalletOptIn(", "function restoreLinkedWalletProof(");
-          section("player-note-helpers", "function showPlayerNoteTooltip(", "function refreshPlayerNoteTooltip(");
-          section("player-view-helper", "function normalizePlayerAttributeView(", "function applyPlayerPageScrollTop(");
-          section("evaluation-invalid-link", "function resetInvalidEvaluationLinkToPlainEvaluation(", "function evaluationDiscountRateFromUrl(");
+          section("settings-email-edit", source, "function setSettingsEmailAddressDraft(", "function updateSettingsEmailDraftActions(");
+          section("watchlist-modal-helpers", source, "function openRenameWatchlistModal(", "function renderWatchlistSwitcher(");
+          section("player-note-prefix", source, "function showPlayerNoteTooltip(", "function playerTrainingKey(");
+          section("player-view-prefix", source, "function normalizePlayerAttributeView(", "function applyPlayerPageScrollTop(");
+          section("evaluation-invalid-link", source, "function resetInvalidEvaluationLinkToPlainEvaluation(", "function evaluationDiscountRateFromUrl(");
           NODE
