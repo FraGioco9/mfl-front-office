@@ -39,6 +39,7 @@ const validators = [
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
   "validate-table-route-core.mjs",
+  "validate-agent-title-loading.mjs",
   "validate-table-column-layout.mjs",
   "validate-wallet-core.mjs",
   "validate-watchlist-route-core.mjs",
