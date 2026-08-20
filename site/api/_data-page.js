@@ -183,9 +183,10 @@ function integerIds(value, maximum = 5000) {
 function progressionActivityCondition(view) {
   if (!["current", "all"].includes(view)) return "";
   const suffix = view === "current" ? "prog_current_season" : "prog_all";
-  return `(${Array.from(STAT_COLUMNS)
+  const activityCondition = Array.from(STAT_COLUMNS)
     .map((column) => `coalesce(${quoteIdentifier(`${column}_${suffix}`)}, 0) > 0`)
-    .join(" OR ")})`;
+    .join(" OR ");
+  return `((${activityCondition}) OR coalesce(retirement_years, -1) = 0)`;
 }
 
 async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
