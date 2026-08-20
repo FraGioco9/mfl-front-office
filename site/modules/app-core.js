@@ -7496,7 +7496,7 @@ function countryCodeForNationality(nationality) {
 
 function countryFlagHtml(nationality) {
   const code = countryCodeForNationality(nationality);
-  const label = escapeHtml(String(nationality || "Unknown nationality"));
+  const label = escapeHtml(formatNationality(nationality));
 
   if (!code) {
     return `<span class="flagText" data-tooltip="${label}" aria-label="${label}">-</span>`;
