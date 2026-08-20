@@ -28,73 +28,48 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
-          def replace_once(path, old, new, label):
-              text = path.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
-              path.write_text(text.replace(old, new, 1), encoding="utf-8")
-
-          styles = Path("site/styles-base.css")
-          replace_once(
+          styles_path = Path("site/styles-base.css")
+          styles = styles_path.read_text(encoding="utf-8")
+          styles, base_count = re.subn(
+              r'(\.menuButton \{.*?\n  color: )var\(--text\);',
+              r'\1#ffffff;',
               styles,
-              '''.menuButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0;
-  width: 100%;
-  height: 42px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-''',
-              '''.menuButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0;
-  width: 100%;
-  height: 42px;
-  border: 0;
-  background: transparent;
-  color: #ffffff;
-''',
-              "Menu base color",
+              count=1,
+              flags=re.S,
           )
-          replace_once(
+          styles, hover_count = re.subn(
+              r'(\.menuButton:hover:not\(:disabled\) \{\n  border-color: transparent;\n  background: transparent;\n  color: )var\(--primary\);',
+              r'\1#ffffff;',
               styles,
-              '''.menuButton:hover:not(:disabled) {
-  border-color: transparent;
-  background: transparent;
-  color: var(--primary);
-}
-''',
-              '''.menuButton:hover:not(:disabled) {
-  border-color: transparent;
-  background: transparent;
-  color: #ffffff;
-}
-''',
-              "Menu hover color",
+              count=1,
           )
+          if base_count != 1 or hover_count != 1:
+              raise SystemExit(f"Menu color migration mismatch: base={base_count}, hover={hover_count}")
+          styles_path.write_text(styles, encoding="utf-8")
 
-          validator = Path("site/validate-sidebar-lifecycle-ownership.mjs")
-          replace_once(
-              validator,
-              '''  styles.includes(".menuButton {")
-    && styles.includes("  pointer-events: none;\\n  cursor: default;"),
-  "Static CSS must retain non-interactive pinned-sidebar menu-button presentation.",
-''',
-              '''  styles.includes(".menuButton {")
-    && styles.includes("  color: #ffffff;\\n  padding: 0;")
-    && styles.includes("  pointer-events: none;\\n  cursor: default;")
-    && styles.includes(".menuButton:hover:not(:disabled) {\\n  border-color: transparent;\\n  background: transparent;\\n  color: #ffffff;"),
-  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",
-''',
-              "Menu color validation",
+          validator_path = Path("site/validate-sidebar-lifecycle-ownership.mjs")
+          validator = validator_path.read_text(encoding="utf-8")
+          old = (
+              '  styles.includes(".menuButton {")\n'
+              '    && styles.includes("  pointer-events: none;")\n'
+              '    && styles.includes("  cursor: default;"),\n'
+              '  "Static CSS must retain non-interactive pinned-sidebar menu-button presentation.",\n'
           )
+          new = (
+              '  styles.includes(".menuButton {")\n'
+              '    && styles.includes("  color: #ffffff;\\n  padding: 0;")\n'
+              '    && styles.includes("  pointer-events: none;")\n'
+              '    && styles.includes("  cursor: default;")\n'
+              '    && styles.includes(".menuButton:hover:not(:disabled) {\\n  border-color: transparent;\\n  background: transparent;\\n  color: #ffffff;"),\n'
+              '  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",\n'
+          )
+          if validator.count(old) != 1:
+              raise SystemExit("Menu color validator migration mismatch")
+          validator = validator.replace(old, new, 1)
+          validator = validator.replace("\n// Trigger stable Menu color migration.\n", "\n")
+          validator_path.write_text(validator, encoding="utf-8")
 
       - name: Commit stable white Menu color
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
@@ -263,7 +238,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "4189829+github-actions[bot]@users.noreply.github.com"
           git commit -m "Regenerate application core"
           git push origin "HEAD:$HEAD_BRANCH"
           gh workflow run site-quality.yml --ref "$HEAD_BRANCH"
