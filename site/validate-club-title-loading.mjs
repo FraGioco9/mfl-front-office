@@ -9,10 +9,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeSplitter, bootstrap] = await Promise.all([
+const [coreSource, routeSplitter, bootstrap, generatedClubCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
   read("./bootstrap.js"),
+  read("./modules/app-core-club-runtime.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -50,6 +51,11 @@ includes(
   "Hydrated Club title data must be cached for future first paint.",
 );
 includes(
+  clubCore,
+  'divisionLabel.className = "clubPageTitleDivision";',
+  "Hydrated Club titles must retain the canonical colored division element.",
+);
+includes(
   bootstrap,
   'const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";',
   "Bootstrap first paint must share the canonical Club title cache key.",
@@ -64,6 +70,11 @@ includes(
   'title.replaceChildren(document.createTextNode(`${identity.name} - `), divisionLabel);',
   "Cached Club first paint must render the full name and division title.",
 );
+includes(
+  bootstrap,
+  'divisionLabel.className = "clubPageTitleDivision";',
+  "First paint must use the same division-title element as hydrated Club rendering.",
+);
 excludes(
   bootstrap,
   'if (page === "club") return "Club";',
@@ -75,6 +86,13 @@ excludes(
   "Club title loading must not fetch an external leaderboard or unrelated global dataset.",
 );
 excludes(routeSplitter, "!important", "Club title loading must not add CSS priority overrides.");
+
+const generatedBanner = "// Generated Club core chunk from modules/app-core.js. Do not edit directly.\n";
+invariant(
+  generatedClubCore.startsWith(generatedBanner)
+    && generatedClubCore.slice(generatedBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""),
+  "The tracked generated Club runtime must exactly match the canonical Club title-loading artifact.",
+);
 
 const readinessStart = clubCore.indexOf("const clubTitleReady = ensureClubTitleIdentity(activeClubId);");
 const earlyRender = clubCore.indexOf("renderClubTitle();", readinessStart);
@@ -97,4 +115,4 @@ invariant(
   "Cached Club title data must remain a zero-request source before the exact fallback lookup.",
 );
 
-console.log("Club cached first paint, exact title lookup, division rendering, and loading readiness validation passed.");
+console.log("Club cached first paint, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
