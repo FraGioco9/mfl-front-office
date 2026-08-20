@@ -22,7 +22,6 @@ function renderWatchlistSwitcher() {
   if (typeof __mflWatchlistRenderSwitcherOwner === "function") {
     return __mflWatchlistRenderSwitcherOwner.apply(this, arguments);
   }
-  if (watchlistSwitcher) watchlistSwitcher.hidden = true;
   updateWatchlistTitle();
   updateTablePlayerCount();
   return undefined;
