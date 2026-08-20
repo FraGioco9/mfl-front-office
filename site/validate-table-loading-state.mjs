@@ -21,6 +21,10 @@ for (const required of [
 ]) {
   invariant(runtime.includes(required), `Loading header selection must stay neutral through ${required}`);
 }
+invariant(
+  !runtime.includes("input.disabled = true;"),
+  "Loading must not use the browser disabled-checkbox appearance for the header selector.",
+);
 
 invariant(
   bootstrap.includes('function neutralizeFirstPaintSelectionHeader(head) {')
@@ -65,4 +69,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selection and synchronous first-paint five-row geometry validation passed.");
+console.log("Table loading header selector stays visually neutral and five-row geometry is synchronous at first paint.");
