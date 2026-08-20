@@ -183,10 +183,9 @@ function integerIds(value, maximum = 5000) {
 function progressionActivityCondition(view) {
   if (!["current", "all"].includes(view)) return "";
   const suffix = view === "current" ? "prog_current_season" : "prog_all";
-  const activityCondition = Array.from(STAT_COLUMNS)
+  return `(${Array.from(STAT_COLUMNS)
     .map((column) => `coalesce(${quoteIdentifier(`${column}_${suffix}`)}, 0) > 0`)
-    .join(" OR ");
-  return `((${activityCondition}) OR coalesce(retirement_years, -1) = 0)`;
+    .join(" OR ")})`;
 }
 
 async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
@@ -326,15 +325,12 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
     ),
   );
   const offset = allRows ? 0 : (page - 1) * pageSize;
-  const baseOrder = orderSql(
+  const order = orderSql(
     scope,
     view,
     String(query.sortKey || (scope === "club" ? "positions" : "overall")),
     String(query.sortDirection || (scope === "club" ? "asc" : "desc")),
   );
-  const order = scope === "progression" && String(query.hideRetired || "") !== "1"
-    ? `CASE WHEN coalesce(retirement_years, -1) = 0 THEN 0 ELSE 1 END ASC, ${baseOrder}`
-    : baseOrder;
   const rows = queryRows(
     `SELECT ${selectList(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
     [...parameters, pageSize, offset],
