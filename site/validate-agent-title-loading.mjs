@@ -1,0 +1,78 @@
+import { readFile } from "node:fs/promises";
+
+import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const invariant = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+const includes = (source, value, message) => invariant(source.includes(value), message);
+const excludes = (source, value, message) => invariant(!source.includes(value), message);
+
+const [coreSource, agentNormalizer, buildNormalizer, bootstrap] = await Promise.all([
+  read("./modules/app-core.js"),
+  read("./modules/app-core-agent-title-normalizer.js"),
+  read("./modules/app-core-build-normalizer.js"),
+  read("./bootstrap.js"),
+]);
+
+const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const sharedCore = String(artifacts.core || "");
+const tableCore = String(artifacts.routeChunks?.table || "");
+const playerCore = String(artifacts.routeChunks?.player || "");
+
+new Function(sharedCore);
+new Function(tableCore);
+new Function(playerCore);
+
+includes(
+  buildNormalizer,
+  "const normalizedSource = normalizeAgentPageTitleLoading(canonicalSource);",
+  "Agent title loading must be normalized before route ownership is split.",
+);
+includes(
+  buildNormalizer,
+  "const routeArtifacts = splitApplicationCoreRuntime(normalizedSource);",
+  "Route splitting must consume the Agent-title-normalized source.",
+);
+
+includes(sharedCore, "const agentPageTitleNamePromises = new Map();", "Agent title lookups must deduplicate by wallet.");
+includes(sharedCore, "async function ensureAgentPageTitleName(address, hintedName = \"\") {", "Agent pages must have an explicit title-readiness owner.");
+includes(sharedCore, 'type: "recent",', "Unknown Agent names must use the exact local database lookup path.");
+includes(sharedCore, "walletAddresses: normalizedAddress,", "Unknown Agent lookup must target only the current wallet address.");
+includes(sharedCore, 'function openAgentPage(walletAddress, agentName = "") {', "Agent navigation must accept an already-known name.");
+includes(sharedCore, "agentName: knownName,", "Agent navigation must carry the known name into page loading.");
+includes(sharedCore, "navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));", "Global search must reuse the Agent name it already rendered.");
+includes(sharedCore, 'agentLink.dataset.agentName || agentLink.textContent || ""', "Table navigation must reuse the Agent label already rendered in the row.");
+includes(sharedCore, "const agentTitleReady = pageName === \"agents\"", "Agent page loading must start title resolution with the route.");
+includes(sharedCore, "await agentTitleReady;", "Agent page loading must not finish before title resolution settles.");
+includes(sharedCore, "renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());", "Agent title must be rendered after its name readiness gate.");
+includes(sharedCore, "localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY", "Resolved Agent names must be cached for future navigation and first paint.");
+includes(sharedCore, "localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY)", "Agent title resolution must consume the per-Agent name cache.");
+
+includes(tableCore, 'link.dataset.agentName = String(agentLabel || "");', "Table Agent links must carry their already-rendered name into navigation.");
+includes(playerCore, 'openAgentPage(agentWalletAddress, formatCellValue(row, "wallet_name"));', "Player pages must pass their already-loaded Agent name into navigation.");
+
+includes(bootstrap, "const AGENT_DISPLAY_NAMES_STORAGE_KEY = \"mfl-agent-display-names-v1\";", "First paint must share the canonical Agent display-name cache.");
+includes(bootstrap, "String(agentNames[normalizedWallet] || \"\").trim()", "Direct Agent first paint must reuse a previously cached Agent name.");
+
+excludes(
+  agentNormalizer,
+  "leaderboards/users/global",
+  "Normal Agent page loading must not fetch the full external leaderboard just to resolve one name.",
+);
+excludes(
+  agentNormalizer,
+  "!important",
+  "Agent title loading must not introduce CSS priority overrides.",
+);
+
+const readinessStart = sharedCore.indexOf('const agentTitleReady = pageName === "agents"');
+const readinessAwait = sharedCore.indexOf("await agentTitleReady;", readinessStart);
+const loadingFinish = sharedCore.indexOf("await finishLoading();", readinessAwait);
+invariant(
+  readinessStart >= 0 && readinessAwait > readinessStart && loadingFinish > readinessAwait,
+  "Agent name readiness must settle before the page can finish its loading lifecycle.",
+);
+
+console.log("Agent title name reuse, exact fallback lookup, cache, and loading readiness validation passed.");
