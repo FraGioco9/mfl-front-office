@@ -12,6 +12,7 @@ const SETTINGS_ROUTE_ONLY_FUNCTIONS = [
   "discardSettingsEmailAddressDraft",
   "saveSettingsEmailAddressDraft",
   "updateSettingsEmailOption",
+  "validSettingsEmailAddress",
 ];
 
 export function splitSettingsApplicationCoreRuntime(artifacts) {

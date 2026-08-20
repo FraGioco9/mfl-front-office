@@ -21,6 +21,12 @@ const PLAYER_ROUTE_ONLY_FUNCTIONS = [
   "formatFootedness",
   "rarityColorForOverall",
   "shortStatLabel",
+  "playerNoteIconHtml",
+  "measureTooltipAnchorWidth",
+  "queueWalletNotesSave",
+  "allowedPlayerAttributeViews",
+  "toggleWatchlistPlayer",
+  "createWatchlistStar",
 ];
 
 export function splitPlayerApplicationCoreRuntime(artifacts) {
