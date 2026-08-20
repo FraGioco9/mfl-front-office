@@ -1,13 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { unlink, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const mode = String(process.argv[2] || "").trim();
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(siteRoot, "..");
-const expectedBranch = "chore/canonical-sidebar-lifecycle-v2";
-const inMigrationCi = process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_HEAD_REF === expectedBranch;
+const headRef = String(process.env.GITHUB_HEAD_REF || "").trim();
+const inMigrationCi = process.env.GITHUB_ACTIONS === "true" && /^chore\/canonical-sidebar-lifecycle-v\d+$/.test(headRef);
 
 function git(args, options = {}) {
   return execFileSync("git", args, {
@@ -28,7 +28,7 @@ function replaceOnce(source, from, to, label) {
 
 async function applyMigration() {
   if (inMigrationCi) {
-    git(["checkout", "--detach", `origin/${expectedBranch}`], { stdio: "inherit" });
+    git(["checkout", "--detach", `origin/${headRef}`], { stdio: "inherit" });
   }
 
   const path = resolve(siteRoot, "modules/app-core.js");
@@ -106,16 +106,25 @@ async function applyMigration() {
   }
   source = source.slice(0, iifeStart) + "(() => {\n" + source.slice(watchlistRouteStart);
 
-  source = replaceOnce(source, "      keepSidebarExpanded();\n", "", "setPage sidebar refresh patch");
-
   const routeOwnerStart = source.indexOf("  function routeViewFromPath() {", iifeStart);
   const captureStart = source.indexOf('\n\n  document.addEventListener("click", (event) => {', routeOwnerStart);
+  if (captureStart < 0) {
+    throw new Error("Could not locate the obsolete sidebar capture owner.");
+  }
+
+  const setPageSidebarCall = source.lastIndexOf("keepSidebarExpanded();", captureStart);
+  if (setPageSidebarCall < routeOwnerStart) {
+    throw new Error("Could not isolate the setPage sidebar refresh call.");
+  }
+  source = source.slice(0, setPageSidebarCall) + source.slice(setPageSidebarCall + "keepSidebarExpanded();".length);
+
   const publicProgressionMarker = "\n})();\n\n/* Public progression table views */";
-  const iifeEnd = source.indexOf(publicProgressionMarker, captureStart);
-  if (captureStart < 0 || iifeEnd < 0) {
+  const adjustedCaptureStart = source.indexOf('\n\n  document.addEventListener("click", (event) => {', routeOwnerStart);
+  const iifeEnd = source.indexOf(publicProgressionMarker, adjustedCaptureStart);
+  if (adjustedCaptureStart < 0 || iifeEnd < 0) {
     throw new Error("Could not remove the obsolete sidebar capture/DOMContentLoaded tail.");
   }
-  source = source.slice(0, captureStart) + source.slice(iifeEnd);
+  source = source.slice(0, adjustedCaptureStart) + source.slice(iifeEnd);
 
   for (const stale of [
     "function keepSidebarExpanded()",
@@ -138,36 +147,24 @@ async function applyMigration() {
   console.log("Canonical pinned-sidebar source migration applied.");
 }
 
-async function publishMigration() {
+function reportValidatedMigration() {
   if (!inMigrationCi) {
-    console.log("Sidebar migration publish skipped outside the dedicated GitHub Actions PR run.");
+    console.log("Sidebar migration report skipped outside the dedicated GitHub Actions PR run.");
     return;
   }
 
-  git(["checkout", "origin/main", "--", "site/package.json"], { stdio: "inherit" });
-  await unlink(resolve(siteRoot, "sidebar-lifecycle-migration.mjs"));
   git(["diff", "--check"], { stdio: "inherit" });
-  git(["config", "user.name", "github-actions[bot]"], { stdio: "inherit" });
-  git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], { stdio: "inherit" });
-  git(["add", "--", "site/modules/app-core.js", "site/package.json", "site/sidebar-lifecycle-migration.mjs"], { stdio: "inherit" });
-
-  const staged = git(["diff", "--cached", "--name-only"]).trim();
-  if (!staged.includes("site/modules/app-core.js")) {
-    throw new Error(`Canonical app-core source was not staged for publication. Staged files: ${staged || "none"}`);
+  const patch = git(["diff", "--", "site/modules/app-core.js"]);
+  if (!patch.includes("function updateMenuVisibility()") || !patch.includes("keepSidebarExpanded")) {
+    throw new Error("Validated sidebar migration patch is incomplete.");
   }
-  if (staged.includes("site/package.json") || staged.includes("site/sidebar-lifecycle-migration.mjs")) {
-    console.log(`Temporary migration lifecycle cleaned in the publication commit:\n${staged}`);
-  }
-
-  git(["commit", "-m", "Canonicalize pinned sidebar lifecycle"], { stdio: "inherit" });
-  git(["push", "origin", `HEAD:${expectedBranch}`], { stdio: "inherit" });
-  console.log("Validated canonical sidebar migration published and temporary npm lifecycle removed.");
+  console.log("Validated canonical sidebar migration patch:\n" + patch);
 }
 
 if (mode === "apply") {
   await applyMigration();
 } else if (mode === "publish") {
-  await publishMigration();
+  reportValidatedMigration();
 } else {
   throw new Error(`Unknown sidebar migration mode: ${mode || "<empty>"}`);
 }
