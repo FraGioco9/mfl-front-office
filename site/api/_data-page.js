@@ -326,12 +326,15 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression) {
     ),
   );
   const offset = allRows ? 0 : (page - 1) * pageSize;
-  const order = orderSql(
+  const baseOrder = orderSql(
     scope,
     view,
     String(query.sortKey || (scope === "club" ? "positions" : "overall")),
     String(query.sortDirection || (scope === "club" ? "asc" : "desc")),
   );
+  const order = scope === "progression" && String(query.hideRetired || "") !== "1"
+    ? `CASE WHEN coalesce(retirement_years, -1) = 0 THEN 0 ELSE 1 END ASC, ${baseOrder}`
+    : baseOrder;
   const rows = queryRows(
     `SELECT ${selectList(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
     [...parameters, pageSize, offset],
