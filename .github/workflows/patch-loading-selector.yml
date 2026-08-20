@@ -79,6 +79,18 @@ jobs:
           """,
           )
 
+          app_core = Path("site/modules/app-core.js")
+          app_core_text = app_core.read_text(encoding="utf-8")
+          function_start = app_core_text.find("function updateSelectionHeader(pageRows = currentPageRows()) {")
+          if function_start < 0:
+              raise SystemExit("site/modules/app-core.js: updateSelectionHeader owner not found")
+          visible_ids_index = app_core_text.find("  const visibleIds =", function_start)
+          if visible_ids_index < 0:
+              raise SystemExit("site/modules/app-core.js: visibleIds boundary not found")
+          function_slice = app_core_text[function_start:visible_ids_index]
+          guard_marker = 'document.documentElement.classList.contains("mflDataLoading")'
+          if guard_marker in function_slice:
+              raise SystemExit("site/modules/app-core.js: loading guard already exists unexpectedly")
           app_core_guard = """  if (document.documentElement.classList.contains(\"mflDataLoading\")) {
             selectVisibleInput.checked = false;
             selectVisibleInput.indeterminate = false;
@@ -90,27 +102,21 @@ jobs:
           }
 
           """
-          replace_once(
-              "site/modules/app-core.js",
-              """  if (!selectVisibleInput) {
-            return;
-          }
-
-          """,
-              """  if (!selectVisibleInput) {
-            return;
-          }
-
-          """ + app_core_guard,
+          app_core.write_text(
+              app_core_text[:visible_ids_index] + app_core_guard + app_core_text[visible_ids_index:],
+              encoding="utf-8",
           )
 
           validator = Path("site/validate-table-loading-state.mjs")
           text = validator.read_text(encoding="utf-8")
-          text = text.replace(
-              'const [runtime, bootstrap, stylesBase] = await Promise.all([\n  read("./table-loading-runtime.js"),\n  read("./bootstrap.js"),\n  read("./styles-base.css"),\n]);',
-              'const [runtime, bootstrap, stylesBase, appCoreSource] = await Promise.all([\n  read("./table-loading-runtime.js"),\n  read("./bootstrap.js"),\n  read("./styles-base.css"),\n  read("./modules/app-core.js"),\n]);',
-          )
-          text = text.replace("  'input.disabled = true;',", "  'input.disabled = false;',")
+          old_sources = 'const [runtime, bootstrap, stylesBase] = await Promise.all([\n  read("./table-loading-runtime.js"),\n  read("./bootstrap.js"),\n  read("./styles-base.css"),\n]);'
+          new_sources = 'const [runtime, bootstrap, stylesBase, appCoreSource] = await Promise.all([\n  read("./table-loading-runtime.js"),\n  read("./bootstrap.js"),\n  read("./styles-base.css"),\n  read("./modules/app-core.js"),\n]);'
+          if old_sources not in text:
+              raise SystemExit("validate-table-loading-state.mjs: source list not found")
+          text = text.replace(old_sources, new_sources, 1)
+          if "  'input.disabled = true;'," not in text:
+              raise SystemExit("validate-table-loading-state.mjs: disabled assertion not found")
+          text = text.replace("  'input.disabled = true;',", "  'input.disabled = false;',", 1)
           marker = '''invariant(
             bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')'''
           insertion = '''invariant(
