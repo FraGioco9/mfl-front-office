@@ -27,6 +27,7 @@ const validators = [
   "validate-prebuilt-core-loading.mjs",
   "validate-asset-cache-policy.mjs",
   "validate-production-core-sources.mjs",
+  "validate-database-refresh-deployment.mjs",
   "validate-route-core-startup-routing.mjs",
   "validate-route-page-normalization.mjs",
   "validate-database-stats-lazy-runtime.mjs",
