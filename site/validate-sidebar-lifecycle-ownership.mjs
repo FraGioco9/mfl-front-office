@@ -7,12 +7,15 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles] = await Promise.all([
+
+const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles, responsive, index] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-sidebar-lifecycle.js"),
   read("./modules/app-core-route-chunks.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./styles-base.css"),
+  read("./responsive.css"),
+  read("./index.html"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
 const shared = String(artifacts.core || "");
@@ -62,9 +65,16 @@ invariant(
 );
 invariant(
   styles.includes(".menuButton {")
+    && styles.includes("  color: #ffffff;\n  padding: 0;")
     && styles.includes("  pointer-events: none;")
-    && styles.includes("  cursor: default;"),
-  "Static CSS must retain non-interactive pinned-sidebar menu-button presentation.",
+    && styles.includes("  cursor: default;")
+    && styles.includes(".menuButton:hover:not(:disabled) {\n  border-color: transparent;\n  background: transparent;\n  color: #ffffff;"),
+  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",
+);
+invariant(
+  styles.includes("button:disabled:not(.menuButton) {\n  cursor: not-allowed;\n  opacity: 0.45;\n}")
+    && !styles.includes("button:disabled {\n  cursor: not-allowed;\n  opacity: 0.45;\n}"),
+  "The global disabled-button fade must exclude the permanently disabled pinned Menu control.",
 );
 invariant(
   sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
@@ -79,6 +89,45 @@ invariant(
   "The build must continue splitting canonical app-core source directly without a pre-split patch chain.",
 );
 
+invariant(
+  index.includes('<aside id="sidebar" class="sidebar">\n          <div class="sidebarGrid">')
+    && index.includes('</div>\n          <a class="navButton settingsNavButton"'),
+  "Desktop sidebar navigation buttons must be grouped by the canonical sidebar grid while Settings remains independently bottom-anchored.",
+);
+invariant(
+  styles.includes(".sidebar {\n  width: 162px;")
+    && styles.includes("  display: grid;\n  grid-template-rows: auto minmax(0, 1fr) auto;"),
+  "Desktop sidebar must retain its 162px width and use the canonical three-row grid shell.",
+);
+invariant(
+  styles.includes(".sidebarGrid {\n  display: grid;\n  grid-auto-rows: 40px;\n  gap: 8px;"),
+  "Sidebar page boxes must retain 40px rows with the existing 8px spacing.",
+);
+invariant(
+  styles.includes(".navButton {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr);\n  align-items: center;\n  justify-items: start;")
+    && styles.includes("  height: 40px;\n  margin: 0;"),
+  "Sidebar page boxes must keep their 40px height and vertically center their two-cell icon/label grid.",
+);
+invariant(
+  styles.includes(".navEmoji {\n  display: grid;\n  place-items: center;\n  align-self: center;\n  justify-self: center;\n  width: 18px;\n  height: 18px;"),
+  "Sidebar icons must use a fixed centered 18px cell instead of intrinsic SVG height.",
+);
+invariant(
+  styles.includes(".navText {\n  display: flex;\n  align-items: center;\n  align-self: center;\n  min-height: 20px;\n  max-width: 112px;\n  opacity: 1;\n  line-height: 1.2;\n  white-space: nowrap;")
+    && !styles.includes(".navText {\n  display: flex;\n  align-items: center;\n  align-self: center;\n  height: 18px;"),
+  "Sidebar page labels must stay vertically centered without a hard-height box that clips font descenders.",
+);
+invariant(
+  styles.includes(".settingsNavButton {\n  grid-row: 3;\n  align-self: end;\n  margin: 0 0 8px;"),
+  "Settings must remain anchored at the bottom of the desktop sidebar with its existing bottom spacing.",
+);
+invariant(
+  responsive.includes("  .sidebarGrid {\n    display: contents;\n  }")
+    && responsive.includes("  .settingsNavButton {\n    align-self: center;\n    margin: 0 0 0 auto;\n  }"),
+  "Mobile navigation must flatten the desktop grid wrapper and preserve the existing horizontal Settings placement.",
+);
+
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle is canonical inside the direct route splitter without runtime monkey-patching, animation ownership, or inline presentation overrides.");
+console.log("Built pinned-sidebar lifecycle, stable white Menu color, and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
+

@@ -171,6 +171,10 @@ html:not(.mflInitialRouteResolved):is(
     overscroll-behavior-x: contain;
   }
 
+  .sidebarGrid {
+    display: contents;
+  }
+
   .navButton {
     flex: 0 0 auto;
     width: auto;
@@ -188,8 +192,8 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .settingsNavButton {
-    margin-top: 0;
-    margin-left: auto;
+    align-self: center;
+    margin: 0 0 0 auto;
   }
 
   body.pinnedSidebarVisible main,

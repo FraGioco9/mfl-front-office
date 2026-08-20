@@ -179,7 +179,7 @@ p {
   height: 42px;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: #ffffff;
   padding: 0;
   margin: 0;
   font-weight: 700;
@@ -496,8 +496,8 @@ body[data-page="home"] .topbar .stats {
   margin-top: 12px;
   min-height: calc(100vh - 188px);
   max-height: none;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   opacity: 1;
   transform: translateX(0);
   transition: none;
@@ -507,23 +507,33 @@ body[data-page="home"] .topbar .stats {
   display: none;
 }
 
+.sidebarGrid {
+  display: grid;
+  grid-auto-rows: 40px;
+  gap: 8px;
+  min-width: 0;
+}
+
 
 .settingsNavButton {
-  margin-top: auto;
+  grid-row: 3;
+  align-self: end;
+  margin: 0 0 8px;
 }
 
 .navButton {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
-  justify-content: flex-start;
+  justify-items: start;
   width: 100%;
   height: 40px;
-  margin-bottom: 8px;
+  margin: 0;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
-  gap: 8px;
+  column-gap: 8px;
   padding: 0 14px;
   text-align: left;
   text-decoration: none;
@@ -539,11 +549,12 @@ body[data-page="home"] .topbar .stats {
 }
 
 .navEmoji {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: center;
   width: 18px;
-  flex: 0 0 18px;
+  height: 18px;
   color: currentColor;
   font-family: "Titillium Web", Arial, Helvetica, sans-serif;
   font-size: 18px;
@@ -583,8 +594,7 @@ body[data-page="home"] .topbar .stats {
 
 .navMflIcon {
   width: 18px;
-  flex-basis: 18px;
-  height: auto;
+  height: 18px;
   fill: currentColor;
   stroke: none;
 }
@@ -600,7 +610,7 @@ body[data-page="home"] .topbar .stats {
 
 .navJerseyIcon {
   width: 15px;
-  flex-basis: 15px;
+  height: 18px;
   transform: none;
 }
 
@@ -625,10 +635,13 @@ body[data-page="home"] .topbar .stats {
 }
 
 .navText {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 20px;
   max-width: 112px;
-  overflow: hidden;
   opacity: 1;
+  line-height: 1.2;
   white-space: nowrap;
   transition: none;
 }
@@ -1081,10 +1094,10 @@ button:hover:not(:disabled) {
 .menuButton:hover:not(:disabled) {
   border-color: transparent;
   background: transparent;
-  color: var(--primary);
+  color: #ffffff;
 }
 
-button:disabled {
+button:disabled:not(.menuButton) {
   cursor: not-allowed;
   opacity: 0.45;
 }
