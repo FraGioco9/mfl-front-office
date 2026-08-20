@@ -1,35 +1,12 @@
 (() => {
   "use strict";
 
-  const STYLE_ID = "mflTableChromeRuntimeStyles";
   const CONTROL_SELECTOR = "#pageSizeSelect, #watchlistButton, #openFiltersButton, #quickClearFiltersButton, .quickFilters input, #sidebar .navButton[data-page], #filtersModal button";
 
   window.__mflSharedTableUiRuntime?.destroy?.();
 
   let destroyed = false;
   let pointerControl = null;
-
-  function installStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      .field.rowsField { min-width: 0 !important; pointer-events: none !important; }
-      .field.rowsField > span { flex: 0 0 auto !important; pointer-events: none !important; }
-      .field.rowsField > #pageSizeSelect { flex: 1 1 0 !important; width: 0 !important; min-width: 0 !important; pointer-events: auto !important; }
-      .quickFilters label { cursor: default !important; }
-      .quickFilters input { cursor: pointer !important; }
-      #pageSizeSelect:focus:not(:focus-visible):not(:hover),
-      #openFiltersButton:focus:not(:focus-visible):not(:hover),
-      #quickClearFiltersButton:focus:not(:focus-visible):not(:hover),
-      .quickFilters input:focus:not(:focus-visible):not(:hover),
-      #sidebar .navButton[data-page]:focus:not(:focus-visible):not(:hover) {
-        outline: none !important;
-        box-shadow: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
 
   function controlFromTarget(target) {
     if (!(target instanceof Element)) return null;
@@ -75,10 +52,8 @@
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
     document.removeEventListener("keydown", onKeyDown, true);
-    document.getElementById(STYLE_ID)?.remove();
   }
 
-  installStyles();
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);

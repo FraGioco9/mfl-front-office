@@ -396,28 +396,6 @@ function removeLegacyTableWidthOwnership(source) {
     normalized = `${normalized.slice(0, applyWidthStart)}${canonicalBuilder}${normalized.slice(headerStart)}`;
   }
 
-  const percentageStart = normalized.indexOf("  const tableColumnPercentages = {");
-  const keepSidebarStart = normalized.indexOf("\n  function keepSidebarExpanded()", percentageStart);
-  if (percentageStart >= 0 && keepSidebarStart > percentageStart) {
-    normalized = `${normalized.slice(0, percentageStart)}${normalized.slice(keepSidebarStart + 1)}`;
-  }
-
-  const widthBlockStart = normalized.indexOf("/* Stable pinned layout and pre-reveal table widths */");
-  const nextBlockStart = normalized.indexOf("/* Layout-centered feedback and transition-free shared views */", widthBlockStart);
-  if (widthBlockStart >= 0 && nextBlockStart > widthBlockStart) {
-    normalized = `${normalized.slice(0, widthBlockStart)}${normalized.slice(nextBlockStart)}`;
-  }
-
-  normalized = normalized.replace(
-    '  let clubWidthUnlockTimer = null;\n  let clubWidthObserver = null;\n  let clubWidthLockStartedAt = 0;\n',
-    "",
-  );
-  const clubWidthStart = normalized.indexOf("  function rebuildClubColumns() {");
-  const clubStyleStart = normalized.indexOf('  const style = document.createElement("style");', clubWidthStart);
-  if (clubWidthStart >= 0 && clubStyleStart > clubWidthStart) {
-    normalized = `${normalized.slice(0, clubWidthStart)}${normalized.slice(clubStyleStart)}`;
-  }
-
   const staleWidthOwners = [
     "tableColumnWidths",
     "tableColumnPercentages",

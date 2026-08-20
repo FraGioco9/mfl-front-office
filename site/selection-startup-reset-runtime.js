@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  const STYLE_ID = "mflSelectionStartupResetStyles";
   const PENDING_CLASS = "mflSelectionStartupResetPending";
 
   window.__mflSelectionStartupResetRuntime?.destroy?.();
@@ -89,18 +88,8 @@
     return bridgeInstalled;
   }
 
-  function ensurePendingStyle() {
+  function markPending() {
     document.documentElement.classList.add(PENDING_CLASS);
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      html.${PENDING_CLASS} #selectionBar {
-        opacity: 0 !important;
-        pointer-events: none !important;
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   function finish() {
@@ -108,7 +97,6 @@
     clearCurrentSelection();
     window.__mflSelectionStartupResetActive = false;
     document.documentElement.classList.remove(PENDING_CLASS);
-    document.getElementById(STYLE_ID)?.remove();
   }
 
   function rebind() {
@@ -116,7 +104,7 @@
     clearCurrentSelection();
   }
 
-  ensurePendingStyle();
+  markPending();
   installRestoreBridge();
   clearCurrentSelection();
   window.addEventListener("mfl:ready", finish, { once: true });
@@ -127,7 +115,6 @@
     window.__mflSelectionStartupResetActive = false;
     window.removeEventListener("mfl:ready", finish);
     document.documentElement.classList.remove(PENDING_CLASS);
-    document.getElementById(STYLE_ID)?.remove();
   }
 
   window.__mflSelectionStartupResetRuntime = Object.freeze({ rebind, destroy });

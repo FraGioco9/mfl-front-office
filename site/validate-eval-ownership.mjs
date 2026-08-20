@@ -161,12 +161,13 @@ invariant(
   "The route normalizer must publish one immutable application-core contract before startup.",
 );
 invariant(
-  routeRuntimeNormalizer.includes("function removeLegacyEvaluationRouteStability(source)"),
-  "The shared normalizer pipeline must remove the legacy Evaluation route-stability tail for both build and fallback paths.",
+  !appCoreSource.includes("__mflEvaluationRouteStability")
+    && !appCoreSource.includes("evaluationRouteStabilityStyles"),
+  "Application core source must not retain the legacy Evaluation route-stability owner or its injected CSS.",
 );
 invariant(
-  routeRuntimeNormalizer.includes('\'window.eval("renderEvaluationPage = window.__mflStableEvaluationRender")\''),
-  "The sanitizer must recognize the historical Evaluation eval marker without executing it.",
+  !routeRuntimeNormalizer.includes("removeLegacyEvaluationRouteStability"),
+  "The shared route normalizer must not carry a sanitizer for deleted Evaluation route-stability source.",
 );
 for (const contractMethod of [
   "ensureCanonicalTableHeader",

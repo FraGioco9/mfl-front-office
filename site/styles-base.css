@@ -1643,7 +1643,28 @@ table {
 }
 
 .contractDivisionLabel {
-  font-weight: 700;
+  font-weight: 400;
+}
+
+.clubPageLink {
+  color: var(--text, #fff);
+  font-weight: 400;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.clubPageLink:hover,
+.clubPageLink:focus-visible {
+  color: #78c7ff;
+}
+
+.clubSearchResult > span {
+  display: block;
+}
+
+.clubSearchDivision {
+  display: inline;
+  font-weight: 400;
 }
 
 th,
@@ -1924,10 +1945,12 @@ td a {
 
 
 .selectionBar {
+  --mfl-selection-exit-y: 0px;
   position: fixed;
   left: var(--selection-center-x, 50%);
-  bottom: 22px;
-  z-index: 30;
+  right: auto;
+  bottom: var(--mfl-selection-bar-bottom, 22px);
+  z-index: 2147483630;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -1940,7 +1963,7 @@ td a {
   box-shadow: 0 16px 42px rgba(28, 95, 138, 0.25);
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 18px) scale(0.96);
+  transform: translateX(-50%) translateY(var(--mfl-selection-exit-y));
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
@@ -1954,7 +1977,18 @@ td a {
 .selectionBar.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0) scale(1);
+  transform: translateX(-50%) translateY(var(--mfl-selection-exit-y));
+}
+
+.selectionBar.mflSelectionActionDismissed {
+  --mfl-selection-exit-y: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.selectionBar.mflSelectionActionDismissed * {
+  pointer-events: none;
 }
 
 .selectionBar[hidden] {

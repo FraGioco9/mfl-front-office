@@ -5,7 +5,6 @@
   const GAP = 12;
   const EXIT_MS = 220;
   const TOAST_ANCHOR_MS = 15000;
-  const TOAST_SELECTOR = ".toastMessage, .watchlistToast, #watchlistToast, #toastMessage, .toast";
   const TABLE_PAGE_NAMES = new Set(["database", "mfl", "progression", "agents", "watchlist", "myplayers", "club"]);
   const NAVIGATION_STATE_CONTROL_IDS = [
     "hideRetiredInput",
@@ -31,13 +30,6 @@
   let frozenSelectionLabel = "";
   let lastKnownSelectionCount = 0;
   let navigationSourceControlSnapshot = null;
-
-  function setImportant(element, property, value) {
-    if (!(element instanceof HTMLElement)) return;
-    if (element.style.getPropertyValue(property) === value
-        && element.style.getPropertyPriority(property) === "important") return;
-    element.style.setProperty(property, value, "important");
-  }
 
   function selectionBar() {
     const bar = document.getElementById("selectionBar");
@@ -78,58 +70,6 @@
     return Math.max(0, Math.min(innerHeight, rect.top));
   }
 
-  function ensureStyles() {
-    let style = document.getElementById("mflSelectionStackStyles");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "mflSelectionStackStyles";
-      document.head?.appendChild(style);
-    }
-
-    const css = `
-      #selectionBar {
-        --mfl-selection-exit-y: 0px;
-      }
-
-      #selectionBar.mflSelectionActionDismissed {
-        --mfl-selection-exit-y: ${GAP}px;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        transition: opacity ${EXIT_MS}ms ease, transform ${EXIT_MS}ms ease !important;
-      }
-
-      #selectionBar.mflSelectionActionDismissed * {
-        pointer-events: none !important;
-      }
-
-      #addWatchlistNameInput:focus,
-      #addWatchlistNameInput:focus-visible {
-        outline: none;
-        border-color: var(--primary-hover);
-        background: var(--row-hover);
-        color: var(--text);
-        box-shadow: none;
-      }
-
-      #sidebar .navButton:focus,
-      #sidebar .navButton:focus-visible {
-        outline: none;
-        border-color: var(--primary-hover);
-        background: var(--row-hover);
-        color: var(--text);
-        box-shadow: none;
-      }
-
-      #sidebar .navButton.active:focus,
-      #sidebar .navButton.active:focus-visible {
-        border-color: var(--primary);
-        background: var(--primary);
-        color: #ffffff;
-      }
-    `;
-    if (style && style.textContent !== css) style.textContent = css;
-  }
-
   function syncSelectionBarPosition() {
     const bar = selectionBar();
     const main = document.querySelector("#appShell main, main");
@@ -139,12 +79,7 @@
     const rect = main.getBoundingClientRect();
     const bottom = Math.max(GAP, Math.ceil(innerHeight - visibleFooterTop() + GAP));
     bar.dataset.contentLayoutVersion = VERSION;
-    setImportant(bar, "position", "fixed");
-    setImportant(bar, "left", `${Math.round(rect.left + rect.width / 2)}px`);
-    setImportant(bar, "right", "auto");
-    setImportant(bar, "bottom", `${bottom}px`);
-    setImportant(bar, "transform", "translateX(-50%) translateY(var(--mfl-selection-exit-y, 0px))");
-    setImportant(bar, "z-index", "2147483630");
+    document.documentElement.style.setProperty("--selection-center-x", `${Math.round(rect.left + rect.width / 2)}px`);
     document.documentElement.style.setProperty("--mfl-selection-bar-bottom", `${bottom}px`);
   }
 
@@ -409,12 +344,7 @@
   }
 
   function syncToastPosition() {
-    const desiredBottom = desiredToastBottom();
-    document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
-      if (!(toast instanceof HTMLElement)) return;
-      setImportant(toast, "bottom", `${desiredBottom}px`);
-      setImportant(toast, "z-index", "2147483635");
-    });
+    document.documentElement.style.setProperty("--mfl-toast-bottom", `${desiredToastBottom()}px`);
   }
 
   function bindObserver() {
@@ -436,7 +366,6 @@
   function sync() {
     frame = 0;
     if (destroyed) return;
-    ensureStyles();
     bindObserver();
     syncSelectionBarPosition();
     syncSelectionState();
@@ -523,21 +452,14 @@
     document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("resize", schedule);
     window.removeEventListener("scroll", schedule, true);
+    document.documentElement.style.removeProperty("--selection-center-x");
     document.documentElement.style.removeProperty("--mfl-selection-bar-bottom");
-    document.querySelectorAll(TOAST_SELECTOR).forEach((toast) => {
-      if (!(toast instanceof HTMLElement)) return;
-      toast.style.removeProperty("bottom");
-      toast.style.removeProperty("z-index");
-    });
+    document.documentElement.style.removeProperty("--mfl-toast-bottom");
     const bar = selectionBar();
     if (bar) {
       bar.hidden = false;
       bar.classList.remove("mflSelectionActionDismissed");
-      ["position", "left", "right", "bottom", "transform", "z-index"].forEach((property) => {
-        bar.style.removeProperty(property);
-      });
     }
-    document.getElementById("mflSelectionStackStyles")?.remove();
   }
 
   window.__mflSelectionStackRuntime = Object.freeze({
