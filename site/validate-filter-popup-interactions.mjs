@@ -20,16 +20,23 @@ for (const required of [
 }
 
 for (const required of [
-  "function blurFilterSelectAfterChange(target) {",
+  "function blurFilterSelectAfterCommit(target) {",
   'const filtersModal = document.getElementById("filtersModal");',
   "!filtersModal.contains(target)",
+  "window.setTimeout(() => {",
+  "target.blur();",
+  "window.requestAnimationFrame(() => {",
   "document.activeElement === target) target.blur();",
-  'document.addEventListener("change", (event) => {\n    blurFilterSelectAfterChange(event.target);\n  });',
+  'document.addEventListener("change", (event) => {\n    blurFilterSelectAfterCommit(event.target);\n  });',
 ]) {
-  invariant(dropdownRuntime.includes(required), `Filter dropdowns are missing post-selection blur ownership through ${required}`);
+  invariant(dropdownRuntime.includes(required), `Filter dropdowns are missing post-commit blur ownership through ${required}`);
 }
 
+invariant(
+  !dropdownRuntime.includes("queueMicrotask(() => {\n      if (target.isConnected && document.activeElement === target) target.blur();"),
+  "Filter dropdown blur must not run before the native picker commit finishes.",
+);
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Filter popup hover and post-selection blur validation passed.");
+console.log("Filter popup hover and post-commit blur validation passed.");
