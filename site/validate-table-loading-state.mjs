@@ -22,10 +22,18 @@ for (const required of [
 }
 
 invariant(
-  runtime.includes('column.classList.contains("col-name")')
-    && runtime.includes('nameCell.className = "playerNameCell";')
-    && runtime.includes('normalizeLoadingRowGeometry(body);'),
-  "Loading rows must reuse the loaded player-name cell geometry instead of owning a separate row-height approximation.",
+  bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
+    && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
+    && bootstrap.includes('if (columnIndex === nameColumnIndex) {')
+    && bootstrap.includes('nameCell.className = "playerNameCell";')
+    && bootstrap.includes('cell.appendChild(nameCell);'),
+  "The synchronous bootstrap must render loading rows with loaded-row player-name geometry before first paint.",
+);
+
+invariant(
+  !runtime.includes("normalizeLoadingRowGeometry")
+    && !runtime.includes("loadingNameColumnIndex"),
+  "The loading runtime must not repair row geometry after first paint; bootstrap owns it synchronously.",
 );
 
 invariant(
@@ -36,7 +44,7 @@ invariant(
 
 invariant(
   stylesBase.includes("#tableBody .playerNameCell {\n  min-height: 38px;\n  align-items: center;\n}"),
-  "Loaded rows must retain the player-name geometry reused by blank loading rows.",
+  "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selection and five-row geometry validation passed.");
+console.log("Table loading header selection and first-paint five-row geometry validation passed.");
