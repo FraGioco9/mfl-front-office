@@ -159,13 +159,13 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 .tablePageTitle {
   display: flex;
   align-items: center;
-  gap: 0.35em;
+  gap: 0;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   margin: var(--mfl-page-title-margin-block-start) 0 var(--mfl-page-title-margin-block-end);
   line-height: var(--mfl-page-title-line-height);
-  white-space: nowrap;
+  white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -208,6 +208,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   border: 0;
   background: transparent;
   display: inline;
+  height: 24px;
   color: inherit;
   font: inherit;
   padding: 0;

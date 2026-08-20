@@ -1,4 +1,85 @@
 // Generated Table core chunk from modules/app-core.js. Do not edit directly.
+const agentPageTitleNamePromises = new Map();
+
+function runtimeAgentPageTitleName(address, hintedName = "") {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) return "";
+
+  const indexedAgent = agentSearchResultByWallet(normalizedAddress);
+  const row = state.rows.find((candidate) => normalizeWalletAddress(getValue(candidate, "wallet_address")).toLowerCase() === normalizedAddress);
+  const candidates = [
+    hintedName,
+    savedAgentNameForWallet(normalizedAddress),
+    indexedAgent?.name,
+    state.walletRows.find((candidate) => normalizeWalletAddress(candidate.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name,
+    row ? getValue(row, "wallet_name") : "",
+  ];
+  const agentName = candidates
+    .map((candidate) => normalizedAgentName(candidate))
+    .find((candidate) => candidate && candidate.toLowerCase() !== normalizedAddress) || "";
+
+  if (agentName) saveAgentNameForWallet(normalizedAddress, agentName);
+  return agentName;
+}
+
+async function tableEnsureAgentPageTitleNameOwner(address, hintedName = "") {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) return "";
+
+  const runtimeName = runtimeAgentPageTitleName(normalizedAddress, hintedName);
+  if (runtimeName) {
+    if (state.currentPage === "agents") renderAgentPageTitle(normalizedAddress);
+    return runtimeName;
+  }
+
+  const existingPromise = agentPageTitleNamePromises.get(normalizedAddress);
+  if (existingPromise) return existingPromise;
+
+  const pending = (async () => {
+    try {
+      const parameters = new URLSearchParams({
+        mode: "search",
+        type: "recent",
+        walletAddresses: normalizedAddress,
+      });
+      const response = await fetch("/api/data?" + parameters.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const agents = payload?.agents || {};
+        const columns = Array.isArray(agents.columns) ? agents.columns : [];
+        const walletIndex = columns.indexOf("wallet_address");
+        const nameIndex = columns.indexOf("wallet_name");
+        const matchingRow = Array.isArray(agents.rows)
+          ? agents.rows.find((candidate) => walletIndex >= 0
+            && normalizeWalletAddress(candidate?.[walletIndex]).toLowerCase() === normalizedAddress)
+          : null;
+        const fetchedName = normalizedAgentName(nameIndex >= 0 ? matchingRow?.[nameIndex] : "");
+        if (fetchedName && fetchedName.toLowerCase() !== normalizedAddress) {
+          saveAgentNameForWallet(normalizedAddress, fetchedName);
+          if (state.currentPage === "agents"
+            && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress) {
+            renderAgentPageTitle(normalizedAddress);
+          }
+          return fetchedName;
+        }
+      }
+    } catch {}
+
+    return runtimeAgentPageTitleName(normalizedAddress, hintedName)
+      || savedAgentNameForWallet(normalizedAddress);
+  })().finally(() => {
+    if (agentPageTitleNamePromises.get(normalizedAddress) === pending) {
+      agentPageTitleNamePromises.delete(normalizedAddress);
+    }
+  });
+
+  agentPageTitleNamePromises.set(normalizedAddress, pending);
+  return pending;
+}
+
 function currentViewColumns(pageName = state.currentPage, viewName = state.view) {
   return (views[viewName]?.columns || []).map((column) => displayColumnForPage(column, pageName));
 }
@@ -1589,6 +1670,7 @@ function tableRenderTableOwner() {
           link.textContent = agentLabel;
           const tooltip = joinedAgencyTooltip(row);
           link.dataset.walletAddress = String(walletAddress || "");
+          link.dataset.agentName = String(agentLabel || "");
           if (tooltip) {
             link.dataset.tooltip = tooltip;
           }
@@ -1687,6 +1769,7 @@ async function tableSetViewOwner(viewName) {
 }
 
 __mflTableTitleForPageOwner = tableTitleForPageOwner;
+__mflTableEnsureAgentPageTitleNameOwner = tableEnsureAgentPageTitleNameOwner;
 __mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
 __mflTableBuildHeaderOwner = tableBuildHeaderOwner;
 __mflTableBuildOperatorSelectOwner = tableBuildOperatorSelectOwner;
