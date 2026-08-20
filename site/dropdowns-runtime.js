@@ -5,7 +5,6 @@
   const suppressNextClick = new WeakSet();
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
-  let filtersEscapeClosePending = false;
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -139,42 +138,6 @@
     }, 0);
   }
 
-  function armFiltersEscapeClose(target) {
-    const filtersModal = document.getElementById("filtersModal");
-    if (!(filtersModal instanceof HTMLElement) || filtersModal.hidden) return;
-    if (!(target instanceof Node) || !filtersModal.contains(target)) return;
-
-    const select = filterSelectForTarget(target);
-    if (select instanceof HTMLSelectElement && isSelectOpen(select)) return;
-    filtersEscapeClosePending = true;
-  }
-
-  function clearFiltersTriggerFocusAfterEscapeClose() {
-    if (!filtersEscapeClosePending) return;
-    const filtersModal = document.getElementById("filtersModal");
-    if (!(filtersModal instanceof HTMLElement) || !filtersModal.hidden) return;
-
-    filtersEscapeClosePending = false;
-    const openFiltersButton = document.getElementById("openFiltersButton");
-    if (!(openFiltersButton instanceof HTMLButtonElement)) return;
-
-    openFiltersButton.blur();
-    window.requestAnimationFrame(() => {
-      if (document.activeElement === openFiltersButton) openFiltersButton.blur();
-    });
-  }
-
-  function observeFiltersEscapeClose() {
-    const filtersModal = document.getElementById("filtersModal");
-    if (!(filtersModal instanceof HTMLElement)) return;
-
-    const observer = new MutationObserver(clearFiltersTriggerFocusAfterEscapeClose);
-    observer.observe(filtersModal, {
-      attributes: true,
-      attributeFilter: ["hidden"],
-    });
-  }
-
   function beginNeutralFiltersOpen() {
     document.documentElement.classList.add("mflFiltersOpeningNeutral");
     queueMicrotask(clearInitialFilterFocus);
@@ -236,9 +199,6 @@
 
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
-    if (event.key === "Escape") {
-      armFiltersEscapeClose(event.target);
-    }
     if (["Enter", "Escape", "Tab"].includes(event.key)) {
       blurFilterSelectWhenClosed(event.target);
     }
@@ -288,7 +248,6 @@
 
   enhanceVisible(document);
   syncAttributesViewLabel();
-  observeFiltersEscapeClose();
 
   const labelObserver = new MutationObserver(syncAttributesViewLabel);
   if (document.body) {
