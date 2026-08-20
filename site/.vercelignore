@@ -1,4 +1,4 @@
-# Site development, validation, and deployment configuration assets.
+# Site-root development, validation, and deployment configuration assets.
 validate*.mjs
 eslint.config.mjs
 jsconfig.json
