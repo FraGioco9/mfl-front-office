@@ -112,6 +112,32 @@
     if (filtersModal.contains(active)) active.blur();
   }
 
+  function filterSelectForTarget(target) {
+    const filtersModal = document.getElementById("filtersModal");
+    if (!(filtersModal instanceof HTMLElement)) return null;
+
+    let select = target instanceof HTMLSelectElement ? target : null;
+    if (!(select instanceof HTMLSelectElement) && document.activeElement instanceof HTMLSelectElement) {
+      select = document.activeElement;
+    }
+    return select instanceof HTMLSelectElement && filtersModal.contains(select) ? select : null;
+  }
+
+  function blurFilterSelectWhenClosed(target) {
+    const select = filterSelectForTarget(target);
+    if (!(select instanceof HTMLSelectElement)) return;
+
+    window.setTimeout(() => {
+      if (!select.isConnected || isSelectOpen(select)) return;
+      select.blur();
+      window.requestAnimationFrame(() => {
+        if (select.isConnected && !isSelectOpen(select) && document.activeElement === select) {
+          select.blur();
+        }
+      });
+    }, 0);
+  }
+
   function beginNeutralFiltersOpen() {
     document.documentElement.classList.add("mflFiltersOpeningNeutral");
     queueMicrotask(clearInitialFilterFocus);
@@ -159,6 +185,7 @@
     const releasedView = String(viewButton?.dataset.view || "");
     clubPointerCommittedView = releasedView && releasedView === clubPointerPressedView ? releasedView : "";
     clubPointerPressedView = "";
+    blurFilterSelectWhenClosed(event.target);
   }, true);
 
   document.addEventListener("pointercancel", () => {
@@ -166,8 +193,15 @@
     clubPointerCommittedView = "";
   }, true);
 
+  document.addEventListener("change", (event) => {
+    blurFilterSelectWhenClosed(event.target);
+  });
+
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
+    if (["Enter", "Escape", "Tab"].includes(event.key)) {
+      blurFilterSelectWhenClosed(event.target);
+    }
   }, true);
 
   document.addEventListener("keydown", (event) => {
@@ -199,6 +233,8 @@
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+
+    blurFilterSelectWhenClosed(target);
 
     if (target.closest("#openFiltersButton")) beginNeutralFiltersOpen();
 

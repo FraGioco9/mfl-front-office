@@ -6320,7 +6320,7 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Escape" && !searchModal.hidden) {
     closeSearch();
   } else if (event.key === "Escape" && !filtersModal.hidden) {
-    closeFilters();
+    closeFilters(false, false);
   } else if (event.key === "Escape" && !watchlistChoiceModal?.hidden) {
     closeWatchlistChoiceModal();
   } else if (event.key === "Escape" && !addWatchlistModal.hidden) {

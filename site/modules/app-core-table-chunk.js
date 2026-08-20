@@ -383,6 +383,33 @@ export function splitTableApplicationCoreRuntime(artifacts) {
 
   normalizedCore = replaceRequired(
     normalizedCore,
+    "function closeFilters(commitChanges = false) {",
+    "function closeFilters(commitChanges = false, restoreTriggerFocus = true) {",
+    "Filters close focus option",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `  hideModal(filtersModal, () => {
+    document.body.classList.remove("filtersOpen");
+    openFiltersButton.focus();
+  });`,
+    `  hideModal(filtersModal, () => {
+    document.body.classList.remove("filtersOpen");
+    if (restoreTriggerFocus) openFiltersButton.focus();
+  });`,
+    "Filters close focus ownership",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `  } else if (event.key === "Escape" && !filtersModal.hidden) {
+    closeFilters();`,
+    `  } else if (event.key === "Escape" && !filtersModal.hidden) {
+    closeFilters(false, false);`,
+    "Filters Escape neutral trigger focus",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
     "saveAgentDisplayName(entry.walletAddress, entry.name);",
     "saveAgentNameForWallet(entry.walletAddress, entry.name);",
     "Agent search-index cache ownership",

@@ -118,15 +118,24 @@
 }
 
 .filtersDialog [data-filter-value],
+.filtersDialog select,
 #evaluationSearchInput,
 .globalSearchControl #playerSearchInput,
 #pageSizeSelect {
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
+.filtersDialog [data-filter-value]:not(:disabled),
+.filtersDialog select:not(:disabled) {
+  cursor: pointer;
+}
+
 .filtersDialog [data-filter-value]:hover:not(:disabled),
 .filtersDialog [data-filter-value]:focus:not(:disabled),
 .filtersDialog [data-filter-value]:focus-visible:not(:disabled),
+.filtersDialog select:hover:not(:disabled),
+.filtersDialog select:focus:not(:disabled),
+.filtersDialog select:focus-visible:not(:disabled),
 #evaluationSearchInput:hover:not(:disabled),
 #evaluationSearchInput:focus:not(:disabled),
 #evaluationSearchInput:focus-visible:not(:disabled),
