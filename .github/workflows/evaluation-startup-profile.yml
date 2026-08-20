@@ -27,6 +27,9 @@ jobs:
           import { readFile } from 'node:fs/promises';
           import { normalizeBuiltApplicationCoreArtifacts } from './modules/app-core-build-normalizer.js';
           const source = await readFile('./modules/app-core.js', 'utf8');
+          const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+          const shared = String(artifacts.core || '');
+          const evaluation = String(artifacts.routeChunks?.evaluation || '');
           const names = [
             'evaluationDiscountRateValue', 'formatEvaluationRate', 'parseEvaluationMflPerUsd',
             'formatEvaluationMflPerUsd', 'saveEvaluationMflPerUsd', 'loadEvaluationMflPerUsd',
@@ -45,7 +48,23 @@ jobs:
             console.log(`\n## ${name} (${hits.length})`);
             hits.forEach((hit) => console.log(hit));
           }
-          const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
-          console.log(`\nSHARED_BYTES ${Buffer.byteLength(String(artifacts.core || ''))}`);
-          console.log(`EVALUATION_BYTES ${Buffer.byteLength(String(artifacts.routeChunks?.evaluation || ''))}`);
+
+          const countWord = (text, name) => (text.match(new RegExp(`\\b${name}\\b`, 'g')) || []).length;
+          const regionStart = source.indexOf('const DEFAULT_EVALUATION_MFL_PER_USD = 400;');
+          const regionEnd = source.indexOf('const agentColumn = "wallet_name";', regionStart);
+          const region = source.slice(regionStart, regionEnd);
+          const declarations = new Set();
+          for (const match of region.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/gm)) declarations.add(match[1]);
+          for (const match of region.matchAll(/^const\s+([A-Za-z_$][\w$]*)\s*=/gm)) declarations.add(match[1]);
+          console.log('\n## Evaluation-region declarations with no shared consumers');
+          for (const name of [...declarations].sort()) {
+            const sharedCount = countWord(shared, name);
+            const evaluationCount = countWord(evaluation, name);
+            if (sharedCount === 1 && evaluationCount > 0) {
+              console.log(`${name} shared=${sharedCount} evaluation=${evaluationCount}`);
+            }
+          }
+
+          console.log(`\nSHARED_BYTES ${Buffer.byteLength(shared)}`);
+          console.log(`EVALUATION_BYTES ${Buffer.byteLength(evaluation)}`);
           NODE
