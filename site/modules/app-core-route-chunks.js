@@ -551,40 +551,6 @@ export function splitApplicationCoreRuntime(source) {
   );
   club = replaceRequired(
     club,
-    `      const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
-        ? await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {
-            view: nextView,
-            clubId: activeClubId,
-            ignoreCurrentClubRoute: true,
-          })
-        : false;
-      if (!dataLoaded) return;`,
-    `      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
-        || clubTitleIdentityFromSearchIndex(activeClubId);
-      if (earlyClubTitle) activeClubTitle = earlyClubTitle;
-      renderClubTitle();
-      void clubTitleReady.then((resolvedTitle) => {
-        if (!resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
-        activeClubTitle = resolvedTitle;
-        renderClubTitle();
-      });
-
-      const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
-        ? await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {
-            view: nextView,
-            clubId: activeClubId,
-            ignoreCurrentClubRoute: true,
-          })
-        : false;
-      if (!dataLoaded) return;
-      const resolvedClubTitle = await clubTitleReady;
-      if (resolvedClubTitle && String(activeClubId) === nextClubId) {
-        activeClubTitle = resolvedClubTitle;
-      }`,
-    "Club title readiness during page loading",
-  );
-  club = replaceRequired(
-    club,
     `  window.addEventListener("popstate", () => {
     const route = clubRoute();
     if (route) void openClubPage(route.clubId, route.view, false);
@@ -687,15 +653,29 @@ export function splitApplicationCoreRuntime(source) {
       };
       await withInteractionBusy(loadClubData);
       if (!dataPayload) return;`,
-    `      const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
+    `      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromSearchIndex(activeClubId);
+      if (earlyClubTitle) activeClubTitle = earlyClubTitle;
+      renderClubTitle();
+      void clubTitleReady.then((resolvedTitle) => {
+        if (!resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+        activeClubTitle = resolvedTitle;
+        renderClubTitle();
+      });
+
+      const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
         ? await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {
             view: nextView,
             clubId: activeClubId,
             ignoreCurrentClubRoute: true,
           })
         : false;
-      if (!dataLoaded) return;`,
-    "Club page canonical incremental loader",
+      if (!dataLoaded) return;
+      const resolvedClubTitle = await clubTitleReady;
+      if (resolvedClubTitle && String(activeClubId) === nextClubId) {
+        activeClubTitle = resolvedClubTitle;
+      }`,
+    "Club page canonical incremental loader and title readiness",
   );
 
   club = replaceRequired(
