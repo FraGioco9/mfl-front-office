@@ -4,8 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -157,6 +159,7 @@ jobs:
         working-directory: .
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
@@ -169,6 +172,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Regenerate application core"
           git push origin "HEAD:$HEAD_BRANCH"
+          gh workflow run site-quality.yml --ref "$HEAD_BRANCH"
 
       - name: Verify generated application artifacts
         if: steps.changes.outputs.quality == 'true'
