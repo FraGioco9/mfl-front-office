@@ -7,17 +7,22 @@ const invariant = (condition, message) => {
 };
 
 invariant(
-  apiSource.includes('const publicProgressionView = ["agent", "club", "watchlist"].includes(scope)\n      && ["current", "all"].includes(view);'),
+  apiSource.includes('const publicEntityProgression = ["agent", "club"].includes(scope)\n      && ["current", "all"].includes(view);'),
+  "Agent and Club progression must retain their canonical public entity access contract.",
+);
+
+invariant(
+  apiSource.includes('const publicWatchlistProgression = scope === "watchlist"\n      && ["current", "all"].includes(view);'),
   "Watchlist current/all views must receive progression columns without full Progression permission.",
 );
 
 invariant(
-  apiSource.includes('const fullAccess = publicProgressionView || (\n      accessMode === "full-progression"'),
+  apiSource.includes('const fullAccess = publicEntityProgression || publicWatchlistProgression || (\n      accessMode === "full-progression"'),
   "Public Watchlist progression must bypass only the full-progression permission check, not replace the canonical access flow.",
 );
 
 invariant(
-  !apiSource.includes('["agent", "club", "watchlist", "progression"]'),
+  !apiSource.includes('scope === "progression"\n      && ["current", "all"].includes(view)'),
   "The main Progression scope must remain excluded from public progression access.",
 );
 
