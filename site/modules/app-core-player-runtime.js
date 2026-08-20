@@ -627,7 +627,7 @@ function renderPlayerPageOwner(playerId) {
     }
     playerAgentLink.addEventListener("click", (event) => {
       event.preventDefault();
-      openAgentPage(agentWalletAddress);
+      openAgentPage(agentWalletAddress, formatCellValue(row, "wallet_name"));
     });
   }
   playerDetail.querySelectorAll("[data-player-attribute-view]").forEach((button) => {

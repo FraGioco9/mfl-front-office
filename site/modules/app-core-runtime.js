@@ -800,59 +800,32 @@ function normalizedAgentName(value) {
 
 function savedAgentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
-  if (!normalizedAddress) {
-    return "";
-  }
-
+  if (!normalizedAddress) return "";
   try {
-    const saved = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
-    return normalizeWalletAddress(saved?.address).toLowerCase() === normalizedAddress
-      ? normalizedAgentName(saved?.name)
-      : "";
+    const names = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+    const name = normalizedAgentName(names?.[normalizedAddress]);
+    return name && name.toLowerCase() !== normalizedAddress ? name : "";
   } catch {
     return "";
   }
 }
 
 function saveAgentNameForWallet(address, name) {
-  const normalizedAddress = normalizeWalletAddress(address);
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   const agentName = normalizedAgentName(name);
-  if (!normalizedAddress || !agentName) {
-    return;
-  }
-
-  function loadAgentDisplayNames() {
-    try {
-      const value = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
-      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function saveAgentDisplayName(address, name) {
-    const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
-    const agentName = normalizedAgentName(name);
-    if (!normalizedAddress || !agentName) return;
-    try {
-      const next = loadAgentDisplayNames();
-      next[normalizedAddress] = agentName;
-      localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Ignore storage failures; runtime can still resolve names from loaded rows.
-    }
-    if (state.currentPage === "agents"
-      && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress
-      && tablePageTitle) {
-      tablePageTitle.textContent = `${agentName} - ${normalizedAddress}`;
-    }
-  }
-
+  if (!normalizedAddress || !agentName || agentName.toLowerCase() === normalizedAddress) return;
   try {
-    localStorage.setItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY, JSON.stringify({ address: normalizedAddress, name: agentName }));
-  } catch {
-    // The account dropdown can still fall back to the live data for this page.
-  }
+    const saved = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+    const names = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    names[normalizedAddress] = agentName;
+    localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(names));
+    if (normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() === normalizedAddress) {
+      localStorage.setItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY, JSON.stringify({ address: normalizedAddress, name: agentName }));
+    }
+  } catch {}
+  if (state.currentPage === "agents"
+    && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress
+    && tablePageTitle) renderAgentPageTitle(normalizedAddress);
 }
 
 
@@ -1627,7 +1600,12 @@ function resetPageScroll() {
   }
 }
 
+
+
+
+
 let __mflTableTitleForPageOwner = null;
+let __mflTableEnsureAgentPageTitleNameOwner = null;
 let __mflTableBuildTableColGroupOwner = null;
 let __mflTableBuildHeaderOwner = null;
 let __mflTableBuildOperatorSelectOwner = null;
@@ -1660,6 +1638,12 @@ const tableTitleForPage = function (pageName) {
   const fallback = Reflect.get(window, "__mflTableTitleForPageFallback");
   return typeof fallback === "function" ? fallback(pageName, window.location.href) : "Progression";
 };
+
+function ensureAgentPageTitleName(address) {
+  return typeof __mflTableEnsureAgentPageTitleNameOwner === "function"
+    ? __mflTableEnsureAgentPageTitleNameOwner.apply(this, arguments)
+    : Promise.resolve(savedAgentNameForWallet(address));
+}
 
 function buildTableColGroup() {
   return typeof __mflTableBuildTableColGroupOwner === "function"
@@ -1797,6 +1781,9 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "agents") {
     state.currentAgentWalletAddress = normalizeWalletAddress(options.walletAddress || agentWalletAddressFromUrl()).toLowerCase();
   }
+  const agentTitleReady = pageName === "agents"
+    ? ensureAgentPageTitleName(state.currentAgentWalletAddress, options.agentName)
+    : Promise.resolve("");
   if (options.replaceUrl && `${window.location.pathname}${window.location.search}` !== options.replaceUrl) {
     window.history.replaceState({}, "", options.replaceUrl);
   }
@@ -1893,7 +1880,12 @@ async function setPage(pageName, updateHash = true, options = {}) {
   playerPage.hidden = !playerPageActive;
   settingsPage.hidden = !settingsPageActive;
   changelogPage.hidden = pageName !== "changelog";
-  tablePageTitle.textContent = tableTitleForPage(pageName);
+  if (pageName === "agents") {
+    await agentTitleReady;
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }
   renderWatchlistSwitcher();
   if (tablePage) {
     restoreSavedTableState(pageName, { view: options.view });
@@ -4242,29 +4234,24 @@ function agentRoute(walletAddress) {
   return normalizedWalletAddress ? pagePath("agents", { walletAddress: normalizedWalletAddress, view: "attributes" }) : "#";
 }
 
-function openAgentPage(walletAddress) {
+function openAgentPage(walletAddress, agentName = "") {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
-  if (!normalizedWalletAddress) {
-    return;
-  }
-
-  const result = agentSearchResultByWallet(normalizedWalletAddress);
-  if (result?.name) saveAgentDisplayName(normalizedWalletAddress, result.name);
-
+  if (!normalizedWalletAddress) return;
+  const knownName = [agentName, agentSearchResultByWallet(normalizedWalletAddress)?.name, savedAgentNameForWallet(normalizedWalletAddress)]
+    .map(normalizedAgentName)
+    .find((name) => name && name.toLowerCase() !== normalizedWalletAddress) || "";
+  if (knownName) saveAgentNameForWallet(normalizedWalletAddress, knownName);
   removePlayerNoteTooltip();
   window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
-
   if (normalizedWalletAddress === normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()) {
     setPage("myplayers", true);
     return;
   }
-
   if (normalizedWalletAddress === mflWalletAddress) {
     setPage("mfl", true);
     return;
   }
-
-  setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes" });
+  setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes", agentName: knownName });
 }
 
 function rowByPlayerId(playerId) {
@@ -4356,7 +4343,7 @@ function buildSearchIndex(options = {}) {
     }
 
     agentsByWallet.set(entry.walletAddress, entry);
-    if (entry.name) saveAgentDisplayName(entry.walletAddress, entry.name);
+    if (entry.name) saveAgentNameForWallet(entry.walletAddress, entry.name);
   };
 
   state.walletRows.forEach((wallet) => addAgent(wallet.wallet_address, wallet.wallet_name));
@@ -5698,7 +5685,7 @@ function renderSearchResultsNow() {
       button.innerHTML = `<strong>${escapeHtml(result.name)}</strong><span>${escapeHtml(result.walletAddress)}</span>`;
       button.addEventListener("click", () => {
         rememberAgentSearchResult(result.walletAddress);
-        navigateFromSearch(() => openAgentPage(result.walletAddress));
+        navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));
       });
       fragment.appendChild(button);
       return;
@@ -6659,7 +6646,7 @@ tableBody?.addEventListener("click", (event) => {
   const agentLink = event.target.closest(".agentTableLink[data-wallet-address]");
   if (agentLink instanceof HTMLAnchorElement && tableBody.contains(agentLink)) {
     event.preventDefault();
-    openAgentPage(agentLink.dataset.walletAddress || "");
+    openAgentPage(agentLink.dataset.walletAddress || "", agentLink.dataset.agentName || agentLink.textContent || "");
     return;
   }
 
