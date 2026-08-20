@@ -25,17 +25,13 @@ for (const required of [
   "function blurFilterSelectWhenClosed(target) {",
   "!select.isConnected || isSelectOpen(select)",
   "!isSelectOpen(select) && document.activeElement === select",
-  "blurFilterSelectWhenClosed(event.target);",
+  'document.addEventListener("pointerup", (event) => {',
+  'document.addEventListener("change", (event) => {\n    blurFilterSelectWhenClosed(event.target);\n  });',
   '["Enter", "Escape", "Tab"].includes(event.key)',
+  'document.addEventListener("click", (event) => {\n    const target = event.target instanceof Element ? event.target : null;\n    if (!target) return;\n\n    blurFilterSelectWhenClosed(target);',
 ]) {
   invariant(dropdownRuntime.includes(required), `Filter dropdowns are missing close-state blur ownership through ${required}`);
 }
-
-const closeBlurCalls = dropdownRuntime.match(/blurFilterSelectWhenClosed\(event\.target\);/g) || [];
-invariant(
-  closeBlurCalls.length >= 4,
-  "Filter dropdown blur must be checked from pointer, change, keyboard, and click closure paths so reselecting the same option also clears focus.",
-);
 
 invariant(
   !dropdownRuntime.includes("function blurFilterSelectAfterCommit(target)"),
