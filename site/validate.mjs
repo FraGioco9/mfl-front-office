@@ -247,9 +247,7 @@ const siteDeploy = await readRepository(".github/workflows/vercel-site-update.ym
 includes(siteDeploy, "node site/build-app-core.mjs", "Vercel deployment must generate the canonical application core before upload.");
 includes(siteDeploy, "test -s site/modules/app-core-runtime.js", "Vercel deployment must refuse to upload without the generated core.");
 includes(siteDeploy, "vercel deploy --prod --yes --force", "Site deployment must force the explicit production release.");
-includes(siteDeploy, "working-directory: site", "Vercel deployment must run from the site project root.");
-includes(siteDeploy, "--local-config vercel.production.json", "Production deployment must use the dedicated production Vercel config relative to the site project root.");
-excludes(siteDeploy, "--local-config site/vercel.production.json", "Production deployment must not address the Vercel config from the repository root.");
+includes(siteDeploy, "--local-config site/vercel.production.json", "Production deployment must use the dedicated production Vercel config.");
 
 const siteQuality = await readRepository(".github/workflows/site-quality.yml");
 includes(siteQuality, "npm run build:core", "Site quality must execute the same canonical core build used by deployment.");

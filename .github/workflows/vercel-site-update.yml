@@ -115,10 +115,17 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Deploy protected site to Vercel
-        working-directory: site
+      - name: Connect Vercel project
+        shell: bash
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel deploy --prod --yes --force --local-config vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+
+      - name: Deploy protected site to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prod --yes --force --local-config site/vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
