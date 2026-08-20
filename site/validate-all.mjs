@@ -45,6 +45,7 @@ const validators = [
   "validate-table-column-layout.mjs",
   "validate-table-loading-state.mjs",
   "validate-table-filter-selection-lifecycle.mjs",
+  "validate-progression-retired-filter.mjs",
   "validate-wallet-core.mjs",
   "validate-watchlist-route-core.mjs",
   "validate-watchlist-selector-navigation.mjs",
