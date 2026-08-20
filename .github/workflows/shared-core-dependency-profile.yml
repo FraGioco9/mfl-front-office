@@ -1,0 +1,146 @@
+name: Shared core dependency profile
+
+on:
+  push:
+    branches:
+      - chore/shared-core-dependency-ownership
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/shared-core-dependency-ownership
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Profile dependency-aware shared ownership
+        working-directory: site
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+
+          const source = await readFile("./modules/app-core.js", "utf8");
+          const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+          const shared = String(artifacts.core || "");
+          const chunks = Object.fromEntries(Object.entries(artifacts.routeChunks || {}).map(([name, value]) => [name, String(value || "")]));
+
+          const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const countName = (text, name) => (text.match(new RegExp(`\\b${escapeRegex(name)}\\b`, "g")) || []).length;
+
+          function functionRanges(text) {
+            const starts = [...text.matchAll(/(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)];
+            const ranges = [];
+            for (const match of starts) {
+              const name = match[1];
+              const markerStart = match.index + (match[0].startsWith("\n") ? 1 : 0);
+              const openBrace = text.indexOf("{", markerStart + match[0].length - (match[0].startsWith("\n") ? 1 : 0));
+              if (openBrace < 0) continue;
+              let depth = 0;
+              let end = -1;
+              let quote = "";
+              let templateDepth = 0;
+              let escaped = false;
+              let lineComment = false;
+              let blockComment = false;
+              for (let index = openBrace; index < text.length; index += 1) {
+                const ch = text[index];
+                const next = text[index + 1] || "";
+                if (lineComment) {
+                  if (ch === "\n") lineComment = false;
+                  continue;
+                }
+                if (blockComment) {
+                  if (ch === "*" && next === "/") { blockComment = false; index += 1; }
+                  continue;
+                }
+                if (quote) {
+                  if (escaped) { escaped = false; continue; }
+                  if (ch === "\\") { escaped = true; continue; }
+                  if (quote === "`" && ch === "$" && next === "{") { templateDepth += 1; index += 1; continue; }
+                  if (quote === "`" && templateDepth > 0) {
+                    if (ch === "{") templateDepth += 1;
+                    if (ch === "}") templateDepth -= 1;
+                    continue;
+                  }
+                  if (ch === quote) quote = "";
+                  continue;
+                }
+                if (ch === "/" && next === "/") { lineComment = true; index += 1; continue; }
+                if (ch === "/" && next === "*") { blockComment = true; index += 1; continue; }
+                if (ch === '"' || ch === "'" || ch === "`") { quote = ch; continue; }
+                if (ch === "{") depth += 1;
+                if (ch === "}") {
+                  depth -= 1;
+                  if (depth === 0) { end = index + 1; break; }
+                }
+              }
+              if (end > markerStart) ranges.push({ name, start: markerStart, end, text: text.slice(markerStart, end) });
+            }
+            return ranges;
+          }
+
+          const ranges = functionRanges(shared);
+          const byName = new Map(ranges.map((item) => [item.name, item]));
+          let topLevel = shared.split("");
+          for (const { start, end } of ranges) {
+            for (let index = start; index < end; index += 1) topLevel[index] = " ";
+          }
+          topLevel = topLevel.join("");
+
+          const callers = new Map(ranges.map(({ name }) => [name, []]));
+          for (const caller of ranges) {
+            for (const callee of ranges) {
+              if (caller.name === callee.name) continue;
+              if (countName(caller.text, callee.name) > 0) callers.get(callee.name).push(caller.name);
+            }
+          }
+
+          console.log(`SHARED_BYTES ${Buffer.byteLength(shared)}`);
+          for (const [name, chunk] of Object.entries(chunks)) console.log(`CHUNK_BYTES ${name} ${Buffer.byteLength(chunk)}`);
+
+          for (const target of Object.keys(chunks)) {
+            const direct = ranges.filter(({ name }) => {
+              const ownerRefs = Object.entries(chunks).filter(([, chunk]) => countName(chunk, name) > 0).map(([chunkName]) => chunkName);
+              return ownerRefs.length === 1 && ownerRefs[0] === target;
+            });
+            const printed = new Set();
+            for (const root of direct) {
+              const closure = new Set([root.name]);
+              const queue = [root.name];
+              const blockers = [];
+              while (queue.length) {
+                const current = queue.shift();
+                const item = byName.get(current);
+                const topRefs = countName(topLevel, current);
+                const otherChunks = Object.entries(chunks)
+                  .filter(([chunkName, chunk]) => chunkName !== target && countName(chunk, current) > 0)
+                  .map(([chunkName]) => chunkName);
+                if (topRefs > 0) blockers.push(`${current}:top=${topRefs}`);
+                if (otherChunks.length) blockers.push(`${current}:chunks=${otherChunks.join(",")}`);
+                for (const caller of callers.get(current) || []) {
+                  if (!closure.has(caller)) { closure.add(caller); queue.push(caller); }
+                }
+              }
+              const key = [...closure].sort().join(",");
+              if (printed.has(key)) continue;
+              printed.add(key);
+              const bytes = [...closure].reduce((sum, name) => sum + Buffer.byteLength(byName.get(name)?.text || ""), 0);
+              console.log(`${blockers.length ? "BLOCKED" : "MOVABLE"} target=${target} root=${root.name} bytes=${bytes} closure=${[...closure].join(",")} blockers=${blockers.join(";") || "none"}`);
+            }
+          }
+
+          console.log("EVALUATION_FOCUS");
+          for (const item of ranges.filter(({ name }) => /evaluation|advanced|reward|mfl|discount|recent/i.test(name))) {
+            const chunkOwners = Object.entries(chunks).filter(([, chunk]) => countName(chunk, item.name) > 0).map(([name]) => name);
+            const topRefs = countName(topLevel, item.name);
+            console.log(`FUNCTION ${item.name} bytes=${Buffer.byteLength(item.text)} top=${topRefs} chunks=${chunkOwners.join(",") || "none"} callers=${(callers.get(item.name) || []).join(",") || "none"}`);
+          }
+          NODE
