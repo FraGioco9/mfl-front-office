@@ -34,18 +34,31 @@ for (const required of [
 }
 
 for (const required of [
-  "let suppressFiltersButtonFocusAfterEscape = false;",
-  "function armFiltersEscapeFocusSuppression(target) {",
+  "let filtersEscapeClosePending = false;",
+  "function armFiltersEscapeClose(target) {",
   "if (select instanceof HTMLSelectElement && isSelectOpen(select)) return;",
-  "suppressFiltersButtonFocusAfterEscape = true;",
-  "function suppressFiltersButtonFocus(event) {",
+  "filtersEscapeClosePending = true;",
+  "function clearFiltersTriggerFocusAfterEscapeClose() {",
+  "!filtersModal.hidden",
+  "filtersEscapeClosePending = false;",
   'const openFiltersButton = document.getElementById("openFiltersButton");',
-  "event.target !== openFiltersButton",
   "openFiltersButton.blur();",
-  'if (event.key === "Escape") {\n      armFiltersEscapeFocusSuppression(event.target);\n    }',
+  "document.activeElement === openFiltersButton",
+  "function observeFiltersEscapeClose() {",
+  "new MutationObserver(clearFiltersTriggerFocusAfterEscapeClose)",
+  'attributeFilter: ["hidden"]',
+  'if (event.key === "Escape") {\n      armFiltersEscapeClose(event.target);\n    }',
+  "observeFiltersEscapeClose();",
+]) {
+  invariant(dropdownRuntime.includes(required), `Filters ESC close must clear trigger focus only after modal closure through ${required}`);
+}
+
+for (const removedOwner of [
+  "suppressFiltersButtonFocusAfterEscape",
+  "filtersEscapeFocusResetTimer",
   'document.addEventListener("focus", suppressFiltersButtonFocus, true);',
 ]) {
-  invariant(dropdownRuntime.includes(required), `Filters ESC close must keep the trigger visually neutral through ${required}`);
+  invariant(!dropdownRuntime.includes(removedOwner), `Filters ESC close must not retain the pre-close focus race through ${removedOwner}`);
 }
 
 invariant(
@@ -59,4 +72,4 @@ invariant(
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Filter popup hover, close-state blur, and neutral ESC return-focus validation passed.");
+console.log("Filter popup hover, close-state blur, and post-close neutral ESC focus validation passed.");
