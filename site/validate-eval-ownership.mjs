@@ -74,8 +74,14 @@ invariant(
   "Table loading must consume the explicit application-core contract.",
 );
 invariant(
-  tableLoadingRuntime.includes("coreContracts()?.installTableLoadingOwners"),
-  "Table loading must delegate lexical header ownership to the application core.",
+  !tableLoadingRuntime.includes("coreContracts()?.installTableLoadingOwners"),
+  "Table loading must not install a late buildHeader wrapper.",
+);
+invariant(
+  tableLoadingRuntime.includes("function installCoreBridge() {")
+    && tableLoadingRuntime.includes("ensureCanonicalHeader();")
+    && tableLoadingRuntime.includes("sync();"),
+  "Table loading core hookup must only reconcile header state and sync presentation.",
 );
 invariant(
   tableLoadingRuntime.includes("coreContracts()?.ensureCanonicalTableHeader"),
@@ -169,7 +175,6 @@ invariant(
 );
 for (const contractMethod of [
   "ensureCanonicalTableHeader",
-  "installTableLoadingOwners",
   "installSearchMatching",
   "renderGlobalSearchResults",
   "renderCurrentEvaluationSearchResults",
@@ -215,6 +220,15 @@ invariant(
 invariant(
   sharedCore.indexOf("window.__mflCoreContracts = Object.freeze({") < sharedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();"),
   "The core contract must exist before application-core loaded state is published.",
+);
+invariant(
+  !sharedCore.includes("function installTableLoadingOwners(")
+    && !sharedCore.includes("    installTableLoadingOwners,"),
+  "Generated shared core must not retain the late Table header wrapper owner or contract entry.",
+);
+invariant(
+  sharedCore.includes('if (!staticHeader && staticSignature === signature && head.rows[0]) return undefined;'),
+  "Generated buildHeader facade must own stable-header duplicate suppression directly.",
 );
 invariant(
   tableCore.includes('if (window.__mflTableLoadingRuntime?.show?.()) return;'),

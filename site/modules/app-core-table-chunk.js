@@ -1,12 +1,14 @@
 // @ts-check
 
 import {
+  extractRequiredFunction,
   extractRequiredSections,
   extractRequiredFunctions,
   finalizeSplitArtifacts,
   insertBeforeRequiredMarker,
   normalizeSplitterInput,
   renameRequiredFunctionOwner,
+  replaceRequired,
 } from "./app-core-splitter-utils.js";
 
 const TABLE_FACADE_BLOCK = `let __mflTableTitleForPageOwner = null;
@@ -50,9 +52,29 @@ function buildTableColGroup() {
 }
 
 function buildHeader() {
-  return typeof __mflTableBuildHeaderOwner === "function"
-    ? __mflTableBuildHeaderOwner.apply(this, arguments)
-    : undefined;
+  if (typeof __mflTableBuildHeaderOwner !== "function") return undefined;
+  const context = typeof tableHeaderContext === "function" ? tableHeaderContext() : null;
+  if (!context) return __mflTableBuildHeaderOwner.apply(this, arguments);
+
+  const { head, signature } = context;
+  const staticHeader = head.dataset.mflStaticHeader === "true";
+  const staticSignature = String(head.dataset.mflHeaderSignature || "");
+  const staticPage = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+  const staticView = String(document.documentElement.dataset.initialTableView || "").toLowerCase();
+  const currentPage = String(state.currentPage || "").toLowerCase();
+  const currentView = String(state.view || "").toLowerCase();
+  const staticRoutePending = staticHeader
+    && staticPage
+    && staticView
+    && (currentPage !== staticPage || currentView !== staticView);
+  if (staticRoutePending) return undefined;
+  if (staticHeader && staticSignature && staticSignature !== signature) return undefined;
+  if (!staticHeader && staticSignature === signature && head.rows[0]) return undefined;
+
+  const result = __mflTableBuildHeaderOwner.apply(this, arguments);
+  head.dataset.mflHeaderSignature = signature;
+  delete head.dataset.mflStaticHeader;
+  return result;
 }
 
 function buildOperatorSelect() {
@@ -227,7 +249,18 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   );
   if (alreadySplit) return artifacts;
 
-  const routeOnly = extractRequiredFunctions(inputCore, TABLE_ROUTE_ONLY_FUNCTIONS, "Table route-only helper");
+  const legacyLoadingOwner = extractRequiredFunction(
+    inputCore,
+    "installTableLoadingOwners",
+    "legacy Table loading header wrapper",
+  );
+  const coreWithoutLegacyLoading = replaceRequired(
+    legacyLoadingOwner.core,
+    "    installTableLoadingOwners,\n",
+    "",
+    "legacy Table loading core contract",
+  );
+  const routeOnly = extractRequiredFunctions(coreWithoutLegacyLoading, TABLE_ROUTE_ONLY_FUNCTIONS, "Table route-only helper");
   const extracted = extractRequiredSections(routeOnly.core, TABLE_SECTIONS);
   let core = insertBeforeRequiredMarker(
     extracted.core,
