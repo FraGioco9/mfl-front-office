@@ -144,6 +144,10 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run build:core
 
+      - name: Verify generated application artifacts
+        if: steps.changes.outputs.quality == 'true'
+        run: npm run verify:generated
+
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
