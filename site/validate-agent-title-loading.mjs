@@ -36,10 +36,9 @@ includes(tableSplitter, '"Agent title loading completion gate"', "Table ownershi
 includes(tableSplitter, "__mflTableEnsureAgentPageTitleNameOwner = tableEnsureAgentPageTitleNameOwner;", "The lazy Table core must publish the Agent-title resolver through its shared facade.");
 includes(playerSplitter, '"Player Agent name handoff"', "Player ownership must explicitly hand its loaded Agent name to navigation.");
 
-includes(sharedCore, "const agentPageTitleNamePromises = new Map();", "Agent title lookup deduplication state must survive route calls.");
 includes(sharedCore, "function ensureAgentPageTitleName(address) {", "Shared setPage must retain only a small Agent-title readiness facade.");
 includes(sharedCore, 'function openAgentPage(walletAddress, agentName = "") {', "Agent navigation must accept an already-known name.");
-includes(sharedCore, "agentName: knownName,", "Agent navigation must carry the known name into page loading.");
+includes(sharedCore, "agentName: knownName", "Agent navigation must carry the known name into page loading.");
 includes(sharedCore, "navigateFromSearch(() => openAgentPage(result.walletAddress, result.name));", "Global search must reuse the Agent name it already rendered.");
 includes(sharedCore, 'agentLink.dataset.agentName || agentLink.textContent || ""', "Table navigation must reuse the Agent label already rendered in the row.");
 includes(sharedCore, "const agentTitleReady = pageName === \"agents\"", "Agent page loading must start title resolution with the route.");
@@ -49,7 +48,9 @@ includes(sharedCore, "localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY", "Re
 includes(sharedCore, "localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY)", "Agent title resolution must consume the per-Agent name cache.");
 excludes(sharedCore, "saveAgentDisplayName(", "The retired duplicate Agent display-name cache helper must not remain in generated core.");
 excludes(sharedCore, 'type: "recent",', "The exact Agent lookup implementation must stay lazy in the Table core.");
+excludes(sharedCore, "const agentPageTitleNamePromises = new Map();", "Agent lookup deduplication state must stay lazy with the Table core.");
 
+includes(tableCore, "const agentPageTitleNamePromises = new Map();", "Agent title lookup deduplication state must live in the lazy Table core.");
 includes(tableCore, "function runtimeAgentPageTitleName(address, hintedName = \"\") {", "The lazy Table core must resolve already-known Agent names first.");
 includes(tableCore, "async function tableEnsureAgentPageTitleNameOwner(address, hintedName = \"\") {", "The lazy Table core must own the exact Agent-name fallback request.");
 includes(tableCore, 'type: "recent",', "Unknown Agent names must use the exact local database lookup path.");
