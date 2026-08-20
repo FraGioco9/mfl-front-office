@@ -225,29 +225,31 @@ def _owner_wallet_address(player: dict[str, Any]) -> str:
 
 
 def prepare_progression_batches(
-    active_players: list[dict[str, Any]],
+    players: list[dict[str, Any]],
 ) -> tuple[tuple[int, ...], ...]:
-    """Build immutable progression batches from active, non-special-wallet players."""
+    """Build immutable progression batches from active and retired non-special-wallet players."""
     excluded_wallets = {
         pipeline.MFL_WALLET_ADDRESS.lower(),
         pipeline.MFL_TRADE_WALLET_ADDRESS.lower(),
     }
+    unique_players = {
+        pipeline.player_id(player): player
+        for player in players
+    }
     eligible_ids = sorted(
-        {
-            pipeline.player_id(player)
-            for player in active_players
-            if _owner_wallet_address(player) not in excluded_wallets
-        }
+        player_id
+        for player_id, player in unique_players.items()
+        if _owner_wallet_address(player) not in excluded_wallets
     )
     batches = tuple(
         tuple(eligible_ids[index:index + pipeline.PROGRESSION_BATCH_SIZE])
         for index in range(0, len(eligible_ids), pipeline.PROGRESSION_BATCH_SIZE)
     )
-    excluded_count = len(active_players) - len(eligible_ids)
+    excluded_count = len(unique_players) - len(eligible_ids)
     pipeline.log(
         f"Progression batches ready: {len(batches)} predetermined batches of up to "
-        f"{pipeline.PROGRESSION_BATCH_SIZE} from {len(eligible_ids)} active players; "
-        f"excluded {excluded_count} MFL/MFL Trade players and all retired players"
+        f"{pipeline.PROGRESSION_BATCH_SIZE} from {len(eligible_ids)} active/retired players; "
+        f"excluded {excluded_count} MFL/MFL Trade players"
     )
     return batches
 
@@ -256,14 +258,17 @@ def fetch_player_sources_and_prepare_progressions(
     fetcher: Any,
     limiter: RollingRateLimiter,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Fetch players, then freeze progression batches from the active source."""
+    """Fetch players, then freeze progression batches from active and retired sources."""
     results = fetcher(limiter)
     active_players = results.get("general")
+    retired_players = results.get("retired")
     if not isinstance(active_players, list):
         raise RuntimeError("Active player source was not available for progression batching")
+    if not isinstance(retired_players, list):
+        raise RuntimeError("Retired player source was not available for progression batching")
 
     global PROGRESSION_BATCHES
-    PROGRESSION_BATCHES = prepare_progression_batches(active_players)
+    PROGRESSION_BATCHES = prepare_progression_batches([*active_players, *retired_players])
     return results
 
 
@@ -271,9 +276,9 @@ def refresh_progressions_from_prepared_batches(
     connection: Any,
     limiter: RollingRateLimiter,
 ) -> dict[str, int]:
-    """Fetch both progression intervals using the batches frozen after active loading."""
+    """Fetch both progression intervals using the batches frozen after player loading."""
     if PROGRESSION_BATCHES is None:
-        raise RuntimeError("Progression batches were not prepared after active player loading")
+        raise RuntimeError("Progression batches were not prepared after player loading")
 
     batches = [list(batch) for batch in PROGRESSION_BATCHES]
     jobs = [
