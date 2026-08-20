@@ -1,22 +1,44 @@
-name: App core optimization snapshot
+name: Apply app core optimization
 
 on:
   push:
     branches:
       - chore/app-core-normalizer-optimization
-  pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  snapshot:
+  apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/upload-artifact@v4
         with:
-          name: app-core-optimization-snapshot
-          path: .
-          include-hidden-files: true
-          retention-days: 1
+          ref: chore/app-core-normalizer-optimization
+          fetch-depth: 0
+      - name: Apply canonical source ownership migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/migrate-app-core.mjs
+          rm -f .github/migrate-app-core.mjs .github/workflows/app-core-optimization-snapshot.yml
+          git config user.name "FraGioco9"
+          git config user.email "giocolifrancesco@gmail.com"
+          git add -- \
+            site/build-app-core.mjs \
+            site/modules/app-core-build-normalizer.js \
+            site/modules/app-core-club-url-normalizer.js \
+            site/modules/app-core-normalizer.js \
+            site/modules/app-core-route-chunks.js \
+            site/modules/app-core-route-request-normalizer.js \
+            site/modules/app-core-route-runtime-normalizer.js \
+            site/modules/app-core-startup-data-normalizer.js \
+            site/modules/app-core-table-events-normalizer.js \
+            site/modules/app-core-table-state-normalizer.js \
+            site/modules/app-core.js \
+            .github/migrate-app-core.mjs \
+            .github/workflows/app-core-optimization-snapshot.yml
+          git diff --cached --check
+          git commit -m "Move app-core normalization into canonical source"
+          git push origin HEAD:chore/app-core-normalizer-optimization
