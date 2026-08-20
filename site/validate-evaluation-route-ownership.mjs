@@ -46,6 +46,8 @@ const startupAndDependencyClosedFunctions = [
   "normalizeEvaluationRewardRateDraft",
   "formatEvaluationRewardRate",
   "clearEvaluationSearchFocus",
+  "clearEvaluationSearch",
+  "handleEvaluationSearchInput",
   "queueEvaluationSettingsSave",
   "renderEvaluationMflPerUsdControl",
   "commitEvaluationMflPerUsd",
