@@ -45,7 +45,6 @@ const startupAndDependencyClosedFunctions = [
   "clampEvaluationRewardRate",
   "normalizeEvaluationRewardRateDraft",
   "formatEvaluationRewardRate",
-  "clearEvaluationSearchFocus",
   "clearEvaluationSearch",
   "handleEvaluationSearchInput",
   "queueEvaluationSettingsSave",
@@ -60,8 +59,8 @@ for (const name of [...advancedFunctions, ...startupAndDependencyClosedFunctions
   invariant(hasFunction(evaluation, name), `Evaluation chunk must own route function ${name}.`);
 }
 
-for (const name of ["loadEvaluationMflPerUsd", "loadEvaluationLateSeasonRewardRates", "currentEvaluationSettingsPayload", "applyEvaluationSettingsPayload", "saveEvaluationSettingsLocally"]) {
-  invariant(hasFunction(shared, name), `Evaluation persistence function ${name} must remain shared for wallet/startup state hydration.`);
+for (const name of ["loadEvaluationMflPerUsd", "loadEvaluationLateSeasonRewardRates", "currentEvaluationSettingsPayload", "applyEvaluationSettingsPayload", "saveEvaluationSettingsLocally", "clearEvaluationSearchFocus"]) {
+  invariant(hasFunction(shared, name), `Cross-route Evaluation function ${name} must remain shared for startup, persistence, or Player ownership.`);
 }
 
 const evaluationBindings = [
@@ -130,4 +129,4 @@ invariant(
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation startup UI, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while persistence hydration remains shared.");
+console.log("Evaluation startup UI, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while shared persistence and Player focus ownership remain eager.");
