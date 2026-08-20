@@ -29,6 +29,8 @@ includes(playerSplitter, '"Player pitch renderer"', "The Player splitter must ex
 includes(playerSplitter, '"Player training and attribute configuration"', "The Player splitter must extract training and attribute configuration.");
 includes(playerSplitter, '"Player attribute panel renderer"', "The Player splitter must extract Player attribute-card rendering.");
 includes(playerSplitter, '"Player page renderer owner"', "The Player splitter must extract the heavy Player page renderer.");
+includes(playerSplitter, '"Player contract-link helper"', "The Player splitter must extract contract-link helpers.");
+includes(playerSplitter, '"Player contract-link shared wrapper"', "The Player splitter must remove the eager contract-link wrapper.");
 includes(playerSplitter, "finalizeSplitArtifacts(", "The Player splitter must use canonical split-result finalization.");
 includes(playerSplitter, '"player"', "The Player splitter must publish the Player chunk through canonical finalization.");
 
@@ -37,7 +39,9 @@ includes(sharedCore, "const owner = window.__mflRenderPlayerPageOwner;", "The st
 includes(sharedCore, "function primaryPreciseOverall(row) {", "Shared table/Evaluation overall math must remain universal.");
 includes(sharedCore, "async function copyPlayerId(id) {", "Shared clipboard behavior must remain universal.");
 includes(sharedCore, "renderPlayerPageWithNoteLimit", "The Player note-limit wrapper must remain shared around the stable renderer facade.");
-includes(sharedCore, "renderPlayerPageWithStableContractLink", "The Player contract-link wrapper must remain shared around the stable renderer facade.");
+excludes(sharedCore, "renderPlayerPageWithStableContractLink", "The Player contract-link wrapper must not remain eager in shared core.");
+excludes(sharedCore, "function contractClubId(playerId, teamName) {", "Player contract-link club resolution must not remain eager in shared core.");
+excludes(sharedCore, "function bindContractTeamLink(playerId) {", "Player contract-link DOM binding must not remain eager in shared core.");
 excludes(sharedCore, "function renderPitch(row) {", "Player pitch rendering must not remain in the shared core.");
 excludes(sharedCore, "function playerTrainingKey(row) {", "Player training state helpers must not remain in the shared core.");
 excludes(sharedCore, "function playerAttributeColumns(row) {", "Player attribute configuration must not remain in the shared core.");
@@ -51,8 +55,11 @@ includes(playerCore, "function adjustTrainingStat(playerId, column, delta) {", "
 includes(playerCore, "function playerAttributeColumns(row) {", "The Player chunk must own attribute configuration.");
 includes(playerCore, "function nextOverallDetailHtml(row, column) {", "The Player chunk must own Next Overall detail rendering.");
 includes(playerCore, "function renderPlayerAttributePanel(row) {", "The Player chunk must own attribute-panel rendering.");
+includes(playerCore, "function contractClubId(playerId, teamName) {", "The Player chunk must own contract-link club resolution.");
+includes(playerCore, "function bindContractTeamLink(playerId) {", "The Player chunk must own contract-link DOM binding.");
 includes(playerCore, "function renderPlayerPageOwner(playerId) {", "The Player chunk must own the heavy Player page renderer implementation.");
-includes(playerCore, "window.__mflRenderPlayerPageOwner = renderPlayerPageOwner;", "The Player chunk must install its renderer behind the shared facade.");
+includes(playerCore, "function renderPlayerPageWithStableContractLinkOwner(playerId) {", "The Player chunk must own stable contract-link rendering.");
+includes(playerCore, "window.__mflRenderPlayerPageOwner = renderPlayerPageWithStableContractLinkOwner;", "The Player chunk must install its final renderer behind the shared facade.");
 includes(playerCore, "const infoCardsData = [", "The Player chunk must contain Player page DOM construction.");
 excludes(playerCore, "function primaryPreciseOverall(row) {", "Shared overall math must not become Player-only.");
 excludes(playerCore, "async function copyPlayerId(id) {", "Shared copy behavior must not become Player-only.");
@@ -80,8 +87,11 @@ for (const owner of [
   "function renderPitch(row) {",
   "function playerTrainingKey(row) {",
   "function renderPlayerAttributePanel(row) {",
+  "function contractClubId(playerId, teamName) {",
+  "function bindContractTeamLink(playerId) {",
   "function renderPlayerPageOwner(playerId) {",
-  "window.__mflRenderPlayerPageOwner = renderPlayerPageOwner;",
+  "function renderPlayerPageWithStableContractLinkOwner(playerId) {",
+  "window.__mflRenderPlayerPageOwner = renderPlayerPageWithStableContractLinkOwner;",
 ]) {
   includes(generatedPlayerBody, owner, `Generated Player runtime must retain route owner ${owner}.`);
 }
