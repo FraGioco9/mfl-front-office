@@ -1,0 +1,27 @@
+# Site development, validation, and deployment configuration assets.
+validate*.mjs
+eslint.config.mjs
+jsconfig.json
+types
+vercel.json
+vercel.production.json
+
+# Application-core compiler sources are build-only. Production serves the generated
+# shared core and route runtime artifacts created before Vercel packaging.
+build-app-core.mjs
+modules/app-config.js
+modules/package.json
+modules/app-core.js
+modules/app-core-build-normalizer.js
+modules/app-core-normalizer.js
+modules/app-core-route-request-normalizer.js
+modules/app-core-route-runtime-normalizer.js
+modules/app-core-startup-data-normalizer.js
+modules/app-core-table-events-normalizer.js
+modules/app-core-table-state-normalizer.js
+modules/app-core-route-chunks.js
+modules/app-core-settings-chunk.js
+modules/app-core-player-chunk.js
+modules/app-core-table-chunk.js
+modules/app-core-wallet-chunk.js
+modules/app-core-watchlist-route-chunk.js
