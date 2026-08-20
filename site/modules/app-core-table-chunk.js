@@ -13,6 +13,7 @@ import {
 } from "./app-core-splitter-utils.js";
 
 const TABLE_FACADE_BLOCK = `let __mflTableTitleForPageOwner = null;
+let __mflTableEnsureAgentPageTitleNameOwner = null;
 let __mflTableBuildTableColGroupOwner = null;
 let __mflTableBuildHeaderOwner = null;
 let __mflTableBuildOperatorSelectOwner = null;
@@ -45,6 +46,12 @@ const tableTitleForPage = function (pageName) {
   const fallback = Reflect.get(window, "__mflTableTitleForPageFallback");
   return typeof fallback === "function" ? fallback(pageName, window.location.href) : "Progression";
 };
+
+function ensureAgentPageTitleName(address) {
+  return typeof __mflTableEnsureAgentPageTitleNameOwner === "function"
+    ? __mflTableEnsureAgentPageTitleNameOwner.apply(this, arguments)
+    : Promise.resolve(savedAgentNameForWallet(address));
+}
 
 function buildTableColGroup() {
   return typeof __mflTableBuildTableColGroupOwner === "function"
@@ -169,6 +176,7 @@ function setView() {
 }`;
 
 const TABLE_OWNER_ASSIGNMENTS = `__mflTableTitleForPageOwner = tableTitleForPageOwner;
+__mflTableEnsureAgentPageTitleNameOwner = tableEnsureAgentPageTitleNameOwner;
 __mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
 __mflTableBuildHeaderOwner = tableBuildHeaderOwner;
 __mflTableBuildOperatorSelectOwner = tableBuildOperatorSelectOwner;
@@ -273,6 +281,8 @@ async function ensureAgentPageTitleName(address, hintedName = "") {
 }`;
 
 const TABLE_ROUTE_ONLY_FUNCTIONS = [
+  "runtimeAgentPageTitleName",
+  "ensureAgentPageTitleName",
   "currentViewColumns",
   "tableColumnClass",
   "agentTitleForWallet",
@@ -305,6 +315,7 @@ const TABLE_SECTIONS = [
 ];
 
 const TABLE_OWNERS = [
+  ["ensureAgentPageTitleName", "tableEnsureAgentPageTitleNameOwner"],
   ["tableTitleForPage", "tableTitleForPageOwner"],
   ["buildTableColGroup", "tableBuildTableColGroupOwner"],
   ["buildHeader", "tableBuildHeaderOwner"],
@@ -410,7 +421,11 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (!normalizedWalletAddress) return;
 
-  const knownName = runtimeAgentPageTitleName(normalizedWalletAddress, agentName);
+  const hintedName = normalizedAgentName(agentName);
+  const indexedName = normalizedAgentName(agentSearchResultByWallet(normalizedWalletAddress)?.name);
+  const knownName = [hintedName, indexedName, savedAgentNameForWallet(normalizedWalletAddress)]
+    .find((name) => name && name.toLowerCase() !== normalizedWalletAddress) || "";
+  if (knownName) saveAgentNameForWallet(normalizedWalletAddress, knownName);
 
   removePlayerNoteTooltip();
   window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
