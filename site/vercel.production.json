@@ -34,6 +34,6 @@
   ],
   "rewrites": [
     { "source": "/releases.json", "destination": "/api/releases" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }

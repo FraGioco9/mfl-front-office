@@ -79,10 +79,10 @@ function validateSpaRouting(config, label) {
   }
 
   const spaFallbackIndex = rewrites.findIndex(
-    (rule) => rule?.source === "/(.*)" && rule?.destination === "/index.html",
+    (rule) => rule?.source === "/(.*)" && rule?.destination === "/",
   );
   if (spaFallbackIndex < 0) {
-    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to /index.html.`);
+    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to the known-working root route.`);
   }
   if (spaFallbackIndex !== rewrites.length - 1) {
     throw new Error(`${label} Vercel SPA catch-all must be the final rewrite rule.`);
