@@ -46,9 +46,16 @@ invariant(
     && generated.includes('function appliedTableFilterSignature(rules) {'),
   "Applied filter changes must clear player selection in the canonical generated table owner.",
 );
+
+const buildHeaderStart = appCore.indexOf("function buildHeader() {");
+const buildHeaderEnd = buildHeaderStart >= 0 ? appCore.indexOf("function buildOperatorSelect() {", buildHeaderStart) : -1;
+invariant(buildHeaderStart >= 0 && buildHeaderEnd > buildHeaderStart, "Canonical table header owner must exist.");
+const buildHeader = appCore.slice(buildHeaderStart, buildHeaderEnd);
 invariant(
-  appCore.includes('buildHeader();\n      applyFilters();'),
-  "Sorting must continue to reapply unchanged filters without an unconditional selection reset.",
+  buildHeader.includes("applyFilters();")
+    && !buildHeader.includes("clearSelection(")
+    && !buildHeader.includes("selectedPlayerIds.clear()"),
+  "Sorting must reapply unchanged filters without directly clearing player selection.",
 );
 
 console.log("Page filter isolation and view/filter selection reset validation passed.");
