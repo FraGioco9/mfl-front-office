@@ -49,7 +49,7 @@ async function ensureAgentPageTitleName(address, hintedName = "") {
         type: "recent",
         walletAddresses: normalizedAddress,
       });
-      const response = await fetch(`/api/data?${parameters}`, {
+      const response = await fetch("/api/data?" + parameters.toString(), {
         cache: "no-store",
         headers: { Accept: "application/json" },
       });
