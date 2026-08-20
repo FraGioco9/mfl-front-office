@@ -240,7 +240,7 @@ invariant(
 for (const reroute of [
   'button.dataset.noteTooltip = "Click to copy";',
   "markerElement.dataset.noteTooltip = marker.label;",
-  'data-note-tooltip=\"Click to copy\" aria-label=\"Click to copy player ID\"',
+  'data-note-tooltip="Click to copy" aria-label="Click to copy player ID"',
   "if (playerAgentLink.dataset.noteTooltip) {",
   "link.dataset.noteTooltip = tooltip;",
 ]) {

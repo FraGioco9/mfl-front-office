@@ -113,6 +113,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Database builder syntax check
+        if: steps.changes.outputs.builder == 'true'
+        working-directory: .
+        run: python -m compileall -q *.py
+
       - name: Database builder import smoke test
         if: steps.changes.outputs.builder == 'true'
         working-directory: .

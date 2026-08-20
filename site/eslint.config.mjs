@@ -1,31 +1,35 @@
 import js from "@eslint/js";
 import globals from "globals";
 
+const recommendedRules = {
+  ...js.configs.recommended.rules,
+  "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+};
+
 export default [
   {
     ignores: ["node_modules/**", ".vercel/**"],
   },
   {
-    files: ["bootstrap.js", "modules/app-entry.js", "modules/*-normalizer.js"],
+    files: ["bootstrap.js", "modules/*.js"],
+    ignores: ["modules/app-core.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
       globals: globals.browser,
     },
-    rules: {
-      ...js.configs.recommended.rules,
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-    },
+    rules: recommendedRules,
   },
   {
-    files: ["*-runtime.js"],
+    files: ["bootstrap-core.js", "*-runtime.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
       globals: globals.browser,
     },
     rules: {
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      ...recommendedRules,
+      "no-empty": ["error", { allowEmptyCatch: true }],
       "no-undef": "off",
     },
   },
@@ -48,7 +52,7 @@ export default [
     rules: js.configs.recommended.rules,
   },
   {
-    files: ["build-app-core.mjs", "validate.mjs", "validate-route-runtime.mjs"],
+    files: ["build-app-core.mjs", "validate*.mjs"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",

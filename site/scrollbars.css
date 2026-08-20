@@ -21,13 +21,13 @@
 
 /* Only create scrollbar controls when there is real overflow. */
 html:root {
-  overflow-y: auto !important;
+  overflow-y: auto;
 }
 
 /* Keep the vertical scrollbar space stable even on short pages. */
 html body > #appShell > main {
-  overflow-y: auto !important;
-  scrollbar-gutter: stable !important;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 * {
