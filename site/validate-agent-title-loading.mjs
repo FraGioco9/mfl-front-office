@@ -25,6 +25,10 @@ const playerCore = String(artifacts.routeChunks?.player || "");
 new Function(sharedCore);
 new Function(tableCore);
 new Function(playerCore);
+invariant(
+  Buffer.byteLength(sharedCore, "utf8") < 301_000,
+  "Agent title loading must preserve the existing shared-core eager-byte budget.",
+);
 
 includes(
   buildNormalizer,
