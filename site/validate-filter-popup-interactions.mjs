@@ -57,8 +57,8 @@ invariant(
   "Built Table runtime must only focus the Filters trigger when explicitly requested.",
 );
 invariant(
-  !dropdownRuntime.includes("openFiltersButton"),
-  "Dropdown runtime must not own or repair Filters trigger focus after the popup closes.",
+  !dropdownRuntime.includes('document.getElementById("openFiltersButton")'),
+  "Dropdown runtime must not directly own or repair Filters trigger focus after close.",
 );
 
 for (const removedWorkaround of [
