@@ -4710,13 +4710,6 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
 }
 
 
-html.mflInitialChromePreparing *,
-html.mflInitialChromePreparing *::before,
-html.mflInitialChromePreparing *::after {
-  transition: none;
-  animation: none;
-}
-
 [data-tooltip]::before,
 [data-tooltip]::after,
 [data-note-tooltip]::before,
