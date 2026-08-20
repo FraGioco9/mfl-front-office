@@ -159,7 +159,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 .tablePageTitle {
   display: flex;
   align-items: center;
-  gap: 0.35em;
+  gap: 0;
   width: 100%;
   min-width: 0;
   max-width: 100%;
