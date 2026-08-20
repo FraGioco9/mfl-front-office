@@ -55,4 +55,5 @@ invariant(sharedBytes < 340_000, `Shared application core is too large after rou
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 
-console.log(`Shared route ownership validation passed at ${sharedBytes} eager bytes.`);
+const routeOnlyCount = Object.values(routeOnlyFunctions).reduce((total, names) => total + names.length, 0);
+console.log(`Shared route ownership validation passed with ${routeOnlyCount} lazy helpers at ${sharedBytes} eager bytes.`);
