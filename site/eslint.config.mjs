@@ -8,7 +8,12 @@ const recommendedRules = {
 
 export default [
   {
-    ignores: ["node_modules/**", ".vercel/**"],
+    ignores: [
+      "node_modules/**",
+      ".vercel/**",
+      "modules/app-core-runtime.js",
+      "modules/app-core-*-runtime.js",
+    ],
   },
   {
     files: ["bootstrap.js", "modules/*.js"],
