@@ -5,9 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, dropdownRuntime] = await Promise.all([
+const [controls, dropdownRuntime, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./controls.css"),
   read("./dropdowns-runtime.js"),
+  read("./modules/app-core-table-chunk.js"),
+  read("./modules/app-core-runtime.js"),
+  read("./modules/app-core-table-runtime.js"),
 ]);
 
 for (const required of [
@@ -34,31 +37,35 @@ for (const required of [
 }
 
 for (const required of [
-  "let filtersEscapeClosePending = false;",
-  "function armFiltersEscapeClose(target) {",
-  "if (select instanceof HTMLSelectElement && isSelectOpen(select)) return;",
-  "filtersEscapeClosePending = true;",
-  "function clearFiltersTriggerFocusAfterEscapeClose() {",
-  "!filtersModal.hidden",
-  "filtersEscapeClosePending = false;",
-  'const openFiltersButton = document.getElementById("openFiltersButton");',
-  "openFiltersButton.blur();",
-  "document.activeElement === openFiltersButton",
-  "function observeFiltersEscapeClose() {",
-  "new MutationObserver(clearFiltersTriggerFocusAfterEscapeClose)",
-  'attributeFilter: ["hidden"]',
-  'if (event.key === "Escape") {\n      armFiltersEscapeClose(event.target);\n    }',
-  "observeFiltersEscapeClose();",
+  '"function closeFilters(commitChanges = false, restoreTriggerFocus = true) {"',
+  "if (restoreTriggerFocus) openFiltersButton.focus();",
+  "closeFilters(false, false);",
 ]) {
-  invariant(dropdownRuntime.includes(required), `Filters ESC close must clear trigger focus only after modal closure through ${required}`);
+  invariant(tableSplitter.includes(required), `Canonical table splitting is missing Filters ESC focus ownership through ${required}`);
 }
 
-for (const removedOwner of [
+invariant(
+  coreRuntime.includes('event.key === "Escape" && !filtersModal.hidden) {\n    closeFilters(false, false);'),
+  "Built application core must close Filters on Escape without restoring trigger focus.",
+);
+invariant(
+  tableRuntime.includes("function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = true)"),
+  "Built Table runtime must expose explicit trigger-focus ownership on filter close.",
+);
+invariant(
+  tableRuntime.includes("if (restoreTriggerFocus) openFiltersButton.focus();"),
+  "Built Table runtime must only focus the Filters trigger when explicitly requested.",
+);
+
+for (const removedWorkaround of [
+  "filtersEscapeClosePending",
+  "armFiltersEscapeClose",
+  "clearFiltersTriggerFocusAfterEscapeClose",
+  "observeFiltersEscapeClose",
   "suppressFiltersButtonFocusAfterEscape",
   "filtersEscapeFocusResetTimer",
-  'document.addEventListener("focus", suppressFiltersButtonFocus, true);',
 ]) {
-  invariant(!dropdownRuntime.includes(removedOwner), `Filters ESC close must not retain the pre-close focus race through ${removedOwner}`);
+  invariant(!dropdownRuntime.includes(removedWorkaround), `Filters ESC focus must not be patched after close through ${removedWorkaround}`);
 }
 
 invariant(
@@ -72,4 +79,4 @@ invariant(
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Filter popup hover, close-state blur, and post-close neutral ESC focus validation passed.");
+console.log("Filter popup hover, close-state blur, and canonical neutral ESC focus validation passed.");
