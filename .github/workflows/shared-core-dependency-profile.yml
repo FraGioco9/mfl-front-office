@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chore/shared-core-dependency-ownership
+  pull_request:
 
 permissions:
   contents: read
@@ -118,7 +119,6 @@ jobs:
               const blockers = [];
               while (queue.length) {
                 const current = queue.shift();
-                const item = byName.get(current);
                 const topRefs = countName(topLevel, current);
                 const otherChunks = Object.entries(chunks)
                   .filter(([chunkName, chunk]) => chunkName !== target && countName(chunk, current) > 0)
