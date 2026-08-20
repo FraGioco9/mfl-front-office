@@ -74,6 +74,7 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
       "normalizeEvaluationRewardRateDraft",
       "formatEvaluationRewardRate",
       "clearEvaluationSearchFocus",
+      "queueEvaluationSettingsSave",
     ],
     "Evaluation startup and dependency-closed helper",
   );
@@ -112,6 +113,15 @@ export function splitEvaluationApplicationCoreRuntime(artifacts) {
     'window.addEventListener("resize", updateAdvancedPlayerTableClip);',
     'playerSearchInput.addEventListener("input", renderSearchResults);',
     "Evaluation advanced-settings control bindings",
+  );
+  core = extracted.core;
+  evaluationParts.push(extracted.chunk);
+
+  extracted = extractRequiredSection(
+    core,
+    'evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);',
+    "if (evaluationDeleteButton) {",
+    "Evaluation search and settings bindings",
   );
   core = extracted.core;
   evaluationParts.push(extracted.chunk);
