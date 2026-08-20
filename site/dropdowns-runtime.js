@@ -5,6 +5,8 @@
   const suppressNextClick = new WeakSet();
   let clubPointerPressedView = "";
   let clubPointerCommittedView = "";
+  let suppressFiltersButtonFocusAfterEscape = false;
+  let filtersEscapeFocusResetTimer = 0;
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
@@ -138,6 +140,33 @@
     }, 0);
   }
 
+  function armFiltersEscapeFocusSuppression(target) {
+    const filtersModal = document.getElementById("filtersModal");
+    if (!(filtersModal instanceof HTMLElement) || filtersModal.hidden) return;
+    if (!(target instanceof Node) || !filtersModal.contains(target)) return;
+
+    const select = filterSelectForTarget(target);
+    if (select instanceof HTMLSelectElement && isSelectOpen(select)) return;
+
+    suppressFiltersButtonFocusAfterEscape = true;
+    window.clearTimeout(filtersEscapeFocusResetTimer);
+    filtersEscapeFocusResetTimer = window.setTimeout(() => {
+      suppressFiltersButtonFocusAfterEscape = false;
+      filtersEscapeFocusResetTimer = 0;
+    }, 1000);
+  }
+
+  function suppressFiltersButtonFocus(event) {
+    if (!suppressFiltersButtonFocusAfterEscape) return;
+    const openFiltersButton = document.getElementById("openFiltersButton");
+    if (!(openFiltersButton instanceof HTMLButtonElement) || event.target !== openFiltersButton) return;
+
+    suppressFiltersButtonFocusAfterEscape = false;
+    window.clearTimeout(filtersEscapeFocusResetTimer);
+    filtersEscapeFocusResetTimer = 0;
+    openFiltersButton.blur();
+  }
+
   function beginNeutralFiltersOpen() {
     document.documentElement.classList.add("mflFiltersOpeningNeutral");
     queueMicrotask(clearInitialFilterFocus);
@@ -199,10 +228,15 @@
 
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
+    if (event.key === "Escape") {
+      armFiltersEscapeFocusSuppression(event.target);
+    }
     if (["Enter", "Escape", "Tab"].includes(event.key)) {
       blurFilterSelectWhenClosed(event.target);
     }
   }, true);
+
+  document.addEventListener("focus", suppressFiltersButtonFocus, true);
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
