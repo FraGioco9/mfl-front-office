@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply canonical sidebar lifecycle migration
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle-run'
         working-directory: .
         shell: bash
         run: |
@@ -268,7 +268,7 @@ jobs:
         run: npm run validate
 
       - name: Publish canonical sidebar migration
-        if: success() && github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle'
+        if: success() && github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chore/canonical-sidebar-lifecycle-run'
         working-directory: .
         shell: bash
         run: |
@@ -281,4 +281,4 @@ jobs:
           git add -- site/modules/app-core.js .github/workflows/site-quality.yml .github/workflows/canonical-sidebar-migration.yml
           git diff --cached --exit-code && { echo 'Migration produced no changes.'; exit 1; } || true
           git commit -m "Canonicalize pinned sidebar lifecycle"
-          git push origin HEAD:chore/canonical-sidebar-lifecycle
+          git push origin HEAD:chore/canonical-sidebar-lifecycle-run
