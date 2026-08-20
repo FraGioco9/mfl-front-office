@@ -304,7 +304,7 @@
     });
   }
 
-  function primeTableChrome(page, urlLike = window.location.href) {
+  function primeTableChrome(page, urlLike = window.location.href, options = {}) {
     const normalizedPage = String(page || "").toLowerCase();
     if (!normalizedPage) return "";
 
@@ -323,7 +323,8 @@
     if (title instanceof HTMLElement) title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
 
     const clubPage = normalizedPage === "club";
-    const savedState = storedTablePageState(normalizedPage) || {};
+    const resetFilters = Boolean(options.resetFilters);
+    const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};
     const quickFilters = document.querySelector("#progressionPage .quickFilters");
     if (quickFilters instanceof HTMLElement) quickFilters.hidden = clubPage;
 
@@ -356,6 +357,13 @@
     const newMintsLabel = document.getElementById("newMintsLabel");
     if (newMintsLabel instanceof HTMLElement) {
       newMintsLabel.textContent = normalizedPage === "mfl" ? "Only aged players" : "Only new mints";
+    }
+
+    if (resetFilters) {
+      const filterRules = document.getElementById("filterRules");
+      if (filterRules instanceof HTMLElement) filterRules.replaceChildren();
+      const filterSummary = document.getElementById("filterSummary");
+      if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0 active";
     }
 
     const pager = document.querySelector("#progressionPage nav.pager");

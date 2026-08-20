@@ -42,6 +42,7 @@ const validators = [
   "validate-agent-title-loading.mjs",
   "validate-table-column-layout.mjs",
   "validate-table-loading-state.mjs",
+  "validate-table-filter-selection-lifecycle.mjs",
   "validate-wallet-core.mjs",
   "validate-watchlist-route-core.mjs",
   "validate-watchlist-selector-navigation.mjs",
