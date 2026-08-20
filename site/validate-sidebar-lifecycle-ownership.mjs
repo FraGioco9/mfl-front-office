@@ -124,5 +124,5 @@ invariant(
 
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
+console.log("Built pinned-sidebar lifecycle, stable white Menu color, and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
 
