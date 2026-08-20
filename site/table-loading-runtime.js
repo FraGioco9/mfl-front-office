@@ -59,36 +59,10 @@
     return true;
   }
 
-  function loadingNameColumnIndex() {
-    const colGroup = document.getElementById("tableColGroup");
-    if (!(colGroup instanceof HTMLElement)) return -1;
-    return Array.from(colGroup.children).findIndex((column) => column.classList.contains("col-name"));
-  }
-
-  function normalizeLoadingRowGeometry(body) {
-    const nameColumnIndex = loadingNameColumnIndex();
-    if (nameColumnIndex < 0) return false;
-
-    let normalized = false;
-    body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => {
-      if (!(row instanceof HTMLTableRowElement)) return;
-      const cell = row.cells[nameColumnIndex];
-      if (!(cell instanceof HTMLTableCellElement) || cell.querySelector(":scope > .playerNameCell")) return;
-      const nameCell = document.createElement("span");
-      nameCell.className = "playerNameCell";
-      nameCell.textContent = cell.textContent || "\u00a0";
-      cell.replaceChildren(nameCell);
-      normalized = true;
-    });
-    return normalized;
-  }
-
   function primeLoadingRows() {
     const primeRows = Reflect.get(window, "__mflPrimeTableRows");
     if (typeof primeRows !== "function") return false;
     primeRows(true);
-    const { body } = elements();
-    if (body) normalizeLoadingRowGeometry(body);
     return true;
   }
 
@@ -110,7 +84,6 @@
     if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
     if (realRowsPresent && !replaceExisting) return false;
     if (body.dataset.staticLoading !== "true" && !primeLoadingRows()) return false;
-    normalizeLoadingRowGeometry(body);
     return body.dataset.staticLoading === "true";
   }
 
