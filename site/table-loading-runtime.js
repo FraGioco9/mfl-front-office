@@ -49,16 +49,53 @@
     return typeof ensureHeader === "function" ? Boolean(ensureHeader()) : false;
   }
 
+  function neutralizeSelectionHeader() {
+    const input = document.getElementById("selectVisiblePlayersInput");
+    if (!(input instanceof HTMLInputElement)) return false;
+    input.checked = false;
+    input.indeterminate = false;
+    input.disabled = true;
+    if (document.activeElement === input) input.blur();
+    return true;
+  }
+
+  function loadingNameColumnIndex() {
+    const colGroup = document.getElementById("tableColGroup");
+    if (!(colGroup instanceof HTMLElement)) return -1;
+    return Array.from(colGroup.children).findIndex((column) => column.classList.contains("col-name"));
+  }
+
+  function normalizeLoadingRowGeometry(body) {
+    const nameColumnIndex = loadingNameColumnIndex();
+    if (nameColumnIndex < 0) return false;
+
+    let normalized = false;
+    body.querySelectorAll(`:scope > .${BLANK_ROW_CLASS}`).forEach((row) => {
+      if (!(row instanceof HTMLTableRowElement)) return;
+      const cell = row.cells[nameColumnIndex];
+      if (!(cell instanceof HTMLTableCellElement) || cell.querySelector(":scope > .playerNameCell")) return;
+      const nameCell = document.createElement("span");
+      nameCell.className = "playerNameCell";
+      nameCell.textContent = cell.textContent || "\u00a0";
+      cell.replaceChildren(nameCell);
+      normalized = true;
+    });
+    return normalized;
+  }
+
   function primeLoadingRows() {
     const primeRows = Reflect.get(window, "__mflPrimeTableRows");
     if (typeof primeRows !== "function") return false;
     primeRows(true);
+    const { body } = elements();
+    if (body) normalizeLoadingRowGeometry(body);
     return true;
   }
 
   function show({ replaceExisting = false, forceRoute = false } = {}) {
     if (destroyed || (!forceRoute && !tableRouteActive())) return false;
     if (!forceRoute) ensureCanonicalHeader();
+    neutralizeSelectionHeader();
     const { body, empty } = elements();
     if (!body) return false;
 
@@ -73,6 +110,7 @@
     if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
     if (realRowsPresent && !replaceExisting) return false;
     if (body.dataset.staticLoading !== "true" && !primeLoadingRows()) return false;
+    normalizeLoadingRowGeometry(body);
     return body.dataset.staticLoading === "true";
   }
 
