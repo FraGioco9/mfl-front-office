@@ -62,7 +62,7 @@ jobs:
 
           for file in "${CHANGED_FILES[@]}"; do
             case "$file" in
-              site/*)
+              site/*|.gitattributes)
                 site=true
                 ;;
               *.py|requirements*.txt|pyproject.toml)
