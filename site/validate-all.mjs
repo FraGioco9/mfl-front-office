@@ -9,6 +9,7 @@ const validators = [
   "validate-release-history.mjs",
   "validate-release-runtime-ownership.mjs",
   "validate-app-config.mjs",
+  "validate-css-priority.mjs",
   "validate-dropdown-style-ownership.mjs",
   "validate-control-style-ownership.mjs",
   "validate-loading-ownership.mjs",
