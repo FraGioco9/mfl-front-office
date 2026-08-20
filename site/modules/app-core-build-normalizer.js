@@ -1,4 +1,5 @@
 // @ts-check
+// Canonical app-core behavior is source-owned; this module only performs structural route/action splitting.
 
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
