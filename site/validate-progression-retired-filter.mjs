@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 const pageSource = String(await readFile(new URL("./api/_data-page.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const rebuildSource = String(await readFile(new URL("../run_flow_rebuild_paged.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const runnerSource = String(await readFile(new URL("../rebuild_database_runner.py", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -32,15 +33,34 @@ invariant(
 );
 
 invariant(
-  rebuildSource.includes('retired_players = results.get("retired")')
-    && rebuildSource.includes('PROGRESSION_BATCHES = prepare_progression_batches([*active_players, *retired_players])'),
-  "Database rebuild progression batches must include both active and retired player sources.",
+  rebuildSource.includes('ACTIVE_PROGRESSION_BATCHES = prepare_progression_batches(\n        active_players,\n        "CURRENT_SEASON",\n    )')
+    && rebuildSource.includes('RETIRED_PROGRESSION_BATCHES = prepare_progression_batches(\n        retired_players,\n        "ALL",\n    )'),
+  "Database rebuild must prepare active current-season batches and retired ALL-only batches separately.",
 );
 
 invariant(
-  rebuildSource.includes('from {len(eligible_ids)} active/retired players;')
-    && !rebuildSource.includes('and all retired players'),
-  "Database rebuild must no longer exclude retired players from progression requests.",
+  rebuildSource.includes('PREVIOUS_DATABASE_PATH = Path("previous-database/mfl_database.db")')
+    && rebuildSource.includes('restore_retired_all_progression(connection)')
+    && rebuildSource.includes('missing_retired_ids = missing_retired_all_player_ids(connection)'),
+  "Retired ALL progression must reuse the previous database before deciding which players need an API request.",
 );
 
-console.log("Progression retired-player data, activity, and sorting validation passed.");
+invariant(
+  rebuildSource.includes('AND ({missing_values})')
+    && rebuildSource.includes('retired_all_batches = [\n        [player_id for player_id in batch if player_id in missing_retired_ids]'),
+  "Retired ALL requests must be restricted to rows whose all-time progression values are still unset.",
+);
+
+invariant(
+  rebuildSource.includes('("CURRENT_SEASON", "current_season", batch)\n        for batch in active_batches')
+    && !rebuildSource.includes('("CURRENT_SEASON", "current_season", batch)\n        for batch in retired_all_batches'),
+  "Retired players must never be requested with CURRENT_SEASON progression.",
+);
+
+invariant(
+  runnerSource.includes('def prepare_progression_batches(\n    players: list[dict[str, Any]],\n    interval: str,')
+    && runnerSource.includes('candidate_url_length = len(progression_url(candidate, interval))'),
+  "Production progression batching must honor the requested interval for active and retired batches.",
+);
+
+console.log("Progression retired-player ALL cache, activity, and sorting validation passed.");
