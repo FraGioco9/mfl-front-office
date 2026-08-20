@@ -31,7 +31,7 @@ for (const [chunkName, names] of Object.entries(routeOnlyFunctions)) {
   }
 }
 
-for (const name of [
+const protectedSharedFunctions = [
   "updateSettingsDateFormat",
   "updateSettingsTimeFormat",
   "discardSettingsEmailAddressDraftSilently",
@@ -48,17 +48,13 @@ for (const name of [
   "normalizeWatchlists",
   "renderWatchlistSwitcher",
   "playerIsInAnyWatchlist",
-  "updateSettingsDateFormat",
-  "updateSettingsTimeFormat",
-  "buildOperatorSelect",
-  "ruleMatches",
-  "optOutWallet",
-]) {
+];
+for (const name of protectedSharedFunctions) {
   invariant(hasFunction(shared, name), `Cross-route/shared function ${name} must remain in the eager core.`);
 }
 
 const sharedBytes = Buffer.byteLength(shared);
-invariant(sharedBytes < 324_000, `Shared application core is too large after route ownership extraction: ${sharedBytes} bytes.`);
+invariant(sharedBytes < 324_000, `Shared application core is too large after dependency-aware route ownership extraction: ${sharedBytes} bytes.`);
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 
