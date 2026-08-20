@@ -270,6 +270,12 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   );
 
   let table = [...routeOnly.chunks, ...extracted.chunks].join("\n\n").replace(/\s*$/, "");
+  table = replaceRequired(
+    table,
+    'return columnLabels[column] || column.replaceAll("_", " ");',
+    'return columnLabels[column] || (column === "nationality" ? "Nationality" : column.replaceAll("_", " "));',
+    "Table nationality filter label",
+  );
   for (const [functionName, ownerName] of TABLE_OWNERS) {
     table = renameRequiredFunctionOwner(table, functionName, ownerName, `Table ${functionName}`);
   }

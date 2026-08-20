@@ -1,0 +1,1706 @@
+// Generated Table core chunk from modules/app-core.js. Do not edit directly.
+function currentViewColumns(pageName = state.currentPage, viewName = state.view) {
+  return (views[viewName]?.columns || []).map((column) => displayColumnForPage(column, pageName));
+}
+
+function tableColumnClass(column) {
+  if (column === "overall") {
+    return "col-stat col-overall";
+  }
+
+  return statColumns.includes(column) ? "col-stat" : tableColumnClasses[column] || "";
+}
+
+function agentTitleForWallet(address) {
+  const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
+  if (!normalizedAddress) {
+    return "";
+  }
+
+  const agentName = savedAgentNameForWallet(normalizedAddress)
+    || normalizedAgentName(state.walletRows.find((row) => normalizeWalletAddress(row.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name)
+    || normalizedAgentName(state.rows.find((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === normalizedAddress)?.wallet_name);
+
+  return agentName ? `${agentName} - ${normalizedAddress}` : normalizedAddress;
+}
+
+function selectedPlayerIdsArray() {
+  return Array.from(state.selectedPlayerIds).map((playerId) => String(playerId));
+}
+
+function trackWatchlistChange(playerId, added) {
+  const key = String(playerId);
+
+  if (added) {
+    state.watchlistPlayerIdsAdded.add(key);
+    state.watchlistPlayerIdsRemoved.delete(key);
+  } else {
+    state.watchlistPlayerIdsRemoved.add(key);
+    state.watchlistPlayerIdsAdded.delete(key);
+  }
+  syncActiveWatchlistFromSet();
+}
+
+function isNumericColumn(column) {
+  return numberColumns.has(column) || column.endsWith("_all") || column.endsWith("_current_season");
+}
+
+function uniqueNationalityValues() {
+  return uniqueColumnValues("nationality")
+    .map((value) => ({ value, label: formatNationality(value) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function uniquePositions() {
+  return POSITION_ORDER;
+}
+
+function availableFilterColumns(pageName = tablePageKey() || state.currentPage || "progression", viewName = state.view) {
+  const normalizedView = normalizeViewForPage(viewName, pageName);
+  const columns = (pageName === "mfl" || pageName === "agents")
+    ? baseFilterColumns.filter((column) => column !== agentColumn && (pageName !== "mfl" || column !== contractStatusFilterColumn))
+    : [...baseFilterColumns];
+
+  if (normalizedView === "current") {
+    columns.push(...statColumns.map((column) => `${column}_prog_current_season`));
+  } else if (normalizedView === "all") {
+    columns.push(...statColumns.map((column) => `${column}_prog_all`));
+  }
+
+  return columns.filter((column) => column === contractStatusFilterColumn || state.columns.includes(column));
+}
+
+function contractStatusValue(row) {
+  const clubName = getValue(row, "active_contract_club_name");
+  if (isDevelopmentCenterClubName(clubName)) {
+    return "development_center";
+  }
+
+  return rowHasActiveContract(row) ? "under_contract" : "free_agent";
+}
+
+function precomputedValue(row, column) {
+  return hasColumn(column) ? getValue(row, column) : null;
+}
+
+function cachedRowSortValue(row, key, compute) {
+  let cache = state.rowSortCache.get(row);
+
+  if (!cache) {
+    cache = {};
+    state.rowSortCache.set(row, cache);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(cache, key)) {
+    return cache[key];
+  }
+
+  const value = compute();
+  cache[key] = value;
+  return value;
+}
+
+function newMintMarker(row) {
+  if (getValue(row, "player_seasons") !== 1) {
+    return null;
+  }
+
+  return {
+    emoji: "\u{1F195}",
+    label: "New mint",
+  };
+}
+
+function rowIsOwnedByLinkedWallet(row) {
+  const walletAddress = normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase();
+  return Boolean(walletAddress && linkedWalletAddressesForOwnedPlayers().has(walletAddress));
+}
+
+function displayColumnForPage(column, pageName = state.currentPage) {
+  return column === agentColumn && joinedAgencyPages().has(pageName) ? joinedAgencyColumn : column;
+}
+
+function filterLabel(column) {
+  if (column.endsWith("_prog_current_season")) {
+    return `${filterLabel(column.replace("_prog_current_season", ""))} Progression`;
+  }
+
+  if (column.endsWith("_prog_all")) {
+    return `${filterLabel(column.replace("_prog_all", ""))} Progression`;
+  }
+
+  return columnLabels[column] || (column === "nationality" ? "Nationality" : column.replaceAll("_", " "));
+}
+
+function uniqueColumnValues(column) {
+  const values = new Set();
+  if (state.incrementalMode && column === "nationality" && state.searchIndex.length) {
+    state.searchIndex.forEach((entry) => {
+      if (entry.nationalityRaw) {
+        values.add(String(entry.nationalityRaw));
+      }
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }
+
+  const columnIndex = state.columns.indexOf(column);
+
+  if (columnIndex < 0) {
+    return [];
+  }
+
+  state.rows.forEach((row) => {
+    const value = row[columnIndex];
+
+    if (value !== null && value !== undefined && value !== "") {
+      values.add(String(value));
+    }
+  });
+
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function tableTitleForPageOwner(pageName) {
+  if (pageName === "watchlist" || /^\/watchlist(?:\/|$)/i.test(window.location.pathname)) {
+    return `Watchlist - ${currentWatchlistName()}`;
+  }
+
+  if (pageName === "myplayers") {
+    return "My Players";
+  }
+
+  if (pageName === "database") {
+    return "Database";
+  }
+
+  if (pageName === "mfl" || pageName === "mflstats") {
+    return "MFL Wallet";
+  }
+
+  if (pageName === "agents") {
+    const walletAddress = normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase();
+    return agentTitleForWallet(walletAddress);
+  }
+
+  return "Progression";
+}
+
+function renderTableLoadingShell(pageName) {
+  state.currentPage = pageName;
+  const tablePage = tablePages.has(pageName);
+
+  if (!tablePage) {
+    return;
+  }
+
+  restoreSavedTableState(pageName);
+  globalThis.syncQuickFilterLabels?.();
+  updateViewButtons();
+  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else if (pageName !== "club") {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }
+  emptyState.hidden = true;
+  emptyState.textContent = "";
+  tableBody.replaceChildren();
+  window.__mflTableLoadingRuntime?.show?.();
+}
+
+function tableNextOverallInfo(row, statColumn) {
+  const precomputedGap = precomputedValue(row, "next_overall_gap");
+  const gap = precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
+  const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+  if (statColumn === "overall") {
+    return maxOverall
+      ? { text: "MAX", className: "neutral" }
+      : { text: `+${formatDecimal(gap)}`, className: "easy" };
+  }
+
+  const primary = playerPositions(row)[0];
+  const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
+
+  if (!weight) {
+    return null;
+  }
+
+  const precomputedColumn = `${statColumn}_to_next_overall`;
+  const precomputedNeeded = precomputedValue(row, precomputedColumn);
+
+  if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
+    const neededStatGain = Number(precomputedNeeded);
+    return {
+      text: `+${formatRoundedUpDecimal(neededStatGain, 1)}`,
+      className: nextOverallColorClass(neededStatGain),
+    };
+  }
+
+  if (maxOverall || Number(getValue(row, statColumn) || 0) >= 99) {
+    return { text: "MAX", className: "neutral" };
+  }
+
+  if (hasColumn(precomputedColumn)) {
+    return null;
+  }
+
+  const neededStatGain = gap / (weight / 100);
+  return {
+    text: `+${formatRoundedUpDecimal(neededStatGain, 1)}`,
+    className: nextOverallColorClass(neededStatGain),
+  };
+}
+
+function appendNextOverallTableValue(cell, row, statColumn) {
+  const precomputedOverall = precomputedValue(row, "next_overall");
+  const value = statColumn === "overall"
+    ? (precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : precomputedOverall)
+    : getValue(row, statColumn);
+
+  if (value === null || value === undefined || value === "") {
+    cell.textContent = "NULL";
+    return;
+  }
+
+  const displayValue = statColumn === "overall" ? formatDecimal(value) : String(value);
+  cell.append(displayValue);
+  const nextOverall = tableNextOverallInfo(row, statColumn);
+
+  if (!nextOverall) {
+    return;
+  }
+
+  const element = document.createElement("span");
+  const overallClass = statColumn === "overall" ? " tableNextOverallValueOverall" : "";
+  element.className = `nextOverallValue tableNextOverallValue${overallClass} ${nextOverall.className}`;
+  element.textContent = ` (${nextOverall.text})`;
+  cell.appendChild(element);
+}
+
+function appendStatValue(cell, row, statColumn) {
+  const value = getValue(row, statColumn);
+  const progressionColumn = getProgressionColumn(statColumn);
+
+  if (state.view === "next") {
+    appendNextOverallTableValue(cell, row, statColumn);
+    return;
+  }
+
+  if (value === null || value === undefined || value === "") {
+    cell.textContent = "NULL";
+    return;
+  }
+
+  cell.append(String(value));
+
+  if (!progressionColumn) {
+    return;
+  }
+
+  const progression = Number(getValue(row, progressionColumn) || 0);
+
+  if (progression === 0) {
+    return;
+  }
+
+  const progressionElement = document.createElement("span");
+  progressionElement.className = progression > 0 ? "progressionValue positive" : "progressionValue negative";
+  progressionElement.textContent = ` (${progression > 0 ? "+" : ""}${progression})`;
+  cell.appendChild(progressionElement);
+}
+
+function tableInteractiveKey(type, id) {
+  const key = String(id || "").trim();
+  return key ? `${type}:${key}` : "";
+}
+
+function markTableInteractiveHover(element, type, id) {
+  const key = tableInteractiveKey(type, id);
+  if (!element || !key) {
+    return;
+  }
+  element.dataset.tableInteractiveKey = key;
+  if (state.hoveredTableInteractiveKey === key) {
+    element.classList.add("tableInteractiveHovered");
+  }
+}
+function createCopyPlayerIdButton(playerId, label = String(playerId)) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "copyPlayerIdButton";
+  button.textContent = label;
+  button.dataset.playerId = String(playerId);
+  button.dataset.tooltip = "Click to copy";
+  button.setAttribute("aria-label", "Click to copy");
+  markTableInteractiveHover(button, "id", playerId);
+  return button;
+}
+
+function appendNameMarker(cell, marker, className) {
+  if (!marker) {
+    return;
+  }
+
+  const markerElement = document.createElement("span");
+  markerElement.className = `${className} retirementMarker--${marker.status || "default"}`;
+  if (marker.icon) {
+    const markerIcon = document.createElement("img");
+    markerIcon.src = `/retirement-${marker.icon}.svg`;
+    markerIcon.width = 16;
+    markerIcon.height = 16;
+    markerIcon.alt = "";
+    markerIcon.setAttribute("aria-hidden", "true");
+    markerElement.appendChild(markerIcon);
+  } else {
+    markerElement.textContent = marker.emoji;
+  }
+  markerElement.dataset.tooltip = marker.label;
+  markerElement.setAttribute("aria-label", marker.label);
+  cell.appendChild(markerElement);
+}
+
+function tableNextOverallPreciseValue(row) {
+  return cachedRowSortValue(row, "next_overall_precise", () => {
+    const precomputedOverall = precomputedValue(row, "next_overall");
+    return precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : Number(precomputedOverall);
+  });
+}
+
+function tableNextOverallNeededValue(row, statColumn) {
+  return cachedRowSortValue(row, `next_overall_needed:${statColumn}`, () => {
+    const maxOverall = Number(statDisplayValue(row, "overall") || 0) >= 99;
+
+    if (maxOverall) {
+      return null;
+    }
+
+    if (statColumn === "overall") {
+      const precomputedGap = precomputedValue(row, "next_overall_gap");
+      return precomputedGap === null || precomputedGap === undefined ? nextOverallGap(row) : Number(precomputedGap);
+    }
+
+    const precomputedColumn = `${statColumn}_to_next_overall`;
+    const precomputedNeeded = precomputedValue(row, precomputedColumn);
+
+    if (precomputedNeeded !== null && precomputedNeeded !== undefined && precomputedNeeded !== "") {
+      return Number(precomputedNeeded);
+    }
+
+    if (hasColumn(precomputedColumn)) {
+      return null;
+    }
+
+    const primary = playerPositions(row)[0];
+    const weight = POSITION_GROUP_WEIGHTS[primary]?.[statColumn] || 0;
+
+    if (!weight || Number(getValue(row, statColumn) || 0) >= 99) {
+      return null;
+    }
+
+    return nextOverallGap(row) / (weight / 100);
+  });
+}
+
+function tableNextOverallSortValue(row, statColumn) {
+  return tableNextOverallNeededValue(row, statColumn);
+}
+
+function compareNextOverallRows(a, b, column, direction) {
+  const aNeeded = tableNextOverallSortValue(a, column);
+  const bNeeded = tableNextOverallSortValue(b, column);
+  const primaryComparison = comparePrimitiveValues(aNeeded, bNeeded, direction, true);
+
+  if (primaryComparison !== 0) {
+    return primaryComparison;
+  }
+
+  return comparePrimitiveValues(tableNextOverallPreciseValue(a), tableNextOverallPreciseValue(b), -1, true);
+}
+
+function sortableValue(row, column) {
+  if (column === "active_contract_club_division") {
+    const divisionRank = contractDivisionSortValue(getValue(row, column));
+    return divisionRank === null ? null : -divisionRank;
+  }
+
+  if (state.view === "next" && statColumns.includes(column)) {
+    return tableNextOverallSortValue(row, column);
+  }
+
+  if ((state.view === "current" || state.view === "all") && statColumns.includes(column)) {
+    return [
+      getValue(row, getProgressionColumn(column)) || 0,
+      getValue(row, "overall") || 0,
+    ];
+  }
+
+  return getValue(row, column);
+}
+
+function tableBuildTableColGroupOwner() {
+  const targetClasses = [
+    "col-select",
+    ...currentViewColumns().map((column) => tableColumnClass(column)),
+  ];
+  const existingCols = Array.from(tableColGroup.children);
+  const alreadyCanonical = existingCols.length === targetClasses.length
+    && existingCols.every((col, index) => col.className === targetClasses[index]);
+  if (alreadyCanonical) return;
+
+  const fragment = document.createDocumentFragment();
+  targetClasses.forEach((columnClass) => {
+    const col = document.createElement("col");
+    if (columnClass) col.classList.add(...columnClass.split(" "));
+    fragment.appendChild(col);
+  });
+
+  tableColGroup.replaceChildren(fragment);
+}
+function tableBuildHeaderOwner() {
+  buildTableColGroup();
+  const headerRow = document.createElement("tr");
+  const selectionHeader = document.createElement("th");
+  const selectVisibleInput = document.createElement("input");
+
+  selectionHeader.className = "selectionCell";
+  selectVisibleInput.id = "selectVisiblePlayersInput";
+  selectVisibleInput.type = "checkbox";
+  selectVisibleInput.setAttribute("aria-label", "Select visible players");
+
+  selectVisibleInput.addEventListener("change", () => setVisiblePlayersSelected(selectVisibleInput.checked));
+  selectionHeader.appendChild(selectVisibleInput);
+  headerRow.appendChild(selectionHeader);
+
+  currentViewColumns().forEach((column) => {
+    const cell = document.createElement("th");
+    const columnClass = tableColumnClass(column);
+    if (columnClass) {
+      cell.classList.add(...columnClass.split(" "));
+    }
+    const isSorted = state.sortKey === column;
+    const label = document.createElement("span");
+    label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
+    cell.appendChild(label);
+
+    if (sortableColumns.has(column)) {
+      cell.classList.add("sortable");
+
+      if (isSorted) {
+        const arrow = document.createElement("span");
+        arrow.className = `sortArrow ${state.sortDirection}`;
+        arrow.setAttribute("aria-hidden", "true");
+        cell.appendChild(arrow);
+      }
+
+      cell.addEventListener("click", () => {
+        const defaultDirection = state.view === "next" && statColumns.includes(column) ? "asc" : numberColumns.has(column) ? "desc" : "asc";
+        const resetDirection = state.view === "next" ? "asc" : "desc";
+        const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
+
+        if (state.sortKey !== column) {
+          state.sortKey = column;
+          state.sortDirection = defaultDirection;
+        } else if (state.sortDirection === defaultDirection) {
+          state.sortDirection = reverseDirection;
+        } else if (column === "overall") {
+          state.sortDirection = defaultDirection;
+        } else {
+          state.sortKey = "overall";
+          state.sortDirection = resetDirection;
+        }
+
+        state.page = 1;
+        buildHeader();
+        applyFilters();
+      });
+    }
+
+    headerRow.appendChild(cell);
+  });
+
+  tableHead.replaceChildren(headerRow);
+}
+
+function isMissingSortValue(value) {
+  return value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL";
+}
+
+function comparePrimitiveValues(aValue, bValue, direction, numeric = false) {
+  const aMissing = isMissingSortValue(aValue);
+  const bMissing = isMissingSortValue(bValue);
+
+  if (aMissing || bMissing) {
+    if (aMissing && bMissing) {
+      return 0;
+    }
+
+    return aMissing ? 1 : -1;
+  }
+
+  if (numeric) {
+    return ((Number(aValue) - Number(bValue)) || 0) * direction;
+  }
+
+  return String(aValue).localeCompare(String(bValue)) * direction;
+}
+
+function compareRows(a, b) {
+  const direction = state.sortDirection === "asc" ? 1 : -1;
+
+  if (state.view === "next" && statColumns.includes(state.sortKey)) {
+    return compareNextOverallRows(a, b, state.sortKey, direction);
+  }
+
+  const aValue = sortableValue(a, state.sortKey);
+  const bValue = sortableValue(b, state.sortKey);
+
+  if (Array.isArray(aValue) && Array.isArray(bValue)) {
+    for (let index = 0; index < aValue.length; index += 1) {
+      const comparison = comparePrimitiveValues(aValue[index], bValue[index], direction, true);
+
+      if (comparison !== 0) {
+        return comparison;
+      }
+    }
+
+    return 0;
+  }
+
+  if (numberColumns.has(state.sortKey)) {
+    return comparePrimitiveValues(aValue, bValue, direction, true);
+  }
+
+  return comparePrimitiveValues(aValue, bValue, direction, false);
+}
+
+function activeFilterCount() {
+  let count = 0;
+
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    const operator = rule.querySelector("[data-filter-operator]").value;
+    const values = readRuleValues(rule);
+
+    if (((operator === "between" || operator === "during") && values.value && values.valueTo) || (operator !== "between" && operator !== "during" && values.value)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function activeFilterCountFromSavedRules(rules = []) {
+  return rules.filter((rule) => {
+    const operator = String(rule?.operator || "");
+    const value = String(rule?.value || "").trim();
+    const valueTo = String(rule?.valueTo || "").trim();
+    return operator === "between" || operator === "during"
+      ? Boolean(value && valueTo)
+      : Boolean(value);
+  }).length;
+}
+
+function updateFilterSummary(count = activeFilterCount()) {
+  filterSummary.textContent = `${count} active`;
+}
+
+function selectedFilterColumns(exceptRule = null) {
+  return new Set(Array.from(filterRules.querySelectorAll(".filterRule"))
+    .filter((rule) => rule !== exceptRule)
+    .map((rule) => rule.dataset.filterColumn));
+}
+
+function populateAddFilterSelect(pageName = tablePageKey() || state.currentPage || "progression") {
+  const selectedColumns = selectedFilterColumns();
+  const fragment = document.createDocumentFragment();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select filter...";
+  fragment.appendChild(placeholder);
+
+  availableFilterColumns(pageName)
+    .filter((column) => !selectedColumns.has(column))
+    .forEach((column) => {
+      const option = document.createElement("option");
+      option.value = column;
+      option.textContent = filterLabel(column);
+      fragment.appendChild(option);
+    });
+
+  addFilterSelect.replaceChildren(fragment);
+}
+
+function tableBuildOperatorSelectOwner(column) {
+  const select = document.createElement("select");
+  select.dataset.filterOperator = "true";
+  let operators;
+
+  if (column === "positions") {
+    operators = [
+      ["primary_is", "primary is"],
+      ["can_play", "can play"],
+    ];
+  } else if (column === joinedAgencyColumn) {
+    operators = [
+      ["before", "before"],
+      ["after", "after"],
+      ["during", "during"],
+    ];
+  } else if (column === contractStatusFilterColumn) {
+    operators = [["=", "is"]];
+    select.hidden = true;
+  } else if (column === "nationality") {
+    operators = [["=", "is"]];
+    select.hidden = true;
+  } else if (column === "name" || column === "wallet_name") {
+    operators = [["contains", "contains"]];
+    select.hidden = true;
+  } else if (isNumericColumn(column)) {
+    operators = [
+      [">=", "at least"],
+      ["<=", "at most"],
+      ["between", "is between"],
+      ["=", "is"],
+    ];
+  } else {
+    operators = [["contains", "contains"]];
+    select.hidden = true;
+  }
+
+  operators.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+
+  return select;
+}
+
+function buildNumberInput(value = "", placeholder = "Value") {
+  const input = document.createElement("input");
+  input.type = "number";
+  input.placeholder = placeholder;
+  input.dataset.filterValue = "true";
+  input.value = value;
+  return input;
+}
+
+function buildDateInput(value = "") {
+  const input = document.createElement("input");
+  input.type = "date";
+  input.className = "dateValue";
+  input.dataset.filterValue = "true";
+  input.value = value;
+  return input;
+}
+
+function buildValueControl(column, savedValue = "", savedValueTo = "", operator = "") {
+  if (column === joinedAgencyColumn && operator === "during") {
+    const group = document.createElement("div");
+    group.className = "betweenValue dateRangeValue";
+    group.dataset.filterValueGroup = "true";
+    group.appendChild(buildDateInput(savedValue));
+    group.appendChild(buildDateInput(savedValueTo));
+    return group;
+  }
+
+  if (isNumericColumn(column) && operator === "between") {
+    const group = document.createElement("div");
+    group.className = "betweenValue";
+    group.dataset.filterValueGroup = "true";
+    group.appendChild(buildNumberInput(savedValue, "From"));
+    group.appendChild(buildNumberInput(savedValueTo, "To"));
+    return group;
+  }
+
+  if (column === joinedAgencyColumn) {
+    return buildDateInput(savedValue);
+  }
+
+  if (column === "nationality" || column === "positions" || column === contractStatusFilterColumn) {
+    const select = document.createElement("select");
+    select.dataset.filterValue = "true";
+    const values = column === "nationality" ? uniqueNationalityValues() : column === contractStatusFilterColumn ? contractStatusOptions : uniquePositions();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select...";
+    select.appendChild(placeholder);
+
+    values.forEach((item) => {
+      const value = typeof item === "string" ? item : item.value;
+      const label = typeof item === "string" ? item : item.label;
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === savedValue;
+      select.appendChild(option);
+    });
+
+    return select;
+  }
+
+  const input = document.createElement("input");
+  input.type = isNumericColumn(column) ? "number" : "search";
+  input.placeholder = isNumericColumn(column) ? "Value" : "Text";
+  input.dataset.filterValue = "true";
+  input.value = savedValue;
+  return input;
+}
+
+function buildColumnSelect(selectedColumn, currentRule = null) {
+  const select = document.createElement("select");
+  select.dataset.filterColumnSelect = "true";
+  const selectedColumns = selectedFilterColumns(currentRule);
+
+  availableFilterColumns().filter((column) => column === selectedColumn || !selectedColumns.has(column)).forEach((column) => {
+    const option = document.createElement("option");
+    option.value = column;
+    option.textContent = filterLabel(column);
+    option.selected = column === selectedColumn;
+    select.appendChild(option);
+  });
+
+  return select;
+}
+
+function replaceOperatorSelect(rule, column) {
+  const oldOperator = rule.querySelector("[data-filter-operator]");
+  const newOperator = buildOperatorSelect(column);
+  newOperator.addEventListener("change", () => {
+    const values = readRuleValues(rule);
+    replaceValueControl(rule, column, values.value, values.valueTo);
+  });
+  oldOperator.replaceWith(newOperator);
+}
+
+function valueControlElement(rule) {
+  return rule.querySelector("[data-filter-value-group]") || rule.querySelector("[data-filter-value]");
+}
+
+function replaceValueControl(rule, column, savedValue = "", savedValueTo = "") {
+  const oldValue = valueControlElement(rule);
+  const operator = rule.querySelector("[data-filter-operator]").value;
+  const newValue = buildValueControl(column, savedValue, savedValueTo, operator);
+  oldValue.replaceWith(newValue);
+}
+
+function tableAddFilterRuleOwner(column, options = {}) {
+  const rule = document.createElement("div");
+  rule.className = "filterRule";
+  rule.dataset.filterColumn = column;
+
+  const connector = document.createElement("select");
+  connector.dataset.filterConnector = "true";
+  connector.innerHTML = '<option value="and">And</option><option value="or">Or</option>';
+  connector.className = "connectorSelect";
+  connector.value = options.connector || "and";
+
+  const columnSelect = buildColumnSelect(column, rule);
+  columnSelect.addEventListener("change", () => {
+    const nextColumn = columnSelect.value;
+    if (selectedFilterColumns(rule).has(nextColumn)) {
+      refreshRuleColumnSelects();
+      populateAddFilterSelect();
+      return;
+    }
+    rule.dataset.filterColumn = nextColumn;
+    replaceOperatorSelect(rule, nextColumn);
+    replaceValueControl(rule, nextColumn);
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
+  });
+
+  const operator = buildOperatorSelect(column);
+  if (options.operator) {
+    operator.value = options.operator;
+  }
+  operator.addEventListener("change", () => {
+    const values = readRuleValues(rule);
+    replaceValueControl(rule, column, values.value, values.valueTo);
+  });
+
+  const value = buildValueControl(column, options.value || "", options.valueTo || "", operator.value);
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "iconButton popupCloseButton";
+  remove.setAttribute("aria-label", `Remove ${filterLabel(column)} filter`);
+  remove.addEventListener("click", () => {
+    rule.remove();
+    refreshRuleConnectors();
+    populateAddFilterSelect();
+    refreshRuleColumnSelects();
+  });
+
+  rule.appendChild(connector);
+  rule.appendChild(columnSelect);
+  rule.appendChild(operator);
+  rule.appendChild(value);
+  rule.appendChild(remove);
+  filterRules.appendChild(rule);
+  refreshRuleConnectors();
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
+
+  if (options.focus !== false) {
+    (value.querySelector("[data-filter-value]") || value).focus();
+  }
+}
+
+function refreshRuleConnectors() {
+  const rules = Array.from(filterRules.querySelectorAll(".filterRule"));
+
+  rules.forEach((rule, index) => {
+    const connector = rule.querySelector("[data-filter-connector]");
+    connector.disabled = index === 0;
+    connector.style.visibility = index === 0 ? "hidden" : "visible";
+  });
+}
+
+function removeUnavailableFilterRules(pageName = tablePageKey() || state.currentPage || "progression") {
+  const allowedColumns = new Set(availableFilterColumns(pageName));
+
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    if (!allowedColumns.has(rule.dataset.filterColumn)) {
+      rule.remove();
+    }
+  }
+
+  refreshRuleConnectors();
+}
+
+function refreshRuleColumnSelects(pageName = tablePageKey() || state.currentPage || "progression") {
+  for (const rule of filterRules.querySelectorAll(".filterRule")) {
+    const oldSelect = rule.querySelector("[data-filter-column-select]");
+    const newSelect = buildColumnSelect(rule.dataset.filterColumn, rule);
+
+    newSelect.addEventListener("change", () => {
+      const nextColumn = newSelect.value;
+      if (selectedFilterColumns(rule).has(nextColumn)) {
+        refreshRuleColumnSelects(pageName);
+        populateAddFilterSelect(pageName);
+        return;
+      }
+      rule.dataset.filterColumn = nextColumn;
+      replaceOperatorSelect(rule, nextColumn);
+      replaceValueControl(rule, nextColumn);
+      populateAddFilterSelect(pageName);
+      refreshRuleColumnSelects(pageName);
+    });
+
+    oldSelect.replaceWith(newSelect);
+  }
+}
+
+function normalizedSavedTableControlState(pageName, savedState) {
+  const newMints = Boolean(savedState.newMints);
+  const mflPackable = pageName === "mfl"
+    ? (newMints ? false : (savedState.mflPackable !== undefined ? Boolean(savedState.mflPackable) : true))
+    : false;
+
+  return {
+    pageName,
+    hideRetired: savedState.hideRetired !== false,
+    hideRetiring: Boolean(savedState.hideRetiring),
+    hideMflPlayers: pageName === "database"
+      ? (savedState.hideMflPlayers !== undefined ? Boolean(savedState.hideMflPlayers) : true)
+      : false,
+    mflPackable,
+    newMints,
+    rules: Array.isArray(savedState.rules)
+      ? savedState.rules.map((rule) => ({ ...rule }))
+      : [],
+  };
+}
+
+function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
+  const savedState = state.tablePageStates?.[pageName]
+    || defaultTablePageState(pageName);
+
+  state.view = normalizeViewForPage(options.view || savedState.view, pageName);
+
+  if (Number(savedState.pageSize)) {
+    state.pageSize = Number(savedState.pageSize);
+  }
+
+  const viewSortState = normalizedViewSortState(
+    savedState.viewSortStates?.[state.view] || savedState,
+    state.view,
+  );
+  state.sortKey = viewSortState.sortKey;
+  state.sortDirection = viewSortState.sortDirection;
+  state.selectedPlayerIds = new Set((savedState.selectedPlayerIds || []).map((playerId) => String(playerId)));
+  state.pendingTableControlRestore = normalizedSavedTableControlState(pageName, savedState);
+}
+
+function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  const restored = state.pendingTableControlRestore;
+  if (!restored || restored.pageName !== pageName) return false;
+
+  pageSizeSelect.value = String(state.pageSize);
+  hideRetiredInput.checked = restored.hideRetired;
+  hideRetiringInput.checked = restored.hideRetiring;
+  if (hideMflPlayersInput) hideMflPlayersInput.checked = restored.hideMflPlayers;
+  if (packablePlayersInput) packablePlayersInput.checked = restored.mflPackable;
+  newMintsInput.checked = restored.newMints;
+
+  const allowedColumns = new Set(availableFilterColumns(pageName));
+  filterRules.replaceChildren();
+  for (const rule of restored.rules) {
+    if (!allowedColumns.has(rule.column)) continue;
+    addFilterRule(rule.column, {
+      connector: rule.connector,
+      operator: rule.operator,
+      value: rule.value,
+      valueTo: rule.valueTo,
+      focus: false,
+    });
+  }
+
+  populateAddFilterSelect(pageName);
+  refreshRuleColumnSelects(pageName);
+  updateFilterSummary();
+  state.pendingTableControlRestore = null;
+  return true;
+}
+
+function readFilterDraftRules() {
+  return Array.from(filterRules.querySelectorAll(".filterRule")).map((rule, index) => {
+    const values = readRuleValues(rule);
+
+    return {
+      column: rule.dataset.filterColumn,
+      connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+      operator: rule.querySelector("[data-filter-operator]").value,
+      value: values.value,
+      valueTo: values.valueTo,
+    };
+  });
+}
+
+function restoreFilterDraftRules(rules = []) {
+  filterRules.replaceChildren();
+
+  rules.forEach((rule) => {
+    addFilterRule(rule.column, {
+      connector: rule.connector,
+      operator: rule.operator,
+      value: rule.value,
+      valueTo: rule.valueTo,
+      focus: false,
+    });
+  });
+
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
+  updateFilterSummary();
+}
+
+function tableOpenFiltersOwner() {
+  state.filterDraftRules = readFilterDraftRules();
+  document.body.classList.add("filtersOpen");
+  showModal(filtersModal);
+  const firstInput = filterRules.querySelector("input") || addFilterSelect;
+
+  if (firstInput) {
+    firstInput.focus();
+  }
+}
+
+function tableCloseFiltersOwner(commitChanges = false) {
+  if (!commitChanges && state.filterDraftRules) {
+    restoreFilterDraftRules(state.filterDraftRules);
+  }
+
+  state.filterDraftRules = null;
+  hideModal(filtersModal, () => {
+    document.body.classList.remove("filtersOpen");
+    openFiltersButton.focus();
+  });
+}
+
+function tableClearAdvancedFiltersOwner(applyNow = true) {
+  filterRules.replaceChildren();
+  populateAddFilterSelect();
+  updateFilterSummary();
+
+  if (!applyNow) {
+    return;
+  }
+
+  state.page = 1;
+  applyFilters();
+}
+
+function tableApplyAdvancedFiltersOwner() {
+  state.page = 1;
+  applyFilters();
+  closeFilters(true);
+}
+
+function readRuleValues(rule) {
+  const inputs = Array.from(rule.querySelectorAll("[data-filter-value]"));
+
+  return {
+    value: (inputs[0]?.value || "").trim(),
+    valueTo: (inputs[1]?.value || "").trim(),
+  };
+}
+
+function readFilterRules() {
+  return Array.from(filterRules.querySelectorAll(".filterRule"))
+    .map((rule, index) => {
+      const values = readRuleValues(rule);
+
+      return {
+        column: rule.dataset.filterColumn,
+        connector: index === 0 ? "and" : rule.querySelector("[data-filter-connector]").value,
+        operator: rule.querySelector("[data-filter-operator]").value,
+        value: values.value,
+        valueTo: values.valueTo,
+      };
+    })
+    .filter((rule) => (rule.operator === "between" || rule.operator === "during") ? rule.value && rule.valueTo : rule.value);
+}
+
+function tableRuleMatchesOwner(row, rule) {
+  const rawValue = rule.column === contractStatusFilterColumn ? contractStatusValue(row) : getValue(row, rule.column);
+  const filterValue = rule.value;
+
+  if (rule.column === contractStatusFilterColumn) {
+    return rawValue === filterValue;
+  }
+
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return false;
+  }
+
+  if (rule.column === joinedAgencyColumn) {
+    const rowDay = ownedSinceDay(row);
+    const filterDay = parseFilterDateDay(filterValue);
+
+    if (rowDay === null || filterDay === null) {
+      return false;
+    }
+
+    if (rule.operator === "before") {
+      return rowDay < filterDay;
+    }
+
+    if (rule.operator === "after") {
+      return rowDay > filterDay;
+    }
+
+    if (rule.operator === "during") {
+      const filterDayTo = parseFilterDateDay(rule.valueTo);
+      if (filterDayTo === null) {
+        return false;
+      }
+      const min = Math.min(filterDay, filterDayTo);
+      const max = Math.max(filterDay, filterDayTo);
+      return rowDay >= min && rowDay <= max;
+    }
+
+    return false;
+  }
+
+  if (rule.column === "positions") {
+    const positions = String(rawValue || "")
+      .split(",")
+      .map((position) => position.trim())
+      .filter(Boolean);
+
+    if (rule.operator === "primary_is") {
+      return positions[0] === filterValue;
+    }
+
+    if (rule.operator === "can_play") {
+      return positions.includes(filterValue);
+    }
+  }
+
+  if (rule.column === "nationality") {
+    return String(rawValue ?? "") === filterValue;
+  }
+
+  if (rule.column === "name" || rule.column === "wallet_name") {
+    return normalizeSearchText(rawValue).includes(normalizeSearchText(filterValue));
+  }
+
+  if (isNumericColumn(rule.column)) {
+    const rowNumber = Number(rawValue);
+    const filterNumber = Number(filterValue);
+
+    if (!Number.isFinite(rowNumber)) {
+      return false;
+    }
+
+    if (rule.operator === "between") {
+      const filterNumberTo = Number(rule.valueTo);
+
+      if (!Number.isFinite(filterNumber) || !Number.isFinite(filterNumberTo)) {
+        return false;
+      }
+
+      const min = Math.min(filterNumber, filterNumberTo);
+      const max = Math.max(filterNumber, filterNumberTo);
+      return rowNumber >= min && rowNumber <= max;
+    }
+
+    if (!Number.isFinite(filterNumber)) {
+      return false;
+    }
+
+    if (rule.operator === "=") {
+      return rowNumber === filterNumber;
+    }
+    if (rule.operator === "!=") {
+      return rowNumber !== filterNumber;
+    }
+    if (rule.operator === "<") {
+      return rowNumber < filterNumber;
+    }
+    if (rule.operator === "<=") {
+      return rowNumber <= filterNumber;
+    }
+    if (rule.operator === ">") {
+      return rowNumber > filterNumber;
+    }
+    if (rule.operator === ">=") {
+      return rowNumber >= filterNumber;
+    }
+  }
+
+  const rowText = normalizeSearchText(rawValue);
+  const filterText = normalizeSearchText(filterValue);
+
+  if (rule.operator === "contains") {
+    return rowText.includes(filterText);
+  }
+  if (rule.operator === "not_contains") {
+    return !rowText.includes(filterText);
+  }
+  if (rule.operator === "=") {
+    return rowText === filterText;
+  }
+  if (rule.operator === "!=") {
+    return rowText !== filterText;
+  }
+
+  return false;
+}
+
+function rowMatchesRules(row, rules) {
+  if (!rules.length) {
+    return true;
+  }
+
+  let result = ruleMatches(row, rules[0]);
+
+  for (let index = 1; index < rules.length; index += 1) {
+    const current = ruleMatches(row, rules[index]);
+
+    if (rules[index].connector === "or") {
+      result = result || current;
+    } else {
+      result = result && current;
+    }
+  }
+
+  return result;
+}
+
+function rowIsHiddenFromTableAsMflPlayer(row) {
+  if (!rowIsMflWalletPlayer(row)) {
+    return false;
+  }
+
+  if (rowHasHiddenMflJoinedAgencyDate(row)) {
+    return true;
+  }
+
+  return state.currentPage === "database" && Boolean(hideMflPlayersInput?.checked);
+}
+
+function syncQuickFilterLabels() {
+  if (hideMflPlayersFilter) {
+    hideMflPlayersFilter.hidden = state.currentPage !== "database";
+  }
+
+  if (packablePlayersFilter) {
+    packablePlayersFilter.hidden = state.currentPage !== "mfl";
+  }
+
+  if (!newMintsLabel) {
+    return;
+  }
+
+  newMintsLabel.textContent = state.currentPage === "mfl" ? "Only aged players" : "Only new mints";
+}
+
+function tableApplyFiltersOwner(options = {}) {
+  const rules = readFilterRules();
+  const retirementIndex = state.columns.indexOf("retirement_years");
+  const seasonsIndex = state.columns.indexOf("player_seasons");
+
+  let sourceRows = state.rows.filter((row) => !rowHasHiddenMflJoinedAgencyDate(row));
+
+  if (state.currentPage === "watchlist") {
+    sourceRows = state.rows.filter((row) => state.watchlistPlayerIds.has(String(getValue(row, "player_id"))) && !rowHasHiddenMflJoinedAgencyDate(row));
+  } else if (state.currentPage === "myplayers") {
+    sourceRows = state.rows.filter((row) => rowIsOwnedByLinkedWallet(row) && !rowHasHiddenMflJoinedAgencyDate(row));
+  } else if (state.currentPage === "mfl") {
+    sourceRows = state.rows.filter((row) => rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
+  } else if (state.currentPage === "agents") {
+    const agentWalletAddress = normalizeWalletAddress(state.currentAgentWalletAddress).toLowerCase();
+    sourceRows = state.rows.filter((row) => normalizeWalletAddress(getValue(row, "wallet_address")).toLowerCase() === agentWalletAddress && !rowHasHiddenMflJoinedAgencyDate(row));
+  } else if (state.currentPage === "progression") {
+    sourceRows = state.rows.filter((row) => !rowIsMflWalletPlayer(row) && !rowHasHiddenMflJoinedAgencyDate(row));
+  }
+
+  state.tableSourceRowsCount = sourceRows.length;
+
+  emptyState.textContent = state.currentPage === "watchlist"
+    ? (sourceRows.length ? "No watchlist players match the current filters." : "No players in your watchlist yet.")
+    : state.currentPage === "myplayers"
+      ? (sourceRows.length ? "No owned players match the current filters." : "No players found for this wallet.")
+      : state.currentPage === "mfl"
+        ? (sourceRows.length ? "No MFL players match the current filters." : "No MFL players found.")
+        : state.currentPage === "agents"
+          ? (sourceRows.length ? "No agent players match the current filters." : "No players found for this agent.")
+          : "No players match the current filters.";
+
+  state.filteredRows = sourceRows.filter((row) => {
+    if (rowIsHiddenFromTableAsMflPlayer(row)) {
+      return false;
+    }
+
+    if (hideRetiredInput.checked && row[retirementIndex] === 0) {
+      return false;
+    }
+
+    if (hideRetiringInput.checked && [1, 2, 3].includes(row[retirementIndex])) {
+      return false;
+    }
+
+
+    const playerSeasons = Number(row[seasonsIndex]);
+
+    if (state.currentPage === "mfl" && packablePlayersInput?.checked) {
+      if (playerSeasons !== 1) {
+        return false;
+      }
+    }
+
+    if (newMintsInput.checked) {
+      if (state.currentPage === "mfl") {
+        if (!Number.isFinite(playerSeasons) || playerSeasons < 2) {
+          return false;
+        }
+      } else if (row[seasonsIndex] !== 1) {
+        return false;
+      }
+    }
+
+    if (!rowMatchesRules(row, rules)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  state.filteredRows.sort(compareRows);
+  updateFilterSummary();
+  syncActiveWatchlistFromSet();
+  if (options.save !== false) {
+    saveTableState();
+  }
+  renderTable();
+}
+
+function currentPageRows() {
+  if (state.incrementalMode) {
+    return state.filteredRows;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+  const currentPage = Math.min(state.page, totalPages);
+  const start = (currentPage - 1) * state.pageSize;
+  return state.filteredRows.slice(start, start + state.pageSize);
+}
+
+function updateSelectionHeader(pageRows = currentPageRows()) {
+  const selectVisibleInput = document.querySelector("#selectVisiblePlayersInput");
+
+  if (!selectVisibleInput) {
+    return;
+  }
+
+  const visibleIds = pageRows.map((row) => String(getValue(row, "player_id")));
+  const selectedVisibleCount = visibleIds.filter((playerId) => state.selectedPlayerIds.has(playerId)).length;
+
+  selectVisibleInput.disabled = visibleIds.length === 0;
+  selectVisibleInput.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  selectVisibleInput.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+}
+
+function updateSelectionBar() {
+  const selectedCount = state.selectedPlayerIds.size;
+  const optedIn = hasWalletOptIn();
+  selectionBar.classList.toggle("visible", selectedCount > 0);
+  selectionCount.textContent = `${selectedCount} selected`;
+  addToWatchlistButton.hidden = !optedIn;
+  addToWatchlistButton.textContent = state.currentPage === "watchlist" ? "Remove from watchlist" : "Add to watchlist";
+  if (moveToWatchlistButton) {
+    moveToWatchlistButton.hidden = !optedIn || state.currentPage !== "watchlist" || selectedCount <= 0;
+  }
+  updateSelectionHeader();
+}
+
+function setVisiblePlayersSelected(selected) {
+  state.selectionAnchorPlayerId = null;
+
+  currentPageRows().forEach((row) => {
+    const playerId = String(getValue(row, "player_id"));
+
+    if (selected) {
+      state.selectedPlayerIds.add(playerId);
+    } else {
+      state.selectedPlayerIds.delete(playerId);
+    }
+  });
+
+  renderTable();
+  saveTableState();
+}
+
+function setPlayerSelected(playerId, selected, shiftKey = false) {
+  const key = String(playerId);
+  const anchorKey = state.selectionAnchorPlayerId;
+  const filteredIds = state.filteredRows.map((row) => String(getValue(row, "player_id")));
+  const anchorIndex = filteredIds.indexOf(anchorKey);
+  const currentIndex = filteredIds.indexOf(key);
+
+  if (shiftKey && anchorKey && anchorIndex >= 0 && currentIndex >= 0) {
+    const start = Math.min(anchorIndex, currentIndex);
+    const end = Math.max(anchorIndex, currentIndex);
+
+    filteredIds.slice(start, end + 1).forEach((rangePlayerId) => {
+      if (selected) {
+        state.selectedPlayerIds.add(rangePlayerId);
+      } else {
+        state.selectedPlayerIds.delete(rangePlayerId);
+      }
+    });
+
+    renderTable();
+    saveTableState();
+    return;
+  }
+
+  if (selected) {
+    state.selectedPlayerIds.add(key);
+  } else {
+    state.selectedPlayerIds.delete(key);
+  }
+
+  state.selectionAnchorPlayerId = key;
+  updateSelectionBar();
+  saveTableState();
+}
+
+function tableClearSelectionOwner() {
+  state.selectedPlayerIds.clear();
+  state.selectionAnchorPlayerId = null;
+  renderTable();
+  updateSelectionBar();
+  saveTableState();
+}
+
+function tableAddSelectedToWatchlistOwner() {
+  const selectedCount = state.selectedPlayerIds.size;
+
+  if (!selectedCount) {
+    return;
+  }
+
+  if (state.currentPage === "watchlist") {
+    const removedIds = selectedPlayerIdsArray();
+    const removedWatchlist = activeWatchlist();
+    removedIds.forEach((playerId) => {
+      const key = String(playerId);
+      state.watchlistPlayerIds.delete(key);
+      trackWatchlistChange(key, false);
+    });
+    state.selectedPlayerIds.clear();
+    state.selectionAnchorPlayerId = null;
+    syncActiveWatchlistFromSet();
+    renderWatchlistSwitcher();
+    saveWatchlistStateAfterAction();
+    applyFilters();
+    showWatchlistActionToast(removedIds, removedIds.length, "removed from", removedWatchlist?.id);
+    return;
+  }
+
+  const selectedIds = selectedPlayerIdsArray();
+  const watchlists = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds));
+  state.watchlists = watchlists;
+
+  if (hasWalletOptIn() && watchlists.length > 1) {
+    openWatchlistChoiceModal("add", selectedIds);
+    return;
+  }
+
+  performWatchlistChoiceAction("add", activeWatchlist()?.id || ensureDefaultWatchlist()?.id || "", selectedIds);
+}
+
+function tableMoveSelectedToWatchlistOwner() {
+  if (state.currentPage !== "watchlist" || !state.selectedPlayerIds.size) {
+    return;
+  }
+
+  openWatchlistChoiceModal("move", selectedPlayerIdsArray());
+}
+
+function tableOpenSelectedPlayerLinksOwner() {
+  if (!state.selectedPlayerIds.size) {
+    return;
+  }
+
+  const playerUrls = Array.from(state.selectedPlayerIds).map((playerId) => {
+    const safePlayerId = encodeURIComponent(playerId);
+    return `https://app.playmfl.com/players/${safePlayerId}`;
+  });
+  const reservedTabs = [];
+
+  for (const playerUrl of playerUrls) {
+    const reservedTab = window.open("about:blank", "_blank");
+
+    if (!reservedTab) {
+      reservedTabs.forEach((tab) => tab.close());
+      showToast("Allow pop-ups for this site, then click Open links again.");
+      return;
+    }
+
+    reservedTabs.push(reservedTab);
+  }
+
+  reservedTabs.forEach((tab, index) => {
+    tab.opener = null;
+    tab.location.href = playerUrls[index];
+  });
+}
+
+function tableRenderTableOwner() {
+  const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
+  state.page = Math.min(state.page, totalPages);
+  if (state.currentPage === "agents" && tablePageTitle) {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  }
+
+  const pageRows = currentPageRows();
+  const fragment = document.createDocumentFragment();
+
+  pageRows.forEach((row) => {
+    const tableRow = document.createElement("tr");
+    const selectionCell = document.createElement("td");
+    const selectionInput = document.createElement("input");
+    const playerId = getValue(row, "player_id");
+    tableRow.dataset.playerId = String(playerId);
+    if (state.hoveredTablePlayerId && String(playerId) === state.hoveredTablePlayerId) {
+      tableRow.classList.add("tableRowHovered");
+    }
+
+    selectionCell.className = "selectionCell";
+    selectionInput.type = "checkbox";
+    selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
+    selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
+    selectionInput.dataset.playerId = String(playerId);
+    selectionCell.appendChild(selectionInput);
+    tableRow.appendChild(selectionCell);
+
+    currentViewColumns().forEach((column) => {
+      const cell = document.createElement("td");
+      const columnClass = tableColumnClass(column);
+      if (columnClass) {
+        cell.classList.add(...columnClass.split(" "));
+      }
+
+      if (column === "name") {
+        cell.classList.add("nameCell");
+        const nameWrap = document.createElement("div");
+        const nameLink = document.createElement("a");
+        nameWrap.className = "playerNameCell";
+        nameLink.href = playerRoute(playerId);
+        nameLink.className = "playerNameLink";
+        markTableInteractiveHover(nameLink, "name", playerId);
+        nameLink.textContent = formatCellValue(row, column);
+        nameLink.dataset.playerId = String(playerId);
+        nameWrap.appendChild(nameLink);
+        const markerWrap = document.createElement("span");
+        markerWrap.className = "playerNameMarkers";
+        if (playerHasNote(playerId)) {
+          const noteIcon = document.createElement("span");
+          noteIcon.className = "playerNoteIcon";
+          noteIcon.dataset.noteTooltip = playerNote(playerId);
+          noteIcon.setAttribute("aria-label", "Player note");
+          noteIcon.textContent = "\u{1F4DD}";
+
+          markerWrap.appendChild(noteIcon);
+        }
+        appendNameMarker(markerWrap, newMintMarker(row), "newMintMarker");
+        if (markerWrap.childElementCount) {
+          nameWrap.appendChild(markerWrap);
+        }
+        cell.appendChild(nameWrap);
+      } else if (column === flagColumn) {
+        cell.classList.add("flagCell");
+        cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
+      } else if (column === "player_id") {
+        cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+      } else if (column === "age") {
+        const ageValue = document.createElement("span");
+        ageValue.className = "playerAgeValue";
+        ageValue.textContent = formatCellValue(row, column);
+        cell.appendChild(ageValue);
+        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
+      } else if (column === joinedAgencyColumn) {
+        cell.textContent = formatCellValue(row, column);
+      } else if (column === "active_contract_club_division") {
+        const division = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, column)) : null;
+        if (division) {
+          const divisionLabel = document.createElement("span");
+          divisionLabel.className = "contractDivisionLabel";
+          divisionLabel.style.color = division.color;
+          divisionLabel.textContent = division.name;
+          cell.appendChild(divisionLabel);
+        } else {
+          cell.textContent = "";
+        }
+      } else if (column === agentColumn) {
+        if (!["myplayers", "agents", "mfl"].includes(state.currentPage)) {
+          const walletAddress = getValue(row, "wallet_address");
+          const agentLabel = formatCellValue(row, column);
+          const link = document.createElement("a");
+          link.href = agentRoute(walletAddress);
+          link.className = "agentTableLink";
+          markTableInteractiveHover(link, "agent", walletAddress);
+          link.textContent = agentLabel;
+          const tooltip = joinedAgencyTooltip(row);
+          link.dataset.walletAddress = String(walletAddress || "");
+          if (tooltip) {
+            link.dataset.tooltip = tooltip;
+          }
+          cell.appendChild(link);
+        }
+      } else if (column === "active_contract_club_name") {
+        const clubId = String(getValue(row, "active_contract_club_id") || "").trim();
+        const clubName = formatContractClubName(row);
+        if (state.currentPage !== "club" && clubId && rowHasActiveContract(row)) {
+          const clubLink = document.createElement("a");
+          clubLink.href = `/clubs/${encodeURIComponent(clubId)}/squad`;
+          clubLink.className = "agentTableLink";
+          markTableInteractiveHover(clubLink, "club", clubId);
+          clubLink.textContent = clubName;
+          clubLink.dataset.clubId = clubId;
+          cell.appendChild(clubLink);
+        } else {
+          cell.textContent = clubName;
+        }
+      } else if (column === linkColumn) {
+        const link = document.createElement("a");
+        link.href = formatCellValue(row, column);
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Link";
+        cell.appendChild(link);
+      } else if (statColumns.includes(column)) {
+        appendStatValue(cell, row, column);
+      } else {
+        cell.textContent = formatCellValue(row, column);
+      }
+
+      tableRow.appendChild(cell);
+    });
+
+    fragment.appendChild(tableRow);
+  });
+
+  tableBody.replaceChildren(fragment);
+  emptyState.hidden = pageRows.length > 0;
+  updateTablePlayerCount();
+  pageText.textContent = `Page ${state.page} of ${totalPages}`;
+  prevButton.disabled = state.page <= 1;
+  nextButton.disabled = state.page >= totalPages;
+  updateSelectionBar();
+}
+
+function showTableBusyState() {
+  if (window.__mflTableLoadingRuntime?.show?.()) return;
+  emptyState.hidden = true;
+  emptyState.textContent = "";
+  tableBody.replaceChildren();
+}
+
+async function tableSetViewOwner(viewName) {
+  if (!allowedViewsForPage().includes(viewName)) {
+    return;
+  }
+
+  const pageKey = tablePageKey();
+  if (pageKey) {
+    const existingPageState = state.tablePageStates[pageKey] || currentTablePageState();
+    state.tablePageStates[pageKey] = {
+      ...existingPageState,
+      viewSortStates: {
+        ...(existingPageState.viewSortStates || {}),
+        [state.view]: {
+          sortKey: state.sortKey,
+          sortDirection: state.sortDirection,
+        },
+      },
+    };
+  }
+
+  state.view = viewName;
+  state.page = 1;
+  if (pageKey) {
+    updatePageUrl(pageKey, { updateUrl: true, view: viewName });
+  }
+
+  const targetSortState = normalizedViewSortState(
+    pageKey ? state.tablePageStates[pageKey]?.viewSortStates?.[viewName] : null,
+    viewName,
+  );
+  state.sortKey = targetSortState.sortKey;
+  state.sortDirection = targetSortState.sortDirection;
+
+  removeUnavailableFilterRules();
+  populateAddFilterSelect();
+  refreshRuleColumnSelects();
+
+  updateViewButtons();
+  buildHeader();
+
+  applyFilters();
+}
+
+__mflTableTitleForPageOwner = tableTitleForPageOwner;
+__mflTableBuildTableColGroupOwner = tableBuildTableColGroupOwner;
+__mflTableBuildHeaderOwner = tableBuildHeaderOwner;
+__mflTableBuildOperatorSelectOwner = tableBuildOperatorSelectOwner;
+__mflTableRuleMatchesOwner = tableRuleMatchesOwner;
+__mflTableAddFilterRuleOwner = tableAddFilterRuleOwner;
+__mflTableRestoreSavedTableStateOwner = tableRestoreSavedTableStateOwner;
+__mflTableApplyFiltersOwner = tableApplyFiltersOwner;
+__mflTableRenderTableOwner = tableRenderTableOwner;
+__mflTableOpenFiltersOwner = tableOpenFiltersOwner;
+__mflTableClearAdvancedFiltersOwner = tableClearAdvancedFiltersOwner;
+__mflTableCloseFiltersOwner = tableCloseFiltersOwner;
+__mflTableApplyAdvancedFiltersOwner = tableApplyAdvancedFiltersOwner;
+__mflTableClearSelectionOwner = tableClearSelectionOwner;
+__mflTableAddSelectedToWatchlistOwner = tableAddSelectedToWatchlistOwner;
+__mflTableMoveSelectedToWatchlistOwner = tableMoveSelectedToWatchlistOwner;
+__mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;
+__mflTableSetViewOwner = tableSetViewOwner;

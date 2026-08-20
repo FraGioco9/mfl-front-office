@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  actions: write
+  contents: write
 
 jobs:
   quality:
@@ -18,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Detect relevant changes
         id: changes
@@ -144,10 +147,33 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run build:core
 
-      - name: Verify generated application artifacts
-        if: steps.changes.outputs.quality == 'true'
-        run: npm run verify:generated
-
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
+
+      - name: Commit generated application artifacts
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          steps.changes.outputs.quality == 'true'
+        working-directory: .
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git add -- site/table-width-runtime.js site/modules/app-core-runtime.js site/modules/app-core-*-runtime.js
+          if git diff --cached --quiet; then
+            echo "Generated application artifacts are current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Regenerate application core"
+          git push origin "HEAD:$HEAD_BRANCH"
+          gh workflow run site-quality.yml --ref "$HEAD_BRANCH"
+
+      - name: Verify generated application artifacts
+        if: steps.changes.outputs.quality == 'true'
+        run: npm run verify:generated
