@@ -1,0 +1,26 @@
+name: Shared core analysis snapshot
+
+on:
+  push:
+    branches:
+      - chore/shared-core-route-ownership
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/shared-core-route-ownership
+          fetch-depth: 0
+      - name: Archive repository snapshot
+        run: tar -czf shared-core-analysis-snapshot.tar.gz --exclude=.git .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shared-core-analysis-snapshot
+          path: shared-core-analysis-snapshot.tar.gz
+          retention-days: 1
