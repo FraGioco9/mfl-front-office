@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
-import { normalizeClubUrlStability } from "./modules/app-core-club-url-normalizer.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(siteRoot, "modules/app-core.js");
@@ -32,150 +31,22 @@ async function writeFileIfChanged(path, content) {
   return true;
 }
 
-function replaceSourceSection(source, startMarker, endMarker, replacement, label) {
-  const start = source.indexOf(startMarker);
-  const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
-  if (start < 0 || end < 0 || end <= start) {
-    throw new Error(`Could not normalize application core section: ${label}.`);
-  }
-  return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
-}
-
-function normalizeRetirementMarkerContract(source) {
-  let normalized = String(source || "").replace(/\r\n?/g, "\n");
-
-  normalized = replaceSourceSection(
-    normalized,
-    "function retirementMarker(row) {",
-    "function newMintMarker(row) {",
-    `function retirementMarker(row) {
-      const rawRetirementYears = getValue(row, "retirement_years");
-      const retirementYears = rawRetirementYears === null
-        || rawRetirementYears === undefined
-        || String(rawRetirementYears).trim() === ""
-        ? null
-        : Number(rawRetirementYears);
-
-  if (retirementYears === 0) {
-    return {
-      icon: "calendar-x-2",
-      label: "Retired",
-      status: "retired",
-    };
-  }
-
-  if ([1, 2, 3].includes(retirementYears)) {
-    return {
-      icon: "calendar-clock",
-      label: \`${'${retirementYears}'} year${'${retirementYears === 1 ? "" : "s"}'} left\`,
-      status: \`retiring-${'${retirementYears}'}\`,
-    };
-  }
-
-  return null;
-}
-
-`,
-    "canonical retirement marker states",
-  );
-
-  normalized = replaceSourceSection(
-    normalized,
-    "function appendNameMarker(cell, marker, className) {",
-    "function playerRoute(playerId) {",
-    `function appendNameMarker(cell, marker, className) {
-  if (!marker) {
-    return;
-  }
-
-  const markerElement = document.createElement("span");
-  markerElement.className = \`${'${className}'} retirementMarker--${'${marker.status || "default"}'}\`;
-  if (marker.icon) {
-    const markerIcon = document.createElement("img");
-    markerIcon.src = \`/retirement-${'${marker.icon}'}.svg\`;
-    markerIcon.width = 16;
-    markerIcon.height = 16;
-    markerIcon.alt = "";
-    markerIcon.setAttribute("aria-hidden", "true");
-    markerElement.appendChild(markerIcon);
-  } else {
-    markerElement.textContent = marker.emoji;
-  }
-  markerElement.dataset.tooltip = marker.label;
-  markerElement.setAttribute("aria-label", marker.label);
-  cell.appendChild(markerElement);
-}
-
-`,
-    "retirement marker SVG renderer",
-  );
-
-  const playerAgeMarkerStart = "  const ageMarkerHtml = ageMarker\n";
-  const playerAgeMarkerEnd = "  const agentWalletAddress = getValue(row, \"wallet_address\");";
-  normalized = replaceSourceSection(
-    normalized,
-    playerAgeMarkerStart,
-    playerAgeMarkerEnd,
-    `  const ageMarkerHtml = ageMarker
-    ? \` <span class="retirementMarker playerAgeMarker retirementMarker--${'${escapeHtml(ageMarker.status || "default")}' }" data-tooltip="${'${escapeHtml(ageMarker.label)}'}" aria-label="${'${escapeHtml(ageMarker.label)}'}"><img src="/retirement-${'${escapeHtml(ageMarker.icon)}'}.svg" width="16" height="16" alt="" aria-hidden="true"></span>\`
-    : "";
-`,
-    "Player retirement marker SVG renderer",
-  );
-
-  return normalized;
-}
-
-function normalizeTooltipHeightOwnership(source) {
-  let normalized = String(source || "").replace(/\r\n?/g, "\n");
-
-  normalized = normalized.replaceAll(
-    "Number(window.__mflTooltipSettings?.gap) || 6",
-    "Number(window.__mflTooltipHeight)",
-  );
-  normalized = normalized.replaceAll("const tooltipGap = Number(window.__mflTooltipHeight);", "const tooltipHeight = Number(window.__mflTooltipHeight);");
-  normalized = normalized.replaceAll("tooltipRect.height - tooltipGap", "tooltipRect.height - tooltipHeight");
-  normalized = normalized.replaceAll("anchorBottom + tooltipGap", "anchorBottom + tooltipHeight");
-
-  const manualAnchor = [
-    "  const anchorHeight = 14;",
-    "  const anchorTop = iconRect.top + Math.max(0, (iconRect.height - anchorHeight) / 2);",
-    "  const anchorBottom = anchorTop + anchorHeight;",
-    "",
-    "  const tooltipHeight = Number(window.__mflTooltipHeight);",
-    "  let top = anchorTop - tooltipRect.height - tooltipHeight;",
-    "  if (top < margin) {",
-    "    top = anchorBottom + tooltipHeight;",
-    "  }",
-  ].join("\n");
-  const canonicalAnchor = [
-    "  const tooltipHeight = Number(window.__mflTooltipHeight);",
-    "  let top = iconRect.top - tooltipRect.height - tooltipHeight;",
-    "  if (top < margin) {",
-    "    top = iconRect.bottom + tooltipHeight;",
-    "  }",
-  ].join("\n");
-  if (normalized.includes(manualAnchor)) normalized = normalized.replace(manualAnchor, canonicalAnchor);
-
-  return normalized;
-}
-
 const release = JSON.parse(await readFile(releasePath, "utf8"));
 const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "");
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
-const source = normalizeRetirementMarkerContract(await readFile(sourcePath, "utf8"));
-const artifacts = normalizeClubUrlStability(normalizeBuiltApplicationCoreArtifacts(source));
-const normalized = normalizeTooltipHeightOwnership(String(artifacts.core || "")).replace(/\s*$/, "");
-const evaluationRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.evaluation || "")).replace(/\s*$/, "");
-const mflStatsRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.mflstats || "")).replace(/\s*$/, "");
-const clubRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.club || "")).replace(/\s*$/, "");
-const settingsRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.settings || "")).replace(/\s*$/, "");
-const playerRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.player || "")).replace(/\s*$/, "");
-const tableRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.table || "")).replace(/\s*$/, "");
-const walletRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.wallet || "")).replace(/\s*$/, "");
-const watchlistRuntime = normalizeTooltipHeightOwnership(String(artifacts.routeChunks?.watchlist || "")).replace(/\s*$/, "");
+const source = await readFile(sourcePath, "utf8");
+const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+const normalized = String(artifacts.core || "").replace(/\s*$/, "");
+const evaluationRuntime = String(artifacts.routeChunks?.evaluation || "").replace(/\s*$/, "");
+const mflStatsRuntime = String(artifacts.routeChunks?.mflstats || "").replace(/\s*$/, "");
+const clubRuntime = String(artifacts.routeChunks?.club || "").replace(/\s*$/, "");
+const settingsRuntime = String(artifacts.routeChunks?.settings || "").replace(/\s*$/, "");
+const playerRuntime = String(artifacts.routeChunks?.player || "").replace(/\s*$/, "");
+const tableRuntime = String(artifacts.routeChunks?.table || "").replace(/\s*$/, "");
+const walletRuntime = String(artifacts.routeChunks?.wallet || "").replace(/\s*$/, "");
+const watchlistRuntime = String(artifacts.routeChunks?.watchlist || "").replace(/\s*$/, "");
 if (!normalized) throw new Error("Application core normalization produced an empty runtime.");
 if (!evaluationRuntime) throw new Error("Application core normalization produced an empty Evaluation runtime.");
 if (!mflStatsRuntime) throw new Error("Application core normalization produced an empty MFL Stats runtime.");

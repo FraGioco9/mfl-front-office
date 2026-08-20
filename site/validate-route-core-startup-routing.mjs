@@ -7,17 +7,17 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const routeNormalizer = await read("./modules/app-core-route-runtime-normalizer.js");
-const routeNormalizerExecution = routeNormalizer.replace(/\/\/[^\n]*/g, "");
+const appCoreSource = await read("./modules/app-core.js");
+const appCoreExecution = appCoreSource.replace(/\/\/[^\n]*/g, "");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
 
 includes(
-  routeNormalizerExecution,
+  appCoreExecution,
   'const initialRouteTarget = pageTargetFromPath(window.location.pathname);',
   "Initial route-core startup must use the canonical core route parser.",
 );
 includes(
-  routeNormalizerExecution,
+  appCoreExecution,
   'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});',
   "Initial route-core startup must delegate dependencies to the route-core loader.",
 );
@@ -30,7 +30,7 @@ for (const duplicateOwner of [
   'window.__mflEnsureRouteCore("settings")',
   'window.__mflEnsureRouteCore("player")',
 ]) {
-  excludes(routeNormalizerExecution, duplicateOwner, `Startup route-core ownership must not be duplicated through ${duplicateOwner}.`);
+  excludes(appCoreExecution, duplicateOwner, `Startup route-core ownership must not be duplicated through ${duplicateOwner}.`);
 }
 
 includes(routeCoreLoader, "function routeCoreDependencies(pageName, options = {})", "The route-core loader must remain the central dependency owner.");

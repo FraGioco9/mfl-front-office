@@ -7,11 +7,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [bootstrap, bootstrapCore, controlInteractions, appCoreBuildNormalizer] = await Promise.all([
+const [bootstrap, bootstrapCore, controlInteractions, appCoreSource] = await Promise.all([
   read("./bootstrap.js"),
   read("./bootstrap-core.js"),
   read("./control-interactions-runtime.js"),
-  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core.js"),
 ]);
 
 includes(
@@ -346,24 +346,24 @@ excludes(
 );
 
 includes(
-  appCoreBuildNormalizer,
+  appCoreSource,
   'navigation.begin("page-transition")',
-  "Generated page transitions must acquire the shared navigation lifecycle.",
+  "Canonical page transitions must acquire the shared navigation lifecycle.",
 );
 includes(
-  appCoreBuildNormalizer,
+  appCoreSource,
   'navigation.begin("view-transition")',
-  "Generated view transitions must acquire the shared navigation lifecycle.",
+  "Canonical view transitions must acquire the shared navigation lifecycle.",
 );
 includes(
-  appCoreBuildNormalizer,
+  appCoreSource,
   "return typeof loader === \"function\" ? await loader(transition) : transition;",
   "Page transition navigation state must remain active until its owned loader settles.",
 );
 includes(
-  appCoreBuildNormalizer,
+  appCoreSource,
   "if (navigationToken) navigation?.end?.(navigationToken);",
-  "Generated transitions must release shared navigation state in finally blocks.",
+  "Canonical transitions must release shared navigation state in finally blocks.",
 );
 
 console.log("Bootstrap first-paint shells, canonical loading state, and canonical navigation lifecycle ownership validation passed.");

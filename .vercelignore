@@ -20,12 +20,6 @@ site/modules/app-config.js
 site/modules/package.json
 site/modules/app-core.js
 site/modules/app-core-build-normalizer.js
-site/modules/app-core-normalizer.js
-site/modules/app-core-route-request-normalizer.js
-site/modules/app-core-route-runtime-normalizer.js
-site/modules/app-core-startup-data-normalizer.js
-site/modules/app-core-table-events-normalizer.js
-site/modules/app-core-table-state-normalizer.js
 site/modules/app-core-route-chunks.js
 site/modules/app-core-settings-chunk.js
 site/modules/app-core-player-chunk.js

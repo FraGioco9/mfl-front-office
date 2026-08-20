@@ -76,21 +76,18 @@ excludes(bootstrapCore, "normalizeSingleRenderCore", "bootstrap-core must not re
 excludes(bootstrapCore, "installSingleRenderCoreTransform", "bootstrap-core must not install legacy fetch interception.");
 
 const buildCore = await readSite("build-app-core.mjs");
-includes(buildCore, "normalizeBuiltApplicationCore", "The core build must use the complete build-time normalizer.");
+includes(buildCore, "normalizeBuiltApplicationCoreArtifacts", "The core build must use the canonical build-time splitter.");
 includes(buildCore, "modules/app-core.js", "The core build must read app-core.js as its source.");
 includes(buildCore, "modules/app-core-runtime.js", "The core build must write the generated runtime artifact.");
 includes(buildCore, "Do not edit directly", "The generated core must carry an ownership banner.");
 
 const coreSource = await readSite("modules/app-core.js");
-const normalizerSource = await readSite("modules/app-core-normalizer.js");
-const tableEventNormalizerSource = await readSite("modules/app-core-table-events-normalizer.js");
 const buildNormalizerSource = await readSite("modules/app-core-build-normalizer.js");
-includes(normalizerSource, "export function normalizeApplicationCore(source)", "The base application core normalizer must expose its canonical transform.");
-includes(tableEventNormalizerSource, "export function normalizeTableEventDelegation(source)", "Table event delegation must be a build-time core transform.");
-includes(buildNormalizerSource, "normalizeTableEventDelegation(normalizeBaseApplicationCore(source))", "The build normalizer must apply table delegation after the base core transform.");
+includes(buildNormalizerSource, "splitApplicationCoreRuntime(canonicalSource)", "The build must split the canonical source directly without a pre-split patch chain.");
+excludes(buildNormalizerSource, "normalizeBaseApplicationCore", "The build must not restore legacy pre-split source patching.");
 const normalizedCore = normalizeBuiltApplicationCore(coreSource).replace(/\s*$/, "");
 invariant(normalizedCore.length > 300_000, "Canonical core normalization produced an unexpectedly small runtime.");
-invariant(normalizedCore !== coreSource.replace(/\s*$/, ""), "The canonical normalizer must still apply the required source migrations.");
+invariant(normalizedCore !== coreSource.replace(/\s*$/, ""), "The canonical splitter must remove route-owned code from the shared runtime.");
 includes(normalizedCore, "const shellFirstTablePages = new Set();", "The generated core must keep destination shell-first rendering disabled.");
 includes(normalizedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The generated core must delegate Club view URLs to the canonical route configuration.");
 excludes(normalizedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The generated core must not duplicate the Club view-to-slug mapping.");
@@ -150,13 +147,10 @@ excludes(entry, "club-squad-route-runtime", "app-entry.js must not restore depre
 excludes(entry, "deferredRuntimePromise", "app-entry.js must not retain legacy deferred runtime bookkeeping.");
 excludes(entry, "evaluationSearchRuntimePromise", "app-entry.js must not retain legacy Evaluation runtime bookkeeping.");
 
-const [tableLoading, routeRuntimeNormalizer] = await Promise.all([
-  readSite("table-loading-runtime.js"),
-  readSite("modules/app-core-route-runtime-normalizer.js"),
-]);
-includes(routeRuntimeNormalizer, "buildHeader.__mflSingleRenderOwner", "The route runtime must make app-core buildHeader the single persistent header owner.");
-includes(routeRuntimeNormalizer, "function ensureCanonicalTableHeader", "The route runtime must own canonical table-header reconciliation.");
-includes(routeRuntimeNormalizer, "if (needsCanonicalBuild) buildHeader();", "The route runtime must invoke the canonical header when table state changes.");
+const tableLoading = await readSite("table-loading-runtime.js");
+includes(coreSource, "buildHeader.__mflSingleRenderOwner", "Canonical app-core must make buildHeader the single persistent header owner.");
+includes(coreSource, "function ensureCanonicalTableHeader", "Canonical app-core must own table-header reconciliation directly.");
+includes(coreSource, "if (needsCanonicalBuild) buildHeader();", "Canonical app-core must invoke the canonical header when table state changes.");
 includes(tableLoading, "function hasRealRows", "Loading placeholders must never overwrite real table rows.");
 excludes(tableLoading, "VIEW_COLUMNS", "Table loading must not own the table schema.");
 
@@ -185,13 +179,13 @@ includes(evaluationDiscountRate, "mfl:season-ratios-ready", "Evaluation discount
 excludes(evaluationDiscountRate, "setInterval", "Evaluation discount-rate ownership must be event-driven.");
 
 const evaluationSearchState = await readSite("evaluation-search-state-runtime.js");
-includes(routeRuntimeNormalizer, "recentEvaluationRows.__mflSupabaseOnly", "The route runtime must keep Evaluation recents Supabase-backed.");
+includes(coreSource, "recentEvaluationRows.__mflSupabaseOnly", "Canonical app-core must keep Evaluation recents Supabase-backed.");
 includes(evaluationSearchState, "coreContracts()?.evaluationRecentPlayerIds?.()", "Evaluation search state must consume the canonical recent-entry contract.");
 excludes(evaluationSearchState, "MutationObserver", "Evaluation recents must not watch and rebuild rendered results.");
 
 const globalSearch = await readSite("global-search-runtime.js");
 includes(globalSearch, "installCoreSearchMatching", "Global Search runtime must remain the authoritative search-data bridge.");
-includes(routeRuntimeNormalizer, "__mflSurnameFirst", "The route runtime must preserve surname-first player matching.");
+includes(coreSource, "__mflSurnameFirst", "Canonical app-core must preserve surname-first player matching.");
 excludes(globalSearch, "resultsObserver", "Global Search must not repair rendered result nodes.");
 
 const filterControls = await readSite("filter-controls-runtime.js");

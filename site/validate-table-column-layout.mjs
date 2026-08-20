@@ -15,7 +15,7 @@ const [
   bootstrapCore,
   indexHtml,
   responsive,
-  appCoreNormalizer,
+  appCoreSource,
 ] = await Promise.all([
   read("./styles.css"),
   read("./styles-base.css"),
@@ -26,7 +26,7 @@ const [
   read("./bootstrap-core.js"),
   read("./index.html"),
   read("./responsive.css"),
-  read("./modules/app-core-normalizer.js"),
+  read("./modules/app-core.js"),
 ]);
 
 function cssVariable(name, unit) {
@@ -247,14 +247,17 @@ invariant(
   "Responsive loading rows must use the canonical row-height variable.",
 );
 
-invariant(appCoreNormalizer.includes("removeLegacyTableWidthOwnership(nextSource)"), "Generated app core must remove raw legacy table-width ownership.");
 invariant(
-  appCoreNormalizer.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
-    && appCoreNormalizer.includes("if (alreadyCanonical) return;"),
-  "Canonical colgroup ownership must be idempotent.",
+  appCoreSource.includes("const alreadyCanonical = existingCols.length === targetClasses.length")
+    && appCoreSource.includes("if (alreadyCanonical) return;"),
+  "Canonical app-core colgroup ownership must be idempotent.",
 );
+const clubFinishStart = appCoreSource.indexOf("function finishClubSwitch() {");
+const clubFinishEnd = appCoreSource.indexOf("function hideClubPageControls() {", clubFinishStart);
+invariant(clubFinishStart >= 0 && clubFinishEnd > clubFinishStart, "Canonical Club completion owner must remain directly inspectable.");
+const clubFinishSection = appCoreSource.slice(clubFinishStart, clubFinishEnd);
 invariant(
-  !appCoreNormalizer.includes('const layoutOnlyClubFinish = `  function finishClubSwitch() {\n    return new Promise((resolve) => {\n      requestAnimationFrame(() => {\n        if (typeof buildTableColGroup === "function") buildTableColGroup();'),
+  !clubFinishSection.includes("buildTableColGroup()"),
   "Club completion must not rebuild an already-rendered colgroup.",
 );
 

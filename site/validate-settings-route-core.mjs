@@ -9,12 +9,11 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, settingsSplitter, appConfig, routeLoader, routeNormalizer, buildCore] = await Promise.all([
+const [coreSource, settingsSplitter, appConfig, routeLoader, buildCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-settings-chunk.js"),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
   read("./build-app-core.mjs"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -47,8 +46,8 @@ excludes(settingsCore, "function updateSettingsDateFormat(format)", "Cross-route
 includes(appConfig, 'settings: "/modules/app-core-settings-runtime.js"', "Canonical app config must map Settings to its generated chunk.");
 includes(routeLoader, "const ROUTE_CORE_PATHS = routeConfig.corePaths;", "The route-core loader must consume canonical route-core paths.");
 excludes(routeLoader, 'void ensure("settings")', "Home and unrelated routes must not eagerly execute the Settings chunk.");
-includes(routeNormalizer, 'await window.__mflEnsureRouteCore("settings");', "Direct Settings startup must load Settings rendering before startApp.");
-includes(routeNormalizer, "return startApp();", "Application startup must begin only after any direct Settings owner is ready.");
+includes(coreSource, 'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});', "Direct Settings startup must load its route owner through the canonical initial-route dependency gate.");
+includes(coreSource, "return startApp();", "Application startup must begin only after any direct Settings owner is ready.");
 
 includes(buildCore, 'const settingsRuntimePath = resolve(siteRoot, "modules/app-core-settings-runtime.js");', "The build must emit a generated Settings runtime.");
 includes(buildCore, "artifacts.routeChunks?.settings", "The build must consume the Settings artifact.");

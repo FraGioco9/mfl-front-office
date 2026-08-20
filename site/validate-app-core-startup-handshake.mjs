@@ -7,25 +7,25 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [entry, routeNormalizer, generatedCore] = await Promise.all([
+const [entry, coreSource, generatedCore] = await Promise.all([
   read("./modules/app-entry.js"),
-  read("./modules/app-core-route-runtime-normalizer.js"),
+  read("./modules/app-core.js"),
   read("./modules/app-core-runtime.js"),
 ]);
 
 includes(
-  routeNormalizer,
+  coreSource,
   "window.__mflMarkApplicationCoreLoaded?.();",
   "The generated application core must explicitly mark successful initialization.",
 );
 includes(
-  routeNormalizer,
+  coreSource,
   "window.__mflAppStartPromise = (async () => {",
   "The generated application core must publish its startup promise.",
 );
-const sourceMarkerIndex = routeNormalizer.indexOf("window.__mflMarkApplicationCoreLoaded?.();");
-const sourceStartupPromiseIndex = routeNormalizer.indexOf("window.__mflAppStartPromise = (async () => {");
-invariant(sourceMarkerIndex >= 0 && sourceStartupPromiseIndex > sourceMarkerIndex, "The route-runtime transform must place the application-core marker immediately before startup begins.");
+const sourceMarkerIndex = coreSource.indexOf("window.__mflMarkApplicationCoreLoaded?.();");
+const sourceStartupPromiseIndex = coreSource.indexOf("window.__mflAppStartPromise = (async () => {");
+invariant(sourceMarkerIndex >= 0 && sourceStartupPromiseIndex > sourceMarkerIndex, "Canonical app-core source must place the application-core marker immediately before startup begins.");
 
 includes(entry, "function assertApplicationCoreInitialized(sourceLabel)", "app-entry must verify that a loaded core actually initialized.");
 includes(entry, "if (applicationCoreLoaded && runtimeWindow.__mflAppStartPromise) return;", "Core initialization must require both the explicit marker and startup promise.");

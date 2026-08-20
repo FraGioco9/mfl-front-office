@@ -5,7 +5,7 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, tableEvents] = await Promise.all([
+const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi, desktopTableUi, coreBuild, coreSource] = await Promise.all([
   read("./styles-base.css"),
   read("./styles.css"),
   read("./controls.css"),
@@ -15,7 +15,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./evaluation-discount-rate-ui-runtime.js"),
   read("./desktop-table-style-runtime.js"),
   read("./build-app-core.mjs"),
-  read("./modules/app-core-table-events-normalizer.js"),
+  read("./modules/app-core.js"),
 ]);
 
 invariant(
@@ -205,34 +205,37 @@ invariant(
 );
 
 invariant(
-  tableEvents.includes('button.dataset.tooltip = "Click to copy";'),
+  coreSource.includes('button.dataset.tooltip = "Click to copy";'),
   "Table player-ID copy buttons must expose their tooltip only to the global tooltip owner.",
 );
 invariant(
-  !tableEvents.includes("function tableTooltipTarget(event)"),
+  !coreSource.includes("function tableTooltipTarget(event)"),
   "The table event runtime must not install a delegated tooltip target owner.",
 );
 invariant(
-  !tableEvents.includes("showPlayerNoteTooltip(tooltip)"),
+  !coreSource.includes("showPlayerNoteTooltip(tooltip)"),
   "The table event runtime must not position delegated tooltips locally.",
 );
 invariant(
-  !tableEvents.includes('tableBody?.addEventListener("pointerover", (event) => {'),
+  !coreSource.includes('tableBody?.addEventListener("pointerover", (event) => {'),
   "The table event runtime must not own tooltip pointerover handling.",
 );
 invariant(
-  !tableEvents.includes('tableBody?.addEventListener("focusin", (event) => {'),
+  !coreSource.includes('tableBody?.addEventListener("focusin", (event) => {'),
   "The table event runtime must not own tooltip focus handling.",
 );
 
 for (const required of [
-  "function normalizeTooltipHeightOwnership(source)",
   "Number(window.__mflTooltipHeight)",
   "iconRect.top - tooltipRect.height - tooltipHeight",
   "iconRect.bottom + tooltipHeight",
 ]) {
-  invariant(coreBuild.includes(required), `Generated specialized tooltips are missing Tooltip Height spacing through ${required}.`);
+  invariant(coreSource.includes(required), `Canonical app-core is missing Tooltip Height spacing through ${required}.`);
 }
+invariant(
+  !coreBuild.includes("normalizeTooltipHeightOwnership"),
+  "The build must not restore a post-split Tooltip Height rewrite layer.",
+);
 invariant(
   coreBuild.includes('artifact.includes("function tableTooltipTarget(event)") || artifact.includes("showPlayerNoteTooltip(tooltip)")'),
   "The core build must reject delegated table tooltip ownership after generation.",

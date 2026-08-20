@@ -400,7 +400,7 @@ export function splitApplicationCoreRuntime(source) {
   core = extracted.core;
   mflStatsParts.push(extracted.chunk);
 
-  const clubEndMarker = '(() => {\n  const VERSION = "1.122.0";';
+  const clubEndMarker = '(() => {\n  const VERSION = String(window.__mflReleaseVersion || "");';
   extracted = extractRequiredSection(
     core,
     '(() => {\n  const CLUB_PAGE = "club";',
