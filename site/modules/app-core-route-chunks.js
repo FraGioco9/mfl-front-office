@@ -7,6 +7,7 @@ import {
   replaceRequired,
   replaceRequiredFunction,
 } from "./app-core-splitter-utils.js";
+import { normalizePinnedSidebarApplicationCoreRuntime } from "./app-core-sidebar-lifecycle.js";
 
 function normalizeMflStatsStaticFilters(source) {
   const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
@@ -156,7 +157,7 @@ const CLUB_SEARCH_BRIDGE = `;(() => {
 })();`;
 
 export function splitApplicationCoreRuntime(source) {
-  let core = String(source || "").replace(/\r\n?/g, "\n");
+  let core = normalizePinnedSidebarApplicationCoreRuntime(source);
   if (!core.trim()) {
     throw new Error("Cannot split an empty application core.");
   }
@@ -403,7 +404,7 @@ export function splitApplicationCoreRuntime(source) {
     divisionLabel.style.color = activeClubTitle.division.color;
     divisionLabel.textContent = activeClubTitle.division.name;
     tablePageTitle.replaceChildren(
-      document.createTextNode(\`\${activeClubTitle.name} - \`),
+      document.createTextNode(\`${activeClubTitle.name} - \`),
       divisionLabel,
     );
   }`,
@@ -424,7 +425,7 @@ export function splitApplicationCoreRuntime(source) {
     `  window.addEventListener("popstate", () => {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
+    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
@@ -438,7 +439,7 @@ export function splitApplicationCoreRuntime(source) {
     `  function bootClubRoute() {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(path) && !route) {
+    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
       window.location.replace("/");
       return;
     }
@@ -537,8 +538,7 @@ export function splitApplicationCoreRuntime(source) {
     if (active) {
       document.querySelectorAll(".navButton.active").forEach((link) => link.classList.remove("active"));
     }
-  }
-`,
+  }`,
     "",
     "Club private loading class owner",
   );
