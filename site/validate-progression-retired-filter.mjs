@@ -15,4 +15,9 @@ invariant(
   "The Hide retired players filter must still remove retired rows when enabled.",
 );
 
-console.log("Progression retired-player filter validation passed.");
+invariant(
+  source.includes('const order = scope === "progression" && String(query.hideRetired || "") !== "1"\n    ? `CASE WHEN coalesce(retirement_years, -1) = 0 THEN 0 ELSE 1 END ASC, ${baseOrder}`\n    : baseOrder;'),
+  "Unchecked Hide retired players must surface retired Progression rows before pagination hides them behind active progression rows.",
+);
+
+console.log("Progression retired-player filter and visible pagination validation passed.");
