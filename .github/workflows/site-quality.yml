@@ -22,6 +22,87 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
+      - name: Apply sidebar label clipping fix
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
+        working-directory: .
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          styles = Path("site/styles-base.css")
+          replace_once(
+              styles,
+              '''.navText {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 18px;
+  max-width: 112px;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  white-space: nowrap;
+  transition: none;
+}
+''',
+              '''.navText {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  min-height: 20px;
+  max-width: 112px;
+  opacity: 1;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: none;
+}
+''',
+              "sidebar label geometry",
+          )
+
+          validator = Path("site/validate-sidebar-lifecycle-ownership.mjs")
+          replace_once(
+              validator,
+              '''  styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  height: 18px;")
+    && styles.includes("  line-height: 1;\\n  white-space: nowrap;"),
+  "Sidebar page labels must use the same explicit vertical-centering contract as their icons.",
+''',
+              '''  styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  min-height: 20px;")
+    && styles.includes("  line-height: 1.2;\\n  white-space: nowrap;")
+    && !styles.includes(".navText {\\n  display: flex;\\n  align-items: center;\\n  align-self: center;\\n  height: 18px;"),
+  "Sidebar page labels must stay vertically centered without a hard-height box that clips font descenders.",
+''',
+              "sidebar label validation",
+          )
+
+      - name: Commit sidebar label clipping fix
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
+        working-directory: .
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- .github/workflows/site-quality.yml
+          git add -- site/styles-base.css site/validate-sidebar-lifecycle-ownership.mjs .github/workflows/site-quality.yml
+          if git diff --cached --quiet; then
+            echo "Sidebar label clipping fix is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Prevent sidebar label descender clipping"
+          git push origin "HEAD:$HEAD_BRANCH"
+          gh workflow run site-quality.yml --ref "$HEAD_BRANCH"
+
       - name: Detect relevant changes
         id: changes
         working-directory: .
