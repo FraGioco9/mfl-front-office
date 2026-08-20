@@ -1,0 +1,22 @@
+name: App core optimization snapshot
+
+on:
+  push:
+    branches:
+      - chore/app-core-normalizer-optimization
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-core-optimization-snapshot
+          path: .
+          include-hidden-files: true
+          retention-days: 1
