@@ -22,9 +22,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/splitter-migration.part* | base64 -d > /tmp/apply-splitter.mjs
-          node /tmp/apply-splitter.mjs
-          rm -f .github/splitter-migration.part*
+          cat .github/splitter-patch.part* | base64 -d | gunzip > /tmp/app-core-splitter.patch
+          git apply --check /tmp/app-core-splitter.patch
+          git apply /tmp/app-core-splitter.patch
+          rm -f \
+            .github/splitter-migration.part00 \
+            .github/splitter-migration.part01 \
+            .github/splitter-migration.part03 \
+            .github/splitter-migration.part04 \
+            .github/splitter-migration.part05 \
+            .github/splitter-patch.part0 \
+            .github/splitter-patch.part1 \
+            .github/workflows/app-core-splitter-snapshot.yml \
+            .github/workflows/app-core-splitter-apply.yml
           git config user.name "FraGioco9"
           git config user.email "giocolifrancesco@gmail.com"
           git add -- \
@@ -41,14 +51,15 @@ jobs:
             site/validate-table-route-core.mjs \
             site/validate-wallet-core.mjs \
             site/validate-watchlist-route-core.mjs \
-            .github/workflows/app-core-splitter-snapshot.yml \
-            .github/workflows/app-core-splitter-apply.yml \
             .github/splitter-migration.part00 \
             .github/splitter-migration.part01 \
-            .github/splitter-migration.part02 \
             .github/splitter-migration.part03 \
             .github/splitter-migration.part04 \
-            .github/splitter-migration.part05
+            .github/splitter-migration.part05 \
+            .github/splitter-patch.part0 \
+            .github/splitter-patch.part1 \
+            .github/workflows/app-core-splitter-snapshot.yml \
+            .github/workflows/app-core-splitter-apply.yml
           git diff --cached --check
           git commit -m "Centralize application core splitter primitives"
           git push origin HEAD:chore/app-core-splitter-architecture
