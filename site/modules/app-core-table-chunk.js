@@ -196,10 +196,9 @@ __mflTableOpenSelectedPlayerLinksOwner = tableOpenSelectedPlayerLinksOwner;
 __mflTableSetViewOwner = tableSetViewOwner;`;
 
 const TABLE_FACADE_INSERTION_MARKER = "async function setPage(pageName, updateHash = true, options = {}) {";
+const AGENT_PAGE_TITLE_ROUTE_STATE = "const agentPageTitleNamePromises = new Map();";
 
-const AGENT_PAGE_TITLE_RESOLVER = `const agentPageTitleNamePromises = new Map();
-
-function runtimeAgentPageTitleName(address, hintedName = "") {
+const AGENT_PAGE_TITLE_RESOLVER = `function runtimeAgentPageTitleName(address, hintedName = "") {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) return "";
 
@@ -264,9 +263,7 @@ async function ensureAgentPageTitleName(address, hintedName = "") {
           return fetchedName;
         }
       }
-    } catch {
-      // The Agent page data request can still provide the name below.
-    }
+    } catch {}
 
     return runtimeAgentPageTitleName(normalizedAddress, hintedName)
       || savedAgentNameForWallet(normalizedAddress);
@@ -350,23 +347,15 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     `function savedAgentNameForWallet(address) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   if (!normalizedAddress) return "";
-
   try {
-    const linkedDisplay = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
-    if (normalizeWalletAddress(linkedDisplay?.address).toLowerCase() === normalizedAddress) {
-      const linkedName = normalizedAgentName(linkedDisplay?.name);
-      if (linkedName && linkedName.toLowerCase() !== normalizedAddress) return linkedName;
-    }
-  } catch {
-    // Continue with the per-Agent cache.
-  }
-
-  try {
-    const savedNames = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
-    const savedName = savedNames && typeof savedNames === "object" && !Array.isArray(savedNames)
-      ? normalizedAgentName(savedNames[normalizedAddress])
+    const names = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+    const cachedName = normalizedAgentName(names?.[normalizedAddress]);
+    if (cachedName && cachedName.toLowerCase() !== normalizedAddress) return cachedName;
+    const linked = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
+    const linkedName = normalizeWalletAddress(linked?.address).toLowerCase() === normalizedAddress
+      ? normalizedAgentName(linked?.name)
       : "";
-    return savedName && savedName.toLowerCase() !== normalizedAddress ? savedName : "";
+    return linkedName && linkedName.toLowerCase() !== normalizedAddress ? linkedName : "";
   } catch {
     return "";
   }
@@ -381,29 +370,18 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   const normalizedAddress = normalizeWalletAddress(address).toLowerCase();
   const agentName = normalizedAgentName(name);
   if (!normalizedAddress || !agentName || agentName.toLowerCase() === normalizedAddress) return;
-
   try {
-    const savedNames = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
-    const nextNames = savedNames && typeof savedNames === "object" && !Array.isArray(savedNames) ? savedNames : {};
-    nextNames[normalizedAddress] = agentName;
-    localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(nextNames));
-  } catch {
-    // Runtime data still retains the name when browser storage is unavailable.
-  }
-
-  if (normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() === normalizedAddress) {
-    try {
+    const saved = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
+    const names = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    names[normalizedAddress] = agentName;
+    localStorage.setItem(AGENT_DISPLAY_NAMES_STORAGE_KEY, JSON.stringify(names));
+    if (normalizeWalletAddress(state.linkedWalletAddress).toLowerCase() === normalizedAddress) {
       localStorage.setItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY, JSON.stringify({ address: normalizedAddress, name: agentName }));
-    } catch {
-      // The account dropdown can still use the live runtime data.
     }
-  }
-
+  } catch {}
   if (state.currentPage === "agents"
     && normalizeWalletAddress(state.currentAgentWalletAddress || agentWalletAddressFromUrl()).toLowerCase() === normalizedAddress
-    && tablePageTitle) {
-    renderAgentPageTitle(normalizedAddress);
-  }
+    && tablePageTitle) renderAgentPageTitle(normalizedAddress);
 }`,
     "Agent display-name cache write",
   );
@@ -420,31 +398,21 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     `function openAgentPage(walletAddress, agentName = "") {
   const normalizedWalletAddress = normalizeWalletAddress(walletAddress).toLowerCase();
   if (!normalizedWalletAddress) return;
-
-  const hintedName = normalizedAgentName(agentName);
-  const indexedName = normalizedAgentName(agentSearchResultByWallet(normalizedWalletAddress)?.name);
-  const knownName = [hintedName, indexedName, savedAgentNameForWallet(normalizedWalletAddress)]
+  const knownName = [agentName, agentSearchResultByWallet(normalizedWalletAddress)?.name, savedAgentNameForWallet(normalizedWalletAddress)]
+    .map(normalizedAgentName)
     .find((name) => name && name.toLowerCase() !== normalizedWalletAddress) || "";
   if (knownName) saveAgentNameForWallet(normalizedWalletAddress, knownName);
-
   removePlayerNoteTooltip();
   window.__mflStaticUiRuntime?.hideTooltips?.({ immediate: true });
-
   if (normalizedWalletAddress === normalizeWalletAddress(state.linkedWalletAddress).toLowerCase()) {
     setPage("myplayers", true);
     return;
   }
-
   if (normalizedWalletAddress === mflWalletAddress) {
     setPage("mfl", true);
     return;
   }
-
-  setPage("agents", true, {
-    walletAddress: normalizedWalletAddress,
-    view: "attributes",
-    agentName: knownName,
-  });
+  setPage("agents", true, { walletAddress: normalizedWalletAddress, view: "attributes", agentName: knownName });
 }`,
     "Agent navigation name handoff",
   );
@@ -513,7 +481,7 @@ export function splitTableApplicationCoreRuntime(artifacts) {
     "Table facade",
   );
 
-  let table = [...routeOnly.chunks, ...extracted.chunks].join("\n\n").replace(/\s*$/, "");
+  let table = [AGENT_PAGE_TITLE_ROUTE_STATE, ...routeOnly.chunks, ...extracted.chunks].join("\n\n").replace(/\s*$/, "");
   table = replaceRequired(
     table,
     'return columnLabels[column] || column.replaceAll("_", " ");',
