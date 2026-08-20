@@ -7,9 +7,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [coreSource, sidebarNormalizer, buildNormalizer, styles] = await Promise.all([
+const [coreSource, sidebarNormalizer, routeSplitter, buildNormalizer, styles] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-sidebar-lifecycle.js"),
+  read("./modules/app-core-route-chunks.js"),
   read("./modules/app-core-build-normalizer.js"),
   read("./styles-base.css"),
 ]);
@@ -67,14 +68,17 @@ invariant(
 );
 invariant(
   sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
-  "Pinned-sidebar cleanup must use the dedicated build-preparation owner.",
+  "Pinned-sidebar cleanup must use the dedicated structural owner.",
 );
 invariant(
-  buildNormalizer.indexOf("normalizePinnedSidebarApplicationCoreRuntime(canonicalSource)")
-    < buildNormalizer.indexOf("splitApplicationCoreRuntime(sidebarSource)"),
-  "Pinned-sidebar compatibility ownership must be removed before route splitting.",
+  routeSplitter.includes("let core = normalizePinnedSidebarApplicationCoreRuntime(source);"),
+  "Pinned-sidebar compatibility ownership must be removed inside the canonical route splitter.",
+);
+invariant(
+  buildNormalizer.includes("splitApplicationCoreRuntime(canonicalSource)"),
+  "The build must continue splitting canonical app-core source directly without a pre-split patch chain.",
 );
 
 new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
-console.log("Built pinned-sidebar lifecycle is canonical without runtime monkey-patching, animation ownership, or inline presentation overrides.");
+console.log("Built pinned-sidebar lifecycle is canonical inside the direct route splitter without runtime monkey-patching, animation ownership, or inline presentation overrides.");
