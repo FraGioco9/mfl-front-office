@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
 
-const [ignoreSource, productionConfigSource, developmentConfigSource, deployWorkflowSource] = await Promise.all([
-  readFile(new URL("./.vercelignore", import.meta.url), "utf8"),
+const [ignoreSource, productionConfigSource, developmentConfigSource] = await Promise.all([
+  readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
   readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
   readFile(new URL("./vercel.json", import.meta.url), "utf8"),
-  readFile(new URL("../.github/workflows/vercel-site-update.yml", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
   ignoreSource
@@ -16,47 +15,48 @@ const productionConfig = JSON.parse(productionConfigSource);
 const developmentConfig = JSON.parse(developmentConfigSource);
 
 const requiredProductionIgnoredPaths = [
-  "validate*.mjs",
-  "eslint.config.mjs",
-  "jsconfig.json",
-  "types",
-  "vercel.json",
-  "vercel.production.json",
-  "build-app-core.mjs",
-  "modules/app-config.js",
-  "modules/package.json",
-  "modules/app-core.js",
-  "modules/app-core-build-normalizer.js",
-  "modules/app-core-normalizer.js",
-  "modules/app-core-route-request-normalizer.js",
-  "modules/app-core-route-runtime-normalizer.js",
-  "modules/app-core-startup-data-normalizer.js",
-  "modules/app-core-table-events-normalizer.js",
-  "modules/app-core-table-state-normalizer.js",
-  "modules/app-core-route-chunks.js",
-  "modules/app-core-settings-chunk.js",
-  "modules/app-core-player-chunk.js",
-  "modules/app-core-table-chunk.js",
-  "modules/app-core-wallet-chunk.js",
-  "modules/app-core-watchlist-route-chunk.js",
+  ".gitignore",
+  "site/validate*.mjs",
+  "site/eslint.config.mjs",
+  "site/jsconfig.json",
+  "site/types",
+  "site/vercel.json",
+  "site/vercel.production.json",
+  "site/build-app-core.mjs",
+  "site/modules/app-config.js",
+  "site/modules/package.json",
+  "site/modules/app-core.js",
+  "site/modules/app-core-build-normalizer.js",
+  "site/modules/app-core-normalizer.js",
+  "site/modules/app-core-route-request-normalizer.js",
+  "site/modules/app-core-route-runtime-normalizer.js",
+  "site/modules/app-core-startup-data-normalizer.js",
+  "site/modules/app-core-table-events-normalizer.js",
+  "site/modules/app-core-table-state-normalizer.js",
+  "site/modules/app-core-route-chunks.js",
+  "site/modules/app-core-settings-chunk.js",
+  "site/modules/app-core-player-chunk.js",
+  "site/modules/app-core-table-chunk.js",
+  "site/modules/app-core-wallet-chunk.js",
+  "site/modules/app-core-watchlist-route-chunk.js",
 ];
 
 for (const path of requiredProductionIgnoredPaths) {
   if (!ignoredPaths.has(path)) {
-    throw new Error(`Development-only source must not ship in the site-root Vercel deployment: ${path}`);
+    throw new Error(`Development-only source must not ship in production: ${path}`);
   }
 }
 
 for (const runtimePath of [
-  "modules/app-core-runtime.js",
-  "modules/app-core-evaluation-runtime.js",
-  "modules/app-core-mfl-stats-runtime.js",
-  "modules/app-core-club-runtime.js",
-  "modules/app-core-settings-runtime.js",
-  "modules/app-core-player-runtime.js",
-  "modules/app-core-table-runtime.js",
-  "modules/app-core-wallet-runtime.js",
-  "modules/app-core-watchlist-runtime.js",
+  "site/modules/app-core-runtime.js",
+  "site/modules/app-core-evaluation-runtime.js",
+  "site/modules/app-core-mfl-stats-runtime.js",
+  "site/modules/app-core-club-runtime.js",
+  "site/modules/app-core-settings-runtime.js",
+  "site/modules/app-core-player-runtime.js",
+  "site/modules/app-core-table-runtime.js",
+  "site/modules/app-core-wallet-runtime.js",
+  "site/modules/app-core-watchlist-runtime.js",
 ]) {
   if (ignoredPaths.has(runtimePath)) {
     throw new Error(`Generated application-core runtime must remain deployable: ${runtimePath}`);
@@ -107,19 +107,4 @@ function validateSpaRouting(config, label) {
 validateSpaRouting(productionConfig, "Production");
 validateSpaRouting(developmentConfig, "Development");
 
-if (!deployWorkflowSource.includes("working-directory: site")) {
-  throw new Error("The Vercel deployment workflow must run the Vercel CLI from the site project root.");
-}
-if (!deployWorkflowSource.includes("--local-config vercel.production.json")) {
-  throw new Error("The site-root Vercel deployment must load vercel.production.json relative to the site directory.");
-}
-if (deployWorkflowSource.includes("mkdir -p .vercel") || deployWorkflowSource.includes("site/vercel.production.json")) {
-  throw new Error("The Vercel deployment workflow must not link or configure the repository root as the Vercel project root.");
-}
-for (const variable of ["VERCEL_ORG_ID", "VERCEL_PROJECT_ID", "VERCEL_TOKEN"]) {
-  if (!deployWorkflowSource.includes(`${variable}:`)) {
-    throw new Error(`The Vercel deployment workflow must provide ${variable} directly to the site-root CLI invocation.`);
-  }
-}
-
-console.log("Site-root production boundary, prebuilt deployment, and SPA deep-link routing validation passed.");
+console.log("Production source boundary, prebuilt deployment, and SPA deep-link routing validation passed.");
