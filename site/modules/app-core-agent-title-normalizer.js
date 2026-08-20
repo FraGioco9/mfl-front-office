@@ -16,6 +16,7 @@ function runtimeAgentPageTitleName(address, hintedName = "") {
   const row = state.rows.find((candidate) => normalizeWalletAddress(getValue(candidate, "wallet_address")).toLowerCase() === normalizedAddress);
   const candidates = [
     hintedName,
+    savedAgentNameForWallet(normalizedAddress),
     indexedAgent?.name,
     state.walletRows.find((candidate) => normalizeWalletAddress(candidate.wallet_address).toLowerCase() === normalizedAddress)?.wallet_name,
     row ? getValue(row, "wallet_name") : "",
