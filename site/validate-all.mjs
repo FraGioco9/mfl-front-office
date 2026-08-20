@@ -42,6 +42,7 @@ const validators = [
   "validate-table-column-layout.mjs",
   "validate-wallet-core.mjs",
   "validate-watchlist-route-core.mjs",
+  "validate-watchlist-selector-navigation.mjs",
   "validate-app-core-startup-handshake.mjs",
   "validate-generated-core-bindings.mjs",
 ];
