@@ -22,75 +22,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Apply stable white Menu color
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
-        working-directory: .
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-
-          styles_path = Path("site/styles-base.css")
-          styles = styles_path.read_text(encoding="utf-8")
-          styles, base_count = re.subn(
-              r'(\.menuButton \{.*?\n  color: )var\(--text\);',
-              r'\1#ffffff;',
-              styles,
-              count=1,
-              flags=re.S,
-          )
-          styles, hover_count = re.subn(
-              r'(\.menuButton:hover:not\(:disabled\) \{\n  border-color: transparent;\n  background: transparent;\n  color: )var\(--primary\);',
-              r'\1#ffffff;',
-              styles,
-              count=1,
-          )
-          if base_count != 1 or hover_count != 1:
-              raise SystemExit(f"Menu color migration mismatch: base={base_count}, hover={hover_count}")
-          styles_path.write_text(styles, encoding="utf-8")
-
-          validator_path = Path("site/validate-sidebar-lifecycle-ownership.mjs")
-          validator = validator_path.read_text(encoding="utf-8")
-          old = (
-              '  styles.includes(".menuButton {")\n'
-              '    && styles.includes("  pointer-events: none;")\n'
-              '    && styles.includes("  cursor: default;"),\n'
-              '  "Static CSS must retain non-interactive pinned-sidebar menu-button presentation.",\n'
-          )
-          new = (
-              '  styles.includes(".menuButton {")\n'
-              '    && styles.includes("  color: #ffffff;\\n  padding: 0;")\n'
-              '    && styles.includes("  pointer-events: none;")\n'
-              '    && styles.includes("  cursor: default;")\n'
-              '    && styles.includes(".menuButton:hover:not(:disabled) {\\n  border-color: transparent;\\n  background: transparent;\\n  color: #ffffff;"),\n'
-              '  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",\n'
-          )
-          if validator.count(old) != 1:
-              raise SystemExit("Menu color validator migration mismatch")
-          validator = validator.replace(old, new, 1)
-          validator = validator.replace("\n// Trigger stable Menu color migration.\n", "\n")
-          validator_path.write_text(validator, encoding="utf-8")
-
-      - name: Commit stable white Menu color
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
-        working-directory: .
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          git checkout origin/main -- .github/workflows/site-quality.yml
-          git add -- site/styles-base.css site/validate-sidebar-lifecycle-ownership.mjs .github/workflows/site-quality.yml
-          if git diff --cached --quiet; then
-            echo "Stable white Menu color is already applied."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Keep Menu label white after first paint"
-          git push origin "HEAD:$HEAD_BRANCH"
-
       - name: Detect relevant changes
         id: changes
         working-directory: .
@@ -238,7 +169,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "4189829+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Regenerate application core"
           git push origin "HEAD:$HEAD_BRANCH"
           gh workflow run site-quality.yml --ref "$HEAD_BRANCH"

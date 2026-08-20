@@ -179,7 +179,7 @@ p {
   height: 42px;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: #ffffff;
   padding: 0;
   margin: 0;
   font-weight: 700;
@@ -1094,7 +1094,7 @@ button:hover:not(:disabled) {
 .menuButton:hover:not(:disabled) {
   border-color: transparent;
   background: transparent;
-  color: var(--primary);
+  color: #ffffff;
 }
 
 button:disabled {

@@ -65,9 +65,11 @@ invariant(
 );
 invariant(
   styles.includes(".menuButton {")
+    && styles.includes("  color: #ffffff;\n  padding: 0;")
     && styles.includes("  pointer-events: none;")
-    && styles.includes("  cursor: default;"),
-  "Static CSS must retain non-interactive pinned-sidebar menu-button presentation.",
+    && styles.includes("  cursor: default;")
+    && styles.includes(".menuButton:hover:not(:disabled) {\n  border-color: transparent;\n  background: transparent;\n  color: #ffffff;"),
+  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",
 );
 invariant(
   sidebarNormalizer.includes("export function normalizePinnedSidebarApplicationCoreRuntime(source)"),
@@ -124,4 +126,3 @@ new Function(shared);
 for (const chunk of Object.values(artifacts.routeChunks || {})) new Function(String(chunk || ""));
 console.log("Built pinned-sidebar lifecycle and sidebar grid geometry are canonical without runtime monkey-patching, CSS priority overrides, or competing layout owners.");
 
-// Trigger stable Menu color migration.
