@@ -1,19 +1,22 @@
 import { readFile } from "node:fs/promises";
 
-const canonicalStylesheets = [
+const canonicalCssSources = [
   "styles.css",
+  "styles-base.css",
   "scrollbars.css",
   "dropdowns.css",
   "controls.css",
   "footer.css",
   "loading.css",
+  "responsive.css",
+  "index.html",
 ];
 
-for (const stylesheet of canonicalStylesheets) {
-  const source = await readFile(new URL(`./${stylesheet}`, import.meta.url), "utf8");
+for (const sourcePath of canonicalCssSources) {
+  const source = await readFile(new URL(`./${sourcePath}`, import.meta.url), "utf8");
   if (source.includes("!important")) {
-    throw new Error(`${stylesheet} must not use !important; fix stylesheet ownership or cascade order instead.`);
+    throw new Error(`${sourcePath} must not use !important; fix CSS ownership or cascade order instead.`);
   }
 }
 
-console.log("Canonical stylesheet priority validation passed.");
+console.log("Canonical CSS priority validation passed.");

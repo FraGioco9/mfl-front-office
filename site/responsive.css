@@ -21,7 +21,7 @@ html:not(.mflInitialRouteResolved):is(
   [data-initial-page^="clubs/"],
   [data-initial-page^="club/"]
 ) #homePage {
-  display: none !important;
+  display: none;
 }
 
 @media (max-width: 1100px) {
@@ -42,7 +42,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -132,83 +132,59 @@ html:not(.mflInitialRouteResolved):is(
     right: 0;
   }
 
-  .appShell,
-  .appShell.menuClosed,
-  .appShell.sidebarClosed,
-  .appShell.sidebarCollapsed,
-  .appShell.collapsed {
-    --sidebar-offset: 0px !important;
+  .appShell {
+    --sidebar-offset: 0px;
     position: relative;
   }
 
-  .menuRail,
-  .appShell.menuClosed .menuRail,
-  .appShell.sidebarClosed .menuRail,
-  .appShell.sidebarCollapsed .menuRail,
-  .appShell.collapsed .menuRail {
-    position: absolute !important;
-    inset: 0 0 auto !important;
+  .menuRail {
+    position: absolute;
+    inset: 0 0 auto;
     z-index: 18;
-    width: 100% !important;
+    width: 100%;
     height: var(--mobile-nav-height);
     min-height: var(--mobile-nav-height);
-    padding: 8px 10px !important;
+    padding: 8px 10px;
     overflow: hidden;
     border-right: 0;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
-    align-items: stretch !important;
+    align-items: stretch;
   }
 
-  .menuButton,
-  .appShell.menuClosed .menuButton,
-  .appShell.sidebarClosed .menuButton,
-  .appShell.sidebarCollapsed .menuButton,
-  .appShell.collapsed .menuButton {
-    display: none !important;
+  .menuButton {
+    display: none;
   }
 
-  .sidebar,
-  .appShell.menuClosed .sidebar,
-  .appShell.sidebarClosed .sidebar,
-  .appShell.sidebarCollapsed .sidebar,
-  .appShell.collapsed .sidebar {
-    display: flex !important;
+  .sidebar {
+    display: flex;
     flex-direction: row;
-    align-items: center !important;
+    align-items: center;
     gap: 6px;
-    width: 100% !important;
+    width: 100%;
     min-height: 0;
     height: 42px;
-    margin: 0 !important;
+    margin: 0;
     padding: 0;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
   }
 
-  .navButton,
-  .appShell.menuClosed .navButton,
-  .appShell.sidebarClosed .navButton,
-  .appShell.sidebarCollapsed .navButton,
-  .appShell.collapsed .navButton {
+  .navButton {
     flex: 0 0 auto;
-    width: auto !important;
+    width: auto;
     height: 40px;
     margin: 0;
-    gap: 6px !important;
-    padding: 0 10px !important;
+    gap: 6px;
+    padding: 0 10px;
     white-space: nowrap;
   }
 
-  .appShell.menuClosed .navText,
-  .appShell.sidebarClosed .navText,
-  .appShell.sidebarCollapsed .navText,
-  .appShell.collapsed .navText,
   .navText {
-    max-width: none !important;
-    margin-left: 0 !important;
-    opacity: 1 !important;
+    max-width: none;
+    margin-left: 0;
+    opacity: 1;
   }
 
   .settingsNavButton {
@@ -220,19 +196,19 @@ html:not(.mflInitialRouteResolved):is(
   body.pinnedSidebarVisible .siteFooter,
   body:not(.pinnedSidebarVisible) main,
   body:not(.pinnedSidebarVisible) .siteFooter {
-    width: 100% !important;
-    margin-left: 0 !important;
+    width: 100%;
+    margin-left: 0;
   }
 
   body > #appShell > main {
-    padding: calc(var(--mobile-nav-height) + 10px) 12px 12px !important;
-    overflow-x: hidden !important;
+    padding: calc(var(--mobile-nav-height) + 10px) 12px 12px;
+    overflow-x: hidden;
   }
 
   body.pinnedSidebarVisible .myPlayersLockedPage,
   body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
-    left: 0 !important;
-    width: auto !important;
+    left: 0;
+    width: auto;
   }
 
   .homePage,
@@ -270,7 +246,7 @@ html:not(.mflInitialRouteResolved):is(
 
   .views,
   body[data-page="watchlist"] #progressionPage .views {
-    display: flex !important;
+    display: flex;
     flex-wrap: nowrap;
     gap: 6px;
     width: 100%;
@@ -282,7 +258,7 @@ html:not(.mflInitialRouteResolved):is(
 
   .viewButton {
     flex: 0 0 auto;
-    width: auto !important;
+    width: auto;
     min-width: 100px;
     height: 38px;
   }
@@ -297,7 +273,7 @@ html:not(.mflInitialRouteResolved):is(
     flex: 1 0 100%;
     width: 100%;
     min-width: 0;
-    margin-left: 0 !important;
+    margin-left: 0;
   }
 
   .watchlistSwitcherLabel {
@@ -360,14 +336,14 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage .tableShell {
     max-width: 100%;
-    overflow: hidden !important;
+    overflow: hidden;
   }
 
   #progressionPage .tableScroller,
   .tableScroller {
     max-width: 100%;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
+    overflow-x: auto;
+    overflow-y: visible;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -514,7 +490,7 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .evaluationTitleRow {
-    align-items: stretch !important;
+    align-items: stretch;
     flex-direction: column;
   }
 
@@ -627,7 +603,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .mflStatsDistributionHeader {
@@ -715,20 +691,16 @@ html:not(.mflInitialRouteResolved):is(
     padding-left: max(12px, env(safe-area-inset-left));
   }
 
-  .menuRail,
-  .appShell.menuClosed .menuRail,
-  .appShell.sidebarClosed .menuRail,
-  .appShell.sidebarCollapsed .menuRail,
-  .appShell.collapsed .menuRail {
-    padding-right: max(10px, env(safe-area-inset-right)) !important;
-    padding-left: max(10px, env(safe-area-inset-left)) !important;
+  .menuRail {
+    padding-right: max(10px, env(safe-area-inset-right));
+    padding-left: max(10px, env(safe-area-inset-left));
   }
 
   body > #appShell > main {
     min-width: 0;
-    padding-right: max(12px, env(safe-area-inset-right)) !important;
-    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
-    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
   }
 
   #progressionPage,
@@ -742,7 +714,7 @@ html:not(.mflInitialRouteResolved):is(
 
   #progressionPage .tableShell,
   .tableShell {
-    overflow: hidden !important;
+    overflow: hidden;
   }
 
   #progressionPage .tableScroller,
@@ -751,8 +723,8 @@ html:not(.mflInitialRouteResolved):is(
     display: block;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
+    overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
@@ -773,10 +745,10 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   #mflLoadingToast {
-    width: min(360px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
-    max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    width: min(360px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
     min-height: 44px;
-    bottom: calc(18px + env(safe-area-inset-bottom) + var(--mfl-visual-viewport-bottom, 0px)) !important;
+    bottom: calc(18px + env(safe-area-inset-bottom) + var(--mfl-visual-viewport-bottom, 0px));
     padding: 10px 12px;
     font-size: 13px;
   }
@@ -820,13 +792,13 @@ html:not(.mflInitialRouteResolved):is(
 
   html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearchGroup,
   body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup {
-    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   html[data-initial-page="evaluation"] body #evaluationPage .evaluationSearch,
   body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-    width: 100% !important;
-    max-width: none !important;
+    width: 100%;
+    max-width: none;
   }
 
   .siteFooter {
@@ -840,7 +812,7 @@ html:not(.mflInitialRouteResolved):is(
   .homeStats,
   #databaseStatsPage .databaseStatsCards,
   .mflStatsCards {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   #databaseStatsPage .databaseStatsCustomFilter,
@@ -907,6 +879,6 @@ html:not(.mflInitialRouteResolved):is(
   [data-tooltip]::after,
   [data-note-tooltip]::before,
   [data-note-tooltip]::after {
-    pointer-events: none !important;
+    pointer-events: none;
   }
 }

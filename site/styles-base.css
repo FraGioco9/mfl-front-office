@@ -17,6 +17,8 @@
   --primary: #1d5f8a;
   --primary-hover: #174d70;
   --danger: #b42318;
+  --pinned-sidebar-width: 190px;
+  --pinned-topbar-height: 102px;
   background: var(--page-bg);
   color: var(--text);
 }
@@ -45,16 +47,22 @@
 }
 
 html {
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  scrollbar-gutter: auto;
 }
 
 body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   margin: 0;
-  scrollbar-gutter: stable;
-  min-height: 100vh;
+  overflow: hidden;
+  scrollbar-gutter: auto;
   background: var(--page-bg);
   color: var(--text);
 }
@@ -75,9 +83,10 @@ select {
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  grid-row: 1;
+  position: relative;
+  top: auto;
+  z-index: 2147483000;
   display: grid;
   grid-template-columns: minmax(460px, 1fr) minmax(420px, 560px) minmax(460px, 1fr);
   align-items: center;
@@ -172,10 +181,13 @@ p {
   background: transparent;
   color: var(--text);
   padding: 0;
+  margin: 0;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  transition: width var(--menu-transition, 0ms ease), color 120ms ease;
+  pointer-events: none;
+  cursor: default;
+  transition: none;
 }
 
 .menuIcon {
@@ -196,7 +208,7 @@ p {
   max-width: 80px;
   overflow: hidden;
   opacity: 1;
-  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
+  transition: none;
 }
 
 .menuButton[hidden] {
@@ -255,29 +267,16 @@ body[data-page="home"] .topbar .stats {
 }
 
 .appShell {
-  --sidebar-offset: 190px;
+  --sidebar-offset: var(--pinned-sidebar-width);
+  grid-row: 2;
   display: block;
   flex: 1 0 auto;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
   transition: none;
 }
 
-.appShell.menuAnimating {
-  --menu-transition: 220ms ease;
-}
-
-.appShell.menuClosed {
-  --sidebar-offset: 70px;
-}
-
-.appShell.menuClosed .menuRail {
-  width: 70px;
-  padding-left: 0;
-  padding-right: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
 
 .menuRail {
   position: fixed;
@@ -285,13 +284,13 @@ body[data-page="home"] .topbar .stats {
   bottom: 0;
   left: 0;
   z-index: 15;
-  width: 190px;
+  width: var(--pinned-sidebar-width);
   box-sizing: border-box;
   overflow: hidden;
   padding: 14px 14px;
   border-right: 1px solid var(--border);
   background: var(--surface);
-  transition: width var(--menu-transition, 0ms ease);
+  transition: none;
 }
 
 .menuRail[hidden] {
@@ -299,14 +298,15 @@ body[data-page="home"] .topbar .stats {
 }
 
 .menuRail[hidden] + main {
+  width: 100%;
   margin-left: 0;
 }
 
 .changelogPage {
+  width: 100%;
   max-width: 860px;
   margin: 14px auto 0;
   position: relative;
-  left: calc(var(--sidebar-offset, 0px) / -2);
 }
 
 .changelogPage h2 {
@@ -490,25 +490,6 @@ body[data-page="home"] .topbar .stats {
   line-height: 1.15;
 }
 
-.appShell.menuClosed .menuButton {
-  margin: 0 auto;
-  width: 42px;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.appShell.menuClosed .menuIcon {
-  width: 42px;
-  height: 42px;
-  font-size: 22px;
-}
-
-.appShell.menuClosed .menuText {
-  margin-left: 0;
-  max-width: 0;
-  opacity: 0;
-}
 
 .sidebar {
   width: 162px;
@@ -519,24 +500,13 @@ body[data-page="home"] .topbar .stats {
   flex-direction: column;
   opacity: 1;
   transform: translateX(0);
-  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
+  transition: none;
 }
 
 .sidebar[hidden] {
   display: none;
 }
 
-.appShell.menuClosed .sidebar {
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  max-height: none;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
 
 .settingsNavButton {
   margin-top: auto;
@@ -558,7 +528,7 @@ body[data-page="home"] .topbar .stats {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: width var(--menu-transition, 0ms ease), padding var(--menu-transition, 0ms ease), background 120ms ease, border-color 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
 .tablePageTitle,
@@ -579,30 +549,9 @@ body[data-page="home"] .topbar .stats {
   font-size: 18px;
   line-height: 1;
   text-align: center;
-  transition: width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease), transform var(--menu-transition, 0ms ease);
+  transition: none;
 }
 
-.appShell.menuClosed .navButton {
-  justify-content: center;
-  width: 42px;
-  gap: 0;
-  margin-left: 0;
-  margin-right: 0;
-  padding: 0;
-}
-
-.appShell.menuClosed .navEmoji {
-  width: 18px;
-  transform: scale(1.04);
-}
-
-.appShell.menuAnimating .sidebar {
-  transition: opacity var(--menu-transition, 220ms ease), transform var(--menu-transition, 220ms ease), max-height var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
-}
-
-.appShell.menuAnimating .navEmoji {
-  transition: transform var(--menu-transition, 220ms ease), width var(--menu-transition, 220ms ease);
-}
 
 .navDatabaseIcon,
 .navTrendIcon,
@@ -640,9 +589,6 @@ body[data-page="home"] .topbar .stats {
   stroke: none;
 }
 
-.appShell.menuClosed .navMflIcon {
-  width: 18px;
-}
 
 .navEvaluationIcon {
   fill: none;
@@ -684,13 +630,9 @@ body[data-page="home"] .topbar .stats {
   overflow: hidden;
   opacity: 1;
   white-space: nowrap;
-  transition: max-width var(--menu-transition, 0ms ease), opacity var(--menu-transition, 0ms ease);
+  transition: none;
 }
 
-.appShell.menuClosed .navText {
-  max-width: 0;
-  opacity: 0;
-}
 
 .navButton:hover {
   border-color: var(--primary-hover);
@@ -716,18 +658,21 @@ body.filtersOpen .navButton:hover {
   display: none;
 }
 
+main > .pageView {
+  width: 100%;
+}
+
 .homePage {
   display: grid;
   align-content: center;
   justify-items: center;
   gap: 10px;
-  width: min(780px, 100%);
+  width: 100%;
   min-height: calc(100vh - 298px);
   margin: 0 auto;
   padding-top: 0;
   text-align: center;
   position: relative;
-  left: calc(var(--sidebar-offset, 0px) / -2);
 }
 
 .homeIntro p {
@@ -819,6 +764,9 @@ body.filtersOpen .navButton:hover {
   }
 }
 .siteFooter {
+  grid-row: 3;
+  position: relative;
+  z-index: 2147483000;
   display: grid;
   align-content: center;
   justify-items: center;
@@ -830,6 +778,9 @@ body.filtersOpen .navButton:hover {
   font-size: 12px;
   line-height: 1.15;
   text-align: center;
+  margin-top: 0;
+  box-sizing: border-box;
+  transition: none;
 }
 
 .siteFooter a {
@@ -848,9 +799,29 @@ body.filtersOpen .navButton:hover {
 }
 main {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   margin-left: var(--sidebar-offset, 0px);
-  transition: margin-left var(--menu-transition, 0ms ease);
   padding: 4px 28px 6px;
+  overflow-x: clip;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+  box-sizing: border-box;
+  transition: none;
+}
+
+body.pinnedSidebarVisible main,
+body.pinnedSidebarVisible .siteFooter {
+  width: calc(100% - var(--pinned-sidebar-width));
+  margin-left: var(--pinned-sidebar-width);
+}
+
+
+body:not(.pinnedSidebarVisible) main,
+body:not(.pinnedSidebarVisible) .siteFooter {
+  width: 100%;
+  margin-left: 0;
 }
 
 .views {
@@ -1556,8 +1527,8 @@ button:disabled {
 
 .advancedPlayerTable tbody tr:hover td:hover,
 .advancedPlayerTable tbody td:hover {
-  background-color: var(--contracts-cell-hover) !important;
-  background-image: linear-gradient(var(--contracts-cell-hover), var(--contracts-cell-hover)) !important;
+  background-color: var(--contracts-cell-hover);
+  background-image: linear-gradient(var(--contracts-cell-hover), var(--contracts-cell-hover));
 }
 
 .filterBuilder {
@@ -1659,10 +1630,10 @@ table {
 .copyPlayerIdButton:focus,
 .copyPlayerIdButton.tableInteractiveHovered,
 .copyPlayerIdButton:hover:not(:disabled) {
-  border-color: transparent !important;
-  background: transparent !important;
+  border-color: transparent;
+  background: transparent;
   color: inherit;
-  box-shadow: none !important;
+  box-shadow: none;
   outline: 0;
   text-decoration: underline;
 }
@@ -1932,7 +1903,8 @@ td a {
 
 .pager {
   position: relative;
-  left: calc(var(--sidebar-offset, 0px) / -2);
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1953,7 +1925,7 @@ td a {
 
 .selectionBar {
   position: fixed;
-  left: 50%;
+  left: var(--selection-center-x, 50%);
   bottom: 22px;
   z-index: 30;
   display: inline-flex;
@@ -2047,7 +2019,7 @@ td a {
 
 .toastMessage {
   position: fixed;
-  left: 50%;
+  left: var(--toast-center-x, 50%);
   bottom: 88px;
   z-index: 10020;
   display: flex;
@@ -2315,10 +2287,10 @@ td a {
   cursor: pointer;
 }
 
-.playerIdText:hover,
-.playerIdText:focus,
-.playerIdText:active {
-  background: transparent !important;
+button.playerIdText:hover:not(:disabled),
+button.playerIdText:focus,
+button.playerIdText:active {
+  background: transparent;
   box-shadow: none;
   outline: 0;
   color: var(--text-soft);
@@ -2679,11 +2651,11 @@ td a {
 }
 
 .detailGrid .contractDetailCard strong .playerContractTeam {
-  color: var(--text) !important;
-  font-size: 1rem !important;
+  color: var(--text);
+  font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
-  text-transform: none !important;
+  text-transform: none;
 }
 
 .playerContractDivision {
@@ -3233,9 +3205,6 @@ td a {
   transform: translate(-50%, 0);
 }
 
-.evaluationMetric.evaluationDiscountRate[data-tooltip]::after {
-  display: none !important;
-}
 .evaluationSummaryShell .tableScroller {
   overflow: hidden;
 }
@@ -3549,7 +3518,7 @@ td a {
 
 .playerNoteFloatingTooltip {
   position: fixed;
-  z-index: 10000;
+  z-index: 2147483647;
   max-width: 320px;
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
@@ -3728,9 +3697,6 @@ td a {
   stroke-width: 2;
 }
 
-.toastMessage {
-  z-index: 10000;
-}
 
 .evaluationLoadDialog,
 .evaluationLoadList,
@@ -3908,9 +3874,9 @@ td a {
 #tableBody tr.tableRowHovered .playerNameLink:hover,
 #tableBody tr.tableRowHovered a:hover,
 #tableBody tr.tableRowHovered button:hover {
-  background: transparent !important;
-  box-shadow: none !important;
-  transition: none !important;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
 }
 
 #tableBody .newMintMarker[data-tooltip]::after {
@@ -3921,23 +3887,8 @@ td a {
 #tableBody tr *,
 #tableBody td,
 #tableBody td * {
-  transition: none !important;
-  animation: none !important;
-}
-
-#tableBody tr:hover > td,
-#tableBody tr:hover > th,
-#tableBody tr.tableRowHovered > td,
-#tableBody tr.tableRowHovered > th {
-  background: var(--row-hover) !important;
-  background-image: linear-gradient(var(--row-hover), var(--row-hover)) !important;
-}
-
-#tableBody tr:hover .playerNameLink:hover,
-#tableBody tr:hover a:hover,
-#tableBody tr.tableRowHovered .playerNameLink:hover,
-#tableBody tr.tableRowHovered a:hover {
-  transition: none !important;
+  transition: none;
+  animation: none;
 }
 
 .mflStatsPage {
@@ -4402,34 +4353,18 @@ td a {
   resize: none;
 }
 
-.appShell:not(.menuClosed) .tableScroller th,
-.appShell:not(.menuClosed) .tableScroller td,
-.appShell.menuClosed .tableScroller th,
-.appShell.menuClosed .tableScroller td {
+.appShell .tableScroller th,
+.appShell .tableScroller td {
   padding-left: 4px;
   padding-right: 4px;
 }
 
-/* Preserve cell alignment for the full sidebar transition. */
+/* Preserve stable cell alignment. */
 .appShell .tableScroller th,
 .appShell .tableScroller td {
   vertical-align: middle;
 }
 
-.appShell.menuAnimating .tableScroller th,
-.appShell.menuAnimating .tableScroller td {
-  transition: none !important;
-}
-
-.appShell.menuAnimating .tableScroller .selectionCell,
-.appShell.menuAnimating .tableScroller .flagCell,
-.appShell.menuAnimating .tableScroller .statCell,
-.appShell.menuAnimating .tableScroller .overallCell,
-.appShell.menuAnimating .tableScroller .ageCell,
-.appShell.menuAnimating .tableScroller .positionsCell,
-.appShell.menuAnimating .tableScroller .seasonsCell {
-  text-align: center;
-}
 
 .appShell .tableScroller .selectionCell {
   padding-left: 4px;
@@ -4443,231 +4378,112 @@ td a {
 }
 
 /* Pinned content grid, guest centering, and flicker-free tables. */
-:root {
-  --pinned-sidebar-width: 190px;
-  --pinned-topbar-height: 102px;
-}
 
-html {
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
-}
-
-.appShell,
-.appShell.menuClosed,
-.appShell.sidebarClosed,
-.appShell.sidebarCollapsed,
-.appShell.collapsed {
-  --sidebar-offset: var(--pinned-sidebar-width) !important;
-  transition: none !important;
-}
-
-.menuRail,
-.appShell.menuClosed .menuRail,
-.appShell.sidebarClosed .menuRail,
-.appShell.sidebarCollapsed .menuRail,
-.appShell.collapsed .menuRail {
-  width: var(--pinned-sidebar-width) !important;
-  padding: 14px !important;
-  align-items: stretch !important;
-  transition: none !important;
-}
-
-.sidebar,
-.appShell.menuClosed .sidebar,
-.appShell.sidebarClosed .sidebar,
-.appShell.sidebarCollapsed .sidebar,
-.appShell.collapsed .sidebar {
-  width: 162px !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  align-items: stretch !important;
-  transition: none !important;
-}
-
-.menuButton,
-.appShell.menuClosed .menuButton,
-.appShell.sidebarClosed .menuButton,
-.appShell.sidebarCollapsed .menuButton,
-.appShell.collapsed .menuButton {
-  width: 100% !important;
-  margin: 0 !important;
-  justify-content: flex-start !important;
-  pointer-events: none !important;
-  cursor: default !important;
-  transition: none !important;
-}
-
-.appShell.menuClosed .menuText,
-.appShell.sidebarClosed .menuText,
-.appShell.sidebarCollapsed .menuText,
-.appShell.collapsed .menuText,
-.appShell.menuClosed .navText,
-.appShell.sidebarClosed .navText,
-.appShell.sidebarCollapsed .navText,
-.appShell.collapsed .navText {
-  max-width: 112px !important;
-  margin-left: 8px !important;
-  opacity: 1 !important;
-}
-
-.appShell.menuClosed .navButton,
-.appShell.sidebarClosed .navButton,
-.appShell.sidebarCollapsed .navButton,
-.appShell.collapsed .navButton {
-  justify-content: flex-start !important;
-  width: 100% !important;
-  gap: 8px !important;
-  padding: 0 14px !important;
-}
-
-main,
-.siteFooter {
-  box-sizing: border-box !important;
-  transition: none !important;
-}
-
-body.pinnedSidebarVisible main,
-body.pinnedSidebarVisible .siteFooter {
-  width: calc(100% - var(--pinned-sidebar-width)) !important;
-  margin-left: var(--pinned-sidebar-width) !important;
-}
-
-body:not(.pinnedSidebarVisible) main,
-body:not(.pinnedSidebarVisible) .siteFooter,
-.menuRail[hidden] + main {
-  width: 100% !important;
-  margin-left: 0 !important;
-}
-
-.siteFooter {
-  justify-items: center !important;
-  text-align: center !important;
-}
-
-main > .pageView,
-.homePage,
-.changelogPage,
-.myPlayersLockedPage {
-  width: 100% !important;
-  left: auto !important;
-}
 
 .myPlayersLockedPage:not([hidden]),
 body.guest main > [class*="LockedPage"]:not([hidden]),
 body.guest main > [class*="OptInPage"]:not([hidden]) {
-  display: grid !important;
-  place-items: center !important;
-  min-height: calc(100vh - var(--pinned-topbar-height) - 52px) !important;
-  margin: 0 !important;
-  padding: 24px !important;
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - var(--pinned-topbar-height) - 52px);
+  margin: 0;
+  padding: 24px;
 }
 
 .myPlayersLockedContent,
 body.guest main [class*="LockedContent"],
 body.guest main [class*="OptInContent"] {
-  width: min(520px, 100%) !important;
-  margin: auto !important;
-  text-align: center !important;
+  width: min(520px, 100%);
+  margin: auto;
+  text-align: center;
 }
 
 #progressionPage {
-  transition: opacity 180ms ease, transform 180ms ease !important;
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
 html.table-layout-pending #progressionPage,
 body.tableLayoutPending #progressionPage,
 body.clubViewSwitching #progressionPage {
-  visibility: visible !important;
-  opacity: 0 !important;
-  transform: translateY(6px) !important;
-  pointer-events: none !important;
+  visibility: visible;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
 }
 
 body.clubViewSwitching .navButton.active {
-  border-color: var(--border-strong) !important;
-  background: var(--surface) !important;
-  color: var(--text) !important;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
 }
 
 body[data-page="club"] #progressionPage .quickFilters,
 body[data-page="club"] #progressionPage .controlsBar,
 body[data-page="club"] #progressionPage .pager,
 body[data-page="club"] #progressionPage nav.pager {
-  display: none !important;
+  display: none;
 }
 
 body[data-page="watchlist"] #progressionPage .views {
-  display: flex !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
+  display: flex;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 #progressionPage .tableShell,
 #progressionPage .tableScroller,
 #progressionPage .tableScroller table {
-  box-sizing: border-box !important;
+  box-sizing: border-box;
 }
 
-#progressionPage .tableShell,
-#progressionPage .tableScroller {
-  overflow: visible !important;
-}
 
 #progressionPage .tableScroller table,
 #progressionPage .tableScroller col,
 #progressionPage .tableScroller th,
 #progressionPage .tableScroller td {
-  transition: none !important;
-  animation: none !important;
+  transition: none;
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   #progressionPage {
-    transition: none !important;
+    transition: none;
   }
 }
 
 /* Layout-centered states and stable shared view presentation. */
-.toastMessage {
-  left: var(--toast-center-x, 50%) !important;
-}
-
-.selectionBar {
-  left: var(--selection-center-x, 50%) !important;
-}
 
 body.pinnedSidebarVisible .myPlayersLockedPage {
-  right: 0 !important;
-  left: var(--pinned-sidebar-width) !important;
-  width: auto !important;
+  right: 0;
+  left: var(--pinned-sidebar-width);
+  width: auto;
 }
 
 body:not(.pinnedSidebarVisible) .myPlayersLockedPage {
-  right: 0 !important;
-  left: 0 !important;
-  width: auto !important;
+  right: 0;
+  left: 0;
+  width: auto;
 }
 
 body[data-page="club"] #progressionPage,
 body[data-page="club"] #progressionPage * {
-  transition: none !important;
-  animation: none !important;
+  transition: none;
+  animation: none;
 }
 
 #progressionPage .tableShell {
-  border-radius: 8px !important;
-  overflow: hidden !important;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 #progressionPage .tableScroller {
-  border-radius: inherit !important;
-  overflow: hidden !important;
+  border-radius: inherit;
+  overflow: hidden;
 }
 
 #progressionPage .tableScroller thead,
 #progressionPage .tableScroller thead tr {
-  background-clip: padding-box !important;
+  background-clip: padding-box;
 }
 
 #progressionPage .tableScroller thead th:first-child {
@@ -4678,32 +4494,6 @@ body[data-page="club"] #progressionPage * {
   border-top-right-radius: inherit;
 }
 
-#progressionPage nav.pager {
-  left: 0 !important;
-  width: 100% !important;
-}
-
-/* Layer Evaluation search results above page content without changing overflow. */
-body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
-  position: relative;
-  z-index: 1000;
-}
-
-body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
-body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  position: relative;
-  z-index: 1001;
-}
-
-body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
-  position: absolute;
-  z-index: 1002 !important;
-}
-
-body[data-page="evaluation"] #evaluationPanel {
-  position: relative;
-  z-index: 0;
-}
 
 /* Extend the empty Evaluation page to the footer. */
 body[data-page="evaluation"] #evaluationPage {
@@ -4711,57 +4501,14 @@ body[data-page="evaluation"] #evaluationPage {
   min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 50px);
 }
 
-/* Prevent Evaluation value flashes and stabilize MFL Stats loading and controls. */
-html,
-body {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden !important;
-  scrollbar-gutter: auto !important;
-}
-
-body {
-  display: grid !important;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-body > .topbar {
-  grid-row: 1;
-  position: relative !important;
-  top: auto !important;
-  z-index: 2147483000;
-}
-
-body > #appShell {
-  grid-row: 2;
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-}
-
-body > #appShell > main {
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow-x: clip !important;
-  overflow-y: scroll !important;
-  overscroll-behavior: contain;
-  scrollbar-gutter: auto !important;
-}
-
-body > .siteFooter {
-  grid-row: 3;
-  position: relative !important;
-  z-index: 2147483000;
-  margin-top: 0 !important;
-}
+/* Stabilize Evaluation, MFL Stats, and modal state ownership. */
 
 #searchModal:not([hidden]),
 #advancedSettingsModal:not([hidden]),
 #evaluationLoadModal:not([hidden]) {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483645 !important;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
 }
 
 #searchModal > .searchDialog,
@@ -4772,64 +4519,60 @@ body > .siteFooter {
 }
 
 html body[data-page="evaluation"] #evaluationPage {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  overflow-x: clip !important;
-  overflow-y: visible !important;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 body[data-page="evaluation"]:not(.evaluationPageReady) #evaluationPage {
-  visibility: visible !important;
-  opacity: 1 !important;
+  visibility: visible;
+  opacity: 1;
 }
 
 body[data-page="evaluation"]::after {
-  display: none !important;
-  pointer-events: none !important;
+  display: none;
+  pointer-events: none;
 }
 
-html[data-initial-page="evaluation"] body:not(.evaluationDiscountRateReady) #evaluationDiscountRate,
-body[data-page="evaluation"]:not(.evaluationDiscountRateReady) #evaluationDiscountRate {
-  visibility: hidden !important;
-}
 
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
+  display: inline-flex;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 html.mflEvaluationInitialStateReady:not(.mflEvaluationInitialLoadVisible) #evaluationLoadButton,
 body.evaluationPlayerRoute #evaluationLoadButton {
-  display: none !important;
+  display: none;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationTopBar {
   position: relative;
-  z-index: 10 !important;
-  overflow: visible !important;
+  z-index: 10;
+  overflow: visible;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
 html body[data-page="evaluation"] #evaluationPage .evaluationSearch,
 html body[data-page="evaluation"] #evaluationPage .evaluationMetrics {
   position: relative;
-  overflow: visible !important;
+  overflow: visible;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationSearchGroup,
 html body[data-page="evaluation"] #evaluationPage .evaluationSearch {
-  z-index: 11 !important;
+  z-index: 11;
 }
 
 html body[data-page="evaluation"] #evaluationSearchResults:not([hidden]) {
-  position: absolute !important;
-  z-index: 12 !important;
-  max-height: none !important;
-  overflow: visible !important;
+  position: absolute;
+  z-index: 12;
+  max-height: none;
+  overflow: visible;
 }
 
 html body[data-page="evaluation"] #evaluationPanel {
@@ -4838,27 +4581,27 @@ html body[data-page="evaluation"] #evaluationPanel {
 }
 
 html body[data-page="evaluation"] #evaluationSearchInput:not(:placeholder-shown) + .evaluationSearchClearButton[hidden] {
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
+  display: inline-flex;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 html body[data-page="evaluation"]:has(#evaluationPanel[hidden]) #evaluationPage {
-  min-height: 0 !important;
+  min-height: 0;
 }
 
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::after,
 html body[data-page="evaluation"] #evaluationPage .evaluationDiscountRate[data-tooltip]::before {
-  content: none !important;
-  display: none !important;
+  content: none;
+  display: none;
 }
 
 html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGuardReady) #playerDetail > .emptyState {
-  visibility: hidden !important;
+  visibility: hidden;
 }
 
-.playerContractTeamLink {
+#playerDetail .contractDetailCard strong .playerContractTeamLink {
   color: var(--text);
   font-weight: 600;
   text-decoration: none;
@@ -4867,15 +4610,12 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
   transition: none;
 }
 
-.playerContractTeamLink:hover,
-.playerContractTeamLink:focus-visible {
+#playerDetail .contractDetailCard strong .playerContractTeamLink:hover,
+#playerDetail .contractDetailCard strong .playerContractTeamLink:focus-visible {
   color: var(--primary);
   text-decoration: none;
 }
 
-.playerNoteFloatingTooltip {
-  z-index: 2147483647 !important;
-}
 
 .evaluationDiscountTooltipPortal {
   position: fixed;
@@ -4893,16 +4633,11 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.evaluationDiscountTooltipPortal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
 
 .evaluationDiscountTooltipPortal[hidden] {
-  display: none !important;
+  display: none;
 }
 
 html.mflStatsStableLoading,
@@ -4911,13 +4646,13 @@ html.mflStatsLoading,
 html.mflStatsLoading *,
 body.mflStatsLoading,
 body.mflStatsLoading * {
-  cursor: wait !important;
+  cursor: wait;
 }
 
 body[data-page="mflstats"]::after,
 body[data-page="mflstats"].mflStatsInteractive::after {
-  display: none !important;
-  pointer-events: none !important;
+  display: none;
+  pointer-events: none;
 }
 
 body[data-page="mflstats"] #appShell,
@@ -4926,7 +4661,7 @@ body[data-page="mflstats"] .mflStatsFilters,
 body[data-page="mflstats"] #mflStatsOverallFilters,
 body[data-page="mflstats"] .mflStatsFilterButton,
 body[data-page="mflstats"] .mflStatsDistributionModeButton {
-  pointer-events: auto !important;
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4938,62 +4673,48 @@ body[data-page="mflstats"] .mflStatsDistributionModeButton {
 /* Table loading visibility. */
 body.mflDatabaseRoutePending #tableBody,
 body.mflTableDataLoading #tableBody {
-  visibility: hidden !important;
-  pointer-events: none !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 body.mflDatabaseRoutePending #emptyState,
 body.mflTableDataLoading #emptyState {
-  display: block !important;
-  visibility: visible !important;
+  display: block;
+  visibility: visible;
 }
 
 body.mflTableDataLoading #tableBody:has(> tr) {
-  visibility: visible !important;
+  visibility: visible;
 }
 
 body.mflTableDataLoading:has(#tableBody > tr) #emptyState {
-  display: none !important;
+  display: none;
 }
 
 /* Changelog first paint. */
 html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"]
   :is(#homePage, #progressionPage, #mflStatsPage, #myPlayersLockedPage, #evaluationPage, #playerPage, #settingsPage) {
-  display: none !important;
-  visibility: hidden !important;
+  display: none;
+  visibility: hidden;
 }
 
 html[data-initial-page="changelog"]:not(.mflInitialRouteResolved) body[data-page="home"] #changelogPage,
 html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  display: block;
+  visibility: visible;
+  opacity: 1;
 }
 
 html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {
-  visibility: hidden !important;
+  visibility: hidden;
 }
 
-#playerDetail .contractDetailCard strong .playerContractTeamLink {
-  color: var(--text) !important;
-  font-weight: 600 !important;
-  text-decoration: none !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  transition: none !important;
-}
-
-#playerDetail .contractDetailCard strong .playerContractTeamLink:hover,
-#playerDetail .contractDetailCard strong .playerContractTeamLink:focus-visible {
-  color: var(--primary) !important;
-  text-decoration: none !important;
-}
 
 html.mflInitialChromePreparing *,
 html.mflInitialChromePreparing *::before,
 html.mflInitialChromePreparing *::after {
-  transition: none !important;
-  animation: none !important;
+  transition: none;
+  animation: none;
 }
 
 [data-tooltip]::before,
@@ -5006,22 +4727,22 @@ html.mflInitialChromePreparing *::after {
   transition:
     opacity 170ms ease,
     transform 170ms ease,
-    visibility 0s linear 170ms !important;
+    visibility 0s linear 170ms;
 }
 
 .floatingActionTooltip.visible,
 .playerNoteFloatingTooltip.visible,
 .evaluationDiscountTooltipPortal.visible {
-  transition-delay: 0s !important;
+  transition-delay: 0s;
 }
 
 .floatingActionTooltip.tooltipHiding,
 .playerNoteFloatingTooltip.tooltipHiding,
 .evaluationDiscountTooltipPortal.tooltipHiding {
-  opacity: 0 !important;
-  visibility: visible !important;
-  transform: translateY(4px) !important;
-  pointer-events: none !important;
+  opacity: 0;
+  visibility: visible;
+  transform: translateY(4px);
+  pointer-events: none;
 }
 
 .evaluationDiscountTooltipPortal {
