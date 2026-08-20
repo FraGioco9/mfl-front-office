@@ -181,6 +181,9 @@ const TABLE_ROUTE_ONLY_FUNCTIONS = [
   "cachedRowSortValue",
   "newMintMarker",
   "rowIsOwnedByLinkedWallet",
+  "displayColumnForPage",
+  "filterLabel",
+  "uniqueColumnValues",
 ];
 
 const TABLE_SECTIONS = [

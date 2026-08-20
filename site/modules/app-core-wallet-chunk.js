@@ -33,6 +33,9 @@ const WALLET_ROUTE_ONLY_FUNCTIONS = [
   "mergeGuestWatchlistIntoAccount",
   "refreshWatchlistPageAfterWalletSync",
   "upgradeCurrentPageAfterWalletOptIn",
+  "fetchLiveAgentNameForWallet",
+  "walletAddressCandidatesFromValue",
+  "walletAddressFromUser",
 ];
 
 const WALLET_SECTIONS = [

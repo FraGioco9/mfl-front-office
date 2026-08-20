@@ -14,10 +14,11 @@ const shared = String(artifacts.core || "");
 const chunks = artifacts.routeChunks || {};
 
 const routeOnlyFunctions = {
-  settings: ["setSettingsEmailAddressDraft", "discardSettingsEmailAddressDraft", "saveSettingsEmailAddressDraft", "updateSettingsEmailOption"],
-  player: ["showPlayerNoteTooltip", "setPlayerNote", "normalizePlayerAttributeView", "formatFootedness", "rarityColorForOverall", "shortStatLabel"],
-  table: ["currentViewColumns", "tableColumnClass", "agentTitleForWallet", "selectedPlayerIdsArray", "trackWatchlistChange", "isNumericColumn", "uniqueNationalityValues", "uniquePositions", "availableFilterColumns", "contractStatusValue", "precomputedValue", "cachedRowSortValue", "newMintMarker", "rowIsOwnedByLinkedWallet"],
-  wallet: ["appOrigin", "recordWalletOptIn", "loadWalletNames", "refreshLinkedWalletAgentName", "authenticatedWalletUser", "signatureWalletAddress", "mergeGuestWatchlistIntoAccount", "refreshWatchlistPageAfterWalletSync", "upgradeCurrentPageAfterWalletOptIn"],
+  evaluation: ["resetInvalidEvaluationLinkToPlainEvaluation"],
+  settings: ["setSettingsEmailAddressDraft", "discardSettingsEmailAddressDraft", "saveSettingsEmailAddressDraft", "updateSettingsEmailOption", "validSettingsEmailAddress"],
+  player: ["showPlayerNoteTooltip", "setPlayerNote", "normalizePlayerAttributeView", "formatFootedness", "rarityColorForOverall", "shortStatLabel", "playerNoteIconHtml", "measureTooltipAnchorWidth", "queueWalletNotesSave", "allowedPlayerAttributeViews", "toggleWatchlistPlayer", "createWatchlistStar"],
+  table: ["currentViewColumns", "tableColumnClass", "agentTitleForWallet", "selectedPlayerIdsArray", "trackWatchlistChange", "isNumericColumn", "uniqueNationalityValues", "uniquePositions", "availableFilterColumns", "contractStatusValue", "precomputedValue", "cachedRowSortValue", "newMintMarker", "rowIsOwnedByLinkedWallet", "displayColumnForPage", "filterLabel", "uniqueColumnValues"],
+  wallet: ["appOrigin", "recordWalletOptIn", "loadWalletNames", "refreshLinkedWalletAgentName", "authenticatedWalletUser", "signatureWalletAddress", "mergeGuestWatchlistIntoAccount", "refreshWatchlistPageAfterWalletSync", "upgradeCurrentPageAfterWalletOptIn", "fetchLiveAgentNameForWallet", "walletAddressCandidatesFromValue", "walletAddressFromUser"],
   watchlist: ["openRenameWatchlistModal", "openDeleteWatchlistModal"],
 };
 
@@ -30,7 +31,7 @@ for (const [chunkName, names] of Object.entries(routeOnlyFunctions)) {
   }
 }
 
-for (const name of [
+const protectedSharedFunctions = [
   "updateSettingsDateFormat",
   "updateSettingsTimeFormat",
   "discardSettingsEmailAddressDraftSilently",
@@ -46,12 +47,14 @@ for (const name of [
   "switchWatchlist",
   "normalizeWatchlists",
   "renderWatchlistSwitcher",
-]) {
+  "playerIsInAnyWatchlist",
+];
+for (const name of protectedSharedFunctions) {
   invariant(hasFunction(shared, name), `Cross-route/shared function ${name} must remain in the eager core.`);
 }
 
 const sharedBytes = Buffer.byteLength(shared);
-invariant(sharedBytes < 340_000, `Shared application core is too large after route ownership extraction: ${sharedBytes} bytes.`);
+invariant(sharedBytes < 324_000, `Shared application core is too large after dependency-aware route ownership extraction: ${sharedBytes} bytes.`);
 new Function(shared);
 for (const chunkName of Object.keys(routeOnlyFunctions)) new Function(String(Reflect.get(chunks, chunkName) || ""));
 

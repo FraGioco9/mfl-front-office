@@ -2,6 +2,7 @@
 
 import {
   extractRequiredSection,
+  extractRequiredFunctions,
   insertBeforeRequiredMarker,
   replaceRequired,
   replaceRequiredFunction,
@@ -285,6 +286,14 @@ export function splitApplicationCoreRuntime(source) {
 
   const evaluationParts = [];
   const mflStatsParts = [];
+
+  const evaluationRouteOnly = extractRequiredFunctions(
+    core,
+    ["resetInvalidEvaluationLinkToPlainEvaluation"],
+    "Evaluation dependency-closed helper",
+  );
+  core = evaluationRouteOnly.core;
+  evaluationParts.push(...evaluationRouteOnly.chunks);
 
   let extracted = extractRequiredSection(
     core,
