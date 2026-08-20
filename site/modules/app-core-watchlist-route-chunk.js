@@ -2,11 +2,17 @@
 
 import {
   extractRequiredSection,
+  extractRequiredFunctions,
   finalizeSplitArtifacts,
   insertBeforeRequiredMarker,
   normalizeSplitterInput,
   renameRequiredFunctionOwner,
 } from "./app-core-splitter-utils.js";
+
+const WATCHLIST_ROUTE_ONLY_FUNCTIONS = [
+  "openRenameWatchlistModal",
+  "openDeleteWatchlistModal",
+];
 
 const WATCHLIST_ROUTE_FACADE_BLOCK = `let __mflWatchlistRenderSwitcherOwner = null;
 let __mflWatchlistCloseDropdownOwner = null;
@@ -49,8 +55,9 @@ export function splitWatchlistRouteApplicationCoreRuntime(artifacts) {
   );
   if (alreadySplit) return artifacts;
 
+  const routeOnly = extractRequiredFunctions(inputCore, WATCHLIST_ROUTE_ONLY_FUNCTIONS, "Watchlist route-only helper");
   const switcher = extractRequiredSection(
-    inputCore,
+    routeOnly.core,
     "function renderWatchlistSwitcher() {",
     "function showGenericToast(message) {",
     "Watchlist switcher and dropdown owner",
@@ -62,7 +69,7 @@ export function splitWatchlistRouteApplicationCoreRuntime(artifacts) {
     "Watchlist route facade",
   );
 
-  let watchlist = switcher.chunk.replace(/\s*$/, "");
+  let watchlist = [switcher.chunk, ...routeOnly.chunks].join("\n\n").replace(/\s*$/, "");
   for (const [functionName, ownerName] of [
     ["renderWatchlistSwitcher", "watchlistRenderSwitcherOwner"],
     ["closeWatchlistDropdown", "watchlistCloseDropdownOwner"],
