@@ -8,7 +8,7 @@
     "build": "npm run build:core",
     "lint": "eslint bootstrap.js bootstrap-core.js build-app-core.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
-    "verify:generated": "git diff --exit-code -- table-width-runtime.js \" :(glob)modules/app-core*-runtime.js\"",
+    "verify:generated": "git diff --exit-code -- table-width-runtime.js \":(glob)modules/app-core*-runtime.js\"",
     "validate": "node validate-all.mjs",
     "check": "npm run lint && npm run typecheck && npm run build:core && npm run verify:generated && npm run validate"
   },
