@@ -6,6 +6,7 @@ import {
   extractRequiredFunctions,
   finalizeSplitArtifacts,
   normalizeSplitterInput,
+  replaceRequired,
 } from "./app-core-splitter-utils.js";
 
 const PLAYER_SECTIONS = [
@@ -28,6 +29,17 @@ const PLAYER_ROUTE_ONLY_FUNCTIONS = [
   "toggleWatchlistPlayer",
   "createWatchlistStar",
 ];
+
+const PLAYER_CONTRACT_LINK_FUNCTIONS = ["contractClubId", "bindContractTeamLink"];
+const PLAYER_CONTRACT_LINK_WRAPPER = `  if (typeof renderPlayerPage === "function") {
+    const originalRenderPlayerPage = renderPlayerPage;
+    renderPlayerPage = function renderPlayerPageWithStableContractLink(playerId) {
+      const result = originalRenderPlayerPage.apply(this, arguments);
+      bindContractTeamLink(playerId);
+      return result;
+    };
+  }
+`;
 
 export function splitPlayerApplicationCoreRuntime(artifacts) {
   const { alreadySplit, routeChunks, core: inputCore } = normalizeSplitterInput(
@@ -56,7 +68,35 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
   if (!playerRenderer.includes("function renderPlayerPageOwner(playerId) {")) {
     throw new Error("Could not rename the Player page renderer owner.");
   }
-  playerParts.push(`${playerRenderer}\n\nwindow.__mflRenderPlayerPageOwner = renderPlayerPageOwner;`);
+
+  const contractLink = extractRequiredFunctions(
+    core,
+    PLAYER_CONTRACT_LINK_FUNCTIONS,
+    "Player contract-link helper",
+  );
+  core = contractLink.core;
+  core = replaceRequired(
+    core,
+    PLAYER_CONTRACT_LINK_WRAPPER,
+    "",
+    "Player contract-link shared wrapper",
+  );
+  core = replaceRequired(
+    core,
+    '  const RELEASE_VERSION = String(window.__mflReleaseVersion || "");\n\n',
+    "",
+    "Player contract-link release constant",
+  );
+
+  const contractLinkHelpers = contractLink.chunks
+    .join("\n\n")
+    .replaceAll("RELEASE_VERSION", "PLAYER_RELEASE_VERSION");
+  playerParts.push(`const PLAYER_RELEASE_VERSION = String(window.__mflReleaseVersion || "");\n\n${contractLinkHelpers}`);
+  playerParts.push(`${playerRenderer}\n\nfunction renderPlayerPageWithStableContractLinkOwner(playerId) {
+  const result = renderPlayerPageOwner.apply(this, arguments);
+  bindContractTeamLink(playerId);
+  return result;
+}\n\nwindow.__mflRenderPlayerPageOwner = renderPlayerPageWithStableContractLinkOwner;`);
 
   const sharedPlayerFacade = [
     "function renderPlayerPage(playerId) {",
