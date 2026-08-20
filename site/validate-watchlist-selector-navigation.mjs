@@ -5,8 +5,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, watchlistCore] = await Promise.all([
+const [controls, splitter, watchlistCore] = await Promise.all([
   read("./control-interactions-runtime.js"),
+  read("./modules/app-core-watchlist-route-chunk.js"),
   read("./modules/app-core-watchlist-runtime.js"),
 ]);
 
@@ -43,6 +44,10 @@ const navigationHandoff = controls.indexOf("if (beginNavigationIntent(event.targ
 invariant(
   visibilityIntent >= 0 && navigationHandoff > visibilityIntent,
   "Watchlist selector visibility must update before navigation is handed off to asynchronous route work.",
+);
+invariant(
+  !splitter.includes("if (watchlistSwitcher) watchlistSwitcher.hidden = true;"),
+  "The shared Watchlist facade must not undo synchronous selector visibility while the lazy route core loads.",
 );
 invariant(
   watchlistCore.includes('const visible = state.currentPage === "watchlist" && hasWalletOptIn();'),
