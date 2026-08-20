@@ -112,6 +112,16 @@
     if (filtersModal.contains(active)) active.blur();
   }
 
+  function blurFilterSelectAfterChange(target) {
+    if (!(target instanceof HTMLSelectElement)) return;
+    const filtersModal = document.getElementById("filtersModal");
+    if (!(filtersModal instanceof HTMLElement) || !filtersModal.contains(target)) return;
+
+    queueMicrotask(() => {
+      if (target.isConnected && document.activeElement === target) target.blur();
+    });
+  }
+
   function beginNeutralFiltersOpen() {
     document.documentElement.classList.add("mflFiltersOpeningNeutral");
     queueMicrotask(clearInitialFilterFocus);
@@ -165,6 +175,10 @@
     clubPointerPressedView = "";
     clubPointerCommittedView = "";
   }, true);
+
+  document.addEventListener("change", (event) => {
+    blurFilterSelectAfterChange(event.target);
+  });
 
   document.addEventListener("keydown", (event) => {
     endNeutralFiltersOpen(event.target);
