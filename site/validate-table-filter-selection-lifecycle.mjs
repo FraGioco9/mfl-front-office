@@ -49,10 +49,8 @@ invariant(
 
 const sortCommit = 'state.page = 1;\n        buildHeader();\n        applyFilters();';
 invariant(
-  appCore.includes(sortCommit)
-    && !sortCommit.includes("clearSelection(")
-    && !sortCommit.includes("selectedPlayerIds.clear()"),
-  "Sorting must reapply unchanged filters without directly clearing player selection.",
+  appCore.includes(sortCommit) && generated.includes(sortCommit),
+  "Source and generated sorting must reapply unchanged filters instead of owning a separate selection reset.",
 );
 
-console.log("Page filter isolation and view/filter selection reset validation passed.");
+console.log("Page filter isolation and view/filter selection reset validation passed in source and generated table runtime.");
