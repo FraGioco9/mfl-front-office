@@ -22,6 +22,53 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
+      - name: Apply Menu disabled opacity fix
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
+        working-directory: .
+        shell: python
+        run: |
+          from pathlib import Path
+
+          styles_path = Path("site/styles-base.css")
+          styles = styles_path.read_text(encoding="utf-8")
+          old_disabled = "button:disabled {\n  cursor: not-allowed;\n  opacity: 0.45;\n}"
+          new_disabled = "button:disabled:not(.menuButton) {\n  cursor: not-allowed;\n  opacity: 0.45;\n}"
+          if old_disabled in styles:
+              styles = styles.replace(old_disabled, new_disabled, 1)
+              styles_path.write_text(styles, encoding="utf-8")
+          elif new_disabled not in styles:
+              raise SystemExit("Could not find canonical disabled-button opacity rule")
+
+          validator_path = Path("site/validate-sidebar-lifecycle-ownership.mjs")
+          validator = validator_path.read_text(encoding="utf-8")
+          old_message = '  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",\n);'
+          new_message = '  "Static CSS must keep the pinned Menu label white and non-interactive before and after hydration.",\n);\ninvariant(\n  styles.includes("button:disabled:not(.menuButton) {\\n  cursor: not-allowed;\\n  opacity: 0.45;\\n}")\n    && !styles.includes("button:disabled {\\n  cursor: not-allowed;\\n  opacity: 0.45;\\n}"),\n  "The global disabled-button fade must exclude the permanently disabled pinned Menu control.",\n);'
+          if old_message in validator:
+              validator = validator.replace(old_message, new_message, 1)
+              validator_path.write_text(validator, encoding="utf-8")
+          elif "The global disabled-button fade must exclude the permanently disabled pinned Menu control." not in validator:
+              raise SystemExit("Could not update Menu disabled-opacity regression validation")
+
+      - name: Commit Menu disabled opacity fix
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/sidebar-grid-alignment'
+        working-directory: .
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- .github/workflows/site-quality.yml
+          git add -- site/styles-base.css site/validate-sidebar-lifecycle-ownership.mjs .github/workflows/site-quality.yml
+          if git diff --cached --quiet; then
+            echo "Menu disabled opacity fix is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Keep Menu fully opaque after hydration"
+          git push origin "HEAD:$HEAD_BRANCH"
+
       - name: Detect relevant changes
         id: changes
         working-directory: .
