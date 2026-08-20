@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 
-const [ignoreSource, productionConfigSource] = await Promise.all([
+const [ignoreSource, productionConfigSource, developmentConfigSource] = await Promise.all([
   readFile(new URL("../.vercelignore", import.meta.url), "utf8"),
   readFile(new URL("./vercel.production.json", import.meta.url), "utf8"),
+  readFile(new URL("./vercel.json", import.meta.url), "utf8"),
 ]);
 const ignoredPaths = new Set(
   ignoreSource
@@ -11,6 +12,7 @@ const ignoredPaths = new Set(
     .filter((line) => line && !line.startsWith("#")),
 );
 const productionConfig = JSON.parse(productionConfigSource);
+const developmentConfig = JSON.parse(developmentConfigSource);
 
 const requiredProductionIgnoredPaths = [
   ".gitignore",
@@ -69,4 +71,40 @@ if (/build-app-core|npm\s+(?:run\s+)?build\b/i.test(productionBuildCommand)) {
   throw new Error("Production Vercel build must deploy the prebuilt application core instead of invoking an excluded compiler source.");
 }
 
-console.log("Production source boundary and prebuilt Vercel deployment validation passed.");
+function validateSpaRouting(config, label) {
+  const rewrites = Array.isArray(config.rewrites) ? config.rewrites : [];
+  const releaseRewrite = rewrites.find((rule) => rule?.source === "/releases.json");
+  if (releaseRewrite?.destination !== "/api/releases") {
+    throw new Error(`${label} Vercel config must preserve the /releases.json API rewrite before the SPA fallback.`);
+  }
+
+  const spaFallbackIndex = rewrites.findIndex(
+    (rule) => rule?.source === "/(.*)" && rule?.destination === "/index.html",
+  );
+  if (spaFallbackIndex < 0) {
+    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to /index.html.`);
+  }
+  if (spaFallbackIndex !== rewrites.length - 1) {
+    throw new Error(`${label} Vercel SPA catch-all must be the final rewrite rule.`);
+  }
+
+  const invalidClubRedirects = new Map([
+    ["/clubs/:id", "/"],
+    ["/club/:id", "/"],
+    ["/club/:id/:view", "/"],
+    ["/club", "/"],
+    ["/clubs", "/"],
+  ]);
+  const redirects = Array.isArray(config.redirects) ? config.redirects : [];
+  for (const [source, destination] of invalidClubRedirects) {
+    const redirect = redirects.find((rule) => rule?.source === source);
+    if (redirect?.destination !== destination || redirect?.permanent !== false) {
+      throw new Error(`${label} Vercel config must temporarily redirect invalid Club route ${source} to ${destination}.`);
+    }
+  }
+}
+
+validateSpaRouting(productionConfig, "Production");
+validateSpaRouting(developmentConfig, "Development");
+
+console.log("Production source boundary, prebuilt deployment, and SPA deep-link routing validation passed.");
