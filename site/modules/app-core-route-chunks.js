@@ -1,58 +1,11 @@
 // @ts-check
 
-function extractRequiredSection(source, startMarker, endMarker, label) {
-  const start = source.indexOf(startMarker);
-  const end = start >= 0 ? source.indexOf(endMarker, start + startMarker.length) : -1;
-  if (start < 0 || end < 0 || end <= start) {
-    throw new Error(`Could not split application core section: ${label}.`);
-  }
-
-  return {
-    core: `${source.slice(0, start)}${source.slice(end)}`,
-    chunk: source.slice(start, end).replace(/^\s+|\s+$/g, ""),
-  };
-}
-
-function insertBeforeRequiredMarker(source, marker, insertion, label) {
-  const index = source.indexOf(marker);
-  if (index < 0) {
-    throw new Error(`Could not insert application core bridge: ${label}.`);
-  }
-  return `${source.slice(0, index)}${insertion}\n\n${source.slice(index)}`;
-}
-
-function replaceRequired(source, before, after, label) {
-  if (!source.includes(before)) {
-    throw new Error(`Could not normalize application core before Club split: ${label}.`);
-  }
-  return source.replace(before, after);
-}
-
-function replaceFunction(source, functionName, replacement, label) {
-  const marker = `function ${functionName}(`;
-  const start = source.indexOf(marker);
-  const openBrace = start >= 0 ? source.indexOf("{", start + marker.length) : -1;
-  if (start < 0 || openBrace < 0) {
-    throw new Error(`Could not normalize application core function before Club split: ${label}.`);
-  }
-
-  let depth = 0;
-  let end = -1;
-  for (let index = openBrace; index < source.length; index += 1) {
-    if (source[index] === "{") depth += 1;
-    if (source[index] === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        end = index + 1;
-        break;
-      }
-    }
-  }
-  if (end < 0) {
-    throw new Error(`Could not find the end of application core function before Club split: ${label}.`);
-  }
-  return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
-}
+import {
+  extractRequiredSection,
+  insertBeforeRequiredMarker,
+  replaceRequired,
+  replaceRequiredFunction,
+} from "./app-core-splitter-utils.js";
 
 function normalizeMflStatsStaticFilters(source) {
   const pattern = /function renderMflStatsFilterButtons\(\) \{[\s\S]*?\n\}\n\nfunction mflStatsDistributionValue/;
@@ -235,7 +188,7 @@ export function splitApplicationCoreRuntime(source) {
     "Club incremental title stability",
   );
 
-  core = replaceFunction(
+  core = replaceRequiredFunction(
     core,
     "clubRouteTargetFromPath",
     `function clubRouteTargetFromPath() {
@@ -416,7 +369,7 @@ export function splitApplicationCoreRuntime(source) {
     '  let activeClubId = "";\n  let activeClubTitle = null;\n  let openingClub = false;',
     "Club stable title state",
   );
-  club = replaceFunction(
+  club = replaceRequiredFunction(
     club,
     "renderClubTitle",
     `  function renderClubTitle() {
@@ -470,7 +423,7 @@ export function splitApplicationCoreRuntime(source) {
   });`,
     "invalid Club popstate redirect",
   );
-  club = replaceFunction(
+  club = replaceRequiredFunction(
     club,
     "bootClubRoute",
     `  function bootClubRoute() {
@@ -488,7 +441,7 @@ export function splitApplicationCoreRuntime(source) {
     "strict Club route boot",
   );
 
-  club = replaceFunction(
+  club = replaceRequiredFunction(
     club,
     "clubRoute",
     `  function clubRoute(pathname = normalizedPath()) {
@@ -497,7 +450,7 @@ export function splitApplicationCoreRuntime(source) {
   }`,
     "Club chunk canonical route parser",
   );
-  club = replaceFunction(
+  club = replaceRequiredFunction(
     club,
     "canonicalClubRoute",
     `  function canonicalClubRoute(clubId = activeClubId, view = state.view) {

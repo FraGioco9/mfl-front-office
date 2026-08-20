@@ -44,7 +44,8 @@ new Function(tableCore);
 new Function(watchlistCore);
 
 includes(splitter, '"Watchlist switcher and dropdown owner"', "The Watchlist splitter must extract switcher ownership.");
-includes(splitter, "routeChunks: Object.freeze({ ...routeChunks, watchlist:", "The artifact map must expose the Watchlist chunk.");
+includes(splitter, "finalizeSplitArtifacts(", "The Watchlist splitter must use canonical split-result finalization.");
+includes(splitter, '"watchlist"', "The Watchlist splitter must publish the Watchlist chunk through canonical finalization.");
 
 includes(sharedCore, "let __mflWatchlistRenderSwitcherOwner = null;", "Shared core must retain a stable Watchlist switcher facade.");
 includes(sharedCore, "function renderWatchlistSwitcher() {", "Shared core must retain the Watchlist switcher facade name.");
