@@ -209,7 +209,8 @@ invariant(
 );
 invariant(!bootstrap.includes("cell.colSpan = 16"), "First-paint loading rows must not collapse into one colspan cell.");
 invariant(
-  bootstrap.includes('const columnCount = Math.max(1, colGroup?.children.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);'),
+  bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
+    && bootstrap.includes('const columnCount = Math.max(1, renderedColumns.length || document.getElementById("tableHead")?.querySelector("tr")?.cells.length || 1);'),
   "First-paint loading rows must use the rendered column count.",
 );
 
