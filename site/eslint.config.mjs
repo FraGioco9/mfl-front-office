@@ -29,6 +29,7 @@ export default [
     },
     rules: {
       ...recommendedRules,
+      "no-empty": ["error", { allowEmptyCatch: true }],
       "no-undef": "off",
     },
   },
