@@ -38,9 +38,29 @@ const advancedFunctions = [
   "resetAdvancedRewardRateDraft",
 ];
 
-for (const name of advancedFunctions) {
-  invariant(!hasFunction(shared, name), `Evaluation advanced-settings function ${name} must not remain in shared core.`);
-  invariant(hasFunction(evaluation, name), `Evaluation chunk must own advanced-settings function ${name}.`);
+const startupAndDependencyClosedFunctions = [
+  "evaluationDiscountRateValue",
+  "formatEvaluationRate",
+  "formatEvaluationMflPerUsd",
+  "clampEvaluationRewardRate",
+  "normalizeEvaluationRewardRateDraft",
+  "formatEvaluationRewardRate",
+  "clearEvaluationSearch",
+  "handleEvaluationSearchInput",
+  "queueEvaluationSettingsSave",
+  "renderEvaluationMflPerUsdControl",
+  "commitEvaluationMflPerUsd",
+  "resetEvaluationMflPerUsd",
+  "adjustEvaluationMflPerUsdDraft",
+];
+
+for (const name of [...advancedFunctions, ...startupAndDependencyClosedFunctions]) {
+  invariant(!hasFunction(shared, name), `Evaluation route-owned function ${name} must not remain in shared core.`);
+  invariant(hasFunction(evaluation, name), `Evaluation chunk must own route function ${name}.`);
+}
+
+for (const name of ["loadEvaluationMflPerUsd", "loadEvaluationLateSeasonRewardRates", "currentEvaluationSettingsPayload", "applyEvaluationSettingsPayload", "saveEvaluationSettingsLocally", "clearEvaluationSearchFocus"]) {
+  invariant(hasFunction(shared, name), `Cross-route Evaluation function ${name} must remain shared for startup, persistence, or Player ownership.`);
 }
 
 const evaluationBindings = [
@@ -53,6 +73,14 @@ const evaluationBindings = [
   'resetAdvancedSettingsButton.addEventListener("click", resetAdvancedSettingsDraft);',
   'discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);',
   'applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);',
+  'evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);',
+  'evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);',
+  'evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);',
+  'ignoreDiscountRateInput.addEventListener("change", () => {',
+  'ignoreFirstSeasonInput.addEventListener("change", () => {',
+  'evaluationMflUsdEditButton.addEventListener("click", () => {',
+  'evaluationMflUsdResetButton.addEventListener("click", resetEvaluationMflPerUsd);',
+  'evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);',
   "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);",
 ];
 
@@ -61,6 +89,18 @@ for (const binding of evaluationBindings) {
   invariant(evaluation.includes(binding), `Evaluation chunk must own binding: ${binding}`);
 }
 
+invariant(
+  shared.includes("  loadEvaluationMflPerUsd();\n  loadEvaluationLateSeasonRewardRates();\n  updateMenuVisibility();"),
+  "Startup must hydrate Evaluation persistence state without eagerly rendering Evaluation-only UI.",
+);
+invariant(
+  evaluation.includes("renderEvaluationMflPerUsdControl(false);\nevaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());"),
+  "Evaluation route loading must initialize its MFL-per-USD control and discount-rate text.",
+);
+invariant(
+  shared.includes('state.currentPage === "evaluation" && typeof renderEvaluationMflPerUsdControl === "function"'),
+  "Wallet preference hydration must refresh Evaluation UI only when its route owner is already loaded.",
+);
 invariant(
   shared.includes('window.addEventListener("storage", syncRecentSearchStateFromStorage);'),
   "Cross-route recent-search storage synchronization must remain shared.",
@@ -89,4 +129,4 @@ invariant(
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation advanced-settings functions and DOM bindings are lazy route-owned with shared global dispatch preserved.");
+console.log("Evaluation startup UI, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while shared persistence and Player focus ownership remain eager.");
