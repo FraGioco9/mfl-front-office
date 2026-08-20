@@ -349,13 +349,8 @@ export function splitTableApplicationCoreRuntime(artifacts) {
   if (!normalizedAddress) return "";
   try {
     const names = JSON.parse(localStorage.getItem(AGENT_DISPLAY_NAMES_STORAGE_KEY) || "{}");
-    const cachedName = normalizedAgentName(names?.[normalizedAddress]);
-    if (cachedName && cachedName.toLowerCase() !== normalizedAddress) return cachedName;
-    const linked = JSON.parse(localStorage.getItem(LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY) || "null");
-    const linkedName = normalizeWalletAddress(linked?.address).toLowerCase() === normalizedAddress
-      ? normalizedAgentName(linked?.name)
-      : "";
-    return linkedName && linkedName.toLowerCase() !== normalizedAddress ? linkedName : "";
+    const name = normalizedAgentName(names?.[normalizedAddress]);
+    return name && name.toLowerCase() !== normalizedAddress ? name : "";
   } catch {
     return "";
   }
