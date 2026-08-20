@@ -13,16 +13,7 @@
     { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/release.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/releases.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
-    {
-      "source": "/(.*\\.js)",
-      "missing": [{ "type": "query", "key": "mfl_core" }],
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
-    },
-    {
-      "source": "/modules/app-core-runtime.js",
-      "has": [{ "type": "query", "key": "mfl_core" }],
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-    },
+    { "source": "/(.*\\.js)", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
     { "source": "/(.*\\.css)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
   ],
   "redirects": [
