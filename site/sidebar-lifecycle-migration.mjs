@@ -152,7 +152,7 @@ async function applyMigration() {
   console.log("Canonical pinned-sidebar source migration applied.");
 }
 
-function reportValidatedMigration() {
+async function reportValidatedMigration() {
   if (!inMigrationCi) {
     console.log("Sidebar migration report skipped outside the dedicated GitHub Actions PR run.");
     return;
@@ -164,12 +164,23 @@ function reportValidatedMigration() {
     throw new Error("Validated sidebar migration patch is incomplete.");
   }
   console.log("Validated canonical sidebar migration patch:\n" + patch);
+
+  const { DefaultArtifactClient } = await import("@actions/artifact");
+  const artifact = new DefaultArtifactClient();
+  const sourcePath = resolve(siteRoot, "modules/app-core.js");
+  await artifact.uploadArtifact(
+    "canonical-sidebar-app-core",
+    [sourcePath],
+    siteRoot,
+    { retentionDays: 1 },
+  );
+  console.log("Validated transformed app-core uploaded as a short-lived workflow artifact.");
 }
 
 if (mode === "apply") {
   await applyMigration();
 } else if (mode === "publish") {
-  reportValidatedMigration();
+  await reportValidatedMigration();
 } else {
   throw new Error(`Unknown sidebar migration mode: ${mode || "<empty>"}`);
 }
