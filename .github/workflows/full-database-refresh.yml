@@ -181,7 +181,7 @@ jobs:
           ref: ${{ steps.production_site.outputs.sha }}
           path: production-site
 
-      - name: Install fresh database runtime in published site source
+      - name: Install fresh database in published site source
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
@@ -192,20 +192,63 @@ jobs:
             echo "Publish a SQLite-capable site version once before using database-only production refreshes." >&2
             exit 1
           fi
-          if [ ! -f builder/site/api/_database.js ]; then
-            echo "The current database runtime adapter is missing." >&2
-            exit 1
-          fi
+
+          PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
 
           rm -rf production-site/site/api/data-files
           mkdir -p production-site/site/api/data-files
           cp builder/mfl_database.db production-site/site/api/data-files/mfl_database.db
-          cp builder/site/api/_database.js production-site/site/api/_database.js
           test -s production-site/site/api/data-files/mfl_database.db
+
+          CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"
+          if [ "$CURRENT_ADAPTER_BLOB" != "$PUBLISHED_ADAPTER_BLOB" ]; then
+            echo "Database-only refresh changed the published SQLite adapter; refusing to deploy mixed site versions." >&2
+            exit 1
+          fi
+
           if find production-site/site/api/data-files -maxdepth 1 -type f -name '*.json' | grep -q .; then
             echo "Generated JSON data files are not allowed." >&2
             exit 1
           fi
+
+      - name: Build published application core
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node production-site/site/build-app-core.mjs
+          test -s production-site/site/modules/app-core-runtime.js
+
+      - name: Validate database with published site adapter
+        if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const path = require("node:path");
+
+          const publishedDatabase = require(path.resolve("production-site/site/api/_database.js"));
+          const database = publishedDatabase.getDatabase();
+          const playerCount = Number(database.prepare("SELECT count(*) AS count FROM players").get()?.count ?? -1);
+          const walletCount = Number(database.prepare("SELECT count(*) AS count FROM wallets").get()?.count ?? -1);
+          const generatedAt = String(
+            database.prepare("SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1").get()?.value || "",
+          ).trim();
+
+          if (!Number.isFinite(playerCount) || playerCount <= 0) {
+            throw new Error(`Published adapter could not read a valid player count: ${playerCount}`);
+          }
+          if (!Number.isFinite(walletCount) || walletCount <= 0) {
+            throw new Error(`Published adapter could not read a valid wallet count: ${walletCount}`);
+          }
+          if (!generatedAt || Number.isNaN(Date.parse(generatedAt))) {
+            throw new Error(`Published adapter could not read a valid generated_at value: ${generatedAt}`);
+          }
+
+          console.log(
+            `Published site adapter accepted fresh database: ${playerCount} players, ${walletCount} wallets, generatedAt ${generatedAt}.`,
+          );
+          NODE
 
       - name: Record expected database summary
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
@@ -244,7 +287,7 @@ jobs:
           )
           PY
 
-      - name: Verify published frontend source is unchanged
+      - name: Verify published site version is unchanged
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         shell: bash
         run: |
@@ -252,6 +295,23 @@ jobs:
           ACTUAL_SHA="$(git -C production-site rev-parse HEAD)"
           EXPECTED_SHA="${{ steps.production_site.outputs.sha }}"
           test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+
+          PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:site/api/_database.js)"
+          CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object site/api/_database.js)"
+          test "$CURRENT_ADAPTER_BLOB" = "$PUBLISHED_ADAPTER_BLOB"
+
+          UNEXPECTED_TRACKED_CHANGES="$(
+            git -C production-site diff --name-only -- . \
+              ':(exclude)site/api/data-files/**' \
+              ':(exclude)site/modules/app-core-runtime.js' \
+              ':(exclude)site/modules/app-core-*-runtime.js'
+          )"
+          if [ -n "$UNEXPECTED_TRACKED_CHANGES" ]; then
+            echo "Database-only refresh changed published site source files:" >&2
+            printf '%s\n' "$UNEXPECTED_TRACKED_CHANGES" >&2
+            exit 1
+          fi
+
           python - <<'PY'
           import json
           import re
@@ -277,13 +337,13 @@ jobs:
 
           if version:
               print(
-                  f"Deploying fresh SQLite data/runtime adapter with the unchanged "
-                  f"published MFL Front Office v{version} frontend."
+                  f"Deploying fresh SQLite data with the exact published MFL Front Office "
+                  f"v{version} site runtime."
               )
           else:
               print(
-                  "Deploying fresh SQLite data/runtime adapter with the exact unchanged "
-                  "frontend from the last successful Vercel site update."
+                  "Deploying fresh SQLite data with the exact site runtime from the last "
+                  "successful Vercel site update."
               )
           PY
 
@@ -303,12 +363,12 @@ jobs:
           mkdir -p .vercel
           printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
-      - name: Deploy database with unchanged published frontend
+      - name: Deploy database with unchanged published site
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
         working-directory: production-site
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel deploy --prod --yes --force --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
+        run: vercel deploy --prod --yes --force --local-config site/vercel.production.json --build-env ALLOW_VERCEL_ACTION_DEPLOY=1 --token "$VERCEL_TOKEN"
 
       - name: Verify live production database
         if: github.event_name != 'schedule' || steps.schedule_gate.outputs.should_run == 'true'
