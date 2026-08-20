@@ -1,0 +1,51 @@
+name: Evaluation startup ownership profile
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/evaluation-startup-profile.yml'
+      - 'site/modules/**'
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Profile Evaluation startup ownership
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { normalizeBuiltApplicationCoreArtifacts } from './modules/app-core-build-normalizer.js';
+          const source = await readFile('./modules/app-core.js', 'utf8');
+          const names = [
+            'evaluationDiscountRateValue', 'formatEvaluationRate', 'parseEvaluationMflPerUsd',
+            'formatEvaluationMflPerUsd', 'saveEvaluationMflPerUsd', 'loadEvaluationMflPerUsd',
+            'parseEvaluationRewardRate', 'normalizeEvaluationLateSeasonRewardRates',
+            'saveEvaluationLateSeasonRewardRates', 'loadEvaluationLateSeasonRewardRates',
+            'evaluationLateSeasonRewardRatesFromPayload', 'currentEvaluationSettingsPayload',
+            'applyEvaluationSettingsPayload', 'saveEvaluationSettingsLocally',
+            'queueEvaluationSettingsSave', 'renderEvaluationMflPerUsdControl'
+          ];
+          const lines = source.split('\n');
+          for (const name of names) {
+            const hits = [];
+            lines.forEach((line, index) => {
+              if (line.includes(name)) hits.push(`${index + 1}:${line.trim()}`);
+            });
+            console.log(`\n## ${name} (${hits.length})`);
+            hits.forEach((hit) => console.log(hit));
+          }
+          const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
+          console.log(`\nSHARED_BYTES ${Buffer.byteLength(String(artifacts.core || ''))}`);
+          console.log(`EVALUATION_BYTES ${Buffer.byteLength(String(artifacts.routeChunks?.evaluation || ''))}`);
+          NODE
