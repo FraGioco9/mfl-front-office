@@ -1,4 +1,4 @@
-/* Canonical loading-state presentation for MFL Front Office. */
+/* Canonical loading and first-paint state presentation for MFL Front Office. */
 
 html.mflInteractionBusy,
 html.mflInteractionBusy body {
@@ -9,6 +9,14 @@ html.mflInteractionBusy body *,
 html.mflInteractionBusy body *::before,
 html.mflInteractionBusy body *::after {
   pointer-events: none;
+  transition: none;
+  animation: none;
+}
+
+html.mflInitialChromePreparing body:has(> #appShell),
+html.mflInitialChromePreparing body:has(> #appShell) *,
+html.mflInitialChromePreparing body:has(> #appShell) *::before,
+html.mflInitialChromePreparing body:has(> #appShell) *::after {
   transition: none;
   animation: none;
 }

@@ -50,14 +50,14 @@
           const buttonSelector = (viewName) => `${routeSelector} #progressionPage .views > .viewButton[data-view="${viewName}"]`;
           const firstPaintStyle = document.createElement("style");
           const rules = [
-            `${routeSelector} #progressionPage .views > .viewButton { display: none !important; border-color: var(--border-strong) !important; background: var(--surface) !important; color: var(--text) !important; }`,
-            `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex !important; }`,
+            `${routeSelector} #progressionPage .views > .viewButton { display: none; border-color: var(--border-strong); background: var(--surface); color: var(--text); }`,
+            `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex; }`,
             ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
-            `${buttonSelector(activeView)} { border-color: var(--primary) !important; background: var(--primary) !important; color: #ffffff !important; }`,
+            `${buttonSelector(activeView)} { border-color: var(--primary); background: var(--primary); color: #ffffff; }`,
           ];
           if (tablePage === "club") {
             rules.push(
-              `${buttonSelector("attributes")} { font-size: 0 !important; }`,
+              `${buttonSelector("attributes")} { font-size: 0; }`,
               `${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`,
             );
           }
@@ -110,7 +110,7 @@
         display: inline;
       }
       html[data-stored-progression-access="false"] #sidebar .navButton[data-page="progression"] {
-        display: none !important;
+        display: none;
       }
       html:not(.mflInitialRouteResolved):is(
         [data-initial-table-page="database"],
@@ -135,7 +135,7 @@
         color: #ffffff;
       }
       html[data-stored-wallet-opt-in="true"] :is(#homeOptInButton, #myPlayersOptInButton) {
-        display: none !important;
+        display: none;
       }
       html[data-stored-wallet-opt-in="false"] :is(#homeOptInButton, #myPlayersOptInButton) {
         display: inline-flex;
@@ -145,51 +145,51 @@
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
       ) #homePage {
-        display: none !important;
+        display: none;
       }
       html[data-stored-wallet-opt-in="false"]:not(.mflInitialRouteResolved):is(
         [data-initial-page^="my-players"],
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
       ) #myPlayersLockedPage {
-        display: block !important;
+        display: block;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #homePage {
-        display: none !important;
+        display: none;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #evaluationPage {
-        display: block !important;
+        display: block;
       }
       html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow {
-        align-items: flex-start !important;
+        align-items: flex-start;
       }
       html[data-initial-page="evaluation"] #evaluationPage .evaluationTitleRow > .tablePageTitle {
-        margin-top: 0 !important;
-        line-height: 1.2 !important;
+        margin-top: 0;
+        line-height: 1.2;
       }
       html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationButtons {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        display: flex;
+        visibility: visible;
+        opacity: 1;
       }
       html[data-initial-page="evaluation"][data-stored-wallet-opt-in="true"][data-initial-evaluation-selection="false"]:not(.mflInitialRouteResolved) #evaluationLoadButton {
-        display: inline-flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        display: inline-flex;
+        visibility: visible;
+        opacity: 1;
       }
       html:not([data-mfl-ready="true"]) #progressionPage nav.pager,
       html.mflDataLoading #progressionPage nav.pager {
-        display: none !important;
+        display: none;
       }
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #homePage,
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #progressionPage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #homePage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #progressionPage {
-        display: none !important;
+        display: none;
       }
       html[data-initial-page="database/stats"]:not(.mflInitialRouteResolved) #databaseStatsPage,
       html[data-initial-page="mfl/stats"]:not(.mflInitialRouteResolved) #mflStatsPage {
-        display: block !important;
+        display: block;
       }
       #homePage .homeStats span {
         line-height: 44px;
@@ -203,9 +203,9 @@
         grid-template-columns: repeat(5, minmax(0, 1fr));
       }
       #mflStatsPage .mflStatsHistogram {
-        animation: none !important;
-        opacity: 1 !important;
-        transform: none !important;
+        animation: none;
+        opacity: 1;
+        transform: none;
       }
     </style>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -516,7 +516,7 @@
                   </section>
                   <section class="evaluationMetric evaluationDiscountRate" aria-label="Discount rate" tabindex="0" data-tooltip="Discount Rate is the geometric mean of the last five completed seasons of MFL/USD conversion growth. Current season is 15, so it uses seasons 10-14.">
                     <span>Discount Rate</span>
-                    <strong id="evaluationDiscountRate" style="visibility: visible !important;">-</strong>
+                    <strong id="evaluationDiscountRate">-</strong>
                   </section>
                 </section>
               </section>

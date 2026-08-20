@@ -19,15 +19,16 @@
   --mfl-scrollbar-arrow-hover: transparent;
 }
 
-/* Only create scrollbar controls when there is real overflow. */
+/* Keep document scrolling contained inside the application content region. */
 html:root {
-  overflow-y: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
 }
 
-/* Keep the vertical scrollbar space stable even on short pages. */
+/* The main content is the canonical vertical page-scrolling surface. */
 html body > #appShell > main {
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  scrollbar-gutter: auto;
 }
 
 * {
