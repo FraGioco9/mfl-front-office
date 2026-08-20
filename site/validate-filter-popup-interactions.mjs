@@ -33,6 +33,21 @@ for (const required of [
   invariant(dropdownRuntime.includes(required), `Filter dropdowns are missing close-state blur ownership through ${required}`);
 }
 
+for (const required of [
+  "let suppressFiltersButtonFocusAfterEscape = false;",
+  "function armFiltersEscapeFocusSuppression(target) {",
+  "if (select instanceof HTMLSelectElement && isSelectOpen(select)) return;",
+  "suppressFiltersButtonFocusAfterEscape = true;",
+  "function suppressFiltersButtonFocus(event) {",
+  'const openFiltersButton = document.getElementById("openFiltersButton");',
+  "event.target !== openFiltersButton",
+  "openFiltersButton.blur();",
+  'if (event.key === "Escape") {\n      armFiltersEscapeFocusSuppression(event.target);\n    }',
+  'document.addEventListener("focus", suppressFiltersButtonFocus, true);',
+]) {
+  invariant(dropdownRuntime.includes(required), `Filters ESC close must keep the trigger visually neutral through ${required}`);
+}
+
 invariant(
   !dropdownRuntime.includes("function blurFilterSelectAfterCommit(target)"),
   "Filter dropdown focus clearing must not depend only on value-change commits.",
@@ -44,4 +59,4 @@ invariant(
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Filter popup hover and close-state blur validation passed.");
+console.log("Filter popup hover, close-state blur, and neutral ESC return-focus validation passed.");
