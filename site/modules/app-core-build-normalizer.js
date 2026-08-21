@@ -15,13 +15,13 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
   const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
-  const clubStartupArtifacts = normalizeClubStartupLifecycle(routeArtifacts);
-  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(clubStartupArtifacts);
+  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
-  return splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
+  const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
+  return normalizeClubStartupLifecycle(watchlistArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
