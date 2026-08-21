@@ -34,6 +34,8 @@ async function openSavedEvaluationsModal() {
 /**
  * Enter the shared Uniform Loading workflow synchronously at the Load click,
  * before the lazy Evaluation route core or saved-evaluation request can begin.
+ * The evaluation-load reason intentionally remains toast-visible so the global
+ * Loading... toast appears for the whole Load operation.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeEvaluationLoadLifecycle(artifacts) {
