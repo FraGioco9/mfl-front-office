@@ -110,11 +110,16 @@
   position: relative;
 }
 
+#progressionPage > .views {
+  anchor-name: --mfl-table-views;
+}
+
 #progressionPage:has(#openFiltersButton:not(.filtersViewButton)) > .views::before {
   content: "";
-  flex: 0 0 149px;
+  flex: 0 0 153px;
   align-self: center;
   height: 24px;
+  margin-right: 4px;
   border-right: 1px solid var(--border-strong);
   pointer-events: none;
 }
@@ -123,6 +128,9 @@
   position: absolute;
   top: 50px;
   left: 0;
+  position-anchor: --mfl-table-views;
+  top: anchor(top);
+  left: anchor(left);
   z-index: 2;
   display: inline-flex;
   align-items: center;
@@ -164,16 +172,20 @@
 
 #filterSummary:not(.filtersViewCount) {
   position: absolute;
-  top: 60px;
+  top: 50px;
   left: 84px;
+  position-anchor: --mfl-table-views;
+  top: anchor(top);
+  left: calc(anchor(left) + 84px);
   z-index: 3;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 46px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--header-bg);
+  height: 40px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-soft);
   font-size: 10px;
   line-height: 1;
@@ -209,15 +221,16 @@
 }
 
 #filterSummary.filtersViewCount {
-  display: grid;
-  place-items: center;
-  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
   min-width: 46px;
-  height: 20px;
+  height: auto;
   margin-left: auto;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--header-bg);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-soft);
   font-size: 10px;
   line-height: 1;
@@ -227,11 +240,6 @@ body.filtersOpen .filtersViewButton {
   border-color: var(--primary-hover);
   background: var(--row-hover);
   color: var(--text);
-}
-
-body.filtersOpen #filterSummary.filtersViewCount {
-  background: var(--surface-muted);
-  color: var(--primary);
 }
 
 .viewControlsSeparator {
