@@ -22,6 +22,20 @@
     });
   }
 
+  function normalizeTableControlStructure() {
+    const views = document.querySelector("#progressionPage > .views");
+    if (!(views instanceof HTMLElement)) return;
+
+    const controlsBar = document.querySelector("#progressionPage > .controlsBar");
+    if (!(controlsBar instanceof HTMLElement)) return;
+
+    const rowsField = controlsBar.querySelector(".rowsField");
+    const quickClear = controlsBar.querySelector("#quickClearFiltersButton");
+    if (rowsField instanceof HTMLElement) views.append(rowsField);
+    if (quickClear instanceof HTMLElement) views.append(quickClear);
+    controlsBar.remove();
+  }
+
   function filterRuleIsActive(rule) {
     if (!(rule instanceof HTMLElement)) return false;
     const operator = String(rule.querySelector("[data-filter-operator]")?.value || "");
@@ -95,6 +109,7 @@
   }
 
   function sync() {
+    normalizeTableControlStructure();
     markInitialTableFiltersForReset();
     syncFilterSummaryNow();
   }
