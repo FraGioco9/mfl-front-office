@@ -47,12 +47,14 @@ const ROSTER_OWNED_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
       state.currentPage = CLUB_PAGE;`;
 
 const GENERIC_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
-      globalThis.syncQuickFilterLabels?.();
-      if (route.scope === "club") {`;
+      globalThis.syncQuickFilterLabels?.();`;
 
 const CLUB_FREE_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
-      if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();
-      if (route.scope === "club") {`;
+      if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();`;
+
+const GENERIC_PUBLIC_TABLE_PAGES = `  const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);`;
+const FILTERABLE_PUBLIC_TABLE_PAGES = `  const PUBLIC_TABLE_PAGES = new Set(["watchlist"]);`;
+const CLUB_GENERIC_TABLE_MEMBERSHIP = `  tablePages.add("club");\n`;
 
 const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
@@ -178,6 +180,18 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
 
   let normalizedCore = replaceRequired(
     core,
+    GENERIC_PUBLIC_TABLE_PAGES,
+    FILTERABLE_PUBLIC_TABLE_PAGES,
+    "Club excluded from generic filterable public table pages",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    CLUB_GENERIC_TABLE_MEMBERSHIP,
+    "",
+    "Club excluded from generic table page state and filters",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
     GENERIC_INCREMENTAL_LOADING_FILTERS,
     CLUB_FREE_INCREMENTAL_LOADING_FILTERS,
     "Club loading skips generic quick-filter initialization",
