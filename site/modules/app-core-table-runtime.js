@@ -577,12 +577,20 @@ function tableBuildHeaderOwner() {
     if (columnClass) {
       cell.classList.add(...columnClass.split(" "));
     }
-    const isSorted = state.sortKey === column;
+    const clubPositionSort = state.currentPage === "club" && column === "positions";
+    const isSorted = state.currentPage !== "club" && state.sortKey === column;
     const label = document.createElement("span");
     label.textContent = column === agentColumn && state.currentPage === "mfl" ? "" : columnLabels[column];
     cell.appendChild(label);
 
-    if (sortableColumns.has(column)) {
+    if (clubPositionSort) {
+      const arrow = document.createElement("span");
+      arrow.className = "sortArrow asc";
+      arrow.setAttribute("aria-hidden", "true");
+      cell.appendChild(arrow);
+    }
+
+    if (state.currentPage !== "club" && sortableColumns.has(column)) {
       cell.classList.add("sortable");
 
       if (isSorted) {
@@ -1031,8 +1039,6 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
   if (pageName === "club") {
     state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
     state.page = 1;
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
     state.selectedPlayerIds = new Set();
     state.pendingTableControlRestore = null;
     return;

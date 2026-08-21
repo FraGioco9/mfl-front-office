@@ -7579,8 +7579,6 @@ async function startApp() {
     } else if (clubTarget) {
       state.view = clubTarget.view;
       state.page = 1;
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
     }
 
     if (pageName === "agents") {
