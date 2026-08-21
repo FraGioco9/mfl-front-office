@@ -60,12 +60,8 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     "Evaluation page path keeps explicit saved and shared URLs",
   );
 
-  const routeChunks = { ...(artifacts?.routeChunks || {}) };
-  const evaluationSource = String(routeChunks.evaluation || "");
-  if (!evaluationSource) throw new Error("Cannot normalize Evaluation player hydration without Evaluation route core.");
-
-  let evaluation = replaceRequired(
-    evaluationSource,
+  normalizedCore = replaceRequired(
+    normalizedCore,
     `  const row = rowByPlayerId(state.evaluationPlayerId);
 
   if (row) {
@@ -119,8 +115,12 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     "Evaluation refresh hydrates its route player before deciding the selection is invalid",
   );
 
-  evaluation = replaceRequired(
-    evaluation,
+  const routeChunks = { ...(artifacts?.routeChunks || {}) };
+  const evaluationSource = String(routeChunks.evaluation || "");
+  if (!evaluationSource) throw new Error("Cannot normalize shared Evaluation hydration without Evaluation route core.");
+
+  routeChunks.evaluation = replaceRequired(
+    evaluationSource,
     `    const data = await response.json();
     state.evaluationShareId = id;
     applySharedEvaluationPayload(data.payload);`,
@@ -140,8 +140,6 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     applySharedEvaluationPayload(data.payload);`,
     "Shared Evaluation hydrates the same player row before using the standard table renderer",
   );
-
-  routeChunks.evaluation = evaluation;
 
   return Object.freeze({
     ...artifacts,
