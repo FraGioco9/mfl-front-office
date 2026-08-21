@@ -177,7 +177,6 @@ function applySharedEvaluationPayload(payload) {
     state.evaluationSummaryPositions[data.playerId] = data.summaryPosition;
   }
 
-  evaluationSearchInput.value = "";
   renderEvaluationMflPerUsdControl(false);
   renderEvaluationPage();
 }
@@ -763,8 +762,14 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-  evaluationSearchInput.focus({ preventScroll: true });
-  evaluationSearchInput.select();
+
+  const activateEvaluationSearch = () => {
+    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
+    evaluationSearchInput.focus({ preventScroll: true });
+    evaluationSearchInput.select();
+  };
+  activateEvaluationSearch();
+  window.requestAnimationFrame(activateEvaluationSearch);
 }
 
 function handleEvaluationSearchInput() {

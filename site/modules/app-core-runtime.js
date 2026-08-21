@@ -4865,6 +4865,36 @@ function rememberEvaluationResult(playerId) {
 }
 
 function renderEmptyEvaluationSelection(showRecentResults = true) {
+  const evaluationRouteParams = new URLSearchParams(window.location.search);
+  const pendingEvaluationRoute = window.location.pathname === "/evaluation" && Boolean(
+    evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")
+  );
+
+  if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+    return;
+  }
+
+  evaluationSearchInput.placeholder = "Search ID or player name";
+  if (!String(evaluationSearchInput.value || "").trim()) {
+    window.requestAnimationFrame(() => {
+      const routeParams = new URLSearchParams(window.location.search);
+      const plainEvaluationRoute = window.location.pathname === "/evaluation"
+        && !routeParams.get("player")
+        && !routeParams.get("saved")
+        && !routeParams.get("share");
+      if (!plainEvaluationRoute || String(evaluationSearchInput.value || "").trim()) return;
+      evaluationSearchInput.focus({ preventScroll: true });
+      evaluationSearchInput.select();
+    });
+  }
+
   evaluationPanel.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
@@ -4931,6 +4961,11 @@ function renderEvaluationSearchResults() {
       state.evaluationPlayerId = playerId;
       rememberEvaluationResult(playerId);
       evaluationSearchInput.value = entry.nameDisplay;
+      try {
+        sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);
+      } catch {
+        // Session storage is an optional first-paint cache only.
+      }
       evaluationSearchResults.hidden = true;
       syncEvaluationPlayerUrl(playerId);
       try {
@@ -5300,6 +5335,7 @@ async function renderEvaluationPage() {
   const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || "").trim();
 
   if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
     evaluationButtons.hidden = false;
     evaluationResetButton.hidden = false;
     if (evaluationLoadButton) {
