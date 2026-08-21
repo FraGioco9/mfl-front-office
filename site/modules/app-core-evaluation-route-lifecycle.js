@@ -98,10 +98,15 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     const evaluationPlayerName = formatCellValue(row, "name");
     evaluationSearchInput.value = evaluationPlayerName;
     try {
-      const evaluationRouteKey = \`\${window.location.pathname}\${window.location.search}\`;
-      if (evaluationRouteKey.startsWith("/evaluation?")) {
-        sessionStorage.setItem(\`mfl-evaluation-first-paint-name-v1:\${evaluationRouteKey}\`, evaluationPlayerName);
-      }
+      const evaluationRoute = new URL(window.location.href);
+      const evaluationIdentities = [
+        ["player", String(evaluationRoute.searchParams.get("player") || state.evaluationPlayerId || "").trim()],
+        ["saved", String(evaluationRoute.searchParams.get("saved") || state.evaluationSavedId || "").trim()],
+        ["share", String(evaluationRoute.searchParams.get("share") || state.evaluationShareId || "").trim()],
+      ];
+      evaluationIdentities.forEach(([kind, id]) => {
+        if (id) sessionStorage.setItem(\`mfl-evaluation-first-paint-name-v2:\${kind}:\${id}\`, evaluationPlayerName);
+      });
     } catch {
       // Session storage is an optional first-paint cache only.
     }
