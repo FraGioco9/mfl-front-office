@@ -89,21 +89,39 @@
 }
 
 .searchButton .searchEmoji {
+  position: relative;
   display: inline-block;
   flex: 0 0 17px;
   width: 17px;
   height: 17px;
-  background: currentColor;
+  background: transparent;
   font-size: 0;
   line-height: 0;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6' fill='none' stroke='black' stroke-width='2'/%3E%3Cpath d='M15.5 15.5L20 20' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 100% 100%;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6' fill='none' stroke='black' stroke-width='2'/%3E%3Cpath d='M15.5 15.5L20 20' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 100% 100%;
+}
+
+.searchButton .searchEmoji::before {
+  content: "";
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  border: 1.8px solid currentColor;
+  border-radius: 50%;
+}
+
+.searchButton .searchEmoji::after {
+  content: "";
+  position: absolute;
+  top: 10.75px;
+  left: 10.75px;
+  width: 6px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: left center;
 }
 
 .filtersViewButton {
