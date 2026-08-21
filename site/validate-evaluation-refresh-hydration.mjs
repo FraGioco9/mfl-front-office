@@ -33,14 +33,19 @@ invariant(
   "A refreshed player/saved/shared Evaluation must hydrate without clearing its first-paint name or Reset/Player Page chrome.",
 );
 
+const emptySelectionStart = shared.indexOf("function renderEmptyEvaluationSelection(showRecentResults = true)");
+const emptySelectionEnd = shared.indexOf("function renderEvaluationSearchResults", emptySelectionStart);
+const emptySelectionSource = emptySelectionStart >= 0 && emptySelectionEnd > emptySelectionStart
+  ? shared.slice(emptySelectionStart, emptySelectionEnd)
+  : "";
 invariant(
-  shared.includes('const evaluationRouteParams = new URLSearchParams(window.location.search);')
-    && shared.includes('evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")')
-    && shared.includes('evaluationSearchInput.placeholder = "Search ID or player name";')
-    && shared.includes('const plainEvaluationRoute = window.location.pathname === "/evaluation"')
-    && shared.includes('evaluationSearchInput.focus({ preventScroll: true });')
-    && shared.includes("evaluationSearchInput.select();"),
-  "The empty-Evaluation renderer must preserve selected routes and focus an empty search when plain Evaluation is entered from any page.",
+  emptySelectionSource.includes('const evaluationRouteParams = new URLSearchParams(window.location.search);')
+    && emptySelectionSource.includes('evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")')
+    && emptySelectionSource.includes('evaluationSearchInput.placeholder = "Search ID or player name";')
+    && !emptySelectionSource.includes("requestAnimationFrame")
+    && !emptySelectionSource.includes("evaluationSearchInput.focus(")
+    && !emptySelectionSource.includes("evaluationSearchInput.select()"),
+  "The empty-Evaluation renderer must preserve selected routes without focusing the empty search before Uniform Loading finishes.",
 );
 
 invariant(
@@ -75,31 +80,33 @@ invariant(
     && bootstrap.includes("function firstPaintEvaluationPlayerName(")
     && bootstrap.includes('const cachedName = String(sessionStorage.getItem(`${EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX}${kind}:${id}`) || "").trim();')
     && bootstrap.includes("const evaluationRouteState = firstPaintEvaluationRouteState();")
-    && bootstrap.includes("if (initialPlayerName) searchInput.value = initialPlayerName;")
+    && bootstrap.includes("if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;")
     && bootstrap.includes("const canLoad = plainEvaluation;"),
   "Evaluation bootstrap must synchronously restore the cached player name by player/saved/share identity and expose Load on plain /evaluation.",
 );
 
 invariant(
-  bootstrap.includes("function requestPlainEvaluationFirstPaintFocus(searchInput)")
-    && bootstrap.includes("window.requestAnimationFrame(() => {")
-    && bootstrap.includes("if (!firstPaintEvaluationRouteState().plain) return;")
-    && bootstrap.includes("searchInput.focus({ preventScroll: true });")
-    && bootstrap.includes("searchInput.select();")
-    && bootstrap.includes("if (evaluationRouteState.plain) requestPlainEvaluationFirstPaintFocus(searchInput);"),
-  "Plain /evaluation must focus and select the Evaluation search input before the first rendered frame on refresh and route entry.",
+  !bootstrap.includes("requestPlainEvaluationFirstPaintFocus")
+    && !bootstrap.includes("searchInput.focus({ preventScroll: true });")
+    && !bootstrap.includes("searchInput.select();"),
+  "Plain /evaluation must remain unselected at first paint; focus is owned only after Uniform Loading finishes.",
 );
 
+const clearStart = evaluationSearchState.indexOf('const clear = event.target.closest("#evaluationSearchClearButton");');
+const clearEnd = evaluationSearchState.indexOf('const result = event.target.closest("#evaluationSearchResults .evaluationSearchResult");', clearStart);
+const clearSource = clearStart >= 0 && clearEnd > clearStart
+  ? evaluationSearchState.slice(clearStart, clearEnd)
+  : "";
 invariant(
   evaluation.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());')
-    && evaluation.includes("const activateEvaluationSearch = () => {")
-    && evaluation.includes("activateEvaluationSearch();")
-    && evaluation.includes("window.requestAnimationFrame(activateEvaluationSearch);")
-    && evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
-    && evaluation.includes("evaluationSearchInput.select();")
-    && evaluationSearchState.includes('const clear = event.target.closest("#evaluationSearchClearButton");')
-    && evaluationSearchState.includes("directPointerFocus = true;\n          field.focus({ preventScroll: true });\n          field.select();\n          clearDirectPointerFocus();"),
-  "Clearing the Evaluation search must prevent the clear control from stealing focus and let the search-state runtime keep the input focused after route reset.",
+    && !evaluation.includes("activateEvaluationSearch")
+    && !evaluation.includes("requestAnimationFrame(activateEvaluationSearch)")
+    && evaluationSearchState.includes("function selectEmptySearch()")
+    && evaluationSearchState.includes('field.focus({ preventScroll: true });')
+    && evaluationSearchState.includes("field.select();")
+    && clearSource.includes("selectEmptySearch();")
+    && clearSource.includes("void restoreEmptyRecentResults(false);"),
+  "Clearing the Evaluation search must prevent the clear control from stealing focus and select the cleared input through the single search-state focus owner.",
 );
 
 invariant(
@@ -116,4 +123,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, complete loading lifecycle, clear-focus ownership, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, first-paint-unselected timing, clear-focus ownership, and table-edge validation passed.");
