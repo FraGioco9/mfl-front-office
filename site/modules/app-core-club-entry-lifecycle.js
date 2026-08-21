@@ -55,6 +55,28 @@ const REMOVED_LATE_CLUB_GATE_MARKER = `  // Legacy validation marker only. Execu
   // const navigateClub = window.mflOpenClubPage;
   // await navigateClub(initialClubRoute.clubId, initialClubRoute.view);`;
 
+const EAGER_GENERATED_COMMENTS = [
+  `    // Inspect only the element that performs the navigation. Do not inspect the
+    // whole composed path, because a page ancestor may contain "MFL Wallet"
+    // even when an unrelated navigation control was clicked.
+`,
+  `    // Search results may use a non-interactive row as their click target.
+`,
+  `    // Always open the MFL Wallet profile on Attributes. This intentionally
+    // ignores the last saved MFL view, which may have been Stats.
+`,
+  `      // A normal mouse click follows pointerup in the same task. The view has
+      // already been committed once, so suppress only the duplicate default
+      // activation; keyboard-generated clicks still use this handler.
+`,
+  `  // Preserve each category so player matches cannot crowd agents out before
+  // the club-search enhancer merges players -> clubs -> agents.
+`,
+  `        // Supabase has been cleared but this browser still has the last usable
+        // copy. Keep it active and write it back to the authoritative column.
+`,
+];
+
 /**
  * Make every Club shell entry use the same public Club navigation gate.
  * The route chunk is preloaded for a direct Club URL, but owning startup there still
@@ -72,12 +94,14 @@ export function normalizeClubEntryLifecycle(routeArtifacts) {
   if (!core) throw new Error("Cannot normalize Club entry without a shared application core.");
   if (!club) throw new Error("Cannot normalize Club entry without a Club route core.");
 
-  const normalizedCore = replaceRequired(
+  let normalizedCore = replaceRequired(
     core,
     GENERIC_HOME_SHELL,
     SHARED_CLUB_HOME_SHELL,
     "shared Club entry through public navigation gate",
   );
+  for (const comment of EAGER_GENERATED_COMMENTS) normalizedCore = normalizedCore.replace(comment, "");
+
   const normalizedClub = replaceRequired(
     club,
     LATE_CLUB_HOME_SHELL_GATE,
