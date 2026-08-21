@@ -71,6 +71,14 @@
     recentLoadingToken = "";
   }
 
+  function waitForSupabaseRecentState() {
+    const pending = window.__mflWalletPreferencesStartupPromise;
+    if (!pending || typeof pending.then !== "function") return Promise.resolve();
+    return Promise.resolve(pending).catch((error) => {
+      console.warn("Could not load Supabase Evaluation recent-search state.", error);
+    });
+  }
+
   function hideTypedBlurredResults(field = input()) {
     if (!(field instanceof HTMLInputElement) || !field.value.trim() || document.activeElement === field) return;
     const container = results();
@@ -267,25 +275,25 @@
 
   function primeRecentSearchData({ force = false } = {}) {
     const field = input();
-    const ids = recentEvaluationPlayerIds();
-    const signature = ids.join(",");
     beginRecentLoadingGate(field);
+    if (recentPrimePromise) return recentPrimePromise;
 
-    if (!force && recentPayload && recentPayloadSignature === signature) {
-      publishRecentPayload(recentPayload);
-      renderEmptySearchFromCore();
-      endRecentLoadingGate();
-      return Promise.resolve(true);
-    }
-    if (recentPrimePromise && recentPayloadSignature === signature) return recentPrimePromise;
+    recentPrimePromise = waitForSupabaseRecentState()
+      .then(() => {
+        const ids = recentEvaluationPlayerIds();
+        const signature = ids.join(",");
+        if (!force && recentPayload && recentPayloadSignature === signature) {
+          publishRecentPayload(recentPayload);
+          return renderEmptySearchFromCore();
+        }
 
-    recentPayloadSignature = signature;
-    recentPrimePromise = fetchRecentEvaluationPayload(ids)
-      .then((payload) => {
-        if (destroyed || recentPayloadSignature !== signature) return false;
-        recentPayload = payload;
-        publishRecentPayload(payload);
-        return renderEmptySearchFromCore();
+        recentPayloadSignature = signature;
+        return fetchRecentEvaluationPayload(ids).then((payload) => {
+          if (destroyed || recentPayloadSignature !== signature) return false;
+          recentPayload = payload;
+          publishRecentPayload(payload);
+          return renderEmptySearchFromCore();
+        });
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
