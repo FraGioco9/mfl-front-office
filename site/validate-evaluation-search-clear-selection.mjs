@@ -55,14 +55,15 @@ invariant(
   clearSource.includes("queueMicrotask(() => {")
     && clearSource.includes("selectEmptySearch();")
     && clearSource.includes("void restoreEmptyRecentResults(false);"),
-  "Clicking the Evaluation clear X must select the cleared input through the canonical selector.",
+  "The Evaluation search-state owner must retain its delegated clear fallback.",
 );
 
 invariant(
   searchLifecycleNormalizer.includes("EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS")
+    && searchLifecycleNormalizer.includes("resetEvaluationSelection();\n  renderEvaluationSearchResults();\n  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();")
     && !searchLifecycleNormalizer.includes("activateEvaluationSearch")
     && !searchLifecycleNormalizer.includes("requestAnimationFrame(activateEvaluationSearch)"),
-  "Generated Evaluation clear logic must not schedule a competing focus after the search-state owner selects the input.",
+  "Clicking the Evaluation clear X must select the empty search directly after the core reset through the canonical search-state owner.",
 );
 
 invariant(
@@ -77,4 +78,4 @@ invariant(
   "Evaluation selection must not add keyboard blocking while loading.",
 );
 
-console.log("Evaluation search selection validation passed: first paint stays unselected, X selects after clear, and an empty search selects only when Uniform Loading becomes idle.");
+console.log("Evaluation search selection validation passed: first paint stays unselected, clear X directly selects after reset, and an empty search selects when Uniform Loading becomes idle.");
