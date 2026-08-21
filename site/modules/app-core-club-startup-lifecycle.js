@@ -67,33 +67,30 @@ const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) 
       }
       return true;`;
 
-const CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
+const CLUB_BYPASS_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
       if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
-      }
-      if (clubPage) {
-        state.currentPage = "club";
-        state.view = route.view || state.view;
-        state.page = 1;
-        state.sortKey = "positions";
-        state.sortDirection = "asc";
-        if (typeof filterRules !== "undefined" && filterRules) filterRules.replaceChildren();
-        if (typeof hideRetiredInput !== "undefined" && hideRetiredInput) hideRetiredInput.checked = false;
-        if (typeof hideRetiringInput !== "undefined" && hideRetiringInput) hideRetiringInput.checked = false;
-        if (typeof hideMflPlayersInput !== "undefined" && hideMflPlayersInput) hideMflPlayersInput.checked = false;
-        if (typeof newMintsInput !== "undefined" && newMintsInput) newMintsInput.checked = false;
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        if (clubPage) applyFilters({ save: false, localOnly: true });
-        else originalApplyFilters.call(this, { save: false });
+        if (!clubPage) originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
       return true;`;
+
+const CLUB_FINAL_RENDER = `      if (typeof updateViewButtons === "function") updateViewButtons();
+      applyClubPresentation();
+      captureClubView(nextView);`;
+
+const CLUB_FINAL_ROSTER_RENDER = `      if (typeof updateViewButtons === "function") updateViewButtons();
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
+      applyClubPresentation();
+      captureClubView(nextView);`;
 
 export function normalizeClubStartupLifecycle(routeArtifacts) {
   const artifacts = routeArtifacts && typeof routeArtifacts === "object" ? routeArtifacts : null;
@@ -117,11 +114,17 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     ROSTER_OWNED_TITLE_SETTLEMENT,
     "Club roster independent of title preflight",
   );
+  normalizedClub = replaceRequired(
+    normalizedClub,
+    CLUB_FINAL_RENDER,
+    CLUB_FINAL_ROSTER_RENDER,
+    "Club-owned final roster render",
+  );
   const normalizedCore = replaceRequired(
     core,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
-    CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
-    "Club-owned incremental roster render",
+    CLUB_BYPASS_INCREMENTAL_PAYLOAD_RENDER,
+    "generic render bypass for Club payloads",
   );
 
   return Object.freeze({
