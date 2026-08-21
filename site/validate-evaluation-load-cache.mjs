@@ -17,9 +17,9 @@ const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
 
 invariant(
   controls.includes("#evaluationSearchInput:hover:not(:disabled),")
-    && !controls.includes("#evaluationSearchInput:focus:not(:disabled)")
+    && controls.includes("#evaluationSearchInput:focus:not(:disabled),")
     && !controls.includes("#evaluationSearchInput:focus-visible:not(:disabled)"),
-  "Evaluation search highlighting must be owned only by hovering the actual evaluationSearchInput, not by label/focus state.",
+  "Evaluation search highlighting must be owned by direct input hover/focus so Player-label hover cannot highlight it and focus keeps the normal highlight without a separate white focus border.",
 );
 
 invariant(
@@ -51,4 +51,4 @@ invariant(
   "The first saved-Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation saved-list cache validation passed: input highlight is hover-only, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
+console.log("Evaluation saved-list cache validation passed: input hover/focus highlight is direct-input owned, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
