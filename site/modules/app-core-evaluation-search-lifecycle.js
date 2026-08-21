@@ -32,12 +32,16 @@ const EVALUATION_CLEAR_SEARCH_WITH_SELECTION = `function clearEvaluationSearch()
   window.requestAnimationFrame(activateEvaluationSearch);
 }`;
 
+const EVALUATION_CLEAR_BINDING = `evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
+const EVALUATION_CLEAR_BINDING_WITH_FOCUS_OWNERSHIP = `evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());
+evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
+
 /**
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
  * discard a valid result list while text is still present. Clearing the search
- * returns focus and selection to the input both immediately and after route sync
- * so the search remains active and typing can resume immediately.
+ * keeps pointer focus on the input and reapplies focus/selection after route sync
+ * so typing can resume immediately.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
@@ -59,6 +63,12 @@ export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
     EVALUATION_CLEAR_SEARCH,
     EVALUATION_CLEAR_SEARCH_WITH_SELECTION,
     "Evaluation clear keeps the search input active after route reset",
+  );
+  normalizedEvaluation = replaceRequired(
+    normalizedEvaluation,
+    EVALUATION_CLEAR_BINDING,
+    EVALUATION_CLEAR_BINDING_WITH_FOCUS_OWNERSHIP,
+    "Evaluation clear control does not steal focus from the search input",
   );
 
   return Object.freeze({
