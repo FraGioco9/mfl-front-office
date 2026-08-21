@@ -46,6 +46,14 @@ const ROSTER_OWNED_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
 
       state.currentPage = CLUB_PAGE;`;
 
+const GENERIC_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
+      globalThis.syncQuickFilterLabels?.();
+      if (route.scope === "club") {`;
+
+const CLUB_FREE_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
+      if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();
+      if (route.scope === "club") {`;
+
 const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
@@ -72,8 +80,7 @@ const CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName =
       try {
         updateViewButtons();
         buildHeader();
-        if (clubPage) applyFilters({ save: false, localOnly: true });
-        else originalApplyFilters.call(this, { save: false });
+        if (!clubPage) originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
@@ -171,9 +178,15 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
 
   let normalizedCore = replaceRequired(
     core,
+    GENERIC_INCREMENTAL_LOADING_FILTERS,
+    CLUB_FREE_INCREMENTAL_LOADING_FILTERS,
+    "Club loading skips generic quick-filter initialization",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
     CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
-    "Club-owned incremental roster render",
+    "Club payload defers rendering until filter-free Club state is ready",
   );
   for (const comment of EAGER_RUNTIME_COMMENTS) normalizedCore = normalizedCore.replace(comment, "");
 
