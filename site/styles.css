@@ -6,7 +6,7 @@
 @import url("/loading.css");
 
 :root {
-  --mfl-pager-block-padding: 8px;
+  --mfl-pager-block-padding: 12px;
   --mfl-page-title-margin-block-start: 6px;
   --mfl-page-title-margin-block-end: 8px;
   --mfl-page-title-line-height: 1.2;
