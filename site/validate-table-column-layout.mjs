@@ -133,7 +133,7 @@ invariant(
 );
 invariant(!styles.includes("--mfl-table-mobile-width"), "Uniform Width must contain percentages only; table pixel width is not part of the contract.");
 invariant(pixelVariable("--mfl-table-header-height") === 38, "Player table headers must use the global 38px height.");
-invariant(pixelVariable("--mfl-table-row-height") === 38, "Player table rows must use the global 38px height.");
+invariant(pixelVariable("--mfl-table-row-height") === 34, "Player table rows must use the compact global 34px height.");
 invariant(
   styles.includes("#progressionPage .playerTableScroller table {") && styles.includes("table-layout: fixed;"),
   "The player scroller must own stable fixed table layout before hydration.",
