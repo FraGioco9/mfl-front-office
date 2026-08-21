@@ -10,6 +10,14 @@
   let coreObserver = null;
   let bridgeInstalled = false;
 
+  function clubRouteActive() {
+    const root = document.documentElement;
+    const bodyPage = String(document.body?.dataset.page || "").toLowerCase();
+    if (bodyPage === "club") return true;
+    return root.dataset.mflReady !== "true"
+      && String(root.dataset.initialTablePage || "").toLowerCase() === "club";
+  }
+
   function nationalityLabel(value) {
     return String(value || "")
       .toLowerCase()
@@ -25,7 +33,7 @@
   }
 
   function installCoreBridge() {
-    if (destroyed || bridgeInstalled) return bridgeInstalled;
+    if (destroyed || bridgeInstalled || clubRouteActive()) return bridgeInstalled;
     try {
       bridgeInstalled = Boolean(window.eval(`(() => {
         if (typeof uniqueNationalityValues !== "function") return false;
@@ -53,7 +61,7 @@
   }
 
   function refreshCanonicalControls() {
-    if (!nationalityOptions.length || !installCoreBridge()) return false;
+    if (clubRouteActive() || !nationalityOptions.length || !installCoreBridge()) return false;
     try {
       return Boolean(window.eval(`(() => {
         if (typeof readFilterDraftRules !== "function" || typeof restoreFilterDraftRules !== "function") return false;
@@ -69,7 +77,7 @@
   }
 
   async function load() {
-    if (destroyed) return [];
+    if (destroyed || clubRouteActive()) return [];
     if (nationalityOptions.length) return nationalityOptions;
     if (loadingPromise) return loadingPromise;
 
@@ -80,7 +88,7 @@
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "Could not load nationality filter options.");
-        if (destroyed) return [];
+        if (destroyed || clubRouteActive()) return [];
         nationalityOptions = Array.from(new Set(
           (Array.isArray(payload.nationalities) ? payload.nationalities : [])
             .map((value) => String(value || "").trim())
@@ -102,8 +110,9 @@
   }
 
   function installCoreBridgeWhenAvailable() {
-    if (installCoreBridge()) return;
+    if (clubRouteActive() || installCoreBridge()) return;
     coreObserver = new MutationObserver((records, observer) => {
+      if (clubRouteActive()) return;
       const coreInserted = records.some((record) => Array.from(record.addedNodes).some((node) => (
         node instanceof HTMLScriptElement && node.dataset.mflRuntime === "/modules/app-core.js"
       )));
@@ -117,20 +126,24 @@
   }
 
   function onClick(event) {
+    if (clubRouteActive()) return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("#openFiltersButton")) return;
     void load().then(() => refreshCanonicalControls());
   }
 
   function onReady() {
+    if (clubRouteActive()) return;
     installCoreBridge();
     refreshCanonicalControls();
   }
 
   document.addEventListener("click", onClick);
   window.addEventListener("mfl:ready", onReady);
-  installCoreBridgeWhenAvailable();
-  void load();
+  if (!clubRouteActive()) {
+    installCoreBridgeWhenAvailable();
+    void load();
+  }
 
   function destroy() {
     destroyed = true;
