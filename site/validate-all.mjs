@@ -37,6 +37,7 @@ const validators = [
   "validate-mfl-stats-data-scope.mjs",
   "validate-generated-view-transition.mjs",
   "validate-page-route-gate-transition.mjs",
+  "validate-club-entry-workflow.mjs",
   "validate-club-route-core.mjs",
   "validate-club-title-loading.mjs",
   "validate-settings-route-core.mjs",
