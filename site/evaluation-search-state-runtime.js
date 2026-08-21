@@ -17,6 +17,7 @@
   let recentLoadingToken = "";
   let directPointerFocus = false;
   let directPointerFocusResetTimer = 0;
+  let unsubscribeLoadingState = null;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -29,6 +30,39 @@
     const contracts = window.__mflCoreContracts;
     return contracts && typeof contracts === "object" ? contracts : null;
   };
+
+  function loadingSnapshot() {
+    return window.__mflInteractionBusy?.snapshot?.() || null;
+  }
+
+  function evaluationSearchLocked(snapshot = loadingSnapshot()) {
+    return active() && Boolean(snapshot?.busy);
+  }
+
+  function syncLoadingLock(snapshot = loadingSnapshot()) {
+    const locked = active() && Boolean(snapshot?.busy);
+    const field = input();
+    if (field instanceof HTMLInputElement) {
+      field.readOnly = locked;
+      if (locked) field.setAttribute("aria-busy", "true");
+      else field.removeAttribute("aria-busy");
+    }
+
+    const clear = clearButton();
+    if (clear instanceof HTMLButtonElement) clear.disabled = locked;
+    document.querySelectorAll("#evaluationSearchResults .evaluationSearchResult").forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = locked;
+    });
+    return locked;
+  }
+
+  function blockSearchInteractionWhileLoading(event) {
+    if (!evaluationSearchLocked()) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.closest(".evaluationSearch")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
 
   function selectedPlayerIdFromUrl() {
     if (!/^\/evaluation\/?$/i.test(location.pathname)) return "";
@@ -231,6 +265,7 @@
       return false;
     }
     syncClearButton(field);
+    syncLoadingLock();
     return true;
   }
 
@@ -319,6 +354,7 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
+    syncLoadingLock();
     if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
@@ -346,6 +382,11 @@
   function onFocus(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    if (syncLoadingLock()) {
+      event.stopImmediatePropagation();
+      field.blur();
+      return;
+    }
     if (!directPointerFocus) {
       event.stopImmediatePropagation();
       field.blur();
@@ -369,13 +410,19 @@
 
   function onKeyUp(event) {
     const field = input();
-    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    if (!(field instanceof HTMLInputElement) || event.target !== field || evaluationSearchLocked()) return;
     syncClearButton(field);
     if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
   function onClick(event) {
     if (!(event.target instanceof Element)) return;
+    if (evaluationSearchLocked() && event.target.closest(".evaluationSearch")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     const title = event.target.closest(".evaluationSearch .field > span");
     if (title instanceof HTMLElement) {
       event.preventDefault();
@@ -404,6 +451,7 @@
 
   function onReady() {
     installCoreBridges();
+    syncLoadingLock();
     void restoreEmptyRecentResults(false);
   }
 
@@ -414,15 +462,22 @@
     if (!(field instanceof HTMLInputElement)) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
+    syncLoadingLock();
     if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
   purgeLegacyLocalRecentState();
   installCoreBridges();
   syncClearButton();
+  unsubscribeLoadingState = window.__mflInteractionBusy?.subscribe?.((snapshot) => {
+    if (!destroyed) syncLoadingLock(snapshot);
+  }, { immediate: true }) || null;
   document.addEventListener("pointerdown", onPointerDown, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
+  document.addEventListener("keydown", blockSearchInteractionWhileLoading, true);
+  document.addEventListener("keyup", blockSearchInteractionWhileLoading, true);
+  document.addEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
   window.addEventListener("storage", onLegacyRecentStorage, true);
@@ -437,6 +492,9 @@
     document.removeEventListener("pointerdown", onPointerDown, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
+    document.removeEventListener("keydown", blockSearchInteractionWhileLoading, true);
+    document.removeEventListener("keyup", blockSearchInteractionWhileLoading, true);
+    document.removeEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("storage", onLegacyRecentStorage, true);
@@ -444,6 +502,18 @@
     window.removeEventListener("mfl:evaluation-route-active", onRouteActive);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
+    unsubscribeLoadingState?.();
+    unsubscribeLoadingState = null;
+    const field = input();
+    if (field instanceof HTMLInputElement) {
+      field.readOnly = false;
+      field.removeAttribute("aria-busy");
+    }
+    const clear = clearButton();
+    if (clear instanceof HTMLButtonElement) clear.disabled = false;
+    document.querySelectorAll("#evaluationSearchResults .evaluationSearchResult").forEach((button) => {
+      if (button instanceof HTMLButtonElement) button.disabled = false;
+    });
     clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
