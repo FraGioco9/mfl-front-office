@@ -32,6 +32,11 @@ includes(
 );
 includes(
   clubCore,
+  "const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);",
+  "Club navigation must reuse identity already present in the loaded source rows before first paint.",
+);
+includes(
+  clubCore,
   'type: "recent",\n          clubIds: normalizedClubId,',
   "Unknown Club titles must use the exact local SQLite search path for only that Club ID.",
 );
@@ -95,24 +100,27 @@ invariant(
 );
 
 const readinessStart = clubCore.indexOf("const clubTitleReady = ensureClubTitleIdentity(activeClubId);");
+const pageTransition = clubCore.indexOf("runPageTransition(CLUB_PAGE", readinessStart);
 const earlyRender = clubCore.indexOf("renderClubTitle();", readinessStart);
 const rosterLoad = clubCore.indexOf("window.mflLoadIncrementalRoutePage", earlyRender);
 const readinessAwait = clubCore.indexOf("const resolvedClubTitle = await clubTitleReady;", rosterLoad);
 const finalPresentation = clubCore.indexOf("applyClubPresentation();", readinessAwait);
 invariant(
   readinessStart >= 0
-    && earlyRender > readinessStart
+    && pageTransition > readinessStart
+    && earlyRender > pageTransition
     && rosterLoad > earlyRender
     && readinessAwait > rosterLoad
     && finalPresentation > readinessAwait,
-  "Club title resolution must start with navigation, render cached identity before roster loading, and settle before loading completes.",
+  "Club title resolution must start before the route first-paint transition, render its identity before roster loading, and settle before loading completes.",
 );
 
+const rowIdentityRead = clubCore.indexOf("const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);");
 const cacheRead = clubCore.indexOf("const cached = cachedClubTitleIdentity(normalizedClubId);");
 const exactLookup = clubCore.indexOf('fetch("/api/data?" + parameters.toString()', cacheRead);
 invariant(
-  cacheRead >= 0 && exactLookup > cacheRead,
-  "Cached Club title data must remain a zero-request source before the exact fallback lookup.",
+  rowIdentityRead >= 0 && cacheRead > rowIdentityRead && exactLookup > cacheRead,
+  "Loaded Club row identity must be persisted synchronously before cache fallback and the exact lookup.",
 );
 
-console.log("Club cached first paint, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
+console.log("Club source-row first paint, cached refresh, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
