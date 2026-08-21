@@ -6,14 +6,14 @@
 @import url("/loading.css");
 
 :root {
-  --mfl-pager-block-padding: 12px;
-  --mfl-page-title-margin-block-start: 14px;
-  --mfl-page-title-margin-block-end: 12px;
+  --mfl-pager-block-padding: 8px;
+  --mfl-page-title-margin-block-start: 6px;
+  --mfl-page-title-margin-block-end: 8px;
   --mfl-page-title-line-height: 1.2;
 
   /* Uniform Width. This is the only numeric column-width contract. */
-  --mfl-table-header-height: 38px;
-  --mfl-table-row-height: 38px;
+  --mfl-table-header-height: 36px;
+  --mfl-table-row-height: 34px;
   --mfl-table-col-select: 2.5%;
   --mfl-table-col-id: 3%;
   --mfl-table-col-flag: 2.5%;
@@ -81,6 +81,61 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 #progressionPage .playerTableScroller col.col-contract-division { width: var(--mfl-table-col-contract-division); }
 #progressionPage .playerTableScroller col.col-agent { width: var(--mfl-table-col-agent); }
 #progressionPage .playerTableScroller col.col-link { width: var(--mfl-table-col-link); }
+
+#progressionPage {
+  position: relative;
+}
+
+#progressionPage > .controlsBar {
+  display: none;
+}
+
+#progressionPage .views {
+  margin-bottom: 6px;
+}
+
+#progressionPage .quickFilters {
+  margin-bottom: 6px;
+}
+
+#progressionPage .tablePageTitle {
+  min-height: 32px;
+}
+
+html body[data-page="watchlist"] #progressionPage .watchlistSwitcher,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .watchlistSwitcher {
+  position: absolute;
+  top: var(--mfl-page-title-margin-block-start);
+  right: 0;
+  z-index: 4;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  gap: 6px;
+}
+
+body[data-page="watchlist"] #progressionPage .tablePageTitle,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .tablePageTitle {
+  padding-right: 330px;
+}
+
+#progressionPage .watchlistSwitcherLabel {
+  font-size: 12px;
+}
+
+#progressionPage .watchlistButton {
+  width: 260px;
+  height: 32px;
+  padding-left: 9px;
+  padding-right: 28px;
+  font-size: 13px;
+}
+
+#progressionPage .watchlistDropdown {
+  width: 260px;
+  min-width: 260px;
+}
 
 #progressionPage .playerTableScroller {
   width: 100%;
@@ -205,6 +260,26 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
     padding-left: 5px;
     padding-right: 5px;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 900px) {
+  body[data-page="watchlist"] #progressionPage .tablePageTitle,
+  html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .tablePageTitle {
+    padding-right: min(230px, 58vw);
+  }
+
+  #progressionPage .watchlistSwitcherLabel {
+    display: none;
+  }
+
+  #progressionPage .watchlistButton {
+    width: min(220px, 55vw);
+  }
+
+  #progressionPage .watchlistDropdown {
+    width: min(220px, calc(100vw - 24px));
+    min-width: min(220px, calc(100vw - 24px));
   }
 }
 
