@@ -8,6 +8,7 @@
   const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
   const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
+  const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const TABLE_VIEW_BY_SLUG = Object.freeze({
@@ -220,6 +221,18 @@
       };
     } catch {
       return { clubId, name: `Club ${clubId}`, divisionName: "", divisionColor: "" };
+    }
+  }
+
+  function firstPaintEvaluationPlayerName(urlLike = window.location.href) {
+    try {
+      const route = new URL(String(urlLike || window.location.href), window.location.href);
+      if (route.pathname !== "/evaluation") return "";
+      if (!route.searchParams.get("player") && !route.searchParams.get("saved") && !route.searchParams.get("share")) return "";
+      const routeKey = `${route.pathname}${route.search}`;
+      return String(sessionStorage.getItem(`${EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX}${routeKey}`) || "").trim();
+    } catch {
+      return "";
     }
   }
 
@@ -702,11 +715,14 @@ function primeInitialTableStructure(page, view) {
       if (panel instanceof HTMLElement) panel.hidden = true;
       const results = document.getElementById("evaluationSearchResults");
       if (results instanceof HTMLElement) results.hidden = true;
+      const searchInput = document.getElementById("evaluationSearchInput");
+      const initialPlayerName = firstPaintEvaluationPlayerName();
+      if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;
       setLoadingValue("evaluationDiscountRate");
       const buttons = document.getElementById("evaluationButtons");
       const loadButton = document.getElementById("evaluationLoadButton");
       const plainEvaluation = root.dataset.initialEvaluationSelection !== "true";
-      const canLoad = root.dataset.storedWalletOptIn === "true" && plainEvaluation;
+      const canLoad = plainEvaluation;
       if (buttons instanceof HTMLElement && canLoad) buttons.hidden = false;
       if (loadButton instanceof HTMLElement) loadButton.hidden = !canLoad;
       return;
