@@ -170,20 +170,22 @@ invariant(
     && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
   "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
 );
-const plainEvaluationStart = generatedSharedCore.indexOf('if (options.plain || isPlainEvaluationUrl()) {');
-const plainEvaluationEnd = generatedSharedCore.indexOf("    try {", plainEvaluationStart);
-const plainEvaluationSource = plainEvaluationStart >= 0 && plainEvaluationEnd > plainEvaluationStart
-  ? generatedSharedCore.slice(plainEvaluationStart, plainEvaluationEnd)
+const evaluationPageStart = generatedSharedCore.indexOf("  if (evaluationPageActive) {");
+const evaluationPageEnd = generatedSharedCore.indexOf("  if (playerPageActive) {", evaluationPageStart);
+const evaluationPageSource = evaluationPageStart >= 0 && evaluationPageEnd > evaluationPageStart
+  ? generatedSharedCore.slice(evaluationPageStart, evaluationPageEnd)
   : "";
 invariant(
-  plainEvaluationSource.includes('state.evaluationShareId = "";')
-    && plainEvaluationSource.includes('state.evaluationSavedId = "";')
-    && plainEvaluationSource.includes("state.evaluationPlayerId = null;")
-    && plainEvaluationSource.includes('evaluationSearchInput.value = "";')
+  evaluationPageSource.includes('document.body.classList.add("evaluationPageLoading");\n    if (options.plain || isPlainEvaluationUrl()) {')
+    && evaluationPageSource.includes('state.evaluationShareId = "";')
+    && evaluationPageSource.includes('state.evaluationSavedId = "";')
+    && evaluationPageSource.includes("state.evaluationPlayerId = null;")
+    && evaluationPageSource.includes('evaluationSearchInput.value = "";')
+    && generatedSharedCore.includes('if (pageName === "evaluation") {\n    if (options.plain) {')
     && searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
     && !searchRuntime.includes("MutationObserver")
     && !generatedSharedCore.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
-  "Entering plain /evaluation must clear stale selected Evaluation state before render so the Evaluation-ready lifecycle restores the Supabase recent five without DOM observation or an early route signal.",
+  "Entering plain /evaluation must clear stale selected Evaluation state in the Evaluation render block, while pagePath keeps its canonical options.plain rule and Evaluation-ready restores the Supabase recent five without DOM observation or an early route signal.",
 );
 invariant(
   searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
@@ -199,4 +201,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, plain /evaluation clears stale selected state so Evaluation-ready restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, the Evaluation render block clears stale selected state on plain /evaluation so Evaluation-ready restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
