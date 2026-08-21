@@ -475,9 +475,9 @@
   document.addEventListener("pointerdown", onPointerDown, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
-  document.addEventListener("keydown", blockSearchInteractionWhileLoading, true);
-  document.addEventListener("keyup", blockSearchInteractionWhileLoading, true);
-  document.addEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
+  window.addEventListener("keydown", blockSearchInteractionWhileLoading, true);
+  window.addEventListener("keyup", blockSearchInteractionWhileLoading, true);
+  window.addEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
   window.addEventListener("storage", onLegacyRecentStorage, true);
@@ -492,9 +492,9 @@
     document.removeEventListener("pointerdown", onPointerDown, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
-    document.removeEventListener("keydown", blockSearchInteractionWhileLoading, true);
-    document.removeEventListener("keyup", blockSearchInteractionWhileLoading, true);
-    document.removeEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
+    window.removeEventListener("keydown", blockSearchInteractionWhileLoading, true);
+    window.removeEventListener("keyup", blockSearchInteractionWhileLoading, true);
+    window.removeEventListener("beforeinput", blockSearchInteractionWhileLoading, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("storage", onLegacyRecentStorage, true);
