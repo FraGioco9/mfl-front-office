@@ -39,6 +39,7 @@ const validators = [
   "validate-page-route-gate-transition.mjs",
   "validate-club-entry-workflow.mjs",
   "validate-club-refresh-startup.mjs",
+  "validate-club-sorting.mjs",
   "validate-club-route-core.mjs",
   "validate-club-title-loading.mjs",
   "validate-settings-route-core.mjs",
