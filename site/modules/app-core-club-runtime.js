@@ -397,10 +397,8 @@
           })
         : false;
       if (!dataLoaded) return;
-      const resolvedClubTitle = await clubTitleReady;
-      if (resolvedClubTitle && String(activeClubId) === nextClubId) {
-        activeClubTitle = resolvedClubTitle;
-      }
+      const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
+      if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
