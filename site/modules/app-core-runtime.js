@@ -1186,6 +1186,7 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
+  evaluationSearchInput.blur();
   const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
     && activeWallet

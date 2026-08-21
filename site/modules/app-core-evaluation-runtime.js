@@ -307,10 +307,13 @@ function savedEvaluationPayloadCache() {
 function rememberSavedEvaluationCacheEntry(entry) {
   const id = String(entry?.id || "").trim();
   if (!id || !entry?.payload) return null;
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
   const normalizedEntry = {
     ...entry,
     id,
-    playerId: String(entry?.playerId || entry?.payload?.playerId || "").trim(),
+    playerId,
+    playerName: String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),
   };
   savedEvaluationPayloadCache()[id] = normalizedEntry;
   return normalizedEntry;
@@ -330,9 +333,10 @@ function cachedSavedEvaluationEntry(savedId) {
 
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
-  const list = Array.isArray(entries) ? entries : [];
+  const list = Array.isArray(entries)
+    ? entries.map((entry) => rememberSavedEvaluationCacheEntry(entry) || entry)
+    : [];
   window.__mflSavedEvaluationsSessionCache = list;
-  list.forEach(rememberSavedEvaluationCacheEntry);
   return list;
 }
 
@@ -576,7 +580,9 @@ function renderSavedEvaluationList(rows) {
     const main = document.createElement("span");
     main.className = "evaluationLoadResultMain";
     const name = document.createElement("strong");
-    name.textContent = row ? formatCellValue(row, "name") : `Player ${playerId}`;
+    name.textContent = row
+      ? formatCellValue(row, "name")
+      : (String(entry?.playerName || "").trim() || `Player ${playerId}`);
     const details = document.createElement("span");
     const summaryOverall = Number(payload.summaryOverall);
     const summaryAge = Number(payload.summaryAge);
@@ -620,18 +626,15 @@ function renderSavedEvaluationList(rows) {
     attachEvaluationLoadActionTooltip(shareButton);
     attachEvaluationLoadActionTooltip(deleteButton);
 
-    const loadEvaluation = () => {
+    const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);
       window.history.replaceState({}, "", url.toString());
-      state.evaluationSavedId = savedId;
-      state.evaluationShareId = "";
       hideModal(evaluationLoadModal);
-      updateEvaluationFooterActions();
-      applySharedEvaluationPayload(entry.payload);
+      await loadSavedEvaluation(savedId, playerId);
     };
 
     shareButton.addEventListener("click", async (event) => {
@@ -731,8 +734,8 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       }, 1, { force: true });
     }
 
-    rememberSavedEvaluationList(evaluations);
-    renderSavedEvaluationList(evaluations);
+    const rememberedEvaluations = rememberSavedEvaluationList(evaluations);
+    renderSavedEvaluationList(rememberedEvaluations);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
     const message = document.createElement("p");
