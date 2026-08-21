@@ -49,10 +49,14 @@ invariant(
 );
 
 invariant(
-  evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
+  shared.includes('["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)')
+    && evaluation.includes("async function applySharedEvaluationPayload(payload) {")
+    && evaluation.includes("await renderEvaluationPage();\n}\n\nasync function loadSharedEvaluation")
+    && evaluation.includes("await applySharedEvaluationPayload(data.payload);")
+    && evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
     && evaluation.includes("playerId: payloadPlayerId,")
     && !evaluation.includes('evaluationSearchInput.value = "";\n  renderEvaluationMflPerUsdControl(false);'),
-  "Saved/shared Evaluations must hydrate their player row without blanking the bootstrapped player name.",
+  "Evaluation startup must keep loading active through wallet/settings hydration and the final player/saved/shared render without blanking the player name.",
 );
 
 invariant(
@@ -86,19 +90,22 @@ invariant(
 );
 
 invariant(
-  evaluation.includes("const activateEvaluationSearch = () => {")
+  evaluation.includes('evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());')
+    && evaluation.includes("const activateEvaluationSearch = () => {")
     && evaluation.includes("activateEvaluationSearch();")
     && evaluation.includes("window.requestAnimationFrame(activateEvaluationSearch);")
     && evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
     && evaluation.includes("evaluationSearchInput.select();"),
-  "Clearing the Evaluation search must keep the search active after the route reset completes.",
+  "Clearing the Evaluation search must prevent the clear control from stealing focus and keep the search active after route reset.",
 );
 
 invariant(
   loading.includes('[data-initial-evaluation-selection="false"] #evaluationLoadButton[hidden]')
     && loading.includes(':is(#evaluationResetButton, #evaluationPlayerPageButton)')
-    && loading.includes('[data-initial-evaluation-selection="true"] #evaluationLoadButton'),
-  "Evaluation first-paint CSS must show only Load on plain /evaluation and keep Load hidden for player, saved, and shared routes.",
+    && loading.includes('[data-initial-evaluation-selection="true"] #evaluationLoadButton')
+    && loading.includes('[data-initial-evaluation-selection="true"] #evaluationSearchInput::placeholder')
+    && loading.includes("color: transparent;"),
+  "Evaluation first-paint CSS must show only Load on plain /evaluation, keep Load hidden on selected routes, and suppress the selected-route placeholder before hydration.",
 );
 
 invariant(
@@ -106,4 +113,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions, cross-route empty-search focus, clear-focus persistence, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, complete loading lifecycle, clear-focus persistence, and table-edge validation passed.");
