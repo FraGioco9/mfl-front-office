@@ -15,7 +15,9 @@ const [searchRuntime, controlInteractions, loadingToastRuntime, appEntry, wallet
   read("./api/wallet-preferences.js"),
   read("./modules/app-core.js"),
 ]);
-const generatedSharedCore = String(normalizeBuiltApplicationCoreArtifacts(appCoreSource).core || "");
+const generatedArtifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
+const generatedSharedCore = String(generatedArtifacts.core || "");
+const generatedEvaluationCore = String(generatedArtifacts.routeChunks?.evaluation || "");
 
 invariant(
   searchRuntime.includes('const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";')
@@ -41,6 +43,10 @@ invariant(
 invariant(
   !searchRuntime.includes("hideTypedBlurredResults"),
   "Blurred non-empty Evaluation searches must keep their current result list visible.",
+);
+invariant(
+  !generatedEvaluationCore.includes('evaluationSearchInput.addEventListener("blur", () => {'),
+  "The generated Evaluation route core must not install a second blur handler that hides typed results.",
 );
 invariant(
   searchRuntime.includes("function onPointerDown(event)")
@@ -152,4 +158,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, focus is direct-input only, search spellcheck is disabled, Load enters Uniform Loading with the Loading toast immediately, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur across all Evaluation URLs, focus is direct-input only, search spellcheck is disabled, Load enters Uniform Loading with the Loading toast immediately, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");
