@@ -3413,6 +3413,8 @@ async function loadWalletPreferences(options = {}) {
           ensureDefaultWatchlist();
         }
       } else {
+        // Supabase has been cleared but this browser still has the last usable
+        // copy. Keep it active and write it back to the authoritative column.
         void saveWalletPreferencesNow();
       }
       state.watchlistPlayerIdsAdded.clear();
@@ -5599,6 +5601,8 @@ function bestSearchResults(query) {
       || String(a.label).localeCompare(String(b.label))
     ));
 
+  // Preserve each category so player matches cannot crowd agents out before
+  // the club-search enhancer merges players -> clubs -> agents.
   return [...playerResults.slice(0, 5), ...agentResults.slice(0, 5)];
 }
 
@@ -6241,6 +6245,9 @@ viewButtons.forEach((button) => {
   });
   button.addEventListener("click", (event) => {
     if (pointerCommittedViewButton === button) {
+      // A normal mouse click follows pointerup in the same task. The view has
+      // already been committed once, so suppress only the duplicate default
+      // activation; keyboard-generated clicks still use this handler.
       event.preventDefault();
       clearPointerCommittedViewButton();
       return;
@@ -6943,6 +6950,8 @@ async function startApp() {
   }
 })();
 
+/* Keep MFL Wallet search navigation anchored to Attributes. */
+
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
@@ -6962,6 +6971,9 @@ async function startApp() {
     const target = event?.target;
     if (!target?.closest) return false;
 
+    // Inspect only the element that performs the navigation. Do not inspect the
+    // whole composed path, because a page ancestor may contain "MFL Wallet"
+    // even when an unrelated navigation control was clicked.
     const interactiveElement = target.closest(
       "a,button,[role='button'],[data-wallet-address],[data-agent-wallet],[data-wallet]",
     );
@@ -6971,6 +6983,7 @@ async function startApp() {
       if (context.includes("mfl wallet") || context.includes(mflWalletAddress)) return true;
     }
 
+    // Search results may use a non-interactive row as their click target.
     const searchContainer = target.closest(
       "#searchModal,.searchResults,#playerSearchResults,[class*='searchResult']",
     );
@@ -6993,6 +7006,8 @@ async function startApp() {
 
     if (typeof closeSearch === "function") closeSearch();
 
+    // Always open the MFL Wallet profile on Attributes. This intentionally
+    // ignores the last saved MFL view, which may have been Stats.
     window.location.assign("/mfl/attributes");
   }, true);
 })();
@@ -7485,6 +7500,7 @@ async function startApp() {
   else initialize();
 })();
 
+/* Layout-centered feedback and transition-free shared views */
 (() => {
   function syncLayoutCenter() {
     const selection = document.querySelector("#selectionBar");
@@ -7513,6 +7529,7 @@ async function startApp() {
   syncLayoutCenter();
 })();
 
+/* Session-cached incremental route data and destination-first loading */
 (() => {
   const originalApplyFilters = applyFilters;
   const originalSetPage = setPage;

@@ -249,12 +249,6 @@ const CLUB_FILTER_FREE_TABLE_APPLY_START = `function tableApplyFiltersOwner(opti
 
   const rules = readFilterRules();`;
 
-const EAGER_RUNTIME_COMMENTS = [
-  "/* Keep MFL Wallet search navigation anchored to Attributes. */\n\n",
-  "/* Layout-centered feedback and transition-free shared views */\n",
-  "/* Session-cached incremental route data and destination-first loading */\n",
-];
-
 export function normalizeClubStartupLifecycle(routeArtifacts) {
   const artifacts = routeArtifacts && typeof routeArtifacts === "object" ? routeArtifacts : null;
   const routeChunks = artifacts?.routeChunks && typeof artifacts.routeChunks === "object"
@@ -316,7 +310,6 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
     "Club payload defers rendering until filter-free Club state is ready",
   );
-  for (const comment of EAGER_RUNTIME_COMMENTS) normalizedCore = normalizedCore.replace(comment, "");
 
   let normalizedTable = replaceRequired(
     table,
