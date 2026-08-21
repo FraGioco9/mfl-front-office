@@ -140,8 +140,17 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   gap: 6px;
 }
 
-#progressionPage .watchlistSwitcherLabel {
+html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .watchlistSwitcher[hidden],
+body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
+  display: flex;
+}
+
+#progressionPage .watchlistSwitcherLabel,
+#progressionPage .rowsField > span {
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 #progressionPage .watchlistButton {
@@ -155,6 +164,19 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 #progressionPage .watchlistDropdown {
   width: 260px;
   min-width: 260px;
+  font-size: 13px;
+}
+
+#progressionPage .watchlistDropdownItem,
+#progressionPage .watchlistDropdownName,
+#progressionPage .watchlistDropdownCount,
+#progressionPage .watchlistDropdownAdd {
+  font-size: 13px;
+}
+
+#progressionPage .watchlistDropdownItem,
+#progressionPage .watchlistDropdownAdd {
+  min-height: 34px;
 }
 
 #progressionPage #pageSizeSelect {
@@ -163,6 +185,20 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   min-width: 80px;
   max-width: 80px;
   height: 40px;
+  font-size: 13px;
+}
+
+@supports (appearance: base-select) {
+  #progressionPage #pageSizeSelect::picker(select) {
+    width: 80px;
+    min-width: 80px;
+  }
+
+  #progressionPage #pageSizeSelect option {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 13px;
+  }
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .rowsField,
