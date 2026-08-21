@@ -25,11 +25,16 @@ const SHARED_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeSh
         if (normalizedPath() !== canonicalRoute) {
           window.history.replaceState({}, "", canonicalRoute);
         }
-        const navigateClub = window.mflOpenClubPage;
-        if (typeof navigateClub !== "function" || Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true) {
-          throw new Error("Shared Club navigation gate is unavailable during startup.");
+        document.getElementById("mflInitialTableViewFirstPaint")?.remove();
+        const loadingController = window.__mflInteractionBusy;
+        const loadingToken = typeof loadingController?.begin === "function"
+          ? loadingController.begin("route-runtime")
+          : "";
+        try {
+          await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
+        } finally {
+          if (loadingToken) loadingController?.end?.(loadingToken);
         }
-        await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
         return;
       }
       return originalShowHomeShell.apply(this, arguments);
@@ -48,7 +53,7 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     club,
     DIRECT_INITIAL_CLUB_STARTUP,
     SHARED_INITIAL_CLUB_STARTUP,
-    "shared Club refresh navigation lifecycle",
+    "single-path Club refresh loading lifecycle",
   );
 
   return Object.freeze({
