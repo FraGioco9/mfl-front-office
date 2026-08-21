@@ -47,12 +47,17 @@ for (const removedLegacyMarkup of [
 for (const required of [
   ".searchButton .searchEmoji",
   ".filtersViewButton",
+  "width: 116px;",
+  "height: 40px;",
+  "font-weight: 700;",
   ".filtersViewIcon",
-  ".filtersViewLabel,\n#filterSummary.filtersViewCount",
-  "align-items: center;",
-  "align-self: center;",
-  "height: 100%;",
+  ".filtersViewLabel",
   "#filterSummary.filtersViewCount",
+  "flex: 0 0 18px;",
+  "width: 18px;",
+  "min-width: 18px;",
+  "max-width: 18px;",
+  "overflow: hidden;",
   "body.filtersOpen .filtersViewButton",
   ".viewControlsSeparator",
   "#progressionPage .views > #openFiltersButton",
@@ -67,14 +72,16 @@ for (const removedFallback of [
   "anchor-name: --mfl-table-views",
   "position-anchor: --mfl-table-views",
   ":has(#openFiltersButton:not(.filtersViewButton))",
+  "width: 140px;",
 ]) {
-  invariant(!controls.includes(removedFallback), `Legacy first-paint Filters fallback must be removed: ${removedFallback}`);
+  invariant(!controls.includes(removedFallback), `Legacy first-paint Filters fallback or oversized control must be removed: ${removedFallback}`);
 }
 
 invariant(
-  controls.includes("#filterSummary.filtersViewCount {\n  justify-content: center;\n  min-width: 24px;")
-    && controls.includes(".filtersViewLabel,\n#filterSummary.filtersViewCount {\n  display: inline-flex;\n  align-items: center;\n  align-self: center;\n  height: 100%;"),
-  "Filters icon, label, and count must remain vertically centered in the control.",
+  controls.includes(".filtersViewLabel {\n  display: inline-flex;\n  align-items: center;\n  align-self: center;\n  height: 40px;")
+    && controls.includes("#filterSummary.filtersViewCount {\n  display: inline-flex;\n  flex: 0 0 18px;\n  align-items: center;\n  justify-content: center;\n  align-self: center;")
+    && controls.includes("height: 40px;\n  margin-left: auto;"),
+  "Filters icon, label, and count must remain vertically centered in the 40px control.",
 );
 invariant(
   !controls.includes("body.filtersOpen #filterSummary.filtersViewCount"),
@@ -89,6 +96,11 @@ for (const required of [
   "function syncFilterSummaryNow() {",
   "summary.textContent = String(activeFilterCountFromDialog());",
   "function syncFilterSummaryAfterClose() {",
+  "function installPrimeTableChromeBridge() {",
+  'Reflect.get(window, "__mflPrimeTableChrome")',
+  "function primeTableChromeWithCountOnlySummary(...args) {",
+  "syncFilterSummaryNow();",
+  'Reflect.set(window, "__mflPrimeTableChrome", wrappedPrimeTableChrome);',
   'target?.closest("#applyFiltersButton")',
   "filtersModalIsOpen()",
 ]) {
@@ -193,4 +205,4 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters behavior must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Structural first-paint Filters, count-only summary, refresh/page reset, vertical centering, popup highlight, and neutral ESC focus validation passed.");
+console.log("View-sized Filters, count-only loading summary, refresh/page reset, vertical centering, popup highlight, and neutral ESC focus validation passed.");
