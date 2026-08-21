@@ -155,7 +155,7 @@ function currentEvaluationSharePayload() {
   };
 }
 
-function applySharedEvaluationPayload(payload) {
+async function applySharedEvaluationPayload(payload) {
   const data = normalizeSharedEvaluationPayload(payload);
 
   if (!data.playerId) {
@@ -178,7 +178,7 @@ function applySharedEvaluationPayload(payload) {
   }
 
   renderEvaluationMflPerUsdControl(false);
-  renderEvaluationPage();
+  await renderEvaluationPage();
 }
 
 async function loadSharedEvaluation(shareId) {
@@ -217,7 +217,7 @@ async function loadSharedEvaluation(shareId) {
       if (!playerPayload) return;
     }
     state.evaluationShareId = id;
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
     resetInvalidEvaluationLinkToPlainEvaluation();
@@ -372,7 +372,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
     clearEvaluationSearchFocus();
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
     resetInvalidEvaluationLinkToPlainEvaluation();
@@ -1075,6 +1075,7 @@ discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings)
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
+evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());
 evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 

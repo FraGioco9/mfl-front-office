@@ -6994,7 +6994,7 @@ async function startApp() {
   const startupDependencies = [earlyGlobalSearch];
   if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);
   if (initialTarget.pageName === "home") startupDependencies.push(startupSummaryPromise);
-  if (["watchlist", "myplayers", "settings", "player"].includes(initialTarget.pageName)) {
+  if (["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)) {
     startupDependencies.push(startupWalletPreferencesPromise);
   }
   await Promise.allSettled(startupDependencies);
