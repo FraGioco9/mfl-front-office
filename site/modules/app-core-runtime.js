@@ -1290,6 +1290,18 @@ function pageTargetFromPath(path) {
   }
 
   const playerMatch = cleanPath.match(/^\/players\/([^/]+)$/);
+  const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);
+
+  if (clubRoute) {
+    return {
+      pageName: "club",
+      options: {
+        clubId: clubRoute.clubId,
+        view: clubRoute.view,
+        path: clubRoute.path,
+      },
+    };
+  }
 
   if (cleanPath === "/mfl/stats") {
     return {
