@@ -9,9 +9,11 @@ const WALLET_PREFERENCES_WITH_READINESS = `  const startupWalletPreferencesPromi
   window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (`;
 
-const EVALUATION_PLAIN_ROUTE_RESET = `    if (options.plain) {`;
+const EVALUATION_PLAIN_ROUTE_RESET = `    document.body.classList.add("evaluationPageLoading");
+    if (options.plain) {`;
 
-const EVALUATION_PLAIN_ROUTE_RESET_WITH_URL = `    if (options.plain || isPlainEvaluationUrl()) {`;
+const EVALUATION_PLAIN_ROUTE_RESET_WITH_URL = `    document.body.classList.add("evaluationPageLoading");
+    if (options.plain || isPlainEvaluationUrl()) {`;
 
 /**
  * Publish the already-existing startup wallet-preferences request as a readiness
@@ -19,8 +21,9 @@ const EVALUATION_PLAIN_ROUTE_RESET_WITH_URL = `    if (options.plain || isPlainE
  * This does not create another request; consumers await the same startup promise.
  *
  * Plain /evaluation entry also clears any stale in-memory selected/saved/shared
- * Evaluation state before render. That keeps an in-app return to /evaluation
- * eligible for the Supabase-backed recent-five lifecycle just like a direct load.
+ * Evaluation state in the Evaluation render lifecycle before render. That keeps
+ * an in-app return to /evaluation eligible for the Supabase-backed recent-five
+ * lifecycle just like a direct load without changing pagePath routing semantics.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeEvaluationRecentReadiness(artifacts) {
@@ -37,7 +40,7 @@ export function normalizeEvaluationRecentReadiness(artifacts) {
     core,
     EVALUATION_PLAIN_ROUTE_RESET,
     EVALUATION_PLAIN_ROUTE_RESET_WITH_URL,
-    "plain Evaluation routes clear stale selection state before recent-search readiness",
+    "plain Evaluation render routes clear stale selection state before recent-search readiness",
   );
 
   return Object.freeze({
