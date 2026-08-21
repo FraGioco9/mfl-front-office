@@ -89,6 +89,16 @@ includes(
   "Bootstrap must retire the synthetic Club Squad label before writing the real button label.",
 );
 excludes(
+  clubStartupLifecycle,
+  'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
+  "Club startup must not compete with bootstrap for first-paint Squad label ownership.",
+);
+excludes(
+  clubCore,
+  'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
+  "Generated Club runtime must leave first-paint Squad handoff exclusively to bootstrap.",
+);
+excludes(
   bootstrap,
   'if (page === "club") return "Club";',
   "Club first paint must not fall back unconditionally to a generic Club title.",
@@ -108,11 +118,6 @@ invariant(
   "The existing application startup gate must load the initial Club route core before startApp begins.",
 );
 
-includes(
-  clubStartupLifecycle,
-  'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
-  "Club refresh must also ensure the temporary first-paint view label is retired before hydrated navigation.",
-);
 includes(
   clubStartupLifecycle,
   'loadingController.begin("route-runtime")',
@@ -194,17 +199,15 @@ invariant(
 );
 
 const refreshHandoff = clubCore.indexOf("showHomeShellWithInitialClub");
-const firstPaintRetired = clubCore.indexOf('document.getElementById("mflInitialTableViewFirstPaint")?.remove();', refreshHandoff);
-const loadingStart = clubCore.indexOf('loadingController.begin("route-runtime")', firstPaintRetired);
+const loadingStart = clubCore.indexOf('loadingController.begin("route-runtime")', refreshHandoff);
 const refreshClubLoad = clubCore.indexOf('await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', loadingStart);
 const loadingEnd = clubCore.indexOf('loadingController?.end?.(loadingToken)', refreshClubLoad);
 invariant(
   refreshHandoff >= 0
-    && firstPaintRetired > refreshHandoff
-    && loadingStart > firstPaintRetired
+    && loadingStart > refreshHandoff
     && refreshClubLoad > loadingStart
     && loadingEnd > refreshClubLoad,
-  "Refreshed Club routes must remove temporary Squad labeling, start shared loading, execute one Club load, and release loading afterward.",
+  "Refreshed Club routes must start shared loading, execute one Club load, and release loading afterward.",
 );
 
 const startupClubLoads = clubCore.match(/await openClubPage\(initialClubRoute\.clubId, initialClubRoute\.view, false\);/g) || [];
@@ -213,4 +216,4 @@ invariant(
   "Club refresh startup must trigger exactly one canonical Club route-owner load.",
 );
 
-console.log("Club source-row first paint, single-path refresh loading, non-blocking title preflight, single Squad label handoff, cached refresh, generated runtime, and roster readiness validation passed.");
+console.log("Club source-row first paint, single-path refresh loading, non-blocking title preflight, single Squad text ownership, cached refresh, generated runtime, and roster readiness validation passed.");
