@@ -95,6 +95,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 
 #progressionPage .views {
   margin-bottom: 6px;
+  anchor-name: --mfl-table-views;
 }
 
 #progressionPage:has(> .controlsBar) > .views {
@@ -114,6 +115,9 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   position: absolute;
   top: calc(var(--mfl-page-title-margin-block-start) + 32px + var(--mfl-page-title-margin-block-end));
   right: 0;
+  position-anchor: --mfl-table-views;
+  top: anchor(top);
+  right: anchor(right);
   z-index: 4;
   width: 132px;
   min-width: 132px;
