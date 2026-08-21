@@ -87,9 +87,14 @@ includes(
   "Club core and runtime ownership must settle together before rendering.",
 );
 includes(
+  eagerCore,
+  "result = await navigateClub(clubId, view);",
+  "Direct Club refresh must enter the same public navigation gate as an in-site click from the shared shell.",
+);
+excludes(
   clubCore,
-  "await navigateClub(initialClubRoute.clubId, initialClubRoute.view);",
-  "Direct Club refresh must enter the same public navigation gate as an in-site click.",
+  "showHomeShellWithInitialClub",
+  "The Club route chunk must not retain a startup-only shell interceptor.",
 );
 excludes(
   clubCore,
@@ -212,4 +217,4 @@ invariant(
   "The tracked Club runtime must exactly match the normalized Club artifact.",
 );
 
-console.log("Club filter-free refresh checks passed: no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club filter-free refresh checks passed: shared public entry, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
