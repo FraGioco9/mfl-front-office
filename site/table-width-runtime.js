@@ -136,6 +136,9 @@
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
 
+  const initialRoute = routes.initialRequest(location.pathname);
+  if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
+
   const initialClubPath = String(location.pathname || "/");
   const initialClubLikePath = /^\/(?:clubs|club)(?:\/|$)/i.test(initialClubPath);
   const initialClubRoute = routes.clubRoute(initialClubPath);

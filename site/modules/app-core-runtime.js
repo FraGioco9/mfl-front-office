@@ -1794,6 +1794,7 @@ function setView() {
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
+  if (pageName === "home") void loadSummary();
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
     await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
     return;
@@ -2050,21 +2051,42 @@ function updateSummaryCounts(playerCount, walletCount) {
   homeWallets.textContent = wallets ? formatCount(wallets) : "-";
 }
 
+let summaryLoadPromise = null;
+let summaryLoaded = false;
+let summarySnapshot = null;
+
 async function loadSummary() {
-  try {
-    const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
-    state.manifest = data.manifest || null;
-    const summary = data.summary || {};
-    updateSummaryCounts(summary.playerCount, summary.walletCount);
-    updateStatusDate(summary.generatedAt);
+  if (summaryLoaded && summarySnapshot) {
+    updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
     return true;
-  } catch (error) {
-    console.error(error?.message || "Could not load the database summary.");
-    updateSummaryCounts(0, 0);
-    return false;
   }
+  if (summaryLoadPromise) return summaryLoadPromise;
+
+  summaryLoadPromise = (async () => {
+    try {
+      const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
+      state.manifest = data.manifest || null;
+      const summary = data.summary || {};
+      summarySnapshot = Object.freeze({
+        playerCount: summary.playerCount,
+        walletCount: summary.walletCount,
+      });
+      updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
+      updateStatusDate(summary.generatedAt);
+      summaryLoaded = true;
+      return true;
+    } catch (error) {
+      console.error(error?.message || "Could not load the database summary.");
+      updateSummaryCounts(0, 0);
+      return false;
+    }
+  })();
+
+  const result = await summaryLoadPromise;
+  summaryLoadPromise = null;
+  return result;
 }
 
 function tablePageKey(pageName = state.currentPage) {
