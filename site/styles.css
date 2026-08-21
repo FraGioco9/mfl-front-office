@@ -103,7 +103,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 
 #progressionPage .quickFilters {
   margin-bottom: 0;
-  padding-bottom: 12px;
+  padding-bottom: 6px;
 }
 
 #progressionPage .tablePageTitle {
@@ -131,7 +131,9 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   order: 101;
 }
 
-#progressionPage .views > .watchlistSwitcher:not([hidden]) + .rowsField {
+#progressionPage .views > .watchlistSwitcher:not([hidden]) + .rowsField,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .views > .watchlistSwitcher + .rowsField,
+body[data-page="watchlist"] #progressionPage .views > .watchlistSwitcher + .rowsField {
   margin-left: 0;
 }
 
