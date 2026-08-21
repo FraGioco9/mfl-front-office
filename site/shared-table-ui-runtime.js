@@ -22,11 +22,50 @@
     });
   }
 
+  function filterRuleIsActive(rule) {
+    if (!(rule instanceof HTMLElement)) return false;
+    const operator = String(rule.querySelector("[data-filter-operator]")?.value || "");
+    const values = Array.from(rule.querySelectorAll("[data-filter-value]"));
+    const value = String(values[0]?.value || "").trim();
+    const valueTo = String(values[1]?.value || "").trim();
+    return operator === "between" || operator === "during"
+      ? Boolean(value && valueTo)
+      : Boolean(value);
+  }
+
+  function activeFilterCountFromDialog() {
+    return Array.from(document.querySelectorAll("#filterRules .filterRule")).filter(filterRuleIsActive).length;
+  }
+
+  function syncFilterSummaryNow() {
+    const summary = document.getElementById("filterSummary");
+    if (!(summary instanceof HTMLElement)) return;
+    summary.textContent = `${activeFilterCountFromDialog()} active`;
+  }
+
+  function syncFilterSummaryAfterClose() {
+    queueMicrotask(() => {
+      if (!destroyed) syncFilterSummaryNow();
+    });
+  }
+
+  function filtersModalIsOpen() {
+    const modal = document.getElementById("filtersModal");
+    return modal instanceof HTMLElement && !modal.hidden;
+  }
+
   function onPointerDown(event) {
     pointerControl = controlFromTarget(event.target);
   }
 
   function onClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("#applyFiltersButton")) {
+      syncFilterSummaryNow();
+    } else if (target?.closest("#closeFiltersButton") || target?.id === "filtersModal") {
+      syncFilterSummaryAfterClose();
+    }
+
     const control = controlFromTarget(event.target);
     if (control && control === pointerControl) releaseFocus(control);
     pointerControl = null;
@@ -38,7 +77,12 @@
   }
 
   function onKeyDown(event) {
+    if (event.key === "Enter" && filtersModalIsOpen()) {
+      syncFilterSummaryNow();
+    }
+
     if (event.key !== "Escape") return;
+    if (filtersModalIsOpen()) syncFilterSummaryAfterClose();
     const active = document.activeElement;
     if (active instanceof HTMLElement && active.matches(CONTROL_SELECTOR)) releaseFocus(active);
   }
