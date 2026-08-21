@@ -5,8 +5,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [index, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [index, bootstrap, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./index.html"),
+  read("./bootstrap.js"),
   read("./controls.css"),
   read("./shared-table-ui-runtime.js"),
   read("./static-ui-runtime.js"),
@@ -43,6 +44,12 @@ for (const removedLegacyMarkup of [
 ]) {
   invariant(!index.includes(removedLegacyMarkup), `Legacy Filters markup must be removed completely: ${removedLegacyMarkup}`);
 }
+
+invariant(
+  bootstrap.includes('if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0";')
+    && !bootstrap.includes('filterSummary.textContent = "0 active"'),
+  "Bootstrap must render the count-only Filters summary directly, without an intermediate legacy label.",
+);
 
 for (const required of [
   ".searchButton .searchEmoji",
@@ -96,26 +103,25 @@ for (const required of [
   "function syncFilterSummaryNow() {",
   "summary.textContent = String(activeFilterCountFromDialog());",
   "function syncFilterSummaryAfterClose() {",
-  "function installPrimeTableChromeBridge() {",
-  'Reflect.get(window, "__mflPrimeTableChrome")',
-  "function primeTableChromeWithCountOnlySummary(...args) {",
-  "syncFilterSummaryNow();",
-  'Reflect.set(window, "__mflPrimeTableChrome", wrappedPrimeTableChrome);',
   'target?.closest("#applyFiltersButton")',
   "filtersModalIsOpen()",
 ]) {
   invariant(sharedTableUi.includes(required), `Shared table UI must preserve Filters reset/count ownership through ${required}`);
 }
 
-for (const removedMigration of [
+for (const removedMigrationOrRepair of [
   "createFiltersIcon",
   "syncFiltersViewControl",
   'button.classList.add("filtersViewButton")',
   "views.insertBefore(button",
   "views.insertBefore(separator",
   "SVG_NAMESPACE",
+  "installPrimeTableChromeBridge",
+  "primeTableChromeWithCountOnlySummary",
+  "wrappedPrimeTableChrome",
+  "originalPrimeTableChrome",
 ]) {
-  invariant(!sharedTableUi.includes(removedMigration), `Filters runtime migration must be removed completely: ${removedMigration}`);
+  invariant(!sharedTableUi.includes(removedMigrationOrRepair), `Filters runtime migration/repair must be removed completely: ${removedMigrationOrRepair}`);
 }
 
 for (const required of [
@@ -126,12 +132,17 @@ for (const required of [
 }
 
 for (const required of [
+  "function normalizePageFilterResetBeforeRequest(source) {",
+  "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
+  "? tableStateWithoutPageFilters(pageName, storedPageState)",
+  "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
   "function normalizeFilterSummaryLifecycle(artifacts) {",
   'filterSummary.textContent = String(count);',
   'if (filterSummary) filterSummary.textContent = "0";',
+  'document.body.classList.remove("filtersOpen");',
   "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);",
 ]) {
-  invariant(buildNormalizer.includes(required), `Build normalization must preserve count-only Filters summaries through ${required}`);
+  invariant(buildNormalizer.includes(required), `Build normalization must preserve direct Filters reset/count/close ownership through ${required}`);
 }
 
 for (const required of [
@@ -165,8 +176,8 @@ invariant(
   "Built Table runtime must expose explicit trigger-focus ownership on filter close.",
 );
 invariant(
-  tableRuntime.includes("if (restoreTriggerFocus) openFiltersButton.focus();"),
-  "Built Table runtime must only focus the Filters trigger when explicitly requested.",
+  tableRuntime.includes('state.filterDraftRules = null;\n  document.body.classList.remove("filtersOpen");\n  hideModal(filtersModal, () => {\n    if (restoreTriggerFocus) openFiltersButton.focus();'),
+  "Built Table runtime must clear Filters highlight synchronously when popup close starts.",
 );
 invariant(
   tableRuntime.includes("function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}"),
@@ -205,4 +216,4 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters behavior must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("View-sized Filters, count-only loading summary, refresh/page reset, vertical centering, popup highlight, and neutral ESC focus validation passed.");
+console.log("Direct count-only Filters, request-time page reset, immediate close highlight, view-sized control, and neutral ESC focus validation passed.");
