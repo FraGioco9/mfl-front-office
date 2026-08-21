@@ -2129,7 +2129,7 @@ td a {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
-  height: 512px;
+  height: 501px;
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2140,7 +2140,7 @@ td a {
 .searchBody {
   display: grid;
   gap: 12px;
-  padding: 16px 18px 18px;
+  padding: 16px 18px 8px;
 }
 
 .searchResults {
