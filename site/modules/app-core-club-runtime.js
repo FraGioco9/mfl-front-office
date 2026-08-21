@@ -329,15 +329,7 @@
     });
   }
 
-  function restoreStandardControls() {
-    const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    if (quickFilters) quickFilters.hidden = false;
-    const controlsBar = document.querySelector("#progressionPage .controlsBar");
-    if (controlsBar) controlsBar.hidden = false;
-    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
-      pager.hidden = false;
-    });
-  }
+
 
 
   function applyClubPresentation() {
@@ -442,28 +434,7 @@
     };
   }
 
-  if (typeof applyFilters === "function") {
-    const originalApplyFilters = applyFilters;
-    applyFilters = function applyFiltersWithClubRows(options = {}) {
-      if (state.currentPage !== CLUB_PAGE || !activeClubId) {
-        const result = originalApplyFilters.apply(this, arguments);
-        restoreStandardControls();
-        return result;
-      }
 
-      const originalRows = state.rows;
-      state.rows = clubRows();
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
-      try {
-        const result = originalApplyFilters.call(this, { ...options, save: false });
-        state.tableSourceRowsCount = state.rows.length;
-        return result;
-      } finally {
-        state.rows = originalRows;
-      }
-    };
-  }
 
 
   if (initialClubRoute && typeof showHomeShell === "function") {
