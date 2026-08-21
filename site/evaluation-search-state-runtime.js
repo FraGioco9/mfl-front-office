@@ -331,6 +331,13 @@
   function onPointerDown(event) {
     const field = input();
     clearDirectPointerFocus();
+    if (event.target instanceof Element) {
+      const title = event.target.closest(".evaluationSearch .field > span");
+      if (title instanceof HTMLElement) {
+        event.preventDefault();
+        return;
+      }
+    }
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     directPointerFocus = true;
     directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
