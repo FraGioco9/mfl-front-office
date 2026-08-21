@@ -6,6 +6,13 @@
   const TOAST_ID = "mflLoadingToast";
   const FOOTER_LOCK_CLASS = "mflLoadingLocked";
   const TABLE_SCROLL_CLASS = "mflTableScrolling";
+  const TOAST_COORDINATION_REASONS = new Set([
+    "setPage",
+    "setView",
+    "switchWatchlist",
+    "route-runtime",
+    "requestIncrementalRoute",
+  ]);
   const controller = window.__mflInteractionBusy;
   let destroyed = false;
   let unsubscribe = null;
@@ -125,6 +132,12 @@
     return Boolean(document.body?.classList.contains("evaluationLoadIntent"));
   }
 
+  function snapshotNeedsToast(snapshot) {
+    if (!snapshot?.busy) return false;
+    const reasons = Array.isArray(snapshot.reasons) ? snapshot.reasons : [];
+    return reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || "")));
+  }
+
   function loadingSnapshot() {
     return controller?.snapshot?.() || Object.freeze({ busy: false, dataLoading: false, reasons: Object.freeze([]) });
   }
@@ -138,7 +151,7 @@
     positionToast(toast);
     const loadingToastVisible = !toast.hidden && toast.classList.contains("visible");
 
-    if (snapshot.busy && !toastSuppressed()) {
+    if (snapshotNeedsToast(snapshot) && !toastSuppressed()) {
       if (!loadingToastVisible) retireVisibleApplicationToast();
       toast.hidden = false;
       toast.classList.add("visible");
