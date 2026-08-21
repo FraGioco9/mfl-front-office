@@ -5293,14 +5293,34 @@ async function renderEvaluationPage() {
     return;
   }
 
-  const row = rowByPlayerId(state.evaluationPlayerId);
+  let row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (!row) {
+    const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+    if (routePlayerId) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: routePlayerId,
+      }, 1, { force: true });
+      state.evaluationPlayerId = routePlayerId;
+      row = rowByPlayerId(routePlayerId);
+    }
+  }
 
   if (row) {
     evaluationSearchInput.value = formatCellValue(row, "name");
     syncEvaluationSearchClearButton();
   }
 
-  if (!row || getValue(row, "retirement_years") === 0) {
+  if (!row) {
+    renderEmptyEvaluationSelection(false);
+    return;
+  }
+
+  if (getValue(row, "retirement_years") === 0) {
     state.evaluationPlayerId = null;
     syncEvaluationPlayerUrl(null);
     renderEmptyEvaluationSelection(true);

@@ -206,6 +206,17 @@ async function loadSharedEvaluation(shareId) {
     }
 
     const data = await response.json();
+    const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
+    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+      const playerPayload = await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: payloadPlayerId,
+      }, 1, { force: true });
+      if (!playerPayload) return;
+    }
     state.evaluationShareId = id;
     applySharedEvaluationPayload(data.payload);
   } catch {
