@@ -12,7 +12,7 @@
   --mfl-page-title-line-height: 1.2;
 
   /* Uniform Width. This is the only numeric column-width contract. */
-  --mfl-table-header-height: 36px;
+  --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
   --mfl-table-col-select: 2.5%;
   --mfl-table-col-id: 3%;
