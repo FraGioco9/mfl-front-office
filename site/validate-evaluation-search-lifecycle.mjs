@@ -63,7 +63,7 @@ invariant(
     && searchRuntime.includes("if (!directPointerFocus) {")
     && searchRuntime.includes("event.stopImmediatePropagation();")
     && searchRuntime.includes("field.blur();"),
-  "Evaluation search focus must be accepted only from a direct pointer press on the input; Player-title label activation must be cancelled before focus.",
+  "Evaluation search focus must be accepted only from a direct pointer press on the input; Player-title activation must be cancelled before focus.",
 );
 const focusStart = searchRuntime.indexOf("function onFocus(event)");
 const focusEnd = searchRuntime.indexOf("function onBlur(event)", focusStart);
@@ -170,19 +170,20 @@ invariant(
     && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
   "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
 );
-const routeActiveStart = searchRuntime.indexOf("function onRouteActive()");
-const routeActiveEnd = searchRuntime.indexOf("purgeLegacyLocalRecentState();", routeActiveStart);
-const routeActiveSource = routeActiveStart >= 0 && routeActiveEnd > routeActiveStart
-  ? searchRuntime.slice(routeActiveStart, routeActiveEnd)
+const plainEvaluationStart = generatedSharedCore.indexOf('if (options.plain || isPlainEvaluationUrl()) {');
+const plainEvaluationEnd = generatedSharedCore.indexOf("    try {", plainEvaluationStart);
+const plainEvaluationSource = plainEvaluationStart >= 0 && plainEvaluationEnd > plainEvaluationStart
+  ? generatedSharedCore.slice(plainEvaluationStart, plainEvaluationEnd)
   : "";
 invariant(
-  routeActiveSource.includes("if (destroyed || !active()) return;")
-    && routeActiveSource.includes("void restoreEmptyRecentResults(false, true);")
-    && searchRuntime.includes('window.addEventListener("mfl:evaluation-route-active", onRouteActive);')
-    && searchRuntime.includes('window.removeEventListener("mfl:evaluation-route-active", onRouteActive);')
+  plainEvaluationSource.includes('state.evaluationShareId = "";')
+    && plainEvaluationSource.includes('state.evaluationSavedId = "";')
+    && plainEvaluationSource.includes("state.evaluationPlayerId = null;")
+    && plainEvaluationSource.includes('evaluationSearchInput.value = "";')
+    && searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
     && !searchRuntime.includes("MutationObserver")
-    && generatedSharedCore.includes('if (pageName === "evaluation") window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
-  "Switching into Evaluation from another page must explicitly signal route activation and restore the Supabase recent five without observing rendered DOM state.",
+    && !generatedSharedCore.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
+  "Entering plain /evaluation must clear stale selected Evaluation state before render so the Evaluation-ready lifecycle restores the Supabase recent five without DOM observation or an early route signal.",
 );
 invariant(
   searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
@@ -198,4 +199,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-label activation cannot focus/highlight the input, direct input focus does not start loading, focus retains its visual highlight, explicit route activation restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, plain /evaluation clears stale selected state so Evaluation-ready restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
