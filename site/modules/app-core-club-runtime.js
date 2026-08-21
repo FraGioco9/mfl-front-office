@@ -437,9 +437,7 @@
 
 
 
-  // Legacy validation marker only. Executable Club startup now belongs to shared showHomeShell.
-  // const navigateClub = window.mflOpenClubPage;
-  // await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
+
 
   window.addEventListener("popstate", () => {
     const path = normalizedPath();
