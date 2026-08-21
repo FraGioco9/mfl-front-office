@@ -98,7 +98,7 @@ includes(
 );
 includes(
   eagerCore,
-  `      saveTableState();\n    }\n\n    const route = prepareIncrementalRoute(pageName, {`,
+  `        saveTableState();\n      }\n    }\n\n    const route = prepareIncrementalRoute(pageName, {`,
   "Incremental route preparation must happen only after the guarded previous-page save block.",
 );
 
