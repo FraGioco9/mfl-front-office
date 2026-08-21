@@ -273,15 +273,6 @@
     }
   }
 
-  function requestPlainEvaluationFirstPaintFocus(searchInput) {
-    if (!(searchInput instanceof HTMLInputElement)) return;
-    window.requestAnimationFrame(() => {
-      if (!firstPaintEvaluationRouteState().plain) return;
-      searchInput.focus({ preventScroll: true });
-      searchInput.select();
-    });
-  }
-
   function initialShellTarget() {
     const initialPage = String(root.dataset.initialPage || "home").toLowerCase();
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
@@ -764,10 +755,7 @@ function primeInitialTableStructure(page, view) {
       const searchInput = document.getElementById("evaluationSearchInput");
       const evaluationRouteState = firstPaintEvaluationRouteState();
       const initialPlayerName = firstPaintEvaluationPlayerName();
-      if (searchInput instanceof HTMLInputElement) {
-        if (initialPlayerName) searchInput.value = initialPlayerName;
-        if (evaluationRouteState.plain) requestPlainEvaluationFirstPaintFocus(searchInput);
-      }
+      if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;
       setLoadingValue("evaluationDiscountRate");
       const buttons = document.getElementById("evaluationButtons");
       const loadButton = document.getElementById("evaluationLoadButton");
