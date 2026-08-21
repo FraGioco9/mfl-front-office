@@ -2053,9 +2053,13 @@ function updateSummaryCounts(playerCount, walletCount) {
 
 let summaryLoadPromise = null;
 let summaryLoaded = false;
+let summarySnapshot = null;
 
 async function loadSummary() {
-  if (summaryLoaded) return true;
+  if (summaryLoaded && summarySnapshot) {
+    updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
+    return true;
+  }
   if (summaryLoadPromise) return summaryLoadPromise;
 
   summaryLoadPromise = (async () => {
@@ -2065,7 +2069,11 @@ async function loadSummary() {
       if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
       state.manifest = data.manifest || null;
       const summary = data.summary || {};
-      updateSummaryCounts(summary.playerCount, summary.walletCount);
+      summarySnapshot = Object.freeze({
+        playerCount: summary.playerCount,
+        walletCount: summary.walletCount,
+      });
+      updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
       updateStatusDate(summary.generatedAt);
       summaryLoaded = true;
       return true;
