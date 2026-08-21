@@ -96,6 +96,12 @@ const CLUB_FINAL_ROSTER_RENDER = `      if (typeof updateViewButtons === "functi
       applyClubPresentation();
       captureClubView(nextView);`;
 
+const EAGER_RUNTIME_COMMENTS = [
+  "/* Keep MFL Wallet search navigation anchored to Attributes. */\n\n",
+  "/* Layout-centered feedback and transition-free shared views */\n",
+  "/* Session-cached incremental route data and destination-first loading */\n",
+];
+
 export function normalizeClubStartupLifecycle(routeArtifacts) {
   const artifacts = routeArtifacts && typeof routeArtifacts === "object" ? routeArtifacts : null;
   const routeChunks = artifacts?.routeChunks && typeof artifacts.routeChunks === "object"
@@ -124,12 +130,13 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     CLUB_FINAL_ROSTER_RENDER,
     "Club-owned final roster render",
   );
-  const normalizedCore = replaceRequired(
+  let normalizedCore = replaceRequired(
     core,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
     CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
     "Club-owned incremental roster render",
   );
+  for (const comment of EAGER_RUNTIME_COMMENTS) normalizedCore = normalizedCore.replace(comment, "");
 
   return Object.freeze({
     ...artifacts,
