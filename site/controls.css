@@ -88,40 +88,17 @@
   box-shadow: none;
 }
 
-.searchButton .searchEmoji {
-  position: relative;
-  display: inline-block;
+.searchButton .searchIcon {
+  display: block;
   flex: 0 0 17px;
   width: 17px;
   height: 17px;
-  background: transparent;
-  font-size: 0;
-  line-height: 0;
-}
-
-.searchButton .searchEmoji::before {
-  content: "";
-  position: absolute;
-  top: 1.5px;
-  left: 1.5px;
-  box-sizing: border-box;
-  width: 11px;
-  height: 11px;
-  border: 1.8px solid currentColor;
-  border-radius: 50%;
-}
-
-.searchButton .searchEmoji::after {
-  content: "";
-  position: absolute;
-  top: 10.75px;
-  left: 10.75px;
-  width: 6px;
-  height: 1.8px;
-  border-radius: 999px;
-  background: currentColor;
-  transform: rotate(45deg);
-  transform-origin: left center;
+  color: var(--text);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .filtersViewButton {
