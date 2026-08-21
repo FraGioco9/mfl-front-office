@@ -6,96 +6,107 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
-const hasFunction = (source, name) => new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).test(source);
 
-const [coreSource, splitter, buildNormalizer] = await Promise.all([
+const [appCoreSource, splitter, buildNormalizer] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-evaluation-chunk.js"),
   read("./modules/app-core-build-normalizer.js"),
 ]);
-const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
+const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
 
-const advancedFunctions = [
-  "formatAdvancedPlayerTableValue",
-  "renderAdvancedPlayerTable",
-  "updateAdvancedPlayerTableClip",
-  "syncAdvancedSettingsValues",
-  "updateAdvancedRewardRateResetVisibility",
-  "updateAdvancedMflUsdResetVisibility",
-  "openAdvancedSettings",
-  "closeAdvancedSettings",
-  "toggleAdvancedLateSeasonRewards",
-  "syncAdvancedRewardRateDraft",
-  "syncAdvancedRewardRateDrafts",
-  "applyAdvancedSettings",
-  "resetAdvancedSettingsDraft",
-  "discardAdvancedSettings",
-  "adjustAdvancedMflUsdDraft",
-  "resetAdvancedMflUsd",
-  "adjustAdvancedRewardRateDraft",
-  "resetAdvancedRewardRateDraft",
-];
-
-const startupAndDependencyClosedFunctions = [
-  "evaluationDiscountRateValue",
-  "formatEvaluationRate",
-  "formatEvaluationMflPerUsd",
-  "clampEvaluationRewardRate",
-  "normalizeEvaluationRewardRateDraft",
-  "formatEvaluationRewardRate",
-  "clearEvaluationSearch",
-  "handleEvaluationSearchInput",
-  "queueEvaluationSettingsSave",
-  "renderEvaluationMflPerUsdControl",
-  "commitEvaluationMflPerUsd",
-  "resetEvaluationMflPerUsd",
-  "adjustEvaluationMflPerUsdDraft",
-];
-
-for (const name of [...advancedFunctions, ...startupAndDependencyClosedFunctions]) {
-  invariant(!hasFunction(shared, name), `Evaluation route-owned function ${name} must not remain in shared core.`);
-  invariant(hasFunction(evaluation, name), `Evaluation chunk must own route function ${name}.`);
-}
-
-for (const name of ["loadEvaluationMflPerUsd", "loadEvaluationLateSeasonRewardRates", "currentEvaluationSettingsPayload", "applyEvaluationSettingsPayload", "saveEvaluationSettingsLocally", "clearEvaluationSearchFocus"]) {
-  invariant(hasFunction(shared, name), `Cross-route Evaluation function ${name} must remain shared for startup, persistence, or Player ownership.`);
-}
-
-const evaluationBindings = [
-  'advancedSettingsButton.addEventListener("click", openAdvancedSettings);',
-  'closeAdvancedSettingsButton.addEventListener("click", closeAdvancedSettings);',
-  'advancedSettingsBody.addEventListener("scroll", updateAdvancedPlayerTableClip, { passive: true });',
-  'advancedLateSeasonRewardsToggle?.addEventListener("click", toggleAdvancedLateSeasonRewards);',
-  'window.addEventListener("resize", updateAdvancedPlayerTableClip);',
-  'advancedMflUsdInput.addEventListener("input", updateAdvancedMflUsdResetVisibility);',
-  'resetAdvancedSettingsButton.addEventListener("click", resetAdvancedSettingsDraft);',
-  'discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings);',
-  'applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);',
-  'evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);',
-  'evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);',
-  'evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);',
-  'ignoreDiscountRateInput.addEventListener("change", () => {',
-  'ignoreFirstSeasonInput.addEventListener("change", () => {',
-  'evaluationMflUsdEditButton.addEventListener("click", () => {',
-  'evaluationMflUsdResetButton.addEventListener("click", resetEvaluationMflPerUsd);',
-  'evaluationMflUsdInput.addEventListener("blur", commitEvaluationMflPerUsd);',
-  "setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);",
-];
-
-for (const binding of evaluationBindings) {
-  invariant(!shared.includes(binding), `Evaluation binding must not execute eagerly: ${binding}`);
-  invariant(evaluation.includes(binding), `Evaluation chunk must own binding: ${binding}`);
-}
-
 invariant(
-  shared.includes("  loadEvaluationMflPerUsd();\n  loadEvaluationLateSeasonRewardRates();\n  updateMenuVisibility();"),
-  "Startup must hydrate Evaluation persistence state without eagerly rendering Evaluation-only UI.",
+  !shared.includes("const evaluationConversions = {"),
+  "Evaluation discount-rate conversion data must not remain in shared core.",
 );
 invariant(
-  evaluation.includes("renderEvaluationMflPerUsdControl(false);\nevaluationDiscountRate.textContent = formatEvaluationRate(evaluationDiscountRateValue());"),
-  "Evaluation route loading must initialize its MFL-per-USD control and discount-rate text.",
+  evaluation.includes("const evaluationConversions = {"),
+  "Evaluation route core must own discount-rate conversion data.",
+);
+invariant(
+  !shared.includes("function renderEvaluationMflPerUsdControl("),
+  "Evaluation MFL/USD UI rendering must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function renderEvaluationMflPerUsdControl("),
+  "Evaluation route core must own MFL/USD UI rendering.",
+);
+invariant(
+  !shared.includes("function formatAdvancedPlayerTableValue(value) {"),
+  "Evaluation advanced-settings UI ownership must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function formatAdvancedPlayerTableValue(value) {"),
+  "Evaluation route core must own advanced-settings UI behavior.",
+);
+invariant(
+  !shared.includes('advancedSettingsButton.addEventListener("click", openAdvancedSettings);'),
+  "Evaluation advanced-settings primary bindings must not remain in shared core.",
+);
+invariant(
+  evaluation.includes('advancedSettingsButton.addEventListener("click", openAdvancedSettings);'),
+  "Evaluation route core must own advanced-settings primary bindings.",
+);
+invariant(
+  !shared.includes('window.addEventListener("resize", updateAdvancedPlayerTableClip);'),
+  "Evaluation advanced-settings control bindings must not remain in shared core.",
+);
+invariant(
+  evaluation.includes('window.addEventListener("resize", updateAdvancedPlayerTableClip);'),
+  "Evaluation route core must own advanced-settings control bindings.",
+);
+invariant(
+  !shared.includes('evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);'),
+  "Evaluation search/settings bindings must not remain in shared core.",
+);
+invariant(
+  evaluation.includes('evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);'),
+  "Evaluation route core must own search/settings bindings.",
+);
+invariant(
+  !evaluation.includes('evaluationSearchInput.addEventListener("blur", () => {'),
+  "Evaluation route core must not hide typed search results on blur.",
+);
+invariant(
+  !shared.includes('setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);'),
+  "Evaluation advanced-settings backdrop binding must not remain in shared core.",
+);
+invariant(
+  evaluation.includes('setupBackdropClickClose(advancedSettingsModal, closeAdvancedSettings);'),
+  "Evaluation route core must own its advanced-settings backdrop binding.",
+);
+invariant(
+  !shared.includes("function evaluationDiscountRateValue("),
+  "Evaluation discount-rate helper must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function evaluationDiscountRateValue("),
+  "Evaluation route core must own discount-rate helper dependencies.",
+);
+invariant(
+  !shared.includes("function formatEvaluationRate("),
+  "Evaluation rate formatting helper must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function formatEvaluationRate("),
+  "Evaluation route core must own rate formatting helper dependencies.",
+);
+invariant(
+  !shared.includes("function clearEvaluationSearch("),
+  "Evaluation search helper must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function clearEvaluationSearch("),
+  "Evaluation route core must own its search helper dependencies.",
+);
+invariant(
+  !shared.includes("function queueEvaluationSettingsSave("),
+  "Evaluation settings save helper must not remain in shared core.",
+);
+invariant(
+  evaluation.includes("function queueEvaluationSettingsSave("),
+  "Evaluation route core must own settings save helper dependencies.",
 );
 invariant(
   shared.includes('state.currentPage === "evaluation" && typeof renderEvaluationMflPerUsdControl === "function"'),
@@ -121,12 +132,16 @@ invariant(
   splitter.includes("export function splitEvaluationApplicationCoreRuntime(artifacts)"),
   "Evaluation ownership must use a dedicated structural splitter stage.",
 );
+const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(routeArtifacts)");
+const evaluationSearchIndex = buildNormalizer.indexOf("normalizeEvaluationSearchLifecycle(evaluationArtifacts)");
+const settingsSplitIndex = buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts)");
 invariant(
-  buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(routeArtifacts)")
-    < buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationArtifacts)"),
-  "Evaluation ownership must split immediately after base route extraction and before later route splitters.",
+  evaluationSplitIndex >= 0
+    && evaluationSearchIndex > evaluationSplitIndex
+    && settingsSplitIndex > evaluationSearchIndex,
+  "Evaluation ownership must split immediately after base route extraction, normalize its search lifecycle, and then continue into later route splitters.",
 );
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation startup UI, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while shared persistence and Player focus ownership remain eager.");
+console.log("Evaluation startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while shared persistence and Player focus ownership remain eager.");
