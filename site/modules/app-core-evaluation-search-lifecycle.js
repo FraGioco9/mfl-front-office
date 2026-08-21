@@ -22,6 +22,7 @@ const EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS = `function clearEvaluationSear
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
+  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();
 }`;
 
 const EVALUATION_CLEAR_BINDING = `evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
@@ -32,9 +33,8 @@ evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
  * discard a valid result list while text is still present. Clearing the search
- * leaves focus/selection to the Evaluation search-state runtime so one owner
- * controls both clear-X selection and post-loading selection without a later
- * animation-frame focus competing with that owner.
+ * explicitly hands focus/selection to the Evaluation search-state runtime after
+ * the selected Evaluation has been reset, so the X action finishes focused.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
@@ -55,7 +55,7 @@ export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
     normalizedEvaluation,
     EVALUATION_CLEAR_SEARCH,
     EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS,
-    "Evaluation clear delegates focus to the search-state owner",
+    "Evaluation clear selects the empty search through the search-state owner",
   );
   normalizedEvaluation = replaceRequired(
     normalizedEvaluation,
