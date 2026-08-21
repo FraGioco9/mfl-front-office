@@ -5,10 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, sharedTableUi, dropdownRuntime, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [index, controls, sharedTableUi, staticUi, dropdownRuntime, buildNormalizer, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+  read("./index.html"),
   read("./controls.css"),
   read("./shared-table-ui-runtime.js"),
+  read("./static-ui-runtime.js"),
   read("./dropdowns-runtime.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
@@ -24,61 +27,99 @@ for (const required of [
 }
 
 for (const required of [
+  'id="openFiltersButton" class="filtersViewButton"',
+  '<svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>',
+  '<span class="filtersViewLabel">Filters</span>',
+  '<span id="filterSummary" class="filtersViewCount">0</span>',
+  'id="viewControlsSeparator" class="viewControlsSeparator"',
+]) {
+  invariant(index.includes(required), `Filters must exist in final structural first-paint markup through ${required}`);
+}
+
+for (const removedLegacyMarkup of [
+  'id="openFiltersButton" class="compactButton"',
+  '&#128269; Filters',
+  'id="filterSummary">0 active',
+]) {
+  invariant(!index.includes(removedLegacyMarkup), `Legacy Filters markup must be removed completely: ${removedLegacyMarkup}`);
+}
+
+for (const required of [
   ".searchButton .searchEmoji",
-  "#progressionPage > .views {\n  anchor-name: --mfl-table-views;",
-  "#progressionPage:has(#openFiltersButton:not(.filtersViewButton)) > .views::before",
-  "flex: 0 0 153px;",
-  "margin-right: 4px;",
-  "#openFiltersButton:not(.filtersViewButton)",
-  "position-anchor: --mfl-table-views;",
-  "#filterSummary:not(.filtersViewCount)",
   ".filtersViewButton",
   ".filtersViewIcon",
+  ".filtersViewLabel,\n#filterSummary.filtersViewCount",
+  "align-items: center;",
+  "align-self: center;",
+  "height: 100%;",
   "#filterSummary.filtersViewCount",
   "body.filtersOpen .filtersViewButton",
   ".viewControlsSeparator",
-  "#quickClearFiltersButton",
   "#progressionPage .views > #openFiltersButton",
   'body[data-page="club"] #progressionPage .filtersViewButton',
 ]) {
-  invariant(controls.includes(required), `Search and Filters chrome is missing canonical shared-control ownership through ${required}`);
+  invariant(controls.includes(required), `Search and structural Filters chrome is missing canonical ownership through ${required}`);
+}
+
+for (const removedFallback of [
+  "#openFiltersButton:not(.filtersViewButton)",
+  "#filterSummary:not(.filtersViewCount)",
+  "anchor-name: --mfl-table-views",
+  "position-anchor: --mfl-table-views",
+  ":has(#openFiltersButton:not(.filtersViewButton))",
+]) {
+  invariant(!controls.includes(removedFallback), `Legacy first-paint Filters fallback must be removed: ${removedFallback}`);
 }
 
 invariant(
-  controls.includes("#filterSummary:not(.filtersViewCount) {\n  position: absolute;")
-    && controls.includes("height: 40px;\n  padding: 0;\n  border-radius: 0;\n  background: transparent;"),
-  "First-paint active-filter text must be vertically centered without badge chrome.",
-);
-invariant(
-  controls.includes("#filterSummary.filtersViewCount {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  align-self: stretch;")
-    && controls.includes("margin-left: auto;\n  padding: 0;\n  border-radius: 0;\n  background: transparent;"),
-  "Loaded active-filter text must remain vertically centered and unboxed inside Filters.",
+  controls.includes("#filterSummary.filtersViewCount {\n  justify-content: center;\n  min-width: 24px;")
+    && controls.includes(".filtersViewLabel,\n#filterSummary.filtersViewCount {\n  display: inline-flex;\n  align-items: center;\n  align-self: center;\n  height: 100%;"),
+  "Filters icon, label, and count must remain vertically centered in the control.",
 );
 invariant(
   !controls.includes("body.filtersOpen #filterSummary.filtersViewCount"),
-  "Opening Filters must highlight only the button, not the active-filter text.",
+  "Opening Filters must highlight only the button, not the active-filter count.",
 );
 
 for (const required of [
-  'button.classList.add("filtersViewButton");',
-  'svg.classList.add("filtersViewIcon");',
-  'svg.setAttribute("viewBox", "0 0 24 24");',
-  'path.setAttribute("d", "M4 6h16M7 12h10M10 18h4");',
-  'summary.classList.add("filtersViewCount");',
-  "button.append(summary);",
-  "quickClear.hidden = true;",
-  'separator.className = "viewControlsSeparator";',
-  'views.insertBefore(button, firstViewButton);',
-  'views.insertBefore(separator, firstViewButton);',
+  'const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);',
+  "function markInitialTableFiltersForReset() {",
+  "document.documentElement.dataset.mflResetTableFilters = page;",
   "function activeFilterCountFromDialog() {",
   "function syncFilterSummaryNow() {",
-  'summary.textContent = `${activeFilterCountFromDialog()} active`; ',
+  "summary.textContent = String(activeFilterCountFromDialog());",
   "function syncFilterSummaryAfterClose() {",
   'target?.closest("#applyFiltersButton")',
-  "syncFilterSummaryNow();",
   "filtersModalIsOpen()",
 ]) {
-  invariant(sharedTableUi.includes(required.trimEnd()), `Shared table UI must preserve immediate Filters chrome through ${required}`);
+  invariant(sharedTableUi.includes(required), `Shared table UI must preserve Filters reset/count ownership through ${required}`);
+}
+
+for (const removedMigration of [
+  "createFiltersIcon",
+  "syncFiltersViewControl",
+  'button.classList.add("filtersViewButton")',
+  "views.insertBefore(button",
+  "views.insertBefore(separator",
+  "SVG_NAMESPACE",
+]) {
+  invariant(!sharedTableUi.includes(removedMigration), `Filters runtime migration must be removed completely: ${removedMigration}`);
+}
+
+for (const required of [
+  "const resetFilters = pageChanged && FILTERED_TABLE_PAGES.has(state.page);",
+  "document.documentElement.dataset.mflResetTableFilters = state.page;",
+]) {
+  invariant(staticUi.includes(required), `Page transitions must discard table filters through ${required}`);
+}
+
+for (const required of [
+  "function normalizeFilterSummaryLifecycle(artifacts) {",
+  'filterSummary.textContent = String(count);',
+  'if (filterSummary) filterSummary.textContent = "0";',
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableArtifacts);",
+]) {
+  invariant(buildNormalizer.includes(required), `Build normalization must preserve count-only Filters summaries through ${required}`);
 }
 
 for (const required of [
@@ -116,6 +157,15 @@ invariant(
   "Built Table runtime must only focus the Filters trigger when explicitly requested.",
 );
 invariant(
+  tableRuntime.includes("function updateFilterSummary(count = activeFilterCount()) {\n  filterSummary.textContent = String(count);\n}"),
+  "Built Table runtime must render only the active-filter count.",
+);
+invariant(
+  !tableRuntime.includes('filterSummary.textContent = `${count} active`;')
+    && !tableRuntime.includes('filterSummary.textContent = "0 active";'),
+  "Built Table runtime must not retain the legacy active-count label.",
+);
+invariant(
   !dropdownRuntime.includes('document.getElementById("openFiltersButton")'),
   "Dropdown runtime must not directly own or repair Filters trigger focus after close.",
 );
@@ -140,7 +190,7 @@ invariant(
   "Filter dropdown blur must not run before the native picker close finishes.",
 );
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
-invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters view placement must not inject runtime styles.");
+invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters behavior must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Search, first-paint Filters alignment, flat active count, immediate close sync, popup highlight, close-state blur, and canonical neutral ESC focus validation passed.");
+console.log("Structural first-paint Filters, count-only summary, refresh/page reset, vertical centering, popup highlight, and neutral ESC focus validation passed.");
