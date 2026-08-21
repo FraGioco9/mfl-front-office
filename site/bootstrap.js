@@ -6,6 +6,7 @@
   const LINKED_WALLET_STORAGE_KEY = "mfl-linked-wallet-v1";
   const LINKED_WALLET_DISPLAY_NAME_STORAGE_KEY = "mfl-linked-wallet-display-name-v1";
   const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
+  const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
@@ -195,6 +196,33 @@
     }
   }
 
+  function firstPaintClubIdentity(urlLike = window.location.href) {
+    const parts = routeParts(urlLike);
+    const routeRoot = String(parts[0] || "").toLowerCase();
+    const clubId = ["club", "clubs"].includes(routeRoot) ? decodedRoutePart(parts[1]).trim() : "";
+    if (!clubId) {
+      return { clubId: "", name: "Club", divisionName: "", divisionColor: "" };
+    }
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      const identity = stored && typeof stored === "object" && !Array.isArray(stored)
+        ? stored[clubId]
+        : null;
+      const name = String(identity?.name || "").trim();
+      const divisionName = String(identity?.divisionName || "").trim();
+      const divisionColor = String(identity?.divisionColor || "").trim();
+      return {
+        clubId,
+        name: name || `Club ${clubId}`,
+        divisionName,
+        divisionColor,
+      };
+    } catch {
+      return { clubId, name: `Club ${clubId}`, divisionName: "", divisionColor: "" };
+    }
+  }
+
   function initialShellTarget() {
     const initialPage = String(root.dataset.initialPage || "home").toLowerCase();
     const tablePage = String(root.dataset.initialTablePage || "").toLowerCase();
@@ -249,7 +277,10 @@
         return agentName ? `${agentName} - ${normalizedWallet}` : normalizedWallet;
       }
     }
-    if (page === "club") return "Club";
+    if (page === "club") {
+      const identity = firstPaintClubIdentity(urlLike);
+      return identity.divisionName ? `${identity.name} - ${identity.divisionName}` : identity.name;
+    }
     return "Progression";
   }
 
@@ -275,6 +306,7 @@
     if (!config || !Array.isArray(config.order)) return;
     const container = document.querySelector("#progressionPage .views");
     if (!(container instanceof HTMLElement)) return;
+    if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();
 
     const buttons = new Map();
     container.querySelectorAll(":scope > .viewButton[data-view]").forEach((candidate) => {
@@ -320,7 +352,22 @@
     }
 
     const title = document.getElementById("tablePageTitle");
-    if (title instanceof HTMLElement) title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
+    if (title instanceof HTMLElement) {
+      if (normalizedPage === "club") {
+        const identity = firstPaintClubIdentity(urlLike);
+        if (identity.divisionName) {
+          const divisionLabel = document.createElement("span");
+          divisionLabel.className = "clubPageTitleDivision";
+          if (identity.divisionColor) divisionLabel.style.color = identity.divisionColor;
+          divisionLabel.textContent = identity.divisionName;
+          title.replaceChildren(document.createTextNode(`${identity.name} - `), divisionLabel);
+        } else {
+          title.textContent = identity.name;
+        }
+      } else {
+        title.textContent = firstPaintTableTitle(normalizedPage, urlLike);
+      }
+    }
 
     const clubPage = normalizedPage === "club";
     const resetFilters = Boolean(options.resetFilters);

@@ -177,6 +177,7 @@ const prepareStart = normalizedCore.indexOf("function prepareIncrementalRoute(pa
 const prepareEnd = normalizedCore.indexOf("function commitIncrementalLocation(", prepareStart);
 invariant(prepareStart >= 0 && prepareEnd > prepareStart, "The generated core must contain incremental route preparation.");
 excludes(normalizedCore.slice(prepareStart, prepareEnd), "syncRestoredTableControls(", "Pre-request route preparation must never sync restored controls into the DOM.");
+includes(normalizedCore.slice(prepareStart, prepareEnd), 'pageName !== "club" && !clubTarget && tablePages.has(pageName)', "Club route preparation must bypass saved table filter state while retaining Table infrastructure.");
 
 includes(normalizedCore, `  if (tablePage) {
     restoreSavedTableState(pageName, { view: options.view });
@@ -184,10 +185,17 @@ includes(normalizedCore, `  if (tablePage) {
     updateViewButtons();
     buildHeader();
   }`, "The canonical table-page render must consume staged controls synchronously before header/filter rendering.");
-includes(normalizedCore, `      if (tablePages.has(pageName)) {
+includes(normalizedCore, `      if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
       }
-      state.incrementalApplying = true;`, "The public incremental table renderer must consume staged controls only after its route data is ready.");
+      if (clubPage) {`, "The public incremental table renderer must consume staged controls only after route data is ready, while Club keeps route-owned roster state.");
+includes(normalizedCore, "if (!clubPage) originalApplyFilters.call(this, { save: false });", "Only non-Club incremental payloads may enter the generic pre-route filter renderer.");
+includes(normalizedCore, 'tablePages.add("club")', "Club must retain generic Table infrastructure ownership so the canonical loading shell and renderer remain active.");
+includes(normalizedCore, 'const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);', "Club public progression views must remain available while filter state is bypassed separately.");
+includes(tableCore, 'const clubPage = pageName === "club";', "The Table loading shell must distinguish Club from filterable table pages.");
+includes(tableCore, 'window.__mflTableLoadingRuntime?.show?.();', "Club must retain the canonical Table loading skeleton.");
+includes(tableCore, 'if (state.currentPage === "club") {', "The Table renderer must have an explicit filter-free Club branch.");
+includes(tableCore, "state.filteredRows = [...state.rows];", "Club must render its returned roster rows without generic filtering.");
 
-console.log("Route runtime, prebuilt route-core splitting, request cancellation, and pure table-state validation passed.");
+console.log("Route runtime, prebuilt route-core splitting, request cancellation, pure table-state validation, and filter-free Club loading/render handoff passed.");

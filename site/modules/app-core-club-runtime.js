@@ -1,6 +1,7 @@
 // Generated Club core chunk from modules/app-core.js. Do not edit directly.
 (() => {
   const CLUB_PAGE = "club";
+  const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
   const CLUB_ID_COLUMNS = [
     "active_contract_club_id",
     "club_id",
@@ -17,6 +18,129 @@
   let activeClubTitle = null;
   let openingClub = false;
   const clubViewRenderCache = new Map();
+
+  const clubTitleIdentityPromises = new Map();
+
+  function normalizedClubTitleIdentity(value, fallbackClubId = "") {
+    const clubId = String(value?.clubId || fallbackClubId || "").trim();
+    const name = String(value?.name || "").trim();
+    const divisionName = String(value?.division?.name || value?.divisionName || "").trim();
+    const divisionColor = String(value?.division?.color || value?.divisionColor || "").trim();
+    if (!clubId || !name) return null;
+    return {
+      clubId,
+      name,
+      division: divisionName ? { name: divisionName, color: divisionColor } : null,
+    };
+  }
+
+  function cachedClubTitleIdentity(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      return normalizedClubTitleIdentity(stored?.[normalizedClubId], normalizedClubId);
+    } catch {
+      return null;
+    }
+  }
+
+  function saveClubTitleIdentity(identity) {
+    const normalized = normalizedClubTitleIdentity(identity);
+    if (!normalized) return null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+      const next = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+      next[normalized.clubId] = {
+        clubId: normalized.clubId,
+        name: normalized.name,
+        divisionName: normalized.division?.name || "",
+        divisionColor: normalized.division?.color || "",
+      };
+      localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Title rendering can continue even when browser storage is unavailable.
+    }
+    return normalized;
+  }
+
+  function clubTitleIdentityFromSearchIndex(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    const entry = Array.isArray(state.clubSearchIndex)
+      ? state.clubSearchIndex.find((candidate) => String(candidate?.clubId || "") === normalizedClubId)
+      : null;
+    if (!entry?.name) return null;
+    const division = typeof contractDivisionInfo === "function" ? contractDivisionInfo(entry.division) : null;
+    return normalizedClubTitleIdentity({
+      clubId: normalizedClubId,
+      name: entry.name,
+      division,
+    });
+  }
+
+  function clubTitleIdentityFromRows(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    const row = clubRows(normalizedClubId)[0];
+    if (!row) return null;
+    const name = String(getValue(row, "active_contract_club_name") || "").trim();
+    if (!name) return null;
+    const division = typeof contractDivisionInfo === "function"
+      ? contractDivisionInfo(getValue(row, "active_contract_club_division"))
+      : null;
+    return normalizedClubTitleIdentity({ clubId: normalizedClubId, name, division });
+  }
+
+  async function ensureClubTitleIdentity(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return null;
+
+    const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);
+    if (rowIdentity) return saveClubTitleIdentity(rowIdentity);
+
+    const cached = cachedClubTitleIdentity(normalizedClubId);
+    if (cached) return cached;
+
+    const indexed = clubTitleIdentityFromSearchIndex(normalizedClubId);
+    if (indexed) return saveClubTitleIdentity(indexed);
+
+    const existing = clubTitleIdentityPromises.get(normalizedClubId);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const parameters = new URLSearchParams({
+          mode: "search",
+          type: "recent",
+          clubIds: normalizedClubId,
+        });
+        const response = await fetch("/api/data?" + parameters.toString(), {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return null;
+        const payload = await response.json();
+        const clubEntry = Array.isArray(payload?.clubs)
+          ? payload.clubs.find((candidate) => String(candidate?.clubId || "") === normalizedClubId)
+          : null;
+        if (!clubEntry?.name) return null;
+        const division = typeof contractDivisionInfo === "function"
+          ? contractDivisionInfo(clubEntry.division)
+          : null;
+        return saveClubTitleIdentity({
+          clubId: normalizedClubId,
+          name: clubEntry.name,
+          division,
+        });
+      } catch {
+        return null;
+      } finally {
+        clubTitleIdentityPromises.delete(normalizedClubId);
+      }
+    })();
+    clubTitleIdentityPromises.set(normalizedClubId, promise);
+    return promise;
+  }
+
 
   function clubViewRenderCacheKey(clubId = activeClubId, view = state.view) {
     return String(clubId || "") + ":" + String(view || "attributes");
@@ -131,12 +255,15 @@
     if (typeof tablePageTitle === "undefined" || !tablePageTitle) return;
 
     if (!activeClubTitle || activeClubTitle.clubId !== String(activeClubId)) {
-      const division = clubDivision();
-      activeClubTitle = {
+      const resolvedTitle = clubTitleIdentityFromRows(activeClubId)
+        || cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromSearchIndex(activeClubId);
+      activeClubTitle = resolvedTitle || {
         clubId: String(activeClubId),
-        name: clubName(),
-        division: division ? { name: division.name, color: division.color } : null,
+        name: activeClubId ? `Club ${activeClubId}` : "Club",
+        division: null,
       };
+      if (resolvedTitle) saveClubTitleIdentity(resolvedTitle);
     }
 
     if (!activeClubTitle.division) {
@@ -202,15 +329,7 @@
     });
   }
 
-  function restoreStandardControls() {
-    const quickFilters = document.querySelector("#progressionPage .quickFilters");
-    if (quickFilters) quickFilters.hidden = false;
-    const controlsBar = document.querySelector("#progressionPage .controlsBar");
-    if (controlsBar) controlsBar.hidden = false;
-    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
-      pager.hidden = false;
-    });
-  }
+
 
 
   function applyClubPresentation() {
@@ -233,6 +352,7 @@
       const nextClubId = String(clubId);
       if (nextClubId !== activeClubId) activeClubTitle = null;
       activeClubId = nextClubId;
+      const clubTitleReady = ensureClubTitleIdentity(activeClubId);
       const nextView = CLUB_VIEWS.has(String(view || "")) ? String(view) : "attributes";
       const route = canonicalClubRoute(activeClubId, nextView);
       const routeAlreadyCommitted = state.currentPage === CLUB_PAGE && normalizedPath() === route;
@@ -251,6 +371,16 @@
         state.sortDirection = "asc";
       }
 
+      const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
+        || clubTitleIdentityFromSearchIndex(activeClubId);
+      if (earlyClubTitle) activeClubTitle = earlyClubTitle;
+      renderClubTitle();
+      void clubTitleReady.then((resolvedTitle) => {
+        if (!resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+        activeClubTitle = resolvedTitle;
+        renderClubTitle();
+      });
+
       const dataLoaded = typeof window.mflLoadIncrementalRoutePage === "function"
         ? await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {
             view: nextView,
@@ -259,6 +389,8 @@
           })
         : false;
       if (!dataLoaded) return;
+      const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
+      if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
@@ -284,6 +416,8 @@
       if (typeof newMintsInput !== "undefined" && newMintsInput) newMintsInput.checked = false;
 
       if (typeof updateViewButtons === "function") updateViewButtons();
+      if (typeof buildHeader === "function") buildHeader();
+      if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
       captureClubView(nextView);
     } finally {
@@ -300,42 +434,10 @@
     };
   }
 
-  if (typeof applyFilters === "function") {
-    const originalApplyFilters = applyFilters;
-    applyFilters = function applyFiltersWithClubRows(options = {}) {
-      if (state.currentPage !== CLUB_PAGE || !activeClubId) {
-        const result = originalApplyFilters.apply(this, arguments);
-        restoreStandardControls();
-        return result;
-      }
-
-      const originalRows = state.rows;
-      state.rows = clubRows();
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
-      try {
-        const result = originalApplyFilters.call(this, { ...options, save: false });
-        state.tableSourceRowsCount = state.rows.length;
-        return result;
-      } finally {
-        state.rows = originalRows;
-      }
-    };
-  }
 
 
-  if (initialClubRoute && typeof showHomeShell === "function") {
-    const originalShowHomeShell = showHomeShell;
-    let initialClubHandled = false;
-    showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
-      if (!initialClubHandled) {
-        initialClubHandled = true;
-        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
-        return;
-      }
-      return originalShowHomeShell.apply(this, arguments);
-    };
-  }
+
+
 
   window.addEventListener("popstate", () => {
     const path = normalizedPath();

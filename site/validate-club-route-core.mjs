@@ -110,6 +110,11 @@ includes(clubCore, "return openClubPage(clubId, view, true);", "The private Club
 excludes(clubCore, "void openClubPage(clubId, view, true);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
+includes(sharedCore, "const navigateClub = window.mflOpenClubPage;", "Direct Club startup must enter through the public navigation gate used by in-site links.");
+includes(sharedCore, "result = await navigateClub(clubId, view);", "Direct Club startup must await the same public Club navigation workflow as an in-site click.");
+excludes(clubCore, "showHomeShellWithInitialClub", "The Club chunk must not retain a separate startup shell workflow.");
+excludes(clubCore, 'loadingController.begin("route-runtime")', "Direct Club startup must not create a second loading owner around the public gate.");
+excludes(clubCore, 'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', "Direct Club startup must not bypass the public gate with a private route-owner call.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
 excludes(clubCore, "renderSearchResultsNowWithClubs", "The Club chunk must not patch Global Search after navigation.");
 includes(clubCore, "runPageTransition(CLUB_PAGE, updateHistory", "Club page entry must use the global page transition runner.");
@@ -173,4 +178,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club canonical view links, shared switching, refresh routing, Uniform Loading, and API contract validation passed.");
+console.log("Club canonical view links, shared click/refresh navigation, shared switching, Uniform Loading, and API contract validation passed.");

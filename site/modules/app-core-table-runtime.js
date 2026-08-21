@@ -274,8 +274,27 @@ function renderTableLoadingShell(pageName) {
     return;
   }
 
-  restoreSavedTableState(pageName);
-  globalThis.syncQuickFilterLabels?.();
+  const clubPage = pageName === "club";
+  if (clubPage) {
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    const quickFilters = document.querySelector("#progressionPage .quickFilters");
+    if (quickFilters) quickFilters.hidden = true;
+    const controlsBar = document.querySelector("#progressionPage .controlsBar");
+    if (controlsBar) controlsBar.hidden = true;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = true;
+    });
+  } else {
+    restoreSavedTableState(pageName);
+    globalThis.syncQuickFilterLabels?.();
+  }
+
   updateViewButtons();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
@@ -1009,6 +1028,16 @@ function tableStateWithoutPageFilters(pageName, savedState) {
 }
 
 function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
+  if (pageName === "club") {
+    state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    state.selectedPlayerIds = new Set();
+    state.pendingTableControlRestore = null;
+    return;
+  }
+
   const storedState = state.tablePageStates?.[pageName]
     || defaultTablePageState(pageName);
   const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
@@ -1032,6 +1061,11 @@ function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progress
 }
 
 function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  if (pageName === "club") {
+    state.pendingTableControlRestore = null;
+    return false;
+  }
+
   const restored = state.pendingTableControlRestore;
   if (!restored || restored.pageName !== pageName) return false;
 
@@ -1354,6 +1388,24 @@ function appliedTableFilterSignature(rules) {
 }
 
 function tableApplyFiltersOwner(options = {}) {
+  if (state.currentPage === "club") {
+    state.tableSourceRowsCount = state.rows.length;
+    state.filteredRows = [...state.rows];
+    state.filteredRows.sort(compareRows);
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    if (filterSummary) filterSummary.textContent = "0 active";
+    emptyState.textContent = "No players found for this club.";
+    syncActiveWatchlistFromSet();
+    renderTable();
+    return;
+  }
+
   const rules = readFilterRules();
   const filterSignature = appliedTableFilterSignature(rules);
   if (lastAppliedTableFilterSignature && filterSignature !== lastAppliedTableFilterSignature) {
