@@ -89,28 +89,28 @@ excludes(
 
 includes(
   clubStartupLifecycle,
-  'const navigateClub = window.mflOpenClubPage;',
-  "Club refresh startup must delegate to the public Club navigator.",
+  'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
+  "Club refresh must retire the temporary first-paint view label before hydrated view text is rendered.",
 );
 includes(
   clubStartupLifecycle,
-  'Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true',
-  "Club refresh startup must require the shared route-runtime loading gate.",
+  'loadingController.begin("route-runtime")',
+  "Club refresh must use the same route-runtime busy reason as in-site Club navigation.",
 );
 includes(
   clubCore,
-  'const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);',
-  "Club refresh startup must canonicalize the route before shared navigation.",
+  'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
+  "Club refresh must execute the canonical Club route owner exactly once without adding history.",
 );
 includes(
   clubCore,
-  'await navigateClub(initialClubRoute.clubId, initialClubRoute.view);',
-  "Club refresh startup must use the same public navigation lifecycle as in-site Club clicks.",
+  'if (loadingToken) loadingController?.end?.(loadingToken);',
+  "Club refresh must release its shared loading token only after the Club route owner settles.",
 );
 excludes(
   clubCore,
-  'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
-  "Club refresh startup must not bypass the shared loading lifecycle through the private Club loader.",
+  'await navigateClub(initialClubRoute.clubId, initialClubRoute.view);',
+  "Club refresh must not stack a public Club transition around the route owner's own transition and roster load.",
 );
 excludes(
   clubCore,
@@ -152,11 +152,25 @@ invariant(
 );
 
 const refreshHandoff = clubCore.indexOf("showHomeShellWithInitialClub");
-const sharedRefreshNavigation = clubCore.indexOf("await navigateClub(initialClubRoute.clubId, initialClubRoute.view);", refreshHandoff);
+const firstPaintRetired = clubCore.indexOf('document.getElementById("mflInitialTableViewFirstPaint")?.remove();', refreshHandoff);
+const loadingStart = clubCore.indexOf('loadingController.begin("route-runtime")', firstPaintRetired);
+const refreshClubLoad = clubCore.indexOf('await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', loadingStart);
+const loadingEnd = clubCore.indexOf('loadingController?.end?.(loadingToken)', refreshClubLoad);
 const privateClubLoader = clubCore.indexOf("async function openClubPage(");
 invariant(
-  privateClubLoader >= 0 && refreshHandoff > privateClubLoader && sharedRefreshNavigation > refreshHandoff,
-  "Refreshed Club routes must hand off from startup to the shared public navigator after the Club route owner is installed.",
+  privateClubLoader >= 0
+    && refreshHandoff > privateClubLoader
+    && firstPaintRetired > refreshHandoff
+    && loadingStart > firstPaintRetired
+    && refreshClubLoad > loadingStart
+    && loadingEnd > refreshClubLoad,
+  "Refreshed Club routes must remove the temporary Squad label, start shared loading, execute one canonical Club load, and release loading afterward.",
 );
 
-console.log("Club source-row first paint, shared refresh loading, cached refresh, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
+const startupClubLoads = clubCore.match(/await openClubPage\(initialClubRoute\.clubId, initialClubRoute\.view, false\);/g) || [];
+invariant(
+  startupClubLoads.length === 1,
+  "Club refresh startup must trigger exactly one canonical Club route-owner load.",
+);
+
+console.log("Club source-row first paint, single-path refresh loading, Squad-label handoff, cached refresh, exact title lookup, division rendering, generated runtime, and roster readiness validation passed.");
