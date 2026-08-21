@@ -7068,8 +7068,9 @@ async function startApp() {
 /* Public progression table views */
 (() => {
   const PUBLIC_PROGRESSION_VIEWS = ["current", "all"];
-  const PUBLIC_TABLE_PAGES = new Set(["watchlist"]);
+  const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);
 
+  tablePages.add("club");
   pageViewOptions.watchlist = Array.from(new Set([
     ...(pageViewOptions.watchlist || []),
     ...PUBLIC_PROGRESSION_VIEWS,
@@ -7540,7 +7541,7 @@ async function startApp() {
 
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    const savedPageState = !clubTarget && tablePages.has(pageName)
+    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
     if (savedPageState) {
