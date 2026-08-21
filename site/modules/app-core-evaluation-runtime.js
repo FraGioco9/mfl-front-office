@@ -213,7 +213,7 @@ async function loadSharedEvaluation(shareId) {
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
-      }, 1, { force: true });
+      }, 1);
       if (!playerPayload) return;
     }
     state.evaluationShareId = id;
@@ -365,7 +365,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
-      }, 1, { force: true });
+      }, 1);
       if (!playerPayload) return;
     }
     state.evaluationSavedId = id;
@@ -546,18 +546,38 @@ function renderSavedEvaluationList(rows) {
     attachEvaluationLoadActionTooltip(shareButton);
     attachEvaluationLoadActionTooltip(deleteButton);
 
-    const loadEvaluation = () => {
+    let loadingEvaluation = false;
+    const loadEvaluation = async () => {
+      if (loadingEvaluation) return;
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
-      const url = new URL("/evaluation", window.location.origin);
-      url.searchParams.set("player", playerId);
-      url.searchParams.set("saved", savedId);
-      window.history.replaceState({}, "", url.toString());
-      state.evaluationSavedId = savedId;
-      state.evaluationShareId = "";
-      hideModal(evaluationLoadModal);
-      updateEvaluationFooterActions();
-      applySharedEvaluationPayload(entry.payload);
+      if (!savedId || !playerId) return;
+
+      loadingEvaluation = true;
+      try {
+        if (!rowByPlayerId(playerId)) {
+          const route = incrementalRouteTarget("evaluation", { playerId });
+          const playerPayload = route ? await requestIncrementalRoute(route, 1) : null;
+          if (!playerPayload || !rowByPlayerId(playerId)) {
+            showToast("Saved evaluation could not be loaded.");
+            return;
+          }
+        }
+
+        const url = new URL("/evaluation", window.location.origin);
+        url.searchParams.set("player", playerId);
+        url.searchParams.set("saved", savedId);
+        window.history.replaceState({}, "", url.toString());
+        state.evaluationSavedId = savedId;
+        state.evaluationShareId = "";
+        hideModal(evaluationLoadModal);
+        updateEvaluationFooterActions();
+        await applySharedEvaluationPayload(entry.payload);
+      } catch (error) {
+        showToast(error?.message || "Saved evaluation could not be loaded.");
+      } finally {
+        loadingEvaluation = false;
+      }
     };
 
     shareButton.addEventListener("click", async (event) => {
@@ -648,13 +668,35 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       .filter(Boolean)));
 
     if (playerIds.length) {
-      await requestIncrementalRoute({
+      const savedPlayersPayload = await requestIncrementalRoute({
         pageName: "evaluation",
         scope: "players",
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerIds,
       }, 1, { force: true });
+
+      const columns = Array.isArray(savedPlayersPayload?.columns) ? savedPlayersPayload.columns : [];
+      const rows = Array.isArray(savedPlayersPayload?.rows) ? savedPlayersPayload.rows : [];
+      const playerIdIndex = columns.indexOf("player_id");
+      if (playerIdIndex >= 0) {
+        rows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cachedPlayerId = String(row[playerIdIndex] || "").trim();
+          if (!cachedPlayerId) return;
+          const route = incrementalRouteTarget("evaluation", { playerId: cachedPlayerId });
+          if (!route) return;
+          const { cacheKey } = incrementalRequestDetails(route, 1);
+          state.incrementalPayloadCache.set(cacheKey, {
+            ...savedPlayersPayload,
+            rows: [row],
+            page: 1,
+            pageSize: 1,
+            totalRows: 1,
+            sourceRows: 1,
+          });
+        });
+      }
     }
 
     window.__mflSavedEvaluationsSessionCache = evaluations;

@@ -2003,6 +2003,26 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
 
   if (evaluationPageActive) {
+    const plainEvaluationRoute = options.plain || isPlainEvaluationUrl();
+    const warmPlainEvaluation = state.dataLoaded
+      && plainEvaluationRoute
+      && document.documentElement.classList.contains("mflEvaluationReady");
+
+    if (warmPlainEvaluation) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+      renderEmptyEvaluationSelection(true);
+      syncHomeLoginButton();
+      if (shouldResetScroll) {
+        resetPageScroll();
+      }
+      void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
+      window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
+      return;
+    }
+
     const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
     document.documentElement.classList.remove("mflEvaluationReady");
     document.body.classList.add("evaluationPageLoading");
@@ -5353,7 +5373,7 @@ async function renderEvaluationPage() {
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: routePlayerId,
-      }, 1, { force: true });
+      }, 1);
       state.evaluationPlayerId = routePlayerId;
       row = rowByPlayerId(routePlayerId);
     }
@@ -6023,10 +6043,11 @@ function incrementalRouteTarget(pageName, options = {}) {
     };
   }
   if (pageName === "evaluation") {
-    const playerId = String(options.playerId || state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "");
-    return playerId
-      ? { ...base, scope: "evaluation", playerId, view: "attributes" }
-      : { ...base, scope: "empty", view: "attributes" };
+    const playerId = String(options.playerId || evaluationPlayerIdFromUrl() || "");
+    if (playerId) {
+      return { ...base, scope: "evaluation", playerId, view: "attributes" };
+    }
+    return state.dataLoaded ? null : { ...base, scope: "empty", view: "attributes" };
   }
   return null;
 }
@@ -6042,8 +6063,16 @@ function incrementalDataQuery(route, page = 1) {
       : ["club", "mflstats"].includes(route.scope)
         ? 5000
         : state.pageSize),
-    sortKey: route.scope === "club" ? "positions" : state.sortKey,
-    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,
+    sortKey: route.scope === "club"
+      ? "positions"
+      : ["player", "evaluation"].includes(route.scope)
+        ? "overall"
+        : state.sortKey,
+    sortDirection: route.scope === "club"
+      ? "asc"
+      : ["player", "evaluation"].includes(route.scope)
+        ? "desc"
+        : state.sortDirection,
   });
 
   if (route.access === "owned") query.set("access", "owned-progression");
@@ -8585,6 +8614,26 @@ async function startApp() {
     const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
     let previousTableStateSaved = false;
+    const warmPlainEvaluation = !runtimeReady
+      && String(pageName || "") === "evaluation"
+      && state.dataLoaded
+      && document.documentElement.classList.contains("mflEvaluationReady")
+      && !String(incomingOptions.playerId || "").trim()
+      && !String(incomingOptions.savedId || "").trim()
+      && !String(incomingOptions.shareId || "").trim()
+      && (!String(incomingOptions.path || "").trim() || String(incomingOptions.path || "").trim() === "/evaluation");
+
+    if (warmPlainEvaluation) {
+      if (updateHash && currentNavigationPath() !== "/evaluation") {
+        window.history.pushState({}, "", "/evaluation");
+      }
+      return originalRouteRuntimeSetPage.call(this, "evaluation", false, {
+        ...incomingOptions,
+        plain: true,
+        skipNavigationTransition: true,
+        skipNavigationLoading: true,
+      });
+    }
 
     if (!runtimeReady) {
       const loadCommittedRoute = async () => {
