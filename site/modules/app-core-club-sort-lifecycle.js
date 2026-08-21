@@ -138,19 +138,25 @@ const TOP_LEVEL_PREVIOUS_TABLE_SAVE_GUARDED = `  if (options.__mflPreviousTableS
     }
   }`;
 
-const NESTED_PREVIOUS_TABLE_SAVE = `    const previousTablePage = tablePageKey();
+const INCREMENTAL_PREVIOUS_TABLE_SAVE = `    const previousPage = state.currentPage;
+    const previousTablePage = tablePageKey();
     if (previousTablePage) {
       state.tablePageStates[previousTablePage] = currentTablePageState();
       saveTableState();
-    }`;
+    }
 
-const NESTED_PREVIOUS_TABLE_SAVE_GUARDED = `    if (options.__mflPreviousTableStateSaved !== true) {
+    const route = prepareIncrementalRoute(pageName, {`;
+
+const INCREMENTAL_PREVIOUS_TABLE_SAVE_GUARDED = `    const previousPage = state.currentPage;
+    if (options.__mflPreviousTableStateSaved !== true) {
       const previousTablePage = tablePageKey();
       if (previousTablePage) {
         state.tablePageStates[previousTablePage] = currentTablePageState();
         saveTableState();
       }
-    }`;
+    }
+
+    const route = prepareIncrementalRoute(pageName, {`;
 
 /**
  * Keep Club's fixed Position -> Overall ordering local to the Club route.
@@ -202,8 +208,8 @@ export function normalizeClubSortLifecycle(routeArtifacts) {
   );
   normalizedCore = replaceRequired(
     normalizedCore,
-    NESTED_PREVIOUS_TABLE_SAVE,
-    NESTED_PREVIOUS_TABLE_SAVE_GUARDED,
+    INCREMENTAL_PREVIOUS_TABLE_SAVE,
+    INCREMENTAL_PREVIOUS_TABLE_SAVE_GUARDED,
     "incremental setPage does not overwrite destination state after committed transition",
   );
 
