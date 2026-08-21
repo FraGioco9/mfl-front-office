@@ -474,16 +474,9 @@
         initialClubHandled = true;
         const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);
         if (normalizedPath() !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
-        const loadingController = window.__mflInteractionBusy;
-        const loadingToken = typeof loadingController?.begin === "function" ? loadingController.begin("route-runtime") : "";
-        const ensureRouteRuntime = window.__mflEnsureRouteRuntime;
-        if (typeof ensureRouteRuntime !== "function") throw new Error("Club route runtime gate is unavailable during startup.");
-        try {
-          await ensureRouteRuntime("club", { view: initialClubRoute.view });
-          await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
-        } finally {
-          if (loadingToken) loadingController?.end?.(loadingToken);
-        }
+        const navigateClub = window.mflOpenClubPage;
+        if (typeof navigateClub !== "function") throw new Error("Club navigation gate is unavailable during startup.");
+        await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
         return;
       }
       return originalShowHomeShell.apply(this, arguments);
