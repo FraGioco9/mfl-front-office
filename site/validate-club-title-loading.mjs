@@ -216,4 +216,4 @@ invariant(
   "Club refresh startup must trigger exactly one canonical Club route-owner load.",
 );
 
-console.log("Club source-row first paint, single-path refresh loading, non-blocking title preflight, single Squad text ownership, cached refresh, generated runtime, and roster readiness validation passed.");
+console.log("Club conflict regression checks passed: one Squad text owner, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
