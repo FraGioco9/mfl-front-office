@@ -170,17 +170,19 @@ invariant(
     && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
   "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
 );
-const pageChangeStart = searchRuntime.indexOf("function onPageChange()");
-const pageChangeEnd = searchRuntime.indexOf("purgeLegacyLocalRecentState();", pageChangeStart);
-const pageChangeSource = pageChangeStart >= 0 && pageChangeEnd > pageChangeStart
-  ? searchRuntime.slice(pageChangeStart, pageChangeEnd)
+const routeActiveStart = searchRuntime.indexOf("function onRouteActive()");
+const routeActiveEnd = searchRuntime.indexOf("purgeLegacyLocalRecentState();", routeActiveStart);
+const routeActiveSource = routeActiveStart >= 0 && routeActiveEnd > routeActiveStart
+  ? searchRuntime.slice(routeActiveStart, routeActiveEnd)
   : "";
 invariant(
-  pageChangeSource.includes('document.body?.dataset.page !== "evaluation"')
-    && pageChangeSource.includes("void restoreEmptyRecentResults(false, true);")
-    && searchRuntime.includes("pageObserver = new MutationObserver(onPageChange);")
-    && searchRuntime.includes('attributeFilter: ["data-page"]'),
-  "Switching into Evaluation from another page must re-prime the Supabase recent five when the actual body route becomes active.",
+  routeActiveSource.includes("if (destroyed || !active()) return;")
+    && routeActiveSource.includes("void restoreEmptyRecentResults(false, true);")
+    && searchRuntime.includes('window.addEventListener("mfl:evaluation-route-active", onRouteActive);')
+    && searchRuntime.includes('window.removeEventListener("mfl:evaluation-route-active", onRouteActive);')
+    && !searchRuntime.includes("MutationObserver")
+    && generatedSharedCore.includes('if (pageName === "evaluation") window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
+  "Switching into Evaluation from another page must explicitly signal route activation and restore the Supabase recent five without observing rendered DOM state.",
 );
 invariant(
   searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
@@ -196,4 +198,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-label activation cannot focus/highlight the input, direct input focus does not start loading, focus retains its visual highlight, route entry restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-label activation cannot focus/highlight the input, direct input focus does not start loading, focus retains its visual highlight, explicit route activation restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
