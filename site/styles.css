@@ -86,17 +86,14 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   position: relative;
 }
 
-/* The legacy wrapper has no box. shared-table-ui-runtime moves its controls
- * into .views before app-core binds them, then removes the wrapper entirely. */
+/* The legacy wrapper has no layout box; Rows stays in one fixed visual slot
+ * before and after hydration, so table chrome never relocates on first paint. */
 #progressionPage > .controlsBar {
   display: contents;
 }
 
 #progressionPage .views {
   margin-bottom: 6px;
-}
-
-#progressionPage:has(> .controlsBar) > .views {
   padding-right: 140px;
 }
 
@@ -109,7 +106,8 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   min-height: 32px;
 }
 
-#progressionPage > .controlsBar > .rowsField {
+#progressionPage > .controlsBar > .rowsField,
+#progressionPage .views > .rowsField {
   position: absolute;
   top: calc(var(--mfl-page-title-margin-block-start) + 32px + var(--mfl-page-title-margin-block-end));
   right: 0;
@@ -118,18 +116,6 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   min-width: 132px;
   height: 40px;
   margin: 0;
-}
-
-#progressionPage .views > .rowsField {
-  flex: 0 0 132px;
-  width: 132px;
-  min-width: 132px;
-  height: 40px;
-  margin-left: auto;
-}
-
-#progressionPage .views > .watchlistSwitcher:not([hidden]) + .rowsField {
-  margin-left: 0;
 }
 
 #progressionPage .watchlistSwitcher {
@@ -164,19 +150,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
 #progressionPage .watchlistDropdown {
   width: 260px;
   min-width: 260px;
-  font-size: 13px;
-}
-
-#progressionPage .watchlistDropdownItem,
-#progressionPage .watchlistDropdownName,
-#progressionPage .watchlistDropdownCount,
-#progressionPage .watchlistDropdownAdd {
-  font-size: 13px;
-}
-
-#progressionPage .watchlistDropdownItem,
-#progressionPage .watchlistDropdownAdd {
-  min-height: 34px;
 }
 
 #progressionPage #pageSizeSelect {
