@@ -33,8 +33,9 @@ invariant(
 
 invariant(
   sharedCore.includes('evaluationLoadButton.addEventListener("click", () => {')
-    && sharedCore.includes("clearEvaluationSearchFocus();\n    void openSavedEvaluationsModal();"),
-  "Clicking Load must immediately remove focus/selection from the Evaluation search before opening Saved Evaluations.",
+    && sharedCore.includes("evaluationSearchInput.blur();\n    void openSavedEvaluationsModal();")
+    && !sharedCore.includes("clearEvaluationSearchFocus();\n    void openSavedEvaluationsModal();"),
+  "Clicking Load must immediately blur the Evaluation search in shared core without referencing an extracted Evaluation function.",
 );
 
 for (const required of [
@@ -123,4 +124,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: Load clears search focus, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: Load blurs the search within shared-core ownership, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
