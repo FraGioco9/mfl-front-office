@@ -1186,13 +1186,18 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("evaluation");
+  const busyToken = window.__mflInteractionBusy?.begin?.("evaluation-load") || "";
+  try {
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+      await window.__mflEnsureRouteCore("evaluation");
+    }
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+      throw new Error("Evaluation route core is not loaded.");
+    }
+    return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
+  } finally {
+    if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
-    throw new Error("Evaluation route core is not loaded.");
-  }
-  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
 }
 
 function normalizedPageName(pageName) {
