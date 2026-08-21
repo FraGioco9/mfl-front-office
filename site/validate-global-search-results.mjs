@@ -30,8 +30,13 @@ invariant(
 );
 
 invariant(
+  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 512px;"),
+  "Global Search popup must be tall enough to show five full fixed-height result boxes.",
+);
+
+invariant(
   !runtime.includes('document.createElement("style")') && !runtime.includes("!important"),
   "Global Search result layout must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search caps typed results at 10 and preserves fixed, non-overlapping result boxes.");
+console.log("Global Search caps typed results at 10 and preserves five visible, fixed, non-overlapping result boxes.");
