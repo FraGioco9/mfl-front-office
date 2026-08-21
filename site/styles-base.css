@@ -271,6 +271,7 @@ body[data-page="home"] .topbar .stats {
   transition: none;
 }
 
+
 .menuRail {
   position: fixed;
   top: 102px;
@@ -483,6 +484,7 @@ body[data-page="home"] .topbar .stats {
   line-height: 1.15;
 }
 
+
 .sidebar {
   width: 162px;
   margin-top: 12px;
@@ -505,6 +507,7 @@ body[data-page="home"] .topbar .stats {
   gap: 8px;
   min-width: 0;
 }
+
 
 .settingsNavButton {
   grid-row: 3;
@@ -554,6 +557,7 @@ body[data-page="home"] .topbar .stats {
   transition: none;
 }
 
+
 .navDatabaseIcon,
 .navTrendIcon,
 .navEvaluationIcon,
@@ -588,6 +592,7 @@ body[data-page="home"] .topbar .stats {
   fill: currentColor;
   stroke: none;
 }
+
 
 .navEvaluationIcon {
   fill: none;
@@ -634,6 +639,7 @@ body[data-page="home"] .topbar .stats {
   white-space: nowrap;
   transition: none;
 }
+
 
 .navButton:hover {
   border-color: var(--primary-hover);
@@ -817,6 +823,7 @@ body.pinnedSidebarVisible .siteFooter {
   width: calc(100% - var(--pinned-sidebar-width));
   margin-left: var(--pinned-sidebar-width);
 }
+
 
 body:not(.pinnedSidebarVisible) main,
 body:not(.pinnedSidebarVisible) .siteFooter {
@@ -1943,6 +1950,7 @@ td a {
   color: var(--text-muted);
 }
 
+
 .selectionBar {
   --mfl-selection-exit-y: 0px;
   position: fixed;
@@ -2876,6 +2884,7 @@ button.playerIdText:active {
   border-bottom: 0;
 }
 
+
 .evaluationPage {
   width: min(1180px, 100%);
   margin: 0 auto;
@@ -3729,6 +3738,7 @@ button.playerIdText:active {
   stroke-width: 2;
 }
 
+
 .evaluationLoadDialog,
 .evaluationLoadList,
 .evaluationLoadResult,
@@ -4154,6 +4164,7 @@ button.playerIdText:active {
   font-weight: 700;
 }
 
+
 .settingsPage {
   width: min(1180px, 100%);
   margin: 0 auto;
@@ -4395,6 +4406,7 @@ button.playerIdText:active {
   vertical-align: middle;
 }
 
+
 .appShell .tableScroller .selectionCell {
   padding-left: 4px;
   padding-right: 4px;
@@ -4407,6 +4419,7 @@ button.playerIdText:active {
 }
 
 /* Pinned content grid, guest centering, and flicker-free tables. */
+
 
 .myPlayersLockedPage:not([hidden]),
 body.guest main > [class*="LockedPage"]:not([hidden]),
@@ -4463,6 +4476,7 @@ body[data-page="watchlist"] #progressionPage .views {
 #progressionPage .tableScroller table {
   box-sizing: border-box;
 }
+
 
 #progressionPage .tableScroller table,
 #progressionPage .tableScroller col,
@@ -4521,6 +4535,7 @@ body[data-page="club"] #progressionPage * {
   border-top-right-radius: inherit;
 }
 
+
 /* Extend the empty Evaluation page to the footer. */
 body[data-page="evaluation"] #evaluationPage {
   min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 50px);
@@ -4561,6 +4576,7 @@ body[data-page="evaluation"]::after {
   display: none;
   pointer-events: none;
 }
+
 
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton,
 html.mflEvaluationInitialLoadVisible #evaluationLoadButton[hidden] {
@@ -4641,6 +4657,7 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
   text-decoration: none;
 }
 
+
 .evaluationDiscountTooltipPortal {
   position: fixed;
   z-index: 2147483647;
@@ -4658,6 +4675,7 @@ html[data-initial-page^="players/"] body[data-page="player"]:not(.playerRouteGua
   opacity: 0;
   transform: translateY(4px);
 }
+
 
 .evaluationDiscountTooltipPortal[hidden] {
   display: none;
@@ -4731,6 +4749,7 @@ html[data-initial-page="changelog"] body[data-page="changelog"] #changelogPage {
 html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAttributeViews {
   visibility: hidden;
 }
+
 
 [data-tooltip]::before,
 [data-tooltip]::after,
