@@ -124,6 +124,16 @@ includes(
   "Club refresh must use the same route-runtime busy reason as in-site Club navigation.",
 );
 includes(
+  clubStartupLifecycle,
+  'const ensureRouteRuntime = window.__mflEnsureRouteRuntime;',
+  "Club refresh must use the shared route-runtime readiness owner before loading players.",
+);
+includes(
+  clubCore,
+  'await ensureRouteRuntime("club", { view: initialClubRoute.view });',
+  "Club refresh must settle the Club/Table route runtime before starting roster hydration.",
+);
+includes(
   clubCore,
   'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
   "Club refresh must execute one canonical Club route-owner load without adding history.",
@@ -200,14 +210,16 @@ invariant(
 
 const refreshHandoff = clubCore.indexOf("showHomeShellWithInitialClub");
 const loadingStart = clubCore.indexOf('loadingController.begin("route-runtime")', refreshHandoff);
-const refreshClubLoad = clubCore.indexOf('await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', loadingStart);
+const routeRuntimeReady = clubCore.indexOf('await ensureRouteRuntime("club", { view: initialClubRoute.view });', loadingStart);
+const refreshClubLoad = clubCore.indexOf('await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', routeRuntimeReady);
 const loadingEnd = clubCore.indexOf('loadingController?.end?.(loadingToken)', refreshClubLoad);
 invariant(
   refreshHandoff >= 0
     && loadingStart > refreshHandoff
-    && refreshClubLoad > loadingStart
+    && routeRuntimeReady > loadingStart
+    && refreshClubLoad > routeRuntimeReady
     && loadingEnd > refreshClubLoad,
-  "Refreshed Club routes must start shared loading, execute one Club load, and release loading afterward.",
+  "Refreshed Club routes must start shared loading, settle route runtime ownership, load the roster once, and release loading afterward.",
 );
 
 const startupClubLoads = clubCore.match(/await openClubPage\(initialClubRoute\.clubId, initialClubRoute\.view, false\);/g) || [];
@@ -216,4 +228,4 @@ invariant(
   "Club refresh startup must trigger exactly one canonical Club route-owner load.",
 );
 
-console.log("Club conflict regression checks passed: one Squad text owner, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
+console.log("Club conflict regression checks passed: one Squad text owner, route-runtime-ready player loading, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
