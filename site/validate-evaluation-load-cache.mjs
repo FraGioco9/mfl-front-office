@@ -16,10 +16,11 @@ const sharedCore = String(artifacts.core || "");
 const evaluationCore = String(artifacts.routeChunks?.evaluation || "");
 
 invariant(
-  controls.includes("#evaluationSearchInput:hover:not(:disabled),")
+  controls.includes(".evaluationSearchControl:hover #evaluationSearchInput:not(:disabled),")
     && controls.includes("#evaluationSearchInput:focus:not(:disabled),")
+    && !controls.includes("#evaluationSearchInput:hover:not(:disabled),")
     && !controls.includes("#evaluationSearchInput:focus-visible:not(:disabled)"),
-  "Evaluation search highlighting must be owned by direct input hover/focus so Player-label hover cannot highlight it and focus keeps the normal highlight without a separate white focus border.",
+  "Evaluation search highlighting must be owned by the search-control hover area plus direct input focus, so hovering Player cannot highlight it and focus keeps the normal highlight without a separate white border.",
 );
 
 invariant(
@@ -51,4 +52,4 @@ invariant(
   "The first saved-Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation saved-list cache validation passed: input hover/focus highlight is direct-input owned, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
+console.log("Evaluation saved-list cache validation passed: control-scoped hover and direct-input focus own the Evaluation highlight, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
