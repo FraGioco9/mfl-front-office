@@ -117,7 +117,7 @@ for (const required of [
   "function normalizeFilterSummaryLifecycle(artifacts) {",
   'filterSummary.textContent = String(count);',
   'if (filterSummary) filterSummary.textContent = "0";',
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableArtifacts);",
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve count-only Filters summaries through ${required}`);
 }
