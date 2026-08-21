@@ -7595,9 +7595,14 @@ async function startApp() {
 
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
+    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     if (savedPageState) {
       restoreSavedTableState(pageName, { view: options.view, deferRules: true });
     } else if (clubTarget) {
