@@ -7,11 +7,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCoreSource, bootstrap, loading, styles] = await Promise.all([
+const [appCoreSource, bootstrap, loading, styles, evaluationSearchState] = await Promise.all([
   read("./modules/app-core.js"),
   read("./bootstrap.js"),
   read("./loading.css"),
   read("./styles.css"),
+  read("./evaluation-search-state-runtime.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
@@ -95,8 +96,10 @@ invariant(
     && evaluation.includes("activateEvaluationSearch();")
     && evaluation.includes("window.requestAnimationFrame(activateEvaluationSearch);")
     && evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
-    && evaluation.includes("evaluationSearchInput.select();"),
-  "Clearing the Evaluation search must prevent the clear control from stealing focus and keep the search active after route reset.",
+    && evaluation.includes("evaluationSearchInput.select();")
+    && evaluationSearchState.includes('const clear = event.target.closest("#evaluationSearchClearButton");')
+    && evaluationSearchState.includes("directPointerFocus = true;\n          field.focus({ preventScroll: true });\n          field.select();\n          clearDirectPointerFocus();"),
+  "Clearing the Evaluation search must prevent the clear control from stealing focus and let the search-state runtime keep the input focused after route reset.",
 );
 
 invariant(
@@ -113,4 +116,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, complete loading lifecycle, clear-focus persistence, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, complete loading lifecycle, clear-focus ownership, and table-edge validation passed.");
