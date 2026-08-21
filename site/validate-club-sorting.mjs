@@ -8,6 +8,7 @@ const invariant = (condition, message) => {
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
+const occurrences = (source, value) => source.split(value).length - 1;
 
 const [coreSource, dataPage] = await Promise.all([
   read("./modules/app-core.js"),
@@ -79,14 +80,30 @@ includes(
   "__mflPreviousTableStateSaved: true",
   "The route gate must pass pre-save ownership into committed setPage work.",
 );
+
+const guardedSave = 'if (options.__mflPreviousTableStateSaved !== true) {';
+invariant(
+  occurrences(eagerCore, guardedSave) >= 2,
+  "Both canonical and incremental setPage paths must skip destination-state saves after the source state was pre-saved.",
+);
+excludes(
+  eagerCore,
+  `${guardedSave}\n    ${guardedSave}`,
+  "The generated runtime must not contain a redundant nested pre-save guard.",
+);
 includes(
   eagerCore,
-  "if (options.__mflPreviousTableStateSaved !== true) {",
-  "setPage must not re-save inherited Club sorting under the destination page key.",
+  `    const previousPage = state.currentPage;\n    ${guardedSave}\n      const previousTablePage = tablePageKey();`,
+  "The actual incremental setPage path must guard its previous-page save after navigation commits the destination.",
+);
+includes(
+  eagerCore,
+  `      saveTableState();\n    }\n\n    const route = prepareIncrementalRoute(pageName, {`,
+  "Incremental route preparation must happen only after the guarded previous-page save block.",
 );
 
 const preSave = eagerCore.indexOf('const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;');
 const transition = eagerCore.indexOf('const runTransition = Reflect.get(window, "__mflRunPageTransition");', preSave);
 invariant(preSave >= 0 && transition > preSave, "Source table state must be saved before the page transition commits the destination.");
 
-console.log("Club sorting validation passed: fixed Position -> Overall ordering is visible and Club navigation cannot overwrite destination page sort state.");
+console.log("Club sorting validation passed: fixed Position -> Overall ordering is visible and every committed page path preserves destination sort state after Club navigation.");
