@@ -15,6 +15,8 @@
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
   let recentLoadingToken = "";
+  let directPointerFocus = false;
+  let directPointerFocusResetTimer = 0;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -275,9 +277,16 @@
 
   function primeRecentSearchData({ force = false } = {}) {
     const field = input();
-    beginRecentLoadingGate(field);
     if (recentPrimePromise) return recentPrimePromise;
 
+    const currentIds = recentEvaluationPlayerIds();
+    const currentSignature = currentIds.join(",");
+    if (!force && recentPayload && recentPayloadSignature === currentSignature) {
+      publishRecentPayload(recentPayload);
+      return Promise.resolve(renderEmptySearchFromCore());
+    }
+
+    beginRecentLoadingGate(field);
     recentPrimePromise = waitForSupabaseRecentState()
       .then(() => {
         const ids = recentEvaluationPlayerIds();
@@ -324,9 +333,29 @@
     else hideTypedBlurredResults(field);
   }
 
+  function clearDirectPointerFocus() {
+    directPointerFocus = false;
+    if (directPointerFocusResetTimer) window.clearTimeout(directPointerFocusResetTimer);
+    directPointerFocusResetTimer = 0;
+  }
+
+  function onPointerDown(event) {
+    const field = input();
+    clearDirectPointerFocus();
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    directPointerFocus = true;
+    directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
+  }
+
   function onFocus(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    if (!directPointerFocus) {
+      event.stopImmediatePropagation();
+      field.blur();
+      return;
+    }
+    clearDirectPointerFocus();
     syncClearButton(field);
     if (!field.value.trim()) {
       void restoreEmptyRecentResults(false);
@@ -340,11 +369,8 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) {
-      void restoreEmptyRecentResults(false);
-      return;
-    }
-    window.setTimeout(() => hideTypedBlurredResults(field), 0);
+    if (!field.value.trim()) return;
+    window.setTimeout(() => hideTypedBlurredResults(field), 120);
   }
 
   function onKeyUp(event) {
@@ -358,7 +384,7 @@
     if (!(event.target instanceof Element)) return;
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      queueMicrotask(() => void restoreEmptyRecentResults(true));
+      queueMicrotask(() => void restoreEmptyRecentResults(false));
       return;
     }
 
@@ -369,12 +395,13 @@
 
   function onReady() {
     installCoreBridges();
-    void restoreEmptyRecentResults(true);
+    void restoreEmptyRecentResults(false);
   }
 
   purgeLegacyLocalRecentState();
   installCoreBridges();
   syncClearButton();
+  document.addEventListener("pointerdown", onPointerDown, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -387,6 +414,7 @@
 
   function destroy() {
     destroyed = true;
+    document.removeEventListener("pointerdown", onPointerDown, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
@@ -395,6 +423,7 @@
     window.removeEventListener("mfl:evaluation-ready", onReady);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
+    clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
