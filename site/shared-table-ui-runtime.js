@@ -65,7 +65,8 @@
     if (!button.querySelector(":scope > .filtersViewIcon")) {
       const label = document.createElement("span");
       label.textContent = "Filters";
-      button.replaceChildren(createFiltersIcon(), label);
+      button.textContent = "";
+      button.append(createFiltersIcon(), label);
     }
 
     let separator = document.getElementById("viewControlsSeparator");
