@@ -281,6 +281,74 @@ async function createSharedEvaluation() {
 }
 
 
+function savedEvaluationCacheWallet() {
+  return normalizeWalletAddress(state.linkedWalletAddress).toLowerCase();
+}
+
+function ensureSavedEvaluationCacheWallet() {
+  const wallet = savedEvaluationCacheWallet();
+  if (String(window.__mflSavedEvaluationsSessionCacheWallet || "") !== wallet) {
+    window.__mflSavedEvaluationsSessionCacheWallet = wallet;
+    window.__mflSavedEvaluationsSessionCache = null;
+    window.__mflSavedEvaluationPayloadCache = Object.create(null);
+  }
+  return wallet;
+}
+
+function savedEvaluationPayloadCache() {
+  ensureSavedEvaluationCacheWallet();
+  const cache = window.__mflSavedEvaluationPayloadCache;
+  if (cache && typeof cache === "object" && !Array.isArray(cache)) return cache;
+  const nextCache = Object.create(null);
+  window.__mflSavedEvaluationPayloadCache = nextCache;
+  return nextCache;
+}
+
+function rememberSavedEvaluationCacheEntry(entry) {
+  const id = String(entry?.id || "").trim();
+  if (!id || !entry?.payload) return null;
+  const normalizedEntry = {
+    ...entry,
+    id,
+    playerId: String(entry?.playerId || entry?.payload?.playerId || "").trim(),
+  };
+  savedEvaluationPayloadCache()[id] = normalizedEntry;
+  return normalizedEntry;
+}
+
+function cachedSavedEvaluationEntry(savedId) {
+  const id = String(savedId || "").trim();
+  if (!id) return null;
+  ensureSavedEvaluationCacheWallet();
+  const list = window.__mflSavedEvaluationsSessionCache;
+  if (Array.isArray(list)) {
+    const listEntry = list.find((entry) => String(entry?.id || "").trim() === id) || null;
+    if (listEntry?.payload) return rememberSavedEvaluationCacheEntry(listEntry);
+  }
+  return savedEvaluationPayloadCache()[id] || null;
+}
+
+function rememberSavedEvaluationList(entries) {
+  ensureSavedEvaluationCacheWallet();
+  const list = Array.isArray(entries) ? entries : [];
+  window.__mflSavedEvaluationsSessionCache = list;
+  list.forEach(rememberSavedEvaluationCacheEntry);
+  return list;
+}
+
+function savedEvaluationListCache() {
+  const wallet = ensureSavedEvaluationCacheWallet();
+  return wallet && Array.isArray(window.__mflSavedEvaluationsSessionCache)
+    ? window.__mflSavedEvaluationsSessionCache
+    : null;
+}
+
+function invalidateSavedEvaluationCache() {
+  ensureSavedEvaluationCacheWallet();
+  window.__mflSavedEvaluationsSessionCache = null;
+  window.__mflSavedEvaluationPayloadCache = Object.create(null);
+}
+
 async function createSavedEvaluation() {
   if (!hasWalletOptIn()) {
     showToast("Opt in to save evaluations.");
@@ -295,7 +363,6 @@ async function createSavedEvaluation() {
   const currentSavedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
   const payload = currentEvaluationSharePayload();
 
-  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch("/api/evaluation-save", {
     method: "POST",
     headers: {
@@ -318,6 +385,7 @@ async function createSavedEvaluation() {
     throw new Error("Could not save evaluation.");
   }
 
+  invalidateSavedEvaluationCache();
   state.evaluationSavedId = id;
   state.evaluationShareId = "";
   updateEvaluationFooterActions();
@@ -340,23 +408,29 @@ async function loadSavedEvaluation(savedId, playerId = "") {
   state.evaluationSavedLoading = true;
 
   try {
-    const requestUrl = new URL("/api/evaluation-save", window.location.origin);
-    requestUrl.searchParams.set("id", id);
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
-    if (selectedPlayerId) {
-      requestUrl.searchParams.set("player", selectedPlayerId);
+    let data = cachedSavedEvaluationEntry(id);
+
+    if (!data) {
+      const requestUrl = new URL("/api/evaluation-save", window.location.origin);
+      requestUrl.searchParams.set("id", id);
+      if (selectedPlayerId) {
+        requestUrl.searchParams.set("player", selectedPlayerId);
+      }
+
+      const response = await fetch(requestUrl.toString(), {
+        cache: "no-store",
+        headers: walletProofHeaders(true),
+      });
+
+      if (!response.ok) {
+        throw new Error("Saved evaluation not found.");
+      }
+
+      data = await response.json();
+      rememberSavedEvaluationCacheEntry(data);
     }
 
-    const response = await fetch(requestUrl.toString(), {
-      cache: "no-store",
-      headers: walletProofHeaders(true),
-    });
-
-    if (!response.ok) {
-      throw new Error("Saved evaluation not found.");
-    }
-
-    const data = await response.json();
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
     if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
       const playerPayload = await requestIncrementalRoute({
@@ -426,7 +500,6 @@ async function deleteSavedEvaluation(savedId) {
   const requestUrl = new URL("/api/evaluation-save", window.location.origin);
   requestUrl.searchParams.set("id", id);
 
-  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch(requestUrl.toString(), {
     method: "DELETE",
     cache: "no-store",
@@ -438,6 +511,7 @@ async function deleteSavedEvaluation(savedId) {
     throw new Error(error.error || "Could not delete saved evaluation.");
   }
 
+  invalidateSavedEvaluationCache();
   return true;
 }
 
@@ -623,8 +697,8 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
   }
 
   showModal(evaluationLoadModal);
-  const cachedEvaluations = window.__mflSavedEvaluationsSessionCache;
-  if (Array.isArray(cachedEvaluations)) {
+  const cachedEvaluations = savedEvaluationListCache();
+  if (cachedEvaluations) {
     renderSavedEvaluationList(cachedEvaluations);
     return;
   }
@@ -657,7 +731,7 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       }, 1, { force: true });
     }
 
-    window.__mflSavedEvaluationsSessionCache = evaluations;
+    rememberSavedEvaluationList(evaluations);
     renderSavedEvaluationList(evaluations);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
@@ -762,6 +836,7 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
+  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();
 }
 
 function handleEvaluationSearchInput() {

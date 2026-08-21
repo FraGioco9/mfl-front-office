@@ -1186,7 +1186,10 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
+  const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && activeWallet
+    && String(window.__mflSavedEvaluationsSessionCacheWallet || "") === activeWallet
     && Array.isArray(window.__mflSavedEvaluationsSessionCache);
   const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
   try {
