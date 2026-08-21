@@ -189,6 +189,8 @@ includes(normalizedCore, `      if (tablePages.has(pageName) && !clubPage) {
         syncRestoredTableControls(pageName);
       }
       if (clubPage) {`, "The public incremental table renderer must consume staged controls only after route data is ready, while Club keeps route-owned roster state.");
-includes(normalizedCore, "if (clubPage) applyFilters({ save: false, localOnly: true });", "Club payloads must render through the live Club filter owner instead of the captured generic filter owner.");
+includes(normalizedCore, "if (!clubPage) originalApplyFilters.call(this, { save: false });", "Only non-Club incremental payloads may enter the generic pre-route filter renderer.");
+excludes(normalizedCore, 'tablePages.add("club")', "Club must remain outside generic table-page state and filter ownership.");
+includes(normalizedCore, 'const PUBLIC_TABLE_PAGES = new Set(["watchlist"]);', "Only Watchlist should use the generic public-table progression compatibility owner.");
 
-console.log("Route runtime, prebuilt route-core splitting, request cancellation, and pure table-state validation passed.");
+console.log("Route runtime, prebuilt route-core splitting, request cancellation, pure table-state validation, and filter-free Club payload handoff passed.");
