@@ -25,7 +25,10 @@ const UNIFORM_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeS
         if (normalizedPath() !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
         const loadingController = window.__mflInteractionBusy;
         const loadingToken = typeof loadingController?.begin === "function" ? loadingController.begin("route-runtime") : "";
+        const ensureRouteRuntime = window.__mflEnsureRouteRuntime;
+        if (typeof ensureRouteRuntime !== "function") throw new Error("Club route runtime gate is unavailable during startup.");
         try {
+          await ensureRouteRuntime("club", { view: initialClubRoute.view });
           await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
         } finally {
           if (loadingToken) loadingController?.end?.(loadingToken);
