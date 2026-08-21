@@ -94,7 +94,7 @@ includes(
 );
 includes(
   clubStartupLifecycle,
-  'navigateClub.__mflRouteRuntimeGate !== true',
+  'Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true',
   "Club refresh startup must require the shared route-runtime loading gate.",
 );
 includes(
