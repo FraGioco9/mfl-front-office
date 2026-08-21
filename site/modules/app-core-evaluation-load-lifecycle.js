@@ -41,7 +41,7 @@ const EVALUATION_LOAD_BUTTON_BINDING = `if (evaluationLoadButton) {
 }`;
 const EVALUATION_LOAD_BUTTON_BINDING_WITH_BLUR = `if (evaluationLoadButton) {
   evaluationLoadButton.addEventListener("click", () => {
-    clearEvaluationSearchFocus();
+    evaluationSearchInput.blur();
     void openSavedEvaluationsModal();
   });
 }`;
