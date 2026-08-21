@@ -59,4 +59,34 @@ for (const [label, source] of [["shared", eagerCore], ["Club", clubCore], ["Tabl
   );
 }
 
-console.log("Club sorting validation passed: fixed Position -> Overall ordering is visible, read-only, and isolated from shared table sort state.");
+includes(
+  eagerCore,
+  'const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;',
+  "Page transitions must capture the source table before the destination page is committed.",
+);
+includes(
+  eagerCore,
+  "state.tablePageStates[previousTablePage] = currentTablePageState();",
+  "The source page sort/filter state must be persisted before navigation commits the destination.",
+);
+includes(
+  eagerCore,
+  "previousTableStateSaved = true;",
+  "The committed route must record that source table state was already handled.",
+);
+includes(
+  eagerCore,
+  "__mflPreviousTableStateSaved: true",
+  "The route gate must pass pre-save ownership into committed setPage work.",
+);
+includes(
+  eagerCore,
+  "if (options.__mflPreviousTableStateSaved !== true) {",
+  "setPage must not re-save inherited Club sorting under the destination page key.",
+);
+
+const preSave = eagerCore.indexOf('const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;');
+const transition = eagerCore.indexOf('const runTransition = Reflect.get(window, "__mflRunPageTransition");', preSave);
+invariant(preSave >= 0 && transition > preSave, "Source table state must be saved before the page transition commits the destination.");
+
+console.log("Club sorting validation passed: fixed Position -> Overall ordering is visible and Club navigation cannot overwrite destination page sort state.");
