@@ -1395,7 +1395,7 @@ function pagePath(pageName, options = {}) {
   }
 
   if (pageName === "evaluation") {
-    if (options.plain || isPlainEvaluationUrl()) {
+    if (options.plain) {
       return "/evaluation";
     }
 
@@ -1982,7 +1982,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
     document.documentElement.classList.remove("mflEvaluationReady");
     document.body.classList.add("evaluationPageLoading");
-    if (options.plain) {
+    if (options.plain || isPlainEvaluationUrl()) {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
       state.evaluationPlayerId = null;
