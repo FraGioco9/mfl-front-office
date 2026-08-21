@@ -52,9 +52,13 @@ const GENERIC_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
 const CLUB_FREE_INCREMENTAL_LOADING_FILTERS = `    if (tableRoute) {
       if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();`;
 
-const GENERIC_PUBLIC_TABLE_PAGES = `  const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);`;
-const FILTERABLE_PUBLIC_TABLE_PAGES = `  const PUBLIC_TABLE_PAGES = new Set(["watchlist"]);`;
-const CLUB_GENERIC_TABLE_MEMBERSHIP = `  tablePages.add("club");\n`;
+const GENERIC_PREPARE_SAVED_PAGE_STATE = `    const savedPageState = !clubTarget && tablePages.has(pageName)
+      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
+      : null;`;
+
+const CLUB_FREE_PREPARE_SAVED_PAGE_STATE = `    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
+      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
+      : null;`;
 
 const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
@@ -131,6 +135,120 @@ const RESTORE_STANDARD_CONTROLS = `  function restoreStandardControls() {
     });
   }`;
 
+const GENERIC_TABLE_LOADING_SHELL = `function renderTableLoadingShell(pageName) {
+  state.currentPage = pageName;
+  const tablePage = tablePages.has(pageName);
+
+  if (!tablePage) {
+    return;
+  }
+
+  restoreSavedTableState(pageName);
+  globalThis.syncQuickFilterLabels?.();
+  updateViewButtons();
+  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else if (pageName !== "club") {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }
+  emptyState.hidden = true;
+  emptyState.textContent = "";
+  tableBody.replaceChildren();
+  window.__mflTableLoadingRuntime?.show?.();
+}`;
+
+const CLUB_AWARE_TABLE_LOADING_SHELL = `function renderTableLoadingShell(pageName) {
+  state.currentPage = pageName;
+  const tablePage = tablePages.has(pageName);
+
+  if (!tablePage) {
+    return;
+  }
+
+  const clubPage = pageName === "club";
+  if (clubPage) {
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    const quickFilters = document.querySelector("#progressionPage .quickFilters");
+    if (quickFilters) quickFilters.hidden = true;
+    const controlsBar = document.querySelector("#progressionPage .controlsBar");
+    if (controlsBar) controlsBar.hidden = true;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = true;
+    });
+  } else {
+    restoreSavedTableState(pageName);
+    globalThis.syncQuickFilterLabels?.();
+  }
+
+  updateViewButtons();
+  if (pageName === "agents") {
+    renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
+  } else if (!clubPage) {
+    tablePageTitle.textContent = tableTitleForPage(pageName);
+  }
+  emptyState.hidden = true;
+  emptyState.textContent = "";
+  tableBody.replaceChildren();
+  window.__mflTableLoadingRuntime?.show?.();
+}`;
+
+const TABLE_RESTORE_START = `function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
+  const storedState = state.tablePageStates?.[pageName]`;
+
+const CLUB_FREE_TABLE_RESTORE_START = `function tableRestoreSavedTableStateOwner(pageName = tablePageKey() || "progression", options = {}) {
+  if (pageName === "club") {
+    state.view = normalizeViewForPage(options.view || state.view || "attributes", pageName);
+    state.page = 1;
+    state.sortKey = "positions";
+    state.sortDirection = "asc";
+    state.selectedPlayerIds = new Set();
+    state.pendingTableControlRestore = null;
+    return;
+  }
+
+  const storedState = state.tablePageStates?.[pageName]`;
+
+const TABLE_CONTROL_SYNC_START = `function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  const restored = state.pendingTableControlRestore;`;
+
+const CLUB_FREE_TABLE_CONTROL_SYNC_START = `function syncRestoredTableControls(pageName = tablePageKey() || "progression") {
+  if (pageName === "club") {
+    state.pendingTableControlRestore = null;
+    return false;
+  }
+
+  const restored = state.pendingTableControlRestore;`;
+
+const TABLE_APPLY_FILTER_START = `function tableApplyFiltersOwner(options = {}) {
+  const rules = readFilterRules();`;
+
+const CLUB_FILTER_FREE_TABLE_APPLY_START = `function tableApplyFiltersOwner(options = {}) {
+  if (state.currentPage === "club") {
+    state.tableSourceRowsCount = state.rows.length;
+    state.filteredRows = [...state.rows];
+    state.filteredRows.sort(compareRows);
+    state.pendingTableControlRestore = null;
+    filterRules.replaceChildren();
+    hideRetiredInput.checked = false;
+    hideRetiringInput.checked = false;
+    if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
+    if (packablePlayersInput) packablePlayersInput.checked = false;
+    newMintsInput.checked = false;
+    if (filterSummary) filterSummary.textContent = "0 active";
+    emptyState.textContent = "No players found for this club.";
+    syncActiveWatchlistFromSet();
+    renderTable();
+    return;
+  }
+
+  const rules = readFilterRules();`;
+
 const EAGER_RUNTIME_COMMENTS = [
   "/* Keep MFL Wallet search navigation anchored to Attributes. */\n\n",
   "/* Layout-centered feedback and transition-free shared views */\n",
@@ -144,8 +262,10 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     : null;
   const club = String(routeChunks?.club || "");
   const core = String(artifacts?.core || "");
+  const table = String(routeChunks?.table || "");
   if (!club) throw new Error("Cannot normalize an empty Club route artifact.");
   if (!core) throw new Error("Cannot normalize an empty shared application core.");
+  if (!table) throw new Error("Cannot normalize an empty Table route artifact for Club.");
 
   let normalizedClub = replaceRequired(
     club,
@@ -180,15 +300,9 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
 
   let normalizedCore = replaceRequired(
     core,
-    GENERIC_PUBLIC_TABLE_PAGES,
-    FILTERABLE_PUBLIC_TABLE_PAGES,
-    "Club excluded from generic filterable public table pages",
-  );
-  normalizedCore = replaceRequired(
-    normalizedCore,
-    CLUB_GENERIC_TABLE_MEMBERSHIP,
-    "",
-    "Club excluded from generic table page state and filters",
+    GENERIC_PREPARE_SAVED_PAGE_STATE,
+    CLUB_FREE_PREPARE_SAVED_PAGE_STATE,
+    "Club route preparation bypasses saved table filter state",
   );
   normalizedCore = replaceRequired(
     normalizedCore,
@@ -204,12 +318,38 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
   );
   for (const comment of EAGER_RUNTIME_COMMENTS) normalizedCore = normalizedCore.replace(comment, "");
 
+  let normalizedTable = replaceRequired(
+    table,
+    GENERIC_TABLE_LOADING_SHELL,
+    CLUB_AWARE_TABLE_LOADING_SHELL,
+    "Club retains Table loading shell without filter restoration",
+  );
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    TABLE_RESTORE_START,
+    CLUB_FREE_TABLE_RESTORE_START,
+    "Club table-state restore excludes filter state",
+  );
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    TABLE_CONTROL_SYNC_START,
+    CLUB_FREE_TABLE_CONTROL_SYNC_START,
+    "Club never synchronizes restored filter controls",
+  );
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    TABLE_APPLY_FILTER_START,
+    CLUB_FILTER_FREE_TABLE_APPLY_START,
+    "Club table render bypasses the filter pipeline",
+  );
+
   return Object.freeze({
     ...artifacts,
     core: normalizedCore,
     routeChunks: Object.freeze({
       ...routeChunks,
       club: normalizedClub,
+      table: normalizedTable,
     }),
   });
 }
