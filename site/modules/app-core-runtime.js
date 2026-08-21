@@ -5311,7 +5311,16 @@ async function renderEvaluationPage() {
   }
 
   if (row) {
-    evaluationSearchInput.value = formatCellValue(row, "name");
+    const evaluationPlayerName = formatCellValue(row, "name");
+    evaluationSearchInput.value = evaluationPlayerName;
+    try {
+      const evaluationRouteKey = `${window.location.pathname}${window.location.search}`;
+      if (evaluationRouteKey.startsWith("/evaluation?")) {
+        sessionStorage.setItem(`mfl-evaluation-first-paint-name-v1:${evaluationRouteKey}`, evaluationPlayerName);
+      }
+    } catch {
+      // Session storage is an optional first-paint cache only.
+    }
     syncEvaluationSearchClearButton();
   }
 
