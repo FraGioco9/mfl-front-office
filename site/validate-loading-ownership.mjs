@@ -73,6 +73,36 @@ for (const [name, source] of [
   );
 }
 
+for (const reason of [
+  "setPage",
+  "setView",
+  "switchWatchlist",
+  "route-runtime",
+  "requestIncrementalRoute",
+]) {
+  invariant(
+    loadingUi.includes(`"${reason}"`),
+    `Loading toast must classify ${reason} as navigation/cache coordination rather than standalone loading.`,
+  );
+}
+invariant(
+  loadingUi.includes("const TOAST_COORDINATION_REASONS = new Set(["),
+  "Loading toast must keep navigation/cache coordination reasons separate from real loading reasons.",
+);
+invariant(
+  loadingUi.includes("function snapshotNeedsToast(snapshot) {")
+    && loadingUi.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))"),
+  "Loading toast must require at least one non-coordination busy reason before becoming visible.",
+);
+invariant(
+  loadingUi.includes("if (snapshotNeedsToast(snapshot) && !toastSuppressed())"),
+  "Loading toast visibility must use the cache-aware loading predicate.",
+);
+invariant(
+  !loadingUi.includes("if (snapshot.busy && !toastSuppressed())"),
+  "Loading toast must not appear for every busy navigation snapshot.",
+);
+
 invariant(
   !loadingUi.includes("syncToastHosts"),
   "Loading UI must not maintain toast layering through DOM-reparent observers.",
@@ -101,4 +131,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Canonical loading-state ownership, bootstrap-owned loading rows, static presentation, and direct subscribers validation passed.");
+console.log("Canonical loading-state ownership, cache-aware toast suppression, bootstrap-owned loading rows, static presentation, and direct subscribers validation passed.");
