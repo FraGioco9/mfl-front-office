@@ -55,18 +55,33 @@
     return svg;
   }
 
+  function hideLegacyQuickClear() {
+    const quickClear = document.getElementById("quickClearFiltersButton");
+    if (!(quickClear instanceof HTMLButtonElement)) return;
+    quickClear.hidden = true;
+    quickClear.tabIndex = -1;
+    quickClear.setAttribute("aria-hidden", "true");
+  }
+
   function syncFiltersViewControl() {
     const views = document.querySelector("#progressionPage .views");
     const button = document.getElementById("openFiltersButton");
+    const summary = document.getElementById("filterSummary");
     if (!(views instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return false;
 
     button.classList.add("filtersViewButton");
     button.setAttribute("aria-label", "Filters");
     if (!button.querySelector(":scope > .filtersViewIcon")) {
       const label = document.createElement("span");
+      label.className = "filtersViewLabel";
       label.textContent = "Filters";
       button.textContent = "";
       button.append(createFiltersIcon(), label);
+    }
+
+    if (summary instanceof HTMLElement) {
+      summary.classList.add("filtersViewCount");
+      button.append(summary);
     }
 
     let separator = document.getElementById("viewControlsSeparator");
@@ -80,6 +95,7 @@
     const firstViewButton = views.querySelector(":scope > .viewButton[data-view]");
     views.insertBefore(button, firstViewButton);
     views.insertBefore(separator, firstViewButton);
+    hideLegacyQuickClear();
     return true;
   }
 
