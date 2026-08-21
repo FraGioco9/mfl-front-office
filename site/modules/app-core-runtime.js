@@ -4882,19 +4882,6 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
   }
 
   evaluationSearchInput.placeholder = "Search ID or player name";
-  if (!String(evaluationSearchInput.value || "").trim()) {
-    window.requestAnimationFrame(() => {
-      const routeParams = new URLSearchParams(window.location.search);
-      const plainEvaluationRoute = window.location.pathname === "/evaluation"
-        && !routeParams.get("player")
-        && !routeParams.get("saved")
-        && !routeParams.get("share");
-      if (!plainEvaluationRoute || String(evaluationSearchInput.value || "").trim()) return;
-      evaluationSearchInput.focus({ preventScroll: true });
-      evaluationSearchInput.select();
-    });
-  }
-
   evaluationPanel.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();

@@ -762,14 +762,6 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-
-  const activateEvaluationSearch = () => {
-    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
-    evaluationSearchInput.focus({ preventScroll: true });
-    evaluationSearchInput.select();
-  };
-  activateEvaluationSearch();
-  window.requestAnimationFrame(activateEvaluationSearch);
 }
 
 function handleEvaluationSearchInput() {
