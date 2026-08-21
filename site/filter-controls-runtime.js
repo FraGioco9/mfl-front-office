@@ -4,6 +4,14 @@
   let coreObserver = null;
   let destroyed = false;
 
+  function clubRouteActive() {
+    const root = document.documentElement;
+    const bodyPage = String(document.body?.dataset.page || "").toLowerCase();
+    if (bodyPage === "club") return true;
+    return root.dataset.mflReady !== "true"
+      && String(root.dataset.initialTablePage || "").toLowerCase() === "club";
+  }
+
   function syncDropdowns(root = document) {
     try {
       window.__mflDropdowns?.enhanceVisible(root);
@@ -63,7 +71,7 @@
   }
 
   function installCoreBridge() {
-    if (destroyed) return false;
+    if (destroyed || clubRouteActive()) return false;
     try {
       const installed = Boolean(window.eval(`(() => {
         if (typeof buildOperatorSelect !== "function"
@@ -126,15 +134,18 @@
   }
 
   function sync() {
+    if (clubRouteActive()) return false;
     installSelectedLinksDirectOpen();
     restorePageSizeSelectInteraction();
     installCoreBridge();
     syncDropdowns(document);
+    return true;
   }
 
   function installCoreBridgeWhenAvailable() {
-    if (installCoreBridge()) return;
+    if (clubRouteActive() || installCoreBridge()) return;
     coreObserver = new MutationObserver((records, observer) => {
+      if (clubRouteActive()) return;
       const coreInserted = records.some((record) => Array.from(record.addedNodes).some((node) => (
         node instanceof HTMLScriptElement && node.dataset.mflRuntime === "/modules/app-core.js"
       )));
@@ -146,8 +157,10 @@
     coreObserver.observe(document.head, { childList: true });
   }
 
-  installSelectedLinksDirectOpen();
-  installCoreBridgeWhenAvailable();
+  if (!clubRouteActive()) {
+    installSelectedLinksDirectOpen();
+    installCoreBridgeWhenAvailable();
+  }
   window.addEventListener("mfl:ready", sync, { once: true });
 
   function destroy() {
