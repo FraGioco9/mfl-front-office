@@ -62,6 +62,41 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
 
   normalizedCore = replaceRequired(
     normalizedCore,
+    `  if (pageName === "evaluation") {
+    const playerId = String(options.playerId || state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "");
+    return playerId
+      ? { ...base, scope: "evaluation", playerId, view: "attributes" }
+      : { ...base, scope: "empty", view: "attributes" };
+  }`,
+    `  if (pageName === "evaluation") {
+    const playerId = String(options.playerId || evaluationPlayerIdFromUrl() || "");
+    if (playerId) {
+      return { ...base, scope: "evaluation", playerId, view: "attributes" };
+    }
+    return state.dataLoaded ? null : { ...base, scope: "empty", view: "attributes" };
+  }`,
+    "Plain Evaluation return does not preload the stale previous player or discard already-loaded row data",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `    sortKey: route.scope === "club" ? "positions" : state.sortKey,
+    sortDirection: route.scope === "club" ? "asc" : state.sortDirection,`,
+    `    sortKey: route.scope === "club"
+      ? "positions"
+      : ["player", "evaluation"].includes(route.scope)
+        ? "overall"
+        : state.sortKey,
+    sortDirection: route.scope === "club"
+      ? "asc"
+      : ["player", "evaluation"].includes(route.scope)
+        ? "desc"
+        : state.sortDirection,`,
+    "Player and Evaluation route-cache identities do not depend on unrelated table sorting",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
     `  if (["watchlist", "myplayers", "settings", "player"].includes(initialTarget.pageName)) {
     startupDependencies.push(startupWalletPreferencesPromise);
   }`,
@@ -69,6 +104,126 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     startupDependencies.push(startupWalletPreferencesPromise);
   }`,
     "Evaluation startup waits for wallet preferences before selected-route readiness",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `  if (evaluationPageActive) {
+    const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    document.documentElement.classList.remove("mflEvaluationReady");
+    document.body.classList.add("evaluationPageLoading");
+    if (options.plain) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+    }
+    try {
+      await renderEvaluationPage();
+      await finishEvaluationReadiness();
+      if (document.body.classList.contains("loading")) {
+        await finishLoading();
+      }
+
+      syncHomeLoginButton();
+      if (shouldResetScroll) {
+        resetPageScroll();
+      }
+      document.documentElement.classList.add("mflEvaluationReady");
+      window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
+      return;
+    } finally {
+      document.body.classList.remove("evaluationPageLoading");
+      if (!document.documentElement.classList.contains("mflEvaluationReady")) {
+        document.documentElement.classList.add("mflEvaluationReady");
+      }
+      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+    }
+  }`,
+    `  if (evaluationPageActive) {
+    const plainEvaluationRoute = options.plain || isPlainEvaluationUrl();
+    const warmPlainEvaluation = state.dataLoaded
+      && plainEvaluationRoute
+      && document.documentElement.classList.contains("mflEvaluationReady");
+
+    if (warmPlainEvaluation) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+      renderEmptyEvaluationSelection(true);
+      syncHomeLoginButton();
+      if (shouldResetScroll) {
+        resetPageScroll();
+      }
+      void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
+      window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
+      return;
+    }
+
+    const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
+    document.documentElement.classList.remove("mflEvaluationReady");
+    document.body.classList.add("evaluationPageLoading");
+    if (options.plain) {
+      state.evaluationShareId = "";
+      state.evaluationSavedId = "";
+      state.evaluationPlayerId = null;
+      evaluationSearchInput.value = "";
+    }
+    try {
+      await renderEvaluationPage();
+      await finishEvaluationReadiness();
+      if (document.body.classList.contains("loading")) {
+        await finishLoading();
+      }
+
+      syncHomeLoginButton();
+      if (shouldResetScroll) {
+        resetPageScroll();
+      }
+      document.documentElement.classList.add("mflEvaluationReady");
+      window.dispatchEvent(new CustomEvent("mfl:evaluation-ready"));
+      return;
+    } finally {
+      document.body.classList.remove("evaluationPageLoading");
+      if (!document.documentElement.classList.contains("mflEvaluationReady")) {
+        document.documentElement.classList.add("mflEvaluationReady");
+      }
+      window.__mflInteractionBusy?.end?.(evaluationBusyToken);
+    }
+  }`,
+    "Warm plain Evaluation returns bypass cold readiness and interaction loading",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+
+    if (!runtimeReady) {`,
+    `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    const warmPlainEvaluation = !runtimeReady
+      && String(pageName || "") === "evaluation"
+      && state.dataLoaded
+      && document.documentElement.classList.contains("mflEvaluationReady")
+      && !String(incomingOptions.playerId || "").trim()
+      && !String(incomingOptions.savedId || "").trim()
+      && !String(incomingOptions.shareId || "").trim()
+      && (!String(incomingOptions.path || "").trim() || String(incomingOptions.path || "").trim() === "/evaluation");
+
+    if (warmPlainEvaluation) {
+      if (updateHash && currentNavigationPath() !== "/evaluation") {
+        window.history.pushState({}, "", "/evaluation");
+      }
+      return originalRouteRuntimeSetPage.call(this, "evaluation", false, {
+        ...incomingOptions,
+        plain: true,
+        skipNavigationTransition: true,
+        skipNavigationLoading: true,
+      });
+    }
+
+    if (!runtimeReady) {`,
+    "Warm plain Evaluation return bypasses the global cold-route transition gate",
   );
 
   normalizedCore = replaceRequired(
@@ -188,7 +343,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: routePlayerId,
-      }, 1, { force: true });
+      }, 1);
       state.evaluationPlayerId = routePlayerId;
       row = rowByPlayerId(routePlayerId);
     }
@@ -233,7 +388,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
   }
 
   renderEvaluationTable(row);`,
-    "Evaluation refresh hydrates its route player without clearing first-paint selection chrome",
+    "Evaluation refresh hydrates its route player through the session cache without clearing first-paint selection chrome",
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
@@ -284,12 +439,25 @@ async function loadSharedEvaluation`,
         view: "attributes",
         access: currentDataAccess("evaluation"),
         playerId: payloadPlayerId,
-      }, 1, { force: true });
+      }, 1);
       if (!playerPayload) return;
     }
     state.evaluationShareId = id;
     await applySharedEvaluationPayload(data.payload);`,
-    "Shared Evaluation hydrates the same player row and awaits the standard table renderer",
+    "Shared Evaluation reuses the cached player row and awaits the standard table renderer",
+  );
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `      }, 1, { force: true });
+      if (!playerPayload) return;
+    }
+    state.evaluationSavedId = id;`,
+    `      }, 1);
+      if (!playerPayload) return;
+    }
+    state.evaluationSavedId = id;`,
+    "Saved Evaluation route hydration reuses the cached player row",
   );
 
   evaluationSource = replaceRequired(

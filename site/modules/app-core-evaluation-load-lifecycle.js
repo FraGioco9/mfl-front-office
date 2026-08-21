@@ -47,6 +47,48 @@ const EVALUATION_LOAD_MODAL_START_WITH_CACHE = `  showModal(evaluationLoadModal)
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
   try {`;
 
+const EVALUATION_SAVED_PLAYER_PREFETCH = `    if (playerIds.length) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "players",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerIds,
+      }, 1, { force: true });
+    }`;
+
+const EVALUATION_SAVED_PLAYER_PREFETCH_WITH_CACHE = `    if (playerIds.length) {
+      const savedPlayersPayload = await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "players",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerIds,
+      }, 1, { force: true });
+
+      const columns = Array.isArray(savedPlayersPayload?.columns) ? savedPlayersPayload.columns : [];
+      const rows = Array.isArray(savedPlayersPayload?.rows) ? savedPlayersPayload.rows : [];
+      const playerIdIndex = columns.indexOf("player_id");
+      if (playerIdIndex >= 0) {
+        rows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cachedPlayerId = String(row[playerIdIndex] || "").trim();
+          if (!cachedPlayerId) return;
+          const route = incrementalRouteTarget("evaluation", { playerId: cachedPlayerId });
+          if (!route) return;
+          const { cacheKey } = incrementalRequestDetails(route, 1);
+          state.incrementalPayloadCache.set(cacheKey, {
+            ...savedPlayersPayload,
+            rows: [row],
+            page: 1,
+            pageSize: 1,
+            totalRows: 1,
+            sourceRows: 1,
+          });
+        });
+      }
+    }`;
+
 const EVALUATION_LOAD_RENDER = `    renderSavedEvaluationList(evaluations);`;
 const EVALUATION_LOAD_RENDER_WITH_CACHE = `    window.__mflSavedEvaluationsSessionCache = evaluations;
     renderSavedEvaluationList(evaluations);`;
@@ -63,10 +105,61 @@ const EVALUATION_DELETE_REQUEST_WITH_CACHE_INVALIDATION = `  window.__mflSavedEv
   const response = await fetch(requestUrl.toString(), {
     method: "DELETE",`;
 
+const EVALUATION_SAVED_SELECTION = `    const loadEvaluation = () => {
+      clearEvaluationSearchFocus();
+      const savedId = String(entry.id || "").trim();
+      const url = new URL("/evaluation", window.location.origin);
+      url.searchParams.set("player", playerId);
+      url.searchParams.set("saved", savedId);
+      window.history.replaceState({}, "", url.toString());
+      state.evaluationSavedId = savedId;
+      state.evaluationShareId = "";
+      hideModal(evaluationLoadModal);
+      updateEvaluationFooterActions();
+      applySharedEvaluationPayload(entry.payload);
+    };`;
+
+const EVALUATION_SAVED_SELECTION_WITH_ROW_RESTORE = `    let loadingEvaluation = false;
+    const loadEvaluation = async () => {
+      if (loadingEvaluation) return;
+      clearEvaluationSearchFocus();
+      const savedId = String(entry.id || "").trim();
+      if (!savedId || !playerId) return;
+
+      loadingEvaluation = true;
+      try {
+        if (!rowByPlayerId(playerId)) {
+          const route = incrementalRouteTarget("evaluation", { playerId });
+          const playerPayload = route ? await requestIncrementalRoute(route, 1) : null;
+          if (!playerPayload || !rowByPlayerId(playerId)) {
+            showToast("Saved evaluation could not be loaded.");
+            return;
+          }
+        }
+
+        const url = new URL("/evaluation", window.location.origin);
+        url.searchParams.set("player", playerId);
+        url.searchParams.set("saved", savedId);
+        window.history.replaceState({}, "", url.toString());
+        state.evaluationSavedId = savedId;
+        state.evaluationShareId = "";
+        hideModal(evaluationLoadModal);
+        updateEvaluationFooterActions();
+        await applySharedEvaluationPayload(entry.payload);
+      } catch (error) {
+        showToast(error?.message || "Saved evaluation could not be loaded.");
+      } finally {
+        loadingEvaluation = false;
+      }
+    };`;
+
 /**
  * Keep saved-Evaluation loading in the shared interaction workflow only when
  * data actually needs to be fetched. The first successful list request is
  * cached for the current browser session; save/delete mutations invalidate it.
+ * The same first request also seeds each saved player's canonical Evaluation
+ * route payload, so a later reopen after navigating elsewhere restores from
+ * the session cache instead of performing another player request.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeEvaluationLoadLifecycle(artifacts) {
@@ -92,6 +185,12 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
   );
   evaluation = replaceRequired(
     evaluation,
+    EVALUATION_SAVED_PLAYER_PREFETCH,
+    EVALUATION_SAVED_PLAYER_PREFETCH_WITH_CACHE,
+    "Saved Evaluation list primes canonical per-player Evaluation route payloads",
+  );
+  evaluation = replaceRequired(
+    evaluation,
     EVALUATION_LOAD_RENDER,
     EVALUATION_LOAD_RENDER_WITH_CACHE,
     "Evaluation saved-list request populates its session cache",
@@ -107,6 +206,12 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     EVALUATION_DELETE_REQUEST,
     EVALUATION_DELETE_REQUEST_WITH_CACHE_INVALIDATION,
     "Deleting an Evaluation invalidates the saved-list session cache",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_SAVED_SELECTION,
+    EVALUATION_SAVED_SELECTION_WITH_ROW_RESTORE,
+    "Cached saved Evaluation selection restores its cached player data before applying its payload",
   );
   routeChunks.evaluation = evaluation;
 

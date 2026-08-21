@@ -21,7 +21,7 @@ const builtApplicationSources = [shared, ...Object.values(artifacts.routeChunks 
 
 invariant(
   shared.includes('const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
-    && shared.includes("playerId: routePlayerId,")
+    && shared.includes("playerId: routePlayerId,\n      }, 1);")
     && shared.includes("const pendingEvaluationRoute = Boolean(")
     && shared.includes("const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || \"\").trim();")
     && shared.includes("if (pendingEvaluationRoute) {\n    evaluationSearchInput.placeholder = \"\";")
@@ -30,7 +30,31 @@ invariant(
     && shared.includes("evaluationPlayerPageButton.hidden = false;")
     && shared.includes("if (firstPaintEvaluationPlayerName) {\n        evaluationSearchInput.value = firstPaintEvaluationPlayerName;")
     && !shared.includes('if (!row || getValue(row, "retirement_years") === 0) {'),
-  "A refreshed player/saved/shared Evaluation must hydrate without clearing its first-paint name or Reset/Player Page chrome.",
+  "A refreshed player/saved/shared Evaluation must reuse cached route hydration without clearing its first-paint name or Reset/Player Page chrome.",
+);
+
+invariant(
+  shared.includes('const playerId = String(options.playerId || evaluationPlayerIdFromUrl() || "");')
+    && shared.includes('return state.dataLoaded ? null : { ...base, scope: "empty", view: "attributes" };')
+    && !shared.includes('const playerId = String(options.playerId || state.evaluationPlayerId || evaluationPlayerIdFromUrl() || "");'),
+  "Returning to plain Evaluation must not preload the stale previous Evaluation player or replace already-loaded row data.",
+);
+
+invariant(
+  shared.includes('const warmPlainEvaluation = state.dataLoaded')
+    && shared.includes('plainEvaluationRoute\n      && document.documentElement.classList.contains("mflEvaluationReady")')
+    && shared.includes('void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);')
+    && shared.includes('const warmPlainEvaluation = !runtimeReady')
+    && shared.includes('String(pageName || "") === "evaluation"')
+    && shared.includes('return originalRouteRuntimeSetPage.call(this, "evaluation", false, {')
+    && shared.includes('plain: true,\n        skipNavigationTransition: true,\n        skipNavigationLoading: true,'),
+  "A warm plain Evaluation return must bypass both the cold Evaluation readiness gate and the global route-transition loading gate.",
+);
+
+invariant(
+  shared.includes('["player", "evaluation"].includes(route.scope)\n        ? "overall"')
+    && shared.includes('["player", "evaluation"].includes(route.scope)\n        ? "desc"'),
+  "Player and Evaluation incremental cache identities must stay stable when unrelated table sort state changes.",
 );
 
 invariant(
@@ -55,9 +79,36 @@ invariant(
     && evaluation.includes("await renderEvaluationPage();\n}\n\nasync function loadSharedEvaluation")
     && evaluation.includes("await applySharedEvaluationPayload(data.payload);")
     && evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
-    && evaluation.includes("playerId: payloadPlayerId,")
+    && evaluation.includes("playerId: payloadPlayerId,\n      }, 1);")
     && !evaluation.includes('evaluationSearchInput.value = "";\n  renderEvaluationMflPerUsdControl(false);'),
-  "Evaluation startup must keep loading active through wallet/settings hydration and the final player/saved/shared render without blanking the player name.",
+  "Cold Evaluation startup must keep loading active through wallet/settings hydration while selected routes reuse cached player payloads when available.",
+);
+
+invariant(
+  evaluation.includes("const savedPlayersPayload = await requestIncrementalRoute({")
+    && evaluation.includes('scope: "players"')
+    && evaluation.includes('const playerIdIndex = columns.indexOf("player_id");')
+    && evaluation.includes('const route = incrementalRouteTarget("evaluation", { playerId: cachedPlayerId });')
+    && evaluation.includes("const { cacheKey } = incrementalRequestDetails(route, 1);")
+    && evaluation.includes("state.incrementalPayloadCache.set(cacheKey, {")
+    && evaluation.includes("rows: [row],\n            page: 1,\n            pageSize: 1,"),
+  "The first saved-Evaluation list load must seed every saved player's canonical Evaluation route cache.",
+);
+
+invariant(
+  evaluation.includes("let loadingEvaluation = false;")
+    && evaluation.includes("if (!rowByPlayerId(playerId)) {")
+    && evaluation.includes('const route = incrementalRouteTarget("evaluation", { playerId });')
+    && evaluation.includes("const playerPayload = route ? await requestIncrementalRoute(route, 1) : null;")
+    && evaluation.includes("if (!playerPayload || !rowByPlayerId(playerId)) {")
+    && evaluation.includes("await applySharedEvaluationPayload(entry.payload);"),
+  "Reopening a cached saved Evaluation must restore its cached player data before applying the cached saved payload.",
+);
+
+invariant(
+  evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();')
+    && evaluation.includes("playerId: payloadPlayerId,\n      }, 1);\n      if (!playerPayload) return;\n    }\n    state.evaluationSavedId = id;"),
+  "A direct saved-Evaluation route must reuse its per-player Evaluation cache instead of forcing a second network request.",
 );
 
 invariant(
@@ -116,4 +167,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, complete loading lifecycle, clear-focus ownership, and table-edge validation passed.");
+console.log("Evaluation warm-return readiness bypass, stable route cache, saved-player cache priming/restoration, refresh hydration, first-paint state, clear-focus ownership, and table-edge validation passed.");
