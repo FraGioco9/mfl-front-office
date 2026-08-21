@@ -83,10 +83,22 @@ includes(
   'divisionLabel.className = "clubPageTitleDivision";',
   "First paint must use the same division-title element as hydrated Club rendering.",
 );
+includes(
+  bootstrap,
+  'if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
+  "Bootstrap must retire the synthetic Club Squad label before writing the real button label.",
+);
 excludes(
   bootstrap,
   'if (page === "club") return "Club";',
   "Club first paint must not fall back unconditionally to a generic Club title.",
+);
+
+const bootstrapSquadStyleRetire = bootstrap.indexOf('if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();');
+const bootstrapSquadText = bootstrap.indexOf('candidate.textContent = page === "club" ? "Squad" : "Attributes";', bootstrapSquadStyleRetire);
+invariant(
+  bootstrapSquadStyleRetire >= 0 && bootstrapSquadText > bootstrapSquadStyleRetire,
+  "The synthetic Squad label must be removed in the same bootstrap task before the real Squad text becomes visible.",
 );
 
 const initialRouteCoreReady = eagerCore.indexOf("await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});");
@@ -99,7 +111,7 @@ invariant(
 includes(
   clubStartupLifecycle,
   'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
-  "Club refresh must retire the temporary first-paint view label before hydrated view text is rendered.",
+  "Club refresh must also ensure the temporary first-paint view label is retired before hydrated navigation.",
 );
 includes(
   clubStartupLifecycle,
@@ -201,4 +213,4 @@ invariant(
   "Club refresh startup must trigger exactly one canonical Club route-owner load.",
 );
 
-console.log("Club source-row first paint, single-path refresh loading, non-blocking title preflight, Squad-label handoff, cached refresh, generated runtime, and roster readiness validation passed.");
+console.log("Club source-row first paint, single-path refresh loading, non-blocking title preflight, single Squad label handoff, cached refresh, generated runtime, and roster readiness validation passed.");
