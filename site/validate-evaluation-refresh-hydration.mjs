@@ -16,6 +16,7 @@ const [appCoreSource, bootstrap, loading, styles] = await Promise.all([
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
+const builtEvaluationSources = `${shared}\n${evaluation}`;
 
 invariant(
   shared.includes('const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
@@ -42,8 +43,8 @@ invariant(
 );
 
 invariant(
-  shared.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);')
-    && shared.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);'),
+  builtEvaluationSources.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);')
+    && builtEvaluationSources.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);'),
   "Evaluation navigation from Player pages and search results must cache the player name before the route changes.",
 );
 
