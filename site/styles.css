@@ -86,14 +86,18 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   position: relative;
 }
 
-/* The legacy wrapper has no layout box; Rows stays in one fixed visual slot
- * before and after hydration, so table chrome never relocates on first paint. */
+/* Before the shared table runtime normalizes the DOM, the legacy wrapper has
+ * no box and only reserves the exact final Rows slot. After normalization,
+ * Rows is a real flex item in .views and the reservation disappears. */
 #progressionPage > .controlsBar {
   display: contents;
 }
 
 #progressionPage .views {
   margin-bottom: 6px;
+}
+
+#progressionPage:has(> .controlsBar) > .views {
   padding-right: 140px;
 }
 
@@ -106,8 +110,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   min-height: 32px;
 }
 
-#progressionPage > .controlsBar > .rowsField,
-#progressionPage .views > .rowsField {
+#progressionPage > .controlsBar > .rowsField {
   position: absolute;
   top: calc(var(--mfl-page-title-margin-block-start) + 32px + var(--mfl-page-title-margin-block-end));
   right: 0;
@@ -118,12 +121,27 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   margin: 0;
 }
 
+#progressionPage .views > .rowsField {
+  position: relative;
+  flex: 0 0 132px;
+  width: 132px;
+  min-width: 132px;
+  height: 40px;
+  margin-left: auto;
+  order: 101;
+}
+
+#progressionPage .views > .watchlistSwitcher:not([hidden]) + .rowsField {
+  margin-left: 0;
+}
+
 #progressionPage .watchlistSwitcher {
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
   margin-left: auto;
   gap: 6px;
+  order: 100;
 }
 
 html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .watchlistSwitcher[hidden],
