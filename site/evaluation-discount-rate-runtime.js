@@ -10,6 +10,7 @@
   let frame = 0;
   let retryTimer = 0;
   let coreObserver = null;
+  let rateTextObserver = null;
   let discountPromise = null;
   let discountResult = null;
   let discountMflPerUsd = null;
@@ -131,6 +132,26 @@
     if (metric instanceof HTMLElement) metric.setAttribute("aria-label", `Discount Rate. ${discountResult.tooltip}`);
     document.body?.classList.add("evaluationDiscountRateReady");
     document.documentElement.classList.add("mflEvaluationRateResolved");
+  }
+
+  function installRateTextGuard() {
+    rateTextObserver?.disconnect();
+    rateTextObserver = null;
+    const targets = [
+      document.getElementById("evaluationDiscountRate"),
+      document.getElementById("advancedDiscountRateValue"),
+    ].filter((element) => element instanceof HTMLElement);
+    if (!targets.length) return;
+    rateTextObserver = new MutationObserver(() => {
+      if (destroyed || !isEvaluation()) return;
+      const label = discountResult?.label || "-";
+      targets.forEach((element) => {
+        if (element.textContent !== label) element.textContent = label;
+      });
+    });
+    targets.forEach((element) => {
+      rateTextObserver.observe(element, { childList: true, characterData: true, subtree: true });
+    });
   }
 
   function publishRate(result) {
@@ -284,6 +305,8 @@
     clearRetry();
     coreObserver?.disconnect();
     coreObserver = null;
+    rateTextObserver?.disconnect();
+    rateTextObserver = null;
     document.removeEventListener("click", onDocumentClick);
     document.removeEventListener("focusout", onFocusOut);
     document.removeEventListener("keydown", onKeyDown);
@@ -292,6 +315,7 @@
     window.removeEventListener("mfl:ready", schedule);
   }
 
+  installRateTextGuard();
   installCoreAuthorityWhenAvailable();
   document.addEventListener("click", onDocumentClick);
   document.addEventListener("focusout", onFocusOut);

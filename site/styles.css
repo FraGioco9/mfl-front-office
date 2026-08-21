@@ -142,6 +142,11 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 .evaluationTableShell .evaluationTable :is(th, td):nth-child(7) { width: var(--mfl-evaluation-season-col-discount); }
 .evaluationTableShell .evaluationTable :is(th, td):nth-child(8) { width: var(--mfl-evaluation-season-col-value); }
 
+.evaluationSummaryTable :is(th, td):first-child,
+.evaluationTableShell .evaluationTable :is(th, td):first-child {
+  padding-left: 12px;
+}
+
 .advancedPlayerTable {
   width: 100%;
   min-width: 100%;

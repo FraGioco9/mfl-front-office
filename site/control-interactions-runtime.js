@@ -15,6 +15,7 @@
     'input[type="checkbox"]',
     'input[type="radio"]',
   ].join(", ");
+  const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";
   const DRAG_ACTIVATION_THRESHOLD_PX = 6;
 
   let pointerFocusedControl = null;
@@ -26,6 +27,14 @@
   let suppressClickControl = null;
   let suppressClickTimer = 0;
   let navigationIntentToken = "";
+
+  function disableSearchSpellcheck() {
+    document.querySelectorAll(SEARCH_INPUT_SELECTOR).forEach((field) => {
+      if (!(field instanceof HTMLInputElement)) return;
+      field.spellcheck = false;
+      field.setAttribute("spellcheck", "false");
+    });
+  }
 
   function navigationController() {
     const controller = window.__mflNavigation;
@@ -291,6 +300,7 @@
     if (pointerFocusedControl && target !== pointerFocusedControl) pointerFocusedControl = null;
   }
 
+  disableSearchSpellcheck();
   document.addEventListener("click", onClick, true);
   document.addEventListener("change", onChange, true);
   document.addEventListener("pointerdown", onPointerDown, true);

@@ -1186,13 +1186,20 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("evaluation");
+  const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && Array.isArray(window.__mflSavedEvaluationsSessionCache);
+  const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
+  try {
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+      await window.__mflEnsureRouteCore("evaluation");
+    }
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+      throw new Error("Evaluation route core is not loaded.");
+    }
+    return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
+  } finally {
+    if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
-    throw new Error("Evaluation route core is not loaded.");
-  }
-  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
 }
 
 function normalizedPageName(pageName) {
@@ -1975,7 +1982,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
     const evaluationBusyToken = window.__mflInteractionBusy?.begin?.("evaluation-loading");
     document.documentElement.classList.remove("mflEvaluationReady");
     document.body.classList.add("evaluationPageLoading");
-    if (options.plain) {
+    if (options.plain || isPlainEvaluationUrl()) {
       state.evaluationShareId = "";
       state.evaluationSavedId = "";
       state.evaluationPlayerId = null;
@@ -6857,6 +6864,7 @@ async function startApp() {
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
@@ -8352,6 +8360,8 @@ async function startApp() {
     return true;
   }
 
+  let evaluationRecentStateHydrated = false;
+
   function installEvaluationRecentStateOwnership() {
     if (typeof restoreRecentEvaluationState !== "function"
       || typeof persistRecentSearchStates !== "function"
@@ -8366,6 +8376,7 @@ async function startApp() {
         ? savedState.recentEvaluationPlayerIds
         : [];
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
+      evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
         void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
       }
@@ -8411,7 +8422,26 @@ async function startApp() {
       Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
       finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
     }
+    window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
+  }
+
+  async function ensureEvaluationRecentStateHydrated() {
+    const pendingStartup = window.__mflWalletPreferencesStartupPromise;
+    if (pendingStartup && typeof pendingStartup.then === "function") {
+      await Promise.resolve(pendingStartup).catch(() => undefined);
+    }
+
+    if (evaluationRecentStateHydrated) return true;
+    if (!state.linkedWalletAddress
+      || typeof hasWalletProof !== "function"
+      || !hasWalletProof()
+      || typeof loadWalletPreferences !== "function") {
+      return false;
+    }
+
+    await loadWalletPreferences({ force: true });
+    return evaluationRecentStateHydrated;
   }
 
   window.__mflCoreContracts = Object.freeze({
@@ -8431,6 +8461,7 @@ async function startApp() {
     installEvaluationEmptySearchOwner,
     installEvaluationRecentWriteOwner,
     installEvaluationRecentStateOwnership,
+    ensureEvaluationRecentStateHydrated,
   });
 })();
 ;(() => {

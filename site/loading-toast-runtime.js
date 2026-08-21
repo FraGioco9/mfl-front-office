@@ -12,6 +12,7 @@
     "switchWatchlist",
     "route-runtime",
     "requestIncrementalRoute",
+    "evaluation-load",
   ]);
   const controller = window.__mflInteractionBusy;
   let destroyed = false;

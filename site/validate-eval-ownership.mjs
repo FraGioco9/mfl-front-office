@@ -222,6 +222,15 @@ invariant(
   "The core contract must exist before application-core loaded state is published.",
 );
 invariant(
+  sharedCore.includes("let evaluationRecentStateHydrated = false;")
+    && sharedCore.includes("evaluationRecentStateHydrated = true;")
+    && sharedCore.includes("async function ensureEvaluationRecentStateHydrated()")
+    && sharedCore.includes("await loadWalletPreferences({ force: true });")
+    && sharedCore.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+    && sharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+  "Generated shared core must keep late Evaluation Supabase hydration inside the canonical lexical owner, including the one corrective fresh preference read for a late-installed owner, and publish it through the existing readiness promise.",
+);
+invariant(
   !sharedCore.includes("function installTableLoadingOwners(")
     && !sharedCore.includes("    installTableLoadingOwners,"),
   "Generated shared core must not retain the late Table header wrapper owner or contract entry.",
@@ -270,4 +279,4 @@ for (const legacyBridge of [
   invariant(!watchlistRuntime.includes(legacyBridge), `Watchlist route runtime must not restore legacy eval bridge ${legacyBridge}.`);
 }
 
-console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges.");
+console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative late Evaluation Supabase hydration and its corrective refresh retained in shared-core ownership.");

@@ -5,6 +5,9 @@ import { normalizeClubEntryLifecycle } from "./app-core-club-entry-lifecycle.js"
 import { normalizeClubSortLifecycle } from "./app-core-club-sort-lifecycle.js";
 import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
+import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lifecycle.js";
+import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
+import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
@@ -87,7 +90,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
 
   const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
-  const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
+  const evaluationSearchArtifacts = normalizeEvaluationSearchLifecycle(evaluationArtifacts);
+  const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
@@ -98,7 +102,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
-  return normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
+  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
+  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
+  return normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

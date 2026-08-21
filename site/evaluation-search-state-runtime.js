@@ -5,6 +5,7 @@
   const LEGACY_RECENT_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
   const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
   const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";
+  const RECENT_LOADING_REASON = "evaluation-recent-searches";
 
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
@@ -13,6 +14,9 @@
   let recentPayload = null;
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
+  let recentLoadingToken = "";
+  let directPointerFocus = false;
+  let directPointerFocusResetTimer = 0;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -47,7 +51,6 @@
   function recentRule() {
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
-    if (field.value.trim()) return originalRecentRule?.() || false;
     return active();
   }
 
@@ -55,6 +58,25 @@
     if (window.shouldShowEvaluationRecentResults !== recentRule) {
       window.shouldShowEvaluationRecentResults = recentRule;
     }
+  }
+
+  function beginRecentLoadingGate(field = input()) {
+    if (recentLoadingToken || !active() || !(field instanceof HTMLInputElement) || field.value.trim()) return;
+    recentLoadingToken = window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON) || "";
+  }
+
+  function endRecentLoadingGate() {
+    if (!recentLoadingToken) return;
+    window.__mflInteractionBusy?.end?.(recentLoadingToken);
+    recentLoadingToken = "";
+  }
+
+  function waitForSupabaseRecentState() {
+    const pending = window.__mflWalletPreferencesStartupPromise;
+    if (!pending || typeof pending.then !== "function") return Promise.resolve();
+    return Promise.resolve(pending).catch((error) => {
+      console.warn("Could not load Supabase Evaluation recent-search state.", error);
+    });
   }
 
   function resultId(button) {
@@ -199,15 +221,17 @@
   }
 
   function renderEmptySearchFromCore() {
-    if (!active()) return;
+    if (!active()) return false;
     const field = input();
-    if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) return false;
     try {
       coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
+      return false;
     }
     syncClearButton(field);
+    return true;
   }
 
   async function fetchRecentEvaluationPayload(ids) {
@@ -241,24 +265,34 @@
     return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
   }
 
-  function primeRecentSearchData({ force = false } = {}) {
-    const ids = recentEvaluationPlayerIds();
-    const signature = ids.join(",");
-    if (!force && recentPayload && recentPayloadSignature === signature) {
-      publishRecentPayload(recentPayload);
-      renderEmptySearchFromCore();
-      return Promise.resolve(true);
-    }
-    if (recentPrimePromise && recentPayloadSignature === signature) return recentPrimePromise;
+  function primeRecentSearchData({ force = false, showLoading = false } = {}) {
+    const field = input();
+    if (recentPrimePromise) return recentPrimePromise;
 
-    recentPayloadSignature = signature;
-    recentPrimePromise = fetchRecentEvaluationPayload(ids)
-      .then((payload) => {
-        if (destroyed || recentPayloadSignature !== signature) return false;
-        recentPayload = payload;
-        publishRecentPayload(payload);
-        renderEmptySearchFromCore();
-        return true;
+    const currentIds = recentEvaluationPlayerIds();
+    const currentSignature = currentIds.join(",");
+    if (!force && recentPayload && recentPayloadSignature === currentSignature) {
+      publishRecentPayload(recentPayload);
+      return Promise.resolve(renderEmptySearchFromCore());
+    }
+
+    if (showLoading) beginRecentLoadingGate(field);
+    recentPrimePromise = waitForSupabaseRecentState()
+      .then(() => {
+        const ids = recentEvaluationPlayerIds();
+        const signature = ids.join(",");
+        if (!force && recentPayload && recentPayloadSignature === signature) {
+          publishRecentPayload(recentPayload);
+          return renderEmptySearchFromCore();
+        }
+
+        recentPayloadSignature = signature;
+        return fetchRecentEvaluationPayload(ids).then((payload) => {
+          if (destroyed || recentPayloadSignature !== signature) return false;
+          recentPayload = payload;
+          publishRecentPayload(payload);
+          return renderEmptySearchFromCore();
+        });
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
@@ -266,15 +300,16 @@
       })
       .finally(() => {
         recentPrimePromise = null;
+        if (showLoading) endRecentLoadingGate();
       });
     return recentPrimePromise;
   }
 
-  function restoreEmptyRecentResults(force = false) {
+  function restoreEmptyRecentResults(force = false, showLoading = false) {
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
     installCoreBridges();
-    return primeRecentSearchData({ force });
+    return primeRecentSearchData({ force, showLoading });
   }
 
   function sync() {
@@ -287,12 +322,49 @@
     if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
+  function clearDirectPointerFocus() {
+    directPointerFocus = false;
+    if (directPointerFocusResetTimer) window.clearTimeout(directPointerFocusResetTimer);
+    directPointerFocusResetTimer = 0;
+  }
+
+  function onPointerDown(event) {
+    const field = input();
+    clearDirectPointerFocus();
+    if (event.target instanceof Element) {
+      const title = event.target.closest(".evaluationSearch .field > span");
+      if (title instanceof HTMLElement) {
+        event.preventDefault();
+        return;
+      }
+    }
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    directPointerFocus = true;
+    directPointerFocusResetTimer = window.setTimeout(clearDirectPointerFocus, 0);
+  }
+
+  function onFocus(event) {
+    const field = input();
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    if (!directPointerFocus) {
+      event.stopImmediatePropagation();
+      field.blur();
+      return;
+    }
+    clearDirectPointerFocus();
+    syncClearButton(field);
+    if (!field.value.trim()) {
+      void restoreEmptyRecentResults(false);
+      return;
+    }
+    coreContracts()?.renderCurrentEvaluationSearchResults?.();
+  }
+
   function onBlur(event) {
     const field = input();
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false);
   }
 
   function onKeyUp(event) {
@@ -304,9 +376,15 @@
 
   function onClick(event) {
     if (!(event.target instanceof Element)) return;
+    const title = event.target.closest(".evaluationSearch .field > span");
+    if (title instanceof HTMLElement) {
+      event.preventDefault();
+      return;
+    }
+
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      queueMicrotask(() => void restoreEmptyRecentResults(true));
+      queueMicrotask(() => void restoreEmptyRecentResults(false));
       return;
     }
 
@@ -317,34 +395,52 @@
 
   function onReady() {
     installCoreBridges();
-    void restoreEmptyRecentResults(true);
+    void restoreEmptyRecentResults(false);
+  }
+
+  function onRouteActive() {
+    if (destroyed || !active()) return;
+    installCoreBridges();
+    const field = input();
+    if (!(field instanceof HTMLInputElement)) return;
+    syncSelectedPlayerLabel(field);
+    syncClearButton(field);
+    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
   }
 
   purgeLegacyLocalRecentState();
   installCoreBridges();
   syncClearButton();
+  document.addEventListener("pointerdown", onPointerDown, true);
+  input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
   window.addEventListener("storage", onLegacyRecentStorage, true);
   window.addEventListener("mfl:evaluation-ready", onReady);
+  window.addEventListener("mfl:evaluation-route-active", onRouteActive);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  void restoreEmptyRecentResults(true);
+  void restoreEmptyRecentResults(true, active());
 
   function destroy() {
     destroyed = true;
+    document.removeEventListener("pointerdown", onPointerDown, true);
+    input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("storage", onLegacyRecentStorage, true);
     window.removeEventListener("mfl:evaluation-ready", onReady);
+    window.removeEventListener("mfl:evaluation-route-active", onRouteActive);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
+    clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
     recentPayloadSignature = "";
     recentWriteSequence += 1;
+    endRecentLoadingGate();
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;

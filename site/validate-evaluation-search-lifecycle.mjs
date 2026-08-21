@@ -1,0 +1,219 @@
+import { readFile } from "node:fs/promises";
+
+import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const invariant = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+
+const [searchRuntime, controlInteractions, loadingToastRuntime, discountRateRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
+  read("./evaluation-search-state-runtime.js"),
+  read("./control-interactions-runtime.js"),
+  read("./loading-toast-runtime.js"),
+  read("./evaluation-discount-rate-runtime.js"),
+  read("./modules/app-entry.js"),
+  read("./api/wallet-preferences.js"),
+  read("./modules/app-core.js"),
+]);
+const generatedArtifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
+const generatedSharedCore = String(generatedArtifacts.core || "");
+const generatedEvaluationCore = String(generatedArtifacts.routeChunks?.evaluation || "");
+
+invariant(
+  searchRuntime.includes('const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";')
+    && searchRuntime.includes("coreContracts()?.evaluationRecentPlayerIds?.()")
+    && searchRuntime.includes("coreContracts()?.persistEvaluationRecentPlayerIds?.(ids)"),
+  "Evaluation recent searches must remain owned by the Supabase-backed core preference contract.",
+);
+invariant(
+  searchRuntime.includes("localStorage.removeItem(LEGACY_RECENT_STORAGE_KEY)")
+    && searchRuntime.includes('delete savedState.recentEvaluationPlayerIds;'),
+  "Evaluation recent searches must not fall back to legacy local recent-search state.",
+);
+invariant(
+  searchRuntime.includes(".filter(Boolean).slice(0, 5)"),
+  "Evaluation recent-search state must remain capped at five entries.",
+);
+invariant(
+  searchRuntime.includes("function recentRule()")
+    && searchRuntime.includes("return active();")
+    && !searchRuntime.includes("if (field.value.trim()) return document.activeElement === field;"),
+  "Evaluation search results must remain eligible while the Evaluation page is active even after a typed search loses focus.",
+);
+invariant(
+  !searchRuntime.includes("hideTypedBlurredResults"),
+  "Blurred non-empty Evaluation searches must keep their current result list visible.",
+);
+invariant(
+  !generatedEvaluationCore.includes('evaluationSearchInput.addEventListener("blur", () => {'),
+  "The generated Evaluation route core must not install a second blur handler that hides typed results.",
+);
+const pointerDownStart = searchRuntime.indexOf("function onPointerDown(event)");
+const pointerDownEnd = searchRuntime.indexOf("function onFocus(event)", pointerDownStart);
+const pointerDownSource = pointerDownStart >= 0 && pointerDownEnd > pointerDownStart
+  ? searchRuntime.slice(pointerDownStart, pointerDownEnd)
+  : "";
+invariant(
+  pointerDownSource.includes('const title = event.target.closest(".evaluationSearch .field > span");')
+    && pointerDownSource.includes("if (title instanceof HTMLElement) {")
+    && pointerDownSource.includes("event.preventDefault();")
+    && pointerDownSource.indexOf("event.preventDefault();") < pointerDownSource.indexOf("if (!(field instanceof HTMLInputElement) || event.target !== field) return;")
+    && pointerDownSource.includes("directPointerFocus = true;")
+    && searchRuntime.includes("if (!directPointerFocus) {")
+    && searchRuntime.includes("event.stopImmediatePropagation();")
+    && searchRuntime.includes("field.blur();"),
+  "Evaluation search focus must be accepted only from a direct pointer press on the input; Player-title activation must be cancelled before focus.",
+);
+const focusStart = searchRuntime.indexOf("function onFocus(event)");
+const focusEnd = searchRuntime.indexOf("function onBlur(event)", focusStart);
+const focusSource = focusStart >= 0 && focusEnd > focusStart ? searchRuntime.slice(focusStart, focusEnd) : "";
+invariant(
+  focusSource.includes("void restoreEmptyRecentResults(false);")
+    && !focusSource.includes("restoreEmptyRecentResults(false, true)")
+    && !focusSource.includes("beginRecentLoadingGate"),
+  "Selecting the Evaluation search input must render/refresh recent results without starting the Evaluation recent-search loading gate.",
+);
+const blurStart = searchRuntime.indexOf("function onBlur(event)");
+const blurEnd = searchRuntime.indexOf("function onKeyUp(event)", blurStart);
+const blurSource = blurStart >= 0 && blurEnd > blurStart ? searchRuntime.slice(blurStart, blurEnd) : "";
+invariant(
+  blurSource.includes("syncSelectedPlayerLabel(field);")
+    && blurSource.includes("syncClearButton(field);")
+    && !blurSource.includes("hidden = true")
+    && !blurSource.includes("replaceChildren")
+    && !blurSource.includes("restoreEmptyRecentResults")
+    && !blurSource.includes("setTimeout"),
+  "Evaluation blur must preserve typed results and must not re-prime recent searches or enter loading.",
+);
+invariant(
+  controlInteractions.includes('const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";')
+    && controlInteractions.includes("field.spellcheck = false;")
+    && controlInteractions.includes('field.setAttribute("spellcheck", "false");')
+    && controlInteractions.includes("disableSearchSpellcheck();"),
+  "Global and Evaluation search inputs must disable browser spellcheck so search terms never receive red spelling underlines.",
+);
+const renderStart = appCoreSource.indexOf("function renderEvaluationSearchResults()");
+const renderEnd = appCoreSource.indexOf("let evaluationRecentSearchPrimed", renderStart);
+const renderSource = renderStart >= 0 && renderEnd > renderStart ? appCoreSource.slice(renderStart, renderEnd) : "";
+invariant(
+  renderSource.includes('button.addEventListener("click", async () => {')
+    && renderSource.includes("state.evaluationPlayerId = playerId;")
+    && renderSource.includes("syncEvaluationPlayerUrl(playerId);")
+    && renderSource.includes('incrementalRouteTarget("evaluation", { playerId })')
+    && renderSource.includes("requestIncrementalRoute(route, 1)")
+    && renderSource.includes("renderEvaluationTable(row);")
+    && renderSource.includes("withInteractionBusy(loadAndRender)"),
+  "Clicking an Evaluation search result must select that player, sync the Evaluation URL, load the player route, and render the Evaluation.",
+);
+const loadStart = generatedSharedCore.indexOf("async function openSavedEvaluationsModal()");
+const loadEnd = generatedSharedCore.indexOf("function normalizedPageName(", loadStart);
+const loadSource = loadStart >= 0 && loadEnd > loadStart ? generatedSharedCore.slice(loadStart, loadEnd) : "";
+invariant(
+  loadSource.indexOf('window.__mflInteractionBusy?.begin?.("evaluation-load")') >= 0
+    && loadSource.indexOf('window.__mflInteractionBusy?.begin?.("evaluation-load")') < loadSource.indexOf('window.__mflEnsureRouteCore("evaluation")')
+    && loadSource.includes("return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);")
+    && loadSource.includes("if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);"),
+  "Evaluation Load must enter Uniform Loading synchronously before lazy route-core work and remain busy through the saved-evaluation request.",
+);
+const toastReasonsStart = loadingToastRuntime.indexOf("const TOAST_COORDINATION_REASONS = new Set([");
+const toastReasonsEnd = loadingToastRuntime.indexOf("]);", toastReasonsStart);
+const toastReasonsSource = toastReasonsStart >= 0 && toastReasonsEnd > toastReasonsStart
+  ? loadingToastRuntime.slice(toastReasonsStart, toastReasonsEnd)
+  : "";
+invariant(
+  loadingToastRuntime.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))")
+    && toastReasonsSource.includes('"evaluation-load"'),
+  "Evaluation Load must stay in Uniform Loading without showing the Loading toast.",
+);
+invariant(
+  discountRateRuntime.includes("let rateTextObserver = null;")
+    && discountRateRuntime.includes("function installRateTextGuard()")
+    && discountRateRuntime.includes('const label = discountResult?.label || "-";')
+    && discountRateRuntime.includes('document.getElementById("evaluationDiscountRate")')
+    && discountRateRuntime.includes('document.getElementById("advancedDiscountRateValue")')
+    && discountRateRuntime.includes("rateTextObserver.observe(element, { childList: true, characterData: true, subtree: true });")
+    && discountRateRuntime.includes("installRateTextGuard();"),
+  "Evaluation Discount Rate must remain '-' until the authoritative live Supabase rate resolves, preventing the legacy fallback rate from painting on refresh.",
+);
+invariant(
+  generatedSharedCore.includes("window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);"),
+  "The generated shared core must publish the existing wallet-preferences startup request as Evaluation Supabase readiness.",
+);
+const recentOwnerStart = generatedSharedCore.indexOf("let evaluationRecentStateHydrated = false;");
+const recentOwnerEnd = generatedSharedCore.indexOf("window.__mflCoreContracts = Object.freeze({", recentOwnerStart);
+const recentOwnerSource = recentOwnerStart >= 0 && recentOwnerEnd > recentOwnerStart
+  ? generatedSharedCore.slice(recentOwnerStart, recentOwnerEnd)
+  : "";
+invariant(
+  recentOwnerSource.includes("evaluationRecentStateHydrated = true;")
+    && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
+    && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
+    && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
+    && recentOwnerSource.includes("await loadWalletPreferences({ force: true });")
+    && recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+    && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+  "Late Evaluation route ownership must chain authoritative Supabase hydration into the same published readiness promise, reusing startup when possible and issuing one corrective fresh preference read only when startup completed before the Supabase-only owner was installed.",
+);
+invariant(
+  searchRuntime.includes("function waitForSupabaseRecentState()")
+    && searchRuntime.includes("const pending = window.__mflWalletPreferencesStartupPromise;")
+    && searchRuntime.includes("return Promise.resolve(pending).catch"),
+  "Evaluation recent-search priming must await the published authoritative Supabase readiness promise instead of issuing its own wallet-preference request.",
+);
+invariant(
+  searchRuntime.includes('const RECENT_LOADING_REASON = "evaluation-recent-searches";')
+    && searchRuntime.includes("window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON)")
+    && searchRuntime.includes("window.__mflInteractionBusy?.end?.(recentLoadingToken)"),
+  "Evaluation route/startup readiness must retain the dedicated recent-search loading gate.",
+);
+const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
+const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
+const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
+invariant(
+  primeSource.includes("function primeRecentSearchData({ force = false, showLoading = false } = {})")
+    && primeSource.includes("if (showLoading) beginRecentLoadingGate(field);")
+    && primeSource.indexOf("if (showLoading) beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
+    && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
+    && primeSource.indexOf("const ids = recentEvaluationPlayerIds();") < primeSource.indexOf("return fetchRecentEvaluationPayload(ids).then"),
+  "When route/startup loading is requested, Evaluation must begin the readiness gate, await authoritative Supabase preferences, resolve the five IDs, then request player rows.",
+);
+invariant(
+  primeSource.includes("publishRecentPayload(payload);")
+    && primeSource.includes("return renderEmptySearchFromCore();")
+    && primeSource.includes(".finally(() => {")
+    && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
+  "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
+);
+const evaluationPageStart = generatedSharedCore.indexOf("  if (evaluationPageActive) {");
+const evaluationPageEnd = generatedSharedCore.indexOf("  if (playerPageActive) {", evaluationPageStart);
+const evaluationPageSource = evaluationPageStart >= 0 && evaluationPageEnd > evaluationPageStart
+  ? generatedSharedCore.slice(evaluationPageStart, evaluationPageEnd)
+  : "";
+invariant(
+  evaluationPageSource.includes('document.body.classList.add("evaluationPageLoading");\n    if (options.plain || isPlainEvaluationUrl()) {')
+    && evaluationPageSource.includes('state.evaluationShareId = "";')
+    && evaluationPageSource.includes('state.evaluationSavedId = "";')
+    && evaluationPageSource.includes("state.evaluationPlayerId = null;")
+    && evaluationPageSource.includes('evaluationSearchInput.value = "";')
+    && generatedSharedCore.includes('if (pageName === "evaluation") {\n    if (options.plain) {')
+    && searchRuntime.includes('window.addEventListener("mfl:evaluation-ready", onReady);')
+    && !searchRuntime.includes("MutationObserver")
+    && !generatedSharedCore.includes('window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));'),
+  "Entering plain /evaluation must clear stale selected Evaluation state in the Evaluation render block, while pagePath keeps its canonical options.plain rule and Evaluation-ready restores the Supabase recent five without DOM observation or an early route signal.",
+);
+invariant(
+  searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
+  "Direct Evaluation startup must request recent-search loading only when Evaluation is the active initial route.",
+);
+invariant(
+  appEntry.includes("await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);"),
+  "Direct Evaluation startup must continue awaiting recent-search rendering before global startup readiness ends.",
+);
+invariant(
+  walletPreferences.includes("wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings")
+    && walletPreferences.includes("recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds)"),
+  "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
+);
+
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, late Evaluation ownership rehydrates authoritative Supabase recents before the search loader reads them, the Evaluation render block clears stale selected state on plain /evaluation, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
