@@ -184,10 +184,11 @@ includes(normalizedCore, `  if (tablePage) {
     updateViewButtons();
     buildHeader();
   }`, "The canonical table-page render must consume staged controls synchronously before header/filter rendering.");
-includes(normalizedCore, `      if (tablePages.has(pageName)) {
+includes(normalizedCore, `      if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
       }
-      state.incrementalApplying = true;`, "The public incremental table renderer must consume staged controls only after its route data is ready.");
+      if (clubPage) {`, "The public incremental table renderer must consume staged controls only after route data is ready, while Club keeps route-owned roster state.");
+includes(normalizedCore, "if (clubPage) applyFilters({ save: false, localOnly: true });", "Club payloads must render through the live Club filter owner instead of the captured generic filter owner.");
 
 console.log("Route runtime, prebuilt route-core splitting, request cancellation, and pure table-state validation passed.");
