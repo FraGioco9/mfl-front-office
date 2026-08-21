@@ -47,6 +47,20 @@ const EVALUATION_RECENT_HYDRATION_CONTRACT = `  async function ensureEvaluationR
 
 ${CORE_CONTRACT_MARKER}`;
 
+const EVALUATION_RECENT_OWNER_TAIL = `      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
+    }
+    return true;
+  }
+
+  async function ensureEvaluationRecentStateHydrated() {`;
+const EVALUATION_RECENT_OWNER_TAIL_WITH_READINESS = `      finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
+    }
+    window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
+    return true;
+  }
+
+  async function ensureEvaluationRecentStateHydrated() {`;
+
 const EVALUATION_RECENT_STATE_CONTRACT_ENTRY = `    installEvaluationRecentStateOwnership,
   });`;
 const EVALUATION_RECENT_STATE_CONTRACT_ENTRY_WITH_HYDRATION = `    installEvaluationRecentStateOwnership,
@@ -60,9 +74,11 @@ const EVALUATION_RECENT_STATE_CONTRACT_ENTRY_WITH_HYDRATION = `    installEvalua
  * Evaluation recent-state ownership can be installed after the startup preference
  * request has already completed when the user first navigates into /evaluation
  * from another page. Track whether the Supabase-only restore owner has actually
- * received preference state. Route startup can then await the existing startup
- * request when it is still useful, or perform one corrective fresh read only when
- * that request completed before Evaluation installed its Supabase-only owner.
+ * received preference state. Route startup then keeps using the same published
+ * readiness promise: it awaits the original startup request when that request is
+ * still in flight, or performs one corrective fresh read only when startup finished
+ * before Evaluation installed its Supabase-only owner. The existing Evaluation
+ * search loader therefore cannot read the cleared recent state before hydration.
  *
  * Plain /evaluation entry also clears any stale in-memory selected/saved/shared
  * Evaluation state in the Evaluation render lifecycle before render. That keeps
@@ -103,6 +119,12 @@ export function normalizeEvaluationRecentReadiness(artifacts) {
     CORE_CONTRACT_MARKER,
     EVALUATION_RECENT_HYDRATION_CONTRACT,
     "Evaluation route can await authoritative Supabase recent-state hydration",
+  );
+  core = replaceRequired(
+    core,
+    EVALUATION_RECENT_OWNER_TAIL,
+    EVALUATION_RECENT_OWNER_TAIL_WITH_READINESS,
+    "late Evaluation ownership chains authoritative hydration into startup readiness",
   );
   core = replaceRequired(
     core,
