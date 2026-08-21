@@ -132,13 +132,10 @@
   top: anchor(top);
   left: anchor(left);
   z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
+  display: block;
   width: 140px;
   height: 40px;
-  gap: 8px;
-  padding: 0 58px 0 10px;
+  padding: 0;
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text);
@@ -149,10 +146,13 @@
 
 #openFiltersButton:not(.filtersViewButton)::before {
   content: "";
-  flex: 0 0 17px;
+  position: absolute;
+  top: 50%;
+  left: 10px;
   width: 17px;
   height: 17px;
   background: currentColor;
+  transform: translateY(-50%);
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M7 12h10M10 18h4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -165,9 +165,13 @@
 
 #openFiltersButton:not(.filtersViewButton)::after {
   content: "Filters";
+  position: absolute;
+  top: 50%;
+  left: 35px;
   color: inherit;
   font-size: 14px;
   line-height: 1;
+  transform: translateY(-50%);
 }
 
 #filterSummary:not(.filtersViewCount) {
