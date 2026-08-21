@@ -7068,9 +7068,8 @@ async function startApp() {
 /* Public progression table views */
 (() => {
   const PUBLIC_PROGRESSION_VIEWS = ["current", "all"];
-  const PUBLIC_TABLE_PAGES = new Set(["watchlist", "club"]);
+  const PUBLIC_TABLE_PAGES = new Set(["watchlist"]);
 
-  tablePages.add("club");
   pageViewOptions.watchlist = Array.from(new Set([
     ...(pageViewOptions.watchlist || []),
     ...PUBLIC_PROGRESSION_VIEWS,
@@ -7642,7 +7641,7 @@ async function startApp() {
     });
 
     if (tableRoute) {
-      globalThis.syncQuickFilterLabels?.();
+      if (route.scope !== "club") globalThis.syncQuickFilterLabels?.();
       if (route.scope !== "club") {
         tablePageTitle.textContent = tableTitleForPage(pageName);
       }
@@ -8027,8 +8026,7 @@ async function startApp() {
       try {
         updateViewButtons();
         buildHeader();
-        if (clubPage) applyFilters({ save: false, localOnly: true });
-        else originalApplyFilters.call(this, { save: false });
+        if (!clubPage) originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
