@@ -1859,12 +1859,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
   if (options.__mflPreviousTableStateSaved !== true) {
-    if (options.__mflPreviousTableStateSaved !== true) {
-      const previousTablePage = tablePageKey();
-      if (previousTablePage) {
-        state.tablePageStates[previousTablePage] = currentTablePageState();
-        saveTableState();
-      }
+    const previousTablePage = tablePageKey();
+    if (previousTablePage) {
+      state.tablePageStates[previousTablePage] = currentTablePageState();
+      saveTableState();
     }
   }
 
@@ -7872,10 +7870,12 @@ async function startApp() {
     }
 
     const previousPage = state.currentPage;
-    const previousTablePage = tablePageKey();
-    if (previousTablePage) {
-      state.tablePageStates[previousTablePage] = currentTablePageState();
-      saveTableState();
+    if (options.__mflPreviousTableStateSaved !== true) {
+      const previousTablePage = tablePageKey();
+      if (previousTablePage) {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
     }
 
     const route = prepareIncrementalRoute(pageName, {
