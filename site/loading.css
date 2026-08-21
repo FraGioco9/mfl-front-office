@@ -72,6 +72,10 @@ html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-
   display: none;
 }
 
+html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationSearchInput::placeholder {
+  color: transparent;
+}
+
 html:not(.mflInitialRouteResolved)[data-initial-page="evaluation"][data-initial-evaluation-selection="true"] #evaluationButtons {
   visibility: visible;
   opacity: 1;
