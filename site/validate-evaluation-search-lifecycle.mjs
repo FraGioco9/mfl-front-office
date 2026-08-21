@@ -42,15 +42,19 @@ invariant(
     && searchRuntime.includes("window.__mflInteractionBusy?.end?.(recentLoadingToken)"),
   "Evaluation loading must include a dedicated recent-search readiness gate.",
 );
+const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
+const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
+const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
 invariant(
-  searchRuntime.indexOf("beginRecentLoadingGate(field);") < searchRuntime.indexOf("fetchRecentEvaluationPayload(ids)"),
+  primeSource.indexOf("beginRecentLoadingGate(field);") >= 0
+    && primeSource.indexOf("beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = fetchRecentEvaluationPayload(ids)"),
   "Evaluation recent-search loading must begin before recent player rows are requested.",
 );
 invariant(
-  searchRuntime.includes("publishRecentPayload(payload);")
-    && searchRuntime.includes("return renderEmptySearchFromCore();")
-    && searchRuntime.includes(".finally(() => {")
-    && searchRuntime.includes("endRecentLoadingGate();"),
+  primeSource.includes("publishRecentPayload(payload);")
+    && primeSource.includes("return renderEmptySearchFromCore();")
+    && primeSource.includes(".finally(() => {")
+    && primeSource.includes("endRecentLoadingGate();"),
   "Evaluation loading must end only after the Supabase recent IDs are expanded and the empty-search results are rendered.",
 );
 invariant(
