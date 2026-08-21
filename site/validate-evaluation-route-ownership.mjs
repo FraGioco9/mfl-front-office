@@ -134,13 +134,16 @@ invariant(
   "Evaluation ownership must use a dedicated structural splitter stage.",
 );
 invariant(
-  routeLifecycle.includes('path: search ? `/evaluation?${search}` : "/evaluation"'),
-  "Evaluation route lifecycle must retain the exact incoming Evaluation query path.",
+  routeLifecycle.includes('const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";')
+    && routeLifecycle.includes("...(savedId ? { savedId } : {})")
+    && routeLifecycle.includes("...(shareId ? { shareId } : {})"),
+  "Evaluation route lifecycle must extract and retain player, saved, and shared query identity.",
 );
 invariant(
   shared.includes('const requestedPath = String(path || "");')
+    && shared.includes('path: search ? `/evaluation?${search}` : "/evaluation"')
     && shared.includes('const explicitPath = String(options.path || "");'),
-  "Built shared routing must preserve explicit player, saved, and shared Evaluation URLs.",
+  "Built shared routing must preserve the exact Evaluation URL through refresh and page-path resolution.",
 );
 const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
 const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
