@@ -94,6 +94,9 @@
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return null;
 
+    const rowIdentity = clubTitleIdentityFromRows(normalizedClubId);
+    if (rowIdentity) return saveClubTitleIdentity(rowIdentity);
+
     const cached = cachedClubTitleIdentity(normalizedClubId);
     if (cached) return cached;
 
