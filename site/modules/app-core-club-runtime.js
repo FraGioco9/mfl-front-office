@@ -203,8 +203,6 @@
     state.view = view;
     state.page = 1;
     state.pageSize = Number(payload.pageSize || state.pageSize);
-    state.sortKey = "positions";
-    state.sortDirection = "asc";
     if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
     if (typeof updateViewButtons === "function") updateViewButtons();
     if (typeof buildHeader === "function") buildHeader();
@@ -362,13 +360,8 @@
           clubId: activeClubId,
           path: route,
           replace: !updateHistory,
-          sortKey: "positions",
-          sortDirection: "asc",
         });
         if (!transition) return;
-      } else {
-        state.sortKey = "positions";
-        state.sortDirection = "asc";
       }
 
       const earlyClubTitle = cachedClubTitleIdentity(activeClubId)
@@ -405,8 +398,6 @@
       settingsPage.hidden = true;
       changelogPage.hidden = true;
       state.page = 1;
-      state.sortKey = "positions";
-      state.sortDirection = "asc";
       state.pageSize = Math.max(100, clubRows().length || 100);
       if (typeof pageSizeSelect !== "undefined" && pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
       if (typeof filterRules !== "undefined" && filterRules) filterRules.replaceChildren();
