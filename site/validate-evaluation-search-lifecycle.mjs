@@ -7,8 +7,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [searchRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
+const [searchRuntime, controlInteractions, loadingToastRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
   read("./evaluation-search-state-runtime.js"),
+  read("./control-interactions-runtime.js"),
+  read("./loading-toast-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
   read("./modules/app-core.js"),
@@ -31,14 +33,14 @@ invariant(
   "Evaluation recent-search state must remain capped at five entries.",
 );
 invariant(
-  searchRuntime.includes("if (field.value.trim()) return document.activeElement === field;")
-    && searchRuntime.includes("return active();"),
-  "Typed Evaluation results must require search-input focus while an empty Evaluation input always allows recent results.",
+  searchRuntime.includes("function recentRule()")
+    && searchRuntime.includes("return active();")
+    && !searchRuntime.includes("if (field.value.trim()) return document.activeElement === field;"),
+  "Evaluation search results must remain eligible while the Evaluation page is active even after a typed search loses focus.",
 );
 invariant(
-  searchRuntime.includes("function hideTypedBlurredResults(field = input())")
-    && searchRuntime.includes("window.setTimeout(() => hideTypedBlurredResults(field), 120);"),
-  "Blurred non-empty Evaluation searches must hide and clear their result list after the result click has time to settle.",
+  !searchRuntime.includes("hideTypedBlurredResults"),
+  "Blurred non-empty Evaluation searches must keep their current result list visible.",
 );
 invariant(
   searchRuntime.includes("function onPointerDown(event)")
@@ -47,15 +49,32 @@ invariant(
     && searchRuntime.includes("if (!directPointerFocus) {")
     && searchRuntime.includes("event.stopImmediatePropagation();")
     && searchRuntime.includes("field.blur();"),
-  "Evaluation search focus must be accepted only from a direct pointer press on the input, not from its surrounding label/title.",
+  "Evaluation search focus must be accepted only from a direct pointer press on the input.",
+);
+invariant(
+  searchRuntime.includes('const title = event.target.closest(".evaluationSearch .field > span");')
+    && searchRuntime.includes("if (title instanceof HTMLElement) {")
+    && searchRuntime.includes("event.preventDefault();"),
+  "Clicking the Evaluation Player title must cancel the label activation instead of focusing the search input.",
 );
 const blurStart = searchRuntime.indexOf("function onBlur(event)");
 const blurEnd = searchRuntime.indexOf("function onKeyUp(event)", blurStart);
 const blurSource = blurStart >= 0 && blurEnd > blurStart ? searchRuntime.slice(blurStart, blurEnd) : "";
 invariant(
-  blurSource.includes("if (!field.value.trim()) return;")
-    && !blurSource.includes("restoreEmptyRecentResults"),
-  "Clicking elsewhere on an empty Evaluation search must not re-prime recent searches or enter the loading workflow.",
+  blurSource.includes("syncSelectedPlayerLabel(field);")
+    && blurSource.includes("syncClearButton(field);")
+    && !blurSource.includes("hidden = true")
+    && !blurSource.includes("replaceChildren")
+    && !blurSource.includes("restoreEmptyRecentResults")
+    && !blurSource.includes("setTimeout"),
+  "Evaluation blur must preserve typed results and must not re-prime recent searches or enter loading.",
+);
+invariant(
+  controlInteractions.includes('const SEARCH_INPUT_SELECTOR = "#playerSearchInput, #evaluationSearchInput";')
+    && controlInteractions.includes("field.spellcheck = false;")
+    && controlInteractions.includes('field.setAttribute("spellcheck", "false");')
+    && controlInteractions.includes("disableSearchSpellcheck();"),
+  "Global and Evaluation search inputs must disable browser spellcheck so search terms never receive red spelling underlines.",
 );
 const renderStart = appCoreSource.indexOf("function renderEvaluationSearchResults()");
 const renderEnd = appCoreSource.indexOf("let evaluationRecentSearchPrimed", renderStart);
@@ -69,6 +88,26 @@ invariant(
     && renderSource.includes("renderEvaluationTable(row);")
     && renderSource.includes("withInteractionBusy(loadAndRender)"),
   "Clicking an Evaluation search result must select that player, sync the Evaluation URL, load the player route, and render the Evaluation.",
+);
+const loadStart = generatedSharedCore.indexOf("async function openSavedEvaluationsModal()");
+const loadEnd = generatedSharedCore.indexOf("function normalizedPageName(", loadStart);
+const loadSource = loadStart >= 0 && loadEnd > loadStart ? generatedSharedCore.slice(loadStart, loadEnd) : "";
+invariant(
+  loadSource.indexOf('window.__mflInteractionBusy?.begin?.("evaluation-load")') >= 0
+    && loadSource.indexOf('window.__mflInteractionBusy?.begin?.("evaluation-load")') < loadSource.indexOf('window.__mflEnsureRouteCore("evaluation")')
+    && loadSource.includes("return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);")
+    && loadSource.includes("if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);"),
+  "Evaluation Load must enter Uniform Loading synchronously before lazy route-core work and remain busy through the saved-evaluation request.",
+);
+const toastReasonsStart = loadingToastRuntime.indexOf("const TOAST_COORDINATION_REASONS = new Set([");
+const toastReasonsEnd = loadingToastRuntime.indexOf("]);", toastReasonsStart);
+const toastReasonsSource = toastReasonsStart >= 0 && toastReasonsEnd > toastReasonsStart
+  ? loadingToastRuntime.slice(toastReasonsStart, toastReasonsEnd)
+  : "";
+invariant(
+  loadingToastRuntime.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))")
+    && !toastReasonsSource.includes('"evaluation-load"'),
+  "Evaluation Load must use the standard Loading toast while its Uniform Loading busy reason is active.",
 );
 invariant(
   generatedSharedCore.includes("window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);"),
@@ -113,4 +152,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: result clicks open the selected player Evaluation, focus requires a direct input click, empty blur does not trigger loading, recent five stay Supabase-backed, and startup readiness waits for recent rendering.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, focus is direct-input only, search spellcheck is disabled, Load enters Uniform Loading with the Loading toast immediately, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");

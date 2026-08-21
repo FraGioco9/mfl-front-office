@@ -5,6 +5,7 @@ import { normalizeClubEntryLifecycle } from "./app-core-club-entry-lifecycle.js"
 import { normalizeClubSortLifecycle } from "./app-core-club-sort-lifecycle.js";
 import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
+import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lifecycle.js";
 import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
@@ -29,7 +30,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(clubSortArtifacts);
-  return normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
+  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
+  return normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {

@@ -24,7 +24,6 @@
 
   const input = () => document.getElementById("evaluationSearchInput");
   const clearButton = () => document.getElementById("evaluationSearchClearButton");
-  const results = () => document.getElementById("evaluationSearchResults");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
   const coreContracts = () => {
     const contracts = window.__mflCoreContracts;
@@ -52,7 +51,6 @@
   function recentRule() {
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
-    if (field.value.trim()) return document.activeElement === field;
     return active();
   }
 
@@ -79,14 +77,6 @@
     return Promise.resolve(pending).catch((error) => {
       console.warn("Could not load Supabase Evaluation recent-search state.", error);
     });
-  }
-
-  function hideTypedBlurredResults(field = input()) {
-    if (!(field instanceof HTMLInputElement) || !field.value.trim() || document.activeElement === field) return;
-    const container = results();
-    if (!(container instanceof HTMLElement)) return;
-    container.hidden = true;
-    container.replaceChildren();
   }
 
   function resultId(button) {
@@ -330,7 +320,6 @@
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
     if (!field.value.trim()) void restoreEmptyRecentResults(false);
-    else hideTypedBlurredResults(field);
   }
 
   function clearDirectPointerFocus() {
@@ -369,8 +358,6 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) return;
-    window.setTimeout(() => hideTypedBlurredResults(field), 120);
   }
 
   function onKeyUp(event) {
@@ -382,6 +369,12 @@
 
   function onClick(event) {
     if (!(event.target instanceof Element)) return;
+    const title = event.target.closest(".evaluationSearch .field > span");
+    if (title instanceof HTMLElement) {
+      event.preventDefault();
+      return;
+    }
+
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
       queueMicrotask(() => void restoreEmptyRecentResults(false));
