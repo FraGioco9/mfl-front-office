@@ -17,6 +17,7 @@
   let recentLoadingToken = "";
   let directPointerFocus = false;
   let directPointerFocusResetTimer = 0;
+  let pageObserver = null;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -265,7 +266,7 @@
     return { columns, rows: ids.map((id) => rowsById.get(id)).filter(Boolean) };
   }
 
-  function primeRecentSearchData({ force = false } = {}) {
+  function primeRecentSearchData({ force = false, showLoading = false } = {}) {
     const field = input();
     if (recentPrimePromise) return recentPrimePromise;
 
@@ -276,7 +277,7 @@
       return Promise.resolve(renderEmptySearchFromCore());
     }
 
-    beginRecentLoadingGate(field);
+    if (showLoading) beginRecentLoadingGate(field);
     recentPrimePromise = waitForSupabaseRecentState()
       .then(() => {
         const ids = recentEvaluationPlayerIds();
@@ -300,16 +301,16 @@
       })
       .finally(() => {
         recentPrimePromise = null;
-        endRecentLoadingGate();
+        if (showLoading) endRecentLoadingGate();
       });
     return recentPrimePromise;
   }
 
-  function restoreEmptyRecentResults(force = false) {
+  function restoreEmptyRecentResults(force = false, showLoading = false) {
     const field = input();
     if (!active() || !(field instanceof HTMLInputElement) || field.value.trim()) return Promise.resolve(false);
     installCoreBridges();
-    return primeRecentSearchData({ force });
+    return primeRecentSearchData({ force, showLoading });
   }
 
   function sync() {
@@ -398,6 +399,16 @@
     void restoreEmptyRecentResults(false);
   }
 
+  function onPageChange() {
+    if (destroyed || document.body?.dataset.page !== "evaluation") return;
+    installCoreBridges();
+    const field = input();
+    if (!(field instanceof HTMLInputElement)) return;
+    syncSelectedPlayerLabel(field);
+    syncClearButton(field);
+    if (!field.value.trim()) void restoreEmptyRecentResults(false, true);
+  }
+
   purgeLegacyLocalRecentState();
   installCoreBridges();
   syncClearButton();
@@ -410,7 +421,11 @@
   window.addEventListener("mfl:evaluation-ready", onReady);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  void restoreEmptyRecentResults(true);
+  if (document.body) {
+    pageObserver = new MutationObserver(onPageChange);
+    pageObserver.observe(document.body, { attributes: true, attributeFilter: ["data-page"] });
+  }
+  void restoreEmptyRecentResults(true, active());
 
   function destroy() {
     destroyed = true;
@@ -423,6 +438,8 @@
     window.removeEventListener("mfl:evaluation-ready", onReady);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
+    pageObserver?.disconnect();
+    pageObserver = null;
     clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
