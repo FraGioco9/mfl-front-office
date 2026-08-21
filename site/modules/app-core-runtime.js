@@ -1858,10 +1858,14 @@ async function setPage(pageName, updateHash = true, options = {}) {
   const playerPageActive = pageName === "player";
   const evaluationPageActive = pageName === "evaluation";
   const settingsPageActive = pageName === "settings";
-  const previousTablePage = tablePageKey();
-  if (previousTablePage) {
-    state.tablePageStates[previousTablePage] = currentTablePageState();
-    saveTableState();
+  if (options.__mflPreviousTableStateSaved !== true) {
+    if (options.__mflPreviousTableStateSaved !== true) {
+      const previousTablePage = tablePageKey();
+      if (previousTablePage) {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
+    }
   }
 
 
@@ -8408,6 +8412,7 @@ async function startApp() {
   const routeRuntimeSetPage = async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const incomingOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    let previousTableStateSaved = false;
 
     if (!runtimeReady) {
       const loadCommittedRoute = async () => {
@@ -8432,6 +8437,7 @@ async function startApp() {
           const committedOptions = {
             ...incomingOptions,
             skipNavigationTransition: true,
+            ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
           };
           if (setPage !== ownerBeforeRuntime) {
             return setPage.call(this, pageName, updateHash, {
@@ -8448,6 +8454,13 @@ async function startApp() {
       if (incomingOptions.skipNavigationTransition === true) {
         return loadCommittedRoute();
       }
+
+      const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
+      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
+      previousTableStateSaved = true;
 
       const runTransition = Reflect.get(window, "__mflRunPageTransition");
       if (typeof runTransition !== "function") {
