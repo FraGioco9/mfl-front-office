@@ -208,9 +208,10 @@
   stroke-linecap: round;
 }
 
-.filtersViewCount {
+#filterSummary.filtersViewCount {
   display: grid;
   place-items: center;
+  align-self: center;
   min-width: 46px;
   height: 20px;
   margin-left: auto;
@@ -228,7 +229,7 @@ body.filtersOpen .filtersViewButton {
   color: var(--text);
 }
 
-body.filtersOpen .filtersViewCount {
+body.filtersOpen #filterSummary.filtersViewCount {
   background: var(--surface-muted);
   color: var(--primary);
 }
