@@ -110,8 +110,9 @@ includes(clubCore, "return openClubPage(clubId, view, true);", "The private Club
 excludes(clubCore, "void openClubPage(clubId, view, true);", "The private Club route owner must not detach the Club renderer from Uniform Loading.");
 includes(clubCore, "window.__mflOpenClubPageRoute = openClubImmediately;", "The Club chunk must publish only the private route renderer.");
 excludes(clubCore, "window.mflOpenClubPage = openClubImmediately;", "The Club chunk must not replace the stable public lazy gate.");
-includes(clubCore, "const navigateClub = window.mflOpenClubPage;", "Direct Club startup must enter through the public navigation gate used by in-site links.");
-includes(clubCore, "await navigateClub(initialClubRoute.clubId, initialClubRoute.view);", "Direct Club startup must await the same public Club navigation workflow as an in-site click.");
+includes(sharedCore, "const navigateClub = window.mflOpenClubPage;", "Direct Club startup must enter through the public navigation gate used by in-site links.");
+includes(sharedCore, "result = await navigateClub(clubId, view);", "Direct Club startup must await the same public Club navigation workflow as an in-site click.");
+excludes(clubCore, "showHomeShellWithInitialClub", "The Club chunk must not retain a separate startup shell workflow.");
 excludes(clubCore, 'loadingController.begin("route-runtime")', "Direct Club startup must not create a second loading owner around the public gate.");
 excludes(clubCore, 'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', "Direct Club startup must not bypass the public gate with a private route-owner call.");
 excludes(clubCore, "function clubSearchEntries(query)", "The Club chunk must not own universal Club search.");
