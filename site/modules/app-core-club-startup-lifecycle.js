@@ -26,7 +26,7 @@ const SHARED_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeSh
           window.history.replaceState({}, "", canonicalRoute);
         }
         const navigateClub = window.mflOpenClubPage;
-        if (typeof navigateClub !== "function" || navigateClub.__mflRouteRuntimeGate !== true) {
+        if (typeof navigateClub !== "function" || Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true) {
           throw new Error("Shared Club navigation gate is unavailable during startup.");
         }
         await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
