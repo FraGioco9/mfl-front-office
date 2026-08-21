@@ -54,8 +54,8 @@ includes(
 );
 includes(
   preBootstrap,
-  "if (document.body) document.body.dataset.page = initialRoute.pageName;",
-  "Pre-bootstrap runtime must commit the real initial route to body[data-page].",
+  'if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;',
+  "Pre-bootstrap runtime must commit the real initial route to body[data-page] when a DOM is available.",
 );
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
