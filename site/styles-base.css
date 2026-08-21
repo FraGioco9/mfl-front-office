@@ -2463,6 +2463,7 @@ button.playerIdText:active {
 :root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
   color: #ffffff;
 }
+
 .playerAttributeCard.featured .progressionValue.positive {
   color: #2fbf62;
 }
