@@ -145,6 +145,18 @@ invariant(
     && shared.includes('const explicitPath = String(options.path || "");'),
   "Built shared routing must preserve the exact Evaluation URL through refresh and page-path resolution.",
 );
+invariant(
+  evaluation.includes('const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
+    && evaluation.includes("playerId: routePlayerId,")
+    && evaluation.includes('if (!row) {\n    renderEmptyEvaluationSelection(false);')
+    && !evaluation.includes('if (!row || getValue(row, "retirement_years") === 0) {'),
+  "A refreshed player Evaluation must hydrate its route player before rendering and must not clear the URL just because the row is not loaded yet.",
+);
+invariant(
+  evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
+    && evaluation.includes("playerId: payloadPlayerId,"),
+  "Shared Evaluations must hydrate their player row before handing off to the standard Evaluation table renderer.",
+);
 const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
 const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
 const evaluationSearchIndex = buildNormalizer.indexOf("normalizeEvaluationSearchLifecycle(evaluationArtifacts)");
@@ -159,4 +171,4 @@ invariant(
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation refresh URLs, startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are route-owned while shared persistence and Player focus ownership remain eager.");
+console.log("Evaluation refresh URLs, route-player hydration, shared table rendering, startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are route-owned while shared persistence and Player focus ownership remain eager.");
