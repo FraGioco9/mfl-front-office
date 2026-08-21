@@ -90,10 +90,74 @@ const CLUB_AWARE_HEADER_SORT_CONTROL = `    cell.appendChild(label);
 
     if (state.currentPage !== "club" && sortableColumns.has(column)) {`;
 
+const ROUTE_GATE_RUNTIME_READY = `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;`;
+const ROUTE_GATE_RUNTIME_READY_WITH_STATE = `    const runtimeReady = incomingOptions.__mflRouteRuntimeReady === true;
+    let previousTableStateSaved = false;`;
+
+const ROUTE_GATE_COMMITTED_OPTIONS = `          const committedOptions = {
+            ...incomingOptions,
+            skipNavigationTransition: true,
+          };`;
+
+const ROUTE_GATE_COMMITTED_OPTIONS_WITH_STATE = `          const committedOptions = {
+            ...incomingOptions,
+            skipNavigationTransition: true,
+            ...(previousTableStateSaved ? { __mflPreviousTableStateSaved: true } : {}),
+          };`;
+
+const ROUTE_GATE_TRANSITION_OWNER = `      const runTransition = Reflect.get(window, "__mflRunPageTransition");
+      if (typeof runTransition !== "function") {
+        throw new Error("Global page transition owner is unavailable.");
+      }
+      return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);`;
+
+const ROUTE_GATE_TRANSITION_OWNER_WITH_STATE = `      const previousTablePage = typeof tablePageKey === "function" ? tablePageKey() : null;
+      if (previousTablePage && typeof currentTablePageState === "function" && typeof saveTableState === "function") {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
+      previousTableStateSaved = true;
+
+      const runTransition = Reflect.get(window, "__mflRunPageTransition");
+      if (typeof runTransition !== "function") {
+        throw new Error("Global page transition owner is unavailable.");
+      }
+      return runTransition(String(pageName || ""), updateHash, incomingOptions, loadCommittedRoute);`;
+
+const TOP_LEVEL_PREVIOUS_TABLE_SAVE = `  const previousTablePage = tablePageKey();
+  if (previousTablePage) {
+    state.tablePageStates[previousTablePage] = currentTablePageState();
+    saveTableState();
+  }`;
+
+const TOP_LEVEL_PREVIOUS_TABLE_SAVE_GUARDED = `  if (options.__mflPreviousTableStateSaved !== true) {
+    const previousTablePage = tablePageKey();
+    if (previousTablePage) {
+      state.tablePageStates[previousTablePage] = currentTablePageState();
+      saveTableState();
+    }
+  }`;
+
+const NESTED_PREVIOUS_TABLE_SAVE = `    const previousTablePage = tablePageKey();
+    if (previousTablePage) {
+      state.tablePageStates[previousTablePage] = currentTablePageState();
+      saveTableState();
+    }`;
+
+const NESTED_PREVIOUS_TABLE_SAVE_GUARDED = `    if (options.__mflPreviousTableStateSaved !== true) {
+      const previousTablePage = tablePageKey();
+      if (previousTablePage) {
+        state.tablePageStates[previousTablePage] = currentTablePageState();
+        saveTableState();
+      }
+    }`;
+
 /**
  * Keep Club's fixed Position -> Overall ordering local to the Club route.
  * Shared table sort state belongs only to pages whose headers can actually change
  * sorting. Club headers are read-only and expose Position as the fixed primary key.
+ * Page transitions save the page being left before committing the destination so a
+ * Club visit cannot overwrite the destination page's stored sort direction.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeClubSortLifecycle(routeArtifacts) {
@@ -106,11 +170,41 @@ export function normalizeClubSortLifecycle(routeArtifacts) {
   const table = String(routeChunks?.table || "");
   if (!core || !club || !table) throw new Error("Cannot normalize Club sorting without shared, Club, and Table artifacts.");
 
-  const normalizedCore = replaceRequired(
+  let normalizedCore = replaceRequired(
     core,
     CLUB_PREPARE_SHARED_SORT,
     CLUB_PREPARE_LOCAL_SORT,
     "Club route preparation does not mutate shared sort state",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    ROUTE_GATE_RUNTIME_READY,
+    ROUTE_GATE_RUNTIME_READY_WITH_STATE,
+    "route gate tracks pre-transition table-state ownership",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    ROUTE_GATE_COMMITTED_OPTIONS,
+    ROUTE_GATE_COMMITTED_OPTIONS_WITH_STATE,
+    "committed route records pre-saved table state",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    ROUTE_GATE_TRANSITION_OWNER,
+    ROUTE_GATE_TRANSITION_OWNER_WITH_STATE,
+    "page transition saves the source table before destination commit",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    TOP_LEVEL_PREVIOUS_TABLE_SAVE,
+    TOP_LEVEL_PREVIOUS_TABLE_SAVE_GUARDED,
+    "top-level setPage does not overwrite destination state after committed transition",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    NESTED_PREVIOUS_TABLE_SAVE,
+    NESTED_PREVIOUS_TABLE_SAVE_GUARDED,
+    "incremental setPage does not overwrite destination state after committed transition",
   );
 
   let normalizedClub = replaceRequired(
