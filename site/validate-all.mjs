@@ -21,6 +21,7 @@ const validators = [
   "validate-home-summary-first-paint.mjs",
   "validate-eval-ownership.mjs",
   "validate-evaluation-search-lifecycle.mjs",
+  "validate-evaluation-search-loading-lock.mjs",
   "validate-evaluation-load-cache.mjs",
   "validate-route-runtime.mjs",
   "validate-app-core-splitter-architecture.mjs",
