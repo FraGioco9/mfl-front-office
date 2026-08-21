@@ -140,11 +140,26 @@ invariant(
   generatedSharedCore.includes("window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);"),
   "The generated shared core must publish the existing wallet-preferences startup request as Evaluation Supabase readiness.",
 );
+const recentOwnerStart = generatedSharedCore.indexOf("let evaluationRecentStateHydrated = false;");
+const recentOwnerEnd = generatedSharedCore.indexOf("window.__mflCoreContracts = Object.freeze({", recentOwnerStart);
+const recentOwnerSource = recentOwnerStart >= 0 && recentOwnerEnd > recentOwnerStart
+  ? generatedSharedCore.slice(recentOwnerStart, recentOwnerEnd)
+  : "";
+invariant(
+  recentOwnerSource.includes("evaluationRecentStateHydrated = true;")
+    && recentOwnerSource.includes("async function ensureEvaluationRecentStateHydrated()")
+    && recentOwnerSource.includes("await Promise.resolve(pendingStartup).catch(() => undefined);")
+    && recentOwnerSource.includes("if (evaluationRecentStateHydrated) return true;")
+    && recentOwnerSource.includes("await loadWalletPreferences({ force: true });")
+    && recentOwnerSource.includes("window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();")
+    && generatedSharedCore.includes("    ensureEvaluationRecentStateHydrated,"),
+  "Late Evaluation route ownership must chain authoritative Supabase hydration into the same published readiness promise, reusing startup when possible and issuing one corrective fresh preference read only when startup completed before the Supabase-only owner was installed.",
+);
 invariant(
   searchRuntime.includes("function waitForSupabaseRecentState()")
     && searchRuntime.includes("const pending = window.__mflWalletPreferencesStartupPromise;")
     && searchRuntime.includes("return Promise.resolve(pending).catch"),
-  "Evaluation recent-search priming must await the existing Supabase wallet-preferences request instead of starting a second preference request.",
+  "Evaluation recent-search priming must await the published authoritative Supabase readiness promise instead of issuing its own wallet-preference request.",
 );
 invariant(
   searchRuntime.includes('const RECENT_LOADING_REASON = "evaluation-recent-searches";')
@@ -161,7 +176,7 @@ invariant(
     && primeSource.indexOf("if (showLoading) beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
     && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
     && primeSource.indexOf("const ids = recentEvaluationPlayerIds();") < primeSource.indexOf("return fetchRecentEvaluationPayload(ids).then"),
-  "When route/startup loading is requested, Evaluation must begin the readiness gate, await Supabase preferences, resolve the five IDs, then request player rows.",
+  "When route/startup loading is requested, Evaluation must begin the readiness gate, await authoritative Supabase preferences, resolve the five IDs, then request player rows.",
 );
 invariant(
   primeSource.includes("publishRecentPayload(payload);")
@@ -201,4 +216,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, the Evaluation render block clears stale selected state on plain /evaluation so Evaluation-ready restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-title activation cannot focus the input, direct input focus does not start loading, late Evaluation ownership rehydrates authoritative Supabase recents before the search loader reads them, the Evaluation render block clears stale selected state on plain /evaluation, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
