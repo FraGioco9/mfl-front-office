@@ -164,12 +164,6 @@ p {
   justify-self: end;
 }
 
-.searchButton .searchEmoji {
-  color: var(--text);
-  font-size: 18px;
-  line-height: 1;
-}
-
 .menuButton {
   display: inline-flex;
   align-items: center;

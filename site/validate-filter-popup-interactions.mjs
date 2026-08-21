@@ -28,18 +28,19 @@ for (const required of [
 }
 
 for (const required of [
+  'id="openSearchButton" class="searchButton"',
+  '<svg class="searchIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M15.5 15.5 20 20"></path></svg>',
   'id="openFiltersButton" class="filtersViewButton"',
   '<svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>',
   '<span class="filtersViewLabel">Filters</span>',
   '<span id="filterSummary" class="filtersViewCount">0</span>',
   'id="viewControlsSeparator" class="viewControlsSeparator"',
 ]) {
-  invariant(index.includes(required), `Filters must exist in final structural first-paint markup through ${required}`);
+  invariant(index.includes(required), `Search and Filters must exist in final structural first-paint markup through ${required}`);
 }
 
 for (const removedLegacyMarkup of [
   'id="openFiltersButton" class="compactButton"',
-  '&#128269; Filters',
   'id="filterSummary">0 active',
 ]) {
   invariant(!index.includes(removedLegacyMarkup), `Legacy Filters markup must be removed completely: ${removedLegacyMarkup}`);
@@ -52,7 +53,7 @@ invariant(
 );
 
 for (const required of [
-  ".searchButton .searchEmoji",
+  ".searchButton .searchIcon",
   ".filtersViewButton",
   "width: 116px;",
   "height: 40px;",
