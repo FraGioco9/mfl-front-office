@@ -6936,8 +6936,6 @@ async function startApp() {
   }
 })();
 
-/* Keep MFL Wallet search navigation anchored to Attributes. */
-
 (() => {
   const mflWalletAddress = "0xff8d2bbed8164db0";
 
@@ -7486,7 +7484,6 @@ async function startApp() {
   else initialize();
 })();
 
-/* Layout-centered feedback and transition-free shared views */
 (() => {
   function syncLayoutCenter() {
     const selection = document.querySelector("#selectionBar");
@@ -7515,7 +7512,6 @@ async function startApp() {
   syncLayoutCenter();
 })();
 
-/* Session-cached incremental route data and destination-first loading */
 (() => {
   const originalApplyFilters = applyFilters;
   const originalSetPage = setPage;
@@ -8019,15 +8015,20 @@ async function startApp() {
     const loadAndRender = async () => {
       const payload = await requestIncrementalRoute(route, 1);
       if (!payload) return false;
-      if (tablePages.has(pageName)) {
+      const clubPage = pageName === "club";
+      if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
+      }
+      if (clubPage) {
+        state.currentPage = "club";
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        originalApplyFilters.call(this, { save: false });
+        if (clubPage) applyFilters({ save: false, localOnly: true });
+        else originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
