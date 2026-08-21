@@ -471,13 +471,9 @@
       if (!initialClubHandled) {
         initialClubHandled = true;
         const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);
-        if (normalizedPath() !== canonicalRoute) {
-          window.history.replaceState({}, "", canonicalRoute);
-        }
+        if (normalizedPath() !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
         const loadingController = window.__mflInteractionBusy;
-        const loadingToken = typeof loadingController?.begin === "function"
-          ? loadingController.begin("route-runtime")
-          : "";
+        const loadingToken = typeof loadingController?.begin === "function" ? loadingController.begin("route-runtime") : "";
         try {
           await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
         } finally {
