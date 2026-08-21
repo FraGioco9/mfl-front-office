@@ -2463,7 +2463,6 @@ button.playerIdText:active {
 :root[data-theme="dark"] .playerAttributeCard.featured .attributeValueText {
   color: #ffffff;
 }
-
 .playerAttributeCard.featured .progressionValue.positive {
   color: #2fbf62;
 }
@@ -2898,7 +2897,7 @@ button.playerIdText:active {
 
 .evaluationTitleRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin: 14px 0 12px;
