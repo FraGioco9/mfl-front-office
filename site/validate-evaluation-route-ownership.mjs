@@ -7,9 +7,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCoreSource, splitter, buildNormalizer] = await Promise.all([
+const [appCoreSource, splitter, routeLifecycle, buildNormalizer] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-evaluation-chunk.js"),
+  read("./modules/app-core-evaluation-route-lifecycle.js"),
   read("./modules/app-core-build-normalizer.js"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
@@ -132,16 +133,30 @@ invariant(
   splitter.includes("export function splitEvaluationApplicationCoreRuntime(artifacts)"),
   "Evaluation ownership must use a dedicated structural splitter stage.",
 );
-const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(routeArtifacts)");
+invariant(
+  routeLifecycle.includes('const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";')
+    && routeLifecycle.includes("...(savedId ? { savedId } : {})")
+    && routeLifecycle.includes("...(shareId ? { shareId } : {})"),
+  "Evaluation route lifecycle must extract and retain player, saved, and shared query identity.",
+);
+invariant(
+  shared.includes('const requestedPath = String(path || "");')
+    && shared.includes('path: search ? `/evaluation?${search}` : "/evaluation"')
+    && shared.includes('const explicitPath = String(options.path || "");'),
+  "Built shared routing must preserve the exact Evaluation URL through refresh and page-path resolution.",
+);
+const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
+const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
 const evaluationSearchIndex = buildNormalizer.indexOf("normalizeEvaluationSearchLifecycle(evaluationArtifacts)");
 const settingsSplitIndex = buildNormalizer.indexOf("splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts)");
 invariant(
-  evaluationSplitIndex >= 0
+  evaluationRouteIndex >= 0
+    && evaluationSplitIndex > evaluationRouteIndex
     && evaluationSearchIndex > evaluationSplitIndex
     && settingsSplitIndex > evaluationSearchIndex,
-  "Evaluation ownership must split immediately after base route extraction, normalize its search lifecycle, and then continue into later route splitters.",
+  "Evaluation routing must preserve query identity before route splitting, then normalize search before later route splitters.",
 );
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are lazy route-owned while shared persistence and Player focus ownership remain eager.");
+console.log("Evaluation refresh URLs, startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are route-owned while shared persistence and Player focus ownership remain eager.");

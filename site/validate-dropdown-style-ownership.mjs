@@ -57,6 +57,11 @@ for (const legacySelector of [
   );
 }
 
+invariant(
+  runtime.includes('!select.classList.contains("evaluationSummaryPositionSelect")'),
+  "Evaluation summary position selects must remain table-owned instead of receiving global dropdown enhancement.",
+);
+
 for (const runtimeStyleOwner of [
   'document.createElement("style")',
   "mflDropdownRuntimeAdjustments",

@@ -155,7 +155,7 @@ function currentEvaluationSharePayload() {
   };
 }
 
-function applySharedEvaluationPayload(payload) {
+async function applySharedEvaluationPayload(payload) {
   const data = normalizeSharedEvaluationPayload(payload);
 
   if (!data.playerId) {
@@ -177,9 +177,8 @@ function applySharedEvaluationPayload(payload) {
     state.evaluationSummaryPositions[data.playerId] = data.summaryPosition;
   }
 
-  evaluationSearchInput.value = "";
   renderEvaluationMflPerUsdControl(false);
-  renderEvaluationPage();
+  await renderEvaluationPage();
 }
 
 async function loadSharedEvaluation(shareId) {
@@ -206,8 +205,19 @@ async function loadSharedEvaluation(shareId) {
     }
 
     const data = await response.json();
+    const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
+    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+      const playerPayload = await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: payloadPlayerId,
+      }, 1, { force: true });
+      if (!playerPayload) return;
+    }
     state.evaluationShareId = id;
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Shared evaluation has expired or could not be loaded.");
     resetInvalidEvaluationLinkToPlainEvaluation();
@@ -362,7 +372,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
     clearEvaluationSearchFocus();
-    applySharedEvaluationPayload(data.payload);
+    await applySharedEvaluationPayload(data.payload);
   } catch {
     showToast("Saved evaluation could not be loaded.");
     resetInvalidEvaluationLinkToPlainEvaluation();
@@ -752,7 +762,14 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-  evaluationSearchInput.focus();
+
+  const activateEvaluationSearch = () => {
+    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
+    evaluationSearchInput.focus({ preventScroll: true });
+    evaluationSearchInput.select();
+  };
+  activateEvaluationSearch();
+  window.requestAnimationFrame(activateEvaluationSearch);
 }
 
 function handleEvaluationSearchInput() {
@@ -1058,6 +1075,7 @@ discardAdvancedSettingsButton.addEventListener("click", discardAdvancedSettings)
 applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
+evaluationSearchClearButton.addEventListener("pointerdown", (event) => event.preventDefault());
 evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
 

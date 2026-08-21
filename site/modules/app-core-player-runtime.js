@@ -589,6 +589,11 @@ function renderPlayerPageOwner(playerId) {
     const targetPath = pagePath("evaluation", { playerId: id });
 
     rememberEvaluationResult(id);
+    try {
+      sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);
+    } catch {
+      // Session storage is an optional first-paint cache only.
+    }
 
     if (event.ctrlKey || event.metaKey || event.button === 1) {
       window.open(targetPath, "_blank", "noopener");

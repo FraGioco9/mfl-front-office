@@ -255,6 +255,10 @@ body[data-page="club"] #progressionPage .rowsField {
   padding-left: 12px;
 }
 
+.evaluationTable tbody tr:last-child > :is(th, td) {
+  border-bottom: 0;
+}
+
 .advancedPlayerTable {
   width: 100%;
   min-width: 100%;
