@@ -8360,6 +8360,8 @@ async function startApp() {
     return true;
   }
 
+  let evaluationRecentStateHydrated = false;
+
   function installEvaluationRecentStateOwnership() {
     if (typeof restoreRecentEvaluationState !== "function"
       || typeof persistRecentSearchStates !== "function"
@@ -8374,6 +8376,7 @@ async function startApp() {
         ? savedState.recentEvaluationPlayerIds
         : [];
       state.recentEvaluationPlayerIds = normalizeIdList(incoming, 5);
+      evaluationRecentStateHydrated = true;
       if (/^\/evaluation\/?$/i.test(window.location.pathname)) {
         void window.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(true);
       }
@@ -8422,6 +8425,24 @@ async function startApp() {
     return true;
   }
 
+  async function ensureEvaluationRecentStateHydrated() {
+    const pendingStartup = window.__mflWalletPreferencesStartupPromise;
+    if (pendingStartup && typeof pendingStartup.then === "function") {
+      await Promise.resolve(pendingStartup).catch(() => undefined);
+    }
+
+    if (evaluationRecentStateHydrated) return true;
+    if (!state.linkedWalletAddress
+      || typeof hasWalletProof !== "function"
+      || !hasWalletProof()
+      || typeof loadWalletPreferences !== "function") {
+      return false;
+    }
+
+    await loadWalletPreferences({ force: true });
+    return evaluationRecentStateHydrated;
+  }
+
   window.__mflCoreContracts = Object.freeze({
     ensureCanonicalTableHeader,
     installSearchMatching,
@@ -8439,6 +8460,7 @@ async function startApp() {
     installEvaluationEmptySearchOwner,
     installEvaluationRecentWriteOwner,
     installEvaluationRecentStateOwnership,
+    ensureEvaluationRecentStateHydrated,
   });
 })();
 ;(() => {
