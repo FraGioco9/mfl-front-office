@@ -472,7 +472,15 @@
     showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
       if (!initialClubHandled) {
         initialClubHandled = true;
-        await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
+        const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);
+        if (normalizedPath() !== canonicalRoute) {
+          window.history.replaceState({}, "", canonicalRoute);
+        }
+        const navigateClub = window.mflOpenClubPage;
+        if (typeof navigateClub !== "function" || Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true) {
+          throw new Error("Shared Club navigation gate is unavailable during startup.");
+        }
+        await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
         return;
       }
       return originalShowHomeShell.apply(this, arguments);
