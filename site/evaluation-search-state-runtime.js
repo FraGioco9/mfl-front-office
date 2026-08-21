@@ -17,7 +17,6 @@
   let recentLoadingToken = "";
   let directPointerFocus = false;
   let directPointerFocusResetTimer = 0;
-  let pageObserver = null;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -399,8 +398,8 @@
     void restoreEmptyRecentResults(false);
   }
 
-  function onPageChange() {
-    if (destroyed || document.body?.dataset.page !== "evaluation") return;
+  function onRouteActive() {
+    if (destroyed || !active()) return;
     installCoreBridges();
     const field = input();
     if (!(field instanceof HTMLInputElement)) return;
@@ -419,12 +418,9 @@
   document.addEventListener("keyup", onKeyUp, true);
   window.addEventListener("storage", onLegacyRecentStorage, true);
   window.addEventListener("mfl:evaluation-ready", onReady);
+  window.addEventListener("mfl:evaluation-route-active", onRouteActive);
   window.addEventListener("mfl:ready", onReady);
   window.addEventListener("pageshow", onReady);
-  if (document.body) {
-    pageObserver = new MutationObserver(onPageChange);
-    pageObserver.observe(document.body, { attributes: true, attributeFilter: ["data-page"] });
-  }
   void restoreEmptyRecentResults(true, active());
 
   function destroy() {
@@ -436,10 +432,9 @@
     document.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("storage", onLegacyRecentStorage, true);
     window.removeEventListener("mfl:evaluation-ready", onReady);
+    window.removeEventListener("mfl:evaluation-route-active", onRouteActive);
     window.removeEventListener("mfl:ready", onReady);
     window.removeEventListener("pageshow", onReady);
-    pageObserver?.disconnect();
-    pageObserver = null;
     clearDirectPointerFocus();
     recentPrimePromise = null;
     recentPayload = null;
