@@ -25,12 +25,16 @@ for (const required of [
 
 for (const required of [
   ".searchButton .searchEmoji",
+  "#progressionPage > .views {\n  anchor-name: --mfl-table-views;",
   "#progressionPage:has(#openFiltersButton:not(.filtersViewButton)) > .views::before",
+  "flex: 0 0 153px;",
+  "margin-right: 4px;",
   "#openFiltersButton:not(.filtersViewButton)",
+  "position-anchor: --mfl-table-views;",
   "#filterSummary:not(.filtersViewCount)",
   ".filtersViewButton",
   ".filtersViewIcon",
-  ".filtersViewCount",
+  "#filterSummary.filtersViewCount",
   "body.filtersOpen .filtersViewButton",
   ".viewControlsSeparator",
   "#quickClearFiltersButton",
@@ -39,6 +43,21 @@ for (const required of [
 ]) {
   invariant(controls.includes(required), `Search and Filters chrome is missing canonical shared-control ownership through ${required}`);
 }
+
+invariant(
+  controls.includes("#filterSummary:not(.filtersViewCount) {\n  position: absolute;")
+    && controls.includes("height: 40px;\n  padding: 0;\n  border-radius: 0;\n  background: transparent;"),
+  "First-paint active-filter text must be vertically centered without badge chrome.",
+);
+invariant(
+  controls.includes("#filterSummary.filtersViewCount {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  align-self: stretch;")
+    && controls.includes("margin-left: auto;\n  padding: 0;\n  border-radius: 0;\n  background: transparent;"),
+  "Loaded active-filter text must remain vertically centered and unboxed inside Filters.",
+);
+invariant(
+  !controls.includes("body.filtersOpen #filterSummary.filtersViewCount"),
+  "Opening Filters must highlight only the button, not the active-filter text.",
+);
 
 for (const required of [
   'button.classList.add("filtersViewButton");',
@@ -51,8 +70,15 @@ for (const required of [
   'separator.className = "viewControlsSeparator";',
   'views.insertBefore(button, firstViewButton);',
   'views.insertBefore(separator, firstViewButton);',
+  "function activeFilterCountFromDialog() {",
+  "function syncFilterSummaryNow() {",
+  'summary.textContent = `${activeFilterCountFromDialog()} active`; ',
+  "function syncFilterSummaryAfterClose() {",
+  'target?.closest("#applyFiltersButton")',
+  "syncFilterSummaryNow();",
+  "filtersModalIsOpen()",
 ]) {
-  invariant(sharedTableUi.includes(required), `Shared table UI must preserve first-paint Filters chrome through ${required}`);
+  invariant(sharedTableUi.includes(required.trimEnd()), `Shared table UI must preserve immediate Filters chrome through ${required}`);
 }
 
 for (const required of [
@@ -117,4 +143,4 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters view placement must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Search, first-paint Filters chrome, embedded active count, popup highlight, close-state blur, and canonical neutral ESC focus validation passed.");
+console.log("Search, first-paint Filters alignment, flat active count, immediate close sync, popup highlight, close-state blur, and canonical neutral ESC focus validation passed.");
