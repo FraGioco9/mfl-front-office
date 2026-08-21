@@ -78,6 +78,19 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
 
   renderEvaluationTable(row);`,
     `  let row = rowByPlayerId(state.evaluationPlayerId);
+  const pendingEvaluationRoute = Boolean(
+    evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+  );
+  const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || "").trim();
+
+  if (pendingEvaluationRoute) {
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+  }
 
   if (!row) {
     const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
@@ -114,6 +127,13 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
   }
 
   if (!row) {
+    if (pendingEvaluationRoute) {
+      if (firstPaintEvaluationPlayerName) {
+        evaluationSearchInput.value = firstPaintEvaluationPlayerName;
+        syncEvaluationSearchClearButton();
+      }
+      return;
+    }
     renderEmptyEvaluationSelection(false);
     return;
   }
@@ -126,7 +146,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
   }
 
   renderEvaluationTable(row);`,
-    "Evaluation refresh hydrates its route player before deciding the selection is invalid",
+    "Evaluation refresh hydrates its route player without clearing first-paint selection chrome",
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
