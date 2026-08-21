@@ -21,9 +21,13 @@ const SUMMARY_LOADER = `async function loadSummary() {
 
 const DEDUPED_SUMMARY_LOADER = `let summaryLoadPromise = null;
 let summaryLoaded = false;
+let summarySnapshot = null;
 
 async function loadSummary() {
-  if (summaryLoaded) return true;
+  if (summaryLoaded && summarySnapshot) {
+    updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
+    return true;
+  }
   if (summaryLoadPromise) return summaryLoadPromise;
 
   summaryLoadPromise = (async () => {
@@ -33,7 +37,11 @@ async function loadSummary() {
       if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
       state.manifest = data.manifest || null;
       const summary = data.summary || {};
-      updateSummaryCounts(summary.playerCount, summary.walletCount);
+      summarySnapshot = Object.freeze({
+        playerCount: summary.playerCount,
+        walletCount: summary.walletCount,
+      });
+      updateSummaryCounts(summarySnapshot.playerCount, summarySnapshot.walletCount);
       updateStatusDate(summary.generatedAt);
       summaryLoaded = true;
       return true;
@@ -58,8 +66,10 @@ const SET_PAGE_WITH_HOME_SUMMARY = `async function setPage(pageName, updateHash 
 
 /**
  * Make the database summary a reusable Home dependency. Startup and later Home
- * navigation share one in-flight request; a failed bootstrap request remains
- * retryable the next time Home is opened.
+ * navigation share one in-flight request. Successful counts are cached so a
+ * later Home route-prime can reset its placeholders and then immediately
+ * repaint the cached summary without another request. A failed bootstrap
+ * request remains retryable the next time Home is opened.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeHomeSummaryLifecycle(artifacts) {
@@ -70,7 +80,7 @@ export function normalizeHomeSummaryLifecycle(artifacts) {
     source,
     SUMMARY_LOADER,
     DEDUPED_SUMMARY_LOADER,
-    "database summary loading is shared and retryable",
+    "database summary loading is shared, repaintable, and retryable",
   );
   core = replaceRequired(
     core,
