@@ -34,7 +34,7 @@ invariant(
     && evaluationCore.includes("if (Array.isArray(cachedEvaluations)) {")
     && evaluationCore.includes("renderSavedEvaluationList(cachedEvaluations);")
     && evaluationCore.includes("window.__mflSavedEvaluationsSessionCache = evaluations;"),
-  "Saved Evaluations must reuse the successful list request for the rest of the browser session.",
+  "Saved Evaluations must reuse the successful list request for the rest of the in-memory page session.",
 );
 
 const invalidations = evaluationCore.match(/window\.__mflSavedEvaluationsSessionCache = null;/g) || [];
@@ -51,4 +51,4 @@ invariant(
   "The first saved-Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation saved-list cache validation passed: input highlight is hover-only, the first saved list is fetched fresh, later opens reuse it, and save/delete invalidate it.");
+console.log("Evaluation saved-list cache validation passed: input highlight is hover-only, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
