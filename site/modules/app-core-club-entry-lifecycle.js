@@ -51,10 +51,6 @@ const LATE_CLUB_HOME_SHELL_GATE = `  if (initialClubRoute && typeof showHomeShel
     };
   }`;
 
-const REMOVED_LATE_CLUB_GATE_MARKER = `  // Legacy validation marker only. Executable Club startup now belongs to shared showHomeShell.
-  // const navigateClub = window.mflOpenClubPage;
-  // await navigateClub(initialClubRoute.clubId, initialClubRoute.view);`;
-
 const EAGER_GENERATED_COMMENTS = [
   `    // Inspect only the element that performs the navigation. Do not inspect the
     // whole composed path, because a page ancestor may contain "MFL Wallet"
@@ -105,7 +101,7 @@ export function normalizeClubEntryLifecycle(routeArtifacts) {
   const normalizedClub = replaceRequired(
     club,
     LATE_CLUB_HOME_SHELL_GATE,
-    REMOVED_LATE_CLUB_GATE_MARKER,
+    "",
     "remove late Club startup interception",
   );
 
