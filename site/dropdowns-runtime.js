@@ -8,6 +8,7 @@
 
   function visibleSelect(select) {
     return select instanceof HTMLSelectElement
+      && !select.classList.contains("evaluationSummaryPositionSelect")
       && select.isConnected
       && !select.hidden
       && select.getClientRects().length > 0;
