@@ -31,15 +31,10 @@ invariant(
   "Cached Saved Evaluations must only bypass Uniform Loading when the list belongs to the active wallet.",
 );
 
-const loadFacadeStart = sharedCore.indexOf("async function openSavedEvaluationsModal()");
-const loadFacadeEnd = sharedCore.indexOf("function hasWalletProof", loadFacadeStart);
-const loadFacade = loadFacadeStart >= 0 && loadFacadeEnd > loadFacadeStart
-  ? sharedCore.slice(loadFacadeStart, loadFacadeEnd)
-  : "";
 invariant(
   sharedCore.includes('evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);')
-    && loadFacade.includes("evaluationSearchInput.blur();")
-    && !loadFacade.includes("clearEvaluationSearchFocus();"),
+    && sharedCore.includes('async function openSavedEvaluationsModal() {\n  evaluationSearchInput.blur();')
+    && !sharedCore.includes('async function openSavedEvaluationsModal() {\n  clearEvaluationSearchFocus();'),
   "Clicking Load must preserve the direct universal binding while the shared facade immediately blurs the Evaluation search.",
 );
 
