@@ -1186,7 +1186,9 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  const busyToken = window.__mflInteractionBusy?.begin?.("evaluation-load") || "";
+  const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && Array.isArray(window.__mflSavedEvaluationsSessionCache);
+  const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
   try {
     if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
       await window.__mflEnsureRouteCore("evaluation");

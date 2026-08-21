@@ -285,6 +285,7 @@ async function createSavedEvaluation() {
   const currentSavedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
   const payload = currentEvaluationSharePayload();
 
+  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch("/api/evaluation-save", {
     method: "POST",
     headers: {
@@ -415,6 +416,7 @@ async function deleteSavedEvaluation(savedId) {
   const requestUrl = new URL("/api/evaluation-save", window.location.origin);
   requestUrl.searchParams.set("id", id);
 
+  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch(requestUrl.toString(), {
     method: "DELETE",
     cache: "no-store",
@@ -611,6 +613,12 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
   }
 
   showModal(evaluationLoadModal);
+  const cachedEvaluations = window.__mflSavedEvaluationsSessionCache;
+  if (Array.isArray(cachedEvaluations)) {
+    renderSavedEvaluationList(cachedEvaluations);
+    return;
+  }
+
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
   try {
     const response = await fetch("/api/evaluation-save", {
@@ -639,6 +647,7 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       }, 1, { force: true });
     }
 
+    window.__mflSavedEvaluationsSessionCache = evaluations;
     renderSavedEvaluationList(evaluations);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
