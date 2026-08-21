@@ -5294,6 +5294,19 @@ async function renderEvaluationPage() {
   }
 
   let row = rowByPlayerId(state.evaluationPlayerId);
+  const pendingEvaluationRoute = Boolean(
+    evaluationPlayerIdFromUrl() || evaluationSavedIdFromUrl() || evaluationShareIdFromUrl()
+  );
+  const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || "").trim();
+
+  if (pendingEvaluationRoute) {
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+  }
 
   if (!row) {
     const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
@@ -5330,6 +5343,13 @@ async function renderEvaluationPage() {
   }
 
   if (!row) {
+    if (pendingEvaluationRoute) {
+      if (firstPaintEvaluationPlayerName) {
+        evaluationSearchInput.value = firstPaintEvaluationPlayerName;
+        syncEvaluationSearchClearButton();
+      }
+      return;
+    }
     renderEmptyEvaluationSelection(false);
     return;
   }

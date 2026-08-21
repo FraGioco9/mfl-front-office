@@ -763,7 +763,8 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-  evaluationSearchInput.focus();
+  evaluationSearchInput.focus({ preventScroll: true });
+  evaluationSearchInput.select();
 }
 
 function handleEvaluationSearchInput() {
