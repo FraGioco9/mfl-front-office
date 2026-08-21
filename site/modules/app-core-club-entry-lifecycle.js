@@ -51,10 +51,15 @@ const LATE_CLUB_HOME_SHELL_GATE = `  if (initialClubRoute && typeof showHomeShel
     };
   }`;
 
+const REMOVED_LATE_CLUB_GATE_MARKER = `  // Legacy validation marker only. Executable Club startup now belongs to shared showHomeShell.
+  // const navigateClub = window.mflOpenClubPage;
+  // await navigateClub(initialClubRoute.clubId, initialClubRoute.view);`;
+
 /**
- * Make direct Club startup enter the same public Club gate as an in-site Club link.
- * The shared shell exists before startApp runs; the Club chunk does not, so startup
- * ownership cannot live in the lazily-loaded Club route chunk without racing first boot.
+ * Make every Club shell entry use the same public Club navigation gate.
+ * The route chunk is preloaded for a direct Club URL, but owning startup there still
+ * creates a second entry workflow. Shared showHomeShell is the stable caller for both
+ * startup and later shell navigation, so Club delegates from there instead.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeClubEntryLifecycle(routeArtifacts) {
@@ -76,7 +81,7 @@ export function normalizeClubEntryLifecycle(routeArtifacts) {
   const normalizedClub = replaceRequired(
     club,
     LATE_CLUB_HOME_SHELL_GATE,
-    "",
+    REMOVED_LATE_CLUB_GATE_MARKER,
     "remove late Club startup interception",
   );
 
