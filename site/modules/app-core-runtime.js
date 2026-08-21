@@ -6857,6 +6857,7 @@ async function startApp() {
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
