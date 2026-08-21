@@ -25,9 +25,15 @@ for (const required of [
 
 for (const required of [
   ".searchButton .searchEmoji",
+  "#progressionPage:has(#openFiltersButton:not(.filtersViewButton)) > .views::before",
+  "#openFiltersButton:not(.filtersViewButton)",
+  "#filterSummary:not(.filtersViewCount)",
   ".filtersViewButton",
   ".filtersViewIcon",
+  ".filtersViewCount",
+  "body.filtersOpen .filtersViewButton",
   ".viewControlsSeparator",
+  "#quickClearFiltersButton",
   "#progressionPage .views > #openFiltersButton",
   'body[data-page="club"] #progressionPage .filtersViewButton',
 ]) {
@@ -39,11 +45,14 @@ for (const required of [
   'svg.classList.add("filtersViewIcon");',
   'svg.setAttribute("viewBox", "0 0 24 24");',
   'path.setAttribute("d", "M4 6h16M7 12h10M10 18h4");',
+  'summary.classList.add("filtersViewCount");',
+  "button.append(summary);",
+  "quickClear.hidden = true;",
   'separator.className = "viewControlsSeparator";',
   'views.insertBefore(button, firstViewButton);',
   'views.insertBefore(separator, firstViewButton);',
 ]) {
-  invariant(sharedTableUi.includes(required), `Shared table UI must place the rebuilt Filters control before view buttons through ${required}`);
+  invariant(sharedTableUi.includes(required), `Shared table UI must preserve first-paint Filters chrome through ${required}`);
 }
 
 for (const required of [
@@ -108,4 +117,4 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters view placement must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Search, Filters chrome, popup hover, close-state blur, and canonical neutral ESC focus validation passed.");
+console.log("Search, first-paint Filters chrome, embedded active count, popup highlight, close-state blur, and canonical neutral ESC focus validation passed.");
