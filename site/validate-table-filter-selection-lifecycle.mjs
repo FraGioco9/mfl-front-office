@@ -30,8 +30,9 @@ invariant(
   bootstrap.includes('function primeTableChrome(page, urlLike = window.location.href, options = {}) {')
     && bootstrap.includes('const savedState = resetFilters ? {} : storedTablePageState(normalizedPage) || {};')
     && bootstrap.includes('filterRules.replaceChildren();')
-    && bootstrap.includes('filterSummary.textContent = "0 active";'),
-  "Destination table first paint must show default controls and zero advanced filters on a page switch.",
+    && bootstrap.includes('filterSummary.textContent = "0";')
+    && !bootstrap.includes('filterSummary.textContent = "0 active";'),
+  "Destination table first paint must show default controls and a count-only zero summary on a page switch.",
 );
 invariant(
   appCore.includes('function tableStateWithoutPageFilters(pageName, savedState) {')
@@ -39,6 +40,14 @@ invariant(
     && appCore.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
     && appCore.includes('delete document.documentElement.dataset.mflResetTableFilters;'),
   "Table restore must clear only destination filter/selection state and consume the page-reset marker after controls synchronize.",
+);
+invariant(
+  generated.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
+    && generated.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
+    && generated.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
+    && generated.includes('if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;')
+    && generated.includes('route.filterRules = filterRulesForLoading(pageName, savedPageState, route.view);'),
+  "Destination incremental requests must be built from reset filter state so loaded players match the reset controls.",
 );
 invariant(
   appCore.includes('function appliedTableFilterSignature(rules) {')
@@ -53,4 +62,4 @@ invariant(
   "Source and generated sorting must reapply unchanged filters instead of owning a separate selection reset.",
 );
 
-console.log("Page filter isolation and view/filter selection reset validation passed in source and generated table runtime.");
+console.log("Page filter isolation, request-time player reset, and view/filter selection reset validation passed in source and generated table runtime.");

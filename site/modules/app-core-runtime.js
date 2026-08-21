@@ -1186,20 +1186,13 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
-    && Array.isArray(window.__mflSavedEvaluationsSessionCache);
-  const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
-  try {
-    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
-      await window.__mflEnsureRouteCore("evaluation");
-    }
-    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
-      throw new Error("Evaluation route core is not loaded.");
-    }
-    return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
-  } finally {
-    if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
+  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+    await window.__mflEnsureRouteCore("evaluation");
   }
+  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+    throw new Error("Evaluation route core is not loaded.");
+  }
+  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
 }
 
 function normalizedPageName(pageName) {
@@ -6864,7 +6857,6 @@ async function startApp() {
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
-  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
@@ -7603,9 +7595,14 @@ async function startApp() {
 
   function prepareIncrementalRoute(pageName, options = {}) {
     const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
-    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
+    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     if (savedPageState) {
       restoreSavedTableState(pageName, { view: options.view, deferRules: true });
     } else if (clubTarget) {

@@ -708,7 +708,7 @@ function activeFilterCountFromSavedRules(rules = []) {
 }
 
 function updateFilterSummary(count = activeFilterCount()) {
-  filterSummary.textContent = `${count} active`;
+  filterSummary.textContent = String(count);
 }
 
 function selectedFilterColumns(exceptRule = null) {
@@ -1154,8 +1154,8 @@ function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = tru
   }
 
   state.filterDraftRules = null;
+  document.body.classList.remove("filtersOpen");
   hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     if (restoreTriggerFocus) openFiltersButton.focus();
   });
 }
@@ -1405,7 +1405,7 @@ function tableApplyFiltersOwner(options = {}) {
     if (hideMflPlayersInput) hideMflPlayersInput.checked = false;
     if (packablePlayersInput) packablePlayersInput.checked = false;
     newMintsInput.checked = false;
-    if (filterSummary) filterSummary.textContent = "0 active";
+    if (filterSummary) filterSummary.textContent = "0";
     emptyState.textContent = "No players found for this club.";
     syncActiveWatchlistFromSet();
     renderTable();

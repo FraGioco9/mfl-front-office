@@ -286,6 +286,8 @@
         <section id="progressionPage" class="pageView progressionPage" hidden>
           <h2 id="tablePageTitle" class="tablePageTitle">Progression</h2>
           <section class="views" aria-label="Table views">
+            <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
+            <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
             <button class="viewButton" type="button" data-view="attributes">Attributes</button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
@@ -327,9 +329,7 @@
           </section>
 
           <section class="controlsBar" aria-label="Table controls">
-            <button id="openFiltersButton" class="compactButton" type="button">&#128269; Filters</button>
-            <button id="quickClearFiltersButton" class="compactButton" type="button">&#129529; Clear</button>
-            <span id="filterSummary">0 active</span>
+            <button id="quickClearFiltersButton" class="compactButton" type="button" hidden aria-hidden="true" tabindex="-1">Clear</button>
             <label class="field compact rowsField">
               <span>Rows</span>
               <select id="pageSizeSelect">
