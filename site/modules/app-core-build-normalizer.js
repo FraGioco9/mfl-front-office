@@ -48,13 +48,13 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableArtifacts);
-  const walletArtifacts = splitWalletApplicationCoreRuntime(filterSummaryArtifacts);
+  const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
-  return normalizeHomeSummaryLifecycle(clubSortArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);
+  return normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
