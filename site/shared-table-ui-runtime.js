@@ -8,8 +8,6 @@
 
   let destroyed = false;
   let pointerControl = null;
-  let originalPrimeTableChrome = null;
-  let wrappedPrimeTableChrome = null;
 
   function controlFromTarget(target) {
     if (!(target instanceof Element)) return null;
@@ -63,21 +61,6 @@
     }
   }
 
-  function installPrimeTableChromeBridge() {
-    const prime = Reflect.get(window, "__mflPrimeTableChrome");
-    if (typeof prime !== "function") return false;
-    if (prime === wrappedPrimeTableChrome) return true;
-
-    originalPrimeTableChrome = prime;
-    wrappedPrimeTableChrome = function primeTableChromeWithCountOnlySummary(...args) {
-      const result = originalPrimeTableChrome.apply(this, args);
-      syncFilterSummaryNow();
-      return result;
-    };
-    Reflect.set(window, "__mflPrimeTableChrome", wrappedPrimeTableChrome);
-    return true;
-  }
-
   function onPointerDown(event) {
     pointerControl = controlFromTarget(event.target);
   }
@@ -112,18 +95,12 @@
   }
 
   function sync() {
-    installPrimeTableChromeBridge();
     markInitialTableFiltersForReset();
     syncFilterSummaryNow();
   }
 
   function destroy() {
     destroyed = true;
-    if (wrappedPrimeTableChrome && Reflect.get(window, "__mflPrimeTableChrome") === wrappedPrimeTableChrome && originalPrimeTableChrome) {
-      Reflect.set(window, "__mflPrimeTableChrome", originalPrimeTableChrome);
-    }
-    originalPrimeTableChrome = null;
-    wrappedPrimeTableChrome = null;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("change", onChange, true);
