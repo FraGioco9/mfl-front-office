@@ -86,38 +86,58 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   position: relative;
 }
 
+/* The legacy wrapper has no box. shared-table-ui-runtime moves its controls
+ * into .views before app-core binds them, then removes the wrapper entirely. */
 #progressionPage > .controlsBar {
-  display: none;
+  display: contents;
 }
 
 #progressionPage .views {
   margin-bottom: 6px;
 }
 
+#progressionPage:has(> .controlsBar) > .views {
+  padding-right: 140px;
+}
+
 #progressionPage .quickFilters {
-  margin-bottom: 6px;
+  margin-bottom: 0;
+  padding-bottom: 12px;
 }
 
 #progressionPage .tablePageTitle {
   min-height: 32px;
 }
 
-html body[data-page="watchlist"] #progressionPage .watchlistSwitcher,
-html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .watchlistSwitcher {
+#progressionPage > .controlsBar > .rowsField {
   position: absolute;
-  top: var(--mfl-page-title-margin-block-start);
+  top: calc(var(--mfl-page-title-margin-block-start) + 32px + var(--mfl-page-title-margin-block-end));
   right: 0;
   z-index: 4;
+  width: 132px;
+  min-width: 132px;
+  height: 40px;
+  margin: 0;
+}
+
+#progressionPage .views > .rowsField {
+  flex: 0 0 132px;
+  width: 132px;
+  min-width: 132px;
+  height: 40px;
+  margin-left: auto;
+}
+
+#progressionPage .views > .watchlistSwitcher:not([hidden]) + .rowsField {
+  margin-left: 0;
+}
+
+#progressionPage .watchlistSwitcher {
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
-  margin: 0;
+  margin-left: auto;
   gap: 6px;
-}
-
-body[data-page="watchlist"] #progressionPage .tablePageTitle,
-html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .tablePageTitle {
-  padding-right: 330px;
 }
 
 #progressionPage .watchlistSwitcherLabel {
@@ -126,7 +146,7 @@ html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progres
 
 #progressionPage .watchlistButton {
   width: 260px;
-  height: 32px;
+  height: 40px;
   padding-left: 9px;
   padding-right: 28px;
   font-size: 13px;
@@ -135,6 +155,19 @@ html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progres
 #progressionPage .watchlistDropdown {
   width: 260px;
   min-width: 260px;
+}
+
+#progressionPage #pageSizeSelect {
+  flex: 0 0 80px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  height: 40px;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .rowsField,
+body[data-page="club"] #progressionPage .rowsField {
+  display: none;
 }
 
 #progressionPage .playerTableScroller {
@@ -264,13 +297,14 @@ html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progres
 }
 
 @media (max-width: 900px) {
-  body[data-page="watchlist"] #progressionPage .tablePageTitle,
-  html:not(.mflInitialRouteResolved)[data-initial-table-page="watchlist"] #progressionPage .tablePageTitle {
-    padding-right: min(230px, 58vw);
-  }
-
   #progressionPage .watchlistSwitcherLabel {
     display: none;
+  }
+
+  #progressionPage .watchlistButton,
+  #progressionPage #pageSizeSelect,
+  #progressionPage .rowsField {
+    height: 38px;
   }
 
   #progressionPage .watchlistButton {
