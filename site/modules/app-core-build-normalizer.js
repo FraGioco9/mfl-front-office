@@ -2,6 +2,7 @@
 // Canonical app-core behavior is source-owned; this module composes the build-time route/action normalizers.
 
 import { normalizeClubEntryLifecycle } from "./app-core-club-entry-lifecycle.js";
+import { normalizeClubSortLifecycle } from "./app-core-club-sort-lifecycle.js";
 import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
@@ -23,7 +24,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const walletArtifacts = splitWalletApplicationCoreRuntime(tableArtifacts);
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
-  return normalizeClubEntryLifecycle(clubStartupArtifacts);
+  const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
+  return normalizeClubSortLifecycle(clubEntryArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
