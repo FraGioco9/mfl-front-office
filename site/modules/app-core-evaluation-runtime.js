@@ -1051,14 +1051,7 @@ applyAdvancedSettingsButton.addEventListener("click", applyAdvancedSettings);
 evaluationSearchInput.addEventListener("input", handleEvaluationSearchInput);
 evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);
 evaluationSearchInput.addEventListener("focus", renderEvaluationSearchResults);
-evaluationSearchInput.addEventListener("blur", () => {
-  window.setTimeout(() => {
-    if (!isPlainEvaluationUrl() && document.activeElement !== evaluationSearchInput && !evaluationSearchResults.contains(document.activeElement)) {
-      evaluationSearchResults.hidden = true;
-      evaluationSearchResults.replaceChildren();
-    }
-  }, 120);
-});
+
 ignoreDiscountRateInput.addEventListener("change", () => {
   state.evaluationIgnoreDiscountRate = ignoreDiscountRateInput.checked;
   renderEvaluationPage();
