@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const CONTROL_SELECTOR = "#pageSizeSelect, #watchlistButton, #openFiltersButton, #quickClearFiltersButton, .quickFilters input, #sidebar .navButton[data-page], #filtersModal button";
-  const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+  const CONTROL_SELECTOR = "#pageSizeSelect, #watchlistButton, #openFiltersButton, .quickFilters input, #sidebar .navButton[data-page], #filtersModal button";
+  const FILTERED_TABLE_PAGES = new Set(["database", "mfl", "progression", "watchlist", "agents", "myplayers"]);
 
   window.__mflSharedTableUiRuntime?.destroy?.();
 
@@ -40,7 +40,7 @@
   function syncFilterSummaryNow() {
     const summary = document.getElementById("filterSummary");
     if (!(summary instanceof HTMLElement)) return;
-    summary.textContent = `${activeFilterCountFromDialog()} active`;
+    summary.textContent = String(activeFilterCountFromDialog());
   }
 
   function syncFilterSummaryAfterClose() {
@@ -52,6 +52,13 @@
   function filtersModalIsOpen() {
     const modal = document.getElementById("filtersModal");
     return modal instanceof HTMLElement && !modal.hidden;
+  }
+
+  function markInitialTableFiltersForReset() {
+    const page = String(document.documentElement.dataset.initialTablePage || "").toLowerCase();
+    if (FILTERED_TABLE_PAGES.has(page)) {
+      document.documentElement.dataset.mflResetTableFilters = page;
+    }
   }
 
   function onPointerDown(event) {
@@ -87,64 +94,9 @@
     if (active instanceof HTMLElement && active.matches(CONTROL_SELECTOR)) releaseFocus(active);
   }
 
-  function createFiltersIcon() {
-    const svg = document.createElementNS(SVG_NAMESPACE, "svg");
-    svg.classList.add("filtersViewIcon");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("aria-hidden", "true");
-
-    const path = document.createElementNS(SVG_NAMESPACE, "path");
-    path.setAttribute("d", "M4 6h16M7 12h10M10 18h4");
-    svg.appendChild(path);
-    return svg;
-  }
-
-  function hideLegacyQuickClear() {
-    const quickClear = document.getElementById("quickClearFiltersButton");
-    if (!(quickClear instanceof HTMLButtonElement)) return;
-    quickClear.hidden = true;
-    quickClear.tabIndex = -1;
-    quickClear.setAttribute("aria-hidden", "true");
-  }
-
-  function syncFiltersViewControl() {
-    const views = document.querySelector("#progressionPage .views");
-    const button = document.getElementById("openFiltersButton");
-    const summary = document.getElementById("filterSummary");
-    if (!(views instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return false;
-
-    button.classList.add("filtersViewButton");
-    button.setAttribute("aria-label", "Filters");
-    if (!button.querySelector(":scope > .filtersViewIcon")) {
-      const label = document.createElement("span");
-      label.className = "filtersViewLabel";
-      label.textContent = "Filters";
-      button.textContent = "";
-      button.append(createFiltersIcon(), label);
-    }
-
-    if (summary instanceof HTMLElement) {
-      summary.classList.add("filtersViewCount");
-      button.append(summary);
-    }
-
-    let separator = document.getElementById("viewControlsSeparator");
-    if (!(separator instanceof HTMLSpanElement)) {
-      separator = document.createElement("span");
-      separator.id = "viewControlsSeparator";
-      separator.className = "viewControlsSeparator";
-      separator.setAttribute("aria-hidden", "true");
-    }
-
-    const firstViewButton = views.querySelector(":scope > .viewButton[data-view]");
-    views.insertBefore(button, firstViewButton);
-    views.insertBefore(separator, firstViewButton);
-    hideLegacyQuickClear();
-    return true;
-  }
-
   function sync() {
-    syncFiltersViewControl();
+    markInitialTableFiltersForReset();
+    syncFilterSummaryNow();
   }
 
   function destroy() {
