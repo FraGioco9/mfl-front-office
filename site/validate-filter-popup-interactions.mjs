@@ -132,7 +132,7 @@ for (const required of [
 }
 
 for (const required of [
-  "function normalizePageFilterResetBeforeRequest(source) {",
+  "function normalizePageFilterResetBeforeRequest(artifacts) {",
   "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
   "? tableStateWithoutPageFilters(pageName, storedPageState)",
   "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
@@ -140,7 +140,8 @@ for (const required of [
   'filterSummary.textContent = String(count);',
   'if (filterSummary) filterSummary.textContent = "0";',
   'document.body.classList.remove("filtersOpen");',
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);",
+  "const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);",
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve direct Filters reset/count/close ownership through ${required}`);
 }
