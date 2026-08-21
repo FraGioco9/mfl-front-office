@@ -384,7 +384,16 @@
 
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      queueMicrotask(() => void restoreEmptyRecentResults(false));
+      const field = input();
+      queueMicrotask(() => {
+        if (field instanceof HTMLInputElement && active() && !field.value.trim()) {
+          directPointerFocus = true;
+          field.focus({ preventScroll: true });
+          field.select();
+          clearDirectPointerFocus();
+        }
+        void restoreEmptyRecentResults(false);
+      });
       return;
     }
 
