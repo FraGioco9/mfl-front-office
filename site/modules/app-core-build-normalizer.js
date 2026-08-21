@@ -14,14 +14,17 @@ import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
-function normalizePageFilterResetBeforeRequest(source) {
-  return replaceRequired(
-    source,
-    `    const savedPageState = !clubTarget && tablePages.has(pageName)
+function normalizePageFilterResetBeforeRequest(artifacts) {
+  const core = String(artifacts?.core || "");
+  if (!core) throw new Error("Cannot normalize destination filter reset without shared application core.");
+
+  const normalizedCore = replaceRequired(
+    core,
+    `    const savedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
     if (savedPageState) {`,
-    `    const storedPageState = !clubTarget && tablePages.has(pageName)
+    `    const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)
       ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
       : null;
     const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
@@ -32,6 +35,11 @@ function normalizePageFilterResetBeforeRequest(source) {
     if (savedPageState) {`,
     "destination filters reset before incremental route request",
   );
+
+  return Object.freeze({
+    ...artifacts,
+    core: normalizedCore,
+  });
 }
 
 function normalizeFilterSummaryLifecycle(artifacts) {
@@ -77,8 +85,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
-  const resetNormalizedSource = normalizePageFilterResetBeforeRequest(canonicalSource);
-  const routeArtifacts = splitApplicationCoreRuntime(resetNormalizedSource);
+  const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
@@ -88,8 +95,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
-  // Club lifecycle normalization owns the filter-free Club branch, so normalize the shared count after it settles.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);
+  const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
+  // Club lifecycle normalization owns the filter-free Club branch, so normalize shared Filters UI after it settles.
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
   return normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
 }
 
