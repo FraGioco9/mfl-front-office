@@ -1273,7 +1273,26 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 }
 
 function pageTargetFromPath(path) {
-  const cleanPath = String(path || "").split("?")[0];
+  const requestedPath = String(path || "");
+  const cleanPath = requestedPath.split("?")[0];
+
+  if (cleanPath === "/evaluation") {
+    const queryIndex = requestedPath.indexOf("?");
+    const search = queryIndex >= 0 ? requestedPath.slice(queryIndex + 1) : "";
+    const params = new URLSearchParams(search);
+    const playerId = String(params.get("player") || "").trim();
+    const savedId = String(params.get("saved") || "").trim();
+    const shareId = String(params.get("share") || "").trim();
+    return {
+      pageName: "evaluation",
+      options: {
+        path: search ? `/evaluation?${search}` : "/evaluation",
+        ...(playerId ? { playerId } : {}),
+        ...(savedId ? { savedId } : {}),
+        ...(shareId ? { shareId } : {}),
+      },
+    };
+  }
 
   if (!hasWalletOptIn()) {
     if (/^\/my-players(?:\/[^/]+)?$/.test(cleanPath)) {
@@ -1397,6 +1416,11 @@ function pagePath(pageName, options = {}) {
   if (pageName === "evaluation") {
     if (options.plain) {
       return "/evaluation";
+    }
+
+    const explicitPath = String(options.path || "");
+    if (explicitPath === "/evaluation" || explicitPath.startsWith("/evaluation?")) {
+      return explicitPath;
     }
 
     const playerId = options.playerId || evaluationPlayerIdFromUrl();
