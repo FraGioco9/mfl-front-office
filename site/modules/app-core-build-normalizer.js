@@ -14,8 +14,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
-  const routeArtifacts = normalizeClubStartupLifecycle(splitApplicationCoreRuntime(canonicalSource));
-  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
+  const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
+  const clubStartupArtifacts = normalizeClubStartupLifecycle(routeArtifacts);
+  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(clubStartupArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
   const tableArtifacts = splitTableApplicationCoreRuntime(playerArtifacts);
