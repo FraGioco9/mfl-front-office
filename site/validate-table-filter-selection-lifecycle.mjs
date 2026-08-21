@@ -42,7 +42,7 @@ invariant(
   "Table restore must clear only destination filter/selection state and consume the page-reset marker after controls synchronize.",
 );
 invariant(
-  generated.includes('const storedPageState = !clubTarget && tablePages.has(pageName)')
+  generated.includes('const storedPageState = pageName !== "club" && !clubTarget && tablePages.has(pageName)')
     && generated.includes('const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;')
     && generated.includes('? tableStateWithoutPageFilters(pageName, storedPageState)')
     && generated.includes('if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;')
