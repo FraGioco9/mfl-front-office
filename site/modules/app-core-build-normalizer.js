@@ -7,6 +7,7 @@ import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
 import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lifecycle.js";
 import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
+import { normalizeEvaluationRouteLifecycle } from "./app-core-evaluation-route-lifecycle.js";
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
@@ -89,7 +90,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
   const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
-  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
+  const evaluationRouteArtifacts = normalizeEvaluationRouteLifecycle(routeArtifacts);
+  const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts);
   const evaluationSearchArtifacts = normalizeEvaluationSearchLifecycle(evaluationArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationSearchArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
