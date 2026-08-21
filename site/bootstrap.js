@@ -8,7 +8,8 @@
   const AGENT_DISPLAY_NAMES_STORAGE_KEY = "mfl-agent-display-names-v1";
   const CLUB_DISPLAY_DATA_STORAGE_KEY = "mfl-club-display-data-v1";
   const WALLET_WATCHLIST_STORAGE_PREFIX = "mfl-wallet-watchlist-v1:";
-  const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
+  const EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v2:";
+  const EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX = "mfl-evaluation-first-paint-name-v1:";
   const LOADING_VALUE_TEXT = "-";
   const BLANK_TABLE_LOADING_TEXT = "\u00a0";
   const TABLE_VIEW_BY_SLUG = Object.freeze({
@@ -224,16 +225,61 @@
     }
   }
 
-  function firstPaintEvaluationPlayerName(urlLike = window.location.href) {
+  function firstPaintEvaluationRouteState(urlLike = window.location.href) {
     try {
       const route = new URL(String(urlLike || window.location.href), window.location.href);
-      if (route.pathname !== "/evaluation") return "";
-      if (!route.searchParams.get("player") && !route.searchParams.get("saved") && !route.searchParams.get("share")) return "";
-      const routeKey = `${route.pathname}${route.search}`;
-      return String(sessionStorage.getItem(`${EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX}${routeKey}`) || "").trim();
+      const playerId = String(route.searchParams.get("player") || "").trim();
+      const savedId = String(route.searchParams.get("saved") || "").trim();
+      const shareId = String(route.searchParams.get("share") || "").trim();
+      const evaluationRoute = route.pathname === "/evaluation";
+      return {
+        evaluationRoute,
+        plain: evaluationRoute && !playerId && !savedId && !shareId,
+        playerId,
+        savedId,
+        shareId,
+        routeKey: `${route.pathname}${route.search}`,
+      };
+    } catch {
+      return {
+        evaluationRoute: false,
+        plain: false,
+        playerId: "",
+        savedId: "",
+        shareId: "",
+        routeKey: "",
+      };
+    }
+  }
+
+  function firstPaintEvaluationPlayerName(urlLike = window.location.href) {
+    const routeState = firstPaintEvaluationRouteState(urlLike);
+    if (!routeState.evaluationRoute || routeState.plain) return "";
+
+    try {
+      const identities = [
+        ["saved", routeState.savedId],
+        ["share", routeState.shareId],
+        ["player", routeState.playerId],
+      ];
+      for (const [kind, id] of identities) {
+        if (!id) continue;
+        const cachedName = String(sessionStorage.getItem(`${EVALUATION_FIRST_PAINT_NAME_STORAGE_PREFIX}${kind}:${id}`) || "").trim();
+        if (cachedName) return cachedName;
+      }
+      return String(sessionStorage.getItem(`${EVALUATION_LEGACY_FIRST_PAINT_NAME_STORAGE_PREFIX}${routeState.routeKey}`) || "").trim();
     } catch {
       return "";
     }
+  }
+
+  function requestPlainEvaluationFirstPaintFocus(searchInput) {
+    if (!(searchInput instanceof HTMLInputElement)) return;
+    window.requestAnimationFrame(() => {
+      if (!firstPaintEvaluationRouteState().plain) return;
+      searchInput.focus({ preventScroll: true });
+      searchInput.select();
+    });
   }
 
   function initialShellTarget() {
@@ -716,12 +762,16 @@ function primeInitialTableStructure(page, view) {
       const results = document.getElementById("evaluationSearchResults");
       if (results instanceof HTMLElement) results.hidden = true;
       const searchInput = document.getElementById("evaluationSearchInput");
+      const evaluationRouteState = firstPaintEvaluationRouteState();
       const initialPlayerName = firstPaintEvaluationPlayerName();
-      if (searchInput instanceof HTMLInputElement && initialPlayerName) searchInput.value = initialPlayerName;
+      if (searchInput instanceof HTMLInputElement) {
+        if (initialPlayerName) searchInput.value = initialPlayerName;
+        if (evaluationRouteState.plain) requestPlainEvaluationFirstPaintFocus(searchInput);
+      }
       setLoadingValue("evaluationDiscountRate");
       const buttons = document.getElementById("evaluationButtons");
       const loadButton = document.getElementById("evaluationLoadButton");
-      const plainEvaluation = root.dataset.initialEvaluationSelection !== "true";
+      const plainEvaluation = evaluationRouteState.plain;
       const canLoad = plainEvaluation;
       if (buttons instanceof HTMLElement && canLoad) buttons.hidden = false;
       if (loadButton instanceof HTMLElement) loadButton.hidden = !canLoad;
