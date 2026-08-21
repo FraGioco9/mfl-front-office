@@ -5,8 +5,9 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [controls, dropdownRuntime, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
+const [controls, sharedTableUi, dropdownRuntime, tableSplitter, coreRuntime, tableRuntime] = await Promise.all([
   read("./controls.css"),
+  read("./shared-table-ui-runtime.js"),
   read("./dropdowns-runtime.js"),
   read("./modules/app-core-table-chunk.js"),
   read("./modules/app-core-runtime.js"),
@@ -20,6 +21,29 @@ for (const required of [
   ".filtersDialog select:focus:not(:disabled)",
 ]) {
   invariant(controls.includes(required), `Filter popup controls are missing canonical hover ownership through ${required}`);
+}
+
+for (const required of [
+  ".searchButton .searchEmoji",
+  ".filtersViewButton",
+  ".filtersViewIcon",
+  ".viewControlsSeparator",
+  "#progressionPage .views > #openFiltersButton",
+  'body[data-page="club"] #progressionPage .filtersViewButton',
+]) {
+  invariant(controls.includes(required), `Search and Filters chrome is missing canonical shared-control ownership through ${required}`);
+}
+
+for (const required of [
+  'button.classList.add("filtersViewButton");',
+  'svg.classList.add("filtersViewIcon");',
+  'svg.setAttribute("viewBox", "0 0 24 24");',
+  'path.setAttribute("d", "M4 6h16M7 12h10M10 18h4");',
+  'separator.className = "viewControlsSeparator";',
+  'views.insertBefore(button, firstViewButton);',
+  'views.insertBefore(separator, firstViewButton);',
+]) {
+  invariant(sharedTableUi.includes(required), `Shared table UI must place the rebuilt Filters control before view buttons through ${required}`);
 }
 
 for (const required of [
@@ -81,6 +105,7 @@ invariant(
   "Filter dropdown blur must not run before the native picker close finishes.",
 );
 invariant(!controls.includes("!important"), "Filter popup interactions must not introduce CSS priority overrides.");
+invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters view placement must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Filter popup hover, close-state blur, and canonical neutral ESC focus validation passed.");
+console.log("Search, Filters chrome, popup hover, close-state blur, and canonical neutral ESC focus validation passed.");
