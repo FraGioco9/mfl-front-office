@@ -96,7 +96,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
-  // Club lifecycle normalization owns the filter-free Club branch; after that, finalize direct count-only Filters UI and close-state ownership.
+  // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
   return normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
 }
