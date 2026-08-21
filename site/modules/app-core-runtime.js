@@ -1186,13 +1186,20 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
-    await window.__mflEnsureRouteCore("evaluation");
+  const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && Array.isArray(window.__mflSavedEvaluationsSessionCache);
+  const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
+  try {
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function" && typeof window.__mflEnsureRouteCore === "function") {
+      await window.__mflEnsureRouteCore("evaluation");
+    }
+    if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
+      throw new Error("Evaluation route core is not loaded.");
+    }
+    return await __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
+  } finally {
+    if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
-  if (typeof __mflOpenSavedEvaluationsModalOwner !== "function") {
-    throw new Error("Evaluation route core is not loaded.");
-  }
-  return __mflOpenSavedEvaluationsModalOwner.apply(this, arguments);
 }
 
 function normalizedPageName(pageName) {
@@ -6857,6 +6864,7 @@ async function startApp() {
   const earlyGlobalSearch = primeGlobalSearchIndexes();
   const startupSummaryPromise = loadSummary();
   const startupWalletPreferencesPromise = loadWalletPreferences();
+  window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);
   const startupProgressionPermissionPromise = (
     pageRequiresProgressionPermission(initialTarget.pageName)
     && hasWalletOptIn()
