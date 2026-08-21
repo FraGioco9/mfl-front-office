@@ -62,6 +62,81 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
 
   normalizedCore = replaceRequired(
     normalizedCore,
+    `function renderEmptyEvaluationSelection(showRecentResults = true) {
+  evaluationPanel.hidden = true;`,
+    `function renderEmptyEvaluationSelection(showRecentResults = true) {
+  const evaluationRouteParams = new URLSearchParams(window.location.search);
+  const pendingEvaluationRoute = window.location.pathname === "/evaluation" && Boolean(
+    evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")
+  );
+
+  if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
+    evaluationButtons.hidden = false;
+    evaluationResetButton.hidden = false;
+    if (evaluationLoadButton) {
+      evaluationLoadButton.hidden = true;
+    }
+    evaluationPlayerPageButton.hidden = false;
+    return;
+  }
+
+  evaluationSearchInput.placeholder = "Search ID or player name";
+  if (!String(evaluationSearchInput.value || "").trim()) {
+    window.requestAnimationFrame(() => {
+      const routeParams = new URLSearchParams(window.location.search);
+      const plainEvaluationRoute = window.location.pathname === "/evaluation"
+        && !routeParams.get("player")
+        && !routeParams.get("saved")
+        && !routeParams.get("share");
+      if (!plainEvaluationRoute || String(evaluationSearchInput.value || "").trim()) return;
+      evaluationSearchInput.focus({ preventScroll: true });
+      evaluationSearchInput.select();
+    });
+  }
+
+  evaluationPanel.hidden = true;`,
+    "Selected Evaluation routes never downgrade to empty chrome and plain Evaluation owns empty-search focus",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `    rememberEvaluationResult(id);
+
+    if (event.ctrlKey || event.metaKey || event.button === 1) {`,
+    `    rememberEvaluationResult(id);
+    try {
+      sessionStorage.setItem(\`mfl-evaluation-first-paint-name-v2:player:\${id}\`, playerName);
+    } catch {
+      // Session storage is an optional first-paint cache only.
+    }
+
+    if (event.ctrlKey || event.metaKey || event.button === 1) {`,
+    "Player-page Evaluation navigation caches first-paint player identity before route entry",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `      state.evaluationPlayerId = playerId;
+      rememberEvaluationResult(playerId);
+      evaluationSearchInput.value = entry.nameDisplay;
+      evaluationSearchResults.hidden = true;
+      syncEvaluationPlayerUrl(playerId);`,
+    `      state.evaluationPlayerId = playerId;
+      rememberEvaluationResult(playerId);
+      evaluationSearchInput.value = entry.nameDisplay;
+      try {
+        sessionStorage.setItem(\`mfl-evaluation-first-paint-name-v2:player:\${playerId}\`, entry.nameDisplay);
+      } catch {
+        // Session storage is an optional first-paint cache only.
+      }
+      evaluationSearchResults.hidden = true;
+      syncEvaluationPlayerUrl(playerId);`,
+    "Evaluation search selection caches first-paint player identity before URL selection",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
     `  const row = rowByPlayerId(state.evaluationPlayerId);
 
   if (row) {
@@ -84,6 +159,7 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
   const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || "").trim();
 
   if (pendingEvaluationRoute) {
+    evaluationSearchInput.placeholder = "";
     evaluationButtons.hidden = false;
     evaluationResetButton.hidden = false;
     if (evaluationLoadButton) {
@@ -150,8 +226,16 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
-  const evaluationSource = String(routeChunks.evaluation || "");
+  let evaluationSource = String(routeChunks.evaluation || "");
   if (!evaluationSource) throw new Error("Cannot normalize shared Evaluation hydration without Evaluation route core.");
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `  evaluationSearchInput.value = "";
+  renderEvaluationMflPerUsdControl(false);`,
+    `  renderEvaluationMflPerUsdControl(false);`,
+    "Saved and shared Evaluation payloads preserve the first-paint player name through hydration",
+  );
 
   routeChunks.evaluation = replaceRequired(
     evaluationSource,
