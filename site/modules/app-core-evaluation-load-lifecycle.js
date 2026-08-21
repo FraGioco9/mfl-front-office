@@ -17,6 +17,7 @@ async function openSavedEvaluationsModal() {
 const EVALUATION_LOAD_FACADE_WITH_BUSY = `let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
+  evaluationSearchInput.blur();
   const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
     && activeWallet
@@ -34,16 +35,6 @@ async function openSavedEvaluationsModal() {
   } finally {
     if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
-}`;
-
-const EVALUATION_LOAD_BUTTON_BINDING = `if (evaluationLoadButton) {
-  evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);
-}`;
-const EVALUATION_LOAD_BUTTON_BINDING_WITH_BLUR = `if (evaluationLoadButton) {
-  evaluationLoadButton.addEventListener("click", () => {
-    evaluationSearchInput.blur();
-    void openSavedEvaluationsModal();
-  });
 }`;
 
 const EVALUATION_CREATE_SAVED_START = `async function createSavedEvaluation() {`;
@@ -250,17 +241,11 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
   const source = String(artifacts?.core || "");
   if (!source) throw new Error("Cannot normalize Evaluation Load lifecycle without shared core.");
 
-  let core = replaceRequired(
+  const core = replaceRequired(
     source,
     EVALUATION_LOAD_FACADE,
     EVALUATION_LOAD_FACADE_WITH_BUSY,
-    "Evaluation Load enters Uniform Loading only when its wallet-scoped list cache is unavailable",
-  );
-  core = replaceRequired(
-    core,
-    EVALUATION_LOAD_BUTTON_BINDING,
-    EVALUATION_LOAD_BUTTON_BINDING_WITH_BLUR,
-    "Evaluation Load clears search focus before opening saved evaluations",
+    "Evaluation Load blurs the search and enters Uniform Loading only when its wallet-scoped list cache is unavailable",
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
