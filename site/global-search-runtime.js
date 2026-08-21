@@ -2,6 +2,7 @@
   "use strict";
 
   const VERSION = String(window.__mflReleaseVersion || "dev");
+  const MAX_GLOBAL_SEARCH_RESULTS = 10;
   window.__mflGlobalSearchRuntime?.destroy?.();
 
   let controller = null;
@@ -80,6 +81,16 @@
     results.classList.remove("filledSearchResults");
   }
 
+  function normalizeTypedSearchResults() {
+    const input = searchInput();
+    const results = searchResults();
+    if (!input || !results || !input.value.trim()) return;
+
+    const directResults = Array.from(results.querySelectorAll(":scope > .searchResult"));
+    directResults.slice(MAX_GLOBAL_SEARCH_RESULTS).forEach((result) => result.remove());
+    results.classList.remove("filledSearchResults");
+  }
+
   function renderEvaluationMessage(message) {
     const results = evaluationResults();
     if (!results) return;
@@ -119,6 +130,7 @@
   function renderCurrentResults() {
     try {
       coreContracts()?.renderGlobalSearchResults?.();
+      normalizeTypedSearchResults();
     } catch (error) {
       console.warn("Could not render Global Search results.", error);
     }
@@ -413,7 +425,7 @@
     version: VERSION,
     search: searchDatabase,
     searchEvaluation: searchEvaluationDatabase,
-    cap() {},
+    cap: normalizeTypedSearchResults,
     flush: flushPendingPayload,
     flushEvaluation: flushPendingEvaluationPayload,
     focus: focusAndSelectSearch,
