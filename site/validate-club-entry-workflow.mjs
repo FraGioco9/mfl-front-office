@@ -24,7 +24,7 @@ new Function(clubCore);
 includes(
   coreSource,
   'await window.__mflEnsureRouteCore(initialRouteTarget.pageName, initialRouteTarget.options || {});',
-  "Direct startup must preload the initial Club route core before startApp.",
+  "Direct startup must preload the resolved initial route core before startApp.",
 );
 includes(
   routeLoader,
@@ -35,6 +35,29 @@ includes(
   routeLoader,
   'if (page === "club") return ["table", "club"];',
   "The public Club gate must preserve ordered Table and Club route-core dependencies.",
+);
+
+const routeParserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
+const routeParserEnd = eagerCore.indexOf("\n}\n\nfunction pagePath", routeParserStart);
+invariant(routeParserStart >= 0 && routeParserEnd > routeParserStart, "The shared startup route parser must exist.");
+const routeParser = eagerCore.slice(routeParserStart, routeParserEnd);
+
+includes(
+  routeParser,
+  "const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);",
+  "Direct Club URLs must be resolved by the shared startup parser.",
+);
+includes(routeParser, 'pageName: "club",', "A canonical Club URL must resolve to the Club page, not Home.");
+includes(routeParser, "clubId: clubRoute.clubId,", "Direct Club startup must preserve the route Club ID.");
+includes(routeParser, "view: clubRoute.view,", "Direct Club startup must preserve the requested Club view.");
+includes(routeParser, "path: clubRoute.path,", "Direct Club startup must preserve the canonical Club path.");
+
+const clubRouteResolution = routeParser.indexOf("const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);");
+const clubReturn = routeParser.indexOf('pageName: "club",', clubRouteResolution);
+const genericFallback = routeParser.indexOf('const pageName = normalizedPageName(cleanPath.replace(/^\\//, "") || "home");');
+invariant(
+  clubRouteResolution >= 0 && clubReturn > clubRouteResolution && genericFallback > clubReturn,
+  "Club URLs must resolve before the generic unknown-route Home fallback.",
 );
 
 const shellStart = eagerCore.indexOf('async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {');
@@ -79,4 +102,4 @@ excludes(
 
 excludes(clubEntryLifecycle, "!important", "Unified Club entry must not add CSS priority overrides.");
 
-console.log("Club entry workflow validation passed: refresh and in-site navigation share the same public Club gate with no route-chunk startup interceptor.");
+console.log("Club entry workflow validation passed: direct Club URLs resolve before Home fallback and refresh shares the public Club gate with in-site navigation.");

@@ -34,6 +34,26 @@ const SHARED_CLUB_HOME_SHELL = `async function showHomeShell(pageName = "home", 
   return result;
 }`;
 
+const ROUTE_TARGET_PLAYER_ANCHOR = `  const playerMatch = cleanPath.match(/^\\/players\\/([^/]+)$/);
+
+  if (cleanPath === "/mfl/stats") {`;
+
+const ROUTE_TARGET_WITH_CLUB = `  const playerMatch = cleanPath.match(/^\\/players\\/([^/]+)$/);
+  const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);
+
+  if (clubRoute) {
+    return {
+      pageName: "club",
+      options: {
+        clubId: clubRoute.clubId,
+        view: clubRoute.view,
+        path: clubRoute.path,
+      },
+    };
+  }
+
+  if (cleanPath === "/mfl/stats") {`;
+
 const LATE_CLUB_HOME_SHELL_GATE = `  if (initialClubRoute && typeof showHomeShell === "function") {
     const originalShowHomeShell = showHomeShell;
     let initialClubHandled = false;
@@ -53,9 +73,9 @@ const LATE_CLUB_HOME_SHELL_GATE = `  if (initialClubRoute && typeof showHomeShel
 
 /**
  * Make every Club shell entry use the same public Club navigation gate.
- * The route chunk is preloaded for a direct Club URL, but owning startup there still
- * creates a second entry workflow. Shared showHomeShell is the stable caller for both
- * startup and later shell navigation, so Club delegates from there instead.
+ * Direct Club URLs must first resolve as Club in the shared route parser; otherwise
+ * startApp falls back to Home after the correct bootstrap paint. The route chunk
+ * remains presentation/data ownership only and never owns a second startup workflow.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeClubEntryLifecycle(routeArtifacts) {
@@ -68,8 +88,14 @@ export function normalizeClubEntryLifecycle(routeArtifacts) {
   if (!core) throw new Error("Cannot normalize Club entry without a shared application core.");
   if (!club) throw new Error("Cannot normalize Club entry without a Club route core.");
 
-  const normalizedCore = replaceRequired(
+  let normalizedCore = replaceRequired(
     core,
+    ROUTE_TARGET_PLAYER_ANCHOR,
+    ROUTE_TARGET_WITH_CLUB,
+    "Club URL resolution in shared startup routing",
+  );
+  normalizedCore = replaceRequired(
+    normalizedCore,
     GENERIC_HOME_SHELL,
     SHARED_CLUB_HOME_SHELL,
     "shared Club entry through public navigation gate",
