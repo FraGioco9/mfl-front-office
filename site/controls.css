@@ -106,14 +106,84 @@
   mask-size: 100% 100%;
 }
 
+#progressionPage {
+  position: relative;
+}
+
+#progressionPage:has(#openFiltersButton:not(.filtersViewButton)) > .views::before {
+  content: "";
+  flex: 0 0 149px;
+  align-self: center;
+  height: 24px;
+  border-right: 1px solid var(--border-strong);
+  pointer-events: none;
+}
+
 #openFiltersButton:not(.filtersViewButton) {
-  display: none;
+  position: absolute;
+  top: 50px;
+  left: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 140px;
+  height: 40px;
+  gap: 8px;
+  padding: 0 58px 0 10px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#openFiltersButton:not(.filtersViewButton)::before {
+  content: "";
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M7 12h10M10 18h4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M7 12h10M10 18h4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+}
+
+#openFiltersButton:not(.filtersViewButton)::after {
+  content: "Filters";
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+}
+
+#filterSummary:not(.filtersViewCount) {
+  position: absolute;
+  top: 60px;
+  left: 84px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--header-bg);
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .filtersViewButton {
   order: -2;
   flex: 0 0 auto;
-  width: 116px;
+  width: 140px;
   height: 40px;
   gap: 8px;
   padding: 0 10px;
@@ -125,7 +195,7 @@
 }
 
 #progressionPage .views > #openFiltersButton {
-  width: 116px;
+  width: 140px;
 }
 
 .filtersViewIcon {
@@ -136,6 +206,31 @@
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
+}
+
+.filtersViewCount {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--header-bg);
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1;
+}
+
+body.filtersOpen .filtersViewButton {
+  border-color: var(--primary-hover);
+  background: var(--row-hover);
+  color: var(--text);
+}
+
+body.filtersOpen .filtersViewCount {
+  background: var(--surface-muted);
+  color: var(--primary);
 }
 
 .viewControlsSeparator {
@@ -149,10 +244,18 @@
   pointer-events: none;
 }
 
-.controlsBar {
-  grid-template-columns: max-content auto 150px;
+#quickClearFiltersButton {
+  display: none;
 }
 
+.controlsBar {
+  grid-template-columns: 150px;
+  justify-content: end;
+}
+
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #openFiltersButton,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #filterSummary,
+html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage > .views::before,
 body[data-page="club"] #progressionPage .filtersViewButton,
 body[data-page="club"] #progressionPage .viewControlsSeparator {
   display: none;
@@ -414,7 +517,6 @@ body[aria-busy="true"] #pageSizeSelect {
 
 #pageSizeSelect:focus:not(:focus-visible):not(:hover),
 #openFiltersButton:focus:not(:focus-visible):not(:hover),
-#quickClearFiltersButton:focus:not(:focus-visible):not(:hover),
 .quickFilters input:focus:not(:focus-visible):not(:hover),
 #sidebar .navButton[data-page]:focus:not(:focus-visible):not(:hover) {
   outline: none;
