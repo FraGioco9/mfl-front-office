@@ -9,12 +9,13 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeSplitter, clubStartupLifecycle, bootstrap, generatedClubCore] = await Promise.all([
+const [coreSource, routeSplitter, clubStartupLifecycle, bootstrap, generatedClubCore, routeLoader] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
   read("./modules/app-core-club-startup-lifecycle.js"),
   read("./bootstrap.js"),
   read("./modules/app-core-club-runtime.js"),
+  read("./route-core-loader-runtime.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(coreSource);
@@ -119,34 +120,55 @@ invariant(
 );
 
 includes(
-  clubStartupLifecycle,
-  'loadingController.begin("route-runtime")',
-  "Club refresh must use the same route-runtime busy reason as in-site Club navigation.",
+  routeLoader,
+  "function installClubRouteGate()",
+  "The route-core loader must expose the same public Club navigation gate used by in-site links.",
 );
+includes(
+  routeLoader,
+  'const routeCorePromise = ensure("club", { view });',
+  "The public Club gate must ensure the ordered Table and Club core dependencies.",
+);
+includes(
+  routeLoader,
+  'runtimeWindow.__mflEnsureRouteRuntime("club", { view })',
+  "The public Club gate must ensure the Club/Table runtime dependencies.",
+);
+includes(
+  routeLoader,
+  "await Promise.all([routeCorePromise, routeRuntimePromise]);",
+  "The public Club gate must settle core and runtime ownership before invoking the Club route owner.",
+);
+includes(
+  routeLoader,
+  "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;",
+  "The public Club gate must delegate to the private Club route owner after readiness.",
+);
+
 includes(
   clubStartupLifecycle,
-  'const ensureRouteRuntime = window.__mflEnsureRouteRuntime;',
-  "Club refresh must use the shared route-runtime readiness owner before loading players.",
+  "const navigateClub = window.mflOpenClubPage;",
+  "Club refresh startup must use the same public Club navigation gate as an in-site Club click.",
 );
 includes(
   clubCore,
-  'await ensureRouteRuntime("club", { view: initialClubRoute.view });',
-  "Club refresh must settle the Club/Table route runtime before starting roster hydration.",
-);
-includes(
-  clubCore,
-  'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
-  "Club refresh must execute one canonical Club route-owner load without adding history.",
-);
-includes(
-  clubCore,
-  'if (loadingToken) loadingController?.end?.(loadingToken);',
-  "Club refresh must release its route-runtime loading token after the Club route owner settles.",
+  "await navigateClub(initialClubRoute.clubId, initialClubRoute.view);",
+  "Club refresh must enter the shared public Club navigation workflow.",
 );
 excludes(
   clubCore,
-  'await navigateClub(initialClubRoute.clubId, initialClubRoute.view);',
-  "Club refresh must not stack a second public page transition around its route-owner load.",
+  'loadingController.begin("route-runtime")',
+  "Club refresh must not create a second startup-only loading owner around the public gate.",
+);
+excludes(
+  clubCore,
+  'const ensureRouteRuntime = window.__mflEnsureRouteRuntime;',
+  "Club refresh must not own a second startup-only route-runtime readiness path.",
+);
+excludes(
+  clubCore,
+  'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
+  "Club refresh must not bypass the public navigation gate by calling the private Club route owner directly.",
 );
 
 includes(
@@ -249,23 +271,21 @@ invariant(
 );
 
 const refreshHandoff = clubCore.indexOf("showHomeShellWithInitialClub");
-const loadingStart = clubCore.indexOf('loadingController.begin("route-runtime")', refreshHandoff);
-const routeRuntimeReady = clubCore.indexOf('await ensureRouteRuntime("club", { view: initialClubRoute.view });', loadingStart);
-const refreshClubLoad = clubCore.indexOf('await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);', routeRuntimeReady);
-const loadingEnd = clubCore.indexOf('loadingController?.end?.(loadingToken)', refreshClubLoad);
+const canonicalRefreshPath = clubCore.indexOf("const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);", refreshHandoff);
+const publicGateOwner = clubCore.indexOf("const navigateClub = window.mflOpenClubPage;", canonicalRefreshPath);
+const refreshClubLoad = clubCore.indexOf("await navigateClub(initialClubRoute.clubId, initialClubRoute.view);", publicGateOwner);
 invariant(
   refreshHandoff >= 0
-    && loadingStart > refreshHandoff
-    && routeRuntimeReady > loadingStart
-    && refreshClubLoad > routeRuntimeReady
-    && loadingEnd > refreshClubLoad,
-  "Refreshed Club routes must start shared loading, settle route runtime ownership, load the roster once, and release loading afterward.",
+    && canonicalRefreshPath > refreshHandoff
+    && publicGateOwner > canonicalRefreshPath
+    && refreshClubLoad > publicGateOwner,
+  "Refreshed Club routes must canonicalize the URL and then enter the same public navigation gate used by in-site links.",
 );
 
-const startupClubLoads = clubCore.match(/await openClubPage\(initialClubRoute\.clubId, initialClubRoute\.view, false\);/g) || [];
+const startupClubLoads = clubCore.match(/await navigateClub\(initialClubRoute\.clubId, initialClubRoute\.view\);/g) || [];
 invariant(
   startupClubLoads.length === 1,
-  "Club refresh startup must trigger exactly one canonical Club route-owner load.",
+  "Club refresh startup must trigger the shared public Club navigation gate exactly once.",
 );
 
-console.log("Club conflict regression checks passed: one Squad text owner, route-runtime-ready player loading, Club-owned payload rendering, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
+console.log("Club conflict regression checks passed: one Squad text owner, one public Club navigation workflow for click and refresh, Club-owned payload rendering, non-blocking title preflight, and roster-owned final identity.");
