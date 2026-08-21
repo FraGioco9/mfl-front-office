@@ -150,6 +150,46 @@ excludes(
 );
 
 includes(
+  eagerCore,
+  'const clubPage = pageName === "club";',
+  "The shared incremental payload renderer must identify Club payloads before restoring generic table state.",
+);
+includes(
+  eagerCore,
+  "if (tablePages.has(pageName) && !clubPage) {",
+  "Club payloads must bypass generic saved-table state restoration after the roster response is applied.",
+);
+includes(
+  eagerCore,
+  'state.currentPage = "club";',
+  "Club roster rendering must commit Club page ownership before local filtering.",
+);
+includes(
+  eagerCore,
+  "if (clubPage) applyFilters({ save: false, localOnly: true });",
+  "Club roster rendering must flow through the live Club filter owner instead of the captured pre-Club filter function.",
+);
+includes(
+  eagerCore,
+  "else originalApplyFilters.call(this, { save: false });",
+  "Non-Club table pages must retain the existing generic incremental render path.",
+);
+
+const incrementalLoader = eagerCore.indexOf("window.mflLoadIncrementalRoutePage = async function loadIncrementalRoutePage");
+const clubPayloadOwner = eagerCore.indexOf('const clubPage = pageName === "club";', incrementalLoader);
+const genericRestoreGuard = eagerCore.indexOf("if (tablePages.has(pageName) && !clubPage) {", clubPayloadOwner);
+const clubPageCommit = eagerCore.indexOf('state.currentPage = "club";', genericRestoreGuard);
+const clubLocalRender = eagerCore.indexOf("if (clubPage) applyFilters({ save: false, localOnly: true });", clubPageCommit);
+invariant(
+  incrementalLoader >= 0
+    && clubPayloadOwner > incrementalLoader
+    && genericRestoreGuard > clubPayloadOwner
+    && clubPageCommit > genericRestoreGuard
+    && clubLocalRender > clubPageCommit,
+  "A returned Club roster must bypass generic table restore, commit Club ownership, and render through the Club-local filter path in that order.",
+);
+
+includes(
   clubCore,
   "void clubTitleReady.then((resolvedTitle) => {",
   "Club title preflight must remain non-blocking while the roster loads.",
@@ -228,4 +268,4 @@ invariant(
   "Club refresh startup must trigger exactly one canonical Club route-owner load.",
 );
 
-console.log("Club conflict regression checks passed: one Squad text owner, route-runtime-ready player loading, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
+console.log("Club conflict regression checks passed: one Squad text owner, route-runtime-ready player loading, Club-owned payload rendering, non-blocking title preflight, single-path refresh loading, and roster-owned final identity.");
