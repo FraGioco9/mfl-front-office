@@ -189,7 +189,7 @@ const CLUB_AWARE_TABLE_LOADING_SHELL = `function renderTableLoadingShell(pageNam
   updateViewButtons();
   if (pageName === "agents") {
     renderAgentPageTitle(state.currentAgentWalletAddress || agentWalletAddressFromUrl());
-  } else if (!clubPage) {
+  } else if (pageName !== "club") {
     tablePageTitle.textContent = tableTitleForPage(pageName);
   }
   emptyState.hidden = true;
