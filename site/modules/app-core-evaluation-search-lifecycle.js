@@ -18,18 +18,10 @@ const EVALUATION_CLEAR_SEARCH = `function clearEvaluationSearch() {
   evaluationSearchInput.focus();
 }`;
 
-const EVALUATION_CLEAR_SEARCH_WITH_SELECTION = `function clearEvaluationSearch() {
+const EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS = `function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-
-  const activateEvaluationSearch = () => {
-    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
-    evaluationSearchInput.focus({ preventScroll: true });
-    evaluationSearchInput.select();
-  };
-  activateEvaluationSearch();
-  window.requestAnimationFrame(activateEvaluationSearch);
 }`;
 
 const EVALUATION_CLEAR_BINDING = `evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
@@ -40,8 +32,9 @@ evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
  * discard a valid result list while text is still present. Clearing the search
- * keeps pointer focus on the input and reapplies focus/selection after route sync
- * so typing can resume immediately.
+ * leaves focus/selection to the Evaluation search-state runtime so one owner
+ * controls both clear-X selection and post-loading selection without a later
+ * animation-frame focus competing with that owner.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
@@ -61,8 +54,8 @@ export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
   normalizedEvaluation = replaceRequired(
     normalizedEvaluation,
     EVALUATION_CLEAR_SEARCH,
-    EVALUATION_CLEAR_SEARCH_WITH_SELECTION,
-    "Evaluation clear keeps the search input active after route reset",
+    EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS,
+    "Evaluation clear delegates focus to the search-state owner",
   );
   normalizedEvaluation = replaceRequired(
     normalizedEvaluation,
