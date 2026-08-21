@@ -107,10 +107,6 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
   padding-bottom: 6px;
 }
 
-#progressionPage .tablePageTitle {
-  min-height: 32px;
-}
-
 #progressionPage > .controlsBar > .rowsField {
   position: absolute;
   top: calc(var(--mfl-page-title-margin-block-start) + 32px + var(--mfl-page-title-margin-block-end));
@@ -280,6 +276,7 @@ body[data-page="club"] #progressionPage .rowsField {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  min-height: 32px;
   margin: var(--mfl-page-title-margin-block-start) 0 var(--mfl-page-title-margin-block-end);
   line-height: var(--mfl-page-title-line-height);
   white-space: pre;
