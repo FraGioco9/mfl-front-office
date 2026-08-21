@@ -305,15 +305,17 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .watchlistDropdown {
   position: absolute;
-  top: calc(100% + var(--mfl-dropdown-gap));
+  top: calc(100% + 6px);
   right: 0;
   z-index: 20;
   width: 350px;
   min-width: 350px;
   max-width: calc(100vw - 24px);
   box-sizing: border-box;
+  padding: 4px;
   overflow-x: hidden;
   overflow-y: auto;
+  font-size: 13px;
 }
 
 .watchlistDropdown[hidden] {
@@ -325,19 +327,20 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  min-height: 36px;
+  min-height: 32px;
   margin: 0;
-  padding: 2px 4px 2px 9px;
+  padding: 1px 3px 1px 8px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
+  font-size: 13px;
 }
 
 .watchlistDropdownItem:not(.watchlistDropdownAdd) + .watchlistDropdownItem:not(.watchlistDropdownAdd) {
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .watchlistDropdownItem:hover:not(.active),
@@ -361,14 +364,15 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  min-height: 30px;
+  min-height: 28px;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
+  font-size: 13px;
   font-weight: 700;
   text-align: left;
 }
@@ -391,7 +395,7 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .watchlistDropdownCount {
   flex: 0 0 auto;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -399,28 +403,28 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 .watchlistDropdownActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .watchlistDropdownAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--surface-muted);
   color: var(--text-soft);
 }
 
 .watchlistDropdownAction svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -452,14 +456,15 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
 
 .watchlistDropdownSeparator {
   height: 1px;
-  margin: 2px 4px 5px;
+  margin: 1px 3px 3px;
   background: var(--border);
 }
 
 .watchlistDropdownAdd {
   justify-content: flex-start;
-  min-height: 36px;
-  height: 36px;
+  min-height: 32px;
+  height: 32px;
+  font-size: 13px;
 }
 
 .filtersDialog .filterRule {
