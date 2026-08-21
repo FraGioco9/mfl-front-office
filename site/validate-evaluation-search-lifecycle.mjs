@@ -63,7 +63,16 @@ invariant(
     && searchRuntime.includes("if (!directPointerFocus) {")
     && searchRuntime.includes("event.stopImmediatePropagation();")
     && searchRuntime.includes("field.blur();"),
-  "Evaluation search focus/highlight must be accepted only from a direct pointer press on the input; Player-title label activation must be cancelled before focus.",
+  "Evaluation search focus must be accepted only from a direct pointer press on the input; Player-title label activation must be cancelled before focus.",
+);
+const focusStart = searchRuntime.indexOf("function onFocus(event)");
+const focusEnd = searchRuntime.indexOf("function onBlur(event)", focusStart);
+const focusSource = focusStart >= 0 && focusEnd > focusStart ? searchRuntime.slice(focusStart, focusEnd) : "";
+invariant(
+  focusSource.includes("void restoreEmptyRecentResults(false);")
+    && !focusSource.includes("restoreEmptyRecentResults(false, true)")
+    && !focusSource.includes("beginRecentLoadingGate"),
+  "Selecting the Evaluation search input must render/refresh recent results without starting the Evaluation recent-search loading gate.",
 );
 const blurStart = searchRuntime.indexOf("function onBlur(event)");
 const blurEnd = searchRuntime.indexOf("function onKeyUp(event)", blurStart);
@@ -141,24 +150,41 @@ invariant(
   searchRuntime.includes('const RECENT_LOADING_REASON = "evaluation-recent-searches";')
     && searchRuntime.includes("window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON)")
     && searchRuntime.includes("window.__mflInteractionBusy?.end?.(recentLoadingToken)"),
-  "Evaluation loading must include a dedicated recent-search readiness gate.",
+  "Evaluation route/startup readiness must retain the dedicated recent-search loading gate.",
 );
 const primeStart = searchRuntime.indexOf("function primeRecentSearchData");
 const primeEnd = searchRuntime.indexOf("function restoreEmptyRecentResults", primeStart);
 const primeSource = primeStart >= 0 && primeEnd > primeStart ? searchRuntime.slice(primeStart, primeEnd) : "";
 invariant(
-  primeSource.indexOf("beginRecentLoadingGate(field);") >= 0
-    && primeSource.indexOf("beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
+  primeSource.includes("function primeRecentSearchData({ force = false, showLoading = false } = {})")
+    && primeSource.includes("if (showLoading) beginRecentLoadingGate(field);")
+    && primeSource.indexOf("if (showLoading) beginRecentLoadingGate(field);") < primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()")
     && primeSource.indexOf("recentPrimePromise = waitForSupabaseRecentState()") < primeSource.indexOf("const ids = recentEvaluationPlayerIds();")
     && primeSource.indexOf("const ids = recentEvaluationPlayerIds();") < primeSource.indexOf("return fetchRecentEvaluationPayload(ids).then"),
-  "Evaluation loading must begin first, then await Supabase preferences, then resolve the five IDs before requesting player rows.",
+  "When route/startup loading is requested, Evaluation must begin the readiness gate, await Supabase preferences, resolve the five IDs, then request player rows.",
 );
 invariant(
   primeSource.includes("publishRecentPayload(payload);")
     && primeSource.includes("return renderEmptySearchFromCore();")
     && primeSource.includes(".finally(() => {")
-    && primeSource.includes("endRecentLoadingGate();"),
-  "Evaluation loading must end only after the Supabase recent IDs are expanded and the empty-search results are rendered.",
+    && primeSource.includes("if (showLoading) endRecentLoadingGate();"),
+  "The optional Evaluation recent-search loading gate must end only after the recent IDs are expanded and the empty-search results are rendered.",
+);
+const pageChangeStart = searchRuntime.indexOf("function onPageChange()");
+const pageChangeEnd = searchRuntime.indexOf("purgeLegacyLocalRecentState();", pageChangeStart);
+const pageChangeSource = pageChangeStart >= 0 && pageChangeEnd > pageChangeStart
+  ? searchRuntime.slice(pageChangeStart, pageChangeEnd)
+  : "";
+invariant(
+  pageChangeSource.includes('document.body?.dataset.page !== "evaluation"')
+    && pageChangeSource.includes("void restoreEmptyRecentResults(false, true);")
+    && searchRuntime.includes("pageObserver = new MutationObserver(onPageChange);")
+    && searchRuntime.includes('attributeFilter: ["data-page"]'),
+  "Switching into Evaluation from another page must re-prime the Supabase recent five when the actual body route becomes active.",
+);
+invariant(
+  searchRuntime.includes("void restoreEmptyRecentResults(true, active());"),
+  "Direct Evaluation startup must request recent-search loading only when Evaluation is the active initial route.",
 );
 invariant(
   appEntry.includes("await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);"),
@@ -170,4 +196,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur, focus/highlight is direct-input only, search spellcheck is disabled, saved Evaluation Load enters Uniform Loading immediately without a toast, Discount Rate stays unresolved until the live Supabase value is ready, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, Player-label activation cannot focus/highlight the input, direct input focus does not start loading, focus retains its visual highlight, route entry restores the Supabase recent five, saved Evaluation Load stays toast-free, Discount Rate stays unresolved until the live Supabase value is ready, and result clicks open the selected player Evaluation.");
