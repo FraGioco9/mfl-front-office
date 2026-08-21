@@ -14,7 +14,8 @@ const EVALUATION_BLUR_RESULT_HIDE = `evaluationSearchInput.addEventListener("blu
 /**
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
- * discard a valid result list while text is still present.
+ * discard a valid result list while text is still present. The generated route
+ * intentionally owns no second blur listener that can hide those typed results.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
