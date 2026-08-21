@@ -67,16 +67,20 @@ const GENERIC_INCREMENTAL_PAYLOAD_RENDER = `      if (tablePages.has(pageName)) 
       }
       return true;`;
 
-const CLUB_BYPASS_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
+const CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER = `      const clubPage = pageName === "club";
       if (tablePages.has(pageName) && !clubPage) {
         restoreSavedTableState(pageName, { view: route.view || options.view });
         syncRestoredTableControls(pageName);
+      }
+      if (clubPage) {
+        state.currentPage = "club";
       }
       state.incrementalApplying = true;
       try {
         updateViewButtons();
         buildHeader();
-        if (!clubPage) originalApplyFilters.call(this, { save: false });
+        if (clubPage) applyFilters({ save: false, localOnly: true });
+        else originalApplyFilters.call(this, { save: false });
       } finally {
         state.incrementalApplying = false;
       }
@@ -123,8 +127,8 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
   const normalizedCore = replaceRequired(
     core,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
-    CLUB_BYPASS_INCREMENTAL_PAYLOAD_RENDER,
-    "generic render bypass for Club payloads",
+    CLUB_OWNED_INCREMENTAL_PAYLOAD_RENDER,
+    "Club-owned incremental roster render",
   );
 
   return Object.freeze({
