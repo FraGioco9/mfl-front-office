@@ -20,9 +20,12 @@ const evaluation = String(artifacts.routeChunks?.evaluation || "");
 invariant(
   shared.includes('const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();')
     && shared.includes("playerId: routePlayerId,")
-    && shared.includes('if (!row) {\n    renderEmptyEvaluationSelection(false);')
+    && shared.includes("const pendingEvaluationRoute = Boolean(")
+    && shared.includes("const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || \"\").trim();")
+    && shared.includes("if (pendingEvaluationRoute) {\n    evaluationButtons.hidden = false;")
+    && shared.includes("if (firstPaintEvaluationPlayerName) {\n        evaluationSearchInput.value = firstPaintEvaluationPlayerName;")
     && !shared.includes('if (!row || getValue(row, "retirement_years") === 0) {'),
-  "A refreshed player Evaluation must hydrate its route player before rendering and must not clear a valid route while data is still loading.",
+  "A refreshed player/saved/shared Evaluation must hydrate without clearing its first-paint name or Reset/Player Page chrome.",
 );
 
 invariant(
@@ -62,6 +65,12 @@ invariant(
 );
 
 invariant(
+  evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
+    && evaluation.includes("evaluationSearchInput.select();"),
+  "Clearing the Evaluation search must return focus and text selection to the search input.",
+);
+
+invariant(
   loading.includes('[data-initial-evaluation-selection="false"] #evaluationLoadButton[hidden]')
     && loading.includes(':is(#evaluationResetButton, #evaluationPlayerPageButton)')
     && loading.includes('[data-initial-evaluation-selection="true"] #evaluationLoadButton'),
@@ -73,4 +82,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, first-paint identity/actions/focus, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions/focus, clear-focus selection, and table-edge validation passed.");
