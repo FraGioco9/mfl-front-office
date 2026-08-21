@@ -1154,8 +1154,8 @@ function tableCloseFiltersOwner(commitChanges = false, restoreTriggerFocus = tru
   }
 
   state.filterDraftRules = null;
+  document.body.classList.remove("filtersOpen");
   hideModal(filtersModal, () => {
-    document.body.classList.remove("filtersOpen");
     if (restoreTriggerFocus) openFiltersButton.focus();
   });
 }
