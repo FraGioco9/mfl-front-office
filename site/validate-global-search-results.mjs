@@ -30,8 +30,8 @@ invariant(
 );
 
 invariant(
-  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 512px;"),
-  "Global Search popup must be tall enough to show five full fixed-height result boxes.",
+  styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 501px;"),
+  "Global Search popup must preserve five full fixed-height result boxes with matching 12px spacing above and below the result stack.",
 );
 
 invariant(
