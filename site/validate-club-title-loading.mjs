@@ -9,9 +9,10 @@ const invariant = (condition, message) => {
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [coreSource, routeSplitter, bootstrap, generatedClubCore] = await Promise.all([
+const [coreSource, routeSplitter, clubStartupLifecycle, bootstrap, generatedClubCore] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
+  read("./modules/app-core-club-startup-lifecycle.js"),
   read("./bootstrap.js"),
   read("./modules/app-core-club-runtime.js"),
 ]);
@@ -85,12 +86,39 @@ excludes(
   'if (page === "club") return "Club";',
   "Club first paint must not fall back unconditionally to a generic Club title.",
 );
+
+includes(
+  clubStartupLifecycle,
+  'const navigateClub = window.mflOpenClubPage;',
+  "Club refresh startup must delegate to the public Club navigator.",
+);
+includes(
+  clubStartupLifecycle,
+  'navigateClub.__mflRouteRuntimeGate !== true',
+  "Club refresh startup must require the shared route-runtime loading gate.",
+);
+includes(
+  clubCore,
+  'const canonicalRoute = canonicalClubRoute(initialClubRoute.clubId, initialClubRoute.view);',
+  "Club refresh startup must canonicalize the route before shared navigation.",
+);
+includes(
+  clubCore,
+  'await navigateClub(initialClubRoute.clubId, initialClubRoute.view);',
+  "Club refresh startup must use the same public navigation lifecycle as in-site Club clicks.",
+);
+excludes(
+  clubCore,
+  'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
+  "Club refresh startup must not bypass the shared loading lifecycle through the private Club loader.",
+);
 excludes(
   clubCore,
   "leaderboards/users/global",
   "Club title loading must not fetch an external leaderboard or unrelated global dataset.",
 );
 excludes(routeSplitter, "!important", "Club title loading must not add CSS priority overrides.");
+excludes(clubStartupLifecycle, "!important", "Club refresh loading must not add CSS priority overrides.");
 
 const generatedBanner = "// Generated Club core chunk from modules/app-core.js. Do not edit directly.\n";
 invariant(
@@ -123,4 +151,12 @@ invariant(
   "Loaded Club row identity must be persisted synchronously before cache fallback and the exact lookup.",
 );
 
-console.log("Club source-row first paint, cached refresh, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
+const refreshHandoff = clubCore.indexOf("showHomeShellWithInitialClub");
+const sharedRefreshNavigation = clubCore.indexOf("await navigateClub(initialClubRoute.clubId, initialClubRoute.view);", refreshHandoff);
+const privateClubLoader = clubCore.indexOf("async function openClubPage(");
+invariant(
+  privateClubLoader >= 0 && refreshHandoff > privateClubLoader && sharedRefreshNavigation > refreshHandoff,
+  "Refreshed Club routes must hand off from startup to the shared public navigator after the Club route owner is installed.",
+);
+
+console.log("Club source-row first paint, shared refresh loading, cached refresh, exact title lookup, division rendering, generated runtime, and loading readiness validation passed.");
