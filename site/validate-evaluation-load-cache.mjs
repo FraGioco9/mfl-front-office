@@ -20,7 +20,7 @@ invariant(
     && controls.includes("#evaluationSearchInput:focus:not(:disabled),")
     && !controls.includes("#evaluationSearchInput:hover:not(:disabled),")
     && !controls.includes("#evaluationSearchInput:focus-visible:not(:disabled)"),
-  "Evaluation search highlighting must be owned by the search-control hover area plus direct input focus, so hovering Player cannot highlight it and focus keeps the normal highlight without a separate white border.",
+  "Evaluation search highlighting must be owned by the search-control hover area plus direct input focus: Player-title hover is outside that area, while input focus keeps the normal highlight without a separate white border.",
 );
 
 invariant(
@@ -52,4 +52,4 @@ invariant(
   "The first saved-Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation saved-list cache validation passed: control-scoped hover and direct-input focus own the Evaluation highlight, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
+console.log("Evaluation saved-list cache validation passed: Player-title hover is outside Evaluation highlight ownership, direct-input focus keeps the highlight, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
