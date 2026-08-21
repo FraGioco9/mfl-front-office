@@ -270,7 +270,7 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
 .filtersDialog select:hover:not(:disabled),
 .filtersDialog select:focus:not(:disabled),
 .filtersDialog select:focus-visible:not(:disabled),
-#evaluationSearchInput:hover:not(:disabled),
+.evaluationSearchControl:hover #evaluationSearchInput:not(:disabled),
 #evaluationSearchInput:focus:not(:disabled),
 .globalSearchControl #playerSearchInput:hover:not(:disabled),
 .globalSearchControl #playerSearchInput:focus:not(:disabled),
