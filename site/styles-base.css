@@ -2891,8 +2891,8 @@ button.playerIdText:active {
 
 
 .evaluationPage {
-  width: min(1180px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .evaluationTitleRow {
@@ -2905,6 +2905,12 @@ button.playerIdText:active {
 
 .evaluationPage .tablePageTitle {
   margin: 0;
+}
+
+.evaluationTopBar,
+.evaluationPanel {
+  width: min(1180px, 100%);
+  margin-inline: auto;
 }
 
 .advancedSettingsButton {
