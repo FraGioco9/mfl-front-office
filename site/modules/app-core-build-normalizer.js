@@ -5,6 +5,7 @@ import { normalizeClubEntryLifecycle } from "./app-core-club-entry-lifecycle.js"
 import { normalizeClubSortLifecycle } from "./app-core-club-sort-lifecycle.js";
 import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
+import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
@@ -25,7 +26,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const watchlistArtifacts = splitWatchlistRouteApplicationCoreRuntime(walletArtifacts);
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
-  return normalizeClubSortLifecycle(clubEntryArtifacts);
+  const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
+  return normalizeHomeSummaryLifecycle(clubSortArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
