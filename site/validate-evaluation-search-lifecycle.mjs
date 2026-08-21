@@ -37,8 +37,38 @@ invariant(
 );
 invariant(
   searchRuntime.includes("function hideTypedBlurredResults(field = input())")
-    && searchRuntime.includes("window.setTimeout(() => hideTypedBlurredResults(field), 0);"),
-  "Blurred non-empty Evaluation searches must hide and clear their result list after the click event can settle.",
+    && searchRuntime.includes("window.setTimeout(() => hideTypedBlurredResults(field), 120);"),
+  "Blurred non-empty Evaluation searches must hide and clear their result list after the result click has time to settle.",
+);
+invariant(
+  searchRuntime.includes("function onPointerDown(event)")
+    && searchRuntime.includes("if (!(field instanceof HTMLInputElement) || event.target !== field) return;")
+    && searchRuntime.includes("directPointerFocus = true;")
+    && searchRuntime.includes("if (!directPointerFocus) {")
+    && searchRuntime.includes("event.stopImmediatePropagation();")
+    && searchRuntime.includes("field.blur();"),
+  "Evaluation search focus must be accepted only from a direct pointer press on the input, not from its surrounding label/title.",
+);
+const blurStart = searchRuntime.indexOf("function onBlur(event)");
+const blurEnd = searchRuntime.indexOf("function onKeyUp(event)", blurStart);
+const blurSource = blurStart >= 0 && blurEnd > blurStart ? searchRuntime.slice(blurStart, blurEnd) : "";
+invariant(
+  blurSource.includes("if (!field.value.trim()) return;")
+    && !blurSource.includes("restoreEmptyRecentResults"),
+  "Clicking elsewhere on an empty Evaluation search must not re-prime recent searches or enter the loading workflow.",
+);
+const renderStart = appCoreSource.indexOf("function renderEvaluationSearchResults()");
+const renderEnd = appCoreSource.indexOf("let evaluationRecentSearchPrimed", renderStart);
+const renderSource = renderStart >= 0 && renderEnd > renderStart ? appCoreSource.slice(renderStart, renderEnd) : "";
+invariant(
+  renderSource.includes('button.addEventListener("click", async () => {')
+    && renderSource.includes("state.evaluationPlayerId = playerId;")
+    && renderSource.includes("syncEvaluationPlayerUrl(playerId);")
+    && renderSource.includes('incrementalRouteTarget("evaluation", { playerId })')
+    && renderSource.includes("requestIncrementalRoute(route, 1)")
+    && renderSource.includes("renderEvaluationTable(row);")
+    && renderSource.includes("withInteractionBusy(loadAndRender)"),
+  "Clicking an Evaluation search result must select that player, sync the Evaluation URL, load the player route, and render the Evaluation.",
 );
 invariant(
   generatedSharedCore.includes("window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);"),
@@ -83,4 +113,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: empty search shows Supabase recent five, typed results require focus, and Evaluation readiness waits for Supabase state plus recent rendering.");
+console.log("Evaluation search lifecycle validation passed: result clicks open the selected player Evaluation, focus requires a direct input click, empty blur does not trigger loading, recent five stay Supabase-backed, and startup readiness waits for recent rendering.");
