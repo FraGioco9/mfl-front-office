@@ -62,6 +62,17 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
 
   normalizedCore = replaceRequired(
     normalizedCore,
+    `  if (["watchlist", "myplayers", "settings", "player"].includes(initialTarget.pageName)) {
+    startupDependencies.push(startupWalletPreferencesPromise);
+  }`,
+    `  if (["watchlist", "myplayers", "settings", "player", "evaluation"].includes(initialTarget.pageName)) {
+    startupDependencies.push(startupWalletPreferencesPromise);
+  }`,
+    "Evaluation startup waits for wallet preferences before selected-route readiness",
+  );
+
+  normalizedCore = replaceRequired(
+    normalizedCore,
     `function renderEmptyEvaluationSelection(showRecentResults = true) {
   evaluationPanel.hidden = true;`,
     `function renderEmptyEvaluationSelection(showRecentResults = true) {
@@ -237,7 +248,29 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     "Saved and shared Evaluation payloads preserve the first-paint player name through hydration",
   );
 
-  routeChunks.evaluation = replaceRequired(
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `function applySharedEvaluationPayload(payload) {`,
+    `async function applySharedEvaluationPayload(payload) {`,
+    "Saved and shared Evaluation payload application exposes its final render promise",
+  );
+
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `  renderEvaluationMflPerUsdControl(false);
+  renderEvaluationPage();
+}
+
+async function loadSharedEvaluation`,
+    `  renderEvaluationMflPerUsdControl(false);
+  await renderEvaluationPage();
+}
+
+async function loadSharedEvaluation`,
+    "Saved and shared Evaluation payload application awaits the final Evaluation render",
+  );
+
+  evaluationSource = replaceRequired(
     evaluationSource,
     `    const data = await response.json();
     state.evaluationShareId = id;
@@ -255,10 +288,26 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
       if (!playerPayload) return;
     }
     state.evaluationShareId = id;
-    applySharedEvaluationPayload(data.payload);`,
-    "Shared Evaluation hydrates the same player row before using the standard table renderer",
+    await applySharedEvaluationPayload(data.payload);`,
+    "Shared Evaluation hydrates the same player row and awaits the standard table renderer",
   );
 
+  evaluationSource = replaceRequired(
+    evaluationSource,
+    `    state.evaluationSavedId = id;
+    state.evaluationShareId = "";
+    updateEvaluationFooterActions();
+    clearEvaluationSearchFocus();
+    applySharedEvaluationPayload(data.payload);`,
+    `    state.evaluationSavedId = id;
+    state.evaluationShareId = "";
+    updateEvaluationFooterActions();
+    clearEvaluationSearchFocus();
+    await applySharedEvaluationPayload(data.payload);`,
+    "Saved Evaluation awaits the same final table render before its loader settles",
+  );
+
+  routeChunks.evaluation = evaluationSource;
   return Object.freeze({
     ...artifacts,
     core: normalizedCore,
