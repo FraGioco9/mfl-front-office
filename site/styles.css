@@ -182,7 +182,7 @@ table :is(th, td) > :is(a, button, img, input, select, span, svg) {
 
 /* Desktop table chrome owns three compact rows: title, views, and quick filters. */
 @media (min-width: 901px) {
-  #progressionPage {
+  #progressionPage:not([hidden]) {
     display: grid;
     grid-template-columns: repeat(8, max-content) minmax(0, 1fr) max-content;
     grid-template-rows: auto 40px 40px auto auto;
