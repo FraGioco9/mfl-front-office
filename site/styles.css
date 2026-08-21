@@ -188,19 +188,6 @@ body[data-page="watchlist"] #progressionPage .watchlistSwitcher[hidden] {
   font-size: 13px;
 }
 
-@supports (appearance: base-select) {
-  #progressionPage #pageSizeSelect::picker(select) {
-    width: 80px;
-    min-width: 80px;
-  }
-
-  #progressionPage #pageSizeSelect option {
-    min-height: 34px;
-    padding: 6px 8px;
-    font-size: 13px;
-  }
-}
-
 html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .rowsField,
 body[data-page="club"] #progressionPage .rowsField {
   display: none;
