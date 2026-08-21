@@ -15,7 +15,7 @@ const DIRECT_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeSh
     };
   }`;
 
-const SHARED_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeShell === "function") {
+const UNIFORM_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeShell === "function") {
     const originalShowHomeShell = showHomeShell;
     let initialClubHandled = false;
     showHomeShell = async function showHomeShellWithInitialClub(pageName, updateHistory, options) {
@@ -26,27 +26,34 @@ const SHARED_INITIAL_CLUB_STARTUP = `  if (initialClubRoute && typeof showHomeSh
           window.history.replaceState({}, "", canonicalRoute);
         }
         document.getElementById("mflInitialTableViewFirstPaint")?.remove();
-        const navigateClub = window.mflOpenClubPage;
-        if (typeof navigateClub !== "function" || Reflect.get(navigateClub, "__mflRouteRuntimeGate") !== true) {
-          throw new Error("Shared Club navigation gate is unavailable during startup.");
+        const loadingController = window.__mflInteractionBusy;
+        const loadingToken = typeof loadingController?.begin === "function"
+          ? loadingController.begin("route-runtime")
+          : "";
+        try {
+          await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);
+        } finally {
+          if (loadingToken) loadingController?.end?.(loadingToken);
         }
-        await navigateClub(initialClubRoute.clubId, initialClubRoute.view);
         return;
       }
       return originalShowHomeShell.apply(this, arguments);
     };
   }`;
 
-const INITIAL_ROUTE_RENDER = `  await showHomeShell(initialTarget.pageName, false, initialTarget.options);`;
+const BLOCKING_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
+      const resolvedClubTitle = await clubTitleReady;
+      if (resolvedClubTitle && String(activeClubId) === nextClubId) {
+        activeClubTitle = resolvedClubTitle;
+      }
 
-const SYNCHRONIZED_INITIAL_ROUTE_RENDER = `  if (initialTarget.pageName === "club") {
-    const ensureInitialClubRuntime = window.__mflEnsureRouteRuntime;
-    if (typeof ensureInitialClubRuntime !== "function") {
-      throw new Error("Initial Club route runtime loader is unavailable.");
-    }
-    await ensureInitialClubRuntime("club", initialTarget.options);
-  }
-  await showHomeShell(initialTarget.pageName, false, initialTarget.options);`;
+      state.currentPage = CLUB_PAGE;`;
+
+const ROSTER_OWNED_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
+      const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
+      if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+
+      state.currentPage = CLUB_PAGE;`;
 
 export function normalizeClubStartupLifecycle(routeArtifacts) {
   const artifacts = routeArtifacts && typeof routeArtifacts === "object" ? routeArtifacts : null;
@@ -54,26 +61,23 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     ? artifacts.routeChunks
     : null;
   const club = String(routeChunks?.club || "");
-  const core = String(artifacts?.core || "");
   if (!club) throw new Error("Cannot normalize an empty Club route artifact.");
-  if (!core) throw new Error("Cannot normalize an empty application core for Club startup.");
 
-  const normalizedClub = replaceRequired(
+  let normalizedClub = replaceRequired(
     club,
     DIRECT_INITIAL_CLUB_STARTUP,
-    SHARED_INITIAL_CLUB_STARTUP,
-    "shared Club refresh navigation lifecycle",
+    UNIFORM_INITIAL_CLUB_STARTUP,
+    "single-path Club refresh loading lifecycle",
   );
-  const normalizedCore = replaceRequired(
-    core,
-    INITIAL_ROUTE_RENDER,
-    SYNCHRONIZED_INITIAL_ROUTE_RENDER,
-    "initial Club route-runtime readiness barrier",
+  normalizedClub = replaceRequired(
+    normalizedClub,
+    BLOCKING_TITLE_SETTLEMENT,
+    ROSTER_OWNED_TITLE_SETTLEMENT,
+    "Club roster independent of title preflight",
   );
 
   return Object.freeze({
     ...artifacts,
-    core: normalizedCore,
     routeChunks: Object.freeze({
       ...routeChunks,
       club: normalizedClub,
