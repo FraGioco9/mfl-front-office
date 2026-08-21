@@ -22,16 +22,36 @@ invariant(
     && shared.includes("playerId: routePlayerId,")
     && shared.includes("const pendingEvaluationRoute = Boolean(")
     && shared.includes("const firstPaintEvaluationPlayerName = String(evaluationSearchInput.value || \"\").trim();")
-    && shared.includes("if (pendingEvaluationRoute) {\n    evaluationButtons.hidden = false;")
+    && shared.includes("if (pendingEvaluationRoute) {\n    evaluationSearchInput.placeholder = \"\";")
+    && shared.includes("evaluationButtons.hidden = false;")
+    && shared.includes("evaluationResetButton.hidden = false;")
+    && shared.includes("evaluationPlayerPageButton.hidden = false;")
     && shared.includes("if (firstPaintEvaluationPlayerName) {\n        evaluationSearchInput.value = firstPaintEvaluationPlayerName;")
     && !shared.includes('if (!row || getValue(row, "retirement_years") === 0) {'),
   "A refreshed player/saved/shared Evaluation must hydrate without clearing its first-paint name or Reset/Player Page chrome.",
 );
 
 invariant(
+  shared.includes('const evaluationRouteParams = new URLSearchParams(window.location.search);')
+    && shared.includes('evaluationRouteParams.get("player") || evaluationRouteParams.get("saved") || evaluationRouteParams.get("share")')
+    && shared.includes('evaluationSearchInput.placeholder = "Search ID or player name";')
+    && shared.includes('const plainEvaluationRoute = window.location.pathname === "/evaluation"')
+    && shared.includes('evaluationSearchInput.focus({ preventScroll: true });')
+    && shared.includes("evaluationSearchInput.select();"),
+  "The empty-Evaluation renderer must preserve selected routes and focus an empty search when plain Evaluation is entered from any page.",
+);
+
+invariant(
+  shared.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${id}`, playerName);')
+    && shared.includes('sessionStorage.setItem(`mfl-evaluation-first-paint-name-v2:player:${playerId}`, entry.nameDisplay);'),
+  "Evaluation navigation from Player pages and search results must cache the player name before the route changes.",
+);
+
+invariant(
   evaluation.includes('const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();')
-    && evaluation.includes("playerId: payloadPlayerId,"),
-  "Shared Evaluations must hydrate their player row before using the standard Evaluation table renderer.",
+    && evaluation.includes("playerId: payloadPlayerId,")
+    && !evaluation.includes('evaluationSearchInput.value = "";\n  renderEvaluationMflPerUsdControl(false);'),
+  "Saved/shared Evaluations must hydrate their player row without blanking the bootstrapped player name.",
 );
 
 invariant(
@@ -65,9 +85,12 @@ invariant(
 );
 
 invariant(
-  evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
+  evaluation.includes("const activateEvaluationSearch = () => {")
+    && evaluation.includes("activateEvaluationSearch();")
+    && evaluation.includes("window.requestAnimationFrame(activateEvaluationSearch);")
+    && evaluation.includes('evaluationSearchInput.focus({ preventScroll: true });')
     && evaluation.includes("evaluationSearchInput.select();"),
-  "Clearing the Evaluation search must return focus and text selection to the search input.",
+  "Clearing the Evaluation search must keep the search active after the route reset completes.",
 );
 
 invariant(
@@ -82,4 +105,4 @@ invariant(
   "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions/focus, clear-focus selection, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions, cross-route empty-search focus, clear-focus persistence, and table-edge validation passed.");
