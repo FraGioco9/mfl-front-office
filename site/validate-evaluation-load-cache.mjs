@@ -24,32 +24,77 @@ invariant(
 );
 
 invariant(
-  sharedCore.includes('const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"')
+  sharedCore.includes('const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();')
+    && sharedCore.includes('String(window.__mflSavedEvaluationsSessionCacheWallet || "") === activeWallet')
     && sharedCore.includes("Array.isArray(window.__mflSavedEvaluationsSessionCache)")
     && sharedCore.includes('const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");'),
-  "Cached saved Evaluations must reopen without re-entering the loading interaction workflow.",
+  "Cached Saved Evaluations must only bypass Uniform Loading when the list belongs to the active wallet.",
 );
 
+for (const required of [
+  "function ensureSavedEvaluationCacheWallet()",
+  "window.__mflSavedEvaluationsSessionCacheWallet = wallet;",
+  "window.__mflSavedEvaluationPayloadCache = Object.create(null);",
+  "function rememberSavedEvaluationCacheEntry(entry)",
+  "function cachedSavedEvaluationEntry(savedId)",
+  "function rememberSavedEvaluationList(entries)",
+  "function savedEvaluationListCache()",
+  "function invalidateSavedEvaluationCache()",
+]) {
+  invariant(evaluationCore.includes(required), `Saved Evaluation cache ownership is missing ${required}`);
+}
+
 invariant(
-  evaluationCore.includes("const cachedEvaluations = window.__mflSavedEvaluationsSessionCache;")
-    && evaluationCore.includes("if (Array.isArray(cachedEvaluations)) {")
+  evaluationCore.includes("const cachedEvaluations = savedEvaluationListCache();")
+    && evaluationCore.includes("if (cachedEvaluations) {")
     && evaluationCore.includes("renderSavedEvaluationList(cachedEvaluations);")
-    && evaluationCore.includes("window.__mflSavedEvaluationsSessionCache = evaluations;"),
-  "Saved Evaluations must reuse the successful list request for the rest of the in-memory page session.",
+    && evaluationCore.includes("rememberSavedEvaluationList(evaluations);"),
+  "Saved Evaluations must reuse the complete wallet-scoped list after its first successful request.",
 );
 
-const invalidations = evaluationCore.match(/window\.__mflSavedEvaluationsSessionCache = null;/g) || [];
+const savedLoadStart = evaluationCore.indexOf("async function loadSavedEvaluation(savedId");
+const savedLoadEnd = evaluationCore.indexOf("function evaluationPresentValueTotalFromPayload", savedLoadStart);
+const savedLoad = savedLoadStart >= 0 && savedLoadEnd > savedLoadStart
+  ? evaluationCore.slice(savedLoadStart, savedLoadEnd)
+  : "";
 invariant(
-  invalidations.length === 2
-    && evaluationCore.includes('method: "POST"')
-    && evaluationCore.includes('method: "DELETE"'),
-  "Saving and deleting Evaluations must invalidate the saved-list session cache.",
+  savedLoad.includes("let data = cachedSavedEvaluationEntry(id);")
+    && savedLoad.includes("if (!data) {")
+    && savedLoad.includes('const requestUrl = new URL("/api/evaluation-save", window.location.origin);')
+    && savedLoad.includes("data = await response.json();")
+    && savedLoad.includes("rememberSavedEvaluationCacheEntry(data);")
+    && savedLoad.includes("await applySharedEvaluationPayload(data.payload);"),
+  "Opening a Saved Evaluation must reuse its cached full payload and fetch only when that saved ID is not cached.",
+);
+
+const saveStart = evaluationCore.indexOf("async function createSavedEvaluation()");
+const saveEnd = evaluationCore.indexOf("async function loadSavedEvaluation", saveStart);
+const saveSource = saveStart >= 0 && saveEnd > saveStart ? evaluationCore.slice(saveStart, saveEnd) : "";
+const saveFailureIndex = saveSource.indexOf("if (!response.ok)");
+const saveInvalidationIndex = saveSource.indexOf("invalidateSavedEvaluationCache();");
+invariant(
+  saveFailureIndex >= 0
+    && saveInvalidationIndex > saveFailureIndex
+    && saveSource.includes('method: "POST"'),
+  "Saving an Evaluation must preserve a valid cache when the request fails and invalidate it only after a successful save.",
+);
+
+const deleteStart = evaluationCore.indexOf("async function deleteSavedEvaluation(savedId)");
+const deleteEnd = evaluationCore.indexOf("function showEvaluationLoadActionTooltip", deleteStart);
+const deleteSource = deleteStart >= 0 && deleteEnd > deleteStart ? evaluationCore.slice(deleteStart, deleteEnd) : "";
+const deleteFailureIndex = deleteSource.indexOf("if (!response.ok)");
+const deleteInvalidationIndex = deleteSource.indexOf("invalidateSavedEvaluationCache();");
+invariant(
+  deleteFailureIndex >= 0
+    && deleteInvalidationIndex > deleteFailureIndex
+    && deleteSource.includes('method: "DELETE"'),
+  "Deleting an Evaluation must preserve a valid cache when the request fails and invalidate it only after a successful deletion.",
 );
 
 invariant(
   evaluationCore.includes('fetch("/api/evaluation-save", {\n      cache: "no-store",')
     || evaluationCore.includes('fetch("/api/evaluation-save", {\n    cache: "no-store",'),
-  "The first saved-Evaluation list request must remain server-fresh before it is cached for the session.",
+  "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation saved-list cache validation passed: Player-title hover is outside Evaluation highlight ownership, direct-input focus keeps the highlight, the first saved list is fetched fresh, later opens reuse it in memory, and save/delete invalidate it.");
+console.log("Evaluation Saved cache validation passed: the cache is wallet-scoped, the first list is fresh, full saved payloads are reused by saved routes, and successful save/delete mutations invalidate stale data.");
