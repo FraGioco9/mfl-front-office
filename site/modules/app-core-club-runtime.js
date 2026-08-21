@@ -474,7 +474,6 @@
         if (normalizedPath() !== canonicalRoute) {
           window.history.replaceState({}, "", canonicalRoute);
         }
-        document.getElementById("mflInitialTableViewFirstPaint")?.remove();
         const loadingController = window.__mflInteractionBusy;
         const loadingToken = typeof loadingController?.begin === "function"
           ? loadingController.begin("route-runtime")
