@@ -14,6 +14,26 @@ import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
+function normalizePageFilterResetBeforeRequest(source) {
+  return replaceRequired(
+    source,
+    `    const savedPageState = !clubTarget && tablePages.has(pageName)
+      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
+      : null;
+    if (savedPageState) {`,
+    `    const storedPageState = !clubTarget && tablePages.has(pageName)
+      ? state.tablePageStates?.[pageName] || defaultTablePageState(pageName)
+      : null;
+    const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;
+    const savedPageState = resetFilters && storedPageState
+      ? tableStateWithoutPageFilters(pageName, storedPageState)
+      : storedPageState;
+    if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
+    if (savedPageState) {`,
+    "destination filters reset before incremental route request",
+  );
+}
+
 function normalizeFilterSummaryLifecycle(artifacts) {
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
   const table = String(routeChunks.table || "");
@@ -31,6 +51,20 @@ function normalizeFilterSummaryLifecycle(artifacts) {
     'if (filterSummary) filterSummary.textContent = "0";',
     "Club table clears the Filters summary without the legacy label",
   );
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    `  state.filterDraftRules = null;
+  hideModal(filtersModal, () => {
+    document.body.classList.remove("filtersOpen");
+    if (restoreTriggerFocus) openFiltersButton.focus();
+  });`,
+    `  state.filterDraftRules = null;
+  document.body.classList.remove("filtersOpen");
+  hideModal(filtersModal, () => {
+    if (restoreTriggerFocus) openFiltersButton.focus();
+  });`,
+    "Filters highlight clears when close starts",
+  );
 
   routeChunks.table = normalizedTable;
   return Object.freeze({
@@ -43,7 +77,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
-  const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
+  const resetNormalizedSource = normalizePageFilterResetBeforeRequest(canonicalSource);
+  const routeArtifacts = splitApplicationCoreRuntime(resetNormalizedSource);
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
