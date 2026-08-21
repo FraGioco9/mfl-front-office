@@ -5,6 +5,7 @@
   const LEGACY_RECENT_STORAGE_KEY = "mfl-recent-evaluation-searches-v1";
   const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
   const RECENT_ENTRIES_KEY = "__mflEvaluationSupabaseRecentEntries";
+  const RECENT_LOADING_REASON = "evaluation-recent-searches";
 
   window.__mflEvaluationSearchStateRuntime?.destroy?.();
 
@@ -13,6 +14,7 @@
   let recentPayload = null;
   let recentPayloadSignature = "";
   let recentWriteSequence = 0;
+  let recentLoadingToken = "";
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
     ? window.shouldShowEvaluationRecentResults
@@ -20,6 +22,7 @@
 
   const input = () => document.getElementById("evaluationSearchInput");
   const clearButton = () => document.getElementById("evaluationSearchClearButton");
+  const results = () => document.getElementById("evaluationSearchResults");
   const active = () => document.body?.dataset.page === "evaluation" || /^\/evaluation\/?$/i.test(location.pathname);
   const coreContracts = () => {
     const contracts = window.__mflCoreContracts;
@@ -47,7 +50,7 @@
   function recentRule() {
     const field = input();
     if (!(field instanceof HTMLInputElement)) return originalRecentRule?.() || false;
-    if (field.value.trim()) return originalRecentRule?.() || false;
+    if (field.value.trim()) return document.activeElement === field;
     return active();
   }
 
@@ -55,6 +58,25 @@
     if (window.shouldShowEvaluationRecentResults !== recentRule) {
       window.shouldShowEvaluationRecentResults = recentRule;
     }
+  }
+
+  function beginRecentLoadingGate(field = input()) {
+    if (recentLoadingToken || !active() || !(field instanceof HTMLInputElement) || field.value.trim()) return;
+    recentLoadingToken = window.__mflInteractionBusy?.begin?.(RECENT_LOADING_REASON) || "";
+  }
+
+  function endRecentLoadingGate() {
+    if (!recentLoadingToken) return;
+    window.__mflInteractionBusy?.end?.(recentLoadingToken);
+    recentLoadingToken = "";
+  }
+
+  function hideTypedBlurredResults(field = input()) {
+    if (!(field instanceof HTMLInputElement) || !field.value.trim() || document.activeElement === field) return;
+    const container = results();
+    if (!(container instanceof HTMLElement)) return;
+    container.hidden = true;
+    container.replaceChildren();
   }
 
   function resultId(button) {
@@ -199,15 +221,17 @@
   }
 
   function renderEmptySearchFromCore() {
-    if (!active()) return;
+    if (!active()) return false;
     const field = input();
-    if (!(field instanceof HTMLInputElement) || field.value.trim()) return;
+    if (!(field instanceof HTMLInputElement) || field.value.trim()) return false;
     try {
       coreContracts()?.renderCurrentEvaluationSearchResults?.();
     } catch (error) {
       console.warn("Could not render recent Evaluation searches.", error);
+      return false;
     }
     syncClearButton(field);
+    return true;
   }
 
   async function fetchRecentEvaluationPayload(ids) {
@@ -242,11 +266,15 @@
   }
 
   function primeRecentSearchData({ force = false } = {}) {
+    const field = input();
     const ids = recentEvaluationPlayerIds();
     const signature = ids.join(",");
+    beginRecentLoadingGate(field);
+
     if (!force && recentPayload && recentPayloadSignature === signature) {
       publishRecentPayload(recentPayload);
       renderEmptySearchFromCore();
+      endRecentLoadingGate();
       return Promise.resolve(true);
     }
     if (recentPrimePromise && recentPayloadSignature === signature) return recentPrimePromise;
@@ -257,8 +285,7 @@
         if (destroyed || recentPayloadSignature !== signature) return false;
         recentPayload = payload;
         publishRecentPayload(payload);
-        renderEmptySearchFromCore();
-        return true;
+        return renderEmptySearchFromCore();
       })
       .catch((error) => {
         console.warn("Could not prime recent Evaluation searches.", error);
@@ -266,6 +293,7 @@
       })
       .finally(() => {
         recentPrimePromise = null;
+        endRecentLoadingGate();
       });
     return recentPrimePromise;
   }
@@ -285,6 +313,18 @@
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
     if (!field.value.trim()) void restoreEmptyRecentResults(false);
+    else hideTypedBlurredResults(field);
+  }
+
+  function onFocus(event) {
+    const field = input();
+    if (!(field instanceof HTMLInputElement) || event.target !== field) return;
+    syncClearButton(field);
+    if (!field.value.trim()) {
+      void restoreEmptyRecentResults(false);
+      return;
+    }
+    coreContracts()?.renderCurrentEvaluationSearchResults?.();
   }
 
   function onBlur(event) {
@@ -292,7 +332,11 @@
     if (!(field instanceof HTMLInputElement) || event.target !== field) return;
     syncSelectedPlayerLabel(field);
     syncClearButton(field);
-    if (!field.value.trim()) void restoreEmptyRecentResults(false);
+    if (!field.value.trim()) {
+      void restoreEmptyRecentResults(false);
+      return;
+    }
+    window.setTimeout(() => hideTypedBlurredResults(field), 0);
   }
 
   function onKeyUp(event) {
@@ -323,6 +367,7 @@
   purgeLegacyLocalRecentState();
   installCoreBridges();
   syncClearButton();
+  input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("keyup", onKeyUp, true);
@@ -334,6 +379,7 @@
 
   function destroy() {
     destroyed = true;
+    input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("keyup", onKeyUp, true);
@@ -345,6 +391,7 @@
     recentPayload = null;
     recentPayloadSignature = "";
     recentWriteSequence += 1;
+    endRecentLoadingGate();
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
       window.shouldShowEvaluationRecentResults = originalRecentRule;
