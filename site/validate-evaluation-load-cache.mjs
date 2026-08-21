@@ -31,6 +31,12 @@ invariant(
   "Cached Saved Evaluations must only bypass Uniform Loading when the list belongs to the active wallet.",
 );
 
+invariant(
+  sharedCore.includes('evaluationLoadButton.addEventListener("click", () => {')
+    && sharedCore.includes("clearEvaluationSearchFocus();\n    void openSavedEvaluationsModal();"),
+  "Clicking Load must immediately remove focus/selection from the Evaluation search before opening Saved Evaluations.",
+);
+
 for (const required of [
   "function ensureSavedEvaluationCacheWallet()",
   "window.__mflSavedEvaluationsSessionCacheWallet = wallet;",
@@ -45,11 +51,31 @@ for (const required of [
 }
 
 invariant(
+  evaluationCore.includes('playerName: String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),')
+    && evaluationCore.includes("entries.map((entry) => rememberSavedEvaluationCacheEntry(entry) || entry)"),
+  "The Saved Evaluations list cache must retain player identity instead of depending on whichever page rows are currently active.",
+);
+
+invariant(
   evaluationCore.includes("const cachedEvaluations = savedEvaluationListCache();")
     && evaluationCore.includes("if (cachedEvaluations) {")
     && evaluationCore.includes("renderSavedEvaluationList(cachedEvaluations);")
-    && evaluationCore.includes("rememberSavedEvaluationList(evaluations);"),
+    && evaluationCore.includes("const rememberedEvaluations = rememberSavedEvaluationList(evaluations);")
+    && evaluationCore.includes("renderSavedEvaluationList(rememberedEvaluations);"),
   "Saved Evaluations must reuse the complete wallet-scoped list after its first successful request.",
+);
+
+const listRenderStart = evaluationCore.indexOf("function renderSavedEvaluationList(rows)");
+const listRenderEnd = evaluationCore.indexOf("async function evaluationOpenSavedEvaluationsModalOwner()", listRenderStart);
+const listRender = listRenderStart >= 0 && listRenderEnd > listRenderStart
+  ? evaluationCore.slice(listRenderStart, listRenderEnd)
+  : "";
+invariant(
+  listRender.includes('String(entry?.playerName || "").trim()')
+    && listRender.includes("const loadEvaluation = async () => {")
+    && listRender.includes("await loadSavedEvaluation(savedId, playerId);")
+    && !listRender.includes("applySharedEvaluationPayload(entry.payload);"),
+  "Cached Saved Evaluation rows must remain correctly named after navigation and use the canonical saved hydration path when selected.",
 );
 
 const savedLoadStart = evaluationCore.indexOf("async function loadSavedEvaluation(savedId");
@@ -97,4 +123,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: the cache is wallet-scoped, the first list is fresh, full saved payloads are reused by saved routes, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: Load clears search focus, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
