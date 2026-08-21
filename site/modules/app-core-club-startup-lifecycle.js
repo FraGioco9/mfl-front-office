@@ -89,6 +89,39 @@ const CLUB_FINAL_ROSTER_RENDER = `      if (typeof updateViewButtons === "functi
       applyClubPresentation();
       captureClubView(nextView);`;
 
+const CLUB_APPLY_FILTER_OVERRIDE = `  if (typeof applyFilters === "function") {
+    const originalApplyFilters = applyFilters;
+    applyFilters = function applyFiltersWithClubRows(options = {}) {
+      if (state.currentPage !== CLUB_PAGE || !activeClubId) {
+        const result = originalApplyFilters.apply(this, arguments);
+        restoreStandardControls();
+        return result;
+      }
+
+      const originalRows = state.rows;
+      state.rows = clubRows();
+      state.sortKey = "positions";
+      state.sortDirection = "asc";
+      try {
+        const result = originalApplyFilters.call(this, { ...options, save: false });
+        state.tableSourceRowsCount = state.rows.length;
+        return result;
+      } finally {
+        state.rows = originalRows;
+      }
+    };
+  }`;
+
+const RESTORE_STANDARD_CONTROLS = `  function restoreStandardControls() {
+    const quickFilters = document.querySelector("#progressionPage .quickFilters");
+    if (quickFilters) quickFilters.hidden = false;
+    const controlsBar = document.querySelector("#progressionPage .controlsBar");
+    if (controlsBar) controlsBar.hidden = false;
+    document.querySelectorAll("#progressionPage .pager, #progressionPage nav.pager").forEach((pager) => {
+      pager.hidden = false;
+    });
+  }`;
+
 const EAGER_RUNTIME_COMMENTS = [
   "/* Keep MFL Wallet search navigation anchored to Attributes. */\n\n",
   "/* Layout-centered feedback and transition-free shared views */\n",
@@ -123,6 +156,19 @@ export function normalizeClubStartupLifecycle(routeArtifacts) {
     CLUB_FINAL_ROSTER_RENDER,
     "Club-owned final roster render",
   );
+  normalizedClub = replaceRequired(
+    normalizedClub,
+    CLUB_APPLY_FILTER_OVERRIDE,
+    "",
+    "single canonical Table filter owner for Club rows",
+  );
+  normalizedClub = replaceRequired(
+    normalizedClub,
+    RESTORE_STANDARD_CONTROLS,
+    "",
+    "remove obsolete Club filter-override cleanup",
+  );
+
   let normalizedCore = replaceRequired(
     core,
     GENERIC_INCREMENTAL_PAYLOAD_RENDER,
