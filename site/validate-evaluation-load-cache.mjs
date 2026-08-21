@@ -31,11 +31,16 @@ invariant(
   "Cached Saved Evaluations must only bypass Uniform Loading when the list belongs to the active wallet.",
 );
 
+const loadFacadeStart = sharedCore.indexOf("async function openSavedEvaluationsModal()");
+const loadFacadeEnd = sharedCore.indexOf("function hasWalletProof", loadFacadeStart);
+const loadFacade = loadFacadeStart >= 0 && loadFacadeEnd > loadFacadeStart
+  ? sharedCore.slice(loadFacadeStart, loadFacadeEnd)
+  : "";
 invariant(
-  sharedCore.includes('evaluationLoadButton.addEventListener("click", () => {')
-    && sharedCore.includes("evaluationSearchInput.blur();\n    void openSavedEvaluationsModal();")
-    && !sharedCore.includes("clearEvaluationSearchFocus();\n    void openSavedEvaluationsModal();"),
-  "Clicking Load must immediately blur the Evaluation search in shared core without referencing an extracted Evaluation function.",
+  sharedCore.includes('evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);')
+    && loadFacade.includes("evaluationSearchInput.blur();")
+    && !loadFacade.includes("clearEvaluationSearchFocus();"),
+  "Clicking Load must preserve the direct universal binding while the shared facade immediately blurs the Evaluation search.",
 );
 
 for (const required of [
@@ -124,4 +129,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: Load blurs the search within shared-core ownership, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: direct Load binding blurs search in the shared facade, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
