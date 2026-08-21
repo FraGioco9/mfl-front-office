@@ -53,6 +53,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubStartupArtifacts = normalizeClubStartupLifecycle(watchlistArtifacts);
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
+  // Club lifecycle normalization owns the filter-free Club branch, so normalize the shared count after it settles.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(clubSortArtifacts);
   return normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
 }
