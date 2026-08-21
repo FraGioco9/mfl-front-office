@@ -7,11 +7,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [appCoreSource, splitter, routeLifecycle, buildNormalizer] = await Promise.all([
+const [appCoreSource, splitter, routeLifecycle, buildNormalizer, stylesBase] = await Promise.all([
   read("./modules/app-core.js"),
   read("./modules/app-core-evaluation-chunk.js"),
   read("./modules/app-core-evaluation-route-lifecycle.js"),
   read("./modules/app-core-build-normalizer.js"),
+  read("./styles-base.css"),
 ]);
 const artifacts = normalizeBuiltApplicationCoreArtifacts(appCoreSource);
 const shared = String(artifacts.core || "");
@@ -145,6 +146,12 @@ invariant(
     && shared.includes('const explicitPath = String(options.path || "");'),
   "Built shared routing must preserve the exact Evaluation URL through refresh and page-path resolution.",
 );
+invariant(
+  stylesBase.includes('.evaluationPage {\n  width: 100%;\n  margin: 0;\n}')
+    && stylesBase.includes('.evaluationTitleRow {\n  display: flex;\n  align-items: flex-start;')
+    && stylesBase.includes('.evaluationTopBar,\n.evaluationPanel {\n  width: min(1180px, 100%);\n  margin-inline: auto;\n}'),
+  "Evaluation title must share the main content left edge while Evaluation controls and tables keep their existing centered 1180px content width.",
+);
 const evaluationRouteIndex = buildNormalizer.indexOf("normalizeEvaluationRouteLifecycle(routeArtifacts)");
 const evaluationSplitIndex = buildNormalizer.indexOf("splitEvaluationApplicationCoreRuntime(evaluationRouteArtifacts)");
 const evaluationSearchIndex = buildNormalizer.indexOf("normalizeEvaluationSearchLifecycle(evaluationArtifacts)");
@@ -159,4 +166,4 @@ invariant(
 
 new Function(shared);
 new Function(evaluation);
-console.log("Evaluation refresh URLs, startup UI, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are route-owned while shared persistence and Player focus ownership remain eager.");
+console.log("Evaluation refresh URLs, startup UI, shared-edge title geometry, persistent typed-search results, search/settings bindings, advanced settings, and dependency-closed helpers are route-owned while shared persistence and Player focus ownership remain eager.");
