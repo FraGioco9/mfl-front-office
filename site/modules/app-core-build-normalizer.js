@@ -1,6 +1,7 @@
 // @ts-check
-// Canonical app-core behavior is source-owned; this module only performs structural route/action splitting.
+// Canonical app-core behavior is source-owned; this module composes the build-time route/action normalizers.
 
+import { normalizeClubStartupLifecycle } from "./app-core-club-startup-lifecycle.js";
 import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chunk.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
@@ -13,7 +14,7 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
 
-  const routeArtifacts = splitApplicationCoreRuntime(canonicalSource);
+  const routeArtifacts = normalizeClubStartupLifecycle(splitApplicationCoreRuntime(canonicalSource));
   const evaluationArtifacts = splitEvaluationApplicationCoreRuntime(routeArtifacts);
   const settingsArtifacts = splitSettingsApplicationCoreRuntime(evaluationArtifacts);
   const playerArtifacts = splitPlayerApplicationCoreRuntime(settingsArtifacts);
