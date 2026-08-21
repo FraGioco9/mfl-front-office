@@ -8422,6 +8422,7 @@ async function startApp() {
       Object.defineProperty(finishEvaluationReadinessWithRecents, "__mflAwaitsRecentEvaluation", { value: true });
       finishEvaluationReadiness = finishEvaluationReadinessWithRecents;
     }
+    window.__mflWalletPreferencesStartupPromise = ensureEvaluationRecentStateHydrated();
     return true;
   }
 
