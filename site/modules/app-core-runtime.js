@@ -1794,6 +1794,7 @@ function setView() {
 }
 
 async function setPage(pageName, updateHash = true, options = {}) {
+  if (pageName === "home") void loadSummary();
   if (pageName === "mfl" && normalizeViewForPage(options.view, "mfl") === "stats") {
     await setPage("mflstats", updateHash, { ...options, replaceUrl: options.replaceUrl || "/mfl/stats" });
     return;
@@ -2050,21 +2051,34 @@ function updateSummaryCounts(playerCount, walletCount) {
   homeWallets.textContent = wallets ? formatCount(wallets) : "-";
 }
 
+let summaryLoadPromise = null;
+let summaryLoaded = false;
+
 async function loadSummary() {
-  try {
-    const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
-    state.manifest = data.manifest || null;
-    const summary = data.summary || {};
-    updateSummaryCounts(summary.playerCount, summary.walletCount);
-    updateStatusDate(summary.generatedAt);
-    return true;
-  } catch (error) {
-    console.error(error?.message || "Could not load the database summary.");
-    updateSummaryCounts(0, 0);
-    return false;
-  }
+  if (summaryLoaded) return true;
+  if (summaryLoadPromise) return summaryLoadPromise;
+
+  summaryLoadPromise = (async () => {
+    try {
+      const response = await fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
+      state.manifest = data.manifest || null;
+      const summary = data.summary || {};
+      updateSummaryCounts(summary.playerCount, summary.walletCount);
+      updateStatusDate(summary.generatedAt);
+      summaryLoaded = true;
+      return true;
+    } catch (error) {
+      console.error(error?.message || "Could not load the database summary.");
+      updateSummaryCounts(0, 0);
+      return false;
+    }
+  })();
+
+  const result = await summaryLoadPromise;
+  summaryLoadPromise = null;
+  return result;
 }
 
 function tablePageKey(pageName = state.currentPage) {
