@@ -7,10 +7,11 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [searchRuntime, controlInteractions, loadingToastRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
+const [searchRuntime, controlInteractions, loadingToastRuntime, discountRateRuntime, appEntry, walletPreferences, appCoreSource] = await Promise.all([
   read("./evaluation-search-state-runtime.js"),
   read("./control-interactions-runtime.js"),
   read("./loading-toast-runtime.js"),
+  read("./evaluation-discount-rate-runtime.js"),
   read("./modules/app-entry.js"),
   read("./api/wallet-preferences.js"),
   read("./modules/app-core.js"),
@@ -48,20 +49,21 @@ invariant(
   !generatedEvaluationCore.includes('evaluationSearchInput.addEventListener("blur", () => {'),
   "The generated Evaluation route core must not install a second blur handler that hides typed results.",
 );
+const pointerDownStart = searchRuntime.indexOf("function onPointerDown(event)");
+const pointerDownEnd = searchRuntime.indexOf("function onFocus(event)", pointerDownStart);
+const pointerDownSource = pointerDownStart >= 0 && pointerDownEnd > pointerDownStart
+  ? searchRuntime.slice(pointerDownStart, pointerDownEnd)
+  : "";
 invariant(
-  searchRuntime.includes("function onPointerDown(event)")
-    && searchRuntime.includes("if (!(field instanceof HTMLInputElement) || event.target !== field) return;")
-    && searchRuntime.includes("directPointerFocus = true;")
+  pointerDownSource.includes('const title = event.target.closest(".evaluationSearch .field > span");')
+    && pointerDownSource.includes("if (title instanceof HTMLElement) {")
+    && pointerDownSource.includes("event.preventDefault();")
+    && pointerDownSource.indexOf("event.preventDefault();") < pointerDownSource.indexOf("if (!(field instanceof HTMLInputElement) || event.target !== field) return;")
+    && pointerDownSource.includes("directPointerFocus = true;")
     && searchRuntime.includes("if (!directPointerFocus) {")
     && searchRuntime.includes("event.stopImmediatePropagation();")
     && searchRuntime.includes("field.blur();"),
-  "Evaluation search focus must be accepted only from a direct pointer press on the input.",
-);
-invariant(
-  searchRuntime.includes('const title = event.target.closest(".evaluationSearch .field > span");')
-    && searchRuntime.includes("if (title instanceof HTMLElement) {")
-    && searchRuntime.includes("event.preventDefault();"),
-  "Clicking the Evaluation Player title must cancel the label activation instead of focusing the search input.",
+  "Evaluation search focus/highlight must be accepted only from a direct pointer press on the input; Player-title label activation must be cancelled before focus.",
 );
 const blurStart = searchRuntime.indexOf("function onBlur(event)");
 const blurEnd = searchRuntime.indexOf("function onKeyUp(event)", blurStart);
@@ -112,8 +114,18 @@ const toastReasonsSource = toastReasonsStart >= 0 && toastReasonsEnd > toastReas
   : "";
 invariant(
   loadingToastRuntime.includes("reasons.some((reason) => !TOAST_COORDINATION_REASONS.has(String(reason || \"\")))")
-    && !toastReasonsSource.includes('"evaluation-load"'),
-  "Evaluation Load must use the standard Loading toast while its Uniform Loading busy reason is active.",
+    && toastReasonsSource.includes('"evaluation-load"'),
+  "Evaluation Load must stay in Uniform Loading without showing the Loading toast.",
+);
+invariant(
+  discountRateRuntime.includes("let rateTextObserver = null;")
+    && discountRateRuntime.includes("function installRateTextGuard()")
+    && discountRateRuntime.includes('const label = discountResult?.label || "-";')
+    && discountRateRuntime.includes('document.getElementById("evaluationDiscountRate")')
+    && discountRateRuntime.includes('document.getElementById("advancedDiscountRateValue")')
+    && discountRateRuntime.includes("rateTextObserver.observe(element, { childList: true, characterData: true, subtree: true });")
+    && discountRateRuntime.includes("installRateTextGuard();"),
+  "Evaluation Discount Rate must remain '-' until the authoritative live Supabase rate resolves, preventing the legacy fallback rate from painting on refresh.",
 );
 invariant(
   generatedSharedCore.includes("window.__mflWalletPreferencesStartupPromise = Promise.resolve(startupWalletPreferencesPromise);"),
@@ -158,4 +170,4 @@ invariant(
   "Supabase wallet_preferences.table_state must remain the persisted source for the last five Evaluation searches.",
 );
 
-console.log("Evaluation search lifecycle validation passed: typed results persist after blur across all Evaluation URLs, focus is direct-input only, search spellcheck is disabled, Load enters Uniform Loading with the Loading toast immediately, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");
+console.log("Evaluation search lifecycle validation passed: typed results persist after blur, focus/highlight is direct-input only, search spellcheck is disabled, saved Evaluation Load enters Uniform Loading immediately without a toast, Discount Rate stays unresolved until the live Supabase value is ready, result clicks open the selected player Evaluation, and recent five remain Supabase-backed.");
