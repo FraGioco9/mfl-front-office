@@ -60,8 +60,92 @@ export function normalizeEvaluationRouteLifecycle(artifacts) {
     "Evaluation page path keeps explicit saved and shared URLs",
   );
 
+  const routeChunks = { ...(artifacts?.routeChunks || {}) };
+  const evaluationSource = String(routeChunks.evaluation || "");
+  if (!evaluationSource) throw new Error("Cannot normalize Evaluation player hydration without Evaluation route core.");
+
+  let evaluation = replaceRequired(
+    evaluationSource,
+    `  const row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (row) {
+    evaluationSearchInput.value = formatCellValue(row, "name");
+    syncEvaluationSearchClearButton();
+  }
+
+  if (!row || getValue(row, "retirement_years") === 0) {
+    state.evaluationPlayerId = null;
+    syncEvaluationPlayerUrl(null);
+    renderEmptyEvaluationSelection(true);
+    return;
+  }
+
+  renderEvaluationTable(row);`,
+    `  let row = rowByPlayerId(state.evaluationPlayerId);
+
+  if (!row) {
+    const routePlayerId = String(evaluationPlayerIdFromUrl() || state.evaluationPlayerId || "").trim();
+    if (routePlayerId) {
+      await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: routePlayerId,
+      }, 1, { force: true });
+      state.evaluationPlayerId = routePlayerId;
+      row = rowByPlayerId(routePlayerId);
+    }
+  }
+
+  if (row) {
+    evaluationSearchInput.value = formatCellValue(row, "name");
+    syncEvaluationSearchClearButton();
+  }
+
+  if (!row) {
+    renderEmptyEvaluationSelection(false);
+    return;
+  }
+
+  if (getValue(row, "retirement_years") === 0) {
+    state.evaluationPlayerId = null;
+    syncEvaluationPlayerUrl(null);
+    renderEmptyEvaluationSelection(true);
+    return;
+  }
+
+  renderEvaluationTable(row);`,
+    "Evaluation refresh hydrates its route player before deciding the selection is invalid",
+  );
+
+  evaluation = replaceRequired(
+    evaluation,
+    `    const data = await response.json();
+    state.evaluationShareId = id;
+    applySharedEvaluationPayload(data.payload);`,
+    `    const data = await response.json();
+    const payloadPlayerId = String(data?.payload?.playerId || playerId || "").trim();
+    if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
+      const playerPayload = await requestIncrementalRoute({
+        pageName: "evaluation",
+        scope: "evaluation",
+        view: "attributes",
+        access: currentDataAccess("evaluation"),
+        playerId: payloadPlayerId,
+      }, 1, { force: true });
+      if (!playerPayload) return;
+    }
+    state.evaluationShareId = id;
+    applySharedEvaluationPayload(data.payload);`,
+    "Shared Evaluation hydrates the same player row before using the standard table renderer",
+  );
+
+  routeChunks.evaluation = evaluation;
+
   return Object.freeze({
     ...artifacts,
     core: normalizedCore,
+    routeChunks: Object.freeze(routeChunks),
   });
 }
