@@ -36,6 +36,16 @@ async function openSavedEvaluationsModal() {
   }
 }`;
 
+const EVALUATION_LOAD_BUTTON_BINDING = `if (evaluationLoadButton) {
+  evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);
+}`;
+const EVALUATION_LOAD_BUTTON_BINDING_WITH_BLUR = `if (evaluationLoadButton) {
+  evaluationLoadButton.addEventListener("click", () => {
+    clearEvaluationSearchFocus();
+    void openSavedEvaluationsModal();
+  });
+}`;
+
 const EVALUATION_CREATE_SAVED_START = `async function createSavedEvaluation() {`;
 const EVALUATION_CREATE_SAVED_START_WITH_CACHE = `function savedEvaluationCacheWallet() {
   return normalizeWalletAddress(state.linkedWalletAddress).toLowerCase();
@@ -63,10 +73,13 @@ function savedEvaluationPayloadCache() {
 function rememberSavedEvaluationCacheEntry(entry) {
   const id = String(entry?.id || "").trim();
   if (!id || !entry?.payload) return null;
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
   const normalizedEntry = {
     ...entry,
     id,
-    playerId: String(entry?.playerId || entry?.payload?.playerId || "").trim(),
+    playerId,
+    playerName: String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),
   };
   savedEvaluationPayloadCache()[id] = normalizedEntry;
   return normalizedEntry;
@@ -86,9 +99,10 @@ function cachedSavedEvaluationEntry(savedId) {
 
 function rememberSavedEvaluationList(entries) {
   ensureSavedEvaluationCacheWallet();
-  const list = Array.isArray(entries) ? entries : [];
+  const list = Array.isArray(entries)
+    ? entries.map((entry) => rememberSavedEvaluationCacheEntry(entry) || entry)
+    : [];
   window.__mflSavedEvaluationsSessionCache = list;
-  list.forEach(rememberSavedEvaluationCacheEntry);
   return list;
 }
 
@@ -107,6 +121,35 @@ function invalidateSavedEvaluationCache() {
 
 async function createSavedEvaluation() {`;
 
+const EVALUATION_LOAD_LIST_NAME = `    name.textContent = row ? formatCellValue(row, "name") : \`Player \${playerId}\`;`;
+const EVALUATION_LOAD_LIST_NAME_WITH_CACHE = `    name.textContent = row
+      ? formatCellValue(row, "name")
+      : (String(entry?.playerName || "").trim() || \`Player \${playerId}\`);`;
+
+const EVALUATION_LOAD_LIST_HANDLER = `    const loadEvaluation = () => {
+      clearEvaluationSearchFocus();
+      const savedId = String(entry.id || "").trim();
+      const url = new URL("/evaluation", window.location.origin);
+      url.searchParams.set("player", playerId);
+      url.searchParams.set("saved", savedId);
+      window.history.replaceState({}, "", url.toString());
+      state.evaluationSavedId = savedId;
+      state.evaluationShareId = "";
+      hideModal(evaluationLoadModal);
+      updateEvaluationFooterActions();
+      applySharedEvaluationPayload(entry.payload);
+    };`;
+const EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION = `    const loadEvaluation = async () => {
+      clearEvaluationSearchFocus();
+      const savedId = String(entry.id || "").trim();
+      const url = new URL("/evaluation", window.location.origin);
+      url.searchParams.set("player", playerId);
+      url.searchParams.set("saved", savedId);
+      window.history.replaceState({}, "", url.toString());
+      hideModal(evaluationLoadModal);
+      await loadSavedEvaluation(savedId, playerId);
+    };`;
+
 const EVALUATION_LOAD_MODAL_START = `  showModal(evaluationLoadModal);
   evaluationLoadList.innerHTML = '<p class="evaluationLoadEmpty">Loading saved evaluations...</p>';
   try {`;
@@ -122,8 +165,8 @@ const EVALUATION_LOAD_MODAL_START_WITH_CACHE = `  showModal(evaluationLoadModal)
   try {`;
 
 const EVALUATION_LOAD_RENDER = `    renderSavedEvaluationList(evaluations);`;
-const EVALUATION_LOAD_RENDER_WITH_CACHE = `    rememberSavedEvaluationList(evaluations);
-    renderSavedEvaluationList(evaluations);`;
+const EVALUATION_LOAD_RENDER_WITH_CACHE = `    const rememberedEvaluations = rememberSavedEvaluationList(evaluations);
+    renderSavedEvaluationList(rememberedEvaluations);`;
 
 const EVALUATION_SAVED_LOAD_REQUEST = `  try {
     const requestUrl = new URL("/api/evaluation-save", window.location.origin);
@@ -199,19 +242,25 @@ const EVALUATION_DELETE_SUCCESS_WITH_INVALIDATION = `  if (!response.ok) {
 
 /**
  * Keep Saved Evaluation loading in memory after the first successful fetch.
- * The list cache is scoped to the active wallet, each full payload is reusable
- * by saved-route loading, and successful save/delete mutations invalidate both.
+ * The list cache is scoped to the active wallet, stores stable player identity,
+ * and routes every saved-row selection through the standard hydration owner.
  * @param {{core?: string, routeChunks?: Record<string, string>}} artifacts
  */
 export function normalizeEvaluationLoadLifecycle(artifacts) {
   const source = String(artifacts?.core || "");
   if (!source) throw new Error("Cannot normalize Evaluation Load lifecycle without shared core.");
 
-  const core = replaceRequired(
+  let core = replaceRequired(
     source,
     EVALUATION_LOAD_FACADE,
     EVALUATION_LOAD_FACADE_WITH_BUSY,
     "Evaluation Load enters Uniform Loading only when its wallet-scoped list cache is unavailable",
+  );
+  core = replaceRequired(
+    core,
+    EVALUATION_LOAD_BUTTON_BINDING,
+    EVALUATION_LOAD_BUTTON_BINDING_WITH_BLUR,
+    "Evaluation Load clears search focus before opening saved evaluations",
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
@@ -226,6 +275,18 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
   );
   evaluation = replaceRequired(
     evaluation,
+    EVALUATION_LOAD_LIST_NAME,
+    EVALUATION_LOAD_LIST_NAME_WITH_CACHE,
+    "Cached Saved Evaluation rows keep their player names after page data changes",
+  );
+  evaluation = replaceRequired(
+    evaluation,
+    EVALUATION_LOAD_LIST_HANDLER,
+    EVALUATION_LOAD_LIST_HANDLER_WITH_HYDRATION,
+    "Saved Evaluation list rows use the canonical saved-route hydration path",
+  );
+  evaluation = replaceRequired(
+    evaluation,
     EVALUATION_LOAD_MODAL_START,
     EVALUATION_LOAD_MODAL_START_WITH_CACHE,
     "Evaluation saved-list modal reuses its wallet-scoped session cache",
@@ -234,7 +295,7 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
     evaluation,
     EVALUATION_LOAD_RENDER,
     EVALUATION_LOAD_RENDER_WITH_CACHE,
-    "Evaluation saved-list request populates list and payload caches",
+    "Evaluation saved-list request populates self-contained list and payload caches",
   );
   evaluation = replaceRequired(
     evaluation,
