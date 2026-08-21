@@ -40,6 +40,7 @@ const validators = [
   "validate-club-entry-workflow.mjs",
   "validate-club-refresh-startup.mjs",
   "validate-club-filter-free-runtime.mjs",
+  "validate-club-refresh-player-handoff.mjs",
   "validate-club-route-core.mjs",
   "validate-club-title-loading.mjs",
   "validate-settings-route-core.mjs",
