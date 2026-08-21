@@ -22,15 +22,22 @@ const EVALUATION_CLEAR_SEARCH_WITH_SELECTION = `function clearEvaluationSearch()
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-  evaluationSearchInput.focus({ preventScroll: true });
-  evaluationSearchInput.select();
+
+  const activateEvaluationSearch = () => {
+    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
+    evaluationSearchInput.focus({ preventScroll: true });
+    evaluationSearchInput.select();
+  };
+  activateEvaluationSearch();
+  window.requestAnimationFrame(activateEvaluationSearch);
 }`;
 
 /**
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
  * discard a valid result list while text is still present. Clearing the search
- * returns focus and selection to the input so typing can resume immediately.
+ * returns focus and selection to the input both immediately and after route sync
+ * so the search remains active and typing can resume immediately.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
@@ -51,7 +58,7 @@ export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
     normalizedEvaluation,
     EVALUATION_CLEAR_SEARCH,
     EVALUATION_CLEAR_SEARCH_WITH_SELECTION,
-    "Evaluation clear returns selection to the search input",
+    "Evaluation clear keeps the search input active after route reset",
   );
 
   return Object.freeze({
