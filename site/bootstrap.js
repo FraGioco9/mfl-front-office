@@ -410,7 +410,7 @@
       const filterRules = document.getElementById("filterRules");
       if (filterRules instanceof HTMLElement) filterRules.replaceChildren();
       const filterSummary = document.getElementById("filterSummary");
-      if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0 active";
+      if (filterSummary instanceof HTMLElement) filterSummary.textContent = "0";
     }
 
     const pager = document.querySelector("#progressionPage nav.pager");
