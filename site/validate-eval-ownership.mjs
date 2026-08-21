@@ -278,4 +278,4 @@ for (const legacyBridge of [
   invariant(!watchlistRuntime.includes(legacyBridge), `Watchlist route runtime must not restore legacy eval bridge ${legacyBridge}.`);
 }
 
-console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with late Evaluation Supabase hydration retained in shared-core ownership.");
+console.log("Direct core ownership validation passed without table, search, Evaluation, app-entry, or global-function eval bridges, with authoritative late Evaluation Supabase hydration retained in shared-core ownership.");
