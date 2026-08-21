@@ -1823,6 +1823,7 @@ async function setPage(pageName, updateHash = true, options = {}) {
   }
   document.body.dataset.page = pageName;
   updatePageUrl(pageName, { ...options, updateUrl: updateHash && !options.replaceUrl });
+  if (pageName === "evaluation") window.dispatchEvent(new CustomEvent("mfl:evaluation-route-active"));
 
   if (pageRequiresProgressionPermission(pageName) && !hasProgressionAccess()) {
     return showUnauthorizedProgressionRedirect();
