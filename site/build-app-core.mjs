@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
+import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const sourcePath = resolve(siteRoot, "modules/app-core.js");
@@ -32,7 +33,7 @@ async function writeFileIfChanged(path, content) {
 }
 
 const release = JSON.parse(await readFile(releasePath, "utf8"));
-const appConfigRuntime = browserConfigRuntimeSource(release).replace(/\s*$/, "");
+const appConfigRuntime = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release)).replace(/\s*$/, "");
 if (!appConfigRuntime) throw new Error("Canonical app configuration produced an empty browser runtime.");
 const preBootstrapRuntime = `${appConfigRuntime}\nwindow.__mflUniformWidth = Object.freeze({\n  name: "Uniform Width",\n  source: "styles.css",\n  unit: "%",\n});`;
 
