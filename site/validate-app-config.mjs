@@ -35,9 +35,7 @@ function evaluateInitializer(source, name, context = {}) {
 }
 
 function plain(value) {
-  if (Object.prototype.toString.call(value) === "[object Set]") {
-    return Array.from(value, plain);
-  }
+  if (Object.prototype.toString.call(value) === "[object Set]") return Array.from(value, plain);
   if (Array.isArray(value)) return Array.from(value, plain);
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -50,20 +48,10 @@ function plain(value) {
 }
 
 function same(actual, expected, label) {
-  invariant(
-    JSON.stringify(plain(actual)) === JSON.stringify(plain(expected)),
-    `${label} must match modules/app-config.js.`,
-  );
+  invariant(JSON.stringify(plain(actual)) === JSON.stringify(plain(expected)), `${label} must match modules/app-config.js.`);
 }
 
-const [
-  releaseSource,
-  indexSource,
-  bootstrapSource,
-  staticUiSource,
-  routeCoreSource,
-  tableWidthSource,
-] = await Promise.all([
+const [releaseSource, indexSource, bootstrapSource, staticUiSource, routeCoreSource, tableWidthSource] = await Promise.all([
   read("./release.json"),
   read("./index.html"),
   read("./bootstrap.js"),
@@ -75,10 +63,12 @@ const [
 const release = JSON.parse(releaseSource);
 const runtimeSandbox = {
   window: {},
-  location: { pathname: "/", origin: "https://example.test" },
+  location: { pathname: "/", origin: "https://example.test", search: "", hash: "" },
+  history: { replaceState() {} },
   Object,
   Set,
   encodeURIComponent,
+  decodeURIComponent,
 };
 vm.runInNewContext(tableWidthSource, runtimeSandbox);
 const runtimeConfig = runtimeSandbox.window.__mflAppConfig;
@@ -95,17 +85,14 @@ same(runtimeConfig.table.sortableColumns, TABLE_SORTABLE_COLUMNS, "pre-bootstrap
 same(runtimeConfig.table.columnLabels, TABLE_COLUMN_LABELS, "pre-bootstrap column labels");
 same(runtimeConfig.table.columnClasses, TABLE_COLUMN_CLASSES, "pre-bootstrap column classes");
 invariant(runtimeSandbox.window.__mflReleaseVersion === release.version, "Pre-bootstrap release facade must come from release.json.");
-invariant(runtimeSandbox.window.__mflTableViewConfig === runtimeConfig.routes.tableViews, "Legacy table-view facade must point to canonical config.");
+invariant(runtimeSandbox.window.__mflTableViewConfig === runtimeConfig.routes.tableViews, "Table-view facade must point to canonical config.");
 invariant(runtimeSandbox.window.__mflUniformWidth?.name === "Uniform Width", "Uniform Width marker must remain available before bootstrap.");
 
 same(evaluateInitializer(indexSource, "TABLE_VIEW_CONFIG"), TABLE_VIEW_CONFIG, "index first-paint view config");
 same(evaluateInitializer(indexSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "index first-paint view slug map");
 
 const bootstrapRelease = evaluateInitializer(bootstrapSource, "STATIC_RELEASE_VERSION");
-invariant(
-  String(bootstrapRelease) === String(release.version),
-  "bootstrap first-paint release projection must match release.json.",
-);
+invariant(String(bootstrapRelease) === String(release.version), "bootstrap first-paint release projection must match release.json.");
 const bootstrapViewBySlug = plain(evaluateInitializer(bootstrapSource, "TABLE_VIEW_BY_SLUG"));
 same(bootstrapViewBySlug, VIEW_BY_SLUG, "bootstrap first-paint view slug projection");
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_BASE_COLUMNS"), TABLE_BASE_COLUMNS, "bootstrap base columns");
@@ -115,12 +102,12 @@ same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_AGENT_PAGES"), TABLE_JOIN
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_CLASSES"), TABLE_COLUMN_CLASSES, "bootstrap column classes");
 same(evaluateInitializer(bootstrapSource, "FIRST_PAINT_COLUMN_LABELS"), TABLE_COLUMN_LABELS, "bootstrap column labels");
 
-same(evaluateInitializer(staticUiSource, "VIEW_BY_SLUG"), VIEW_BY_SLUG, "static UI view slug projection");
-invariant(
-  staticUiSource.includes("const configured = window.__mflTableViewConfig;"),
-  "Static UI must consume the canonical table-view configuration facade.",
-);
-[
+invariant(staticUiSource.includes("const configured = window.__mflTableViewConfig;"), "Static UI must consume canonical table-view configuration.");
+invariant(staticUiSource.includes("const routeConfig = window.__mflAppConfig?.routes;"), "Static UI must consume canonical route configuration.");
+invariant(staticUiSource.includes("const request = routeConfig.initialRequest(url.pathname);"), "Static UI must classify routes through the canonical initialRequest owner.");
+invariant(staticUiSource.includes('if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");'), "Static UI must paint the shared not-found shell instead of Home.");
+for (const retiredOwner of [
+  "const VIEW_BY_SLUG = Object.freeze(",
   "STATIC_TABLE_BASE_COLUMNS",
   "STATIC_TABLE_STAT_COLUMNS",
   "STATIC_TABLE_CONTRACT_COLUMNS",
@@ -128,20 +115,18 @@ invariant(
   "STATIC_TABLE_SORTABLE_COLUMNS",
   "STATIC_TABLE_COLUMN_LABELS",
   "STATIC_TABLE_COLUMN_CLASSES",
-].forEach((retiredOwner) => {
-  invariant(!staticUiSource.includes(retiredOwner), `Static UI must not restore duplicate config owner: ${retiredOwner}.`);
-});
+  'return document.getElementById("homePage");\n  }',
+]) {
+  invariant(!staticUiSource.includes(retiredOwner), `Static UI must not retain duplicate or fallback route owner: ${retiredOwner}.`);
+}
 
-invariant(
-  routeCoreSource.includes("const routeConfig = runtimeWindow.__mflAppConfig?.routes;"),
-  "Route core must consume the canonical route configuration.",
-);
-[
+invariant(routeCoreSource.includes("const routeConfig = runtimeWindow.__mflAppConfig?.routes;"), "Route core must consume canonical route configuration.");
+for (const legacyOwner of [
   "const ROUTE_CORE_PATHS = Object.freeze(",
   "const TABLE_INFRASTRUCTURE_PAGES = new Set(",
   "const VIEW_BY_SLUG = Object.freeze(",
-].forEach((legacyOwner) => {
+]) {
   invariant(!routeCoreSource.includes(legacyOwner), `Route core must not retain duplicate config owner: ${legacyOwner}`);
-});
+}
 
-console.log("Canonical app configuration validation passed.");
+console.log("Canonical app configuration validation passed with static UI route ownership delegated to app-config.");
