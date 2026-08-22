@@ -44,6 +44,7 @@
           const requestedView = VIEW_BY_SLUG[lastPart] || "";
           const activeView = tableConfig.order.includes(requestedView) ? requestedView : tableConfig.fallback;
           root.dataset.initialTablePage = tablePage;
+          root.dataset.routeTablePage = tablePage;
           root.dataset.initialTableView = activeView;
 
           const routeSelector = `html:not(.mflInitialRouteResolved)[data-initial-table-page="${tablePage}"]`;
@@ -97,12 +98,10 @@
       #progressionPage .viewButton[data-view="attributes"] .clubViewLabel {
         display: none;
       }
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .defaultViewLabel,
-      body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .defaultViewLabel {
+      html[data-route-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .defaultViewLabel {
         display: none;
       }
-      html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel,
-      body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel {
+      html[data-route-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel {
         display: inline;
       }
       #themeButton .themeSunSymbol {

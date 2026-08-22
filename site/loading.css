@@ -49,8 +49,7 @@ html.mflInteractionBusy body::after {
   animation: none;
 }
 
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager),
-body[data-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager) {
+html[data-route-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager) {
   display: none;
 }
 

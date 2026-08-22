@@ -189,10 +189,8 @@ body.filtersOpen .filtersViewButton {
   justify-content: end;
 }
 
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .filtersViewButton,
-html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .viewControlsSeparator,
-body[data-page="club"] #progressionPage .filtersViewButton,
-body[data-page="club"] #progressionPage .viewControlsSeparator {
+html[data-route-table-page="club"] #progressionPage .filtersViewButton,
+html[data-route-table-page="club"] #progressionPage .viewControlsSeparator {
   display: none;
 }
 

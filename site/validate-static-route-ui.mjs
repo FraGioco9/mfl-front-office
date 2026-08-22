@@ -59,7 +59,10 @@ includes(staticUi, "button.style.order = String(orderIndex + 1);", "Visible view
 includes(staticUi, 'switcher.style.order = "100";', "The Watchlist switcher must remain after the ordered view buttons without DOM reinsertion.");
 excludes(staticUi, "container.insertBefore(", "Hydrated route chrome must not detach and reinsert already-painted view buttons.");
 includes(indexHtml, '<span class="defaultViewLabel">Attributes</span><span class="clubViewLabel">Squad</span>', "Attributes and Squad must have persistent label nodes instead of runtime text replacement.");
-includes(indexHtml, 'body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel', "Club label visibility must follow route state without replacing the button text node.");
+includes(indexHtml, 'root.dataset.routeTablePage = tablePage;', "First paint must publish the current table route before any Club-specific chrome can render.");
+includes(indexHtml, 'html[data-route-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel', "Club label visibility must use one continuous route-table state instead of switching CSS owners after first paint.");
+includes(staticUi, 'document.documentElement.dataset.routeTablePage = state.page;', "Runtime route chrome must keep the persistent table-route state synchronized during in-site navigation.");
+includes(staticUi, 'delete document.documentElement.dataset.routeTablePage;', "Leaving table routes must clear persistent table-route chrome state.");
 includes(bootstrap, "candidate.style.order = String(orderIndex + 1);", "Bootstrap must preserve view-button DOM attachment and use flex order from first paint.");
 includes(bootstrap, 'switcher.style.order = "100";', "Bootstrap must keep the Watchlist switcher after stable view-button nodes.");
 excludes(bootstrap, "container.insertBefore(", "Bootstrap must never detach and reinsert view buttons during first paint.");

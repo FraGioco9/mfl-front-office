@@ -230,6 +230,8 @@
 
   function syncRouteChrome(urlLike = window.location.href) {
   const state = routeState(urlLike);
+  if (tableViewConfig()[state.page]) document.documentElement.dataset.routeTablePage = state.page;
+  else delete document.documentElement.dataset.routeTablePage;
   const previousPage = lastRoutePage;
   const previousView = lastRouteView;
   const pageChanged = Boolean(previousPage && previousPage !== state.page);

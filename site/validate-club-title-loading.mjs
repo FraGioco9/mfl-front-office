@@ -115,14 +115,19 @@ excludes(
 );
 
 includes(
-  loadingCss,
-  'html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager)',
-  "Raw Club first paint must hide generic table filter chrome before application hydration.",
+  indexHtml,
+  'root.dataset.routeTablePage = tablePage;',
+  "Club first paint must publish one persistent route-table state before its chrome renders.",
 );
 includes(
   loadingCss,
+  'html[data-route-table-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager)',
+  "Club generic table chrome must stay absent under one continuous route state from first paint through hydration.",
+);
+excludes(
+  loadingCss,
   'body[data-page="club"] #progressionPage :is(.quickFilters, .controlsBar, nav.pager)',
-  "Hydrated Club pages must keep generic filter chrome absent for the entire route lifetime.",
+  "Club chrome visibility must not switch from initial-route state to body route state during hydration.",
 );
 
 includes(
