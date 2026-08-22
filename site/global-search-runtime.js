@@ -94,6 +94,11 @@
     results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);
   }
 
+  function syncRecentSearchState() {
+    const sync = Reflect.get(window, "syncRecentSearchStateFromStorage");
+    if (typeof sync === "function") sync();
+  }
+
   function renderEvaluationMessage(message) {
     const results = evaluationResults();
     if (!results) return;
@@ -132,6 +137,8 @@
 
   function renderCurrentResults() {
     try {
+      const input = searchInput();
+      if (input && !input.value.trim()) syncRecentSearchState();
       coreContracts()?.renderGlobalSearchResults?.();
       normalizeSearchResults();
     } catch (error) {
