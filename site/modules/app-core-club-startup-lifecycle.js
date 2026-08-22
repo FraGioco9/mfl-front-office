@@ -37,12 +37,20 @@ const BLOCKING_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
       if (resolvedClubTitle && String(activeClubId) === nextClubId) {
         activeClubTitle = resolvedClubTitle;
       }
+      if (!resolvedClubTitle && clubRows().length === 0) {
+        window.__mflStaticUiRuntime?.showNotFound?.("Club");
+        return;
+      }
 
       state.currentPage = CLUB_PAGE;`;
 
 const ROSTER_OWNED_TITLE_SETTLEMENT = `      if (!dataLoaded) return;
       const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+      if (!loadedClubTitle && clubRows().length === 0) {
+        window.__mflStaticUiRuntime?.showNotFound?.("Club");
+        return;
+      }
 
       state.currentPage = CLUB_PAGE;`;
 
