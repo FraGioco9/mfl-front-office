@@ -41,6 +41,7 @@ includes(parser, 'routeConfig?.normalizeClubView?.(requestedView || "attributes"
 includes(parser, 'if (walletAddress === mflWalletAddress)', "The MFL agent alias must retain its canonical MFL redirect.");
 
 includes(core, "function showRouteMessagePage(title, message, options = {})", "Missing resources and unknown pages must share one route-state surface.");
+includes(core, 'const routeMessagePage = document.getElementById("routeMessagePage");', "Missing-resource rendering must target the dedicated static route-message page.");
 includes(core, 'return showProgressionAccessRequired();', "Progression without permission must keep its requested route and render access state.");
 excludes(core, "showUnauthorizedProgressionRedirect", "The retired Progression-to-Home owner must not exist in generated code.");
 excludes(core, 'history.replaceState({}, "", "/");\n  return setPage("home", false);', "Access denial must not rewrite the URL to Home.");
@@ -74,11 +75,12 @@ includes(trackedConfig, 'return { pageName: "notfound", options: {} };', "Tracke
 includes(trackedClub, 'window.__mflShowRouteMessage?.("Club not found"', "Tracked Club runtime must ship missing-resource handling.");
 
 includes(staticUi, "const request = routeConfig.initialRequest(url.pathname);", "Static UI must consume canonical route classification.");
-includes(staticUi, 'if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");', "Static UI must show the not-found shell before hydration.");
+includes(staticUi, 'if (state.page === "notfound") return document.getElementById("routeMessagePage");', "Static UI must show the dedicated not-found shell before hydration.");
+excludes(staticUi, 'if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");', "Static UI must not reuse the opt-in shell for not-found routes.");
 excludes(staticUi, "const VIEW_BY_SLUG = Object.freeze(", "Static UI must not retain its old duplicate route parser.");
 excludes(staticUi, 'return document.getElementById("homePage");\n  }', "Static UI must not use Home as a generic route-shell fallback.");
 
 new Function(core);
 new Function(player);
 new Function(club);
-console.log("Unified route policy validation passed with shipped runtimes audited against every retired Home-redirect path.");
+console.log("Unified route policy validation passed with shipped runtimes audited against every retired Home-redirect path and the dedicated not-found first-paint shell.");
