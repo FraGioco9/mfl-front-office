@@ -80,10 +80,38 @@ for (const forbiddenOwner of [
   excludes(statsRuntime, forbiddenOwner, `Database Stats renderer must not own route/view navigation via ${forbiddenOwner}.`);
 }
 
-includes(styles, "#databaseStatsPage #databaseStatsCustomFilter {", "Database Stats Custom panel styling must be static.");
+const customMenuSelector = "#databaseStatsPage #databaseStatsCustomFilter {";
+const customMenuStart = styles.indexOf(customMenuSelector);
+const customMenuEnd = styles.indexOf("\n}", customMenuStart);
+const customMenuStyles = customMenuStart >= 0 && customMenuEnd > customMenuStart
+  ? styles.slice(customMenuStart, customMenuEnd + 2)
+  : "";
+
+includes(styles, customMenuSelector, "Database Stats Custom menu styling must be static.");
+for (const expectedStyle of [
+  "display: grid;",
+  "width: 220px;",
+  "padding: 5px;",
+  "border: 1px solid var(--border-strong);",
+  "border-radius: 8px;",
+  "box-shadow: var(--mfl-dropdown-shadow);",
+]) {
+  includes(customMenuStyles, expectedStyle, `Database Stats Custom menu must use the canonical site dropdown style: ${expectedStyle}`);
+}
+includes(
+  styles,
+  "#databaseStatsPage #databaseStatsCustomFilter input:hover:not(:disabled),",
+  "Database Stats Custom range inputs must use the site's normal hover/focus treatment.",
+);
+includes(
+  styles,
+  "#databaseStatsPage #databaseStatsCustomApply {\n  grid-column: 1 / -1;\n  width: 100%;\n  height: 34px;",
+  "Database Stats Custom Apply button must align with the compact menu controls.",
+);
+excludes(styles, "#databaseStatsPage #databaseStatsCustomFilter::before", "Database Stats Custom must not retain the retired tooltip arrow.");
 invariant(
-  !styles.slice(styles.indexOf("#databaseStatsPage #databaseStatsCustomFilter {")).includes("!important"),
-  "Database Stats Custom panel static styling must not depend on !important overrides.",
+  !styles.slice(customMenuStart).includes("!important"),
+  "Database Stats Custom menu static styling must not depend on !important overrides.",
 );
 
 const setPageIndex = coreSource.indexOf("setPage = async function setIncrementalPage(pageName, updateHash = true, options = {}) {");
@@ -95,4 +123,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats single-runtime, static-CSS, and global-navigation validation passed.");
+console.log("Database Stats single-runtime, site-style Custom menu, static-CSS, and global-navigation validation passed.");
