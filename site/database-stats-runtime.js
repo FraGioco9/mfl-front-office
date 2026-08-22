@@ -26,6 +26,7 @@
   let activeFilter = "all";
   let customMin = 0;
   let customMax = 99;
+  let customPanelOpen = false;
   let distributionMode = "overall";
   let customPanelFrame = 0;
 
@@ -49,10 +50,28 @@
     return page.querySelector("#databaseStatsCustomFilter");
   }
 
-  function closeCustomPanel({ restoreFocus = false } = {}) {
+  function syncCustomInputs() {
+    const minInput = page.querySelector("#databaseStatsCustomMin");
+    const maxInput = page.querySelector("#databaseStatsCustomMax");
+    if (minInput instanceof HTMLInputElement) minInput.value = String(customMin);
+    if (maxInput instanceof HTMLInputElement) maxInput.value = String(customMax);
+  }
+
+  function syncFilterButtons() {
+    filterButtons().forEach((button) => {
+      const filterId = String(button.dataset.filter || "");
+      const active = customPanelOpen ? filterId === "custom" : filterId === activeFilter;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  function closeCustomPanel() {
+    customPanelOpen = false;
+    syncCustomInputs();
     const panel = customPanel();
     if (panel instanceof HTMLElement) panel.hidden = true;
-    if (restoreFocus) customButton()?.focus({ preventScroll: true });
+    syncFilterButtons();
   }
 
   function positionCustomPanel() {
@@ -64,7 +83,7 @@
     const buttonRect = button.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const viewportPadding = 12;
-    const gap = 9;
+    const gap = 7;
     let left = buttonRect.left + (buttonRect.width - panelRect.width) / 2;
     left = Math.max(viewportPadding, Math.min(left, window.innerWidth - panelRect.width - viewportPadding));
 
@@ -73,11 +92,9 @@
       ? buttonRect.bottom + gap
       : Math.max(viewportPadding, buttonRect.top - panelRect.height - gap);
 
-    panel.classList.toggle("databaseStatsTooltipAbove", !fitsBelow);
+    panel.classList.toggle("databaseStatsMenuAbove", !fitsBelow);
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
-    const arrowLeft = Math.max(10, Math.min(panelRect.width - 10, buttonRect.left + buttonRect.width / 2 - left));
-    panel.style.setProperty("--database-stats-arrow-left", `${Math.round(arrowLeft)}px`);
   }
 
   function scheduleCustomPanel() {
@@ -92,17 +109,21 @@
       button.dataset.filter = filter[0];
       if (button.textContent !== filter[1]) button.textContent = filter[1];
       button.addEventListener("click", () => {
-        activeFilter = filter[0];
-        syncFilterControls();
-        renderStats();
-        if (activeFilter === "custom") {
+        if (filter[0] === "custom") {
+          customPanelOpen = true;
+          syncFilterControls();
           requestAnimationFrame(() => {
             scheduleCustomPanel();
             customPanel()?.querySelector("input")?.focus({ preventScroll: true });
           });
-        } else {
-          closeCustomPanel();
+          return;
         }
+
+        customPanelOpen = false;
+        syncCustomInputs();
+        activeFilter = filter[0];
+        syncFilterControls();
+        renderStats();
       });
     });
 
@@ -118,18 +139,15 @@
         if (event.key === "Enter") applyCustomFilter();
       });
     });
+    syncCustomInputs();
     syncFilterControls();
   }
 
   function syncFilterControls() {
-    filterButtons().forEach((button) => {
-      const active = String(button.dataset.filter || "") === activeFilter;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    });
+    syncFilterButtons();
     const custom = customPanel();
     if (custom instanceof HTMLElement) {
-      custom.hidden = activeFilter !== "custom";
+      custom.hidden = !customPanelOpen;
       if (!custom.hidden) scheduleCustomPanel();
     }
   }
@@ -138,6 +156,15 @@
     if (activeFilter === "custom") return { min: customMin, max: customMax };
     const filter = FILTERS.find(([id]) => id === activeFilter) || FILTERS[0];
     return { min: filter[2], max: filter[3] };
+  }
+
+  function effectiveFilterForRange(minimum, maximum) {
+    const preset = FILTERS.find(([id, , min, max]) => (
+      id !== "custom"
+      && minimum === (min ?? 0)
+      && maximum === (max ?? 99)
+    ));
+    return preset?.[0] || "custom";
   }
 
   function applyCustomFilter() {
@@ -150,14 +177,22 @@
     minimum = Math.max(0, Math.min(99, Math.trunc(minimum)));
     maximum = Math.max(0, Math.min(99, Math.trunc(maximum)));
     if (minimum > maximum) [minimum, maximum] = [maximum, minimum];
+
+    const previousFilter = activeFilter;
+    const previousMin = customMin;
+    const previousMax = customMax;
+    const nextFilter = effectiveFilterForRange(minimum, maximum);
+    const effectiveFilterChanged = nextFilter !== previousFilter
+      || (nextFilter === "custom" && (minimum !== previousMin || maximum !== previousMax));
+
     customMin = minimum;
     customMax = maximum;
     if (minInput instanceof HTMLInputElement) minInput.value = String(minimum);
     if (maxInput instanceof HTMLInputElement) maxInput.value = String(maximum);
-    activeFilter = "custom";
+    activeFilter = nextFilter;
+    customPanelOpen = false;
     syncFilterControls();
-    renderStats();
-    closeCustomPanel();
+    if (effectiveFilterChanged) renderStats();
   }
 
   function retirementYears(group) {
@@ -340,7 +375,7 @@
     if (event.key !== "Escape") return;
     const panel = customPanel();
     if (!(panel instanceof HTMLElement) || panel.hidden) return;
-    closeCustomPanel({ restoreFocus: true });
+    closeCustomPanel();
   }
 
   function destroy() {
