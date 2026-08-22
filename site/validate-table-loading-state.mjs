@@ -52,7 +52,7 @@ for (const required of [
   "let dataLoadingActive = false;",
   "let finalRenderCommitted = false;",
   'if (finalRenderCommitted && loadingSnapshot().dataLoading) return false;',
-  'if (body.dataset.staticLoading === "true" && realRowsPresent && !replaceExisting) return false;',
+  'if (body.dataset.staticLoading === "true" && realRowsPresent) {\n      if (!replaceExisting) return false;\n    }',
   'if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;',
   "function commitFinalRender() {",
   "const loadingStarted = snapshot.dataLoading && !dataLoadingActive;",
