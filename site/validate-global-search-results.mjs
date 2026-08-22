@@ -27,12 +27,16 @@ for (const required of [
   'windowFunction("walletProofHeaders")',
   'fetch("/api/wallet-preferences", {',
   "applySupabaseRecentState(data?.tableState);",
-  'windowFunction("requestDatabaseSearch")',
-  'requestDatabaseSearch("", "all", { force: true })',
   "recent: restoreSupabaseRecentResults,",
 ]) {
   invariant(runtime.includes(required), `Global Search result ownership is missing ${required}`);
 }
+
+invariant(
+  runtime.includes("applySupabaseRecentState(data?.tableState);\n      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;\n\n      renderCurrentResults();")
+    && !runtime.includes('requestDatabaseSearch("", "all", { force: true })'),
+  "Successful Supabase recent results must render directly without a second empty database search that can replace them with an error state.",
+);
 
 invariant(
   runtime.includes('const hidden = !input.value.trim();')
@@ -80,4 +84,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search loads five Supabase recent searches when empty, caps typed results at 10, and only shows clear while typed.");
+console.log("Global Search keeps five Supabase recent searches visible when empty, caps typed results at 10, and only shows clear while typed.");
