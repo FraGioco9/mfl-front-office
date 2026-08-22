@@ -1187,6 +1187,7 @@ let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
   evaluationSearchInput.blur();
+  if (document.activeElement === evaluationLoadButton) evaluationLoadButton.blur();
   const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
     && activeWallet
@@ -6661,6 +6662,12 @@ if (closeEvaluationLoadButton) {
     hideModal(evaluationLoadModal);
   });
 }
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
+  event.preventDefault();
+  hideEvaluationLoadActionTooltip();
+  hideModal(evaluationLoadModal);
+});
 setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
 if (evaluationLoadList) {
   evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });
