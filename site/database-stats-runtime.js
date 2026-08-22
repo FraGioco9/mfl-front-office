@@ -367,7 +367,7 @@
     if (event.key !== "Escape") return;
     const panel = customPanel();
     if (!(panel instanceof HTMLElement) || panel.hidden) return;
-    closeCustomPanel({ restoreFocus: true });
+    closeCustomPanel();
   }
 
   function destroy() {
