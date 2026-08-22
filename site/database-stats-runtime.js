@@ -158,6 +158,15 @@
     return { min: filter[2], max: filter[3] };
   }
 
+  function effectiveFilterForRange(minimum, maximum) {
+    const preset = FILTERS.find(([id, , min, max]) => (
+      id !== "custom"
+      && minimum === (min ?? 0)
+      && maximum === (max ?? 99)
+    ));
+    return preset?.[0] || "custom";
+  }
+
   function applyCustomFilter() {
     const minInput = page.querySelector("#databaseStatsCustomMin");
     const maxInput = page.querySelector("#databaseStatsCustomMax");
@@ -172,7 +181,7 @@
     const previousFilter = activeFilter;
     const previousMin = customMin;
     const previousMax = customMax;
-    const nextFilter = minimum === 0 && maximum === 99 ? "all" : "custom";
+    const nextFilter = effectiveFilterForRange(minimum, maximum);
     const effectiveFilterChanged = nextFilter !== previousFilter
       || (nextFilter === "custom" && (minimum !== previousMin || maximum !== previousMax));
 
