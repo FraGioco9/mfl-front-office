@@ -82,6 +82,54 @@ html body > #appShell > main {
   background: transparent;
 }
 
+/*
+ * Customizable select pickers are separate top-layer scrolling surfaces rather
+ * than normal elements, so explicitly give them the exact same global scrollbar.
+ */
+@supports selector(select::picker(select)::-webkit-scrollbar) {
+  select::picker(select)::-webkit-scrollbar {
+    width: var(--mfl-scrollbar-size);
+    height: var(--mfl-scrollbar-size);
+    background: transparent;
+  }
+
+  select::picker(select)::-webkit-scrollbar-track,
+  select::picker(select)::-webkit-scrollbar-track-piece,
+  select::picker(select)::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  select::picker(select)::-webkit-scrollbar-thumb {
+    min-width: 28px;
+    min-height: 28px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--mfl-scrollbar-thumb);
+    background-clip: padding-box;
+  }
+
+  select::picker(select)::-webkit-scrollbar-thumb:hover {
+    background: var(--mfl-scrollbar-thumb-hover);
+    background-clip: padding-box;
+  }
+
+  select::picker(select)::-webkit-scrollbar-thumb:active {
+    background: var(--mfl-scrollbar-thumb-active);
+    background-clip: padding-box;
+  }
+
+  select::picker(select)::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+    min-width: 0;
+    min-height: 0;
+    max-width: 0;
+    max-height: 0;
+    background: transparent;
+  }
+}
+
 #sidebar::-webkit-scrollbar,
 .views::-webkit-scrollbar,
 .playerAttributeViews::-webkit-scrollbar {
