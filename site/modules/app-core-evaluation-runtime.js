@@ -309,13 +309,21 @@ function rememberSavedEvaluationCacheEntry(entry) {
   if (!id || !entry?.payload) return null;
   const playerId = String(entry?.playerId || entry?.payload?.playerId || "").trim();
   const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const cache = savedEvaluationPayloadCache();
+  const cachedEntry = cache[id] || null;
+  const computedPresentValue = evaluationPresentValueTotalFromPayload(entry.payload);
   const normalizedEntry = {
     ...entry,
     id,
     playerId,
-    playerName: String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),
+    playerName: String(entry?.playerName || cachedEntry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),
+    presentValue: Number.isFinite(entry?.presentValue)
+      ? entry.presentValue
+      : (Number.isFinite(cachedEntry?.presentValue)
+        ? cachedEntry.presentValue
+        : (Number.isFinite(computedPresentValue) ? computedPresentValue : null)),
   };
-  savedEvaluationPayloadCache()[id] = normalizedEntry;
+  cache[id] = normalizedEntry;
   return normalizedEntry;
 }
 
@@ -446,6 +454,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
       }, 1, { force: true });
       if (!playerPayload) return;
     }
+    data = rememberSavedEvaluationCacheEntry(data) || data;
     state.evaluationSavedId = id;
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
@@ -603,7 +612,9 @@ function renderSavedEvaluationList(rows) {
 
     const value = document.createElement("strong");
     value.className = "evaluationLoadPresentValue";
-    const presentValue = evaluationPresentValueTotalFromPayload(entry.payload);
+    const presentValue = Number.isFinite(entry?.presentValue)
+      ? entry.presentValue
+      : evaluationPresentValueTotalFromPayload(entry.payload);
     value.textContent = Number.isFinite(presentValue) ? formatEvaluationCurrency(presentValue) : "-";
 
     const actions = document.createElement("span");
