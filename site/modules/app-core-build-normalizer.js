@@ -79,9 +79,7 @@ function normalizeTableRequestLoadingBoundary(artifacts) {
   const normalizedCore = replaceRequired(
     core,
     "  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);",
-    `  if (["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope)) {
-    window.__mflTableLoadingRuntime?.beginRequest?.();
-  }
+    `  window.__mflTableLoadingRuntime?.beginRequest?.(route.scope);
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);`,
     "uncached table request loading boundary",
