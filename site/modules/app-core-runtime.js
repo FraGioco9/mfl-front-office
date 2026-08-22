@@ -6203,7 +6203,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
-  window.__mflTableLoadingRuntime?.beginRequest?.(route.scope);
+  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
@@ -6255,14 +6255,22 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
   try {
     payload = await requestPromise;
   } catch (error) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
     if (!incrementalRouteRequestIsCurrent(generation)) return null;
     throw error;
   }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+  }
   if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
-  applyIncrementalPayload(route, payload);
-  state.incrementalLastKey = requestKey;
-  state.incrementalLastLoadedAt = Date.now();
-  return payload;
+  try {
+    applyIncrementalPayload(route, payload);
+    state.incrementalLastKey = requestKey;
+    state.incrementalLastLoadedAt = Date.now();
+    return payload;
+  } finally {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+  }
 }
 
 async function withInteractionBusy(callback) { return callback(); }
