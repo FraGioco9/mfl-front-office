@@ -318,7 +318,8 @@ body[data-page="club"] #progressionPage .viewControlsSeparator {
   box-shadow: none;
 }
 
-#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton {
+#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,
+#playerSearchInput:placeholder-shown + .playerSearchClearButton {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
