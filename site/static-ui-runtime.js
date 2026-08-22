@@ -106,10 +106,6 @@
       button.hidden = orderIndex < 0;
       if (orderIndex >= 0) button.style.order = String(orderIndex + 1);
       else button.style.removeProperty("order");
-      if (buttonView === "attributes" && button instanceof HTMLButtonElement) {
-        const label = page === "club" ? "Squad" : "Attributes";
-        if (button.textContent !== label) button.textContent = label;
-      }
     });
 
     const switcher = document.getElementById("watchlistSwitcher");

@@ -58,9 +58,13 @@ includes(staticUi, "const orderIndex = config.order.indexOf(buttonView);", "View
 includes(staticUi, "button.style.order = String(orderIndex + 1);", "Visible view buttons must keep stable DOM nodes while flex order represents the route order.");
 includes(staticUi, 'switcher.style.order = "100";', "The Watchlist switcher must remain after the ordered view buttons without DOM reinsertion.");
 excludes(staticUi, "container.insertBefore(", "Hydrated route chrome must not detach and reinsert already-painted view buttons.");
-includes(staticUi, 'const label = page === "club" ? "Squad" : "Attributes";', "Club Squad must resolve to the canonical real button label.");
-includes(staticUi, "if (button.textContent !== label) button.textContent = label;", "Hydrated route chrome must preserve an already-correct view-button text node instead of replacing it.");
-excludes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Hydration must not unconditionally replace the shared Attributes/Squad text node.");
+includes(indexHtml, '<span class="defaultViewLabel">Attributes</span><span class="clubViewLabel">Squad</span>', "Attributes and Squad must have persistent label nodes instead of runtime text replacement.");
+includes(indexHtml, 'body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel', "Club label visibility must follow route state without replacing the button text node.");
+includes(bootstrap, "candidate.style.order = String(orderIndex + 1);", "Bootstrap must preserve view-button DOM attachment and use flex order from first paint.");
+includes(bootstrap, 'switcher.style.order = "100";', "Bootstrap must keep the Watchlist switcher after stable view-button nodes.");
+excludes(bootstrap, "container.insertBefore(", "Bootstrap must never detach and reinsert view buttons during first paint.");
+excludes(bootstrap, "candidate.textContent", "Bootstrap must never replace a view-button label during first paint.");
+excludes(staticUi, "button.textContent", "Hydrated route chrome must never replace a view-button label.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must reuse passive route chrome and its global tooltip cleanup API.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");

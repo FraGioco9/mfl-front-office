@@ -357,24 +357,17 @@
     const container = document.querySelector("#progressionPage .views");
     if (!(container instanceof HTMLElement)) return;
 
-    const buttons = new Map();
     container.querySelectorAll(":scope > .viewButton[data-view]").forEach((candidate) => {
       if (!(candidate instanceof HTMLElement)) return;
       const buttonView = String(candidate.dataset.view || "");
-      buttons.set(buttonView, candidate);
-      candidate.hidden = !config.order.includes(buttonView);
-      if (buttonView === "attributes" && candidate instanceof HTMLButtonElement) {
-        candidate.textContent = page === "club" ? "Squad" : "Attributes";
-      }
+      const orderIndex = config.order.indexOf(buttonView);
+      candidate.hidden = orderIndex < 0;
+      if (orderIndex >= 0) candidate.style.order = String(orderIndex + 1);
+      else candidate.style.removeProperty("order");
     });
 
     const switcher = document.getElementById("watchlistSwitcher");
-    config.order.forEach((buttonView) => {
-      const button = buttons.get(buttonView);
-      if (!(button instanceof HTMLElement)) return;
-      button.hidden = false;
-      container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);
-    });
+    if (switcher instanceof HTMLElement) switcher.style.order = "100";
 
     const activeView = config.order.includes(view)
       ? view

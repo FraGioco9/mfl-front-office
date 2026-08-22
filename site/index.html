@@ -94,6 +94,17 @@
       html {
         font-size-adjust: 0.500;
       }
+      #progressionPage .viewButton[data-view="attributes"] .clubViewLabel {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .defaultViewLabel,
+      body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .defaultViewLabel {
+        display: none;
+      }
+      html:not(.mflInitialRouteResolved)[data-initial-table-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel,
+      body[data-page="club"] #progressionPage .viewButton[data-view="attributes"] .clubViewLabel {
+        display: inline;
+      }
       #themeButton .themeSunSymbol {
         display: none;
       }
@@ -282,7 +293,7 @@
           <section class="views" aria-label="Table views">
             <button id="openFiltersButton" class="filtersViewButton" type="button" aria-label="Filters"><svg class="filtersViewIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg><span class="filtersViewLabel">Filters</span><span id="filterSummary" class="filtersViewCount">0</span></button>
             <span id="viewControlsSeparator" class="viewControlsSeparator" aria-hidden="true"></span>
-            <button class="viewButton" type="button" data-view="attributes">Attributes</button>
+            <button class="viewButton" type="button" data-view="attributes"><span class="defaultViewLabel">Attributes</span><span class="clubViewLabel">Squad</span></button>
             <button class="viewButton" type="button" data-view="stats">Stats</button>
             <button class="viewButton" type="button" data-view="next">Next Overall</button>
             <button class="viewButton" type="button" data-view="contracts">Contracts</button>
