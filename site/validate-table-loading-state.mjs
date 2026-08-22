@@ -5,11 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase, appCoreSource, tableRuntime] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, generatedCore, tableRuntime] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
+  read("./modules/app-core-runtime.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -47,6 +49,71 @@ for (const marker of loadingGuardMarkers) {
   invariant(tableRuntime.includes(marker), `Generated table runtime selection-header loading guard is missing ${marker}`);
 }
 
+for (const required of [
+  'const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);',
+  "let nextRequestToken = 0;",
+  "let activeRequestToken = 0;",
+  "function requestActive() {",
+  "function beginRequest(routeScope) {",
+  'const scope = String(routeScope || "").toLowerCase();',
+  "!TABLE_ROUTE_SCOPES.has(scope)",
+  "activeRequestToken = token;",
+  "function finishRequest(token) {",
+  "requestToken !== activeRequestToken",
+  "activeRequestToken = 0;",
+  "if (requestActive()) return false;",
+  "if (snapshot.dataLoading || requestActive()) show({ replaceExisting: true });",
+  "finishRequest,",
+  "requestActive,",
+  'if (body.dataset.staticLoading === "true" && realRowsPresent) return false;',
+]) {
+  invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
+}
+const beginRequestSource = runtime.slice(
+  runtime.indexOf("function beginRequest(routeScope) {"),
+  runtime.indexOf("function finishRequest(", runtime.indexOf("function beginRequest(routeScope) {")),
+);
+invariant(
+  beginRequestSource
+    && !beginRequestSource.includes("tableRouteActive()")
+    && !beginRequestSource.includes("loadingSnapshot().dataLoading"),
+  "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
+);
+
+const requestBoundaryMarker = 'const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;';
+const requestFinishMarker = 'window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);';
+invariant(
+  buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
+    && buildNormalizer.includes(requestBoundaryMarker)
+    && buildNormalizer.includes(requestFinishMarker)
+    && buildNormalizer.includes('if (window.__mflTableLoadingRuntime?.requestActive?.()) return;')
+    && buildNormalizer.includes("const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);")
+    && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);"),
+  "The build must keep loading ownership active from uncached request start through payload application.",
+);
+
+const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);
+const generatedPromiseIndex = generatedCore.indexOf("let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);");
+const generatedApplyIndex = generatedCore.indexOf("applyIncrementalPayload(route, payload);", generatedBoundaryIndex);
+const generatedFinishAfterApplyIndex = generatedCore.indexOf(requestFinishMarker, generatedApplyIndex);
+invariant(
+  generatedBoundaryIndex >= 0
+    && generatedPromiseIndex > generatedBoundaryIndex
+    && generatedApplyIndex > generatedPromiseIndex
+    && generatedFinishAfterApplyIndex > generatedApplyIndex,
+  "Generated shared core must hold the table request token from request acquisition through fresh payload application.",
+);
+
+invariant(
+  tableRuntime.includes("function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;"),
+  "The Table renderer must preserve canonical loading rows while stale state can still be rendered during an active request.",
+);
+invariant(
+  !tableRuntime.includes('document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying')
+    && !tableRuntime.includes("commitFinalRender"),
+  "Table render isolation must be request-token based, not tied to broad global loading or final-render commit flags.",
+);
+
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
     && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
@@ -73,4 +140,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selector stays visually neutral in source and generated runtime, with synchronous first-paint row geometry.");
+console.log("All table-backed routes keep canonical loading rows through the active request and release normal rendering only after fresh payload state is applied.");
