@@ -53,24 +53,27 @@ invariant(
 
 invariant(
   runtime.includes("let recentLoadPromise = null;")
-    && runtime.includes("let recentLoadedForOpen = false;")
-    && runtime.includes("if (options.force) recentLoadedForOpen = false;")
-    && runtime.includes("if (recentLoadedForOpen) {\n      renderCurrentResults();\n      return true;\n    }")
+    && runtime.includes("let recentLoadedForSession = false;")
+    && runtime.includes("if (recentLoadedForSession) {\n      renderCurrentResults();\n      return true;\n    }")
     && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
     && runtime.includes('renderSearchMessage("Loading recent searches…");')
-    && runtime.includes("recentLoadedForOpen = true;\n        renderCurrentResults();")
+    && runtime.includes("recentLoadedForSession = true;\n        renderCurrentResults();")
     && runtime.includes('renderSearchMessage("Could not load recent searches.");')
     && runtime.includes("if (requestSequence === recentSequence) recentLoadPromise = null;")
-    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n      void renderEmptySearchResults({ force: true });")
-    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n    syncClearButton();\n    void renderEmptySearchResults({ force: true });"),
-  "Opening may deduplicate lifecycle loads, but explicitly emptying Global Search must always force a fresh Supabase recent-history read.",
+    && !runtime.includes("recentLoadedForOpen")
+    && !runtime.includes("options.force")
+    && !runtime.includes("renderEmptySearchResults({ force: true })")
+    && runtime.includes("clearRecentRequest();\n      void renderEmptySearchResults();")
+    && runtime.includes("clearRecentRequest();\n    syncClearButton();\n    void renderEmptySearchResults();")
+    && runtime.includes("const input = searchInput();\n    syncClearButton();\n    if (input && !input.value.trim()) void renderEmptySearchResults();"),
+  "Global Search recent history must mirror Evaluation: hydrate Supabase once for the session, prime it at readiness, and restore the same in-memory five instantly whenever the input becomes empty.",
 );
 
 invariant(
   runtime.includes("applySupabaseRecentState(data?.tableState);")
     && !runtime.includes('requestDatabaseSearch("", "all", { force: true })')
     && !runtime.includes("if (hadRenderedResults) renderCurrentResults();"),
-  "Successful Supabase recent results must render directly, and a failed refresh must never fall back to stale locally derived results.",
+  "Successful Supabase recent results must render directly, and failed hydration must never fall back to stale locally derived results.",
 );
 
 invariant(
@@ -91,7 +94,7 @@ invariant(
     && runtime.includes("button.hidden = hidden;")
     && runtime.includes('button.toggleAttribute("hidden", hidden);')
     && runtime.includes('document.addEventListener("click", onClearClick, true);')
-    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest({ resetLoaded: true });\n    syncClearButton();')
+    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest();\n    syncClearButton();')
     && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
     && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
   "Global Search clear control must be visually hidden whenever its input is empty and hide immediately when cleared.",
@@ -138,4 +141,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search uses Supabase-only recent history, refetches the latest five whenever the bar is emptied, caps typed results at 10, and only shows clear while typed.");
+console.log("Global Search uses Supabase-only recent history, hydrates the five once per session like Evaluation, restores them instantly when empty, caps typed results at 10, and only shows clear while typed.");
