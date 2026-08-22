@@ -13,6 +13,7 @@ import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search
 import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
+import { normalizeRoutePolicy } from "./app-core-route-policy.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
@@ -206,7 +207,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
-  return normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
+  const evaluationSavedArtifacts = normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
+  return normalizeRoutePolicy(evaluationSavedArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
