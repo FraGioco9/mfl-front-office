@@ -239,7 +239,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
  * __mflDatabaseStatsRuntime?: { sync?: () => void },
- * __mflGlobalSearchRuntime?: { flush?: () => boolean, focus?: () => void },
+ * __mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void },
  * __mflEvaluationLayoutRuntime?: { sync?: () => void },
  * __mflEvaluationSearchStateRuntime?: { sync?: () => void, restoreEmptyRecentResults?: (force?: boolean) => Promise<boolean>, destroy?: () => void },
  * __mflSelectionStartupResetRuntime?: { rebind?: () => void },
@@ -313,6 +313,7 @@ function installCoreBridges() {
   runtimeWindow.__mflTableLoadingRuntime?.installCoreBridge?.();
   runtimeWindow.__mflInteractionBusy?.installCoreBridge?.();
   runtimeWindow.__mflTableLoadingRuntime?.sync?.();
+  void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
   runtimeWindow.__mflGlobalSearchRuntime?.flush?.();
   installClubRouteRuntimeGate();
 }
@@ -453,6 +454,8 @@ async function start() {
   if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
   }
+
+  await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));

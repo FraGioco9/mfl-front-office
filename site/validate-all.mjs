@@ -8,6 +8,8 @@ const validationTextPreload = pathToFileURL(resolve(siteRoot, "validate-text-rea
 const validators = [
   "validate-text-read-normalization.mjs",
   "validate.mjs",
+  "validate-global-search-results.mjs",
+  "validate-global-search-open-lifecycle.mjs",
   "validate-release-history.mjs",
   "validate-release-runtime-ownership.mjs",
   "validate-app-config.mjs",
