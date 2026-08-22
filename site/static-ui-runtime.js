@@ -151,28 +151,34 @@
     return NOT_FOUND_KINDS.has(value) ? value : "Page";
   }
 
-  function ensureNotFoundStylesheet() {
-    if (document.querySelector('link[data-mfl-not-found-styles="true"]')) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/not-found.css";
-    link.dataset.mflNotFoundStyles = "true";
-    document.head.appendChild(link);
-  }
-
   function ensureNotFoundPage(kind = "Page") {
-    ensureNotFoundStylesheet();
+    const normalizedKind = normalizedNotFoundKind(kind);
     let page = document.getElementById("notFoundPage");
     if (!(page instanceof HTMLElement)) {
       page = document.createElement("section");
       page.id = "notFoundPage";
-      page.className = "pageView notFoundPage";
+      page.className = "pageView homePage";
       page.hidden = true;
-      page.innerHTML = '<div class="notFoundContent"><h2 id="notFoundTitle"></h2><p>The requested link could not be found.</p><a class="notFoundHomeButton" href="/" data-page="home">Go to homepage</a></div>';
+      page.innerHTML = `<div class="homeIntro">
+        <h2 id="notFoundTitle" class="tablePageTitle">Page not found</h2>
+        <p id="notFoundMessage">The requested page could not be found.</p>
+      </div>
+      <div class="homeStats" aria-hidden="true">
+        <div><span>404</span><label>Not found</label></div>
+        <div><span id="notFoundResource">Page</span><label>Resource</label></div>
+      </div>
+      <button id="notFoundHomeButton" class="viewButton" type="button">Go to homepage</button>`;
+      page.querySelector("#notFoundHomeButton")?.addEventListener("click", () => {
+        window.location.assign("/");
+      });
       document.querySelector("main")?.appendChild(page);
     }
     const title = page.querySelector("#notFoundTitle");
-    if (title instanceof HTMLElement) title.textContent = `${normalizedNotFoundKind(kind)} not found`;
+    if (title instanceof HTMLElement) title.textContent = `${normalizedKind} not found`;
+    const message = page.querySelector("#notFoundMessage");
+    if (message instanceof HTMLElement) message.textContent = `The requested ${normalizedKind.toLowerCase()} could not be found.`;
+    const resource = page.querySelector("#notFoundResource");
+    if (resource instanceof HTMLElement) resource.textContent = normalizedKind;
     return page;
   }
 
