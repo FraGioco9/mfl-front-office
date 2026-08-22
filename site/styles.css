@@ -214,6 +214,14 @@ body[data-page="club"] #progressionPage .rowsField {
   vertical-align: middle;
 }
 
+#progressionPage #tableBody td > :is(a, button, span) {
+  display: inline-flex;
+  align-items: center;
+  height: var(--mfl-table-row-height);
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
 #progressionPage #tableBody .playerNameCell {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
