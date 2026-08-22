@@ -74,6 +74,18 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
     '      openAgentPage(agentWalletAddress, formatCellValue(row, "wallet_name"));',
     "Player Agent name handoff",
   );
+  playerRenderer = replaceRequired(
+    playerRenderer,
+    `  if (!row) {
+    playerDetail.innerHTML = \`<div class="emptyState">Player \${escapeHtml(playerId || "")} was not found.</div>\`;
+    return;
+  }`,
+    `  if (!row) {
+    window.__mflStaticUiRuntime?.showNotFound?.("Player");
+    return;
+  }`,
+    "Player not-found route surface",
+  );
 
   const contractLink = extractRequiredFunctions(
     core,
