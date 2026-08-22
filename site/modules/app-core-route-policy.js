@@ -77,7 +77,7 @@ const CANONICAL_PAGE_TARGET = `function pageTargetFromPath(path) {
     return {
       pageName: "evaluation",
       options: {
-        path: search ? "/evaluation?" + search : "/evaluation",
+        path: search ? \`/evaluation?\${search}\` : "/evaluation",
         ...(playerId ? { playerId } : {}),
         ...(savedId ? { savedId } : {}),
         ...(shareId ? { shareId } : {}),
@@ -252,6 +252,30 @@ export function normalizeRoutePolicy(artifacts) {
 }`,
     CANONICAL_HOME_SHELL,
     "route-state shell owns unknown routes",
+  );
+  core = replaceRequired(
+    core,
+    `    if (optInLockedMessage) {
+      optInLockedMessage.textContent = pageName === "watchlist"
+        ? "In order to use the watchlist, you need to opt in."
+        : pageName === "settings"
+          ? "In order to view settings, you need to opt in."
+          : "In order to see your players, you need to opt in.";
+    }
+    navButtons.forEach((button) => {`,
+    `    if (optInLockedMessage) {
+      optInLockedMessage.textContent = pageName === "watchlist"
+        ? "In order to use the watchlist, you need to opt in."
+        : pageName === "settings"
+          ? "In order to view settings, you need to opt in."
+          : "In order to see your players, you need to opt in.";
+    }
+    const routeMessageHomeButton = document.getElementById("routeMessageHomeButton");
+    if (routeMessageHomeButton) routeMessageHomeButton.hidden = true;
+    const lockedOptInButton = document.getElementById("myPlayersOptInButton");
+    if (lockedOptInButton) lockedOptInButton.hidden = false;
+    navButtons.forEach((button) => {`,
+    "normal opt-in shell clears route-message controls",
   );
   core = replaceRequired(
     core,
