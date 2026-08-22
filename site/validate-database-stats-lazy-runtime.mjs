@@ -78,7 +78,7 @@ includes(
 );
 includes(
   controlInteractions,
-  'control.matches(\'#databaseStatsOverallFilters .mflStatsFilterButton.active[data-filter="custom"]\')',
+  "control.matches('#databaseStatsOverallFilters .mflStatsFilterButton.active[data-filter=\"custom\"]')",
   "The shared interaction owner must allow the active Database Stats Custom button to reopen its menu.",
 );
 const customOpenIndex = statsRuntime.indexOf('if (filter[0] === "custom") {');
