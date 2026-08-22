@@ -24,11 +24,13 @@
   --mfl-table-col-overall: 6%;
   --mfl-table-col-stat: 6%;
   --mfl-table-col-contract-revenue: 9%;
-  --mfl-table-col-contract-club: 16.9995%;
+  --mfl-table-col-contract-club: 17%;
   --mfl-table-col-contract-division: 10%;
   --mfl-table-col-agent: 12%;
-  --mfl-table-col-contract-agent: 12.0005%;
   --mfl-table-col-link: 2.5%;
+  --mfl-table-col-contract-render-club: 16.998%;
+  --mfl-table-col-contract-agent: 12.00045%;
+  --mfl-table-col-contract-link: 2.50155%;
 
   --mfl-evaluation-summary-col-name: 24%;
   --mfl-evaluation-summary-col-position: 10%;
@@ -79,7 +81,9 @@ table :is(th, td) > :is(button, img, input, select, svg) {
 /* Uniform Width is consumed by the player table only through its colgroup.
  * Headers, loading cells, and loaded cells never become width owners. */
 #progressionPage .playerTableScroller table:has(col.col-contract-revenue) {
+  --mfl-table-col-contract-club: var(--mfl-table-col-contract-render-club);
   --mfl-table-col-agent: var(--mfl-table-col-contract-agent);
+  --mfl-table-col-link: var(--mfl-table-col-contract-link);
 }
 
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
