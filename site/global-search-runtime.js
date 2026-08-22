@@ -230,17 +230,14 @@
 
   function applySupabaseRecentState(tableState) {
     const recentItems = normalizedSupabaseRecentItems(tableState);
-    const recentPlayerIds = recentItems
-      .filter((item) => item.startsWith("player:"))
-      .map((item) => item.slice(7));
-    const recentAgentWallets = recentItems
-      .filter((item) => item.startsWith("agent:"))
-      .map((item) => item.slice(6));
-
     windowFunction("restoreRecentSearchState")?.({
       recentSearchItems: recentItems,
-      recentSearchPlayerIds,
-      recentSearchAgentWallets,
+      recentSearchPlayerIds: recentItems
+        .filter((item) => item.startsWith("player:"))
+        .map((item) => item.slice(7)),
+      recentSearchAgentWallets: recentItems
+        .filter((item) => item.startsWith("agent:"))
+        .map((item) => item.slice(6)),
     });
     return recentItems;
   }
