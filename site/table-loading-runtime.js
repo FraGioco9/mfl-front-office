@@ -2,6 +2,7 @@
   "use strict";
 
   const BLANK_ROW_CLASS = "mflTableLoadingRow";
+  const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);
   const controller = window.__mflInteractionBusy;
 
   window.__mflTableLoadingRuntime?.destroy?.();
@@ -81,8 +82,9 @@
     return body;
   }
 
-  function beginRequest() {
-    if (destroyed || !tableRouteActive() || !loadingSnapshot().dataLoading) return false;
+  function beginRequest(routeScope) {
+    const scope = String(routeScope || "").toLowerCase();
+    if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return false;
     const body = prepareLoadingSurface();
     if (!body) return false;
     return primeLoadingRows() && body.dataset.staticLoading === "true";
