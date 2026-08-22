@@ -209,4 +209,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with refresh-stable attached view-button nodes, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with attached refresh-stable view-button nodes, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
