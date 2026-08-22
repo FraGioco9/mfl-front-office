@@ -169,15 +169,15 @@
             ? runtimeWindow.__mflEnsureRouteRuntime("club", { view })
             : Promise.resolve();
           await Promise.all([routeCorePromise, routeRuntimePromise]);
-
-          const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
-          if (typeof routeOwner !== "function") {
-            throw new Error("Club route owner is unavailable.");
-          }
-          return await routeOwner.call(runtimeWindow, normalizedClubId, view);
         } finally {
           if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
         }
+
+        const routeOwner = runtimeWindow.__mflOpenClubPageRoute;
+        if (typeof routeOwner !== "function") {
+          throw new Error("Club route owner is unavailable.");
+        }
+        return routeOwner.call(runtimeWindow, normalizedClubId, view);
       };
 
       const runTransition = runtimeWindow.__mflRunPageTransition;
