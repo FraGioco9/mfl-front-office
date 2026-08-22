@@ -55,15 +55,15 @@ includes(
   "function firstPaintClubIdentity(urlLike = window.location.href) {",
   "Club refresh must resolve cached title identity during first paint.",
 );
-includes(
+excludes(
   bootstrap,
   'if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
-  "Bootstrap must remain the sole owner of the temporary Squad first-paint handoff.",
+  "Club refresh must keep the first-paint Squad presentation active until route readiness instead of repainting the view label during bootstrap hydration.",
 );
 excludes(
   clubCore,
   'document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
-  "Club runtime must not compete with bootstrap for Squad first-paint ownership.",
+  "Club runtime must not compete with first-paint view-label ownership.",
 );
 
 includes(
@@ -217,4 +217,4 @@ invariant(
   "The tracked Club runtime must exactly match the normalized Club artifact.",
 );
 
-console.log("Club filter-free refresh checks passed: shared public entry, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club filter-free refresh checks passed: shared public entry, stable first-paint Squad label, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
