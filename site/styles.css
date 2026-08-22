@@ -54,7 +54,12 @@ table :is(th, td) {
   vertical-align: middle;
 }
 
-table :is(th, td) > :is(a, button, img, input, select, span, svg) {
+table :is(th, td) > :is(a, span) {
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+table :is(th, td) > :is(button, img, input, select, svg) {
   vertical-align: middle;
 }
 
@@ -210,6 +215,30 @@ body[data-page="club"] #progressionPage .rowsField {
 #progressionPage .playerTableScroller td {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
+  line-height: var(--mfl-table-row-height);
+  vertical-align: middle;
+}
+
+#progressionPage #tableBody .tableControlCellContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+  line-height: 1;
+}
+
+#progressionPage #tableBody .tableControlCellContentCentered {
+  justify-content: center;
+}
+
+#progressionPage #tableBody .playerNameCell {
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
+}
+
+#progressionPage #tableBody td > .retirementMarker {
+  vertical-align: middle;
 }
 
 #tableBody > .mflTableLoadingRow,

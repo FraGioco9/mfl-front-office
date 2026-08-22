@@ -17,6 +17,7 @@ import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
 import { splitSettingsApplicationCoreRuntime } from "./app-core-settings-chunk.js";
 import { replaceRequired } from "./app-core-splitter-utils.js";
 import { splitTableApplicationCoreRuntime } from "./app-core-table-chunk.js";
+import { normalizeTableControlCellAlignment } from "./app-core-table-cell-alignment.js";
 import { splitWalletApplicationCoreRuntime } from "./app-core-wallet-chunk.js";
 import { splitWatchlistRouteApplicationCoreRuntime } from "./app-core-watchlist-route-chunk.js";
 
@@ -200,7 +201,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);
-  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
+  const tableControlCellArtifacts = normalizeTableControlCellAlignment(filterSummaryArtifacts);
+  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableControlCellArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
