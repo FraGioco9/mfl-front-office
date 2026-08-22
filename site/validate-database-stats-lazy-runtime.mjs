@@ -116,6 +116,14 @@ const customApplyBlock = customApplyStart >= 0 && customApplyEnd > customApplySt
   : "";
 includes(customApplyBlock, "if (effectiveFilterChanged) renderStats();", "Custom Apply must render only after an effective filter change.");
 excludes(customApplyBlock, "\n    renderStats();", "Custom Apply must not unconditionally rebuild the histogram.");
+const customEscapeStart = statsRuntime.indexOf("function onKeyDown(event) {");
+const customEscapeEnd = statsRuntime.indexOf("\n  function destroy()", customEscapeStart);
+const customEscapeBlock = customEscapeStart >= 0 && customEscapeEnd > customEscapeStart
+  ? statsRuntime.slice(customEscapeStart, customEscapeEnd)
+  : "";
+includes(customEscapeBlock, "closeCustomPanel();", "Escape must close the Database Stats Custom menu directly.");
+excludes(customEscapeBlock, "restoreFocus", "Escape must not restore focus to Custom and trigger a keyboard focus border.");
+excludes(customEscapeBlock, ".focus(", "Escape must not focus any Custom control after closing the menu.");
 excludes(statsRuntime, 'document.createElement("style")', "Database Stats must not inject deterministic Custom-filter CSS at runtime.");
 excludes(statsRuntime, "__mflDatabaseStatsTooltipPortal", "Database Stats must not restore the retired tooltip-portal compatibility owner.");
 excludes(statsRuntime, "databaseStatsTooltipAbove", "Database Stats Custom positioning must not retain tooltip-specific state naming.");
@@ -187,4 +195,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats Custom draft discard, no-op Apply, reopen, All normalization, site-style menu, and global-navigation validation passed.");
+console.log("Database Stats Custom Escape focus, draft discard, no-op Apply, reopen, All normalization, site-style menu, and global-navigation validation passed.");
