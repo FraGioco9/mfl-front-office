@@ -1,9 +1,12 @@
 (() => {
   "use strict";
 
+  const SAVED_EVALUATIONS_LOADING_REASON = "evaluation-load";
+
   window.__mflEvaluationLayoutRuntime?.destroy?.();
 
   let destroyed = false;
+  let suppressNextIdleSelection = false;
 
   function evaluationActive() {
     return /^\/evaluation\/?$/i.test(location.pathname);
@@ -30,7 +33,18 @@
   }
 
   function onLoadingState(event) {
-    selectEmptySearchAfterLoading(event?.detail);
+    const snapshot = event?.detail;
+    if (snapshot?.busy) {
+      if (Array.isArray(snapshot.reasons) && snapshot.reasons.includes(SAVED_EVALUATIONS_LOADING_REASON)) {
+        suppressNextIdleSelection = true;
+      }
+      return;
+    }
+    if (suppressNextIdleSelection) {
+      suppressNextIdleSelection = false;
+      return;
+    }
+    selectEmptySearchAfterLoading(snapshot);
   }
 
   function onPointerDown(event) {
