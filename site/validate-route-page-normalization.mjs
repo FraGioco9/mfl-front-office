@@ -59,6 +59,23 @@ for (const [options, expected] of [
 }
 invariant(routeConfig.normalizeView() === "", "Missing route view options must normalize to an empty view.");
 
+for (const [path, expectedKind] of [
+  ["/clubs/123/unknown", "Club"],
+  ["/club", "Club"],
+  ["/players/42/contracts", "Player"],
+  ["/players", "Player"],
+  ["/agents", "Agent"],
+  ["/agents/0xabc/unknown", "Agent"],
+  ["/watchlist/example/unknown", "Watchlist"],
+  ["/database/stats/more", "Page"],
+  ["/unknown", "Page"],
+]) {
+  invariant(
+    routeConfig.notFoundKindForPath(path) === expectedKind,
+    `${path} must resolve the not-found resource label ${expectedKind}.`,
+  );
+}
+
 for (const [page, view, expectedView, expectedPath] of [
   ["database", "", "attributes", "/database/attributes"],
   ["database", "contracts", "contracts", "/database/contracts"],
@@ -164,58 +181,62 @@ for (const [path, expectedReplacement] of [
   ["/clubs/123", "/clubs/123/squad?keep=1#route"],
   ["/clubs/123/attributes", "/clubs/123/squad?keep=1#route"],
   ["/club/123/current", "/clubs/123/current-season?keep=1#route"],
-  ["/clubs/123/unknown", "/?keep=1#route"],
-  ["/database/stats/more", "/?keep=1#route"],
-  ["/database//stats", "/?keep=1#route"],
-  ["/players/42/contracts", "/?keep=1#route"],
-  ["/unknown", "/?keep=1#route"],
+  ["/clubs/123/unknown", ""],
+  ["/database/stats/more", ""],
+  ["/database//stats", ""],
+  ["/players/42/contracts", ""],
+  ["/unknown", ""],
 ]) {
   invariant(
     firstRuntimePath(path) === expectedReplacement,
-    `${path} must ${expectedReplacement ? `canonicalize before loading to ${expectedReplacement}` : "already be canonical before loading"}.`,
+    `${path} must ${expectedReplacement ? `canonicalize before loading to ${expectedReplacement}` : "keep its route URL before loading"}.`,
   );
 }
 
 const routeCases = [
-  ["/", "home", "", "/"],
-  ["/home", "home", "", "/"],
-  ["/evaluation", "evaluation", "", "/evaluation"],
-  ["/evaluation/", "evaluation", "", "/evaluation"],
-  ["/evaluation/player", "home", "", "/"],
-  ["/database", "database", "attributes", "/database/attributes"],
-  ["/database/contracts", "database", "contracts", "/database/contracts"],
-  ["/database/stats", "database", "stats", "/database/stats"],
-  ["/DATABASE/STATS", "database", "stats", "/database/stats"],
-  ["/database/stats/more", "home", "", "/"],
-  ["/database//stats", "home", "", "/"],
-  ["/mfl", "mfl", "attributes", "/mfl/attributes"],
-  ["/mfl/stats", "mfl", "stats", "/mfl/stats"],
-  ["/progression", "progression", "current", "/progression/current-season"],
-  ["/progression/all-time", "progression", "all", "/progression/all-time"],
-  ["/watchlist", "watchlist", "current", "/watchlist/current-season"],
-  ["/watchlist/example", "watchlist", "current", "/watchlist/example/current-season"],
-  ["/watchlist/example/current-season", "watchlist", "current", "/watchlist/example/current-season"],
-  ["/my-players", "myplayers", "attributes", "/my-players/attributes"],
-  ["/my-players/all-time", "myplayers", "all", "/my-players/all-time"],
-  ["/agents/0xabc", "agents", "attributes", "/agents/0xabc/attributes"],
-  ["/agents/0xabc/next-overall", "agents", "next", "/agents/0xabc/next-overall"],
-  ["/agents/0xabc/all-time", "agents", "all", "/agents/0xabc/all-time"],
-  ["/agents/0xff8d2bbed8164db0/contracts", "mfl", "attributes", "/mfl/attributes"],
-  ["/clubs/123", "club", "attributes", "/clubs/123/squad"],
-  ["/clubs/123/attributes", "club", "attributes", "/clubs/123/squad"],
-  ["/clubs/123/squad", "club", "attributes", "/clubs/123/squad"],
-  ["/clubs/123/current", "club", "current", "/clubs/123/current-season"],
-  ["/club/123/contracts", "club", "contracts", "/clubs/123/contracts"],
-  ["/clubs/123/unknown", "home", "", "/"],
-  ["/players/42", "player", "", "/players/42"],
-  ["/players/42/contracts", "home", "", "/"],
-  ["/settings", "settings", "", "/settings"],
-  ["/settings/profile", "home", "", "/"],
-  ["/changelog", "changelog", "", "/changelog"],
-  ["/changelog/1", "home", "", "/"],
-  ["/unknown", "home", "", "/"],
+  ["/", "home", "", "/", ""],
+  ["/home", "home", "", "/", ""],
+  ["/evaluation", "evaluation", "", "/evaluation", ""],
+  ["/evaluation/", "evaluation", "", "/evaluation", ""],
+  ["/evaluation/player", "notfound", "", "/evaluation/player", "Page"],
+  ["/database", "database", "attributes", "/database/attributes", ""],
+  ["/database/contracts", "database", "contracts", "/database/contracts", ""],
+  ["/database/stats", "database", "stats", "/database/stats", ""],
+  ["/DATABASE/STATS", "database", "stats", "/database/stats", ""],
+  ["/database/stats/more", "notfound", "", "/database/stats/more", "Page"],
+  ["/database//stats", "notfound", "", "/database//stats", "Page"],
+  ["/mfl", "mfl", "attributes", "/mfl/attributes", ""],
+  ["/mfl/stats", "mfl", "stats", "/mfl/stats", ""],
+  ["/progression", "progression", "current", "/progression/current-season", ""],
+  ["/progression/all-time", "progression", "all", "/progression/all-time", ""],
+  ["/watchlist", "watchlist", "current", "/watchlist/current-season", ""],
+  ["/watchlist/example", "watchlist", "current", "/watchlist/example/current-season", ""],
+  ["/watchlist/example/current-season", "watchlist", "current", "/watchlist/example/current-season", ""],
+  ["/watchlist/example/unknown", "notfound", "", "/watchlist/example/unknown", "Watchlist"],
+  ["/my-players", "myplayers", "attributes", "/my-players/attributes", ""],
+  ["/my-players/all-time", "myplayers", "all", "/my-players/all-time", ""],
+  ["/agents/0xabc", "agents", "attributes", "/agents/0xabc/attributes", ""],
+  ["/agents/0xabc/next-overall", "agents", "next", "/agents/0xabc/next-overall", ""],
+  ["/agents/0xabc/all-time", "agents", "all", "/agents/0xabc/all-time", ""],
+  ["/agents/0xabc/unknown", "notfound", "", "/agents/0xabc/unknown", "Agent"],
+  ["/agents/0xff8d2bbed8164db0/contracts", "mfl", "attributes", "/mfl/attributes", ""],
+  ["/clubs/123", "club", "attributes", "/clubs/123/squad", ""],
+  ["/clubs/123/attributes", "club", "attributes", "/clubs/123/squad", ""],
+  ["/clubs/123/squad", "club", "attributes", "/clubs/123/squad", ""],
+  ["/clubs/123/current", "club", "current", "/clubs/123/current-season", ""],
+  ["/club/123/contracts", "club", "contracts", "/clubs/123/contracts", ""],
+  ["/clubs/123/unknown", "notfound", "", "/clubs/123/unknown", "Club"],
+  ["/clubs", "notfound", "", "/clubs", "Club"],
+  ["/players/42", "player", "", "/players/42", ""],
+  ["/players/42/contracts", "notfound", "", "/players/42/contracts", "Player"],
+  ["/players", "notfound", "", "/players", "Player"],
+  ["/settings", "settings", "", "/settings", ""],
+  ["/settings/profile", "notfound", "", "/settings/profile", "Page"],
+  ["/changelog", "changelog", "", "/changelog", ""],
+  ["/changelog/1", "notfound", "", "/changelog/1", "Page"],
+  ["/unknown", "notfound", "", "/unknown", "Page"],
 ];
-for (const [path, expectedPage, expectedView, expectedCanonicalPath] of routeCases) {
+for (const [path, expectedPage, expectedView, expectedCanonicalPath, expectedNotFoundKind] of routeCases) {
   const result = routeConfig.initialRequest(path);
   const normalizedInputPath = path.replace(/\/+$/, "") || "/";
   invariant(result?.pageName === expectedPage, `${path} must classify as ${expectedPage}, received ${result?.pageName}.`);
@@ -224,6 +245,10 @@ for (const [path, expectedPage, expectedView, expectedCanonicalPath] of routeCas
   invariant(
     String(result?.options?.replaceUrl || "") === (normalizedInputPath === expectedCanonicalPath ? "" : expectedCanonicalPath),
     `${path} must expose replacement ownership only when the path is non-canonical.`,
+  );
+  invariant(
+    String(result?.options?.notFoundKind || "") === expectedNotFoundKind,
+    `${path} must expose not-found kind ${expectedNotFoundKind || "none"}.`,
   );
   if (expectedPage === "club") {
     invariant(result?.options?.clubId === "123", `${path} must retain Club ID 123 during startup classification.`);
@@ -236,7 +261,7 @@ for (const configSource of [vercelConfig, productionVercelConfig]) {
   invariant(!Array.isArray(config.redirects) || config.redirects.length === 0, "Vercel must not duplicate application route redirects.");
   invariant(
     config.rewrites?.some((rule) => rule.source === "/(.*)" && rule.destination === "/"),
-    "Vercel must keep the SPA-shell catch-all rewrite for direct canonical and alias URLs.",
+    "Vercel must keep the SPA-shell catch-all rewrite for direct canonical, alias, and not-found URLs.",
   );
 }
 
@@ -299,4 +324,4 @@ const entryClubPathSection = entry.slice(entryClubPathStart, entryClubPathEnd);
 includes(entryClubPathSection, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "app-entry fallback Club navigation must consume canonical route config.");
 excludes(entryClubPathSection, "new Map([", "app-entry must not duplicate Club view-to-slug mappings.");
 
-console.log("Canonical route classification, alias replacement, strict invalid-route fallback, and single-owner SPA routing validation passed.");
+console.log("Canonical route classification, alias replacement, typed not-found routing, and single-owner SPA routing validation passed.");
