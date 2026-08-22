@@ -1707,7 +1707,10 @@ function tableRenderTableOwner() {
     selectionInput.checked = state.selectedPlayerIds.has(String(playerId));
     selectionInput.setAttribute("aria-label", `Select ${formatCellValue(row, "name") || `player ${playerId}`}`);
     selectionInput.dataset.playerId = String(playerId);
-    selectionCell.appendChild(selectionInput);
+    const selectionContent = document.createElement("span");
+    selectionContent.className = "tableControlCellContent tableControlCellContentCentered";
+    selectionContent.appendChild(selectionInput);
+    selectionCell.appendChild(selectionContent);
     tableRow.appendChild(selectionCell);
 
     currentViewColumns().forEach((column) => {
@@ -1747,8 +1750,15 @@ function tableRenderTableOwner() {
       } else if (column === flagColumn) {
         cell.classList.add("flagCell");
         cell.innerHTML = countryFlagHtml(getValue(row, "nationality"));
+        const flagContent = document.createElement("span");
+        flagContent.className = "tableControlCellContent tableControlCellContentCentered";
+        while (cell.firstChild) flagContent.appendChild(cell.firstChild);
+        cell.appendChild(flagContent);
       } else if (column === "player_id") {
-        cell.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+        const idContent = document.createElement("span");
+        idContent.className = "tableControlCellContent";
+        idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
+        cell.appendChild(idContent);
       } else if (column === "age") {
         const ageValue = document.createElement("span");
         ageValue.className = "playerAgeValue";
