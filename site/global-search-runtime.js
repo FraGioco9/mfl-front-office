@@ -294,7 +294,6 @@
 
     const hasWalletProof = windowFunction("hasWalletProof");
     const walletProofHeaders = windowFunction("walletProofHeaders");
-    const requestDatabaseSearch = windowFunction("requestDatabaseSearch");
     if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
 
     const requestSequence = ++recentSequence;
@@ -315,7 +314,6 @@
       if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
 
       applySupabaseRecentState(data?.tableState);
-      if (requestDatabaseSearch) await requestDatabaseSearch("", "all", { force: true });
       if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
 
       renderCurrentResults();
