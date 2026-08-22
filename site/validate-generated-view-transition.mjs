@@ -248,8 +248,12 @@ invariant(
   "The Club route-core gate must enter through the global page transition runner.",
 );
 invariant(
-  clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime")'),
-  "The Club route-core gate must retain lazy route loading after transition ownership is committed.",
+  clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-loading")'),
+  "The Club route-core gate must retain canonical route loading after transition ownership is committed.",
+);
+invariant(
+  !clubGate.includes('runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime")'),
+  "The Club route-core gate must not retain a second lazy route-runtime loading identity.",
 );
 invariant(
   !clubGate.includes("history.pushState") && !clubGate.includes("history.replaceState"),
@@ -262,5 +266,5 @@ invariant(
 );
 
 console.log(
-  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: Club and the other table pages share one view activation, transition, incremental loading, and active-view no-op pipeline.`,
+  `Generated global navigation validated across ${pageTransitionOwner.name}, ${pageLoaderOwner.name}, ${activationOwner.name}, ${incrementalOwner.name}, and ${clubOwner.name}: Club and the other table pages share one view activation, transition, incremental loading, canonical route-loading, and active-view no-op pipeline.`,
 );
