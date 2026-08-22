@@ -324,9 +324,25 @@
   window.__mflInteractionBusy = createInteractionBusyController();
   window.__mflUniformLoadingWorkflow = window.__mflInteractionBusy;
   const startupToken = window.__mflInteractionBusy.begin("startup");
+  let startupInteractionReleased = false;
   let startupFinished = false;
   let startupStateObserver = null;
   let startupFailureRecoveryRunning = false;
+
+  function releaseStartupInteraction() {
+    if (startupInteractionReleased) return false;
+    startupInteractionReleased = true;
+    window.__mflInteractionBusy.end(startupToken);
+    return true;
+  }
+
+  window.__mflMarkInitialRoutePainted = (pageName) => {
+    if (startupFinished || startupInteractionReleased) return false;
+    const page = String(pageName || "").trim().toLowerCase();
+    const initialTablePage = String(document.documentElement.dataset.initialTablePage || "").trim().toLowerCase();
+    if (page !== "club" || initialTablePage !== "club") return false;
+    return releaseStartupInteraction();
+  };
 
   const finishStartup = async ({ skipAppStart = false } = {}) => {
     if (startupFinished) return;
@@ -337,7 +353,7 @@
         await window.__mflAppStartPromise;
       }
     } catch {}
-    window.__mflInteractionBusy.end(startupToken);
+    releaseStartupInteraction();
     document.documentElement.classList.remove("mflSingleRenderPending");
     document.documentElement.classList.add("mflInitialRouteResolved");
   };
