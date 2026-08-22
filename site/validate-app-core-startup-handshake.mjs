@@ -27,6 +27,13 @@ const sourceMarkerIndex = coreSource.indexOf("window.__mflMarkApplicationCoreLoa
 const sourceStartupPromiseIndex = coreSource.indexOf("window.__mflAppStartPromise = (async () => {");
 invariant(sourceMarkerIndex >= 0 && sourceStartupPromiseIndex > sourceMarkerIndex, "Canonical app-core source must place the application-core marker immediately before startup begins.");
 
+includes(entry, "function detachInitialGlobalSearchWarmupFromRoute()", "app-entry must detach shared Global Search warm-up from visible route startup.");
+includes(entry, 'Reflect.get(runtimeWindow, "primeGlobalSearchIndexes")', "The startup bridge must capture the canonical Global Search primer before startApp runs.");
+includes(entry, 'Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", primeGlobalSearchIndexes);', "The detached startup bridge must restore the canonical Global Search primer after its one startup interception.");
+includes(entry, "initialGlobalSearchWarmupPromise = Promise.resolve()", "Detached Global Search startup must continue as tracked background work.");
+includes(entry, "return Promise.resolve();", "The initial route dependency barrier must receive an already-settled Global Search placeholder.");
+includes(entry, "detachInitialGlobalSearchWarmupFromRoute();", "The application-core marker must install the background warm-up bridge before startup begins.");
+
 includes(entry, "function assertApplicationCoreInitialized(sourceLabel)", "app-entry must verify that a loaded core actually initialized.");
 includes(entry, "if (applicationCoreLoaded && runtimeWindow.__mflAppStartPromise) return;", "Core initialization must require both the explicit marker and startup promise.");
 includes(entry, 'assertApplicationCoreInitialized("Prebuilt");', "The prebuilt core must prove initialization after its script load event.");
@@ -44,9 +51,9 @@ includes(generatedCore, "const startupProgressionPermissionPromise = (", "Startu
 includes(generatedCore, "pageRequiresProgressionPermission(initialTarget.pageName)", "Startup must use the canonical Progression permission route classifier.");
 includes(generatedCore, "&& hasWalletOptIn()", "Startup must refresh Progression permission only when a signed wallet proof was restored.");
 includes(generatedCore, "? loadWalletPermissions({ force: true })", "Initial Progression startup must force a live permission revalidation instead of trusting stale cache state.");
-includes(generatedCore, "if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);", "The Progression permission refresh must join the initial startup barrier.");
+includes(generatedCore, "if (startupProgressionPermissionPromise) startupDependencies.push(startupProgressionPermissionPromise);", "The Progression permission refresh must join the initial route barrier.");
 includes(generatedCore, "await Promise.allSettled(startupDependencies);", "Initial route dependencies must settle through the canonical startup barrier.");
-includes(generatedCore, "await showHomeShell(initialTarget.pageName, false, initialTarget.options);", "The initial route must render only after its startup dependency barrier.");
+includes(generatedCore, "await showHomeShell(initialTarget.pageName, false, initialTarget.options);", "The initial route must render only after its route-required startup dependency barrier.");
 
 const markerIndex = generatedCore.indexOf("window.__mflMarkApplicationCoreLoaded?.();");
 const startupPromiseIndex = generatedCore.indexOf("window.__mflAppStartPromise = (async () => {");
@@ -56,4 +63,18 @@ const initialRouteIndex = generatedCore.indexOf("await showHomeShell(initialTarg
 invariant(markerIndex >= 0 && startupPromiseIndex > markerIndex, "The built core must mark initialization before publishing startup work.");
 invariant(permissionRefreshIndex >= 0 && startupBarrierIndex > permissionRefreshIndex && initialRouteIndex > startupBarrierIndex, "Progression permission must settle before the initial route can run its authorization redirect.");
 
-console.log("Prebuilt application-core startup handshake validation passed.");
+const appStartAwaitIndex = entry.indexOf("await runtimeWindow.__mflAppStartPromise;");
+const routePaintIndex = entry.indexOf("await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();");
+const routeReadyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
+const globalSearchPreloadIndex = entry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
+const appReadyIndex = entry.indexOf('window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));');
+invariant(
+  appStartAwaitIndex >= 0
+    && routePaintIndex > appStartAwaitIndex
+    && routeReadyIndex > routePaintIndex
+    && globalSearchPreloadIndex > routeReadyIndex
+    && appReadyIndex > globalSearchPreloadIndex,
+  "Refresh startup must finish its route, paint it, publish route readiness, then finish shared background warm-up before app-wide readiness.",
+);
+
+console.log("Prebuilt application-core startup handshake and route-ready background warm-up validation passed.");
