@@ -50,30 +50,37 @@ for (const marker of loadingGuardMarkers) {
 }
 
 for (const required of [
-  "function beginRequest() {",
-  "!loadingSnapshot().dataLoading",
+  'const TABLE_ROUTE_SCOPES = new Set(["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"]);',
+  "function beginRequest(routeScope) {",
+  'const scope = String(routeScope || "").toLowerCase();',
+  "!TABLE_ROUTE_SCOPES.has(scope)",
   "return primeLoadingRows() && body.dataset.staticLoading === \"true\";",
   "Object.freeze({ beginRequest, show, release, sync, installCoreBridge, destroy })",
   'if (body.dataset.staticLoading === "true" && realRowsPresent) return false;',
 ]) {
   invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
 }
+invariant(
+  !runtime.includes("!loadingSnapshot().dataLoading")
+    && !runtime.includes("destroyed || !tableRouteActive() || !loadingSnapshot().dataLoading"),
+  "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
+);
 
-const requestBoundaryMarker = 'window.__mflTableLoadingRuntime?.beginRequest?.();';
+const requestBoundaryMarker = 'window.__mflTableLoadingRuntime?.beginRequest?.(route.scope);';
 invariant(
   buildNormalizer.includes("function normalizeTableRequestLoadingBoundary(artifacts) {")
-    && buildNormalizer.includes('["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope)')
     && buildNormalizer.includes(requestBoundaryMarker)
+    && !buildNormalizer.includes('window.__mflTableLoadingRuntime?.beginRequest?.();')
     && buildNormalizer.includes("const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);")
     && buildNormalizer.includes("const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);"),
-  "The build must attach stale-row replacement to real uncached table request boundaries.",
+  "The build must pass every uncached request scope to the canonical table-loading boundary.",
 );
 
 const generatedBoundaryIndex = generatedCore.indexOf(requestBoundaryMarker);
 const generatedPromiseIndex = generatedCore.indexOf("let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);");
 invariant(
   generatedBoundaryIndex >= 0 && generatedPromiseIndex > generatedBoundaryIndex,
-  "Generated shared core must re-prime loading rows immediately before an uncached table request is acquired.",
+  "Generated shared core must pass the destination route scope before an uncached request is acquired.",
 );
 
 invariant(
@@ -108,4 +115,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading re-primes stale or empty table content only at real uncached table request boundaries, without gating final row rendering.");
+console.log("All table-backed routes reset stale or empty content at the uncached request boundary without gating final row rendering.");
