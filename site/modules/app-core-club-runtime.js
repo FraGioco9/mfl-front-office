@@ -411,6 +411,7 @@
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
       captureClubView(nextView);
+      window.__mflMarkInitialRoutePainted?.(CLUB_PAGE);
     } finally {
       openingClub = false;
       await finishClubSwitch();
