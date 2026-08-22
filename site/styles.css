@@ -210,6 +210,13 @@ body[data-page="club"] #progressionPage .rowsField {
 #progressionPage .playerTableScroller td {
   height: var(--mfl-table-row-height);
   min-height: var(--mfl-table-row-height);
+  line-height: var(--mfl-table-row-height);
+  vertical-align: middle;
+}
+
+#progressionPage #tableBody .playerNameCell {
+  height: var(--mfl-table-row-height);
+  min-height: var(--mfl-table-row-height);
 }
 
 #tableBody > .mflTableLoadingRow,
