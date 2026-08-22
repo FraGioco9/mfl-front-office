@@ -100,7 +100,8 @@ const CLUB_FINAL_ROSTER_RENDER = `      if (typeof updateViewButtons === "functi
       if (typeof buildHeader === "function") buildHeader();
       if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });
       applyClubPresentation();
-      captureClubView(nextView);`;
+      captureClubView(nextView);
+      window.__mflMarkInitialRoutePainted?.(CLUB_PAGE);`;
 
 const CLUB_APPLY_FILTER_OVERRIDE = `  if (typeof applyFilters === "function") {
     const originalApplyFilters = applyFilters;
