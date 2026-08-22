@@ -52,7 +52,10 @@ includes(staticUi, "window.__mflTableViewConfig", "Runtime route chrome must reu
 includes(staticUi, 'footer.textContent = `MFL Front Office v${version}`;', "Static route chrome must keep the footer synchronized.");
 includes(staticUi, 'button.classList.toggle("active", buttonPage === page);', "Sidebar destination state must be rendered by passive route chrome.");
 includes(staticUi, 'button.classList.toggle("active", String(button.dataset.view || "") === view);', "Active view state must be rendered by passive route chrome.");
-includes(staticUi, "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);", "View order must be represented in DOM order.");
+includes(staticUi, "const orderIndex = config.order.indexOf(buttonView);", "View order must derive from the same canonical route configuration without moving button nodes.");
+includes(staticUi, "button.style.order = String(orderIndex + 1);", "Visible view buttons must keep stable DOM nodes while flex order represents the route order.");
+includes(staticUi, 'switcher.style.order = "100";', "The Watchlist switcher must remain after the ordered view buttons without DOM reinsertion.");
+excludes(staticUi, "container.insertBefore(", "Hydrated route chrome must not detach and reinsert already-painted view buttons.");
 includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must reuse passive route chrome and its global tooltip cleanup API.");
@@ -78,7 +81,7 @@ for (const forbidden of [
 includes(staticUi, 'if (event.key !== "Escape") return;', "Escape must retain global focus cleanup ownership.");
 includes(staticUi, "active.blur();", "Escape must remove the active element focus ring.");
 includes(staticUi, "selection.removeAllRanges();", "Escape must clear highlighted page text.");
-for (const forbidden of ['document.createElement("style")', "!important", "MutationObserver", ".style.order"]) {
+for (const forbidden of ['document.createElement("style")', "!important", "MutationObserver"]) {
   excludes(staticUi, forbidden, `Static route chrome must not use repair ownership via ${forbidden}.`);
 }
 
@@ -206,4 +209,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with stable view-button nodes, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
