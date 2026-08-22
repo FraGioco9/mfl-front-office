@@ -56,7 +56,9 @@ includes(staticUi, "const orderIndex = config.order.indexOf(buttonView);", "View
 includes(staticUi, "button.style.order = String(orderIndex + 1);", "Visible view buttons must keep stable DOM nodes while flex order represents the route order.");
 includes(staticUi, 'switcher.style.order = "100";', "The Watchlist switcher must remain after the ordered view buttons without DOM reinsertion.");
 excludes(staticUi, "container.insertBefore(", "Hydrated route chrome must not detach and reinsert already-painted view buttons.");
-includes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Club Squad must use real button text.");
+includes(staticUi, 'const label = page === "club" ? "Squad" : "Attributes";', "Club Squad must resolve to the canonical real button label.");
+includes(staticUi, "if (button.textContent !== label) button.textContent = label;", "Hydrated route chrome must preserve an already-correct view-button text node instead of replacing it.");
+excludes(staticUi, 'button.textContent = page === "club" ? "Squad" : "Attributes";', "Hydration must not unconditionally replace the shared Attributes/Squad text node.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
 includes(staticUi, "Object.freeze({ sync, syncTableViews, hideTooltips, destroy })", "The application core must reuse passive route chrome and its global tooltip cleanup API.");
 includes(staticUi, "function showRouteShell(state, options = {}) {", "Static route chrome must reveal an already-committed route shell.");
@@ -209,4 +211,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with attached refresh-stable view-button nodes, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with attached refresh-stable view-button nodes and labels, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
