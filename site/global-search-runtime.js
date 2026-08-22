@@ -19,6 +19,7 @@
   let recentSequence = 0;
   let recentLoadPromise = null;
   let recentLoadedForSession = false;
+  let recentLoadFailed = false;
   let canonicalRecentItems = [];
   let canonicalRecentResults = new Map();
   let canonicalRecentPayload = null;
@@ -452,7 +453,7 @@
   function flushPendingEvaluationPayload() {
     if (!pendingEvaluationPayload) return false;
     const input = evaluationInput();
-    if (!input || !pendingEvaluationQuery || normalize(input.value) !== pendingEvaluationQuery) {
+    if (!input || !pendingEvaluationQuery || normalize(input.value) !== pendingQuery) {
       pendingEvaluationPayload = null;
       pendingEvaluationQuery = "";
       return false;
@@ -485,11 +486,7 @@
     const requestSequence = ++recentSequence;
     recentController = new AbortController();
     const activeController = recentController;
-    const input = searchInput();
-    if (input && !input.value.trim()) {
-      syncClearButton();
-      renderSearchMessage("Loading recent searches…");
-    }
+    recentLoadFailed = false;
 
     const loadPromise = (async () => {
       try {
@@ -507,14 +504,12 @@
         if (destroyed || requestSequence !== recentSequence) return false;
 
         recentLoadedForSession = true;
-        const currentInput = searchInput();
-        if (currentInput && !currentInput.value.trim()) publishCanonicalRecentPayload();
+        recentLoadFailed = false;
         return true;
       } catch (error) {
         if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
-          console.warn("Could not load recent Global Search entries from Supabase.", error);
-          const currentInput = searchInput();
-          if (currentInput && !currentInput.value.trim()) renderSearchMessage("Could not load recent searches.");
+          recentLoadFailed = true;
+          console.warn("Could not preload recent Global Search entries from Supabase.", error);
         }
         return false;
       } finally {
@@ -527,6 +522,13 @@
     return loadPromise;
   }
 
+  function preloadRecentResults() {
+    installSupabaseOnlyRecentStorage();
+    clearLocalRecentStateOnce();
+    installCoreSearchMatching();
+    return hydrateSupabaseRecentResults();
+  }
+
   async function restoreSupabaseRecentResults() {
     const input = searchInput();
     if (!input || input.value.trim()) return false;
@@ -534,8 +536,14 @@
     const hasWalletProof = windowFunction("hasWalletProof");
     if (!hasWalletProof?.()) return false;
 
-    if (!recentLoadedForSession) await hydrateSupabaseRecentResults();
-    if (!recentLoadedForSession || input.value.trim()) return false;
+    const pendingRecentLoad = recentLoadPromise;
+    if (!recentLoadedForSession && pendingRecentLoad) await pendingRecentLoad;
+    if (!recentLoadedForSession || input.value.trim()) {
+      if (!input.value.trim()) {
+        renderSearchMessage(recentLoadFailed ? "Could not load recent searches." : "Loading recent searches…");
+      }
+      return false;
+    }
 
     applyRecentItemsToCore();
     if (renderCanonicalRecentResults()) return true;
@@ -714,7 +722,9 @@
       return;
     }
 
-    void hydrateSupabaseRecentResults().then((loaded) => {
+    const pendingRecentLoad = recentLoadPromise;
+    if (!pendingRecentLoad) return;
+    void pendingRecentLoad.then((loaded) => {
       if (loaded) commit();
     });
   }
@@ -797,8 +807,9 @@
     flushPendingEvaluationPayload();
     const input = searchInput();
     syncClearButton();
-    void hydrateSupabaseRecentResults().then(() => {
-      if (input && !input.value.trim()) void renderEmptySearchResults();
+    void preloadRecentResults().then(() => {
+      const modal = searchModal();
+      if (modal && !modal.hidden && input && !input.value.trim()) void renderEmptySearchResults();
     });
   }
 
@@ -839,6 +850,7 @@
 
   window.__mflGlobalSearchRuntime = Object.freeze({
     version: VERSION,
+    preload: preloadRecentResults,
     search: searchDatabase,
     searchEvaluation: searchEvaluationDatabase,
     recent: restoreSupabaseRecentResults,
