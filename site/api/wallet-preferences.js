@@ -284,9 +284,31 @@ function stripWatchlistStateFromTableState(tableState) {
   return sanitized;
 }
 
+function recentSearchItemsFromLegacy(tableState) {
+  const playerIds = normalizeIdList(tableState?.recentSearchPlayerIds, 5);
+  const agentWallets = normalizeIdList(tableState?.recentSearchAgentWallets, 5)
+    .map(normalizeWalletAddress)
+    .filter(Boolean);
+
+  return [
+    ...playerIds.map((playerId) => `player:${playerId}`),
+    ...agentWallets.map((walletAddress) => `agent:${walletAddress}`),
+  ];
+}
+
+function normalizeRecentSearchTableState(tableState) {
+  const sanitized = stripWatchlistStateFromTableState(tableState);
+  return {
+    ...sanitized,
+    recentSearchItems: mergeRecentIds(sanitized.recentSearchItems, recentSearchItemsFromLegacy(sanitized)),
+  };
+}
+
 function mergeTableState(tableState, currentTableState) {
-  const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState) ? stripWatchlistStateFromTableState(tableState) : null;
-  const current = stripWatchlistStateFromTableState(currentTableState);
+  const incoming = tableState && typeof tableState === "object" && !Array.isArray(tableState)
+    ? normalizeRecentSearchTableState(tableState)
+    : null;
+  const current = normalizeRecentSearchTableState(currentTableState);
 
   if (!incoming) {
     return current;
@@ -310,7 +332,7 @@ function preferencesFromRow(row) {
   return {
     watchlists: normalizeWatchlists(row.watchlists),
     playerNotes: normalizePlayerNotes(row.player_notes),
-    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? stripWatchlistStateFromTableState(row.table_state) : null,
+    tableState: row.table_state && typeof row.table_state === "object" && !Array.isArray(row.table_state) ? normalizeRecentSearchTableState(row.table_state) : null,
     evaluationSettings: normalizeEvaluationSettings(row.evaluation_settings),
     settings: normalizeSettings(row.settings),
   };
