@@ -71,10 +71,31 @@ includes(statsRuntime, "function positionCustomPanel() {", "Database Stats domai
 includes(statsRuntime, 'customPanel()?.querySelector("input")?.focus', "Database Stats domain runtime must own Custom filter opening/focus directly.");
 includes(statsRuntime, "let customPanelOpen = false;", "Database Stats Custom menu must track open state separately from the applied filter.");
 includes(statsRuntime, "custom.hidden = !customPanelOpen;", "Database Stats Custom menu visibility must follow its dedicated open state.");
+includes(statsRuntime, "function syncCustomInputs() {", "Database Stats Custom inputs must have a canonical applied-value restore helper.");
 includes(
   statsRuntime,
-  'activeFilter = minimum === 0 && maximum === 99 ? "all" : "custom";',
+  "customPanelOpen = false;\n    syncCustomInputs();\n    const panel = customPanel();",
+  "Closing the Database Stats Custom menu without Apply must discard draft input changes.",
+);
+includes(
+  statsRuntime,
+  "customPanelOpen = false;\n        syncCustomInputs();\n        activeFilter = filter[0];",
+  "Choosing another Overall filter while Custom is open must discard the Custom input draft.",
+);
+includes(
+  statsRuntime,
+  'const nextFilter = minimum === 0 && maximum === 99 ? "all" : "custom";',
   "Applying the full 0-99 Custom range must normalize back to All.",
+);
+includes(
+  statsRuntime,
+  "const effectiveFilterChanged = nextFilter !== previousFilter",
+  "Database Stats Custom Apply must compare the next effective filter with the already-applied filter.",
+);
+includes(
+  statsRuntime,
+  "if (effectiveFilterChanged) renderStats();",
+  "Database Stats Custom Apply must skip the histogram rebuild when the effective filter did not change.",
 );
 includes(
   controlInteractions,
@@ -88,6 +109,13 @@ invariant(
   customOpenIndex >= 0 && customOpenReturnIndex > customOpenIndex && nextStatsRenderIndex > customOpenReturnIndex,
   "Opening Database Stats Custom must return before rendering stats so the histogram does not transition before Apply.",
 );
+const customApplyStart = statsRuntime.indexOf("function applyCustomFilter() {");
+const customApplyEnd = statsRuntime.indexOf("\n  function retirementYears", customApplyStart);
+const customApplyBlock = customApplyStart >= 0 && customApplyEnd > customApplyStart
+  ? statsRuntime.slice(customApplyStart, customApplyEnd)
+  : "";
+includes(customApplyBlock, "if (effectiveFilterChanged) renderStats();", "Custom Apply must render only after an effective filter change.");
+excludes(customApplyBlock, "\n    renderStats();", "Custom Apply must not unconditionally rebuild the histogram.");
 excludes(statsRuntime, 'document.createElement("style")', "Database Stats must not inject deterministic Custom-filter CSS at runtime.");
 excludes(statsRuntime, "__mflDatabaseStatsTooltipPortal", "Database Stats must not restore the retired tooltip-portal compatibility owner.");
 excludes(statsRuntime, "databaseStatsTooltipAbove", "Database Stats Custom positioning must not retain tooltip-specific state naming.");
@@ -159,4 +187,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats Custom reopen, deferred apply, All normalization, site-style menu, and global-navigation validation passed.");
+console.log("Database Stats Custom draft discard, no-op Apply, reopen, All normalization, site-style menu, and global-navigation validation passed.");
