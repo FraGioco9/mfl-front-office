@@ -341,7 +341,7 @@
         return false;
       } finally {
         if (recentController === activeController) recentController = null;
-        if (recentLoadPromise === loadPromise) recentLoadPromise = null;
+        if (requestSequence === recentSequence) recentLoadPromise = null;
       }
     })();
 
