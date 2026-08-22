@@ -62,7 +62,7 @@ includes(
 );
 invariant(
   preBootstrap.indexOf("document.body.dataset.page = initialRoute.pageName;")
-    < preBootstrap.indexOf("const initialPath = cleanPath(location.pathname);"),
+    < preBootstrap.indexOf('const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";'),
   "Initial body route state must be committed before canonical URL replacement or route-specific bootstrap work.",
 );
 
