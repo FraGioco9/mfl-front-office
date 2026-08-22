@@ -206,7 +206,7 @@
     const maxResults = hasQuery ? MAX_GLOBAL_SEARCH_RESULTS : MAX_RECENT_GLOBAL_SEARCH_RESULTS;
     const directResults = Array.from(results.querySelectorAll(":scope > .searchResult"));
     directResults.slice(maxResults).forEach((result) => result.remove());
-    results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);
+    results.classList.remove("filledSearchResults");
   }
 
   function normalizedSupabaseRecentItems(tableState) {
@@ -283,7 +283,7 @@
       .filter((result) => result instanceof HTMLElement);
     if (ordered.length !== canonicalRecentItems.length) return false;
     results.replaceChildren(...ordered);
-    results.classList.toggle("filledSearchResults", ordered.length > 0);
+    results.classList.remove("filledSearchResults");
     syncClearButton();
     return true;
   }
@@ -505,6 +505,7 @@
 
         recentLoadedForSession = true;
         recentLoadFailed = false;
+        publishCanonicalRecentPayload();
         return true;
       } catch (error) {
         if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
@@ -698,6 +699,13 @@
     input.focus({ preventScroll: true });
   }
 
+  function searchResultTarget(event) {
+    const target = event.target instanceof Element
+      ? event.target.closest("#playerSearchResults > .searchResult")
+      : null;
+    return target instanceof HTMLElement ? target : null;
+  }
+
   function flushCanonicalRecentState() {
     const hasWalletProof = windowFunction("hasWalletProof");
     const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");
@@ -705,27 +713,27 @@
     if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();
   }
 
-  function onSearchResultClick(event) {
-    const target = event.target instanceof Element
-      ? event.target.closest("#playerSearchResults > .searchResult")
-      : null;
-    if (!(target instanceof HTMLElement)) return;
+  function onSearchResultClickCapture(event) {
+    const target = searchResultTarget(event);
+    if (!target || !recentLoadedForSession) return;
+    promoteCanonicalRecentResult(target);
+  }
 
-    const commit = () => {
-      if (destroyed) return;
-      promoteCanonicalRecentResult(target);
-      flushCanonicalRecentState();
-    };
+  function onSearchResultClick(event) {
+    const target = searchResultTarget(event);
+    if (!target) return;
 
     if (recentLoadedForSession) {
-      commit();
+      flushCanonicalRecentState();
       return;
     }
 
     const pendingRecentLoad = recentLoadPromise;
     if (!pendingRecentLoad) return;
     void pendingRecentLoad.then((loaded) => {
-      if (loaded) commit();
+      if (destroyed || !loaded) return;
+      promoteCanonicalRecentResult(target);
+      flushCanonicalRecentState();
     });
   }
 
@@ -817,6 +825,7 @@
   clearLocalRecentStateOnce();
   document.addEventListener("input", onInput, true);
   document.addEventListener("click", onClearClick, true);
+  document.addEventListener("click", onSearchResultClickCapture, true);
   document.addEventListener("click", onSearchResultClick);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
@@ -841,6 +850,7 @@
     if (focusSettleTimer) clearTimeout(focusSettleTimer);
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("click", onClearClick, true);
+    document.removeEventListener("click", onSearchResultClickCapture, true);
     document.removeEventListener("click", onSearchResultClick);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
