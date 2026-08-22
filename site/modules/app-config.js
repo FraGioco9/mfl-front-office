@@ -431,7 +431,7 @@ export function browserConfigRuntimeSource(release) {
   window.__mflReleaseVersion = data.release.version;
   window.__mflTableViewConfig = data.routes.tableViews;
 
-  const initialPath = cleanPath(location.pathname);
+  const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";
   const initialRequestTarget = routes.canonicalRequest(initialPath);
   const initialClubLikePath = /^\\/(?:clubs|club)(?:\\/|$)/i.test(initialPath);
   const initialClubRoute = routes.clubRoute(initialPath);
