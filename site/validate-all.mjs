@@ -39,6 +39,7 @@ const validators = [
   "validate-route-core-startup-routing.mjs",
   "validate-route-page-normalization.mjs",
   "validate-route-policy.mjs",
+  "validate-route-first-paint-and-fallbacks.mjs",
   "validate-database-stats-lazy-runtime.mjs",
   "validate-static-route-ui.mjs",
   "validate-mfl-stats-first-paint.mjs",
