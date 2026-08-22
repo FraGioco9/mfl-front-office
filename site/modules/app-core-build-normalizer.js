@@ -111,8 +111,8 @@ function normalizeTableRequestLoadingBoundary(artifacts) {
   }
   if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
     window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
-    return null;
   }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
   try {
     applyIncrementalPayload(route, payload);
     state.incrementalLastKey = requestKey;
