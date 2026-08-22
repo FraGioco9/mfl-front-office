@@ -453,7 +453,7 @@
   function flushPendingEvaluationPayload() {
     if (!pendingEvaluationPayload) return false;
     const input = evaluationInput();
-    if (!input || !pendingEvaluationQuery || normalize(input.value) !== pendingQuery) {
+    if (!input || !pendingEvaluationQuery || normalize(input.value) !== pendingEvaluationQuery) {
       pendingEvaluationPayload = null;
       pendingEvaluationQuery = "";
       return false;
