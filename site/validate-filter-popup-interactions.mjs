@@ -145,7 +145,8 @@ for (const required of [
   'document.body.classList.remove("filtersOpen");',
   "const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);",
   "const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);",
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);",
+  "const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);",
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve direct Filters reset/count/close ownership through ${required}`);
 }
