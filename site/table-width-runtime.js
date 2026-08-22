@@ -11,6 +11,14 @@
   const tablePageSet = new Set(data.routes.tableInfrastructurePages);
   const joinedAgencyPageSet = new Set(data.table.joinedAgencyPages);
   const statColumnSet = new Set(data.table.statColumns);
+  const viewSlugs = Object.freeze({
+    attributes: "attributes",
+    next: "next-overall",
+    contracts: "contracts",
+    current: "current-season",
+    all: "all-time",
+    stats: "stats",
+  });
 
   function normalizePageName(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
@@ -24,10 +32,15 @@
     return String(options?.view || "").trim().toLowerCase();
   }
 
-  function viewOptionsFromSegments(segments) {
-    const slug = String(segments.at(-1) || "").toLowerCase();
-    const view = data.routes.viewBySlug[slug] || "";
-    return view ? { view } : {};
+  function viewSlug(view) {
+    return viewSlugs[String(view || "").trim().toLowerCase()] || viewSlugs.current;
+  }
+
+  function normalizeRouteView(pageName, requestedView = "") {
+    const config = data.routes.tableViews[pageName];
+    if (!config) return "";
+    const normalized = String(requestedView || "").trim().toLowerCase();
+    return config.order.includes(normalized) ? normalized : config.fallback;
   }
 
   function normalizeClubView(view = "attributes") {
@@ -45,16 +58,23 @@
     return "/clubs/" + encodeURIComponent(normalizedClubId) + "/" + slug;
   }
 
+  function decodedRoutePart(value) {
+    try {
+      return decodeURIComponent(String(value || ""));
+    } catch {
+      return String(value || "");
+    }
+  }
+
   function clubRoute(pathname = location.pathname) {
     const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    const match = path.match(/^\/clubs\/([^/]+)\/(squad|contracts|current-season|all-time)$/i);
+    const match = path.match(/^\/(clubs|club)\/([^/]+)(?:\/([^/]+))?$/i);
     if (!match) return null;
 
-    const clubId = decodedRoutePart(match[1]);
+    const clubId = decodedRoutePart(match[2]);
     if (!clubId) return null;
-    const requestedSlug = decodedRoutePart(match[2]).toLowerCase();
-    const view = data.routes.viewBySlug[requestedSlug] || "";
-    if (!data.routes.tableViews.club.order.includes(view)) return null;
+    const requestedView = data.routes.viewBySlug[decodedRoutePart(match[3] || "").toLowerCase()] || "";
+    const view = normalizeClubView(requestedView || "attributes");
     return Object.freeze({
       clubId,
       view,
@@ -62,41 +82,96 @@
     });
   }
 
+  function tableRouteTarget(path, segments, pageName, basePath) {
+    if (segments.length > 3) return null;
+    const requestedView = data.routes.viewBySlug[String(segments[2] || "").toLowerCase()] || "";
+    const view = normalizeRouteView(pageName, requestedView);
+    const canonicalPath = basePath + "/" + viewSlug(view);
+    return {
+      pageName,
+      options: {
+        view,
+        ...(path !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+      },
+    };
+  }
+
   function initialRequest(pathname = location.pathname) {
     const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    if (!path.startsWith("/")) return { pageName: "home", options: {} };
+    if (!path.startsWith("/")) return { pageName: "notfound", options: {} };
+    if (path === "/") return { pageName: "home", options: {} };
 
     const segments = path.split("/");
     const pageSegment = String(segments[1] || "").toLowerCase();
+
     if (pageSegment === "evaluation" && segments.length === 2) return { pageName: "evaluation", options: {} };
     if (pageSegment === "changelog" && segments.length === 2) return { pageName: "changelog", options: {} };
-    if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "mfl") return { pageName: "mfl", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "progression") return { pageName: "progression", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "watchlist") return { pageName: "watchlist", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "my-players") return { pageName: "myplayers", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "agents") return { pageName: "agents", options: viewOptionsFromSegments(segments) };
+    if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
+    if (pageSegment === "players" && segments.length === 3 && segments[2]) {
+      return { pageName: "player", options: { playerId: decodedRoutePart(segments[2]) } };
+    }
+
+    if (["database", "mfl", "progression", "my-players"].includes(pageSegment)) {
+      const pageName = pageSegment === "my-players" ? "myplayers" : pageSegment;
+      const basePath = pageSegment === "my-players" ? "/my-players" : "/" + pageSegment;
+      return tableRouteTarget(path, segments, pageName, basePath) || { pageName: "notfound", options: {} };
+    }
+
+    if (pageSegment === "watchlist" && segments.length <= 4) {
+      const first = decodedRoutePart(segments[2] || "");
+      const second = decodedRoutePart(segments[3] || "");
+      const firstView = data.routes.viewBySlug[first.toLowerCase()] || "";
+      const watchlistId = firstView ? "" : first;
+      const requestedView = firstView || data.routes.viewBySlug[second.toLowerCase()] || "";
+      const view = normalizeRouteView("watchlist", requestedView);
+      const canonicalPath = watchlistId
+        ? "/watchlist/" + encodeURIComponent(watchlistId) + "/" + viewSlug(view)
+        : "/watchlist/" + viewSlug(view);
+      return {
+        pageName: "watchlist",
+        options: {
+          watchlistId,
+          view,
+          ...(path !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        },
+      };
+    }
+
+    if (pageSegment === "agents" && segments.length >= 3 && segments.length <= 4 && segments[2]) {
+      const rawWalletAddress = decodedRoutePart(segments[2]);
+      const walletAddress = rawWalletAddress.startsWith("0x") ? rawWalletAddress : "0x" + rawWalletAddress;
+      const requestedView = data.routes.viewBySlug[String(segments[3] || "").toLowerCase()] || "";
+      const view = normalizeRouteView("agents", requestedView);
+      const canonicalPath = "/agents/" + encodeURIComponent(walletAddress) + "/" + viewSlug(view);
+      return {
+        pageName: "agents",
+        options: {
+          walletAddress,
+          view,
+          ...(path !== canonicalPath ? { replaceUrl: canonicalPath } : {}),
+        },
+      };
+    }
+
     if (pageSegment === "clubs" || pageSegment === "club") {
       const route = clubRoute(path);
-      return route
-        ? { pageName: "club", options: { clubId: route.clubId, view: route.view, path: route.path } }
-        : { pageName: "home", options: {} };
+      if (!route) return { pageName: "notfound", options: {} };
+      return {
+        pageName: "club",
+        options: {
+          clubId: route.clubId,
+          view: route.view,
+          path: route.path,
+          ...(path !== route.path ? { replaceUrl: route.path } : {}),
+        },
+      };
     }
-    if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
-    if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
-    return { pageName: "home", options: {} };
+
+    return { pageName: "notfound", options: {} };
   }
 
   function usesTableInfrastructure(pageName) {
     return tablePageSet.has(normalizePageName(pageName));
-  }
-
-  function decodedRoutePart(value) {
-    try {
-      return decodeURIComponent(String(value || ""));
-    } catch {
-      return String(value || "");
-    }
   }
 
   function displayColumn(page, column) {
@@ -138,14 +213,9 @@
 
   const initialRoute = routes.initialRequest(location.pathname);
   if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
-
-  const initialClubPath = String(location.pathname || "/");
-  const initialClubLikePath = /^\/(?:clubs|club)(?:\/|$)/i.test(initialClubPath);
-  const initialClubRoute = routes.clubRoute(initialClubPath);
-  if (initialClubLikePath && !initialClubRoute) {
-    location.replace("/");
-  } else if (initialClubRoute && initialClubPath !== initialClubRoute.path) {
-    history.replaceState({}, "", initialClubRoute.path + location.search + location.hash);
+  const initialCanonicalPath = String(initialRoute.options?.replaceUrl || initialRoute.options?.path || "");
+  if (initialCanonicalPath && location.pathname !== initialCanonicalPath) {
+    history.replaceState({}, "", initialCanonicalPath + location.search + location.hash);
   }
 })();
 window.__mflUniformWidth = Object.freeze({

@@ -506,7 +506,7 @@ function renderPlayerPageOwner(playerId) {
   const row = rowByPlayerId(playerId);
 
   if (!row) {
-    playerDetail.innerHTML = `<div class="emptyState">Player ${escapeHtml(playerId || "")} was not found.</div>`;
+    window.__mflShowRouteMessage?.("Player not found", "The requested player could not be found.", { pageName: "player" });
     return;
   }
 

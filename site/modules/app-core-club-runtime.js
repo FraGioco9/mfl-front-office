@@ -383,7 +383,14 @@
         : false;
       if (!dataLoaded) return;
       const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
-      if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+      if (loadedClubTitle) {
+        activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
+      } else {
+        void clubTitleReady.then((resolvedTitle) => {
+          if (resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+          window.__mflShowRouteMessage?.("Club not found", "The requested club could not be found.", { pageName: "club" });
+        });
+      }
 
       state.currentPage = CLUB_PAGE;
       state.view = nextView;
@@ -431,22 +438,13 @@
 
 
   window.addEventListener("popstate", () => {
-    const path = normalizedPath();
-    const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
-      return;
-    }
+    const route = clubRoute(normalizedPath());
     if (route) void openClubPage(route.clubId, route.view, false);
   });
 
     function bootClubRoute() {
     const path = normalizedPath();
     const route = clubRoute(path);
-    if (/^\/(?:clubs|club)(?:\/|$)/i.test(path) && !route) {
-      window.location.replace("/");
-      return;
-    }
     if (!route || initialClubRoute) return;
     const canonicalRoute = canonicalClubRoute(route.clubId, route.view);
     if (path !== canonicalRoute) window.history.replaceState({}, "", canonicalRoute);
