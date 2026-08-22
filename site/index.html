@@ -55,12 +55,6 @@
             ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
             `${buttonSelector(activeView)} { border-color: var(--primary); background: var(--primary); color: #ffffff; }`,
           ];
-          if (tablePage === "club") {
-            rules.push(
-              `${buttonSelector("attributes")} { font-size: 0; }`,
-              `${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`,
-            );
-          }
           firstPaintStyle.id = "mflInitialTableViewFirstPaint";
           firstPaintStyle.textContent = rules.join("\n");
           document.head.appendChild(firstPaintStyle);
@@ -647,7 +641,6 @@
           <h2 id="filtersTitle">Filters</h2>
           <button id="closeFiltersButton" class="iconButton popupCloseButton" type="button" aria-label="Close filters"></button>
         </header>
-
         <section class="filterBuilder">
           <div class="addFilterRow">
             <button id="showAddFilterButton" class="iconButton popupAddButton" type="button" aria-label="Add filter"></button>
