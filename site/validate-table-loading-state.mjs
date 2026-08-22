@@ -60,9 +60,14 @@ for (const required of [
 ]) {
   invariant(runtime.includes(required), `Request-bound table loading ownership is missing ${required}`);
 }
+const beginRequestSource = runtime.slice(
+  runtime.indexOf("function beginRequest(routeScope) {"),
+  runtime.indexOf("function show(", runtime.indexOf("function beginRequest(routeScope) {")),
+);
 invariant(
-  !runtime.includes("!loadingSnapshot().dataLoading")
-    && !runtime.includes("destroyed || !tableRouteActive() || !loadingSnapshot().dataLoading"),
+  beginRequestSource
+    && !beginRequestSource.includes("tableRouteActive()")
+    && !beginRequestSource.includes("loadingSnapshot().dataLoading"),
   "An explicit table request must not depend on the previous DOM route or global data-loading flag before resetting stale rows.",
 );
 
