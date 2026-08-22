@@ -5,11 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, bootstrap, stylesBase, appCoreSource, tableRuntime] = await Promise.all([
+const [runtime, bootstrap, stylesBase, appCoreSource, buildNormalizer, tableRuntime] = await Promise.all([
   read("./table-loading-runtime.js"),
   read("./bootstrap.js"),
   read("./styles-base.css"),
   read("./modules/app-core.js"),
+  read("./modules/app-core-build-normalizer.js"),
   read("./modules/app-core-table-runtime.js"),
 ]);
 
@@ -47,6 +48,40 @@ for (const marker of loadingGuardMarkers) {
   invariant(tableRuntime.includes(marker), `Generated table runtime selection-header loading guard is missing ${marker}`);
 }
 
+for (const required of [
+  "let dataLoadingActive = false;",
+  "let finalRenderCommitted = false;",
+  'if (finalRenderCommitted && loadingSnapshot().dataLoading) return false;',
+  'if (body.dataset.staticLoading === "true" && realRowsPresent && !replaceExisting) return false;',
+  'if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;',
+  "function commitFinalRender() {",
+  "const loadingStarted = snapshot.dataLoading && !dataLoadingActive;",
+  "if (loadingStarted) finalRenderCommitted = false;",
+  "if (!finalRenderCommitted) show({ replaceExisting: true });",
+  "Object.freeze({ show, commitFinalRender, release, sync, installCoreBridge, destroy })",
+]) {
+  invariant(runtime.includes(required), `Table loading fresh-payload ownership is missing ${required}`);
+}
+
+const prePayloadRenderGate = 'if (document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying) {';
+for (const required of [
+  "function normalizeTableLoadingRenderLifecycle(artifacts) {",
+  prePayloadRenderGate,
+  'window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true });',
+  'window.__mflTableLoadingRuntime?.commitFinalRender?.();',
+  "const tableLoadingArtifacts = normalizeTableLoadingRenderLifecycle(filterSummaryArtifacts);",
+  "const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableLoadingArtifacts);",
+]) {
+  invariant(buildNormalizer.includes(required), `Build-time table loading lifecycle is missing ${required}`);
+}
+
+invariant(
+  tableRuntime.includes(prePayloadRenderGate)
+    && tableRuntime.includes('window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true });\n    return;')
+    && tableRuntime.includes('emptyState.hidden = pageRows.length > 0;\n  window.__mflTableLoadingRuntime?.commitFinalRender?.();'),
+  "Generated table rendering must keep stale rows and premature empty state behind loading rows until the fresh payload render commits.",
+);
+
 invariant(
   bootstrap.includes('const renderedColumns = Array.from(colGroup?.children || []);')
     && bootstrap.includes('const nameColumnIndex = renderedColumns.findIndex((column) => column.classList.contains("col-name"));')
@@ -73,4 +108,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selector stays visually neutral in source and generated runtime, with synchronous first-paint row geometry.");
+console.log("Table loading keeps stale rows and premature empty state hidden until a fresh incremental payload render commits.");
