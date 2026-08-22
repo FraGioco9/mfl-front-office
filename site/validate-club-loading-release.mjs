@@ -19,15 +19,19 @@ const routeOwnerCall = routeCoreLoader.indexOf("return routeOwner.call(runtimeWi
 invariant(loadClubStart >= 0, "Club navigation must retain its lazy route loader.");
 invariant(runtimeReady > loadClubStart, "Club navigation must await route core/runtime readiness.");
 invariant(runtimeReleased > runtimeReady, "Club route-runtime loading must end after lazy route dependencies are ready.");
-invariant(routeOwnerLookup > runtimeReleased, "Club route-runtime loading must be released before the Club route owner starts rendering/data work.");
+invariant(routeOwnerLookup > runtimeReleased, "Club route-runtime loading must be released before the Club route owner starts its data/render lifecycle.");
 invariant(routeOwnerCall > routeOwnerLookup, "Club navigation must delegate to the Club route owner after route-runtime loading is released.");
 
-const clubDataStart = clubRuntime.indexOf("const loadClubData = async () => {");
-const clubDataRequest = clubRuntime.indexOf("dataPayload = await requestIncrementalRoute(dataRoute, 1);", clubDataStart);
-const clubDataBusy = clubRuntime.indexOf("await withInteractionBusy(loadClubData);", clubDataRequest);
-const clubRender = clubRuntime.indexOf("if (typeof buildHeader === \"function\") buildHeader();", clubDataBusy);
+const clubDataRequest = clubRuntime.indexOf('await window.mflLoadIncrementalRoutePage(CLUB_PAGE, {');
+const staleLoadGuard = clubRuntime.indexOf("if (!dataLoaded) return;", clubDataRequest);
+const clubRender = clubRuntime.indexOf('if (typeof buildHeader === "function") buildHeader();', staleLoadGuard);
+const clubFilterRender = clubRuntime.indexOf('if (typeof applyFilters === "function") applyFilters({ save: false, localOnly: true });', clubRender);
 
-invariant(clubDataStart >= 0, "Club route must retain its dedicated data-load phase.");
-invariant(clubDataRequest > clubDataStart, "Club route must load its player payload inside the dedicated data-load phase.");
-invariant(clubDataBusy > clubDataRequest, "Club player loading must remain wrapped by the Uniform Loading Workflow.");
-invariant(clubRender > clubDataBusy, "Club rendering must begin only after its player data loading phase has completed.");
+invariant(clubDataRequest >= 0, "Club route must load player data through the canonical incremental route loader.");
+invariant(staleLoadGuard > clubDataRequest, "Club route must reject an obsolete/failed incremental load before rendering.");
+invariant(clubRender > staleLoadGuard, "Club header rendering must begin only after the canonical player-data load completes.");
+invariant(clubFilterRender > clubRender, "Club rows must render only after the canonical player-data load completes.");
+invariant(!clubRuntime.includes("await withInteractionBusy(loadClubData);"), "Club must not restore a second private loading owner around its player request.");
+invariant(!clubRuntime.includes("const loadClubData = async () => {"), "Club must keep player loading in the shared incremental route lifecycle.");
+
+console.log("Club route-runtime loading releases before canonical player-data/render ownership begins.");
