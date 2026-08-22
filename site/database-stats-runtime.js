@@ -50,6 +50,13 @@
     return page.querySelector("#databaseStatsCustomFilter");
   }
 
+  function syncCustomInputs() {
+    const minInput = page.querySelector("#databaseStatsCustomMin");
+    const maxInput = page.querySelector("#databaseStatsCustomMax");
+    if (minInput instanceof HTMLInputElement) minInput.value = String(customMin);
+    if (maxInput instanceof HTMLInputElement) maxInput.value = String(customMax);
+  }
+
   function syncFilterButtons() {
     filterButtons().forEach((button) => {
       const filterId = String(button.dataset.filter || "");
@@ -61,6 +68,7 @@
 
   function closeCustomPanel({ restoreFocus = false } = {}) {
     customPanelOpen = false;
+    syncCustomInputs();
     const panel = customPanel();
     if (panel instanceof HTMLElement) panel.hidden = true;
     syncFilterButtons();
@@ -113,6 +121,7 @@
         }
 
         customPanelOpen = false;
+        syncCustomInputs();
         activeFilter = filter[0];
         syncFilterControls();
         renderStats();
@@ -131,6 +140,7 @@
         if (event.key === "Enter") applyCustomFilter();
       });
     });
+    syncCustomInputs();
     syncFilterControls();
   }
 
@@ -159,14 +169,22 @@
     minimum = Math.max(0, Math.min(99, Math.trunc(minimum)));
     maximum = Math.max(0, Math.min(99, Math.trunc(maximum)));
     if (minimum > maximum) [minimum, maximum] = [maximum, minimum];
+
+    const previousFilter = activeFilter;
+    const previousMin = customMin;
+    const previousMax = customMax;
+    const nextFilter = minimum === 0 && maximum === 99 ? "all" : "custom";
+    const effectiveFilterChanged = nextFilter !== previousFilter
+      || (nextFilter === "custom" && (minimum !== previousMin || maximum !== previousMax));
+
     customMin = minimum;
     customMax = maximum;
     if (minInput instanceof HTMLInputElement) minInput.value = String(minimum);
     if (maxInput instanceof HTMLInputElement) maxInput.value = String(maximum);
-    activeFilter = minimum === 0 && maximum === 99 ? "all" : "custom";
+    activeFilter = nextFilter;
     customPanelOpen = false;
     syncFilterControls();
-    renderStats();
+    if (effectiveFilterChanged) renderStats();
   }
 
   function retirementYears(group) {
