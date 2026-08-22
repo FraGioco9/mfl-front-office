@@ -17,7 +17,7 @@
   let recentController = null;
   let recentSequence = 0;
   let recentLoadPromise = null;
-  let recentLoadedForOpen = false;
+  let recentLoadedForSession = false;
   let evaluationController = null;
   let evaluationSequence = 0;
   let destroyed = false;
@@ -368,15 +368,14 @@
     coreContracts()?.invalidateDatabaseSearch?.("players");
   }
 
-  function clearRecentRequest(options = {}) {
+  function clearRecentRequest() {
     recentSequence += 1;
     recentController?.abort();
     recentController = null;
     recentLoadPromise = null;
-    if (options.resetLoaded) recentLoadedForOpen = false;
   }
 
-  async function restoreSupabaseRecentResults(options = {}) {
+  async function restoreSupabaseRecentResults() {
     const input = searchInput();
     if (!input || input.value.trim()) return false;
 
@@ -384,8 +383,7 @@
     const walletProofHeaders = windowFunction("walletProofHeaders");
     if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
 
-    if (options.force) recentLoadedForOpen = false;
-    if (recentLoadedForOpen) {
+    if (recentLoadedForSession) {
       renderCurrentResults();
       return true;
     }
@@ -411,7 +409,7 @@
         applySupabaseRecentState(data?.tableState);
         if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
 
-        recentLoadedForOpen = true;
+        recentLoadedForSession = true;
         renderCurrentResults();
         return true;
       } catch (error) {
@@ -430,7 +428,7 @@
     return loadPromise;
   }
 
-  async function renderEmptySearchResults(options = {}) {
+  async function renderEmptySearchResults() {
     const input = searchInput();
     if (!input || input.value.trim()) return false;
 
@@ -446,7 +444,7 @@
       return true;
     }
 
-    return restoreSupabaseRecentResults(options);
+    return restoreSupabaseRecentResults();
   }
 
   async function searchDatabase(rawQuery) {
@@ -554,8 +552,8 @@
     const query = String(input.value || "").trim();
     if (!query) {
       clearGlobalRequest();
-      clearRecentRequest({ resetLoaded: true });
-      void renderEmptySearchResults({ force: true });
+      clearRecentRequest();
+      void renderEmptySearchResults();
       return;
     }
     void searchDatabase(query);
@@ -571,9 +569,9 @@
 
     input.value = "";
     clearGlobalRequest();
-    clearRecentRequest({ resetLoaded: true });
+    clearRecentRequest();
     syncClearButton();
-    void renderEmptySearchResults({ force: true });
+    void renderEmptySearchResults();
     input.focus({ preventScroll: true });
   }
 
@@ -652,7 +650,7 @@
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
       if (modal.hidden) {
-        clearRecentRequest({ resetLoaded: true });
+        clearRecentRequest();
         return;
       }
 
@@ -670,10 +668,9 @@
     installCoreSearchMatching();
     flushPendingPayload();
     flushPendingEvaluationPayload();
-    const modal = searchModal();
     const input = searchInput();
     syncClearButton();
-    if (modal && !modal.hidden && input && !input.value.trim()) void renderEmptySearchResults();
+    if (input && !input.value.trim()) void renderEmptySearchResults();
   }
 
   installSupabaseOnlyRecentStorage();
@@ -693,7 +690,7 @@
   function destroy() {
     destroyed = true;
     clearGlobalRequest();
-    clearRecentRequest({ resetLoaded: true });
+    clearRecentRequest();
     clearEvaluationRequest();
     modalObserver?.disconnect();
     modalObserver = null;
