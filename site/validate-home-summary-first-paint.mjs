@@ -65,6 +65,31 @@ invariant(
     < preBootstrap.indexOf('const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";'),
   "Initial body route state must be committed before canonical URL replacement or route-specific bootstrap work.",
 );
+includes(
+  indexHtml,
+  'html:not(.mflInitialRouteResolved):not([data-initial-page="home"]) #homePage,',
+  "Every non-Home direct URL must suppress the default Home boxes before route hydration.",
+);
+includes(
+  indexHtml,
+  'body[data-page="notfound"] main > .pageView:not(#notFoundPage)',
+  "A typed not-found route must suppress every previously primed application page.",
+);
+includes(
+  indexHtml,
+  'root.dataset.initialEntityRoute = initialEntityRoute;',
+  "Direct entity URLs must publish an early first-paint identity guard.",
+);
+includes(
+  indexHtml,
+  'data-initial-entity-route="club"]:not([data-initial-entity-verified="club"]) #progressionPage',
+  "A direct Club URL must not reveal the table shell before the Club identity is confirmed.",
+);
+includes(
+  indexHtml,
+  'data-initial-entity-route="player"]:not([data-initial-entity-verified="player"]) #playerPage',
+  "A direct Player URL must not reveal the Player shell before the Player identity is confirmed.",
+);
 
 includes(
   bootstrapRuntime,
@@ -179,4 +204,4 @@ invariant(
   "Returning Home must repaint cached Players/Wallets counts after route priming reset them to '-'.",
 );
 
-console.log("Home summary first-paint validation passed: canonical deep links show the correct header state immediately and brand-link Home navigation repaints cached Players/Wallets counts after route priming.");
+console.log("Home and deep-link first-paint validation passed: non-Home routes never expose Home boxes, entity shells wait for verification, and cached Home counts still repaint correctly.");
