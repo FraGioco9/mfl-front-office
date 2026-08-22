@@ -66,18 +66,41 @@
     return true;
   }
 
-  function show({ replaceExisting = false, forceRoute = false } = {}) {
-    if (destroyed || (!forceRoute && !tableRouteActive())) return false;
-    if (!forceRoute) ensureCanonicalHeader();
+  function prepareLoadingSurface() {
+    ensureCanonicalHeader();
     neutralizeSelectionHeader();
     const { body, empty } = elements();
-    if (!body) return false;
+    if (!body) return null;
 
     const page = pager();
     if (page) page.hidden = true;
     if (empty) {
       empty.hidden = true;
       empty.textContent = "";
+    }
+    return body;
+  }
+
+  function beginRequest() {
+    if (destroyed || !tableRouteActive() || !loadingSnapshot().dataLoading) return false;
+    const body = prepareLoadingSurface();
+    if (!body) return false;
+    return primeLoadingRows() && body.dataset.staticLoading === "true";
+  }
+
+  function show({ replaceExisting = false, forceRoute = false } = {}) {
+    if (destroyed || (!forceRoute && !tableRouteActive())) return false;
+    const body = forceRoute ? elements().body : prepareLoadingSurface();
+    if (!body) return false;
+    if (forceRoute) {
+      neutralizeSelectionHeader();
+      const page = pager();
+      if (page) page.hidden = true;
+      const { empty } = elements();
+      if (empty) {
+        empty.hidden = true;
+        empty.textContent = "";
+      }
     }
 
     const realRowsPresent = hasRealRows(body);
@@ -127,5 +150,5 @@
     release();
   }
 
-  window.__mflTableLoadingRuntime = Object.freeze({ show, release, sync, installCoreBridge, destroy });
+  window.__mflTableLoadingRuntime = Object.freeze({ beginRequest, show, release, sync, installCoreBridge, destroy });
 })();
