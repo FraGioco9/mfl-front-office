@@ -15,18 +15,18 @@
   --mfl-table-header-height: 38px;
   --mfl-table-row-height: 34px;
   --mfl-table-col-select: 2.5%;
-  --mfl-table-col-id: 3%;
+  --mfl-table-col-id: 4%;
   --mfl-table-col-flag: 2.5%;
-  --mfl-table-col-name: 18%;
-  --mfl-table-col-age: 5%;
-  --mfl-table-col-positions: 8%;
-  --mfl-table-col-seasons: 6%;
-  --mfl-table-col-overall: 5.75%;
-  --mfl-table-col-stat: 5.75%;
-  --mfl-table-col-contract-revenue: 8.5%;
+  --mfl-table-col-name: 17%;
+  --mfl-table-col-age: 4.5%;
+  --mfl-table-col-positions: 7.5%;
+  --mfl-table-col-seasons: 5.5%;
+  --mfl-table-col-overall: 6%;
+  --mfl-table-col-stat: 6%;
+  --mfl-table-col-contract-revenue: 9%;
   --mfl-table-col-contract-club: 17%;
-  --mfl-table-col-contract-division: 9%;
-  --mfl-table-col-agent: 12.25%;
+  --mfl-table-col-contract-division: 10%;
+  --mfl-table-col-agent: 12%;
   --mfl-table-col-link: 2.5%;
 
   --mfl-evaluation-summary-col-name: 24%;
