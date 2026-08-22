@@ -6,8 +6,6 @@
   --mfl-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 84%, var(--text-soft) 16%);
   --mfl-scrollbar-thumb-hover: var(--primary);
   --mfl-scrollbar-thumb-active: var(--primary-hover);
-  --mfl-scrollbar-arrow: var(--text-soft);
-  --mfl-scrollbar-arrow-hover: var(--primary);
 }
 
 :root:not([data-mfl-ready="true"]),
@@ -15,8 +13,6 @@
   --mfl-scrollbar-thumb: transparent;
   --mfl-scrollbar-thumb-hover: transparent;
   --mfl-scrollbar-thumb-active: transparent;
-  --mfl-scrollbar-arrow: transparent;
-  --mfl-scrollbar-arrow-hover: transparent;
 }
 
 /* Keep document scrolling contained inside the application content region. */
@@ -31,9 +27,16 @@ html body > #appShell > main {
   scrollbar-gutter: auto;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
+/*
+ * Standards-based scrollbar properties take precedence over ::-webkit-scrollbar
+ * in modern Chromium. Only use them where WebKit scrollbar pseudo-elements are
+ * unavailable so Chromium/Safari keep the thumb-only WebKit treatment below.
+ */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--mfl-scrollbar-thumb) transparent;
+  }
 }
 
 *::-webkit-scrollbar {
@@ -67,41 +70,16 @@ html body > #appShell > main {
   background-clip: padding-box;
 }
 
-*::-webkit-scrollbar-button:single-button {
-  display: block;
-  width: var(--mfl-scrollbar-size);
-  height: var(--mfl-scrollbar-size);
-  background-color: var(--mfl-scrollbar-arrow);
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 5px 5px;
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: 5px 5px;
-}
-
-*::-webkit-scrollbar-button:single-button:hover {
-  background-color: var(--mfl-scrollbar-arrow-hover);
-}
-
-*::-webkit-scrollbar-button:single-button:vertical:decrement {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 5.5 4 2.5l3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 5.5 4 2.5l3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-*::-webkit-scrollbar-button:single-button:vertical:increment {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='m1 2.5 3 3 3-3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='m1 2.5 3 3 3-3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-*::-webkit-scrollbar-button:single-button:horizontal:decrement {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M5.5 1 2.5 4l3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M5.5 1 2.5 4l3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-*::-webkit-scrollbar-button:single-button:horizontal:increment {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='m2.5 1 3 3-3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='m2.5 1 3 3-3 3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+/* Thumb-only scrollbars: never reserve or render directional button boxes. */
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  max-width: 0;
+  max-height: 0;
+  background: transparent;
 }
 
 #sidebar::-webkit-scrollbar,
