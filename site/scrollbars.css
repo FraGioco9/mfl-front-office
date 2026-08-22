@@ -25,7 +25,15 @@ html:root {
 /* The main content is the canonical vertical page-scrolling surface. */
 html body > #appShell > main {
   overflow-y: scroll;
-  scrollbar-gutter: auto;
+  scrollbar-gutter: stable;
+}
+
+/*
+ * Keep the page fixed while any modal backdrop is present. The stable gutter
+ * remains allocated, so hiding the scrollbar never moves the page underneath.
+ */
+:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
+  overflow-y: hidden;
 }
 
 /*
@@ -87,6 +95,17 @@ html body > #appShell > main {
   max-width: 0;
   max-height: 0;
   background: transparent;
+}
+
+/*
+ * If a WebKit engine still paints the main scrollbar during modal scroll lock,
+ * keep its thumb transparent while preserving the already-reserved gutter.
+ */
+:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb,
+:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb:hover,
+:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb:active {
+  background: transparent;
+  background-clip: padding-box;
 }
 
 /*

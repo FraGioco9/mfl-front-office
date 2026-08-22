@@ -51,6 +51,18 @@ if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFal
 if (!scrollbarSource.includes("--mfl-scrollbar-track-end-inset: 4px;")) {
   throw new Error("Scrollbar tracks must keep the canonical 4px top/bottom thumb inset.");
 }
+if (!scrollbarSource.includes(`html body > #appShell > main {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}`)) {
+  throw new Error("The main scroller must always reserve stable scrollbar space.");
+}
+const modalScrollLock = `:root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main {
+  overflow-y: hidden;
+}`;
+if (!scrollbarSource.includes(modalScrollLock)) {
+  throw new Error("Visible modal backdrops must lock main scrolling without releasing its stable scrollbar gutter.");
+}
 if (!scrollbarSource.includes("*::-webkit-scrollbar-track,")
   || !scrollbarSource.includes("*::-webkit-scrollbar-track-piece,")
   || !scrollbarSource.includes("*::-webkit-scrollbar-corner {")
@@ -69,6 +81,10 @@ if (!scrollbarSource.includes("*::-webkit-scrollbar-button {")
   || !scrollbarSource.includes("max-width: 0;")
   || !scrollbarSource.includes("max-height: 0;")) {
   throw new Error("WebKit scrollbar buttons/arrows must stay globally hidden with zero-size button boxes.");
+}
+const modalThumbSelector = ":root:has(body > .modalBackdrop:not([hidden])) body > #appShell > main::-webkit-scrollbar-thumb";
+if (!scrollbarSource.includes(modalThumbSelector)) {
+  throw new Error("The main scrollbar thumb must stay visually transparent while a modal is visible.");
 }
 if (!scrollbarSource.includes("@supports selector(select::picker(select)::-webkit-scrollbar) {")
   || !scrollbarSource.includes("select::picker(select)::-webkit-scrollbar-thumb {")
