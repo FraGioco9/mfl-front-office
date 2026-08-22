@@ -33,7 +33,20 @@ for (const required of [
 }
 
 invariant(
-  runtime.includes("applySupabaseRecentState(data?.tableState);\n      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;\n\n      renderCurrentResults();")
+  runtime.includes("let recentLoadPromise = null;")
+    && runtime.includes("let recentLoadedForOpen = false;")
+    && runtime.includes("if (recentLoadedForOpen) {\n      renderCurrentResults();\n      return true;\n    }")
+    && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
+    && runtime.includes('const hadRenderedResults = Boolean(results?.querySelector(":scope > .searchResult"));')
+    && runtime.includes('if (!hadRenderedResults) renderSearchMessage("Loading recent searches…");')
+    && runtime.includes("recentLoadedForOpen = true;\n        renderCurrentResults();")
+    && runtime.includes("if (hadRenderedResults) renderCurrentResults();\n          else renderSearchMessage(\"Could not load recent searches.\");")
+    && runtime.includes("clearRecentRequest({ resetLoaded: true });"),
+  "Empty Global Search must use one Supabase load per popup opening and preserve already-rendered recent results if a redundant refresh fails.",
+);
+
+invariant(
+  runtime.includes("applySupabaseRecentState(data?.tableState);")
     && !runtime.includes('requestDatabaseSearch("", "all", { force: true })'),
   "Successful Supabase recent results must render directly without a second empty database search that can replace them with an error state.",
 );
@@ -55,6 +68,12 @@ invariant(
     && core.includes("recentSearchItems: state.recentSearchItems")
     && core.includes("queueCloudTableStateSave(savedState);"),
   "Global Search recent history must persist through the Supabase-backed wallet preferences table state.",
+);
+
+invariant(
+  core.includes("async function openSearch() {")
+    && core.includes("await ensureSearchIndexes();\n  renderSearchResultsNow();"),
+  "Regression coverage must account for the core Global Search open lifecycle rendering again after indexes are ready.",
 );
 
 invariant(
@@ -84,4 +103,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search keeps five Supabase recent searches visible when empty, caps typed results at 10, and only shows clear while typed.");
+console.log("Global Search keeps one stable Supabase recent load per popup opening, caps typed results at 10, and only shows clear while typed.");
