@@ -356,7 +356,6 @@
     if (!config || !Array.isArray(config.order)) return;
     const container = document.querySelector("#progressionPage .views");
     if (!(container instanceof HTMLElement)) return;
-    if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();
 
     const buttons = new Map();
     container.querySelectorAll(":scope > .viewButton[data-view]").forEach((candidate) => {
