@@ -124,6 +124,7 @@ const customEscapeBlock = customEscapeStart >= 0 && customEscapeEnd > customEsca
 includes(customEscapeBlock, "closeCustomPanel();", "Escape must close the Database Stats Custom menu directly.");
 excludes(customEscapeBlock, "restoreFocus", "Escape must not restore focus to Custom and trigger a keyboard focus border.");
 excludes(customEscapeBlock, ".focus(", "Escape must not focus any Custom control after closing the menu.");
+excludes(statsRuntime, "restoreFocus", "Database Stats Custom must not retain an unused focus-restoration path.");
 excludes(statsRuntime, 'document.createElement("style")', "Database Stats must not inject deterministic Custom-filter CSS at runtime.");
 excludes(statsRuntime, "__mflDatabaseStatsTooltipPortal", "Database Stats must not restore the retired tooltip-portal compatibility owner.");
 excludes(statsRuntime, "databaseStatsTooltipAbove", "Database Stats Custom positioning must not retain tooltip-specific state naming.");
