@@ -329,14 +329,12 @@ export function normalizeRoutePolicy(artifacts) {
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
       } else {
-        const resolvedClubTitle = await clubTitleReady;
-        if (!resolvedClubTitle) {
+        void clubTitleReady.then((resolvedTitle) => {
+          if (resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
           window.__mflShowRouteMessage?.("Club not found", "The requested club could not be found.", { pageName: "club" });
-          return;
-        }
-        activeClubTitle = resolvedClubTitle;
+        });
       }`,
-    "missing Club renders route not-found state",
+    "missing Club renders route not-found state without blocking roster completion",
   );
   club = replaceRequired(
     club,
