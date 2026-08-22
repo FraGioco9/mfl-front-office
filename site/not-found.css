@@ -1,0 +1,51 @@
+.notFoundPage {
+  min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 52px);
+  min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 52px);
+}
+
+.notFoundContent {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: inherit;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.notFoundContent h2 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.1;
+}
+
+.notFoundContent p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+
+.notFoundHomeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 150px;
+  height: 40px;
+  margin-top: 4px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 0 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.notFoundHomeButton:hover,
+.notFoundHomeButton:focus-visible {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: #ffffff;
+  outline: 0;
+}
