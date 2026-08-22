@@ -83,7 +83,8 @@ export function splitPlayerApplicationCoreRuntime(artifacts) {
     `  if (!row) {
     window.__mflStaticUiRuntime?.showNotFound?.("Player");
     return;
-  }`,
+  }
+  document.documentElement.dataset.initialEntityVerified = "player";`,
     "Player not-found route surface",
   );
 
