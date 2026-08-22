@@ -374,7 +374,7 @@ export function browserConfigRuntimeSource(release) {
     if (segments.some((segment) => segment === "")) return notFoundRequest(path);
     const pageSegment = String(segments[0] || "").toLowerCase();
 
-    if (pageSegment === "home" && segments.length === 1) return requestResult(path, "home", {}, "/");
+    if (pageSegment === "home" && segments.length === 1) return homeRequest(path);
     if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
     if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
     if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
