@@ -4,15 +4,20 @@ import { browserConfigRuntimeSource } from "./modules/app-config.js";
 import { normalizeBuiltApplicationCoreArtifacts } from "./modules/app-core-build-normalizer.js";
 import { normalizePreBootstrapRouteState } from "./modules/pre-bootstrap-route-state.js";
 
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 const includes = (source, value, message) => invariant(source.includes(value), message);
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-const [source, release] = await Promise.all([
-  readFile(new URL("./modules/app-core.js", import.meta.url), "utf8"),
-  readFile(new URL("./release.json", import.meta.url), "utf8").then(JSON.parse),
+const [source, release, trackedConfig, trackedCore, trackedClub, staticUi] = await Promise.all([
+  read("./modules/app-core.js"),
+  read("./release.json").then(JSON.parse),
+  read("./table-width-runtime.js"),
+  read("./modules/app-core-runtime.js"),
+  read("./modules/app-core-club-runtime.js"),
+  read("./static-ui-runtime.js"),
 ]);
 
 const artifacts = normalizeBuiltApplicationCoreArtifacts(source);
@@ -37,13 +42,13 @@ includes(parser, 'if (walletAddress === mflWalletAddress)', "The MFL agent alias
 
 includes(core, "function showRouteMessagePage(title, message, options = {})", "Missing resources and unknown pages must share one route-state surface.");
 includes(core, 'return showProgressionAccessRequired();', "Progression without permission must keep its requested route and render access state.");
-excludes(core, "showUnauthorizedProgressionRedirect", "The legacy Progression-to-Home redirect owner must be removed from generated code.");
+excludes(core, "showUnauthorizedProgressionRedirect", "The retired Progression-to-Home owner must not exist in generated code.");
 excludes(core, 'history.replaceState({}, "", "/");\n  return setPage("home", false);', "Access denial must not rewrite the URL to Home.");
 includes(core, 'showRouteMessagePage("Agent not found", "The requested agent could not be found."', "Missing agents must stay on their route and render Agent not found.");
 
 includes(player, 'window.__mflShowRouteMessage?.("Player not found", "The requested player could not be found."', "Missing players must stay on their route and render Player not found.");
 includes(club, 'window.__mflShowRouteMessage?.("Club not found", "The requested club could not be found."', "Missing clubs must stay on their route and render Club not found.");
-excludes(club, 'window.location.replace("/")', "Club routing must not retain the legacy malformed-link Home redirect.");
+excludes(club, 'window.location.replace("/")', "Club routing must not retain the retired malformed-link Home redirect.");
 
 includes(evaluation, 'window.history.replaceState({}, "", "/evaluation");', "Expired saved/shared Evaluations must continue returning to plain Evaluation.");
 includes(generated, 'showToast("Watchlist not found.");', "Missing Watchlists must continue falling back with a not-found toast.");
@@ -51,9 +56,29 @@ includes(generated, "updateWatchlistUrl(true, true, options.view);", "Missing Wa
 
 includes(preBootstrap, 'return { pageName: "notfound", options: {} };', "Unknown deep links must be classified as not-found before first paint.");
 includes(preBootstrap, "const initialCanonicalPath = String(initialRoute.options?.replaceUrl || initialRoute.options?.path || \"\");", "Recognizable malformed deep links must canonicalize before hydration.");
-excludes(preBootstrap, 'location.replace("/")', "Pre-bootstrap routing must not redirect malformed Club links to Home.");
+excludes(preBootstrap, 'location.replace("/")', "Pre-bootstrap routing must not redirect malformed links to Home.");
+
+// The tracked files are the code the browser actually receives. Keep this audit explicit so
+// a green source normalization cannot coexist with stale generated redirect behavior again.
+for (const [label, shipped] of [
+  ["pre-bootstrap runtime", trackedConfig],
+  ["shared application runtime", trackedCore],
+  ["Club runtime", trackedClub],
+]) {
+  excludes(shipped, 'location.replace("/")', `${label} must not ship the retired Home redirect.`);
+  excludes(shipped, "showUnauthorizedProgressionRedirect", `${label} must not ship the retired Progression redirect owner.`);
+  excludes(shipped, "initialClubLikePath", `${label} must not ship the retired strict Club redirect gate.`);
+}
+excludes(trackedCore, 'pageName: ["home", "evaluation", "settings", "changelog"].includes(pageName) ? pageName : "home"', "Tracked shared runtime must not ship the unknown-route Home fallback.");
+includes(trackedConfig, 'return { pageName: "notfound", options: {} };', "Tracked pre-bootstrap runtime must ship not-found classification.");
+includes(trackedClub, 'window.__mflShowRouteMessage?.("Club not found"', "Tracked Club runtime must ship missing-resource handling.");
+
+includes(staticUi, "const request = routeConfig.initialRequest(url.pathname);", "Static UI must consume canonical route classification.");
+includes(staticUi, 'if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");', "Static UI must show the not-found shell before hydration.");
+excludes(staticUi, "const VIEW_BY_SLUG = Object.freeze(", "Static UI must not retain its old duplicate route parser.");
+excludes(staticUi, 'return document.getElementById("homePage");\n  }', "Static UI must not use Home as a generic route-shell fallback.");
 
 new Function(core);
 new Function(player);
 new Function(club);
-console.log("Unified route policy validation passed: malformed routes repair, missing resources stay put, unknown pages render not-found, access denial stays in place, and temporary/private fallbacks remain canonical.");
+console.log("Unified route policy validation passed with shipped runtimes audited against every retired Home-redirect path.");
