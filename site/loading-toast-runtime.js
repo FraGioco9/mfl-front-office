@@ -14,6 +14,20 @@
   let unsubscribe = null;
   let tableScrollTimer = 0;
 
+  function ensureNotFoundStylesheet() {
+    if (document.querySelector('link[data-mfl-not-found-styles="true"]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    const releaseVersion = String(window.__mflReleaseVersion || "").trim();
+    link.href = releaseVersion
+      ? `/not-found.css?mfl_release=${encodeURIComponent(releaseVersion)}`
+      : "/not-found.css";
+    link.dataset.mflNotFoundStyles = "true";
+    document.head.appendChild(link);
+  }
+
+  ensureNotFoundStylesheet();
+
   function setToastPosition(centerX) {
     if (!Number.isFinite(centerX)) return;
     document.documentElement.style.setProperty("--toast-center-x", `${centerX}px`);
