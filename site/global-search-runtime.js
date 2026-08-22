@@ -4,10 +4,15 @@
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const MAX_GLOBAL_SEARCH_RESULTS = 10;
   const MAX_RECENT_GLOBAL_SEARCH_RESULTS = 5;
+  const RECENT_PLAYER_CACHE_KEY = "mfl-recent-player-searches-v1";
+  const RECENT_AGENT_CACHE_KEY = "mfl-recent-agent-searches-v1";
+  const RECENT_MIXED_CACHE_KEY = "mfl-recent-searches-v1";
   window.__mflGlobalSearchRuntime?.destroy?.();
 
   let controller = null;
   let sequence = 0;
+  let recentController = null;
+  let recentSequence = 0;
   let evaluationController = null;
   let evaluationSequence = 0;
   let destroyed = false;
@@ -24,6 +29,11 @@
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+  function windowFunction(name) {
+    const fn = Reflect.get(window, name);
+    return typeof fn === "function" ? fn : null;
+  }
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -63,7 +73,10 @@
   function syncClearButton() {
     const input = searchInput();
     const button = document.getElementById("playerSearchClearButton");
-    if (input && button instanceof HTMLElement) button.hidden = !input.value.trim();
+    if (!input || !(button instanceof HTMLElement)) return;
+    const hidden = !input.value.trim();
+    button.hidden = hidden;
+    button.toggleAttribute("hidden", hidden);
   }
 
   function syncEvaluationClearButton() {
@@ -94,9 +107,53 @@
     results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);
   }
 
-  function syncRecentSearchState() {
-    const sync = Reflect.get(window, "syncRecentSearchStateFromStorage");
-    if (typeof sync === "function") sync();
+  function normalizedSupabaseRecentItems(tableState) {
+    const recentItems = Array.isArray(tableState?.recentSearchItems) ? tableState.recentSearchItems : [];
+    const normalizedItems = [];
+
+    recentItems.forEach((item) => {
+      const key = String(item || "").trim();
+      const valid = (key.startsWith("player:") && key.length > 7)
+        || (key.startsWith("agent:") && key.length > 6)
+        || (key.startsWith("club:") && key.length > 5);
+      if (valid && !normalizedItems.includes(key)) normalizedItems.push(key);
+    });
+
+    if (normalizedItems.length) return normalizedItems.slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);
+
+    const playerIds = Array.isArray(tableState?.recentSearchPlayerIds) ? tableState.recentSearchPlayerIds : [];
+    const agentWallets = Array.isArray(tableState?.recentSearchAgentWallets) ? tableState.recentSearchAgentWallets : [];
+    const legacyItems = [
+      ...playerIds.map((playerId) => `player:${String(playerId || "").trim()}`),
+      ...agentWallets.map((walletAddress) => `agent:${String(walletAddress || "").trim().toLowerCase()}`),
+    ].filter((key) => key !== "player:" && key !== "agent:");
+
+    return Array.from(new Set(legacyItems)).slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);
+  }
+
+  function applySupabaseRecentState(tableState) {
+    const recentItems = normalizedSupabaseRecentItems(tableState);
+    const recentPlayerIds = recentItems
+      .filter((item) => item.startsWith("player:"))
+      .map((item) => item.slice(7));
+    const recentAgentWallets = recentItems
+      .filter((item) => item.startsWith("agent:"))
+      .map((item) => item.slice(6));
+
+    try {
+      localStorage.setItem(RECENT_MIXED_CACHE_KEY, JSON.stringify(recentItems));
+      localStorage.setItem(RECENT_PLAYER_CACHE_KEY, JSON.stringify(recentPlayerIds));
+      localStorage.setItem(RECENT_AGENT_CACHE_KEY, JSON.stringify(recentAgentWallets));
+    } catch {
+      // The Supabase payload remains the source for this render even when browser storage is blocked.
+    }
+
+    windowFunction("restoreRecentSearchState")?.({
+      recentSearchItems: recentItems,
+      recentSearchPlayerIds,
+      recentSearchAgentWallets,
+    });
+    return recentItems;
   }
 
   function renderEvaluationMessage(message) {
@@ -137,10 +194,9 @@
 
   function renderCurrentResults() {
     try {
-      const input = searchInput();
-      if (input && !input.value.trim()) syncRecentSearchState();
       coreContracts()?.renderGlobalSearchResults?.();
       normalizeSearchResults();
+      syncClearButton();
     } catch (error) {
       console.warn("Could not render Global Search results.", error);
     }
@@ -226,6 +282,67 @@
     coreContracts()?.invalidateDatabaseSearch?.("players");
   }
 
+  function clearRecentRequest() {
+    recentSequence += 1;
+    recentController?.abort();
+    recentController = null;
+  }
+
+  async function restoreSupabaseRecentResults() {
+    const input = searchInput();
+    if (!input || input.value.trim()) return false;
+
+    const hasWalletProof = windowFunction("hasWalletProof");
+    const walletProofHeaders = windowFunction("walletProofHeaders");
+    const requestDatabaseSearch = windowFunction("requestDatabaseSearch");
+    if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
+
+    const requestSequence = ++recentSequence;
+    recentController?.abort();
+    recentController = new AbortController();
+    const activeController = recentController;
+    syncClearButton();
+    renderSearchMessage("Loading recent searches…");
+
+    try {
+      const response = await fetch("/api/wallet-preferences", {
+        cache: "no-store",
+        headers: walletProofHeaders(true),
+        signal: activeController.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || "Could not load recent searches.");
+      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+
+      applySupabaseRecentState(data?.tableState);
+      if (requestDatabaseSearch) await requestDatabaseSearch("", "all", { force: true });
+      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+
+      renderCurrentResults();
+      return true;
+    } catch (error) {
+      if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
+        console.warn("Could not load recent Global Search entries from Supabase.", error);
+        renderSearchMessage("Could not load recent searches.");
+      }
+      return false;
+    } finally {
+      if (recentController === activeController) recentController = null;
+    }
+  }
+
+  async function renderEmptySearchResults() {
+    const input = searchInput();
+    if (!input || input.value.trim()) return false;
+
+    syncClearButton();
+    const hasWalletProof = windowFunction("hasWalletProof");
+    if (hasWalletProof?.()) return restoreSupabaseRecentResults();
+
+    renderCurrentResults();
+    return true;
+  }
+
   async function searchDatabase(rawQuery) {
     installCoreSearchMatching();
     const query = String(rawQuery || "").trim();
@@ -233,6 +350,7 @@
     const input = searchInput();
     if (!input || !normalizedQuery) return false;
 
+    clearRecentRequest();
     const requestSequence = ++sequence;
     controller?.abort();
     invalidateLegacyAllSearch();
@@ -326,14 +444,31 @@
     const input = searchInput();
     if (!input || event.target !== input) return;
     event.stopImmediatePropagation();
+    syncClearButton();
     const query = String(input.value || "").trim();
     if (!query) {
       clearGlobalRequest();
-      syncClearButton();
-      renderCurrentResults();
+      clearRecentRequest();
+      void renderEmptySearchResults();
       return;
     }
     void searchDatabase(query);
+  }
+
+  function onClearClick(event) {
+    const target = event.target instanceof Element ? event.target.closest("#playerSearchClearButton") : null;
+    if (!target) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const input = searchInput();
+    if (!input) return;
+
+    input.value = "";
+    clearGlobalRequest();
+    clearRecentRequest();
+    syncClearButton();
+    void renderEmptySearchResults();
+    input.focus({ preventScroll: true });
   }
 
   function onEvaluationInput(event) {
@@ -396,11 +531,15 @@
     if (!modal) return;
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
-      if (!modal.hidden) {
-        const input = searchInput();
-        if (input && !input.value.trim()) renderCurrentResults();
-        focusAndSelectSearch();
+      if (modal.hidden) {
+        clearRecentRequest();
+        return;
       }
+
+      const input = searchInput();
+      syncClearButton();
+      if (input && !input.value.trim()) void renderEmptySearchResults();
+      focusAndSelectSearch();
     });
     modalObserver.observe(modal, { attributes: true, attributeFilter: ["hidden"] });
   }
@@ -411,10 +550,12 @@
     flushPendingEvaluationPayload();
     const modal = searchModal();
     const input = searchInput();
-    if (modal && !modal.hidden && input && !input.value.trim()) renderCurrentResults();
+    syncClearButton();
+    if (modal && !modal.hidden && input && !input.value.trim()) void renderEmptySearchResults();
   }
 
   document.addEventListener("input", onInput, true);
+  document.addEventListener("click", onClearClick, true);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
   window.addEventListener("mfl:ready", onReady);
@@ -427,12 +568,14 @@
   function destroy() {
     destroyed = true;
     clearGlobalRequest();
+    clearRecentRequest();
     clearEvaluationRequest();
     modalObserver?.disconnect();
     modalObserver = null;
     if (focusFrame) cancelAnimationFrame(focusFrame);
     if (focusSettleTimer) clearTimeout(focusSettleTimer);
     document.removeEventListener("input", onInput, true);
+    document.removeEventListener("click", onClearClick, true);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
     window.removeEventListener("mfl:ready", onReady);
@@ -442,6 +585,7 @@
     version: VERSION,
     search: searchDatabase,
     searchEvaluation: searchEvaluationDatabase,
+    recent: restoreSupabaseRecentResults,
     cap: normalizeSearchResults,
     flush: flushPendingPayload,
     flushEvaluation: flushPendingEvaluationPayload,
