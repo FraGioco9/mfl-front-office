@@ -84,7 +84,9 @@ includes(clubCore, "function applyClubPresentation()", "The Club chunk must own 
 includes(clubCore, "let activeClubTitle = null;", "The Club chunk must retain the loaded Club title identity across view switches.");
 includes(clubCore, "if (nextClubId !== activeClubId) activeClubTitle = null;", "The stable Club title must reset only when navigating to another Club.");
 includes(clubCore, "activeClubTitle.clubId !== String(activeClubId)", "Club title rendering must reuse the same Club identity across views.");
-includes(clubCore, 'window.location.replace("/");', "Invalid Club history or boot routes must redirect to the homepage.");
+includes(clubCore, 'window.__mflStaticUiRuntime?.showNotFound?.("Club");', "Invalid Club routes and missing Club entities must use the shared Club not-found surface.");
+excludes(clubCore, 'window.location.replace("/");', "Invalid Club routes must preserve their URL instead of redirecting to Home.");
+includes(clubCore, "if (!loadedClubTitle && clubRows().length === 0) {", "A syntactically valid missing Club must resolve to the Club not-found surface after roster loading.");
 includes(clubCore, "if (!dataLoaded) return;", "Obsolete Club loads must stop inside the Club route chunk before render commit.");
 includes(clubCore, "window.mflLoadIncrementalRoutePage(CLUB_PAGE, {", "Initial Club hydration must use the canonical incremental loader.");
 includes(clubCore, "clubId: activeClubId,", "Initial Club hydration must carry the explicit Club ID into the canonical loader.");
@@ -135,11 +137,12 @@ excludes(
 );
 
 includes(appConfig, "export const CLUB_VIEW_SLUGS", "Canonical app config must own Club view-to-slug mapping.");
-includes(appConfig, "squad|contracts|current-season|all-time", "Club routing must expose only the four canonical public view slugs.");
-includes(appConfig, 'initialClubLikePath && !initialClubRoute', "Invalid Club startup paths must redirect before loading begins.");
 includes(appConfig, 'attributes: "squad"', "Canonical Club Squad must map internal Attributes to /squad.");
+includes(appConfig, 'contracts: "contracts"', "Canonical Club Contracts must map to /contracts.");
 includes(appConfig, 'current: "current-season"', "Canonical Club Current Season must map to /current-season.");
 includes(appConfig, 'all: "all-time"', "Canonical Club All Time must map to /all-time.");
+includes(appConfig, 'notFoundRequest(path, "Club")', "Invalid Club URLs must classify as typed Club not-found routes.");
+excludes(appConfig, "initialClubLikePath", "Startup must not retain a Club-only redirect owner.");
 includes(appConfig, 'club: "/modules/app-core-club-runtime.js"', "The route config must map Club to its generated chunk.");
 includes(routeLoader, "function installClubRouteGate()", "The route-core loader must publish a stable Club navigation gate before the chunk loads.");
 includes(routeLoader, 'if (page === "club") return ["table", "club"];', "Club navigation must resolve Table before the Club route owner.");
@@ -178,4 +181,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club canonical view links, shared click/refresh navigation, shared switching, Uniform Loading, and API contract validation passed.");
+console.log("Club canonical view links, typed not-found handling, shared click/refresh navigation, shared switching, Uniform Loading, and API contract validation passed.");
