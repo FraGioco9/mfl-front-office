@@ -8,6 +8,7 @@ import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chu
 import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lifecycle.js";
 import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
 import { normalizeEvaluationRouteLifecycle } from "./app-core-evaluation-route-lifecycle.js";
+import { normalizeEvaluationSavedValuationCache } from "./app-core-evaluation-saved-valuation-cache.js";
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
@@ -106,7 +107,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
-  return normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
+  const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
+  return normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
