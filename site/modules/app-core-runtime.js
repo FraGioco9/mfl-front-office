@@ -6317,6 +6317,10 @@ function activateViewButton(button) {
   const activeViewName = state.currentPage === "mflstats" ? "stats" : state.view;
   if (pageName === activePageName && viewName === activeViewName) return;
 
+  if (pageName === activePageName && tablePages.has(pageName)) {
+    saveTableStateLocally(currentTableState());
+  }
+
   if (pageName === "mfl" && viewName === "stats") {
     void runViewTransition("mfl", "stats", { statePageName: "mflstats" }, async () => {
       await setPage("mfl", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
