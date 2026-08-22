@@ -199,10 +199,10 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
   const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
   const tableRequestLoadingArtifacts = normalizeTableRequestLoadingBoundary(viewFilterStateArtifacts);
-  const tableControlCellArtifacts = normalizeTableControlCellAlignment(tableRequestLoadingArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableControlCellArtifacts);
-  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(tableRequestLoadingArtifacts);
+  const tableControlCellArtifacts = normalizeTableControlCellAlignment(filterSummaryArtifacts);
+  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableControlCellArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
