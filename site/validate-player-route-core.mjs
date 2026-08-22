@@ -61,6 +61,8 @@ includes(playerCore, "function renderPlayerPageOwner(playerId) {", "The Player c
 includes(playerCore, "function renderPlayerPageWithStableContractLinkOwner(playerId) {", "The Player chunk must own stable contract-link rendering.");
 includes(playerCore, "window.__mflRenderPlayerPageOwner = renderPlayerPageWithStableContractLinkOwner;", "The Player chunk must install its final renderer behind the shared facade.");
 includes(playerCore, "const infoCardsData = [", "The Player chunk must contain Player page DOM construction.");
+includes(playerCore, 'window.__mflStaticUiRuntime?.showNotFound?.("Player");', "Missing Player IDs must use the shared not-found surface.");
+includes(playerCore, 'document.documentElement.dataset.initialEntityVerified = "player";', "A confirmed Player must release the guarded first-paint Player shell.");
 excludes(playerCore, "function primaryPreciseOverall(row) {", "Shared overall math must not become Player-only.");
 excludes(playerCore, "async function copyPlayerId(id) {", "Shared copy behavior must not become Player-only.");
 excludes(playerCore, "function renderPlayerPage(playerId) {", "The stable Player renderer name must remain shared for existing wrappers and refresh owners.");
@@ -96,5 +98,6 @@ for (const owner of [
   includes(generatedPlayerBody, owner, `Generated Player runtime must retain route owner ${owner}.`);
 }
 includes(generatedPlayerBody, 'retirementMarker--${escapeHtml(ageMarker.status || "default")}', "Generated Player runtime must contain the build-time retirement marker contract.");
+includes(generatedPlayerBody, 'document.documentElement.dataset.initialEntityVerified = "player";', "Generated Player runtime must preserve first-paint identity verification.");
 
-console.log("Player route-core splitting validation passed.");
+console.log("Player route-core splitting and guarded first-paint identity validation passed.");
