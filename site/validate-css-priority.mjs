@@ -12,15 +12,27 @@ const canonicalCssSources = [
   "responsive.css",
   "index.html",
 ];
+const cssSources = new Map();
 
 for (const sourcePath of canonicalCssSources) {
   const source = await readFile(new URL(`./${sourcePath}`, import.meta.url), "utf8");
+  cssSources.set(sourcePath, source);
   if (source.includes("!important")) {
     throw new Error(`${sourcePath} must not use !important; fix CSS ownership or cascade order instead.`);
   }
 }
 
-const scrollbarSource = await readFile(new URL("./scrollbars.css", import.meta.url), "utf8");
+// scrollbars.css is the only scrollbar-style owner. Other files may control overflow
+// or scrollbar-gutter for layout, but must not define another visual scrollbar.
+const scrollbarStyleTokens = ["::-webkit-scrollbar", "scrollbar-width:", "scrollbar-color:"];
+for (const [sourcePath, source] of cssSources) {
+  if (sourcePath === "scrollbars.css") continue;
+  if (scrollbarStyleTokens.some((token) => source.includes(token))) {
+    throw new Error(`${sourcePath} must not define scrollbar visuals; keep all scrollbar styling in scrollbars.css.`);
+  }
+}
+
+const scrollbarSource = cssSources.get("scrollbars.css") || "";
 const standardsFallback = `@supports not selector(::-webkit-scrollbar) {
   * {
     scrollbar-width: thin;
@@ -36,11 +48,19 @@ const outsideStandardsFallback = scrollbarSource.replace(standardsFallback, "");
 if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFallback.includes("scrollbar-color:")) {
   throw new Error("Do not let standards scrollbar properties override WebKit thumb-only styling in Chromium/Safari.");
 }
+if (!scrollbarSource.includes("--mfl-scrollbar-track-end-inset: 4px;")) {
+  throw new Error("Scrollbar tracks must keep the canonical 4px top/bottom thumb inset.");
+}
 if (!scrollbarSource.includes("*::-webkit-scrollbar-track,")
   || !scrollbarSource.includes("*::-webkit-scrollbar-track-piece,")
   || !scrollbarSource.includes("*::-webkit-scrollbar-corner {")
   || !scrollbarSource.includes("background: transparent;")) {
   throw new Error("WebKit scrollbar tracks and corners must stay globally transparent.");
+}
+if (!scrollbarSource.includes("*::-webkit-scrollbar-track:vertical {")
+  || !scrollbarSource.includes("margin-top: var(--mfl-scrollbar-track-end-inset);")
+  || !scrollbarSource.includes("margin-bottom: var(--mfl-scrollbar-track-end-inset);")) {
+  throw new Error("Vertical scrollbar thumbs must not reach the top or bottom edge of the track.");
 }
 if (!scrollbarSource.includes("*::-webkit-scrollbar-button {")
   || !scrollbarSource.includes("display: none;")
@@ -49,6 +69,13 @@ if (!scrollbarSource.includes("*::-webkit-scrollbar-button {")
   || !scrollbarSource.includes("max-width: 0;")
   || !scrollbarSource.includes("max-height: 0;")) {
   throw new Error("WebKit scrollbar buttons/arrows must stay globally hidden with zero-size button boxes.");
+}
+if (!scrollbarSource.includes("@supports selector(select::picker(select)::-webkit-scrollbar) {")
+  || !scrollbarSource.includes("select::picker(select)::-webkit-scrollbar-thumb {")
+  || !scrollbarSource.includes("select::picker(select)::-webkit-scrollbar-button {")
+  || !scrollbarSource.includes("select::picker(select)::-webkit-scrollbar-track,")
+  || !scrollbarSource.includes("select::picker(select)::-webkit-scrollbar-track:vertical {")) {
+  throw new Error("Customizable select dropdown pickers must use the same canonical thumb-only scrollbar and track inset.");
 }
 if (scrollbarSource.includes("--mfl-scrollbar-arrow") || scrollbarSource.includes("mask-image:")) {
   throw new Error("Scrollbar arrow styling must not be reintroduced; only the thumb should be visible.");
