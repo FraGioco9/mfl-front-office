@@ -9,31 +9,24 @@ import {
 const ROUTE_MESSAGE_HELPERS = `function showRouteMessagePage(title, message, options = {}) {
   const pageName = String(options.pageName || "notfound");
   const activeNavPage = String(options.activeNavPage || "");
+  const showOptIn = Boolean(options.showOptIn);
+  const routeMessagePage = document.getElementById("routeMessagePage");
+  const targetPage = showOptIn ? myPlayersLockedPage : routeMessagePage;
   state.currentPage = pageName;
   document.body.dataset.page = pageName;
 
   document.querySelectorAll("main > .pageView").forEach((page) => {
-    if (page instanceof HTMLElement) page.hidden = page !== myPlayersLockedPage;
+    if (page instanceof HTMLElement) page.hidden = page !== targetPage;
   });
 
-  const titleElement = document.getElementById("optInLockedTitle");
-  const messageElement = document.getElementById("optInLockedMessage");
+  const titleElement = document.getElementById(showOptIn ? "optInLockedTitle" : "routeMessageTitle");
+  const messageElement = document.getElementById(showOptIn ? "optInLockedMessage" : "routeMessageText");
   const optInButton = document.getElementById("myPlayersOptInButton");
+  const homeButton = document.getElementById("routeMessageHomeButton");
   if (titleElement) titleElement.textContent = String(title || "Page not found");
   if (messageElement) messageElement.textContent = String(message || "The requested page could not be found.");
-  if (optInButton) optInButton.hidden = !options.showOptIn;
-
-  let homeButton = document.getElementById("routeMessageHomeButton");
-  if (!homeButton) {
-    homeButton = document.createElement("button");
-    homeButton.id = "routeMessageHomeButton";
-    homeButton.className = "homeOptInButton";
-    homeButton.type = "button";
-    homeButton.textContent = "Home";
-    homeButton.addEventListener("click", () => setPage("home", true));
-    document.querySelector("#myPlayersLockedPage .myPlayersLockedContent")?.appendChild(homeButton);
-  }
-  homeButton.hidden = options.showHome === false;
+  if (optInButton) optInButton.hidden = !showOptIn;
+  if (homeButton) homeButton.hidden = showOptIn || options.showHome === false;
 
   navButtons.forEach((button) => {
     button.classList.toggle("active", Boolean(activeNavPage) && button.dataset.page === activeNavPage);
@@ -321,6 +314,44 @@ export function normalizeRoutePolicy(artifacts) {
   if (!club) throw new Error("Cannot normalize route policy without the Club route chunk.");
   club = replaceRequired(
     club,
+    `  async function ensureClubTitleIdentity(clubId) {`,
+    `  async function fetchAuthoritativeClubTitleIdentity(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return null;
+    try {
+      const parameters = new URLSearchParams({
+        mode: "search",
+        type: "recent",
+        clubIds: normalizedClubId,
+      });
+      const response = await fetch("/api/data?" + parameters.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const clubEntry = Array.isArray(payload?.clubs)
+        ? payload.clubs.find((candidate) => String(candidate?.clubId || "") === normalizedClubId)
+        : null;
+      if (!clubEntry?.name) return null;
+      const division = typeof contractDivisionInfo === "function"
+        ? contractDivisionInfo(clubEntry.division)
+        : null;
+      return saveClubTitleIdentity({
+        clubId: normalizedClubId,
+        name: clubEntry.name,
+        division,
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async function ensureClubTitleIdentity(clubId) {`,
+    "authoritative Club existence lookup",
+  );
+  club = replaceRequired(
+    club,
     `      if (!dataLoaded) return;
       const loadedClubTitle = clubTitleIdentityFromRows(activeClubId);
       if (loadedClubTitle) activeClubTitle = saveClubTitleIdentity(loadedClubTitle);`,
@@ -329,8 +360,17 @@ export function normalizeRoutePolicy(artifacts) {
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
       } else {
-        void clubTitleReady.then((resolvedTitle) => {
+        void fetchAuthoritativeClubTitleIdentity(nextClubId).then((resolvedTitle) => {
           if (resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+          try {
+            const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+            if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+              delete stored[nextClubId];
+              localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(stored));
+            }
+          } catch {
+            // Missing Club rendering does not depend on storage cleanup.
+          }
           window.__mflShowRouteMessage?.("Club not found", "The requested club could not be found.", { pageName: "club" });
         });
       }`,

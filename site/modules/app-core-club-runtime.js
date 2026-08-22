@@ -90,6 +90,38 @@
     return normalizedClubTitleIdentity({ clubId: normalizedClubId, name, division });
   }
 
+  async function fetchAuthoritativeClubTitleIdentity(clubId) {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return null;
+    try {
+      const parameters = new URLSearchParams({
+        mode: "search",
+        type: "recent",
+        clubIds: normalizedClubId,
+      });
+      const response = await fetch("/api/data?" + parameters.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const clubEntry = Array.isArray(payload?.clubs)
+        ? payload.clubs.find((candidate) => String(candidate?.clubId || "") === normalizedClubId)
+        : null;
+      if (!clubEntry?.name) return null;
+      const division = typeof contractDivisionInfo === "function"
+        ? contractDivisionInfo(clubEntry.division)
+        : null;
+      return saveClubTitleIdentity({
+        clubId: normalizedClubId,
+        name: clubEntry.name,
+        division,
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async function ensureClubTitleIdentity(clubId) {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return null;
@@ -386,8 +418,17 @@
       if (loadedClubTitle) {
         activeClubTitle = saveClubTitleIdentity(loadedClubTitle);
       } else {
-        void clubTitleReady.then((resolvedTitle) => {
+        void fetchAuthoritativeClubTitleIdentity(nextClubId).then((resolvedTitle) => {
           if (resolvedTitle || String(activeClubId) !== nextClubId || state.currentPage !== CLUB_PAGE) return;
+          try {
+            const stored = JSON.parse(localStorage.getItem(CLUB_DISPLAY_DATA_STORAGE_KEY) || "{}");
+            if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+              delete stored[nextClubId];
+              localStorage.setItem(CLUB_DISPLAY_DATA_STORAGE_KEY, JSON.stringify(stored));
+            }
+          } catch {
+            // Missing Club rendering does not depend on storage cleanup.
+          }
           window.__mflShowRouteMessage?.("Club not found", "The requested club could not be found.", { pageName: "club" });
         });
       }

@@ -279,6 +279,7 @@
     const tableView = String(root.dataset.initialTableView || "").toLowerCase();
     const storedOptIn = root.dataset.storedWalletOptIn === "true";
 
+    if (initialPage === "notfound") return document.getElementById("routeMessagePage");
     if (!storedOptIn && (["watchlist", "myplayers"].includes(tablePage) || initialPage === "settings")) {
       return document.getElementById("myPlayersLockedPage");
     }
@@ -738,6 +739,21 @@ function primeInitialTableStructure(page, view) {
 
   function primeRouteSkeleton(target) {
     if (!(target instanceof HTMLElement)) return;
+    if (target.id === "routeMessagePage") {
+      const title = document.getElementById("routeMessageTitle");
+      const message = document.getElementById("routeMessageText");
+      const homeButton = document.getElementById("routeMessageHomeButton");
+      if (title instanceof HTMLElement) title.textContent = "Page not found";
+      if (message instanceof HTMLElement) message.textContent = "The requested page could not be found.";
+      if (homeButton instanceof HTMLButtonElement) {
+        homeButton.hidden = false;
+        if (homeButton.dataset.mflBootstrapHomeBound !== "true") {
+          homeButton.dataset.mflBootstrapHomeBound = "true";
+          homeButton.addEventListener("click", () => window.location.assign("/"));
+        }
+      }
+      return;
+    }
     if (target.id === "homePage") {
       setLoadingValue("homePlayers");
       setLoadingValue("homeWallets");

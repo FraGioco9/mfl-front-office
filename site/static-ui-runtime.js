@@ -121,7 +121,7 @@
   }
 
   function shellForRoute(state) {
-    if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");
+    if (state.page === "notfound") return document.getElementById("routeMessagePage");
     if (routeNeedsLockedShell(state.page)) return document.getElementById("myPlayersLockedPage");
     if (state.page === "database" && state.view === "stats") return document.getElementById("databaseStatsPage");
     if (state.page === "mfl" && state.view === "stats") return document.getElementById("mflStatsPage");
@@ -136,14 +136,12 @@
 
   function primeNotFoundShell(state) {
     if (state.page !== "notfound") return;
-    const title = document.getElementById("optInLockedTitle");
-    const message = document.getElementById("optInLockedMessage");
-    const optInButton = document.getElementById("myPlayersOptInButton");
-    const routeMessageHomeButton = document.getElementById("routeMessageHomeButton");
+    const title = document.getElementById("routeMessageTitle");
+    const message = document.getElementById("routeMessageText");
+    const homeButton = document.getElementById("routeMessageHomeButton");
     if (title) title.textContent = "Page not found";
     if (message) message.textContent = "The requested page could not be found.";
-    if (optInButton) optInButton.hidden = true;
-    if (routeMessageHomeButton) routeMessageHomeButton.hidden = false;
+    if (homeButton) homeButton.hidden = false;
   }
 
   function syncDestinationTableHeader(state) {

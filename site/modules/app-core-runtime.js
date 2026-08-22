@@ -1283,31 +1283,24 @@ function tablePageTarget(pageName, cleanPath, basePath) {
 function showRouteMessagePage(title, message, options = {}) {
   const pageName = String(options.pageName || "notfound");
   const activeNavPage = String(options.activeNavPage || "");
+  const showOptIn = Boolean(options.showOptIn);
+  const routeMessagePage = document.getElementById("routeMessagePage");
+  const targetPage = showOptIn ? myPlayersLockedPage : routeMessagePage;
   state.currentPage = pageName;
   document.body.dataset.page = pageName;
 
   document.querySelectorAll("main > .pageView").forEach((page) => {
-    if (page instanceof HTMLElement) page.hidden = page !== myPlayersLockedPage;
+    if (page instanceof HTMLElement) page.hidden = page !== targetPage;
   });
 
-  const titleElement = document.getElementById("optInLockedTitle");
-  const messageElement = document.getElementById("optInLockedMessage");
+  const titleElement = document.getElementById(showOptIn ? "optInLockedTitle" : "routeMessageTitle");
+  const messageElement = document.getElementById(showOptIn ? "optInLockedMessage" : "routeMessageText");
   const optInButton = document.getElementById("myPlayersOptInButton");
+  const homeButton = document.getElementById("routeMessageHomeButton");
   if (titleElement) titleElement.textContent = String(title || "Page not found");
   if (messageElement) messageElement.textContent = String(message || "The requested page could not be found.");
-  if (optInButton) optInButton.hidden = !options.showOptIn;
-
-  let homeButton = document.getElementById("routeMessageHomeButton");
-  if (!homeButton) {
-    homeButton = document.createElement("button");
-    homeButton.id = "routeMessageHomeButton";
-    homeButton.className = "homeOptInButton";
-    homeButton.type = "button";
-    homeButton.textContent = "Home";
-    homeButton.addEventListener("click", () => setPage("home", true));
-    document.querySelector("#myPlayersLockedPage .myPlayersLockedContent")?.appendChild(homeButton);
-  }
-  homeButton.hidden = options.showHome === false;
+  if (optInButton) optInButton.hidden = !showOptIn;
+  if (homeButton) homeButton.hidden = showOptIn || options.showHome === false;
 
   navButtons.forEach((button) => {
     button.classList.toggle("active", Boolean(activeNavPage) && button.dataset.page === activeNavPage);
@@ -1980,7 +1973,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "watchlist" && hasWalletOptIn()) {
     state.currentPage = pageName;
     state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-    await ensureWatchlistRoute(options);
+    const selectedWatchlist = await ensureWatchlistRoute(options);
+    if (selectedWatchlist?.id) {
+      options = { ...options, watchlistId: selectedWatchlist.id };
+    }
   }
 
   state.currentPage = pageName;
@@ -2945,7 +2941,7 @@ async function ensureWatchlistRoute(options = {}) {
     renderWatchlistSwitcher();
     showToast("Watchlist not found.");
     updateWatchlistUrl(true, true, options.view);
-    return;
+    return firstWatchlist || null;
   }
 
   const nextWatchlist = found || state.watchlists[0] || ensureDefaultWatchlist();

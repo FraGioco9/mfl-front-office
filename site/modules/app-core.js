@@ -2934,7 +2934,10 @@ async function setPage(pageName, updateHash = true, options = {}) {
   if (pageName === "watchlist" && hasWalletOptIn()) {
     state.currentPage = pageName;
     state.pendingWatchlistRouteId = options.watchlistId || watchlistIdFromUrl() || "";
-    await ensureWatchlistRoute(options);
+    const selectedWatchlist = await ensureWatchlistRoute(options);
+    if (selectedWatchlist?.id) {
+      options = { ...options, watchlistId: selectedWatchlist.id };
+    }
   }
 
   state.currentPage = pageName;
@@ -4237,7 +4240,7 @@ async function ensureWatchlistRoute(options = {}) {
     renderWatchlistSwitcher();
     showToast("Watchlist not found.");
     updateWatchlistUrl(true, true, options.view);
-    return;
+    return firstWatchlist || null;
   }
 
   const nextWatchlist = found || state.watchlists[0] || ensureDefaultWatchlist();

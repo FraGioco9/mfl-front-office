@@ -7,7 +7,25 @@
     <script>
       (() => {
         const root = document.documentElement;
-        root.dataset.initialPage = window.location.pathname.replace(/^\//, "") || "home";
+        const initialPath = String(window.location.pathname || "/");
+        const initialPathParts = initialPath.split("/").filter(Boolean);
+        const initialRoot = String(initialPathParts[0] || "").toLowerCase();
+        const exactSinglePage = ["evaluation", "settings", "changelog"].includes(initialRoot) && initialPathParts.length === 1;
+        const tableRouteShape = ["database", "mfl", "progression", "my-players"].includes(initialRoot) && initialPathParts.length <= 2;
+        const watchlistRouteShape = initialRoot === "watchlist" && initialPathParts.length <= 3;
+        const agentRouteShape = initialRoot === "agents" && initialPathParts.length >= 2 && initialPathParts.length <= 3;
+        const clubRouteShape = ["clubs", "club"].includes(initialRoot) && initialPathParts.length >= 2 && initialPathParts.length <= 3;
+        const playerRouteShape = initialRoot === "players" && initialPathParts.length === 2;
+        const knownRouteShape = initialPathParts.length === 0
+          || exactSinglePage
+          || tableRouteShape
+          || watchlistRouteShape
+          || agentRouteShape
+          || clubRouteShape
+          || playerRouteShape;
+        root.dataset.initialPage = knownRouteShape
+          ? initialPath.replace(/^\/+|\/+$/g, "") || "home"
+          : "notfound";
 
         const TABLE_VIEW_CONFIG = Object.freeze({
           database: Object.freeze({ order: ["attributes", "contracts", "stats"], fallback: "attributes" }),
@@ -31,13 +49,15 @@
 
         const pathParts = String(window.location.pathname || "/").split("/").filter(Boolean);
         const firstPart = String(pathParts[0] || "").toLowerCase();
-        const tablePage = firstPart === "my-players"
-          ? "myplayers"
-          : firstPart === "clubs" || firstPart === "club"
-            ? "club"
-            : ["database", "mfl", "progression", "watchlist", "agents"].includes(firstPart)
-              ? firstPart
-              : "";
+        const tablePage = root.dataset.initialPage === "notfound"
+          ? ""
+          : firstPart === "my-players"
+            ? "myplayers"
+            : firstPart === "clubs" || firstPart === "club"
+              ? "club"
+              : ["database", "mfl", "progression", "watchlist", "agents"].includes(firstPart)
+                ? firstPart
+                : "";
         const tableConfig = TABLE_VIEW_CONFIG[tablePage];
         if (tableConfig) {
           const lastPart = String(pathParts.at(-1) || "").toLowerCase();
@@ -152,6 +172,12 @@
         [data-initial-page^="watchlist"],
         [data-initial-page="settings"]
       ) #myPlayersLockedPage {
+        display: block;
+      }
+      html[data-initial-page="notfound"]:not(.mflInitialRouteResolved) #homePage {
+        display: none;
+      }
+      html[data-initial-page="notfound"]:not(.mflInitialRouteResolved) #routeMessagePage {
         display: block;
       }
       html[data-initial-page="evaluation"]:not(.mflInitialRouteResolved) #homePage {
@@ -474,6 +500,14 @@
             </div>
             <div id="mflStatsAgeDistribution" class="mflStatsAgeDistribution"></div>
           </section>
+        </section>
+
+        <section id="routeMessagePage" class="pageView myPlayersLockedPage" hidden>
+          <div class="myPlayersLockedContent">
+            <h2 id="routeMessageTitle">Page not found</h2>
+            <p id="routeMessageText">The requested page could not be found.</p>
+            <button id="routeMessageHomeButton" class="homeOptInButton" type="button">Home</button>
+          </div>
         </section>
 
         <section id="myPlayersLockedPage" class="pageView myPlayersLockedPage" hidden>
