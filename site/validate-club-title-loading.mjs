@@ -10,6 +10,7 @@ const includes = (source, value, message) => invariant(source.includes(value), m
 const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
 const [
+  indexHtml,
   coreSource,
   routeSplitter,
   clubStartupLifecycle,
@@ -19,6 +20,7 @@ const [
   generatedClubCore,
   routeLoader,
 ] = await Promise.all([
+  read("./index.html"),
   read("./modules/app-core.js"),
   read("./modules/app-core-route-chunks.js"),
   read("./modules/app-core-club-startup-lifecycle.js"),
@@ -58,7 +60,17 @@ includes(
 excludes(
   bootstrap,
   'if (page === "club") document.getElementById("mflInitialTableViewFirstPaint")?.remove();',
-  "Club refresh must keep the first-paint Squad presentation active until route readiness instead of repainting the view label during bootstrap hydration.",
+  "Club refresh must keep first-paint view styling active until route readiness instead of repainting the active view during bootstrap hydration.",
+);
+excludes(
+  indexHtml,
+  '`${buttonSelector("attributes")} { font-size: 0; }`',
+  "Club first paint must not hide the real Squad text behind a generated label fallback.",
+);
+excludes(
+  indexHtml,
+  '`${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`',
+  "Club first paint must render Squad from the actual button text only, never from a duplicate pseudo-element.",
 );
 excludes(
   clubCore,
@@ -217,4 +229,4 @@ invariant(
   "The tracked Club runtime must exactly match the normalized Club artifact.",
 );
 
-console.log("Club filter-free refresh checks passed: shared public entry, stable first-paint Squad label, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
+console.log("Club filter-free refresh checks passed: shared public entry, one real first-paint Squad label, no first-paint filter chrome, no saved-filter restore, no pre-reset filter render, one final Club-owned roster render.");
