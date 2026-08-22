@@ -20,7 +20,7 @@ const core = String(artifacts.core || "");
 const player = String(artifacts.routeChunks?.player || "");
 const club = String(artifacts.routeChunks?.club || "");
 const evaluation = String(artifacts.routeChunks?.evaluation || "");
-const watchlist = String(artifacts.routeChunks?.watchlist || "");
+const generated = [core, ...Object.values(artifacts.routeChunks || {}).map(String)].join("\n");
 const preBootstrap = normalizePreBootstrapRouteState(browserConfigRuntimeSource(release));
 
 const parserStart = core.indexOf("function pageTargetFromPath(path) {");
@@ -46,8 +46,8 @@ includes(club, 'window.__mflShowRouteMessage?.("Club not found", "The requested 
 excludes(club, 'window.location.replace("/")', "Club routing must not retain the legacy malformed-link Home redirect.");
 
 includes(evaluation, 'window.history.replaceState({}, "", "/evaluation");', "Expired saved/shared Evaluations must continue returning to plain Evaluation.");
-includes(watchlist, 'showToast("Watchlist not found.");', "Missing Watchlists must continue falling back with a not-found toast.");
-includes(watchlist, "updateWatchlistUrl(true, true, options.view);", "Missing Watchlists must preserve the requested view when selecting the fallback list.");
+includes(generated, 'showToast("Watchlist not found.");', "Missing Watchlists must continue falling back with a not-found toast.");
+includes(generated, "updateWatchlistUrl(true, true, options.view);", "Missing Watchlists must preserve the requested view when selecting the fallback list.");
 
 includes(preBootstrap, 'return { pageName: "notfound", options: {} };', "Unknown deep links must be classified as not-found before first paint.");
 includes(preBootstrap, "const initialCanonicalPath = String(initialRoute.options?.replaceUrl || initialRoute.options?.path || \"\");", "Recognizable malformed deep links must canonicalize before hydration.");
