@@ -179,9 +179,12 @@ invariant(
 invariant(
   walletPreferencesApi.includes("wallet_preferences?select=watchlists,player_notes,table_state,evaluation_settings,settings")
     && walletPreferencesApi.includes("tableState: row.table_state")
+    && walletPreferencesApi.includes("recentSearchItems: mergeRecentIds(incoming.recentSearchItems, current.recentSearchItems),")
+    && walletPreferencesApi.includes("recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),")
+    && walletPreferencesApi.includes("recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),")
     && core.includes("recentSearchItems: state.recentSearchItems")
     && core.includes("queueCloudTableStateSave(savedState);"),
-  "Global Search recent history must persist through the Supabase-backed wallet preferences table state.",
+  "Supabase persistence must merge the mixed Global Search history and agent history with the existing five so a partial or concurrent save cannot collapse recentSearchItems to only the newly clicked result.",
 );
 
 invariant(
@@ -220,4 +223,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, preserves the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
