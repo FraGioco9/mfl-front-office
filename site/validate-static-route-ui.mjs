@@ -45,6 +45,8 @@ for (const canonicalConfig of [
 ]) {
   includes(indexHtml, canonicalConfig, `First paint must retain canonical view configuration ${canonicalConfig}.`);
 }
+excludes(indexHtml, '`${buttonSelector("attributes")} { font-size: 0; }`', "First-paint view labels must remain real button text instead of being hidden for a pseudo-label handoff.");
+excludes(indexHtml, '`${buttonSelector("attributes")}::after { content: "Squad"; font-size: 14px; }`', "First-paint Club view labels must not duplicate Squad through generated pseudo-content.");
 
 includes(entry, '"/static-ui-runtime.js"', "Static route chrome must load universally before the application core.");
 excludes(entry, "/table-view-runtime.js", "The retired table-view runtime must stay out of the browser runtime graph.");
@@ -211,4 +213,4 @@ includes(dropdowns, "width: 92px;", "Rows selector must retain its established f
 excludes(dropdowns, "92px !important", "Rows selector dimensions must not rely on priority overrides.");
 includes(dropdowns, "overflow-x: hidden;", "Watchlist dropdown must not expose a horizontal scrollbar.");
 
-console.log("Static route validation passed with attached refresh-stable view-button nodes and labels, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
+console.log("Static route validation passed with attached refresh-stable view-button nodes, single-source first-paint labels, bootstrap-owned table headers, passive route chrome, canonical loading rows, and explicit core contracts.");
