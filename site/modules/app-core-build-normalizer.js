@@ -74,20 +74,68 @@ function normalizeViewFilterStateBeforeTransition(artifacts) {
 
 function normalizeTableRequestLoadingBoundary(artifacts) {
   const core = String(artifacts?.core || "");
+  const routeChunks = { ...(artifacts?.routeChunks || {}) };
+  const table = String(routeChunks.table || "");
   if (!core) throw new Error("Cannot normalize table loading request boundary without shared application core.");
+  if (!table) throw new Error("Cannot normalize table loading request boundary without the Table route chunk.");
 
-  const normalizedCore = replaceRequired(
+  let normalizedCore = replaceRequired(
     core,
     "  let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);",
-    `  window.__mflTableLoadingRuntime?.beginRequest?.(route.scope);
+    `  const tableLoadingRequestToken = window.__mflTableLoadingRuntime?.beginRequest?.(route.scope) || 0;
 
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);`,
     "uncached table request loading boundary",
   );
+  normalizedCore = replaceRequired(
+    normalizedCore,
+    `  let payload;
+  try {
+    payload = await requestPromise;
+  } catch (error) {
+    if (!incrementalRouteRequestIsCurrent(generation)) return null;
+    throw error;
+  }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) return null;
+  applyIncrementalPayload(route, payload);
+  state.incrementalLastKey = requestKey;
+  state.incrementalLastLoadedAt = Date.now();
+  return payload;`,
+    `  let payload;
+  try {
+    payload = await requestPromise;
+  } catch (error) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+    if (!incrementalRouteRequestIsCurrent(generation)) return null;
+    throw error;
+  }
+  if (!payload || !incrementalRouteRequestIsCurrent(generation)) {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+    return null;
+  }
+  try {
+    applyIncrementalPayload(route, payload);
+    state.incrementalLastKey = requestKey;
+    state.incrementalLastLoadedAt = Date.now();
+    return payload;
+  } finally {
+    window.__mflTableLoadingRuntime?.finishRequest?.(tableLoadingRequestToken);
+  }`,
+    "table request loading boundary completion",
+  );
+
+  const normalizedTable = replaceRequired(
+    table,
+    "function tableRenderTableOwner() {\n",
+    "function tableRenderTableOwner() {\n  if (window.__mflTableLoadingRuntime?.requestActive?.()) return;\n",
+    "stale table render isolation during active request",
+  );
+  routeChunks.table = normalizedTable;
 
   return Object.freeze({
     ...artifacts,
     core: normalizedCore,
+    routeChunks: Object.freeze(routeChunks),
   });
 }
 
