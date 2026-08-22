@@ -5667,10 +5667,19 @@ function setupBackdropClickClose(modal, closeCallback) {
 async function openSearch() {
   showModal(searchModal);
   playerSearchInput.value = "";
-  renderSearchResultsNow();
+
+  const renderAuthoritativeRecentSearches = async () => {
+    const renderRecent = window.__mflGlobalSearchRuntime?.recent;
+    if (typeof renderRecent !== "function") return false;
+    return Boolean(await renderRecent());
+  };
+
+  void renderAuthoritativeRecentSearches().then((rendered) => {
+    if (!rendered && !playerSearchInput.value.trim()) renderSearchResultsNow();
+  });
   window.setTimeout(() => playerSearchInput.focus(), 0);
   await ensureSearchIndexes();
-  renderSearchResultsNow();
+  if (!await renderAuthoritativeRecentSearches()) renderSearchResultsNow();
 }
 
 function closeSearch() {
