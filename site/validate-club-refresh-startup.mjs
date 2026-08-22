@@ -16,6 +16,15 @@ const parserEnd = eagerCore.indexOf("\n}\n\nfunction pagePath", parserStart);
 invariant(parserStart >= 0 && parserEnd > parserStart, "Missing shared route parser.");
 const parserSource = eagerCore.slice(parserStart, parserEnd + 2);
 
+const clubViews = new Set(["attributes", "contracts", "current", "all"]);
+const clubSlugs = {
+  attributes: "squad",
+  contracts: "contracts",
+  current: "current-season",
+  all: "all-time",
+};
+const normalizeClubView = (view) => clubViews.has(String(view || "")) ? String(view) : "attributes";
+const clubPath = (clubId, view = "attributes") => `/clubs/${encodeURIComponent(clubId)}/${clubSlugs[normalizeClubView(view)]}`;
 const clubRoute = (pathname) => {
   const path = String(pathname || "/").replace(/\/+$/, "") || "/";
   const match = path.match(/^\/clubs\/([^/]+)\/(squad|contracts|current-season|all-time)$/i);
@@ -28,13 +37,19 @@ const clubRoute = (pathname) => {
   };
   const clubId = decodeURIComponent(match[1]);
   const view = views[String(match[2]).toLowerCase()];
-  return { clubId, view, path: `/clubs/${encodeURIComponent(clubId)}/${String(match[2]).toLowerCase()}` };
+  return { clubId, view, path: clubPath(clubId, view) };
 };
 
-const window = { __mflAppConfig: { routes: { clubRoute } } };
+const window = { __mflAppConfig: { routes: { clubRoute, clubPath, normalizeClubView } } };
 const hasWalletOptIn = () => true;
 const normalizeViewForPage = (view) => view || "attributes";
-const viewFromSlug = (slug) => ({ attributes: "attributes" })[slug] || "";
+const viewFromSlug = (slug) => ({
+  attributes: "attributes",
+  squad: "attributes",
+  contracts: "contracts",
+  "current-season": "current",
+  "all-time": "all",
+})[slug] || "";
 const normalizedPageName = (page) => page;
 const mflWalletAddress = "0xff8d2bbed8164db0";
 const normalizeWalletAddress = (value) => String(value || "");
@@ -71,4 +86,12 @@ invariant(contracts?.pageName === "club", "Club Contracts refresh must resolve a
 invariant(contracts?.options?.clubId === "club id", "Encoded Club IDs must be decoded by canonical routing.");
 invariant(contracts?.options?.view === "contracts", "Club Contracts refresh must preserve the Contracts view.");
 
-console.log("Club refresh startup route validation passed for direct Squad and Contracts URLs.");
+const missingView = pageTargetFromPath("/clubs/12345");
+invariant(missingView?.options?.view === "attributes", "Club URLs without a view must repair to Squad.");
+invariant(missingView?.options?.replaceUrl === "/clubs/12345/squad", "Club URLs without a view must canonicalize in place.");
+
+const invalidView = pageTargetFromPath("/club/12345/not-a-view");
+invariant(invalidView?.options?.view === "attributes", "Invalid Club views must repair to Squad.");
+invariant(invalidView?.options?.replaceUrl === "/clubs/12345/squad", "Legacy malformed Club URLs must canonicalize to the plural Squad route.");
+
+console.log("Club refresh startup route validation passed for direct, missing-view, invalid-view, and legacy Club URLs.");
