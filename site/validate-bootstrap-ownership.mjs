@@ -81,13 +81,23 @@ includes(
 );
 includes(
   bootstrap,
-  "container.insertBefore(button, switcher instanceof HTMLElement ? switcher : null);",
-  "View order must be represented by DOM order instead of CSS order overrides.",
+  "candidate.style.order = String(orderIndex + 1);",
+  "First-paint view order must use flex order without detaching any button node.",
 );
 includes(
   bootstrap,
-  'candidate.textContent = page === "club" ? "Squad" : "Attributes";',
-  "Club Squad must use real button text instead of generated pseudo-content.",
+  'switcher.style.order = "100";',
+  "The Watchlist switcher must remain after the stable first-paint view buttons.",
+);
+excludes(
+  bootstrap,
+  "container.insertBefore(",
+  "First-paint view buttons must never be detached and reinserted to change order.",
+);
+excludes(
+  bootstrap,
+  "candidate.textContent",
+  "First-paint view-button labels must never be replaced during bootstrap.",
 );
 includes(
   bootstrap,
