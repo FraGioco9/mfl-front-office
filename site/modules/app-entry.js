@@ -224,9 +224,6 @@ function initialRouteRuntimeRequest() {
 
 const initialRouteRuntime = Object.freeze(initialRouteRuntimeRequest());
 const evaluationStartup = initialRouteRuntime.pageName === "evaluation";
-const homeStartup = initialRouteRuntime.pageName === "home";
-const playerStartup = initialRouteRuntime.pageName === "player";
-const tableStartup = routeNeedsTable(initialRouteRuntime.pageName, initialRouteRuntime.options);
 const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
   ...UNIVERSAL_RUNTIME_SCRIPTS,
   ...preCoreScriptsForRoute(initialRouteRuntime.pageName, initialRouteRuntime.options),
@@ -234,7 +231,7 @@ const initialPreCoreRuntimeScripts = Object.freeze(uniqueScripts([
 
 /** @type {Window & {
  * __mflReleaseVersion?: string,
- * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, installCoreBridge?: () => void },
+ * __mflInteractionBusy?: { begin?: (reason?: string) => string, end?: (token?: string) => void, waitForRoutePaint?: () => Promise<void>, installCoreBridge?: () => void },
  * __mflTableLoadingRuntime?: { installCoreBridge?: () => void, sync?: () => void },
  * __mflFilterControlsRuntime?: { sync?: () => void },
  * __mflDatabaseStatsStateRuntime?: { sync?: () => void },
@@ -270,9 +267,30 @@ const applicationCoreLoadedPromise = new Promise((resolve) => {
 });
 const routeRuntimeEnsurePromises = new Map();
 let evaluationRecentStateBridgeInstalled = false;
+/** @type {Promise<unknown>} */
+let initialGlobalSearchWarmupPromise = Promise.resolve();
+
+function detachInitialGlobalSearchWarmupFromRoute() {
+  const primeGlobalSearchIndexes = Reflect.get(runtimeWindow, "primeGlobalSearchIndexes");
+  if (typeof primeGlobalSearchIndexes !== "function" || primeGlobalSearchIndexes.__mflInitialRouteDetached) return false;
+
+  const detachedPrime = function (...args) {
+    Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", primeGlobalSearchIndexes);
+    initialGlobalSearchWarmupPromise = Promise.resolve()
+      .then(() => primeGlobalSearchIndexes.apply(runtimeWindow, args))
+      .catch((error) => {
+        console.warn("Initial Global Search warm-up failed after route loading was released.", error);
+        return false;
+      });
+    return Promise.resolve();
+  };
+  Object.defineProperty(detachedPrime, "__mflInitialRouteDetached", { value: true });
+  return Reflect.set(runtimeWindow, "primeGlobalSearchIndexes", detachedPrime);
+}
 
 function markApplicationCoreLoaded() {
   if (applicationCoreLoaded) return;
+  detachInitialGlobalSearchWarmupFromRoute();
   applicationCoreLoaded = true;
   applicationCoreLoadedResolve();
 }
@@ -346,7 +364,7 @@ function installClubRouteRuntimeGate() {
     if (!normalizedClubId) return current.call(runtimeWindow, clubId, view);
 
     const loadClub = async () => {
-      const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
+      const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-loading") || "";
       try {
         await ensureRouteRuntime("club", { view });
         return await current.call(runtimeWindow, normalizedClubId, view);
@@ -446,16 +464,23 @@ async function start() {
     finalizeRouteRuntimeNow(initialRouteRuntime.pageName, initialRouteRuntime.options),
   );
 
-  if (evaluationStartup && runtimeWindow.__mflAppStartPromise) {
+  if (runtimeWindow.__mflAppStartPromise) {
     await runtimeWindow.__mflAppStartPromise;
+  }
+
+  if (evaluationStartup) {
     await runtimeWindow.__mflEvaluationSearchStateRuntime?.restoreEmptyRecentResults?.(false);
   }
 
-  if ((homeStartup || tableStartup || playerStartup) && runtimeWindow.__mflAppStartPromise) {
-    await runtimeWindow.__mflAppStartPromise;
-  }
+  await runtimeWindow.__mflInteractionBusy?.waitForRoutePaint?.();
+  document.documentElement.dataset.mflRouteReady = "true";
+  window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));
 
-  await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
+  const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
+  await Promise.allSettled([
+    initialGlobalSearchWarmupPromise,
+    globalSearchPreloadPromise,
+  ]);
 
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));

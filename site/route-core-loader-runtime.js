@@ -162,7 +162,7 @@
       if (!normalizedClubId) return;
 
       const loadClub = async () => {
-        const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
+        const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-loading") || "";
         try {
           const routeCorePromise = ensure("club", { view });
           const routeRuntimePromise = typeof runtimeWindow.__mflEnsureRouteRuntime === "function"

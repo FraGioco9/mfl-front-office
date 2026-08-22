@@ -96,13 +96,25 @@ includes(
 );
 includes(
   bootstrapCore,
-  '"startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime",',
-  "Watchlist page, view, direct list-switch, and lazy-route transitions must inherit the same global data-loading lifecycle as every other route.",
+  'const ROUTE_LOADING_REASON = "route-loading";',
+  "Watchlist page, view, and direct list-switch transitions must share the canonical route-loading lifecycle.",
+);
+for (const reason of ["setPage", "setView", "switchWatchlist", "route-runtime", "ensureProgressionData", "requestIncrementalRoute"]) {
+  includes(
+    bootstrapCore,
+    `"${reason}"`,
+    `Watchlist loading classification must retain ${reason} as a canonical route-loading alias or wrapped route owner.`,
+  );
+}
+includes(
+  bootstrapCore,
+  "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
+  "Watchlist route aliases must publish only the canonical route-loading identity.",
 );
 includes(
   bootstrapCore,
-  '"setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"',
-  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners.",
+  "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
+  "The global loading bridge must wrap direct Watchlist switches as well as page and view owners with route loading.",
 );
 includes(
   bootstrapCore,
@@ -207,4 +219,4 @@ invariant(
   "Generated Watchlist runtime must exactly match the Watchlist build artifact.",
 );
 
-console.log("Watchlist route-core splitting, direct global function ownership, stable delegates, and canonical loading validation passed.");
+console.log("Watchlist route-core splitting, direct global function ownership, stable delegates, and canonical route-loading validation passed.");

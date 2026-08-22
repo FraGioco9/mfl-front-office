@@ -5,10 +5,12 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [styles, loadingStyles, bootstrapCore, loadingUi, tableLoading] = await Promise.all([
+const [styles, loadingStyles, bootstrapCore, appEntry, routeLoader, loadingUi, tableLoading] = await Promise.all([
   read("./styles.css"),
   read("./loading.css"),
   read("./bootstrap-core.js"),
+  read("./modules/app-entry.js"),
+  read("./route-core-loader-runtime.js"),
   read("./loading-toast-runtime.js"),
   read("./table-loading-runtime.js"),
 ]);
@@ -39,13 +41,53 @@ for (const required of [
 invariant(!loadingStyles.includes("!important"), "loading.css must not introduce !important overrides.");
 
 for (const required of [
+  'const ROUTE_LOADING_REASON = "route-loading";',
+  "const ROUTE_LOADING_ALIASES = new Set([",
+  "function loadingReason(reason) {",
   "const subscribers = new Set();",
   "function subscribe(callback, options = {}) {",
+  "function waitForRoutePaint() {",
   "snapshot: () => currentSnapshot,",
   'window.dispatchEvent(new CustomEvent("mfl:loading-state", { detail: snapshot }));',
 ]) {
   invariant(bootstrapCore.includes(required), `bootstrap-core.js is missing loading-state ownership: ${required}`);
 }
+invariant(
+  bootstrapCore.includes("return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;"),
+  "Legacy route/data reasons must collapse into the canonical route-loading reason.",
+);
+for (const alias of [
+  "setPage",
+  "setView",
+  "switchWatchlist",
+  "route-runtime",
+  "ensureProgressionData",
+  "requestIncrementalRoute",
+  "databaseStatsData",
+  "mflStatsData",
+  "evaluationRouteLoading",
+]) {
+  invariant(
+    bootstrapCore.includes(`"${alias}"`),
+    `Canonical loading must normalize the legacy route reason ${alias}.`,
+  );
+}
+invariant(
+  bootstrapCore.includes('const initialRouteToken = window.__mflInteractionBusy.begin(ROUTE_LOADING_REASON);'),
+  "Refresh startup must enter the same route-loading reason used by SPA navigation.",
+);
+invariant(
+  bootstrapCore.includes('window.addEventListener("mfl:route-ready", finishInitialRoute, { once: true });'),
+  "Initial loading must finish from route readiness instead of application-wide readiness.",
+);
+invariant(
+  !bootstrapCore.includes('begin("startup")'),
+  "Application startup must not retain a separate user-visible loading reason.",
+);
+invariant(
+  bootstrapCore.includes("if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();"),
+  "SPA route loading must remain active through the final route paint.",
+);
 invariant(
   !bootstrapCore.includes('document.createElement("style")'),
   "bootstrap-core.js must not inject loading CSS at runtime.",
@@ -53,6 +95,25 @@ invariant(
 invariant(
   !bootstrapCore.includes("window.__mflTableLoadingRuntime?.sync?.();"),
   "The loading-state owner must notify subscribers instead of directly repairing the table runtime.",
+);
+
+invariant(
+  appEntry.includes('document.documentElement.dataset.mflRouteReady = "true";')
+    && appEntry.includes('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));'),
+  "Initial refresh must publish explicit route readiness.",
+);
+invariant(
+  appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));')
+    < appEntry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();"),
+  "Background Global Search warm-up must not delay visible route readiness.",
+);
+invariant(
+  routeLoader.includes('begin?.("route-loading")'),
+  "Lazy route-core navigation must use the same route-loading reason as refresh startup.",
+);
+invariant(
+  !routeLoader.includes('begin?.("route-runtime")'),
+  "Lazy route-core navigation must not retain a second route-runtime loading identity.",
 );
 
 for (const [name, source] of [
@@ -73,21 +134,21 @@ for (const [name, source] of [
   );
 }
 
-for (const reason of [
-  "setPage",
-  "setView",
-  "switchWatchlist",
-  "route-runtime",
-  "requestIncrementalRoute",
-]) {
-  invariant(
-    loadingUi.includes(`"${reason}"`),
-    `Loading toast must classify ${reason} as navigation/cache coordination rather than standalone loading.`,
-  );
-}
 invariant(
   loadingUi.includes("const TOAST_COORDINATION_REASONS = new Set(["),
-  "Loading toast must keep navigation/cache coordination reasons separate from real loading reasons.",
+  "Loading toast must keep non-route coordination reasons separate from real loading reasons.",
+);
+invariant(
+  !loadingUi.includes('"setPage"')
+    && !loadingUi.includes('"setView"')
+    && !loadingUi.includes('"switchWatchlist"')
+    && !loadingUi.includes('"route-runtime"')
+    && !loadingUi.includes('"requestIncrementalRoute"'),
+  "Loading toast must not classify route transitions by obsolete per-function reasons.",
+);
+invariant(
+  !loadingUi.includes('"route-loading",'),
+  "Canonical route-loading must remain a real Loading toast reason, not a suppressed coordination reason.",
 );
 invariant(
   loadingUi.includes("function snapshotNeedsToast(snapshot) {")
@@ -95,12 +156,12 @@ invariant(
   "Loading toast must require at least one non-coordination busy reason before becoming visible.",
 );
 invariant(
-  loadingUi.includes("if (snapshotNeedsToast(snapshot) && !toastSuppressed())"),
-  "Loading toast visibility must use the cache-aware loading predicate.",
+  loadingUi.includes("const initialRouteResolved = document.documentElement.classList.contains(\"mflInitialRouteResolved\");"),
+  "Footer readiness must follow the visible route instead of application-wide background warm-up.",
 );
 invariant(
-  !loadingUi.includes("if (snapshot.busy && !toastSuppressed())"),
-  "Loading toast must not appear for every busy navigation snapshot.",
+  !loadingUi.includes('document.documentElement.dataset.mflReady !== "true"'),
+  "Footer interaction must not remain locked for background application warm-up.",
 );
 
 invariant(
@@ -131,4 +192,4 @@ invariant(
   "Table loading must not retain a second loading-row renderer.",
 );
 
-console.log("Canonical loading-state ownership, cache-aware toast suppression, bootstrap-owned loading rows, static presentation, and direct subscribers validation passed.");
+console.log("Unified route loading ownership, route-ready startup, background warm-up separation, shared paint boundary, static presentation, and direct subscriber validation passed.");

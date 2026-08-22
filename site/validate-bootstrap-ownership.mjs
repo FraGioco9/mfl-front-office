@@ -22,7 +22,7 @@ includes(
 includes(
   bootstrap,
   'root.classList.remove("mflInitialRouteResolved");',
-  "First-paint route state must remain distinct until startup settles.",
+  "First-paint route state must remain distinct until the visible route settles.",
 );
 includes(
   bootstrap,
@@ -175,17 +175,22 @@ excludes(
 includes(
   bootstrapCore,
   'document.documentElement.classList.remove("mflSingleRenderPending");',
-  "bootstrap-core.js must release first-paint loading state when startup finishes.",
+  "bootstrap-core.js must release first-paint loading state when the visible route is ready.",
 );
 includes(
   bootstrapCore,
   'document.documentElement.classList.add("mflInitialRouteResolved");',
-  "Runtime route ownership must begin only after startup settles.",
+  "Runtime route ownership must begin only after the initial visible route settles.",
 );
 includes(
   bootstrapCore,
-  "if (startupFinished) return;",
-  "Startup cleanup must be idempotent across success and error paths.",
+  "if (initialRouteFinished) return;",
+  "Initial route cleanup must be idempotent across success and error paths.",
+);
+includes(
+  bootstrapCore,
+  'window.addEventListener("mfl:route-ready", finishInitialRoute, { once: true });',
+  "Visible route readiness must be the primary initial loading release signal.",
 );
 includes(
   bootstrapCore,
@@ -224,13 +229,53 @@ includes(
 );
 includes(
   bootstrapCore,
-  '"startup", "interaction-loading", "setPage", "setView", "switchWatchlist", "route-runtime",',
-  "Page transitions, view transitions, Watchlist switches, and lazy route-runtime loading must all participate in the same data-loading lifecycle.",
+  'const ROUTE_LOADING_REASON = "route-loading";',
+  "Refresh and in-app navigation must share one route-loading identity.",
 );
 includes(
   bootstrapCore,
-  '"setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"',
-  "Every page/view transition and direct Watchlist switch must be wrapped by the Uniform Loading Workflow regardless of cache state.",
+  "const ROUTE_LOADING_ALIASES = new Set([",
+  "Legacy route/data reasons must normalize into the same route-loading lifecycle.",
+);
+for (const reason of [
+  "startup",
+  "setPage",
+  "setView",
+  "switchWatchlist",
+  "route-runtime",
+  "ensureProgressionData",
+  "requestIncrementalRoute",
+  "databaseStatsData",
+  "mflStatsData",
+  "evaluationRouteLoading",
+]) {
+  includes(
+    bootstrapCore,
+    `"${reason}"`,
+    `Legacy loading reason ${reason} must remain classified as route loading.`,
+  );
+}
+includes(
+  bootstrapCore,
+  "return ROUTE_LOADING_ALIASES.has(normalizedReason) ? ROUTE_LOADING_REASON : normalizedReason;",
+  "All legacy route reasons must publish the canonical route-loading reason.",
+);
+for (const name of ["setPage", "setView", "switchWatchlist", "ensureProgressionData", "requestIncrementalRoute"]) {
+  includes(
+    bootstrapCore,
+    `"${name}"`,
+    `The Uniform Loading Workflow must wrap ${name} regardless of cache state.`,
+  );
+}
+includes(
+  bootstrapCore,
+  "].forEach((name) => wrapBusyGlobal(name, ROUTE_LOADING_REASON));",
+  "Every page/view transition and direct Watchlist switch must enter canonical route loading.",
+);
+includes(
+  bootstrapCore,
+  "if (normalizedReason === ROUTE_LOADING_REASON) await waitForRoutePaint();",
+  "Route loading must remain active until the destination has crossed the shared final-paint boundary.",
 );
 includes(
   bootstrapCore,
@@ -366,4 +411,4 @@ includes(
   "Canonical transitions must release shared navigation state in finally blocks.",
 );
 
-console.log("Bootstrap first-paint shells, canonical loading state, and canonical navigation lifecycle ownership validation passed.");
+console.log("Bootstrap first-paint shells, route-ready canonical loading state, and canonical navigation lifecycle ownership validation passed.");
