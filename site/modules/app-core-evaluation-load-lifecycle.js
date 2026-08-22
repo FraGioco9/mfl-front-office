@@ -18,6 +18,7 @@ const EVALUATION_LOAD_FACADE_WITH_BUSY = `let __mflOpenSavedEvaluationsModalOwne
 
 async function openSavedEvaluationsModal() {
   evaluationSearchInput.blur();
+  if (document.activeElement === evaluationLoadButton) evaluationLoadButton.blur();
   const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
     && activeWallet
@@ -36,6 +37,25 @@ async function openSavedEvaluationsModal() {
     if (busyToken) window.__mflInteractionBusy?.end?.(busyToken);
   }
 }`;
+
+const EVALUATION_LOAD_CLOSE_BINDING = `if (closeEvaluationLoadButton) {
+  closeEvaluationLoadButton.addEventListener("click", () => {
+    hideModal(evaluationLoadModal);
+  });
+}
+setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));`;
+const EVALUATION_LOAD_CLOSE_BINDING_WITH_ESCAPE = `if (closeEvaluationLoadButton) {
+  closeEvaluationLoadButton.addEventListener("click", () => {
+    hideModal(evaluationLoadModal);
+  });
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
+  event.preventDefault();
+  hideEvaluationLoadActionTooltip();
+  hideModal(evaluationLoadModal);
+});
+setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));`;
 
 const EVALUATION_CREATE_SAVED_START = `async function createSavedEvaluation() {`;
 const EVALUATION_CREATE_SAVED_START_WITH_CACHE = `function savedEvaluationCacheWallet() {
@@ -241,11 +261,17 @@ export function normalizeEvaluationLoadLifecycle(artifacts) {
   const source = String(artifacts?.core || "");
   if (!source) throw new Error("Cannot normalize Evaluation Load lifecycle without shared core.");
 
-  const core = replaceRequired(
+  let core = replaceRequired(
     source,
     EVALUATION_LOAD_FACADE,
     EVALUATION_LOAD_FACADE_WITH_BUSY,
-    "Evaluation Load blurs the search and enters Uniform Loading only when its wallet-scoped list cache is unavailable",
+    "Evaluation Load clears stale trigger focus and enters Uniform Loading only when its wallet-scoped list cache is unavailable",
+  );
+  core = replaceRequired(
+    core,
+    EVALUATION_LOAD_CLOSE_BINDING,
+    EVALUATION_LOAD_CLOSE_BINDING_WITH_ESCAPE,
+    "Saved Evaluations closes on Escape through the canonical shared modal owner",
   );
 
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
