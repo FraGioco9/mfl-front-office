@@ -1681,6 +1681,11 @@ function tableOpenSelectedPlayerLinksOwner() {
 }
 
 function tableRenderTableOwner() {
+  if (document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying) {
+    window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true });
+    return;
+  }
+
   const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
   state.page = Math.min(state.page, totalPages);
@@ -1819,6 +1824,7 @@ function tableRenderTableOwner() {
 
   tableBody.replaceChildren(fragment);
   emptyState.hidden = pageRows.length > 0;
+  window.__mflTableLoadingRuntime?.commitFinalRender?.();
   updateTablePlayerCount();
   pageText.textContent = `Page ${state.page} of ${totalPages}`;
   prevButton.disabled = state.page <= 1;
