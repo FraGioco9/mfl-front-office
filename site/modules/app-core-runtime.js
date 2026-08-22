@@ -6203,6 +6203,10 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return cachedPayload;
   }
 
+  if (["database", "progression", "mfl", "agent", "watchlist", "myplayers", "club"].includes(route.scope)) {
+    window.__mflTableLoadingRuntime?.beginRequest?.();
+  }
+
   let requestPromise = force ? null : state.incrementalRequestPromises.get(cacheKey);
   if (!requestPromise) {
     const controller = new AbortController();
