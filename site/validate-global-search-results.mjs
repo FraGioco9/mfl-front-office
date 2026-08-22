@@ -5,22 +5,34 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, styles] = await Promise.all([
+const [runtime, styles, core] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
+  read("./modules/app-core.js"),
 ]);
 
 for (const required of [
   "const MAX_GLOBAL_SEARCH_RESULTS = 10;",
-  "function normalizeTypedSearchResults() {",
+  "const MAX_RECENT_GLOBAL_SEARCH_RESULTS = 5;",
+  "function normalizeSearchResults() {",
+  "const hasQuery = Boolean(input.value.trim());",
+  "const maxResults = hasQuery ? MAX_GLOBAL_SEARCH_RESULTS : MAX_RECENT_GLOBAL_SEARCH_RESULTS;",
   'results.querySelectorAll(":scope > .searchResult")',
-  "directResults.slice(MAX_GLOBAL_SEARCH_RESULTS).forEach((result) => result.remove());",
-  'results.classList.remove("filledSearchResults");',
-  "coreContracts()?.renderGlobalSearchResults?.();\n      normalizeTypedSearchResults();",
-  "cap: normalizeTypedSearchResults,",
+  "directResults.slice(maxResults).forEach((result) => result.remove());",
+  'results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);',
+  "coreContracts()?.renderGlobalSearchResults?.();\n      normalizeSearchResults();",
+  "if (input && !input.value.trim()) renderCurrentResults();",
+  "cap: normalizeSearchResults,",
 ]) {
   invariant(runtime.includes(required), `Global Search result ownership is missing ${required}`);
 }
+
+invariant(
+  core.includes("const MAX_SEARCH_RESULTS = 5;")
+    && core.includes("state.recentSearchItems.slice(0, MAX_SEARCH_RESULTS).forEach((key) => {")
+    && core.includes("playerSearchResults.replaceChildren(...ordered.slice(0, MAX_SEARCH_RESULTS));"),
+  "Empty Global Search must render only the five most recent mixed player, club, or agent searches.",
+);
 
 invariant(
   styles.includes(".searchResults {\n  display: grid;\n  gap: 8px;")
@@ -40,4 +52,4 @@ invariant(
   "Global Search result layout must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search caps typed results at 10 and preserves five visible, fixed, non-overlapping result boxes.");
+console.log("Global Search shows five recent searches when empty and caps typed results at 10.");
