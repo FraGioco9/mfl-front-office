@@ -5,9 +5,10 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, styles, core, walletPreferencesApi] = await Promise.all([
+const [runtime, styles, controls, core, walletPreferencesApi] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
+  read("./controls.css"),
   read("./modules/app-core.js"),
   read("./api/wallet-preferences.js"),
 ]);
@@ -38,8 +39,10 @@ invariant(
     && runtime.includes("button.hidden = hidden;")
     && runtime.includes('button.toggleAttribute("hidden", hidden);')
     && runtime.includes('document.addEventListener("click", onClearClick, true);')
-    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest();\n    syncClearButton();'),
-  "Global Search clear control must stay hidden until the input contains text and hide immediately when cleared.",
+    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest();\n    syncClearButton();')
+    && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
+    && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
+  "Global Search clear control must be visually hidden whenever its input is empty and hide immediately when cleared.",
 );
 
 invariant(
@@ -71,7 +74,9 @@ invariant(
 );
 
 invariant(
-  !runtime.includes('document.createElement("style")') && !runtime.includes("!important"),
+  !runtime.includes('document.createElement("style")')
+    && !runtime.includes("!important")
+    && !controls.includes("!important"),
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
