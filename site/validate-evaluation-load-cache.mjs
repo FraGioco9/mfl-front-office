@@ -33,9 +33,15 @@ invariant(
 
 invariant(
   sharedCore.includes('evaluationLoadButton.addEventListener("click", openSavedEvaluationsModal);')
-    && sharedCore.includes('async function openSavedEvaluationsModal() {\n  evaluationSearchInput.blur();')
+    && sharedCore.includes('async function openSavedEvaluationsModal() {\n  evaluationSearchInput.blur();\n  if (document.activeElement === evaluationLoadButton) evaluationLoadButton.blur();')
     && !sharedCore.includes('async function openSavedEvaluationsModal() {\n  clearEvaluationSearchFocus();'),
-  "Clicking Load must preserve the direct universal binding while the shared facade immediately blurs the Evaluation search.",
+  "Clicking Load must preserve the direct universal binding while clearing both Evaluation-search focus and stale trigger focus before opening the modal.",
+);
+
+invariant(
+  sharedCore.includes('document.addEventListener("keydown", (event) => {\n  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;')
+    && sharedCore.includes('event.preventDefault();\n  hideEvaluationLoadActionTooltip();\n  hideModal(evaluationLoadModal);'),
+  "Saved Evaluations must close on Escape through the canonical modal owner.",
 );
 
 for (const required of [
@@ -130,4 +136,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: direct Load binding blurs search, cached rows retain names and valuations across page changes, saved hydration refreshes cached data, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: Load clears stale focus, Escape closes the modal, cached rows retain names and valuations across page changes, saved hydration refreshes cached data, and successful save/delete mutations invalidate stale data.");
