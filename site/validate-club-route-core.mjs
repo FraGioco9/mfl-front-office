@@ -149,17 +149,8 @@ includes(routeLoader, 'return routeConfig.clubPath(clubId, view);', "The primary
 includes(routeLoader, 'const routeCorePromise = ensure("club", { view });', "Club loading must start its ordered route-core dependency request inside the global loader callback.");
 includes(routeLoader, 'runtimeWindow.__mflEnsureRouteRuntime("club", { view })', "Club loading must overlap core and table-runtime loading.");
 includes(routeLoader, "await Promise.all([routeCorePromise, routeRuntimePromise]);", "Club loading must wait for both owners before invoking the route implementation.");
-const primaryRouteReady = routeLoader.indexOf("await Promise.all([routeCorePromise, routeRuntimePromise]);");
-const primaryRouteReleased = routeLoader.indexOf("runtimeWindow.__mflInteractionBusy?.end?.(token);", primaryRouteReady);
-const primaryRouteOwner = routeLoader.indexOf("const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", primaryRouteReleased);
-const primaryRouteOwnerCall = routeLoader.indexOf("return routeOwner.call(runtimeWindow, normalizedClubId, view);", primaryRouteOwner);
-invariant(
-  primaryRouteReady >= 0
-    && primaryRouteReleased > primaryRouteReady
-    && primaryRouteOwner > primaryRouteReleased
-    && primaryRouteOwnerCall > primaryRouteOwner,
-  "The primary Club gate must release lazy route-runtime loading before delegating to the canonical Club data/render owner.",
-);
+includes(routeLoader, "const routeOwner = runtimeWindow.__mflOpenClubPageRoute;", "The public gate must invoke the private Club route owner after loading.");
+includes(routeLoader, "return await routeOwner.call(runtimeWindow, normalizedClubId, view);", "The primary Club gate must keep Uniform Loading active until the Club route renderer settles.");
 excludes(routeLoader, "window.history.pushState", "The primary Club lazy gate must not own history outside the global transition.");
 excludes(routeLoader, "window.history.replaceState", "The primary Club lazy gate must not own history outside the global transition.");
 
@@ -169,17 +160,9 @@ includes(appEntry, 'return runTransition("club", true, {', "The fallback Club ga
 includes(appEntry, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "Fallback Club navigation must use canonical app config for URL construction.");
 excludes(appEntry, 'const slugByView = new Map([', "Fallback Club navigation must not duplicate Club view-to-slug mapping.");
 const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
-const fallbackGateEnd = appEntry.indexOf("async function finalizeRouteRuntimeNow", fallbackGateStart);
+const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
 const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
-const fallbackRouteReady = fallbackGate.indexOf('await ensureRouteRuntime("club", { view });');
-const fallbackRouteReleased = fallbackGate.indexOf("runtimeWindow.__mflInteractionBusy?.end?.(token);", fallbackRouteReady);
-const fallbackRouteOwnerCall = fallbackGate.indexOf("return current.call(runtimeWindow, normalizedClubId, view);", fallbackRouteReleased);
-invariant(
-  fallbackRouteReady >= 0
-    && fallbackRouteReleased > fallbackRouteReady
-    && fallbackRouteOwnerCall > fallbackRouteReleased,
-  "The fallback Club gate must release lazy route-runtime loading before delegating to the Club data/render owner.",
-);
+includes(fallbackGate, "return await current.call(runtimeWindow, normalizedClubId, view);", "The fallback Club gate must keep Uniform Loading active until the Club route renderer settles.");
 excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
 excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
 
@@ -195,4 +178,4 @@ const clubBanner = "// Generated Club core chunk from modules/app-core.js. Do no
 invariant(generatedClub.startsWith(clubBanner), "Generated Club runtime must carry the build ownership banner.");
 invariant(generatedClub.slice(clubBanner.length).replace(/\s*$/, "") === clubCore.replace(/\s*$/, ""), "Generated Club runtime must exactly match the Club build artifact.");
 
-console.log("Club canonical view links, shared click/refresh navigation, shared switching, scoped route loading, and API contract validation passed.");
+console.log("Club canonical view links, shared click/refresh navigation, shared switching, Uniform Loading, and API contract validation passed.");

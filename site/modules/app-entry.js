@@ -349,10 +349,10 @@ function installClubRouteRuntimeGate() {
       const token = runtimeWindow.__mflInteractionBusy?.begin?.("route-runtime") || "";
       try {
         await ensureRouteRuntime("club", { view });
+        return await current.call(runtimeWindow, normalizedClubId, view);
       } finally {
         if (token) runtimeWindow.__mflInteractionBusy?.end?.(token);
       }
-      return current.call(runtimeWindow, normalizedClubId, view);
     };
 
     const runTransition = runtimeWindow.__mflRunPageTransition;

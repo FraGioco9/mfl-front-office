@@ -49,7 +49,6 @@ const validators = [
   "validate-club-sorting.mjs",
   "validate-club-route-core.mjs",
   "validate-club-title-loading.mjs",
-  "validate-club-loading-release.mjs",
   "validate-settings-route-core.mjs",
   "validate-player-route-core.mjs",
   "validate-table-route-core.mjs",
