@@ -8,6 +8,7 @@ import { splitEvaluationApplicationCoreRuntime } from "./app-core-evaluation-chu
 import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lifecycle.js";
 import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
 import { normalizeEvaluationRouteLifecycle } from "./app-core-evaluation-route-lifecycle.js";
+import { normalizeEvaluationSavedValuationCache } from "./app-core-evaluation-saved-valuation-cache.js";
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
 import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
@@ -39,6 +40,31 @@ function normalizePageFilterResetBeforeRequest(artifacts) {
     if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;
     if (savedPageState) {`,
     "destination filters reset before incremental route request",
+  );
+
+  return Object.freeze({
+    ...artifacts,
+    core: normalizedCore,
+  });
+}
+
+function normalizeViewFilterStateBeforeTransition(artifacts) {
+  const core = String(artifacts?.core || "");
+  if (!core) throw new Error("Cannot normalize view filter preservation without shared application core.");
+
+  const normalizedCore = replaceRequired(
+    core,
+    `  if (pageName === activePageName && viewName === activeViewName) return;
+
+`,
+    `  if (pageName === activePageName && viewName === activeViewName) return;
+
+  if (pageName === activePageName && tablePages.has(pageName)) {
+    saveTableStateLocally(currentTableState());
+  }
+
+`,
+    "live table filters persisted before same-page view transition",
   );
 
   return Object.freeze({
@@ -103,12 +129,14 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
+  const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
   const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
-  return normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
+  const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
+  return normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
 }
 
 export function normalizeBuiltApplicationCore(source) {
