@@ -188,6 +188,14 @@ invariant(
 );
 
 invariant(
+  walletPreferencesApi.includes("function recentSearchItemsFromLegacy(tableState) {")
+    && walletPreferencesApi.includes("function normalizeRecentSearchTableState(tableState) {")
+    && walletPreferencesApi.includes("recentSearchItems: mergeRecentIds(sanitized.recentSearchItems, recentSearchItemsFromLegacy(sanitized)),")
+    && walletPreferencesApi.includes("? normalizeRecentSearchTableState(row.table_state) : null"),
+  "Wallet preference reads must recover a previously collapsed mixed recent list from preserved player and agent recent arrays whenever those entries still exist.",
+);
+
+invariant(
   core.includes("async function openSearch() {")
     && core.includes("await ensureSearchIndexes();\n  renderSearchResultsNow();"),
   "Regression coverage must account for the core Global Search open lifecycle rendering again after indexes are ready.",
@@ -223,4 +231,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, preserves the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, preserves and recovers the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
