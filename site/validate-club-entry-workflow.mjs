@@ -44,20 +44,23 @@ const routeParser = eagerCore.slice(routeParserStart, routeParserEnd);
 
 includes(
   routeParser,
-  "const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);",
-  "Direct Club URLs must be resolved by the shared startup parser.",
+  "const clubMatch = cleanPath.match(/^\\/(clubs|club)\\/([^/]+)(?:\\/([^/]+))?$/i);",
+  "Direct and legacy Club URLs must be recognized by the shared startup parser.",
 );
-includes(routeParser, 'pageName: "club",', "A canonical Club URL must resolve to the Club page, not Home.");
-includes(routeParser, "clubId: clubRoute.clubId,", "Direct Club startup must preserve the route Club ID.");
-includes(routeParser, "view: clubRoute.view,", "Direct Club startup must preserve the requested Club view.");
-includes(routeParser, "path: clubRoute.path,", "Direct Club startup must preserve the canonical Club path.");
+includes(routeParser, 'pageName: "club",', "A recognizable Club URL must resolve to the Club page, not Home.");
+includes(routeParser, "const clubId = decodeURIComponent(clubMatch[2]);", "Direct Club startup must preserve the route Club ID.");
+includes(routeParser, "const requestedView = viewFromSlug(decodeURIComponent(clubMatch[3] || \"\"));", "Club startup must read an optional requested view.");
+includes(routeParser, "routeConfig?.normalizeClubView?.(requestedView || \"attributes\")", "Missing or invalid Club views must normalize to the canonical default.");
+includes(routeParser, "const canonicalPath = routeConfig?.clubPath?.(clubId, view)", "Club startup must compute the canonical plural Club path.");
+includes(routeParser, "path: canonicalPath,", "Direct Club startup must preserve the canonical Club path.");
+includes(routeParser, "...(cleanPath !== canonicalPath ? { replaceUrl: canonicalPath } : {}),", "Legacy or malformed-but-recognizable Club URLs must be repaired in place.");
 
-const clubRouteResolution = routeParser.indexOf("const clubRoute = window.__mflAppConfig?.routes?.clubRoute?.(cleanPath);");
+const clubRouteResolution = routeParser.indexOf("const clubMatch = cleanPath.match(");
 const clubReturn = routeParser.indexOf('pageName: "club",', clubRouteResolution);
-const genericFallback = routeParser.indexOf('const pageName = normalizedPageName(cleanPath.replace(/^\\//, "") || "home");');
+const unknownFallback = routeParser.lastIndexOf('pageName: "notfound",');
 invariant(
-  clubRouteResolution >= 0 && clubReturn > clubRouteResolution && genericFallback > clubReturn,
-  "Club URLs must resolve before the generic unknown-route Home fallback.",
+  clubRouteResolution >= 0 && clubReturn > clubRouteResolution && unknownFallback > clubReturn,
+  "Recognizable Club URLs must resolve before the generic not-found fallback.",
 );
 
 const shellStart = eagerCore.indexOf('async function showHomeShell(pageName = "home", updateUrl = true, options = {}) {');
@@ -65,13 +68,13 @@ const shellEnd = eagerCore.indexOf("\n}\n\nfunction showAppShell()", shellStart)
 invariant(shellStart >= 0 && shellEnd > shellStart, "The shared application shell entry must exist.");
 const shell = eagerCore.slice(shellStart, shellEnd);
 
-includes(shell, 'if (pageName === "club") {', "Shared shell entry must identify Club before generic setPage.");
+includes(shell, 'pageName === "club"', "Shared shell entry must identify Club before generic setPage.");
 includes(shell, 'const clubId = String(options?.clubId || route?.clubId || "").trim();', "Shared Club entry must preserve the explicit startup Club ID.");
 includes(shell, 'const navigateClub = window.mflOpenClubPage;', "Shared Club entry must resolve the same public gate used by in-site links.");
 includes(shell, "result = await navigateClub(clubId, view);", "Direct refresh must await the public Club loading workflow.");
 includes(shell, "result = await setPage(pageName, updateUrl, options);", "Non-Club routes must keep the normal shared setPage workflow.");
 
-const clubBranch = shell.indexOf('if (pageName === "club") {');
+const clubBranch = shell.indexOf('pageName === "club"');
 const publicGateCall = shell.indexOf("result = await navigateClub(clubId, view);", clubBranch);
 const genericSetPage = shell.indexOf("result = await setPage(pageName, updateUrl, options);", clubBranch);
 invariant(
@@ -99,7 +102,11 @@ excludes(
   'await openClubPage(initialClubRoute.clubId, initialClubRoute.view, false);',
   "Direct refresh must never bypass the public Club gate.",
 );
-
+excludes(
+  clubCore,
+  'window.location.replace("/")',
+  "Malformed Club URLs must never use the legacy Home redirect.",
+);
 excludes(clubEntryLifecycle, "!important", "Unified Club entry must not add CSS priority overrides.");
 
-console.log("Club entry workflow validation passed: direct Club URLs resolve before Home fallback and refresh shares the public Club gate with in-site navigation.");
+console.log("Club entry workflow validation passed: recognizable Club URLs canonicalize before not-found fallback and refresh shares the public Club gate with in-site navigation.");
