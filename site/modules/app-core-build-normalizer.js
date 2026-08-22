@@ -47,6 +47,31 @@ function normalizePageFilterResetBeforeRequest(artifacts) {
   });
 }
 
+function normalizeViewFilterStateBeforeTransition(artifacts) {
+  const core = String(artifacts?.core || "");
+  if (!core) throw new Error("Cannot normalize view filter preservation without shared application core.");
+
+  const normalizedCore = replaceRequired(
+    core,
+    `  if (pageName === activePageName && viewName === activeViewName) return;
+
+`,
+    `  if (pageName === activePageName && viewName === activeViewName) return;
+
+  if (pageName === activePageName && tablePages.has(pageName)) {
+    saveTableStateLocally(currentTableState());
+  }
+
+`,
+    "live table filters persisted before same-page view transition",
+  );
+
+  return Object.freeze({
+    ...artifacts,
+    core: normalizedCore,
+  });
+}
+
 function normalizeFilterSummaryLifecycle(artifacts) {
   const routeChunks = { ...(artifacts?.routeChunks || {}) };
   const table = String(routeChunks.table || "");
@@ -103,8 +128,9 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const clubEntryArtifacts = normalizeClubEntryLifecycle(clubStartupArtifacts);
   const clubSortArtifacts = normalizeClubSortLifecycle(clubEntryArtifacts);
   const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);
+  const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
-  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
+  const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
