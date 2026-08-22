@@ -52,9 +52,12 @@ for (const required of [
 }
 
 invariant(
-  evaluationCore.includes('playerName: String(entry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),')
+  evaluationCore.includes('playerName: String(entry?.playerName || cachedEntry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),')
+    && evaluationCore.includes("const computedPresentValue = evaluationPresentValueTotalFromPayload(entry.payload);")
+    && evaluationCore.includes("presentValue: Number.isFinite(entry?.presentValue)")
+    && evaluationCore.includes("Number.isFinite(cachedEntry?.presentValue)")
     && evaluationCore.includes("entries.map((entry) => rememberSavedEvaluationCacheEntry(entry) || entry)"),
-  "The Saved Evaluations list cache must retain player identity instead of depending on whichever page rows are currently active.",
+  "The Saved Evaluations list cache must retain player identity and computed valuation instead of depending on whichever page rows are currently active.",
 );
 
 invariant(
@@ -73,10 +76,12 @@ const listRender = listRenderStart >= 0 && listRenderEnd > listRenderStart
   : "";
 invariant(
   listRender.includes('String(entry?.playerName || "").trim()')
+    && listRender.includes("const presentValue = Number.isFinite(entry?.presentValue)")
+    && listRender.includes("? entry.presentValue")
     && listRender.includes("const loadEvaluation = async () => {")
     && listRender.includes("await loadSavedEvaluation(savedId, playerId);")
     && !listRender.includes("applySharedEvaluationPayload(entry.payload);"),
-  "Cached Saved Evaluation rows must remain correctly named after navigation and use the canonical saved hydration path when selected.",
+  "Cached Saved Evaluation rows must keep both their valuation and player name after navigation and use the canonical saved hydration path when selected.",
 );
 
 const savedLoadStart = evaluationCore.indexOf("async function loadSavedEvaluation(savedId");
@@ -90,8 +95,9 @@ invariant(
     && savedLoad.includes('const requestUrl = new URL("/api/evaluation-save", window.location.origin);')
     && savedLoad.includes("data = await response.json();")
     && savedLoad.includes("rememberSavedEvaluationCacheEntry(data);")
+    && savedLoad.includes("data = rememberSavedEvaluationCacheEntry(data) || data;")
     && savedLoad.includes("await applySharedEvaluationPayload(data.payload);"),
-  "Opening a Saved Evaluation must reuse its cached full payload and fetch only when that saved ID is not cached.",
+  "Opening a Saved Evaluation must reuse its cached full payload, refresh its cached valuation after row hydration, and fetch only when that saved ID is not cached.",
 );
 
 const saveStart = evaluationCore.indexOf("async function createSavedEvaluation()");
@@ -124,4 +130,4 @@ invariant(
   "The first Saved Evaluation list request must remain server-fresh before it is cached for the session.",
 );
 
-console.log("Evaluation Saved cache validation passed: direct Load binding blurs search in the shared facade, the wallet-scoped list keeps player identity across page changes, cached rows use canonical saved hydration, and successful save/delete mutations invalidate stale data.");
+console.log("Evaluation Saved cache validation passed: direct Load binding blurs search, cached rows retain names and valuations across page changes, saved hydration refreshes cached data, and successful save/delete mutations invalidate stale data.");
