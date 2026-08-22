@@ -455,6 +455,8 @@ async function start() {
     await runtimeWindow.__mflAppStartPromise;
   }
 
+  await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();
+
   document.documentElement.dataset.mflReady = "true";
   window.dispatchEvent(new CustomEvent("mfl:ready", { detail: release }));
 }
