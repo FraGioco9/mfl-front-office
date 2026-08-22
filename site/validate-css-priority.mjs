@@ -30,6 +30,8 @@ const standardsFallback = `@supports not selector(::-webkit-scrollbar) {
 if (!scrollbarSource.includes(standardsFallback)) {
   throw new Error("Standards-based scrollbar styling must be limited to browsers without WebKit scrollbar pseudo-elements.");
 }
+// Chromium 121+ gives scrollbar-width/scrollbar-color precedence over WebKit pseudo-elements;
+// keeping these declarations out of WebKit-capable browsers preserves hidden native arrow buttons.
 const outsideStandardsFallback = scrollbarSource.replace(standardsFallback, "");
 if (outsideStandardsFallback.includes("scrollbar-width:") || outsideStandardsFallback.includes("scrollbar-color:")) {
   throw new Error("Do not let standards scrollbar properties override WebKit thumb-only styling in Chromium/Safari.");
