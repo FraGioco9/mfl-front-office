@@ -119,8 +119,9 @@ invariant(
 );
 
 invariant(
-  styles.includes('.evaluationTable tbody tr:last-child > :is(th, td) {\n  border-bottom: 0;\n}'),
-  "Evaluation tables must let tableShell own the outer bottom edge instead of drawing a duplicate last-row border.",
+  styles.includes('.tableShell tbody tr:last-child > :is(th, td) {\n  border-bottom: 0;\n}')
+    && !styles.includes('.evaluationTable tbody tr:last-child > :is(th, td) {\n  border-bottom: 0;\n}'),
+  "Every bordered tableShell must own its single outer bottom edge without a duplicate last-row cell border.",
 );
 
-console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, first-paint-unselected timing, clear-focus ownership, and table-edge validation passed.");
+console.log("Evaluation refresh hydration, stable first-paint name/actions/placeholder, first-paint-unselected timing, clear-focus ownership, and shared table-edge validation passed.");
