@@ -20,6 +20,9 @@ for (const required of [
   'results.querySelectorAll(":scope > .searchResult")',
   "directResults.slice(maxResults).forEach((result) => result.remove());",
   'results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);',
+  "function syncRecentSearchState() {",
+  'Reflect.get(window, "syncRecentSearchStateFromStorage")',
+  "if (input && !input.value.trim()) syncRecentSearchState();",
   "coreContracts()?.renderGlobalSearchResults?.();\n      normalizeSearchResults();",
   "if (input && !input.value.trim()) renderCurrentResults();",
   "cap: normalizeSearchResults,",
@@ -28,10 +31,11 @@ for (const required of [
 }
 
 invariant(
-  core.includes("const MAX_SEARCH_RESULTS = 5;")
+  core.includes("function syncRecentSearchStateFromStorage(event = null) {")
+    && core.includes("const MAX_SEARCH_RESULTS = 5;")
     && core.includes("state.recentSearchItems.slice(0, MAX_SEARCH_RESULTS).forEach((key) => {")
     && core.includes("playerSearchResults.replaceChildren(...ordered.slice(0, MAX_SEARCH_RESULTS));"),
-  "Empty Global Search must render only the five most recent mixed player, club, or agent searches.",
+  "Empty Global Search must resync persisted recent state and render only the five most recent mixed player, club, or agent searches.",
 );
 
 invariant(
@@ -52,4 +56,4 @@ invariant(
   "Global Search result layout must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search shows five recent searches when empty and caps typed results at 10.");
+console.log("Global Search resyncs and shows five recent searches when empty, and caps typed results at 10.");
