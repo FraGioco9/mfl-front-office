@@ -9,6 +9,8 @@
 
   let destroyed = false;
   let unsubscribe = null;
+  let nextRequestToken = 0;
+  let activeRequestToken = 0;
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -82,12 +84,27 @@
     return body;
   }
 
+  function requestActive() {
+    return !destroyed && activeRequestToken !== 0;
+  }
+
   function beginRequest(routeScope) {
     const scope = String(routeScope || "").toLowerCase();
-    if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return false;
+    if (destroyed || !TABLE_ROUTE_SCOPES.has(scope)) return 0;
+    const token = ++nextRequestToken;
+    activeRequestToken = token;
     const body = prepareLoadingSurface();
-    if (!body) return false;
-    return primeLoadingRows() && body.dataset.staticLoading === "true";
+    if (body) primeLoadingRows();
+    return token;
+  }
+
+  function finishRequest(token) {
+    const requestToken = Number(token || 0);
+    if (!requestToken || requestToken !== activeRequestToken) return false;
+    activeRequestToken = 0;
+    const { body } = elements();
+    if (body) delete body.dataset.staticLoading;
+    return true;
   }
 
   function show({ replaceExisting = false, forceRoute = false } = {}) {
@@ -113,6 +130,7 @@
   }
 
   function release() {
+    if (requestActive()) return false;
     const { body } = elements();
     if (body) {
       delete body.dataset.staticLoading;
@@ -120,6 +138,7 @@
     }
     const page = pager();
     if (page && !loadingSnapshot().dataLoading) page.hidden = false;
+    return true;
   }
 
   function sync(snapshot = loadingSnapshot()) {
@@ -128,7 +147,7 @@
       release();
       return;
     }
-    if (snapshot.dataLoading) show({ replaceExisting: true });
+    if (snapshot.dataLoading || requestActive()) show({ replaceExisting: true });
     else release();
   }
 
@@ -147,10 +166,20 @@
 
   function destroy() {
     destroyed = true;
+    activeRequestToken = 0;
     unsubscribe?.();
     unsubscribe = null;
     release();
   }
 
-  window.__mflTableLoadingRuntime = Object.freeze({ beginRequest, show, release, sync, installCoreBridge, destroy });
+  window.__mflTableLoadingRuntime = Object.freeze({
+    beginRequest,
+    finishRequest,
+    requestActive,
+    show,
+    release,
+    sync,
+    installCoreBridge,
+    destroy,
+  });
 })();
