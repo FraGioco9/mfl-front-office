@@ -1,45 +1,78 @@
 .notFoundPage {
+  display: grid;
+  place-items: center;
   min-height: calc(100vh - var(--pinned-topbar-height, 102px) - 52px);
   min-height: calc(100dvh - var(--pinned-topbar-height, 102px) - 52px);
+  padding: 24px;
 }
 
 .notFoundContent {
   display: grid;
-  align-content: center;
   justify-items: center;
-  gap: 12px;
-  min-height: inherit;
-  padding: 32px 24px;
+  width: min(520px, 100%);
+  padding: 38px 42px 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
   text-align: center;
+}
+
+.notFoundContent::before {
+  content: "404";
+  display: grid;
+  place-items: center;
+  width: 164px;
+  height: 94px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--primary);
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  line-height: 1;
 }
 
 .notFoundContent h2 {
   margin: 0;
-  font-size: clamp(30px, 5vw, 44px);
-  line-height: 1.1;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.15;
 }
 
 .notFoundContent p {
-  max-width: 520px;
-  margin: 0;
+  max-width: 390px;
+  margin: 8px 0 0;
   color: var(--text-soft);
-  font-size: 16px;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .notFoundHomeButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-width: 150px;
   height: 40px;
-  margin-top: 4px;
+  margin-top: 22px;
   border: 1px solid var(--primary);
   border-radius: 6px;
   background: var(--primary);
   color: #ffffff;
   padding: 0 14px;
   font-weight: 700;
+  line-height: 1;
   text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.notFoundHomeButton::after {
+  content: "\2192";
+  font-size: 16px;
+  line-height: 1;
 }
 
 .notFoundHomeButton:hover,
@@ -48,4 +81,25 @@
   background: var(--primary-hover);
   color: #ffffff;
   outline: 0;
+}
+
+@media (max-width: 640px) {
+  .notFoundPage {
+    padding: 18px;
+  }
+
+  .notFoundContent {
+    padding: 32px 24px 34px;
+  }
+
+  .notFoundContent::before {
+    width: 144px;
+    height: 82px;
+    margin-bottom: 20px;
+    font-size: 48px;
+  }
+
+  .notFoundContent h2 {
+    font-size: 25px;
+  }
 }
