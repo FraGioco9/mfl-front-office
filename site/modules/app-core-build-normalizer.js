@@ -111,6 +111,43 @@ function normalizeFilterSummaryLifecycle(artifacts) {
   });
 }
 
+function normalizeTableLoadingRenderLifecycle(artifacts) {
+  const routeChunks = { ...(artifacts?.routeChunks || {}) };
+  const table = String(routeChunks.table || "");
+  if (!table) throw new Error("Cannot normalize table loading render lifecycle without the Table route chunk.");
+
+  let normalizedTable = replaceRequired(
+    table,
+    `function tableRenderTableOwner() {
+  const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;`,
+    `function tableRenderTableOwner() {
+  if (document.documentElement.classList.contains("mflDataLoading") && !state.incrementalApplying) {
+    window.__mflTableLoadingRuntime?.show?.({ replaceExisting: true });
+    return;
+  }
+
+  const totalRows = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;`,
+    "pre-payload table render loading gate",
+  );
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    `  tableBody.replaceChildren(fragment);
+  emptyState.hidden = pageRows.length > 0;
+  updateTablePlayerCount();`,
+    `  tableBody.replaceChildren(fragment);
+  emptyState.hidden = pageRows.length > 0;
+  window.__mflTableLoadingRuntime?.commitFinalRender?.();
+  updateTablePlayerCount();`,
+    "fresh table payload render commit",
+  );
+
+  routeChunks.table = normalizedTable;
+  return Object.freeze({
+    ...artifacts,
+    routeChunks: Object.freeze(routeChunks),
+  });
+}
+
 export function normalizeBuiltApplicationCoreArtifacts(source) {
   const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   if (!canonicalSource.trim()) throw new Error("Cannot build an empty application core.");
@@ -131,7 +168,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);
-  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
+  const tableLoadingArtifacts = normalizeTableLoadingRenderLifecycle(filterSummaryArtifacts);
+  const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(tableLoadingArtifacts);
   const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
   const evaluationLoadArtifacts = normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
   return normalizeEvaluationSavedValuationCache(evaluationLoadArtifacts);
