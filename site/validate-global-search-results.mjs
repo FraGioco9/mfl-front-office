@@ -23,7 +23,7 @@ for (const required of [
   "const maxResults = hasQuery ? MAX_GLOBAL_SEARCH_RESULTS : MAX_RECENT_GLOBAL_SEARCH_RESULTS;",
   'results.querySelectorAll(":scope > .searchResult")',
   "directResults.slice(maxResults).forEach((result) => result.remove());",
-  'results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);',
+  'results.classList.remove("filledSearchResults");',
   "function normalizedSupabaseRecentItems(tableState) {",
   'windowFunction("hasWalletProof")',
   'windowFunction("walletProofHeaders")',
@@ -91,10 +91,13 @@ invariant(
 invariant(
   appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
     && appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+    && appEntry.includes("await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
     && appEntry.includes("function installCoreBridges() {")
     && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+      < appEntry.indexOf('document.documentElement.dataset.mflReady = "true";')
+    && appEntry.lastIndexOf("await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
       < appEntry.indexOf('document.documentElement.dataset.mflReady = "true";'),
-  "Application startup must launch Global Search recent preloading as soon as the application core bridge is installed, before the page is marked ready.",
+  "Application startup must launch Global Search recent preloading as soon as the core bridge is installed and await the completed preload before the page is marked ready.",
 );
 
 invariant(
@@ -104,13 +107,14 @@ invariant(
     && runtime.includes('parameters.set("walletAddresses", identifiers.walletAddresses.join(","));')
     && runtime.includes('parameters.set("clubIds", identifiers.clubIds.join(","));')
     && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal);")
+    && runtime.includes("recentLoadedForSession = true;\n        recentLoadFailed = false;\n        publishCanonicalRecentPayload();")
     && runtime.includes("function publishCanonicalRecentPayload() {")
     && runtime.includes('applySearchPayload(canonicalRecentPayload, "all");')
     && dataViews.includes('if (type === "recent") return recentSearchData(request);')
     && dataViews.includes("const playerIds = integerIds(request.query?.playerIds, 50);")
     && dataViews.includes("const walletAddresses = csvValues(request.query?.walletAddresses, 50)")
     && dataViews.includes("const clubIds = csvValues(request.query?.clubIds, 50);"),
-  "Initial Global Search recent hydration must resolve every Supabase recent player, agent, and club by identifier instead of depending on whichever entities happen to be in the mutable live search indexes.",
+  "Initial Global Search recent hydration must resolve every Supabase recent entity and publish the complete canonical payload into the hidden search state before first open.",
 );
 
 invariant(
@@ -135,13 +139,17 @@ invariant(
 );
 
 invariant(
-  runtime.includes('event.target.closest("#playerSearchResults > .searchResult")')
-    && runtime.includes("promoteCanonicalRecentResult(target);")
-    && runtime.includes("flushCanonicalRecentState();")
+  runtime.includes("function searchResultTarget(event) {")
+    && runtime.includes("function onSearchResultClickCapture(event) {")
+    && runtime.includes("if (!target || !recentLoadedForSession) return;\n    promoteCanonicalRecentResult(target);")
+    && runtime.includes('document.addEventListener("click", onSearchResultClickCapture, true);')
+    && runtime.includes('document.removeEventListener("click", onSearchResultClickCapture, true);')
+    && runtime.includes("function onSearchResultClick(event) {")
+    && runtime.includes("if (recentLoadedForSession) {\n      flushCanonicalRecentState();\n      return;\n    }")
     && runtime.includes("const pendingRecentLoad = recentLoadPromise;")
     && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
     && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
-  "Clicking a Global Search result must promote it into the canonical five before flushing the complete updated history to Supabase, without starting a new recent-history request.",
+  "Global Search must promote the clicked result during capture, before the core click handler snapshots table state, so Supabase receives clicked plus the previous four instead of a one-result stale snapshot.",
 );
 
 invariant(
@@ -192,14 +200,17 @@ invariant(
 invariant(
   styles.includes(".searchResults {\n  display: grid;\n  gap: 8px;")
     && styles.includes("grid-auto-rows: 66px;")
-    && styles.includes("overflow: auto;"),
-  "Global Search must retain the existing fixed 66px result boxes, 8px spacing, and scrolling container.",
+    && styles.includes("overflow: auto;")
+    && runtime.includes('results.classList.remove("filledSearchResults");')
+    && !runtime.includes('results.classList.toggle("filledSearchResults", !hasQuery && directResults.length > 0);')
+    && !runtime.includes('results.classList.toggle("filledSearchResults", ordered.length > 0);'),
+  "Recent and typed Global Search results must both use the same base 66px result boxes and 8px grid gap rather than switching to a separate filled-results sizing mode.",
 );
 
 invariant(
   styles.includes(".searchDialog {\n  display: flex;\n  flex-direction: column;\n  width: min(960px, calc(100vw - 32px));\n  height: 505px;")
     && styles.includes(".searchBody {\n  display: grid;\n  gap: 12px;\n  padding: 16px 18px 12px;"),
-  "Global Search popup must preserve five full fixed-height result boxes with matching 12px spacing above and below the result stack.",
+  "Global Search popup must preserve the existing dialog geometry while both recent and typed results share one box layout.",
 );
 
 invariant(
@@ -209,4 +220,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search preloads its complete Supabase recent-five payload during page startup, keeps popup opening render-only, preserves recents across typed searches, and promotes clicks without collapsing history.");
+console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
