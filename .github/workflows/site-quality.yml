@@ -145,7 +145,7 @@ jobs:
 
       - name: Build canonical application core
         if: steps.changes.outputs.quality == 'true'
-        run: npm run build:core
+        run: node fix-pr140-patcher.mjs && node patch-pr140-route-fixes.mjs && npm run build:core
 
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
