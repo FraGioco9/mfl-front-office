@@ -33,23 +33,58 @@ for (const required of [
 }
 
 invariant(
+  runtime.includes('const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";')
+    && runtime.includes("const GLOBAL_RECENT_STORAGE_KEYS = new Set([")
+    && runtime.includes('"mfl-recent-player-searches-v1"')
+    && runtime.includes('"mfl-recent-agent-searches-v1"')
+    && runtime.includes('"mfl-recent-searches-v1"')
+    && runtime.includes("delete sanitized.recentSearchItems;")
+    && runtime.includes("delete sanitized.recentSearchPlayerIds;")
+    && runtime.includes("delete sanitized.recentSearchAgentWallets;")
+    && runtime.includes('Reflect.set(window, "loadRecentIdsFromStorage", function loadNonGlobalRecentIds(storageKey) {')
+    && runtime.includes('Reflect.set(window, "saveRecentIdsToStorage", function saveNonGlobalRecentIds(storageKey) {')
+    && runtime.includes('Reflect.set(window, "saveTableStateLocally", function saveTableStateWithoutGlobalRecents(savedState) {')
+    && runtime.includes("GLOBAL_RECENT_STORAGE_KEYS.forEach((storageKey) => localStorage.removeItem(storageKey));")
+    && !runtime.includes("RECENT_MIXED_CACHE_KEY")
+    && !runtime.includes("RECENT_PLAYER_CACHE_KEY")
+    && !runtime.includes("RECENT_AGENT_CACHE_KEY"),
+  "Global Search history must never be read from or persisted to browser storage; legacy local history must be removed.",
+);
+
+invariant(
   runtime.includes("let recentLoadPromise = null;")
     && runtime.includes("let recentLoadedForOpen = false;")
+    && runtime.includes("if (options.force) recentLoadedForOpen = false;")
     && runtime.includes("if (recentLoadedForOpen) {\n      renderCurrentResults();\n      return true;\n    }")
     && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
-    && runtime.includes('const hadRenderedResults = Boolean(results?.querySelector(":scope > .searchResult"));')
-    && runtime.includes('if (!hadRenderedResults) renderSearchMessage("Loading recent searches…");')
+    && runtime.includes('renderSearchMessage("Loading recent searches…");')
     && runtime.includes("recentLoadedForOpen = true;\n        renderCurrentResults();")
-    && runtime.includes("if (hadRenderedResults) renderCurrentResults();\n          else renderSearchMessage(\"Could not load recent searches.\");")
+    && runtime.includes('renderSearchMessage("Could not load recent searches.");')
     && runtime.includes("if (requestSequence === recentSequence) recentLoadPromise = null;")
+    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n      void renderEmptySearchResults({ force: true });")
+    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n    syncClearButton();\n    void renderEmptySearchResults({ force: true });")
     && runtime.includes("clearRecentRequest({ resetLoaded: true });"),
-  "Empty Global Search must use one Supabase load per popup opening, clean up only the active request, and preserve already-rendered recent results if a redundant refresh fails.",
+  "Opening may deduplicate lifecycle loads, but explicitly emptying Global Search must always force a fresh Supabase recent-history read.",
 );
 
 invariant(
   runtime.includes("applySupabaseRecentState(data?.tableState);")
-    && !runtime.includes('requestDatabaseSearch("", "all", { force: true })'),
-  "Successful Supabase recent results must render directly without a second empty database search that can replace them with an error state.",
+    && !runtime.includes('requestDatabaseSearch("", "all", { force: true })')
+    && !runtime.includes("if (hadRenderedResults) renderCurrentResults();"),
+  "Successful Supabase recent results must render directly, and a failed refresh must never fall back to stale locally derived results.",
+);
+
+invariant(
+  runtime.includes('renderSearchMessage("Opt in to load recent searches.");')
+    && !runtime.includes("if (hasWalletProof?.()) return restoreSupabaseRecentResults();\n\n    renderCurrentResults();"),
+  "Users without wallet proof must not receive a browser-stored Global Search history fallback.",
+);
+
+invariant(
+  runtime.includes('event.target.closest("#playerSearchResults > .searchResult")')
+    && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
+    && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
+  "Clicking a Global Search result must flush the updated recent history to Supabase immediately instead of relying only on delayed persistence.",
 );
 
 invariant(
@@ -57,7 +92,7 @@ invariant(
     && runtime.includes("button.hidden = hidden;")
     && runtime.includes('button.toggleAttribute("hidden", hidden);')
     && runtime.includes('document.addEventListener("click", onClearClick, true);')
-    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest();\n    syncClearButton();')
+    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest({ resetLoaded: true });\n    syncClearButton();')
     && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
     && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
   "Global Search clear control must be visually hidden whenever its input is empty and hide immediately when cleared.",
@@ -104,4 +139,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search keeps one stable Supabase recent load per popup opening, caps typed results at 10, and only shows clear while typed.");
+console.log("Global Search uses Supabase-only recent history, refetches the latest five whenever the bar is emptied, caps typed results at 10, and only shows clear while typed.");
