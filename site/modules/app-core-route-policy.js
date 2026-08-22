@@ -87,7 +87,12 @@ const CANONICAL_PAGE_TARGET = `function pageTargetFromPath(path) {
 
   if (cleanPath === "/settings") return { pageName: "settings", options: {} };
   if (cleanPath === "/changelog") return { pageName: "changelog", options: {} };
-  if (cleanPath === "/mfl/stats") return { pageName: "mfl", options: { view: "stats" } };
+  if (cleanPath === "/mfl/stats") {
+    return {
+      pageName: "mfl",
+      options: { view: "stats" },
+    };
+  }
 
   const playerMatch = cleanPath.match(/^\\/players\\/([^/]+)$/);
   if (playerMatch) {
