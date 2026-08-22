@@ -4,9 +4,12 @@
   const VERSION = String(window.__mflReleaseVersion || "dev");
   const MAX_GLOBAL_SEARCH_RESULTS = 10;
   const MAX_RECENT_GLOBAL_SEARCH_RESULTS = 5;
-  const RECENT_PLAYER_CACHE_KEY = "mfl-recent-player-searches-v1";
-  const RECENT_AGENT_CACHE_KEY = "mfl-recent-agent-searches-v1";
-  const RECENT_MIXED_CACHE_KEY = "mfl-recent-searches-v1";
+  const TABLE_STATE_STORAGE_KEY = "mfl-table-filters-v1";
+  const GLOBAL_RECENT_STORAGE_KEYS = new Set([
+    "mfl-recent-player-searches-v1",
+    "mfl-recent-agent-searches-v1",
+    "mfl-recent-searches-v1",
+  ]);
   window.__mflGlobalSearchRuntime?.destroy?.();
 
   let controller = null;
@@ -25,6 +28,10 @@
   let pendingQuery = "";
   let pendingEvaluationPayload = null;
   let pendingEvaluationQuery = "";
+  let originalLoadRecentIdsFromStorage = null;
+  let originalSaveRecentIdsToStorage = null;
+  let originalSaveTableStateLocally = null;
+  let localRecentStateCleared = false;
 
   const normalize = (value) => String(value || "")
     .trim()
@@ -45,6 +52,94 @@
   function installCoreSearchMatching() {
     const install = coreContracts()?.installSearchMatching;
     return typeof install === "function" ? Boolean(install()) : false;
+  }
+
+  function stripGlobalRecentFields(savedState) {
+    if (!savedState || typeof savedState !== "object" || Array.isArray(savedState)) return savedState;
+    const sanitized = { ...savedState };
+    delete sanitized.recentSearchItems;
+    delete sanitized.recentSearchPlayerIds;
+    delete sanitized.recentSearchAgentWallets;
+    return sanitized;
+  }
+
+  function purgeLocalGlobalSearchHistory() {
+    try {
+      GLOBAL_RECENT_STORAGE_KEYS.forEach((storageKey) => localStorage.removeItem(storageKey));
+      const rawState = localStorage.getItem(TABLE_STATE_STORAGE_KEY);
+      if (!rawState) return;
+      const savedState = JSON.parse(rawState);
+      const sanitizedState = stripGlobalRecentFields(savedState);
+      if (JSON.stringify(savedState) !== JSON.stringify(sanitizedState)) {
+        localStorage.setItem(TABLE_STATE_STORAGE_KEY, JSON.stringify(sanitizedState));
+      }
+    } catch {
+      // Global Search still remains Supabase-only in memory when browser storage is unavailable.
+    }
+  }
+
+  function installSupabaseOnlyRecentStorage() {
+    const loadRecentIdsFromStorage = windowFunction("loadRecentIdsFromStorage");
+    if (!originalLoadRecentIdsFromStorage && loadRecentIdsFromStorage) {
+      originalLoadRecentIdsFromStorage = loadRecentIdsFromStorage;
+      Reflect.set(window, "loadRecentIdsFromStorage", function loadNonGlobalRecentIds(storageKey) {
+        if (GLOBAL_RECENT_STORAGE_KEYS.has(String(storageKey || ""))) return [];
+        return originalLoadRecentIdsFromStorage.apply(this, arguments);
+      });
+    }
+
+    const saveRecentIdsToStorage = windowFunction("saveRecentIdsToStorage");
+    if (!originalSaveRecentIdsToStorage && saveRecentIdsToStorage) {
+      originalSaveRecentIdsToStorage = saveRecentIdsToStorage;
+      Reflect.set(window, "saveRecentIdsToStorage", function saveNonGlobalRecentIds(storageKey) {
+        if (GLOBAL_RECENT_STORAGE_KEYS.has(String(storageKey || ""))) {
+          try {
+            localStorage.removeItem(storageKey);
+          } catch {
+            // Global Search history intentionally has no browser-storage fallback.
+          }
+          return;
+        }
+        return originalSaveRecentIdsToStorage.apply(this, arguments);
+      });
+    }
+
+    const saveTableStateLocally = windowFunction("saveTableStateLocally");
+    if (!originalSaveTableStateLocally && saveTableStateLocally) {
+      originalSaveTableStateLocally = saveTableStateLocally;
+      Reflect.set(window, "saveTableStateLocally", function saveTableStateWithoutGlobalRecents(savedState) {
+        return originalSaveTableStateLocally.call(this, stripGlobalRecentFields(savedState));
+      });
+    }
+
+    purgeLocalGlobalSearchHistory();
+  }
+
+  function restoreLocalRecentStorageOwners() {
+    if (originalLoadRecentIdsFromStorage) {
+      Reflect.set(window, "loadRecentIdsFromStorage", originalLoadRecentIdsFromStorage);
+      originalLoadRecentIdsFromStorage = null;
+    }
+    if (originalSaveRecentIdsToStorage) {
+      Reflect.set(window, "saveRecentIdsToStorage", originalSaveRecentIdsToStorage);
+      originalSaveRecentIdsToStorage = null;
+    }
+    if (originalSaveTableStateLocally) {
+      Reflect.set(window, "saveTableStateLocally", originalSaveTableStateLocally);
+      originalSaveTableStateLocally = null;
+    }
+  }
+
+  function clearLocalRecentStateOnce() {
+    if (localRecentStateCleared) return;
+    const restoreRecentSearchState = windowFunction("restoreRecentSearchState");
+    if (!restoreRecentSearchState) return;
+    restoreRecentSearchState({
+      recentSearchItems: [],
+      recentSearchPlayerIds: [],
+      recentSearchAgentWallets: [],
+    });
+    localRecentStateCleared = true;
   }
 
   function searchInput() {
@@ -141,14 +236,6 @@
     const recentAgentWallets = recentItems
       .filter((item) => item.startsWith("agent:"))
       .map((item) => item.slice(6));
-
-    try {
-      localStorage.setItem(RECENT_MIXED_CACHE_KEY, JSON.stringify(recentItems));
-      localStorage.setItem(RECENT_PLAYER_CACHE_KEY, JSON.stringify(recentPlayerIds));
-      localStorage.setItem(RECENT_AGENT_CACHE_KEY, JSON.stringify(recentAgentWallets));
-    } catch {
-      // The Supabase payload remains the source for this render even when browser storage is blocked.
-    }
 
     windowFunction("restoreRecentSearchState")?.({
       recentSearchItems: recentItems,
@@ -292,7 +379,7 @@
     if (options.resetLoaded) recentLoadedForOpen = false;
   }
 
-  async function restoreSupabaseRecentResults() {
+  async function restoreSupabaseRecentResults(options = {}) {
     const input = searchInput();
     if (!input || input.value.trim()) return false;
 
@@ -300,20 +387,18 @@
     const walletProofHeaders = windowFunction("walletProofHeaders");
     if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
 
+    if (options.force) recentLoadedForOpen = false;
     if (recentLoadedForOpen) {
       renderCurrentResults();
       return true;
     }
-
     if (recentLoadPromise) return recentLoadPromise;
 
     const requestSequence = ++recentSequence;
     recentController = new AbortController();
     const activeController = recentController;
-    const results = searchResults();
-    const hadRenderedResults = Boolean(results?.querySelector(":scope > .searchResult"));
     syncClearButton();
-    if (!hadRenderedResults) renderSearchMessage("Loading recent searches…");
+    renderSearchMessage("Loading recent searches…");
 
     const loadPromise = (async () => {
       try {
@@ -335,8 +420,7 @@
       } catch (error) {
         if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
           console.warn("Could not load recent Global Search entries from Supabase.", error);
-          if (hadRenderedResults) renderCurrentResults();
-          else renderSearchMessage("Could not load recent searches.");
+          renderSearchMessage("Could not load recent searches.");
         }
         return false;
       } finally {
@@ -349,16 +433,23 @@
     return loadPromise;
   }
 
-  async function renderEmptySearchResults() {
+  async function renderEmptySearchResults(options = {}) {
     const input = searchInput();
     if (!input || input.value.trim()) return false;
 
     syncClearButton();
     const hasWalletProof = windowFunction("hasWalletProof");
-    if (hasWalletProof?.()) return restoreSupabaseRecentResults();
+    if (!hasWalletProof?.()) {
+      windowFunction("restoreRecentSearchState")?.({
+        recentSearchItems: [],
+        recentSearchPlayerIds: [],
+        recentSearchAgentWallets: [],
+      });
+      renderSearchMessage("Opt in to load recent searches.");
+      return true;
+    }
 
-    renderCurrentResults();
-    return true;
+    return restoreSupabaseRecentResults(options);
   }
 
   async function searchDatabase(rawQuery) {
@@ -466,8 +557,8 @@
     const query = String(input.value || "").trim();
     if (!query) {
       clearGlobalRequest();
-      clearRecentRequest();
-      void renderEmptySearchResults();
+      clearRecentRequest({ resetLoaded: true });
+      void renderEmptySearchResults({ force: true });
       return;
     }
     void searchDatabase(query);
@@ -483,10 +574,24 @@
 
     input.value = "";
     clearGlobalRequest();
-    clearRecentRequest();
+    clearRecentRequest({ resetLoaded: true });
     syncClearButton();
-    void renderEmptySearchResults();
+    void renderEmptySearchResults({ force: true });
     input.focus({ preventScroll: true });
+  }
+
+  function onSearchResultClick(event) {
+    const target = event.target instanceof Element
+      ? event.target.closest("#playerSearchResults > .searchResult")
+      : null;
+    if (!target) return;
+
+    queueMicrotask(() => {
+      if (destroyed) return;
+      const hasWalletProof = windowFunction("hasWalletProof");
+      const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");
+      if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();
+    });
   }
 
   function onEvaluationInput(event) {
@@ -563,6 +668,8 @@
   }
 
   function onReady() {
+    installSupabaseOnlyRecentStorage();
+    clearLocalRecentStateOnce();
     installCoreSearchMatching();
     flushPendingPayload();
     flushPendingEvaluationPayload();
@@ -572,8 +679,11 @@
     if (modal && !modal.hidden && input && !input.value.trim()) void renderEmptySearchResults();
   }
 
+  installSupabaseOnlyRecentStorage();
+  clearLocalRecentStateOnce();
   document.addEventListener("input", onInput, true);
   document.addEventListener("click", onClearClick, true);
+  document.addEventListener("click", onSearchResultClick);
   document.addEventListener("input", onEvaluationInput, true);
   document.addEventListener("focus", onEvaluationFocus, true);
   window.addEventListener("mfl:ready", onReady);
@@ -594,9 +704,11 @@
     if (focusSettleTimer) clearTimeout(focusSettleTimer);
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("click", onClearClick, true);
+    document.removeEventListener("click", onSearchResultClick);
     document.removeEventListener("input", onEvaluationInput, true);
     document.removeEventListener("focus", onEvaluationFocus, true);
     window.removeEventListener("mfl:ready", onReady);
+    restoreLocalRecentStorageOwners();
   }
 
   window.__mflGlobalSearchRuntime = Object.freeze({
