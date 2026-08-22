@@ -103,25 +103,15 @@ function validateSpaRouting(config, label) {
     (rule) => rule?.source === "/(.*)" && rule?.destination === "/",
   );
   if (spaFallbackIndex < 0) {
-    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to the known-working root route.`);
+    throw new Error(`${label} Vercel config must rewrite every unmatched SPA route to the known-working root shell.`);
   }
   if (spaFallbackIndex !== rewrites.length - 1) {
     throw new Error(`${label} Vercel SPA catch-all must be the final rewrite rule.`);
   }
 
-  const invalidClubRedirects = new Map([
-    ["/clubs/:id", "/"],
-    ["/club/:id", "/"],
-    ["/club/:id/:view", "/"],
-    ["/club", "/"],
-    ["/clubs", "/"],
-  ]);
   const redirects = Array.isArray(config.redirects) ? config.redirects : [];
-  for (const [source, destination] of invalidClubRedirects) {
-    const redirect = redirects.find((rule) => rule?.source === source);
-    if (redirect?.destination !== destination || redirect?.permanent !== false) {
-      throw new Error(`${label} Vercel config must temporarily redirect invalid Club route ${source} to ${destination}.`);
-    }
+  if (redirects.length > 0) {
+    throw new Error(`${label} Vercel config must not duplicate application route canonicalization through deployment redirects.`);
   }
 }
 
@@ -130,4 +120,4 @@ validatePrebuiltBuild(productionConfig, "Production");
 validateSpaRouting(canonicalConfig, "Canonical");
 validateSpaRouting(productionConfig, "Production");
 
-console.log("Shipped project-root Vercel config, prebuilt deployment, and SPA deep-link routing validation passed.");
+console.log("Shipped project-root Vercel config, prebuilt deployment, SPA deep-link shell routing, and application-owned canonicalization validation passed.");
