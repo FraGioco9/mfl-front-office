@@ -4,7 +4,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "build:core": "node fix-pr140-patcher.mjs && node patch-pr140-route-fixes.mjs && node build-app-core.mjs",
+    "build:core": "node build-app-core.mjs",
     "build": "npm run build:core",
     "lint": "eslint bootstrap.js bootstrap-core.js build-app-core.mjs modules api/releases.js api/mfl-season-ratios-v2.js *-runtime.js validate*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit",
