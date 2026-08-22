@@ -82,10 +82,26 @@ includes(
   "customPanelOpen = false;\n        syncCustomInputs();\n        activeFilter = filter[0];",
   "Choosing another Overall filter while Custom is open must discard the Custom input draft.",
 );
+for (const preset of [
+  '["all", "All", null, null]',
+  '["ultimate", "Ultimate", 95, null]',
+  '["legendary", "Legendary", 85, 94]',
+  '["rare", "Rare", 75, 84]',
+  '["uncommon", "Uncommon", 65, 74]',
+  '["limited", "Limited", 55, 64]',
+  '["common", "Common", null, 54]',
+]) {
+  includes(statsRuntime, preset, `Database Stats must retain preset range definition ${preset}.`);
+}
+includes(statsRuntime, "function effectiveFilterForRange(minimum, maximum) {", "Custom Apply must normalize exact ranges to canonical preset filters.");
+includes(statsRuntime, 'id !== "custom"', "Custom range matching must exclude the Custom catch-all definition.");
+includes(statsRuntime, "minimum === (min ?? 0)", "Custom range matching must treat an open lower preset bound as 0.");
+includes(statsRuntime, "maximum === (max ?? 99)", "Custom range matching must treat an open upper preset bound as 99.");
+includes(statsRuntime, 'return preset?.[0] || "custom";', "Non-preset Custom ranges must remain Custom.");
 includes(
   statsRuntime,
-  'const nextFilter = minimum === 0 && maximum === 99 ? "all" : "custom";',
-  "Applying the full 0-99 Custom range must normalize back to All.",
+  "const nextFilter = effectiveFilterForRange(minimum, maximum);",
+  "Applying Custom must select All or the matching named preset whenever the normalized range exactly matches one.",
 );
 includes(
   statsRuntime,
@@ -196,4 +212,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats Custom Escape focus, draft discard, no-op Apply, reopen, All normalization, site-style menu, and global-navigation validation passed.");
+console.log("Database Stats Custom preset normalization, Escape focus, draft discard, no-op Apply, reopen, site-style menu, and global-navigation validation passed.");
