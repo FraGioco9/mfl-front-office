@@ -217,11 +217,12 @@ const routeCases = [
 ];
 for (const [path, expectedPage, expectedView, expectedCanonicalPath] of routeCases) {
   const result = routeConfig.initialRequest(path);
+  const normalizedInputPath = path.replace(/\/+$/, "") || "/";
   invariant(result?.pageName === expectedPage, `${path} must classify as ${expectedPage}, received ${result?.pageName}.`);
   invariant(String(result?.options?.view || "") === expectedView, `${path} must preserve startup view ${expectedView || "default"}.`);
   invariant(result?.canonicalPath === expectedCanonicalPath, `${path} must canonicalize to ${expectedCanonicalPath}.`);
   invariant(
-    String(result?.options?.replaceUrl || "") === (path.replace(/\/+$/, "") === expectedCanonicalPath ? "" : expectedCanonicalPath),
+    String(result?.options?.replaceUrl || "") === (normalizedInputPath === expectedCanonicalPath ? "" : expectedCanonicalPath),
     `${path} must expose replacement ownership only when the path is non-canonical.`,
   );
   if (expectedPage === "club") {
