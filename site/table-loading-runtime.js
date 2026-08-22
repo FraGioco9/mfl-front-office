@@ -8,6 +8,8 @@
 
   let destroyed = false;
   let unsubscribe = null;
+  let dataLoadingActive = false;
+  let finalRenderCommitted = false;
 
   function coreContracts() {
     const contracts = Reflect.get(window, "__mflCoreContracts");
@@ -68,6 +70,7 @@
 
   function show({ replaceExisting = false, forceRoute = false } = {}) {
     if (destroyed || (!forceRoute && !tableRouteActive())) return false;
+    if (finalRenderCommitted && loadingSnapshot().dataLoading) return false;
     if (!forceRoute) ensureCanonicalHeader();
     neutralizeSelectionHeader();
     const { body, empty } = elements();
@@ -81,10 +84,16 @@
     }
 
     const realRowsPresent = hasRealRows(body);
-    if (body.dataset.staticLoading === "true" && realRowsPresent) return false;
+    if (body.dataset.staticLoading === "true" && realRowsPresent && !replaceExisting) return false;
     if (realRowsPresent && !replaceExisting) return false;
-    if (body.dataset.staticLoading !== "true" && !primeLoadingRows()) return false;
+    if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;
     return body.dataset.staticLoading === "true";
+  }
+
+  function commitFinalRender() {
+    if (destroyed || !tableRouteActive() || !loadingSnapshot().dataLoading) return false;
+    finalRenderCommitted = true;
+    return true;
   }
 
   function release() {
@@ -100,11 +109,21 @@
   function sync(snapshot = loadingSnapshot()) {
     if (destroyed) return;
     if (!tableRouteActive()) {
+      dataLoadingActive = false;
+      finalRenderCommitted = false;
       release();
       return;
     }
-    if (snapshot.dataLoading) show({ replaceExisting: true });
-    else release();
+
+    const loadingStarted = snapshot.dataLoading && !dataLoadingActive;
+    dataLoadingActive = snapshot.dataLoading;
+    if (snapshot.dataLoading) {
+      if (loadingStarted) finalRenderCommitted = false;
+      if (!finalRenderCommitted) show({ replaceExisting: true });
+    } else {
+      finalRenderCommitted = false;
+      release();
+    }
   }
 
   function installCoreBridge() {
@@ -127,5 +146,5 @@
     release();
   }
 
-  window.__mflTableLoadingRuntime = Object.freeze({ show, release, sync, installCoreBridge, destroy });
+  window.__mflTableLoadingRuntime = Object.freeze({ show, commitFinalRender, release, sync, installCoreBridge, destroy });
 })();
