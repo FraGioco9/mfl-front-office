@@ -9,6 +9,7 @@ import { normalizeEvaluationLoadLifecycle } from "./app-core-evaluation-load-lif
 import { normalizeEvaluationRecentReadiness } from "./app-core-evaluation-recent-readiness.js";
 import { normalizeEvaluationRouteLifecycle } from "./app-core-evaluation-route-lifecycle.js";
 import { normalizeEvaluationSearchLifecycle } from "./app-core-evaluation-search-lifecycle.js";
+import { normalizeGlobalSearchOpenLifecycle } from "./app-core-global-search-lifecycle.js";
 import { normalizeHomeSummaryLifecycle } from "./app-core-home-summary-lifecycle.js";
 import { splitPlayerApplicationCoreRuntime } from "./app-core-player-chunk.js";
 import { splitApplicationCoreRuntime } from "./app-core-route-chunks.js";
@@ -105,7 +106,8 @@ export function normalizeBuiltApplicationCoreArtifacts(source) {
   // Club lifecycle normalization settles the Club-specific route shape first; Filters then owns count-only UI and close-state timing.
   const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);
   const homeSummaryArtifacts = normalizeHomeSummaryLifecycle(filterSummaryArtifacts);
-  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(homeSummaryArtifacts);
+  const globalSearchArtifacts = normalizeGlobalSearchOpenLifecycle(homeSummaryArtifacts);
+  const evaluationRecentArtifacts = normalizeEvaluationRecentReadiness(globalSearchArtifacts);
   return normalizeEvaluationLoadLifecycle(evaluationRecentArtifacts);
 }
 
