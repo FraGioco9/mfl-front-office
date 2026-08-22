@@ -14,61 +14,6 @@
   let unsubscribe = null;
   let tableScrollTimer = 0;
 
-  function ensureNotFoundStylesheet() {
-    if (document.querySelector('link[data-mfl-not-found-styles="true"]')) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/not-found.css?mfl_design=3";
-    link.dataset.mflNotFoundStyles = "true";
-    document.head.appendChild(link);
-  }
-
-  function ensureCanonicalNotFoundPage() {
-    const main = document.querySelector("main");
-    if (!(main instanceof HTMLElement)) return null;
-
-    let page = document.getElementById("notFoundPage");
-    if (!(page instanceof HTMLElement)) {
-      page = document.createElement("section");
-      page.id = "notFoundPage";
-      page.className = "pageView notFoundPage";
-      page.hidden = true;
-      main.appendChild(page);
-    }
-
-    if (page.dataset.notFoundDesign !== "3") {
-      page.dataset.notFoundDesign = "3";
-      page.innerHTML = `<div class="notFoundContent">
-        <div class="notFoundGraphic" aria-hidden="true">
-          <span class="notFoundCode">404</span>
-          <svg class="notFoundIcon" viewBox="0 0 24 24">
-            <circle cx="10" cy="10" r="6"></circle>
-            <path d="m14.5 14.5 5 5"></path>
-            <path d="m8 8 4 4"></path>
-            <path d="m12 8-4 4"></path>
-          </svg>
-        </div>
-        <div class="notFoundCopy">
-          <span class="notFoundEyebrow">MFL Front Office</span>
-          <h2 id="notFoundTitle">Page not found</h2>
-          <p>We couldn't find the resource you're looking for.</p>
-        </div>
-        <a class="notFoundHomeButton" href="/" data-page="home">
-          <svg class="notFoundHomeIcon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m3 11 9-8 9 8"></path>
-            <path d="M5 10v10h14V10"></path>
-            <path d="M9 20v-6h6v6"></path>
-          </svg>
-          <span>Go to homepage</span>
-        </a>
-      </div>`;
-    }
-    return page;
-  }
-
-  ensureNotFoundStylesheet();
-  ensureCanonicalNotFoundPage();
-
   function setToastPosition(centerX) {
     if (!Number.isFinite(centerX)) return;
     document.documentElement.style.setProperty("--toast-center-x", `${centerX}px`);
