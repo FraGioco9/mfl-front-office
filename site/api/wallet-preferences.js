@@ -295,7 +295,9 @@ function mergeTableState(tableState, currentTableState) {
   return {
     ...current,
     ...incoming,
+    recentSearchItems: mergeRecentIds(incoming.recentSearchItems, current.recentSearchItems),
     recentSearchPlayerIds: mergeRecentIds(incoming.recentSearchPlayerIds, current.recentSearchPlayerIds),
+    recentSearchAgentWallets: mergeRecentIds(incoming.recentSearchAgentWallets, current.recentSearchAgentWallets),
     recentEvaluationPlayerIds: mergeRecentIds(incoming.recentEvaluationPlayerIds, current.recentEvaluationPlayerIds),
   };
 }
