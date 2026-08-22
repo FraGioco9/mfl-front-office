@@ -62,8 +62,7 @@ invariant(
     && runtime.includes('renderSearchMessage("Could not load recent searches.");')
     && runtime.includes("if (requestSequence === recentSequence) recentLoadPromise = null;")
     && runtime.includes("clearRecentRequest({ resetLoaded: true });\n      void renderEmptySearchResults({ force: true });")
-    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n    syncClearButton();\n    void renderEmptySearchResults({ force: true });")
-    && runtime.includes("clearRecentRequest({ resetLoaded: true });"),
+    && runtime.includes("clearRecentRequest({ resetLoaded: true });\n    syncClearButton();\n    void renderEmptySearchResults({ force: true });"),
   "Opening may deduplicate lifecycle loads, but explicitly emptying Global Search must always force a fresh Supabase recent-history read.",
 );
 
