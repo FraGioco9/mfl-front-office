@@ -153,7 +153,7 @@ function firstRuntimePath(pathname, search = "?keep=1", hash = "#route") {
 for (const [path, expectedReplacement] of [
   ["/", ""],
   ["/home", "/?keep=1#route"],
-  ["/evaluation/", ""],
+  ["/evaluation/", "/evaluation?keep=1#route"],
   ["/database", "/database/attributes?keep=1#route"],
   ["/DATABASE/STATS", "/database/stats?keep=1#route"],
   ["/progression/current", "/progression/current-season?keep=1#route"],
