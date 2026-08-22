@@ -192,7 +192,6 @@ export function browserConfigRuntimeSource(release) {
   const tablePageSet = new Set(data.routes.tableInfrastructurePages);
   const joinedAgencyPageSet = new Set(data.table.joinedAgencyPages);
   const statColumnSet = new Set(data.table.statColumns);
-  const canonicalClubViewPattern = "squad|contracts|current-season|all-time";
 
   function normalizePageName(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
