@@ -13,6 +13,8 @@
   let sequence = 0;
   let recentController = null;
   let recentSequence = 0;
+  let recentLoadPromise = null;
+  let recentLoadedForOpen = false;
   let evaluationController = null;
   let evaluationSequence = 0;
   let destroyed = false;
@@ -282,10 +284,12 @@
     coreContracts()?.invalidateDatabaseSearch?.("players");
   }
 
-  function clearRecentRequest() {
+  function clearRecentRequest(options = {}) {
     recentSequence += 1;
     recentController?.abort();
     recentController = null;
+    recentLoadPromise = null;
+    if (options.resetLoaded) recentLoadedForOpen = false;
   }
 
   async function restoreSupabaseRecentResults() {
@@ -296,37 +300,53 @@
     const walletProofHeaders = windowFunction("walletProofHeaders");
     if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
 
-    const requestSequence = ++recentSequence;
-    recentController?.abort();
-    recentController = new AbortController();
-    const activeController = recentController;
-    syncClearButton();
-    renderSearchMessage("Loading recent searches…");
-
-    try {
-      const response = await fetch("/api/wallet-preferences", {
-        cache: "no-store",
-        headers: walletProofHeaders(true),
-        signal: activeController.signal,
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data?.error || "Could not load recent searches.");
-      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
-
-      applySupabaseRecentState(data?.tableState);
-      if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
-
+    if (recentLoadedForOpen) {
       renderCurrentResults();
       return true;
-    } catch (error) {
-      if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
-        console.warn("Could not load recent Global Search entries from Supabase.", error);
-        renderSearchMessage("Could not load recent searches.");
-      }
-      return false;
-    } finally {
-      if (recentController === activeController) recentController = null;
     }
+
+    if (recentLoadPromise) return recentLoadPromise;
+
+    const requestSequence = ++recentSequence;
+    recentController = new AbortController();
+    const activeController = recentController;
+    const results = searchResults();
+    const hadRenderedResults = Boolean(results?.querySelector(":scope > .searchResult"));
+    syncClearButton();
+    if (!hadRenderedResults) renderSearchMessage("Loading recent searches…");
+
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch("/api/wallet-preferences", {
+          cache: "no-store",
+          headers: walletProofHeaders(true),
+          signal: activeController.signal,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error || "Could not load recent searches.");
+        if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+
+        applySupabaseRecentState(data?.tableState);
+        if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+
+        recentLoadedForOpen = true;
+        renderCurrentResults();
+        return true;
+      } catch (error) {
+        if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
+          console.warn("Could not load recent Global Search entries from Supabase.", error);
+          if (hadRenderedResults) renderCurrentResults();
+          else renderSearchMessage("Could not load recent searches.");
+        }
+        return false;
+      } finally {
+        if (recentController === activeController) recentController = null;
+        if (recentLoadPromise === loadPromise) recentLoadPromise = null;
+      }
+    })();
+
+    recentLoadPromise = loadPromise;
+    return loadPromise;
   }
 
   async function renderEmptySearchResults() {
@@ -530,7 +550,7 @@
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
       if (modal.hidden) {
-        clearRecentRequest();
+        clearRecentRequest({ resetLoaded: true });
         return;
       }
 
@@ -566,7 +586,7 @@
   function destroy() {
     destroyed = true;
     clearGlobalRequest();
-    clearRecentRequest();
+    clearRecentRequest({ resetLoaded: true });
     clearEvaluationRequest();
     modalObserver?.disconnect();
     modalObserver = null;
