@@ -7,10 +7,11 @@
     Object.values(value).forEach(freezeDeep);
     return Object.freeze(value);
   };
-  const data = freezeDeep({"release":{"version":"1.124.1","description":"Optimize loading, routing, caching, and navigation across the application"},"routes":{"tableViews":{"database":{"order":["attributes","contracts","stats"],"fallback":"attributes"},"mfl":{"order":["attributes","stats"],"fallback":"attributes"},"progression":{"order":["current","all"],"fallback":"current"},"agents":{"order":["attributes","contracts","next","current","all"],"fallback":"attributes"},"watchlist":{"order":["attributes","next","contracts","current","all"],"fallback":"current"},"myplayers":{"order":["attributes","next","contracts","current","all"],"fallback":"attributes"},"club":{"order":["attributes","contracts","current","all"],"fallback":"attributes"}},"viewBySlug":{"attributes":"attributes","squad":"attributes","stats":"stats","next-overall":"next","contracts":"contracts","current-season":"current","all-time":"all"},"clubViewSlugs":{"attributes":"squad","contracts":"contracts","current":"current-season","all":"all-time"},"corePaths":{"evaluation":"/modules/app-core-evaluation-runtime.js","mflstats":"/modules/app-core-mfl-stats-runtime.js","club":"/modules/app-core-club-runtime.js","settings":"/modules/app-core-settings-runtime.js","player":"/modules/app-core-player-runtime.js","table":"/modules/app-core-table-runtime.js","wallet":"/modules/app-core-wallet-runtime.js","watchlist":"/modules/app-core-watchlist-runtime.js"},"tableInfrastructurePages":["database","mfl","agents","progression","watchlist","myplayers","club"]},"table":{"baseColumns":["player_id","nationality_flag","name","age","positions","player_seasons"],"statColumns":["overall","pace","shooting","passing","dribbling","defense","physical"],"contractColumns":["overall","active_contract_club_name","active_contract_club_division","active_contract_revenue_share"],"viewColumns":{"attributes":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"current":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"all":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"next":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"contracts":["player_id","nationality_flag","name","age","positions","player_seasons","overall","active_contract_club_name","active_contract_club_division","active_contract_revenue_share","wallet_name","player_link"]},"joinedAgencyPages":["myplayers","agents","mfl"],"sortableColumns":["player_id","name","age","player_seasons","owned_since","active_contract_revenue_share","active_contract_club_division","overall","pace","shooting","passing","dribbling","defense","physical"],"columnLabels":{"player_id":"ID","nationality_flag":"","wallet_name":"Agent","owned_since":"Joined Agency","name":"Name","age":"Age","positions":"Positions","player_seasons":"Seasons","overall":"Overall","pace":"Pace","shooting":"Shooting","passing":"Passing","dribbling":"Dribbling","defense":"Defense","physical":"Physical","active_contract_revenue_share":"Rev. Share","active_contract_club_name":"Club Name","active_contract_club_division":"Division","player_link":""},"columnClasses":{"player_id":"col-id","nationality_flag":"col-flag","name":"col-name","age":"col-age","positions":"col-positions","player_seasons":"col-seasons","wallet_name":"col-agent","owned_since":"col-agent","active_contract_revenue_share":"col-contract-revenue","active_contract_club_name":"col-contract-club","active_contract_club_division":"col-contract-division","player_link":"col-link"}}});
+  const data = freezeDeep({"release":{"version":"1.124.1","description":"Optimize loading, routing, caching, and navigation across the application"},"routes":{"tableViews":{"database":{"order":["attributes","contracts","stats"],"fallback":"attributes"},"mfl":{"order":["attributes","stats"],"fallback":"attributes"},"progression":{"order":["current","all"],"fallback":"current"},"agents":{"order":["attributes","contracts","next","current","all"],"fallback":"attributes"},"watchlist":{"order":["attributes","next","contracts","current","all"],"fallback":"current"},"myplayers":{"order":["attributes","next","contracts","current","all"],"fallback":"attributes"},"club":{"order":["attributes","contracts","current","all"],"fallback":"attributes"}},"viewBySlug":{"attributes":"attributes","squad":"attributes","stats":"stats","next-overall":"next","contracts":"contracts","current-season":"current","all-time":"all"},"viewSlugs":{"attributes":"attributes","stats":"stats","next":"next-overall","contracts":"contracts","current":"current-season","all":"all-time"},"clubViewSlugs":{"attributes":"squad","contracts":"contracts","current":"current-season","all":"all-time"},"mflWalletAddress":"0xff8d2bbed8164db0","corePaths":{"evaluation":"/modules/app-core-evaluation-runtime.js","mflstats":"/modules/app-core-mfl-stats-runtime.js","club":"/modules/app-core-club-runtime.js","settings":"/modules/app-core-settings-runtime.js","player":"/modules/app-core-player-runtime.js","table":"/modules/app-core-table-runtime.js","wallet":"/modules/app-core-wallet-runtime.js","watchlist":"/modules/app-core-watchlist-runtime.js"},"tableInfrastructurePages":["database","mfl","agents","progression","watchlist","myplayers","club"]},"table":{"baseColumns":["player_id","nationality_flag","name","age","positions","player_seasons"],"statColumns":["overall","pace","shooting","passing","dribbling","defense","physical"],"contractColumns":["overall","active_contract_club_name","active_contract_club_division","active_contract_revenue_share"],"viewColumns":{"attributes":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"current":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"all":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"next":["player_id","nationality_flag","name","age","positions","player_seasons","overall","pace","shooting","passing","dribbling","defense","physical","wallet_name","player_link"],"contracts":["player_id","nationality_flag","name","age","positions","player_seasons","overall","active_contract_club_name","active_contract_club_division","active_contract_revenue_share","wallet_name","player_link"]},"joinedAgencyPages":["myplayers","agents","mfl"],"sortableColumns":["player_id","name","age","player_seasons","owned_since","active_contract_revenue_share","active_contract_club_division","overall","pace","shooting","passing","dribbling","defense","physical"],"columnLabels":{"player_id":"ID","nationality_flag":"","wallet_name":"Agent","owned_since":"Joined Agency","name":"Name","age":"Age","positions":"Positions","player_seasons":"Seasons","overall":"Overall","pace":"Pace","shooting":"Shooting","passing":"Passing","dribbling":"Dribbling","defense":"Defense","physical":"Physical","active_contract_revenue_share":"Rev. Share","active_contract_club_name":"Club Name","active_contract_club_division":"Division","player_link":""},"columnClasses":{"player_id":"col-id","nationality_flag":"col-flag","name":"col-name","age":"col-age","positions":"col-positions","player_seasons":"col-seasons","wallet_name":"col-agent","owned_since":"col-agent","active_contract_revenue_share":"col-contract-revenue","active_contract_club_name":"col-contract-club","active_contract_club_division":"col-contract-division","player_link":"col-link"}}});
   const tablePageSet = new Set(data.routes.tableInfrastructurePages);
   const joinedAgencyPageSet = new Set(data.table.joinedAgencyPages);
   const statColumnSet = new Set(data.table.statColumns);
+  const canonicalClubViewPattern = "squad|contracts|current-season|all-time";
 
   function normalizePageName(pageName) {
     const page = String(pageName || "").trim().toLowerCase();
@@ -24,71 +25,10 @@
     return String(options?.view || "").trim().toLowerCase();
   }
 
-  function viewOptionsFromSegments(segments) {
-    const slug = String(segments.at(-1) || "").toLowerCase();
-    const view = data.routes.viewBySlug[slug] || "";
-    return view ? { view } : {};
-  }
-
-  function normalizeClubView(view = "attributes") {
-    const requested = String(view || "attributes").trim().toLowerCase();
-    const clubConfig = data.routes.tableViews.club;
-    if (clubConfig.order.includes(requested)) return requested;
-    const slugView = data.routes.viewBySlug[requested] || "";
-    return clubConfig.order.includes(slugView) ? slugView : clubConfig.fallback;
-  }
-
-  function clubPath(clubId, view = "attributes") {
-    const normalizedClubId = String(clubId || "").trim();
-    const normalizedView = normalizeClubView(view);
-    const slug = data.routes.clubViewSlugs[normalizedView];
-    return "/clubs/" + encodeURIComponent(normalizedClubId) + "/" + slug;
-  }
-
-  function clubRoute(pathname = location.pathname) {
-    const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    const match = path.match(/^\/clubs\/([^/]+)\/(squad|contracts|current-season|all-time)$/i);
-    if (!match) return null;
-
-    const clubId = decodedRoutePart(match[1]);
-    if (!clubId) return null;
-    const requestedSlug = decodedRoutePart(match[2]).toLowerCase();
-    const view = data.routes.viewBySlug[requestedSlug] || "";
-    if (!data.routes.tableViews.club.order.includes(view)) return null;
-    return Object.freeze({
-      clubId,
-      view,
-      path: clubPath(clubId, view),
-    });
-  }
-
-  function initialRequest(pathname = location.pathname) {
-    const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-    if (!path.startsWith("/")) return { pageName: "home", options: {} };
-
-    const segments = path.split("/");
-    const pageSegment = String(segments[1] || "").toLowerCase();
-    if (pageSegment === "evaluation" && segments.length === 2) return { pageName: "evaluation", options: {} };
-    if (pageSegment === "changelog" && segments.length === 2) return { pageName: "changelog", options: {} };
-    if (pageSegment === "database") return { pageName: "database", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "mfl") return { pageName: "mfl", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "progression") return { pageName: "progression", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "watchlist") return { pageName: "watchlist", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "my-players") return { pageName: "myplayers", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "agents") return { pageName: "agents", options: viewOptionsFromSegments(segments) };
-    if (pageSegment === "clubs" || pageSegment === "club") {
-      const route = clubRoute(path);
-      return route
-        ? { pageName: "club", options: { clubId: route.clubId, view: route.view, path: route.path } }
-        : { pageName: "home", options: {} };
-    }
-    if (pageSegment === "players" && segments.length === 3 && segments[2]) return { pageName: "player", options: {} };
-    if (pageSegment === "settings" && segments.length === 2) return { pageName: "settings", options: {} };
-    return { pageName: "home", options: {} };
-  }
-
-  function usesTableInfrastructure(pageName) {
-    return tablePageSet.has(normalizePageName(pageName));
+  function cleanPath(pathname = location.pathname) {
+    const raw = String(pathname || "/").split(/[?#]/, 1)[0] || "/";
+    if (!raw.startsWith("/")) return "/";
+    return raw.replace(/\/+$/, "") || "/";
   }
 
   function decodedRoutePart(value) {
@@ -97,6 +37,177 @@
     } catch {
       return String(value || "");
     }
+  }
+
+  function normalizeTableView(pageName, requestedView = "", useFallback = true) {
+    const page = normalizePageName(pageName);
+    const config = data.routes.tableViews[page];
+    if (!config) return "";
+    const requested = String(requestedView || "").trim().toLowerCase();
+    if (!requested) return useFallback ? String(config.fallback || config.order[0] || "") : "";
+    if (config.order.includes(requested)) return requested;
+    const slugView = data.routes.viewBySlug[requested] || "";
+    return config.order.includes(slugView) ? slugView : "";
+  }
+
+  function viewSlugForPage(pageName, view) {
+    const page = normalizePageName(pageName);
+    const normalizedView = normalizeTableView(page, view);
+    if (!normalizedView) return "";
+    if (page === "club") return data.routes.clubViewSlugs[normalizedView] || "";
+    return data.routes.viewSlugs[normalizedView] || "";
+  }
+
+  function canonicalTablePath(pageName, view = "") {
+    const page = normalizePageName(pageName);
+    const slug = viewSlugForPage(page, view);
+    if (!slug) return "";
+    const basePath = page === "myplayers" ? "/my-players" : "/" + page;
+    return basePath + "/" + slug;
+  }
+
+  function requestResult(originalPath, pageName, options, canonicalPath) {
+    const normalizedOriginalPath = cleanPath(originalPath);
+    const nextOptions = { ...(options || {}) };
+    if (normalizedOriginalPath !== canonicalPath) nextOptions.replaceUrl = canonicalPath;
+    return {
+      pageName,
+      options: nextOptions,
+      canonicalPath,
+    };
+  }
+
+  function homeRequest(originalPath) {
+    return requestResult(originalPath, "home", {}, "/");
+  }
+
+  function clubPath(clubId, view = "attributes") {
+    const normalizedClubId = String(clubId || "").trim();
+    if (!normalizedClubId) return "";
+    const normalizedView = normalizeTableView("club", view);
+    const slug = data.routes.clubViewSlugs[normalizedView];
+    return slug ? "/clubs/" + encodeURIComponent(normalizedClubId) + "/" + slug : "";
+  }
+
+  function clubRoute(pathname = location.pathname) {
+    const path = cleanPath(pathname);
+    const segments = path.slice(1).split("/");
+    if (segments.length < 2 || segments.length > 3) return null;
+    const namespace = String(segments[0] || "").toLowerCase();
+    if (namespace !== "clubs" && namespace !== "club") return null;
+    const clubId = decodedRoutePart(segments[1]);
+    if (!clubId) return null;
+    const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
+    const view = normalizeTableView("club", requestedView);
+    if (!view) return null;
+    return Object.freeze({
+      clubId,
+      view,
+      path: clubPath(clubId, view),
+    });
+  }
+
+  function tableRequest(originalPath, pageName, basePath, segments) {
+    if (segments.length < 1 || segments.length > 2) return homeRequest(originalPath);
+    const requestedView = segments.length === 2 ? decodedRoutePart(segments[1]) : "";
+    const view = normalizeTableView(pageName, requestedView);
+    if (!view) return homeRequest(originalPath);
+    const canonicalPath = canonicalTablePath(pageName, view);
+    return requestResult(originalPath, pageName, { view }, canonicalPath || basePath);
+  }
+
+  function watchlistRequest(originalPath, segments) {
+    if (segments.length < 1 || segments.length > 3) return homeRequest(originalPath);
+    const config = data.routes.tableViews.watchlist;
+    const fallbackView = String(config.fallback || config.order[0] || "current");
+    let watchlistId = "";
+    let view = fallbackView;
+
+    if (segments.length >= 2) {
+      const first = decodedRoutePart(segments[1]);
+      const firstSlugView = data.routes.viewBySlug[String(first || "").toLowerCase()] || "";
+      if (firstSlugView && config.order.includes(firstSlugView)) {
+        if (segments.length === 3) return homeRequest(originalPath);
+        view = firstSlugView;
+      } else {
+        watchlistId = first;
+        if (!watchlistId) return homeRequest(originalPath);
+        if (segments.length === 3) {
+          view = normalizeTableView("watchlist", decodedRoutePart(segments[2]), false);
+          if (!view) return homeRequest(originalPath);
+        }
+      }
+    }
+
+    const slug = viewSlugForPage("watchlist", view);
+    const canonicalPath = watchlistId
+      ? "/watchlist/" + encodeURIComponent(watchlistId) + "/" + slug
+      : "/watchlist/" + slug;
+    return requestResult(originalPath, "watchlist", { watchlistId, view }, canonicalPath);
+  }
+
+  function agentRequest(originalPath, segments) {
+    if (segments.length < 2 || segments.length > 3) return homeRequest(originalPath);
+    const walletAddress = decodedRoutePart(segments[1]).trim().toLowerCase();
+    if (!walletAddress) return homeRequest(originalPath);
+    const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
+    const agentView = normalizeTableView("agents", requestedView);
+    if (!agentView) return homeRequest(originalPath);
+
+    if (walletAddress === data.routes.mflWalletAddress) {
+      const mflView = normalizeTableView("mfl", agentView) || data.routes.tableViews.mfl.fallback;
+      return requestResult(originalPath, "mfl", { view: mflView }, canonicalTablePath("mfl", mflView));
+    }
+
+    const canonicalPath = "/agents/" + encodeURIComponent(walletAddress) + "/" + viewSlugForPage("agents", agentView);
+    return requestResult(originalPath, "agents", { walletAddress, view: agentView }, canonicalPath);
+  }
+
+  function playerRequest(originalPath, segments) {
+    if (segments.length !== 2) return homeRequest(originalPath);
+    const playerId = decodedRoutePart(segments[1]);
+    if (!playerId) return homeRequest(originalPath);
+    const canonicalPath = "/players/" + encodeURIComponent(playerId);
+    return requestResult(originalPath, "player", { playerId }, canonicalPath);
+  }
+
+  function canonicalRequest(pathname = location.pathname) {
+    const path = cleanPath(pathname);
+    if (path === "/") return requestResult(path, "home", {}, "/");
+
+    const segments = path.slice(1).split("/");
+    if (segments.some((segment) => segment === "")) return homeRequest(path);
+    const pageSegment = String(segments[0] || "").toLowerCase();
+
+    if (pageSegment === "home" && segments.length === 1) return requestResult(path, "home", {}, "/");
+    if (pageSegment === "evaluation" && segments.length === 1) return requestResult(path, "evaluation", {}, "/evaluation");
+    if (pageSegment === "settings" && segments.length === 1) return requestResult(path, "settings", {}, "/settings");
+    if (pageSegment === "changelog" && segments.length === 1) return requestResult(path, "changelog", {}, "/changelog");
+
+    if (pageSegment === "database") return tableRequest(path, "database", "/database", segments);
+    if (pageSegment === "mfl") return tableRequest(path, "mfl", "/mfl", segments);
+    if (pageSegment === "progression") return tableRequest(path, "progression", "/progression", segments);
+    if (pageSegment === "my-players" || pageSegment === "myplayers") return tableRequest(path, "myplayers", "/my-players", segments);
+    if (pageSegment === "watchlist") return watchlistRequest(path, segments);
+    if (pageSegment === "agents") return agentRequest(path, segments);
+    if (pageSegment === "players") return playerRequest(path, segments);
+
+    if (pageSegment === "clubs" || pageSegment === "club") {
+      const route = clubRoute(path);
+      return route
+        ? requestResult(path, "club", { clubId: route.clubId, view: route.view, path: route.path }, route.path)
+        : homeRequest(path);
+    }
+
+    return homeRequest(path);
+  }
+
+  function initialRequest(pathname = location.pathname) {
+    return canonicalRequest(pathname);
+  }
+
+  function usesTableInfrastructure(pageName) {
+    return tablePageSet.has(normalizePageName(pageName));
   }
 
   function displayColumn(page, column) {
@@ -118,9 +229,12 @@
     ...data.routes,
     normalizePageName,
     normalizeView,
+    normalizeTableView,
+    viewSlugForPage,
+    canonicalTablePath,
+    canonicalRequest,
     initialRequest,
     usesTableInfrastructure,
-    normalizeClubView,
     clubPath,
     clubRoute,
   });
@@ -139,13 +253,15 @@
   const initialRoute = routes.initialRequest(location.pathname);
   if (typeof document !== "undefined" && document.body) document.body.dataset.page = initialRoute.pageName;
 
-  const initialClubPath = String(location.pathname || "/");
-  const initialClubLikePath = /^\/(?:clubs|club)(?:\/|$)/i.test(initialClubPath);
-  const initialClubRoute = routes.clubRoute(initialClubPath);
-  if (initialClubLikePath && !initialClubRoute) {
-    location.replace("/");
-  } else if (initialClubRoute && initialClubPath !== initialClubRoute.path) {
-    history.replaceState({}, "", initialClubRoute.path + location.search + location.hash);
+  const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";
+  const initialRequestTarget = routes.canonicalRequest(initialPath);
+  const initialClubLikePath = /^\/(?:clubs|club)(?:\/|$)/i.test(initialPath);
+  const initialClubRoute = routes.clubRoute(initialPath);
+  const initialCanonicalPath = initialClubLikePath && !initialClubRoute
+    ? "/"
+    : String(initialRequestTarget.canonicalPath || "/");
+  if (initialPath !== initialCanonicalPath) {
+    history.replaceState({}, "", initialCanonicalPath + location.search + location.hash);
   }
 })();
 window.__mflUniformWidth = Object.freeze({
