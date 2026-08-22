@@ -1,15 +1,6 @@
 (() => {
   "use strict";
 
-  const VIEW_BY_SLUG = Object.freeze({
-    attributes: "attributes",
-    squad: "attributes",
-    stats: "stats",
-    "next-overall": "next",
-    contracts: "contracts",
-    "current-season": "current",
-    "all-time": "all",
-  });
   const TOOLTIP_HEIGHT = 6;
   const TOOLTIP_SETTINGS = Object.freeze({
     durationMs: 170,
@@ -50,22 +41,13 @@
       url = new URL(window.location.href);
     }
 
-    const parts = url.pathname.split("/").filter(Boolean);
-    const first = String(parts[0] || "").toLowerCase();
-    const page = first === "my-players"
-      ? "myplayers"
-      : first === "clubs" || first === "club"
-        ? "club"
-        : ["database", "mfl", "progression", "watchlist", "agents"].includes(first)
-          ? first
-          : first === "players"
-            ? "player"
-            : first || "home";
-    const requestedView = VIEW_BY_SLUG[String(parts.at(-1) || "").toLowerCase()] || "";
-    const config = tableViewConfig()[page];
-    const view = config && Array.isArray(config.order) && config.order.includes(requestedView)
-      ? requestedView
-      : String(config?.fallback || requestedView || "");
+    const routeConfig = window.__mflAppConfig?.routes;
+    if (!routeConfig || typeof routeConfig.initialRequest !== "function") {
+      throw new Error("Canonical route configuration is unavailable to static UI.");
+    }
+    const request = routeConfig.initialRequest(url.pathname);
+    const page = String(request?.pageName || "notfound");
+    const view = String(request?.options?.view || "");
     return { page, view, url: url.href };
   }
 
@@ -139,6 +121,7 @@
   }
 
   function shellForRoute(state) {
+    if (state.page === "notfound") return document.getElementById("myPlayersLockedPage");
     if (routeNeedsLockedShell(state.page)) return document.getElementById("myPlayersLockedPage");
     if (state.page === "database" && state.view === "stats") return document.getElementById("databaseStatsPage");
     if (state.page === "mfl" && state.view === "stats") return document.getElementById("mflStatsPage");
@@ -147,7 +130,20 @@
     if (state.page === "player") return document.getElementById("playerPage");
     if (state.page === "settings") return document.getElementById("settingsPage");
     if (state.page === "changelog") return document.getElementById("changelogPage");
-    return document.getElementById("homePage");
+    if (state.page === "home") return document.getElementById("homePage");
+    return null;
+  }
+
+  function primeNotFoundShell(state) {
+    if (state.page !== "notfound") return;
+    const title = document.getElementById("optInLockedTitle");
+    const message = document.getElementById("optInLockedMessage");
+    const optInButton = document.getElementById("myPlayersOptInButton");
+    const routeMessageHomeButton = document.getElementById("routeMessageHomeButton");
+    if (title) title.textContent = "Page not found";
+    if (message) message.textContent = "The requested page could not be found.";
+    if (optInButton) optInButton.hidden = true;
+    if (routeMessageHomeButton) routeMessageHomeButton.hidden = false;
   }
 
   function syncDestinationTableHeader(state) {
@@ -174,10 +170,10 @@
   }
 
   function syncDestinationTableChrome(state, options = {}) {
-  const prime = Reflect.get(window, "__mflPrimeTableChrome");
-  if (typeof prime === "function") prime(state.page, state.url || window.location.href, options);
-  syncDestinationTableHeader(state);
-}
+    const prime = Reflect.get(window, "__mflPrimeTableChrome");
+    if (typeof prime === "function") prime(state.page, state.url || window.location.href, options);
+    syncDestinationTableHeader(state);
+  }
 
   function routeIdentity(state) {
     try {
@@ -224,41 +220,42 @@
   }
 
   function showRouteShell(state, options = {}) {
-  const target = shellForRoute(state);
-  if (!(target instanceof HTMLElement)) return;
-  if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
-  primeDestinationRouteShell(state, target);
+    const target = shellForRoute(state);
+    if (!(target instanceof HTMLElement)) return;
+    primeNotFoundShell(state);
+    if (target.id === "progressionPage") syncDestinationTableChrome(state, options);
+    primeDestinationRouteShell(state, target);
 
-  document.querySelectorAll("main > .pageView").forEach((page) => {
-    if (page instanceof HTMLElement) page.hidden = page !== target;
-  });
-}
+    document.querySelectorAll("main > .pageView").forEach((page) => {
+      if (page instanceof HTMLElement) page.hidden = page !== target;
+    });
+  }
 
   function syncRouteChrome(urlLike = window.location.href) {
-  const state = routeState(urlLike);
-  const previousPage = lastRoutePage;
-  const previousView = lastRouteView;
-  const pageChanged = Boolean(previousPage && previousPage !== state.page);
-  const viewChanged = Boolean(previousPage && !pageChanged && previousView !== state.view);
-  const resetFilters = pageChanged && FILTERED_TABLE_PAGES.has(state.page);
-  lastRoutePage = state.page;
-  lastRouteView = state.view;
+    const state = routeState(urlLike);
+    const previousPage = lastRoutePage;
+    const previousView = lastRouteView;
+    const pageChanged = Boolean(previousPage && previousPage !== state.page);
+    const viewChanged = Boolean(previousPage && !pageChanged && previousView !== state.view);
+    const resetFilters = pageChanged && FILTERED_TABLE_PAGES.has(state.page);
+    lastRoutePage = state.page;
+    lastRouteView = state.view;
 
-  if (resetFilters) {
-    document.documentElement.dataset.mflResetTableFilters = state.page;
-  } else if (pageChanged) {
-    delete document.documentElement.dataset.mflResetTableFilters;
-  }
-  if (pageChanged || viewChanged) {
-    window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
-  }
+    if (resetFilters) {
+      document.documentElement.dataset.mflResetTableFilters = state.page;
+    } else if (pageChanged) {
+      delete document.documentElement.dataset.mflResetTableFilters;
+    }
+    if (pageChanged || viewChanged) {
+      window.__mflSelectionStackRuntime?.clearForRouteTransition?.();
+    }
 
-  syncFooter();
-  setActiveNavigation(state.page);
-  syncTableViews(state.page, state.view);
-  showRouteShell(state, { resetFilters });
-  return state;
-}
+    syncFooter();
+    setActiveNavigation(state.page);
+    syncTableViews(state.page, state.view);
+    showRouteShell(state, { resetFilters });
+    return state;
+  }
 
   function tooltipTargetFrom(target) {
     if (!(target instanceof Element)) return null;
