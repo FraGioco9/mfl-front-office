@@ -88,16 +88,20 @@ invariant(
   "Global Search must preload its Supabase recent state during page startup; opening the popup may only consume an existing preload and must never initiate the recent-history fetch.",
 );
 
+const routeReadyIndex = appEntry.indexOf('window.dispatchEvent(new CustomEvent("mfl:route-ready", { detail: release }));');
+const backgroundPreloadIndex = appEntry.indexOf("const globalSearchPreloadPromise = runtimeWindow.__mflGlobalSearchRuntime?.preload?.();");
+const appReadyIndex = appEntry.indexOf('document.documentElement.dataset.mflReady = "true";');
 invariant(
   appEntry.includes("__mflGlobalSearchRuntime?: { preload?: () => Promise<boolean>, flush?: () => boolean, focus?: () => void }")
     && appEntry.includes("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
-    && appEntry.includes("await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
+    && appEntry.includes("initialGlobalSearchWarmupPromise")
     && appEntry.includes("function installCoreBridges() {")
-    && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
-      < appEntry.indexOf('document.documentElement.dataset.mflReady = "true";')
-    && appEntry.lastIndexOf("await runtimeWindow.__mflGlobalSearchRuntime?.preload?.();")
-      < appEntry.indexOf('document.documentElement.dataset.mflReady = "true";'),
-  "Application startup must launch Global Search recent preloading as soon as the core bridge is installed and await the completed preload before the page is marked ready.",
+    && appEntry.indexOf("void runtimeWindow.__mflGlobalSearchRuntime?.preload?.();") < routeReadyIndex
+    && routeReadyIndex >= 0
+    && backgroundPreloadIndex > routeReadyIndex
+    && appEntry.includes("await Promise.allSettled([\n    initialGlobalSearchWarmupPromise,\n    globalSearchPreloadPromise,\n  ]);")
+    && appReadyIndex > backgroundPreloadIndex,
+  "Application startup must launch Global Search recent preloading early, release the visible route independently, and still settle Global Search warm-up before application-wide readiness.",
 );
 
 invariant(
@@ -231,4 +235,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search completes and prebuilds its Supabase recent five before page readiness, preserves and recovers the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
+console.log("Global Search starts preloading during startup, may finish after visible route readiness, settles before application-wide readiness, preserves and recovers the mixed five across partial/concurrent saves, promotes clicks before core persistence, and uses identical 66px boxes with 8px gaps for recent and typed results.");
