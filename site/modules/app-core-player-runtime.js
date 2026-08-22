@@ -509,6 +509,7 @@ function renderPlayerPageOwner(playerId) {
     window.__mflStaticUiRuntime?.showNotFound?.("Player");
     return;
   }
+  document.documentElement.dataset.initialEntityVerified = "player";
 
   const playerName = formatCellValue(row, "name");
   const id = formatCellValue(row, "player_id");
