@@ -70,6 +70,11 @@ table :is(th, td) > :is(button, img, input, select, svg) {
   vertical-align: middle;
 }
 
+#progressionPage .playerTableScroller :is(th, td) {
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+
 /* Uniform Width is consumed by the player table only through its colgroup.
  * Headers, loading cells, and loaded cells never become width owners. */
 #progressionPage .playerTableScroller col.col-select { width: var(--mfl-table-col-select); }
