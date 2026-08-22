@@ -262,6 +262,21 @@ export function browserConfigRuntimeSource(release) {
     return requestResult(originalPath, "home", {}, "/");
   }
 
+  function notFoundKindForPath(pathname) {
+    const path = cleanPath(pathname);
+    const first = String(path.slice(1).split("/")[0] || "").toLowerCase();
+    if (first === "clubs" || first === "club") return "Club";
+    if (first === "players") return "Player";
+    if (first === "agents") return "Agent";
+    if (first === "watchlist") return "Watchlist";
+    return "Page";
+  }
+
+  function notFoundRequest(originalPath, kind = notFoundKindForPath(originalPath)) {
+    const canonicalPath = cleanPath(originalPath);
+    return requestResult(originalPath, "notfound", { notFoundKind: kind }, canonicalPath);
+  }
+
   function clubPath(clubId, view = "attributes") {
     const normalizedClubId = String(clubId || "").trim();
     if (!normalizedClubId) return "";
@@ -289,16 +304,16 @@ export function browserConfigRuntimeSource(release) {
   }
 
   function tableRequest(originalPath, pageName, basePath, segments) {
-    if (segments.length < 1 || segments.length > 2) return homeRequest(originalPath);
+    if (segments.length < 1 || segments.length > 2) return notFoundRequest(originalPath, "Page");
     const requestedView = segments.length === 2 ? decodedRoutePart(segments[1]) : "";
     const view = normalizeTableView(pageName, requestedView);
-    if (!view) return homeRequest(originalPath);
+    if (!view) return notFoundRequest(originalPath, "Page");
     const canonicalPath = canonicalTablePath(pageName, view);
     return requestResult(originalPath, pageName, { view }, canonicalPath || basePath);
   }
 
   function watchlistRequest(originalPath, segments) {
-    if (segments.length < 1 || segments.length > 3) return homeRequest(originalPath);
+    if (segments.length < 1 || segments.length > 3) return notFoundRequest(originalPath, "Watchlist");
     const config = data.routes.tableViews.watchlist;
     const fallbackView = String(config.fallback || config.order[0] || "current");
     let watchlistId = "";
@@ -308,14 +323,14 @@ export function browserConfigRuntimeSource(release) {
       const first = decodedRoutePart(segments[1]);
       const firstSlugView = data.routes.viewBySlug[String(first || "").toLowerCase()] || "";
       if (firstSlugView && config.order.includes(firstSlugView)) {
-        if (segments.length === 3) return homeRequest(originalPath);
+        if (segments.length === 3) return notFoundRequest(originalPath, "Watchlist");
         view = firstSlugView;
       } else {
         watchlistId = first;
-        if (!watchlistId) return homeRequest(originalPath);
+        if (!watchlistId) return notFoundRequest(originalPath, "Watchlist");
         if (segments.length === 3) {
           view = normalizeTableView("watchlist", decodedRoutePart(segments[2]), false);
-          if (!view) return homeRequest(originalPath);
+          if (!view) return notFoundRequest(originalPath, "Watchlist");
         }
       }
     }
@@ -328,12 +343,12 @@ export function browserConfigRuntimeSource(release) {
   }
 
   function agentRequest(originalPath, segments) {
-    if (segments.length < 2 || segments.length > 3) return homeRequest(originalPath);
+    if (segments.length < 2 || segments.length > 3) return notFoundRequest(originalPath, "Agent");
     const walletAddress = decodedRoutePart(segments[1]).trim().toLowerCase();
-    if (!walletAddress) return homeRequest(originalPath);
+    if (!walletAddress) return notFoundRequest(originalPath, "Agent");
     const requestedView = segments.length === 3 ? decodedRoutePart(segments[2]) : "";
     const agentView = normalizeTableView("agents", requestedView);
-    if (!agentView) return homeRequest(originalPath);
+    if (!agentView) return notFoundRequest(originalPath, "Agent");
 
     if (walletAddress === data.routes.mflWalletAddress) {
       const mflView = normalizeTableView("mfl", agentView) || data.routes.tableViews.mfl.fallback;
@@ -345,9 +360,9 @@ export function browserConfigRuntimeSource(release) {
   }
 
   function playerRequest(originalPath, segments) {
-    if (segments.length !== 2) return homeRequest(originalPath);
+    if (segments.length !== 2) return notFoundRequest(originalPath, "Player");
     const playerId = decodedRoutePart(segments[1]);
-    if (!playerId) return homeRequest(originalPath);
+    if (!playerId) return notFoundRequest(originalPath, "Player");
     const canonicalPath = "/players/" + encodeURIComponent(playerId);
     return requestResult(originalPath, "player", { playerId }, canonicalPath);
   }
@@ -357,7 +372,7 @@ export function browserConfigRuntimeSource(release) {
     if (path === "/") return requestResult(path, "home", {}, "/");
 
     const segments = path.slice(1).split("/");
-    if (segments.some((segment) => segment === "")) return homeRequest(path);
+    if (segments.some((segment) => segment === "")) return notFoundRequest(path);
     const pageSegment = String(segments[0] || "").toLowerCase();
 
     if (pageSegment === "home" && segments.length === 1) return requestResult(path, "home", {}, "/");
@@ -377,10 +392,10 @@ export function browserConfigRuntimeSource(release) {
       const route = clubRoute(path);
       return route
         ? requestResult(path, "club", { clubId: route.clubId, view: route.view, path: route.path }, route.path)
-        : homeRequest(path);
+        : notFoundRequest(path, "Club");
     }
 
-    return homeRequest(path);
+    return notFoundRequest(path, "Page");
   }
 
   function initialRequest(pathname = location.pathname) {
@@ -416,6 +431,7 @@ export function browserConfigRuntimeSource(release) {
     canonicalRequest,
     initialRequest,
     usesTableInfrastructure,
+    notFoundKindForPath,
     clubPath,
     clubRoute,
   });
@@ -433,11 +449,7 @@ export function browserConfigRuntimeSource(release) {
 
   const initialPath = String(location.pathname || "/").split(/[?#]/, 1)[0] || "/";
   const initialRequestTarget = routes.canonicalRequest(initialPath);
-  const initialClubLikePath = /^\\/(?:clubs|club)(?:\\/|$)/i.test(initialPath);
-  const initialClubRoute = routes.clubRoute(initialPath);
-  const initialCanonicalPath = initialClubLikePath && !initialClubRoute
-    ? "/"
-    : String(initialRequestTarget.canonicalPath || "/");
+  const initialCanonicalPath = String(initialRequestTarget.canonicalPath || initialPath || "/");
   if (initialPath !== initialCanonicalPath) {
     history.replaceState({}, "", initialCanonicalPath + location.search + location.hash);
   }
