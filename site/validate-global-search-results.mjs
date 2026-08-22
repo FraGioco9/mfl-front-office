@@ -38,6 +38,7 @@ invariant(
     && runtime.includes('"mfl-recent-player-searches-v1"')
     && runtime.includes('"mfl-recent-agent-searches-v1"')
     && runtime.includes('"mfl-recent-searches-v1"')
+    && runtime.includes('"mfl-recent-search-clubs"')
     && runtime.includes("delete sanitized.recentSearchItems;")
     && runtime.includes("delete sanitized.recentSearchPlayerIds;")
     && runtime.includes("delete sanitized.recentSearchAgentWallets;")
@@ -48,32 +49,60 @@ invariant(
     && !runtime.includes("RECENT_MIXED_CACHE_KEY")
     && !runtime.includes("RECENT_PLAYER_CACHE_KEY")
     && !runtime.includes("RECENT_AGENT_CACHE_KEY"),
-  "Global Search history must never be read from or persisted to browser storage; legacy local history must be removed.",
+  "Global Search history must never use browser recent-history storage, including the legacy club-only key.",
 );
 
 invariant(
   runtime.includes("let recentLoadPromise = null;")
     && runtime.includes("let recentLoadedForSession = false;")
-    && runtime.includes("if (recentLoadedForSession) {\n      renderCurrentResults();\n      return true;\n    }")
+    && runtime.includes("let canonicalRecentItems = [];")
+    && runtime.includes("let canonicalRecentResults = new Map();")
+    && runtime.includes("async function hydrateSupabaseRecentResults()")
+    && runtime.includes("if (recentLoadedForSession) return true;")
     && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
-    && runtime.includes('renderSearchMessage("Loading recent searches…");')
-    && runtime.includes("recentLoadedForSession = true;\n        renderCurrentResults();")
-    && runtime.includes('renderSearchMessage("Could not load recent searches.");')
-    && runtime.includes("if (requestSequence === recentSequence) recentLoadPromise = null;")
+    && runtime.includes("recentLoadedForSession = true;")
+    && runtime.includes("async function restoreSupabaseRecentResults()")
+    && runtime.includes("if (!recentLoadedForSession) await hydrateSupabaseRecentResults();")
     && !runtime.includes("recentLoadedForOpen")
     && !runtime.includes("options.force")
-    && !runtime.includes("renderEmptySearchResults({ force: true })")
-    && runtime.includes("clearRecentRequest();\n      void renderEmptySearchResults();")
-    && runtime.includes("clearRecentRequest();\n    syncClearButton();\n    void renderEmptySearchResults();")
-    && runtime.includes("const input = searchInput();\n    syncClearButton();\n    if (input && !input.value.trim()) void renderEmptySearchResults();"),
-  "Global Search recent history must mirror Evaluation: hydrate Supabase once for the session, prime it at readiness, and restore the same in-memory five instantly whenever the input becomes empty.",
+    && !runtime.includes("renderEmptySearchResults({ force: true })"),
+  "Global Search must hydrate its Supabase recent state once per session and reuse it like Evaluation.",
+);
+
+invariant(
+  runtime.includes("function captureCanonicalRecentResults() {")
+    && runtime.includes("function renderCanonicalRecentResults() {")
+    && runtime.includes("function promoteCanonicalRecentResult(result) {")
+    && runtime.includes("canonicalRecentItems = [\n      key,\n      ...canonicalRecentItems.filter((item) => item !== key),\n    ].slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);")
+    && runtime.includes("canonicalRecentResults.set(key, result);")
+    && runtime.includes("applyRecentItemsToCore();")
+    && runtime.includes("results.replaceChildren(...ordered);")
+    && runtime.includes("captureCanonicalRecentResults();\n    void searchDatabase(query);")
+    && runtime.includes("if (renderCanonicalRecentResults()) return true;"),
+  "Typed Global Search must preserve a separate canonical five-result payload so replacing typed indexes cannot collapse the next empty state to one card.",
+);
+
+invariant(
+  core.includes("state.searchIndex = playerEntries;")
+    && core.includes("state.agentSearchIndex = Array.isArray(agents?.rows)")
+    && core.includes("state.clubSearchIndex = Array.isArray(payload?.clubs)"),
+  "Regression coverage must account for typed database searches replacing the live player, agent, and club indexes.",
+);
+
+invariant(
+  runtime.includes('event.target.closest("#playerSearchResults > .searchResult")')
+    && runtime.includes("promoteCanonicalRecentResult(target);")
+    && runtime.includes("flushCanonicalRecentState();")
+    && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
+    && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
+  "Clicking a Global Search result must promote it into the canonical five before flushing the complete updated history to Supabase.",
 );
 
 invariant(
   runtime.includes("applySupabaseRecentState(data?.tableState);")
     && !runtime.includes('requestDatabaseSearch("", "all", { force: true })')
     && !runtime.includes("if (hadRenderedResults) renderCurrentResults();"),
-  "Successful Supabase recent results must render directly, and failed hydration must never fall back to stale locally derived results.",
+  "Successful Supabase recent results must render directly without a second empty database search or a stale local fallback.",
 );
 
 invariant(
@@ -83,21 +112,14 @@ invariant(
 );
 
 invariant(
-  runtime.includes('event.target.closest("#playerSearchResults > .searchResult")')
-    && runtime.includes('const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");')
-    && runtime.includes("if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();"),
-  "Clicking a Global Search result must flush the updated recent history to Supabase immediately instead of relying only on delayed persistence.",
-);
-
-invariant(
   runtime.includes('const hidden = !input.value.trim();')
     && runtime.includes("button.hidden = hidden;")
     && runtime.includes('button.toggleAttribute("hidden", hidden);')
     && runtime.includes('document.addEventListener("click", onClearClick, true);')
-    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    clearRecentRequest();\n    syncClearButton();')
+    && runtime.includes('input.value = "";\n    clearGlobalRequest();\n    syncClearButton();')
     && controls.includes("#evaluationSearchInput:placeholder-shown + .evaluationSearchClearButton,\n#playerSearchInput:placeholder-shown + .playerSearchClearButton {")
     && controls.includes("visibility: hidden;\n  opacity: 0;\n  pointer-events: none;"),
-  "Global Search clear control must be visually hidden whenever its input is empty and hide immediately when cleared.",
+  "Global Search clear control must be visually hidden whenever its input is empty and restore canonical recents without invalidating session hydration.",
 );
 
 invariant(
@@ -141,4 +163,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search uses Supabase-only recent history, hydrates the five once per session like Evaluation, restores them instantly when empty, caps typed results at 10, and only shows clear while typed.");
+console.log("Global Search keeps a canonical Supabase-derived five-result payload independent of typed indexes, promotes clicks without collapsing history, and restores the five instantly when empty.");
