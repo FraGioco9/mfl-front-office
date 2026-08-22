@@ -9,6 +9,7 @@
     "mfl-recent-player-searches-v1",
     "mfl-recent-agent-searches-v1",
     "mfl-recent-searches-v1",
+    "mfl-recent-search-clubs",
   ]);
   window.__mflGlobalSearchRuntime?.destroy?.();
 
@@ -18,6 +19,8 @@
   let recentSequence = 0;
   let recentLoadPromise = null;
   let recentLoadedForSession = false;
+  let canonicalRecentItems = [];
+  let canonicalRecentResults = new Map();
   let evaluationController = null;
   let evaluationSequence = 0;
   let destroyed = false;
@@ -228,9 +231,11 @@
     return Array.from(new Set(legacyItems)).slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);
   }
 
-  function applySupabaseRecentState(tableState) {
-    const recentItems = normalizedSupabaseRecentItems(tableState);
-    windowFunction("restoreRecentSearchState")?.({
+  function recentStateFromItems(items) {
+    const recentItems = Array.isArray(items)
+      ? items.map((item) => String(item || "").trim()).filter(Boolean).slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS)
+      : [];
+    return {
       recentSearchItems: recentItems,
       recentSearchPlayerIds: recentItems
         .filter((item) => item.startsWith("player:"))
@@ -238,8 +243,60 @@
       recentSearchAgentWallets: recentItems
         .filter((item) => item.startsWith("agent:"))
         .map((item) => item.slice(6)),
+    };
+  }
+
+  function applyRecentItemsToCore(items = canonicalRecentItems) {
+    windowFunction("restoreRecentSearchState")?.(recentStateFromItems(items));
+  }
+
+  function captureCanonicalRecentResults() {
+    const results = searchResults();
+    if (!results || !canonicalRecentItems.length) return false;
+    const allowed = new Set(canonicalRecentItems);
+    Array.from(results.querySelectorAll(":scope > .searchResult")).forEach((result) => {
+      const key = String(result.dataset.searchKey || "").trim();
+      if (key && allowed.has(key)) canonicalRecentResults.set(key, result);
     });
-    return recentItems;
+    return canonicalRecentItems.every((key) => canonicalRecentResults.has(key));
+  }
+
+  function renderCanonicalRecentResults() {
+    const input = searchInput();
+    const results = searchResults();
+    if (!recentLoadedForSession || !input || input.value.trim() || !results) return false;
+    const ordered = canonicalRecentItems
+      .map((key) => canonicalRecentResults.get(key))
+      .filter((result) => result instanceof HTMLElement);
+    if (ordered.length !== canonicalRecentItems.length) return false;
+    results.replaceChildren(...ordered);
+    results.classList.toggle("filledSearchResults", ordered.length > 0);
+    syncClearButton();
+    return true;
+  }
+
+  function promoteCanonicalRecentResult(result) {
+    if (!(result instanceof HTMLElement)) return false;
+    const key = String(result.dataset.searchKey || "").trim();
+    if (!key) return false;
+    canonicalRecentItems = [
+      key,
+      ...canonicalRecentItems.filter((item) => item !== key),
+    ].slice(0, MAX_RECENT_GLOBAL_SEARCH_RESULTS);
+    canonicalRecentResults.set(key, result);
+    Array.from(canonicalRecentResults.keys()).forEach((cachedKey) => {
+      if (!canonicalRecentItems.includes(cachedKey)) canonicalRecentResults.delete(cachedKey);
+    });
+    applyRecentItemsToCore();
+    purgeLocalGlobalSearchHistory();
+    return true;
+  }
+
+  function applySupabaseRecentState(tableState) {
+    canonicalRecentItems = normalizedSupabaseRecentItems(tableState);
+    canonicalRecentResults = new Map();
+    applyRecentItemsToCore();
+    return canonicalRecentItems;
   }
 
   function renderEvaluationMessage(message) {
@@ -375,25 +432,21 @@
     recentLoadPromise = null;
   }
 
-  async function restoreSupabaseRecentResults() {
-    const input = searchInput();
-    if (!input || input.value.trim()) return false;
-
+  async function hydrateSupabaseRecentResults() {
     const hasWalletProof = windowFunction("hasWalletProof");
     const walletProofHeaders = windowFunction("walletProofHeaders");
     if (!hasWalletProof || !walletProofHeaders || !hasWalletProof()) return false;
-
-    if (recentLoadedForSession) {
-      renderCurrentResults();
-      return true;
-    }
+    if (recentLoadedForSession) return true;
     if (recentLoadPromise) return recentLoadPromise;
 
     const requestSequence = ++recentSequence;
     recentController = new AbortController();
     const activeController = recentController;
-    syncClearButton();
-    renderSearchMessage("Loading recent searches…");
+    const input = searchInput();
+    if (input && !input.value.trim()) {
+      syncClearButton();
+      renderSearchMessage("Loading recent searches…");
+    }
 
     const loadPromise = (async () => {
       try {
@@ -404,18 +457,23 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data?.error || "Could not load recent searches.");
-        if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+        if (destroyed || requestSequence !== recentSequence) return false;
 
         applySupabaseRecentState(data?.tableState);
-        if (destroyed || requestSequence !== recentSequence || searchInput()?.value.trim()) return false;
+        if (destroyed || requestSequence !== recentSequence) return false;
 
         recentLoadedForSession = true;
-        renderCurrentResults();
+        const currentInput = searchInput();
+        if (currentInput && !currentInput.value.trim()) {
+          renderCurrentResults();
+          captureCanonicalRecentResults();
+        }
         return true;
       } catch (error) {
         if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
           console.warn("Could not load recent Global Search entries from Supabase.", error);
-          renderSearchMessage("Could not load recent searches.");
+          const currentInput = searchInput();
+          if (currentInput && !currentInput.value.trim()) renderSearchMessage("Could not load recent searches.");
         }
         return false;
       } finally {
@@ -426,6 +484,23 @@
 
     recentLoadPromise = loadPromise;
     return loadPromise;
+  }
+
+  async function restoreSupabaseRecentResults() {
+    const input = searchInput();
+    if (!input || input.value.trim()) return false;
+
+    const hasWalletProof = windowFunction("hasWalletProof");
+    if (!hasWalletProof?.()) return false;
+
+    if (!recentLoadedForSession) await hydrateSupabaseRecentResults();
+    if (!recentLoadedForSession || input.value.trim()) return false;
+
+    applyRecentItemsToCore();
+    if (renderCanonicalRecentResults()) return true;
+    renderCurrentResults();
+    captureCanonicalRecentResults();
+    return true;
   }
 
   async function renderEmptySearchResults() {
@@ -454,7 +529,6 @@
     const input = searchInput();
     if (!input || !normalizedQuery) return false;
 
-    clearRecentRequest();
     const requestSequence = ++sequence;
     controller?.abort();
     invalidateLegacyAllSearch();
@@ -552,10 +626,10 @@
     const query = String(input.value || "").trim();
     if (!query) {
       clearGlobalRequest();
-      clearRecentRequest();
       void renderEmptySearchResults();
       return;
     }
+    captureCanonicalRecentResults();
     void searchDatabase(query);
   }
 
@@ -569,23 +643,37 @@
 
     input.value = "";
     clearGlobalRequest();
-    clearRecentRequest();
     syncClearButton();
     void renderEmptySearchResults();
     input.focus({ preventScroll: true });
+  }
+
+  function flushCanonicalRecentState() {
+    const hasWalletProof = windowFunction("hasWalletProof");
+    const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");
+    purgeLocalGlobalSearchHistory();
+    if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();
   }
 
   function onSearchResultClick(event) {
     const target = event.target instanceof Element
       ? event.target.closest("#playerSearchResults > .searchResult")
       : null;
-    if (!target) return;
+    if (!(target instanceof HTMLElement)) return;
 
-    queueMicrotask(() => {
+    const commit = () => {
       if (destroyed) return;
-      const hasWalletProof = windowFunction("hasWalletProof");
-      const saveWalletPreferencesNow = windowFunction("saveWalletPreferencesNow");
-      if (hasWalletProof?.() && saveWalletPreferencesNow) void saveWalletPreferencesNow();
+      promoteCanonicalRecentResult(target);
+      flushCanonicalRecentState();
+    };
+
+    if (recentLoadedForSession) {
+      commit();
+      return;
+    }
+
+    void hydrateSupabaseRecentResults().then((loaded) => {
+      if (loaded) commit();
     });
   }
 
@@ -649,10 +737,7 @@
     if (!modal) return;
     modalObserver?.disconnect();
     modalObserver = new MutationObserver(() => {
-      if (modal.hidden) {
-        clearRecentRequest();
-        return;
-      }
+      if (modal.hidden) return;
 
       const input = searchInput();
       syncClearButton();
@@ -670,7 +755,9 @@
     flushPendingEvaluationPayload();
     const input = searchInput();
     syncClearButton();
-    if (input && !input.value.trim()) void renderEmptySearchResults();
+    void hydrateSupabaseRecentResults().then(() => {
+      if (input && !input.value.trim()) void renderEmptySearchResults();
+    });
   }
 
   installSupabaseOnlyRecentStorage();
@@ -694,6 +781,8 @@
     clearEvaluationRequest();
     modalObserver?.disconnect();
     modalObserver = null;
+    canonicalRecentItems = [];
+    canonicalRecentResults.clear();
     if (focusFrame) cancelAnimationFrame(focusFrame);
     if (focusSettleTimer) clearTimeout(focusSettleTimer);
     document.removeEventListener("input", onInput, true);
