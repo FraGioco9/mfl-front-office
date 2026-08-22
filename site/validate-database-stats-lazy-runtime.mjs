@@ -11,6 +11,7 @@ const entry = await read("./modules/app-entry.js");
 const routeCoreLoader = await read("./route-core-loader-runtime.js");
 const stateRuntime = await read("./database-stats-state-runtime.js");
 const statsRuntime = await read("./database-stats-runtime.js");
+const controlInteractions = await read("./control-interactions-runtime.js");
 const styles = await read("./styles.css");
 const coreSource = await read("./modules/app-core.js");
 
@@ -68,8 +69,29 @@ includes(statsRuntime, "async function showStatsPage() {", "Database Stats domai
 includes(statsRuntime, 'window.__mflInteractionBusy.begin("databaseStatsData")', "Database Stats data loading must retain its busy state after navigation paints.");
 includes(statsRuntime, "function positionCustomPanel() {", "Database Stats domain runtime must own Custom filter positioning directly.");
 includes(statsRuntime, 'customPanel()?.querySelector("input")?.focus', "Database Stats domain runtime must own Custom filter opening/focus directly.");
+includes(statsRuntime, "let customPanelOpen = false;", "Database Stats Custom menu must track open state separately from the applied filter.");
+includes(statsRuntime, "custom.hidden = !customPanelOpen;", "Database Stats Custom menu visibility must follow its dedicated open state.");
+includes(
+  statsRuntime,
+  'activeFilter = minimum === 0 && maximum === 99 ? "all" : "custom";',
+  "Applying the full 0-99 Custom range must normalize back to All.",
+);
+includes(
+  controlInteractions,
+  'control.matches(\'#databaseStatsOverallFilters .mflStatsFilterButton.active[data-filter="custom"]\')',
+  "The shared interaction owner must allow the active Database Stats Custom button to reopen its menu.",
+);
+const customOpenIndex = statsRuntime.indexOf('if (filter[0] === "custom") {');
+const customOpenReturnIndex = statsRuntime.indexOf("return;", customOpenIndex);
+const nextStatsRenderIndex = statsRuntime.indexOf("renderStats();", customOpenIndex);
+invariant(
+  customOpenIndex >= 0 && customOpenReturnIndex > customOpenIndex && nextStatsRenderIndex > customOpenReturnIndex,
+  "Opening Database Stats Custom must return before rendering stats so the histogram does not transition before Apply.",
+);
 excludes(statsRuntime, 'document.createElement("style")', "Database Stats must not inject deterministic Custom-filter CSS at runtime.");
 excludes(statsRuntime, "__mflDatabaseStatsTooltipPortal", "Database Stats must not restore the retired tooltip-portal compatibility owner.");
+excludes(statsRuntime, "databaseStatsTooltipAbove", "Database Stats Custom positioning must not retain tooltip-specific state naming.");
+excludes(statsRuntime, "--database-stats-arrow-left", "Database Stats Custom menu caret must stay centered without legacy tooltip offset state.");
 for (const forbiddenOwner of [
   "history.pushState",
   "history.replaceState",
@@ -100,6 +122,21 @@ for (const expectedStyle of [
 }
 includes(
   styles,
+  "#databaseStatsPage #databaseStatsCustomFilter::before {",
+  "Database Stats Custom menu must show a centered caret linking it visually to the Custom button.",
+);
+includes(
+  styles,
+  "left: 50%;",
+  "Database Stats Custom menu caret must stay centered on the menu.",
+);
+includes(
+  styles,
+  "#databaseStatsPage #databaseStatsCustomFilter.databaseStatsMenuAbove::before {",
+  "Database Stats Custom menu caret must flip when the menu has to open above its button.",
+);
+includes(
+  styles,
   "#databaseStatsPage #databaseStatsCustomFilter input:hover:not(:disabled),",
   "Database Stats Custom range inputs must use the site's normal hover/focus treatment.",
 );
@@ -108,7 +145,6 @@ includes(
   "#databaseStatsPage #databaseStatsCustomApply {\n  grid-column: 1 / -1;\n  width: 100%;\n  height: 34px;",
   "Database Stats Custom Apply button must align with the compact menu controls.",
 );
-excludes(styles, "#databaseStatsPage #databaseStatsCustomFilter::before", "Database Stats Custom must not retain the retired tooltip arrow.");
 invariant(
   !styles.slice(customMenuStart).includes("!important"),
   "Database Stats Custom menu static styling must not depend on !important overrides.",
@@ -123,4 +159,4 @@ invariant(
   "Database Stats runtime loading must occur only after the canonical global page transition.",
 );
 
-console.log("Database Stats single-runtime, site-style Custom menu, static-CSS, and global-navigation validation passed.");
+console.log("Database Stats Custom reopen, deferred apply, All normalization, site-style menu, and global-navigation validation passed.");
