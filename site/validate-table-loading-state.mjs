@@ -28,6 +28,20 @@ invariant(
 );
 
 invariant(
+  runtime.includes('if (snapshot.dataLoading) show({ replaceExisting: true });'),
+  "Every data-loading cycle must request replacement of any rows left from the previous table state.",
+);
+invariant(
+  runtime.includes('if (realRowsPresent && !replaceExisting) return false;')
+    && runtime.includes('if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;'),
+  "A replace-existing loading cycle must replace real rows even if the table still carries the static-loading marker.",
+);
+invariant(
+  !runtime.includes('if (body.dataset.staticLoading === "true" && realRowsPresent) return false;'),
+  "A stale static-loading marker must never preserve previously rendered player rows during a new loading cycle.",
+);
+
+invariant(
   bootstrap.includes('function neutralizeFirstPaintSelectionHeader(head) {')
     && bootstrap.includes('neutralizeFirstPaintSelectionHeader(head);')
     && bootstrap.includes('selectionInput.checked = false;')
@@ -73,4 +87,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading header selector stays visually neutral in source and generated runtime, with synchronous first-paint row geometry.");
+console.log("Table loading replaces stale player rows immediately while preserving neutral headers and synchronous first-paint geometry.");
