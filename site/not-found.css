@@ -9,42 +9,90 @@
 .notFoundContent {
   display: grid;
   justify-items: center;
-  width: min(520px, 100%);
-  padding: 38px 42px 40px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  background: var(--surface);
+  width: min(560px, 100%);
   text-align: center;
 }
 
-.notFoundContent::before {
-  content: "404";
+.notFoundGraphic {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 164px;
-  height: 94px;
-  margin-bottom: 24px;
+  width: 190px;
+  height: 190px;
+  margin-bottom: 26px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface-muted);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 14px var(--surface-muted);
+}
+
+.notFoundGraphic::before,
+.notFoundGraphic::after {
+  content: "";
+  position: absolute;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.notFoundGraphic::before {
+  inset: 20px;
+}
+
+.notFoundGraphic::after {
+  inset: 42px;
+}
+
+.notFoundCode {
+  position: absolute;
+  z-index: 1;
   color: var(--primary);
-  font-size: 54px;
+  font-size: 60px;
   font-weight: 800;
   letter-spacing: 2px;
   line-height: 1;
+  transform: translateY(-15px);
+}
+
+.notFoundIcon {
+  position: relative;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  color: var(--text-soft);
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: translate(50px, 48px);
+}
+
+.notFoundCopy {
+  display: grid;
+  justify-items: center;
+}
+
+.notFoundEyebrow {
+  margin-bottom: 6px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .notFoundContent h2 {
   margin: 0;
   color: var(--text);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .notFoundContent p {
-  max-width: 390px;
-  margin: 8px 0 0;
+  max-width: 420px;
+  margin: 9px 0 0;
   color: var(--text-soft);
   font-size: 14px;
   line-height: 1.45;
@@ -55,24 +103,28 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-width: 150px;
+  min-width: 164px;
   height: 40px;
-  margin-top: 22px;
+  margin-top: 24px;
   border: 1px solid var(--primary);
   border-radius: 6px;
   background: var(--primary);
   color: #ffffff;
-  padding: 0 14px;
+  padding: 0 15px;
   font-weight: 700;
   line-height: 1;
   text-decoration: none;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.notFoundHomeButton::after {
-  content: "\2192";
-  font-size: 16px;
-  line-height: 1;
+.notFoundHomeIcon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .notFoundHomeButton:hover,
@@ -88,18 +140,32 @@
     padding: 18px;
   }
 
-  .notFoundContent {
-    padding: 32px 24px 34px;
+  .notFoundGraphic {
+    width: 164px;
+    height: 164px;
+    margin-bottom: 22px;
+    box-shadow: inset 0 0 0 12px var(--surface-muted);
   }
 
-  .notFoundContent::before {
-    width: 144px;
-    height: 82px;
-    margin-bottom: 20px;
-    font-size: 48px;
+  .notFoundGraphic::before {
+    inset: 18px;
+  }
+
+  .notFoundGraphic::after {
+    inset: 37px;
+  }
+
+  .notFoundCode {
+    font-size: 52px;
+  }
+
+  .notFoundIcon {
+    width: 38px;
+    height: 38px;
+    transform: translate(43px, 42px);
   }
 
   .notFoundContent h2 {
-    font-size: 25px;
+    font-size: 27px;
   }
 }
