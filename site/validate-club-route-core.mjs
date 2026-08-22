@@ -169,9 +169,17 @@ includes(appEntry, 'return runTransition("club", true, {', "The fallback Club ga
 includes(appEntry, 'Reflect.get(runtimeWindow, "__mflAppConfig")', "Fallback Club navigation must use canonical app config for URL construction.");
 excludes(appEntry, 'const slugByView = new Map([', "Fallback Club navigation must not duplicate Club view-to-slug mapping.");
 const fallbackGateStart = appEntry.indexOf("function installClubRouteRuntimeGate() {");
-const fallbackGateEnd = appEntry.indexOf("async function ensureRouteRuntimeNow", fallbackGateStart);
+const fallbackGateEnd = appEntry.indexOf("async function finalizeRouteRuntimeNow", fallbackGateStart);
 const fallbackGate = appEntry.slice(fallbackGateStart, fallbackGateEnd);
-includes(fallbackGate, "return await current.call(runtimeWindow, normalizedClubId, view);", "The fallback Club gate must keep Uniform Loading active until the Club route renderer settles.");
+const fallbackRouteReady = fallbackGate.indexOf('await ensureRouteRuntime("club", { view });');
+const fallbackRouteReleased = fallbackGate.indexOf("runtimeWindow.__mflInteractionBusy?.end?.(token);", fallbackRouteReady);
+const fallbackRouteOwnerCall = fallbackGate.indexOf("return current.call(runtimeWindow, normalizedClubId, view);", fallbackRouteReleased);
+invariant(
+  fallbackRouteReady >= 0
+    && fallbackRouteReleased > fallbackRouteReady
+    && fallbackRouteOwnerCall > fallbackRouteReleased,
+  "The fallback Club gate must release lazy route-runtime loading before delegating to the Club data/render owner.",
+);
 excludes(fallbackGate, "history.pushState", "The fallback Club gate must not own history directly.");
 excludes(fallbackGate, "history.replaceState", "The fallback Club gate must not own history directly.");
 
