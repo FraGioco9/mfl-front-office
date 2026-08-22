@@ -41,8 +41,9 @@ invariant(
     && runtime.includes('if (!hadRenderedResults) renderSearchMessage("Loading recent searches…");')
     && runtime.includes("recentLoadedForOpen = true;\n        renderCurrentResults();")
     && runtime.includes("if (hadRenderedResults) renderCurrentResults();\n          else renderSearchMessage(\"Could not load recent searches.\");")
+    && runtime.includes("if (requestSequence === recentSequence) recentLoadPromise = null;")
     && runtime.includes("clearRecentRequest({ resetLoaded: true });"),
-  "Empty Global Search must use one Supabase load per popup opening and preserve already-rendered recent results if a redundant refresh fails.",
+  "Empty Global Search must use one Supabase load per popup opening, clean up only the active request, and preserve already-rendered recent results if a redundant refresh fails.",
 );
 
 invariant(
