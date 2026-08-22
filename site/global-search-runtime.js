@@ -21,6 +21,7 @@
   let recentLoadedForSession = false;
   let canonicalRecentItems = [];
   let canonicalRecentResults = new Map();
+  let canonicalRecentPayload = null;
   let evaluationController = null;
   let evaluationSequence = 0;
   let destroyed = false;
@@ -246,6 +247,17 @@
     };
   }
 
+  function recentIdentifiers(items = canonicalRecentItems) {
+    const identifiers = { playerIds: [], walletAddresses: [], clubIds: [] };
+    items.forEach((item) => {
+      const key = String(item || "").trim();
+      if (key.startsWith("player:")) identifiers.playerIds.push(key.slice(7));
+      else if (key.startsWith("agent:")) identifiers.walletAddresses.push(key.slice(6));
+      else if (key.startsWith("club:")) identifiers.clubIds.push(key.slice(5));
+    });
+    return identifiers;
+  }
+
   function applyRecentItemsToCore(items = canonicalRecentItems) {
     windowFunction("restoreRecentSearchState")?.(recentStateFromItems(items));
   }
@@ -275,6 +287,19 @@
     return true;
   }
 
+  function publishCanonicalRecentPayload() {
+    const input = searchInput();
+    const applySearchPayload = coreContracts()?.applySearchPayload;
+    if (!canonicalRecentPayload || !input || input.value.trim() || typeof applySearchPayload !== "function") return false;
+
+    installCoreSearchMatching();
+    applySearchPayload(canonicalRecentPayload, "all");
+    applyRecentItemsToCore();
+    renderCurrentResults();
+    captureCanonicalRecentResults();
+    return renderCanonicalRecentResults();
+  }
+
   function promoteCanonicalRecentResult(result) {
     if (!(result instanceof HTMLElement)) return false;
     const key = String(result.dataset.searchKey || "").trim();
@@ -295,8 +320,26 @@
   function applySupabaseRecentState(tableState) {
     canonicalRecentItems = normalizedSupabaseRecentItems(tableState);
     canonicalRecentResults = new Map();
+    canonicalRecentPayload = null;
     applyRecentItemsToCore();
     return canonicalRecentItems;
+  }
+
+  async function fetchCanonicalRecentPayload(signal) {
+    const identifiers = recentIdentifiers();
+    const parameters = new URLSearchParams({ mode: "search", type: "recent", v: VERSION });
+    if (identifiers.playerIds.length) parameters.set("playerIds", identifiers.playerIds.join(","));
+    if (identifiers.walletAddresses.length) parameters.set("walletAddresses", identifiers.walletAddresses.join(","));
+    if (identifiers.clubIds.length) parameters.set("clubIds", identifiers.clubIds.join(","));
+
+    const response = await fetch(`/api/data?${parameters}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json", "Cache-Control": "no-cache, no-store, max-age=0", Pragma: "no-cache" },
+      signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error || "Could not resolve recent searches.");
+    return payload;
   }
 
   function renderEvaluationMessage(message) {
@@ -460,14 +503,12 @@
         if (destroyed || requestSequence !== recentSequence) return false;
 
         applySupabaseRecentState(data?.tableState);
+        canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal);
         if (destroyed || requestSequence !== recentSequence) return false;
 
         recentLoadedForSession = true;
         const currentInput = searchInput();
-        if (currentInput && !currentInput.value.trim()) {
-          renderCurrentResults();
-          captureCanonicalRecentResults();
-        }
+        if (currentInput && !currentInput.value.trim()) publishCanonicalRecentPayload();
         return true;
       } catch (error) {
         if (error?.name !== "AbortError" && !destroyed && requestSequence === recentSequence) {
@@ -498,6 +539,7 @@
 
     applyRecentItemsToCore();
     if (renderCanonicalRecentResults()) return true;
+    if (publishCanonicalRecentPayload()) return true;
     renderCurrentResults();
     captureCanonicalRecentResults();
     return true;
@@ -783,6 +825,7 @@
     modalObserver = null;
     canonicalRecentItems = [];
     canonicalRecentResults.clear();
+    canonicalRecentPayload = null;
     if (focusFrame) cancelAnimationFrame(focusFrame);
     if (focusSettleTimer) clearTimeout(focusSettleTimer);
     document.removeEventListener("input", onInput, true);
