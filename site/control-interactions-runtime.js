@@ -78,6 +78,7 @@
   function consumeActivePageViewFilterEvent(event) {
     const control = activePageViewFilterControl(event.target);
     if (!control) return false;
+    if (control.matches('#databaseStatsOverallFilters .mflStatsFilterButton.active[data-filter="custom"]')) return false;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (document.activeElement === control) control.blur();

@@ -18,18 +18,11 @@ const EVALUATION_CLEAR_SEARCH = `function clearEvaluationSearch() {
   evaluationSearchInput.focus();
 }`;
 
-const EVALUATION_CLEAR_SEARCH_WITH_SELECTION = `function clearEvaluationSearch() {
+const EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS = `function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-
-  const activateEvaluationSearch = () => {
-    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
-    evaluationSearchInput.focus({ preventScroll: true });
-    evaluationSearchInput.select();
-  };
-  activateEvaluationSearch();
-  window.requestAnimationFrame(activateEvaluationSearch);
+  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();
 }`;
 
 const EVALUATION_CLEAR_BINDING = `evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
@@ -40,8 +33,8 @@ evaluationSearchClearButton.addEventListener("click", clearEvaluationSearch);`;
  * Keep typed Evaluation search results visible after the search input loses focus.
  * Result visibility is query-driven; blur only changes focus styling and must not
  * discard a valid result list while text is still present. Clearing the search
- * keeps pointer focus on the input and reapplies focus/selection after route sync
- * so typing can resume immediately.
+ * explicitly hands focus/selection to the Evaluation search-state runtime after
+ * the selected Evaluation has been reset, so the X action finishes focused.
  * @param {{core?: string, routeChunks?: Record<string, string>}} routeArtifacts
  */
 export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
@@ -61,8 +54,8 @@ export function normalizeEvaluationSearchLifecycle(routeArtifacts) {
   normalizedEvaluation = replaceRequired(
     normalizedEvaluation,
     EVALUATION_CLEAR_SEARCH,
-    EVALUATION_CLEAR_SEARCH_WITH_SELECTION,
-    "Evaluation clear keeps the search input active after route reset",
+    EVALUATION_CLEAR_SEARCH_WITH_RUNTIME_FOCUS,
+    "Evaluation clear selects the empty search through the search-state owner",
   );
   normalizedEvaluation = replaceRequired(
     normalizedEvaluation,

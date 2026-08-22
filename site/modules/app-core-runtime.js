@@ -1186,7 +1186,12 @@ function hideEvaluationLoadActionTooltip() {
 let __mflOpenSavedEvaluationsModalOwner = null;
 
 async function openSavedEvaluationsModal() {
+  evaluationSearchInput.blur();
+  if (document.activeElement === evaluationLoadButton) evaluationLoadButton.blur();
+  const activeWallet = String(state.linkedWalletAddress || "").trim().toLowerCase();
   const cached = typeof __mflOpenSavedEvaluationsModalOwner === "function"
+    && activeWallet
+    && String(window.__mflSavedEvaluationsSessionCacheWallet || "") === activeWallet
     && Array.isArray(window.__mflSavedEvaluationsSessionCache);
   const busyToken = cached ? "" : (window.__mflInteractionBusy?.begin?.("evaluation-load") || "");
   try {
@@ -4882,19 +4887,6 @@ function renderEmptyEvaluationSelection(showRecentResults = true) {
   }
 
   evaluationSearchInput.placeholder = "Search ID or player name";
-  if (!String(evaluationSearchInput.value || "").trim()) {
-    window.requestAnimationFrame(() => {
-      const routeParams = new URLSearchParams(window.location.search);
-      const plainEvaluationRoute = window.location.pathname === "/evaluation"
-        && !routeParams.get("player")
-        && !routeParams.get("saved")
-        && !routeParams.get("share");
-      if (!plainEvaluationRoute || String(evaluationSearchInput.value || "").trim()) return;
-      evaluationSearchInput.focus({ preventScroll: true });
-      evaluationSearchInput.select();
-    });
-  }
-
   evaluationPanel.hidden = true;
   evaluationSummaryBody.replaceChildren();
   evaluationTableBody.replaceChildren();
@@ -6325,6 +6317,10 @@ function activateViewButton(button) {
   const activeViewName = state.currentPage === "mflstats" ? "stats" : state.view;
   if (pageName === activePageName && viewName === activeViewName) return;
 
+  if (pageName === activePageName && tablePages.has(pageName)) {
+    saveTableStateLocally(currentTableState());
+  }
+
   if (pageName === "mfl" && viewName === "stats") {
     void runViewTransition("mfl", "stats", { statePageName: "mflstats" }, async () => {
       await setPage("mfl", false, { view: "stats", skipNavigationTransition: true, skipNavigationLoading: true });
@@ -6670,6 +6666,12 @@ if (closeEvaluationLoadButton) {
     hideModal(evaluationLoadModal);
   });
 }
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !evaluationLoadModal || evaluationLoadModal.hidden) return;
+  event.preventDefault();
+  hideEvaluationLoadActionTooltip();
+  hideModal(evaluationLoadModal);
+});
 setupBackdropClickClose(evaluationLoadModal, () => hideModal(evaluationLoadModal));
 if (evaluationLoadList) {
   evaluationLoadList.addEventListener("scroll", hideEvaluationLoadActionTooltip, { passive: true });

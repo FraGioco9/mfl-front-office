@@ -328,6 +328,24 @@
     directPointerFocusResetTimer = 0;
   }
 
+  function selectEmptySearch() {
+    const field = input();
+    if (!(field instanceof HTMLInputElement)
+      || !active()
+      || playerSelected()
+      || field.value.trim()
+      || window.__mflInteractionBusy?.isBusy?.()) return false;
+
+    directPointerFocus = true;
+    try {
+      field.focus({ preventScroll: true });
+      field.select();
+      return document.activeElement === field;
+    } finally {
+      clearDirectPointerFocus();
+    }
+  }
+
   function onPointerDown(event) {
     const field = input();
     clearDirectPointerFocus();
@@ -384,14 +402,8 @@
 
     const clear = event.target.closest("#evaluationSearchClearButton");
     if (clear instanceof HTMLButtonElement) {
-      const field = input();
       queueMicrotask(() => {
-        if (field instanceof HTMLInputElement && active() && !field.value.trim()) {
-          directPointerFocus = true;
-          field.focus({ preventScroll: true });
-          field.select();
-          clearDirectPointerFocus();
-        }
+        selectEmptySearch();
         void restoreEmptyRecentResults(false);
       });
       return;
@@ -460,6 +472,7 @@
     sync,
     restoreEmptyRecentResults,
     commitRecentPlayer,
+    selectEmptySearch,
     destroy,
   });
 })();

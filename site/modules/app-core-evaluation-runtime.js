@@ -281,6 +281,86 @@ async function createSharedEvaluation() {
 }
 
 
+function savedEvaluationCacheWallet() {
+  return normalizeWalletAddress(state.linkedWalletAddress).toLowerCase();
+}
+
+function ensureSavedEvaluationCacheWallet() {
+  const wallet = savedEvaluationCacheWallet();
+  if (String(window.__mflSavedEvaluationsSessionCacheWallet || "") !== wallet) {
+    window.__mflSavedEvaluationsSessionCacheWallet = wallet;
+    window.__mflSavedEvaluationsSessionCache = null;
+    window.__mflSavedEvaluationPayloadCache = Object.create(null);
+  }
+  return wallet;
+}
+
+function savedEvaluationPayloadCache() {
+  ensureSavedEvaluationCacheWallet();
+  const cache = window.__mflSavedEvaluationPayloadCache;
+  if (cache && typeof cache === "object" && !Array.isArray(cache)) return cache;
+  const nextCache = Object.create(null);
+  window.__mflSavedEvaluationPayloadCache = nextCache;
+  return nextCache;
+}
+
+function rememberSavedEvaluationCacheEntry(entry) {
+  const id = String(entry?.id || "").trim();
+  if (!id || !entry?.payload) return null;
+  const playerId = String(entry?.playerId || entry?.payload?.playerId || "").trim();
+  const playerRow = playerId ? rowByPlayerId(playerId) : null;
+  const cache = savedEvaluationPayloadCache();
+  const cachedEntry = cache[id] || null;
+  const computedPresentValue = evaluationPresentValueTotalFromPayload(entry.payload);
+  const normalizedEntry = {
+    ...entry,
+    id,
+    playerId,
+    playerName: String(entry?.playerName || cachedEntry?.playerName || (playerRow ? formatCellValue(playerRow, "name") : "")).trim(),
+    presentValue: Number.isFinite(entry?.presentValue)
+      ? entry.presentValue
+      : (Number.isFinite(cachedEntry?.presentValue)
+        ? cachedEntry.presentValue
+        : (Number.isFinite(computedPresentValue) ? computedPresentValue : null)),
+  };
+  cache[id] = normalizedEntry;
+  return normalizedEntry;
+}
+
+function cachedSavedEvaluationEntry(savedId) {
+  const id = String(savedId || "").trim();
+  if (!id) return null;
+  ensureSavedEvaluationCacheWallet();
+  const list = window.__mflSavedEvaluationsSessionCache;
+  if (Array.isArray(list)) {
+    const listEntry = list.find((entry) => String(entry?.id || "").trim() === id) || null;
+    if (listEntry?.payload) return rememberSavedEvaluationCacheEntry(listEntry);
+  }
+  return savedEvaluationPayloadCache()[id] || null;
+}
+
+function rememberSavedEvaluationList(entries) {
+  ensureSavedEvaluationCacheWallet();
+  const list = Array.isArray(entries)
+    ? entries.map((entry) => rememberSavedEvaluationCacheEntry(entry) || entry)
+    : [];
+  window.__mflSavedEvaluationsSessionCache = list;
+  return list;
+}
+
+function savedEvaluationListCache() {
+  const wallet = ensureSavedEvaluationCacheWallet();
+  return wallet && Array.isArray(window.__mflSavedEvaluationsSessionCache)
+    ? window.__mflSavedEvaluationsSessionCache
+    : null;
+}
+
+function invalidateSavedEvaluationCache() {
+  ensureSavedEvaluationCacheWallet();
+  window.__mflSavedEvaluationsSessionCache = null;
+  window.__mflSavedEvaluationPayloadCache = Object.create(null);
+}
+
 async function createSavedEvaluation() {
   if (!hasWalletOptIn()) {
     showToast("Opt in to save evaluations.");
@@ -295,7 +375,6 @@ async function createSavedEvaluation() {
   const currentSavedId = String(state.evaluationSavedId || evaluationSavedIdFromUrl() || "").trim();
   const payload = currentEvaluationSharePayload();
 
-  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch("/api/evaluation-save", {
     method: "POST",
     headers: {
@@ -318,6 +397,7 @@ async function createSavedEvaluation() {
     throw new Error("Could not save evaluation.");
   }
 
+  invalidateSavedEvaluationCache();
   state.evaluationSavedId = id;
   state.evaluationShareId = "";
   updateEvaluationFooterActions();
@@ -340,23 +420,29 @@ async function loadSavedEvaluation(savedId, playerId = "") {
   state.evaluationSavedLoading = true;
 
   try {
-    const requestUrl = new URL("/api/evaluation-save", window.location.origin);
-    requestUrl.searchParams.set("id", id);
     const selectedPlayerId = String(playerId || evaluationPlayerIdFromUrl() || "").trim();
-    if (selectedPlayerId) {
-      requestUrl.searchParams.set("player", selectedPlayerId);
+    let data = cachedSavedEvaluationEntry(id);
+
+    if (!data) {
+      const requestUrl = new URL("/api/evaluation-save", window.location.origin);
+      requestUrl.searchParams.set("id", id);
+      if (selectedPlayerId) {
+        requestUrl.searchParams.set("player", selectedPlayerId);
+      }
+
+      const response = await fetch(requestUrl.toString(), {
+        cache: "no-store",
+        headers: walletProofHeaders(true),
+      });
+
+      if (!response.ok) {
+        throw new Error("Saved evaluation not found.");
+      }
+
+      data = await response.json();
+      rememberSavedEvaluationCacheEntry(data);
     }
 
-    const response = await fetch(requestUrl.toString(), {
-      cache: "no-store",
-      headers: walletProofHeaders(true),
-    });
-
-    if (!response.ok) {
-      throw new Error("Saved evaluation not found.");
-    }
-
-    const data = await response.json();
     const payloadPlayerId = String(data?.payload?.playerId || selectedPlayerId || "").trim();
     if (payloadPlayerId && !rowByPlayerId(payloadPlayerId)) {
       const playerPayload = await requestIncrementalRoute({
@@ -368,6 +454,7 @@ async function loadSavedEvaluation(savedId, playerId = "") {
       }, 1, { force: true });
       if (!playerPayload) return;
     }
+    data = rememberSavedEvaluationCacheEntry(data) || data;
     state.evaluationSavedId = id;
     state.evaluationShareId = "";
     updateEvaluationFooterActions();
@@ -426,7 +513,6 @@ async function deleteSavedEvaluation(savedId) {
   const requestUrl = new URL("/api/evaluation-save", window.location.origin);
   requestUrl.searchParams.set("id", id);
 
-  window.__mflSavedEvaluationsSessionCache = null;
   const response = await fetch(requestUrl.toString(), {
     method: "DELETE",
     cache: "no-store",
@@ -438,6 +524,7 @@ async function deleteSavedEvaluation(savedId) {
     throw new Error(error.error || "Could not delete saved evaluation.");
   }
 
+  invalidateSavedEvaluationCache();
   return true;
 }
 
@@ -502,7 +589,9 @@ function renderSavedEvaluationList(rows) {
     const main = document.createElement("span");
     main.className = "evaluationLoadResultMain";
     const name = document.createElement("strong");
-    name.textContent = row ? formatCellValue(row, "name") : `Player ${playerId}`;
+    name.textContent = row
+      ? formatCellValue(row, "name")
+      : (String(entry?.playerName || "").trim() || `Player ${playerId}`);
     const details = document.createElement("span");
     const summaryOverall = Number(payload.summaryOverall);
     const summaryAge = Number(payload.summaryAge);
@@ -523,7 +612,9 @@ function renderSavedEvaluationList(rows) {
 
     const value = document.createElement("strong");
     value.className = "evaluationLoadPresentValue";
-    const presentValue = evaluationPresentValueTotalFromPayload(entry.payload);
+    const presentValue = Number.isFinite(entry?.presentValue)
+      ? entry.presentValue
+      : evaluationPresentValueTotalFromPayload(entry.payload);
     value.textContent = Number.isFinite(presentValue) ? formatEvaluationCurrency(presentValue) : "-";
 
     const actions = document.createElement("span");
@@ -546,18 +637,15 @@ function renderSavedEvaluationList(rows) {
     attachEvaluationLoadActionTooltip(shareButton);
     attachEvaluationLoadActionTooltip(deleteButton);
 
-    const loadEvaluation = () => {
+    const loadEvaluation = async () => {
       clearEvaluationSearchFocus();
       const savedId = String(entry.id || "").trim();
       const url = new URL("/evaluation", window.location.origin);
       url.searchParams.set("player", playerId);
       url.searchParams.set("saved", savedId);
       window.history.replaceState({}, "", url.toString());
-      state.evaluationSavedId = savedId;
-      state.evaluationShareId = "";
       hideModal(evaluationLoadModal);
-      updateEvaluationFooterActions();
-      applySharedEvaluationPayload(entry.payload);
+      await loadSavedEvaluation(savedId, playerId);
     };
 
     shareButton.addEventListener("click", async (event) => {
@@ -623,8 +711,8 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
   }
 
   showModal(evaluationLoadModal);
-  const cachedEvaluations = window.__mflSavedEvaluationsSessionCache;
-  if (Array.isArray(cachedEvaluations)) {
+  const cachedEvaluations = savedEvaluationListCache();
+  if (cachedEvaluations) {
     renderSavedEvaluationList(cachedEvaluations);
     return;
   }
@@ -657,8 +745,8 @@ async function evaluationOpenSavedEvaluationsModalOwner() {
       }, 1, { force: true });
     }
 
-    window.__mflSavedEvaluationsSessionCache = evaluations;
-    renderSavedEvaluationList(evaluations);
+    const rememberedEvaluations = rememberSavedEvaluationList(evaluations);
+    renderSavedEvaluationList(rememberedEvaluations);
   } catch (error) {
     evaluationLoadList.innerHTML = "";
     const message = document.createElement("p");
@@ -762,14 +850,7 @@ function clearEvaluationSearch() {
   evaluationSearchInput.value = "";
   resetEvaluationSelection();
   renderEvaluationSearchResults();
-
-  const activateEvaluationSearch = () => {
-    if (!isPlainEvaluationUrl() || String(evaluationSearchInput.value || "").trim()) return;
-    evaluationSearchInput.focus({ preventScroll: true });
-    evaluationSearchInput.select();
-  };
-  activateEvaluationSearch();
-  window.requestAnimationFrame(activateEvaluationSearch);
+  window.__mflEvaluationSearchStateRuntime?.selectEmptySearch?.();
 }
 
 function handleEvaluationSearchInput() {

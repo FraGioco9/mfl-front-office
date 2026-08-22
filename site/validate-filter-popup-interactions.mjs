@@ -137,12 +137,15 @@ for (const required of [
   "const resetFilters = document.documentElement.dataset.mflResetTableFilters === pageName;",
   "? tableStateWithoutPageFilters(pageName, storedPageState)",
   "if (resetFilters && savedPageState) state.tablePageStates[pageName] = savedPageState;",
+  "function normalizeViewFilterStateBeforeTransition(artifacts) {",
+  "saveTableStateLocally(currentTableState());",
   "function normalizeFilterSummaryLifecycle(artifacts) {",
   'filterSummary.textContent = String(count);',
   'if (filterSummary) filterSummary.textContent = "0";',
   'document.body.classList.remove("filtersOpen");',
   "const pageFilterResetArtifacts = normalizePageFilterResetBeforeRequest(clubSortArtifacts);",
-  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(pageFilterResetArtifacts);",
+  "const viewFilterStateArtifacts = normalizeViewFilterStateBeforeTransition(pageFilterResetArtifacts);",
+  "const filterSummaryArtifacts = normalizeFilterSummaryLifecycle(viewFilterStateArtifacts);",
 ]) {
   invariant(buildNormalizer.includes(required), `Build normalization must preserve direct Filters reset/count/close ownership through ${required}`);
 }
@@ -218,4 +221,4 @@ invariant(!controls.includes("!important"), "Filter popup interactions must not 
 invariant(!sharedTableUi.includes('document.createElement("style")'), "Filters behavior must not inject runtime styles.");
 invariant(!dropdownRuntime.includes('document.createElement("style")'), "Filter dropdown behavior must not inject runtime styles.");
 
-console.log("Direct count-only Filters, request-time page reset, immediate close highlight, view-sized control, and neutral ESC focus validation passed.");
+console.log("Direct count-only Filters, request-time page reset, view-state preservation, immediate close highlight, view-sized control, and neutral ESC focus validation passed.");
