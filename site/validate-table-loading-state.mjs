@@ -27,18 +27,23 @@ invariant(
   "Loading must not use the browser disabled-checkbox appearance for the header selector.",
 );
 
+for (const required of [
+  "let previousReasonCount = 0;",
+  "const reasonCount = Array.isArray(snapshot.reasons) ? snapshot.reasons.length : 0;",
+  "const loadingReasonAdded = snapshot.dataLoading && reasonCount > previousReasonCount;",
+  "previousReasonCount = reasonCount;",
+  "if (snapshot.dataLoading) show({ replaceExisting: loadingReasonAdded });",
+]) {
+  invariant(runtime.includes(required), `Table loading cycles must track new busy reasons through ${required}`);
+}
 invariant(
-  runtime.includes('if (snapshot.dataLoading) show({ replaceExisting: true });'),
-  "Every data-loading cycle must request replacement of any rows left from the previous table state.",
+  runtime.includes('if (body.dataset.staticLoading === "true" && realRowsPresent) {\n      if (!replaceExisting) return false;\n    }')
+    && runtime.includes('if (realRowsPresent && !replaceExisting) return false;'),
+  "Busy-state unwind must preserve final real rows when no new loading reason was added.",
 );
 invariant(
-  runtime.includes('if (realRowsPresent && !replaceExisting) return false;')
-    && runtime.includes('if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;'),
-  "A replace-existing loading cycle must replace real rows even if the table still carries the static-loading marker.",
-);
-invariant(
-  !runtime.includes('if (body.dataset.staticLoading === "true" && realRowsPresent) return false;'),
-  "A stale static-loading marker must never preserve previously rendered player rows during a new loading cycle.",
+  runtime.includes('if ((body.dataset.staticLoading !== "true" || realRowsPresent) && !primeLoadingRows()) return false;'),
+  "A newly added loading reason must replace real rows even if the table still carries the static-loading marker.",
 );
 
 invariant(
@@ -87,4 +92,4 @@ invariant(
   "Loaded rows and first-paint blank rows must share the same player-name geometry.",
 );
 
-console.log("Table loading replaces stale player rows immediately while preserving neutral headers and synchronous first-paint geometry.");
+console.log("Table loading replaces stale player rows on new loading reasons while preserving final rows during busy-state unwind.");
