@@ -5,12 +5,13 @@ const invariant = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [runtime, styles, controls, core, walletPreferencesApi] = await Promise.all([
+const [runtime, styles, controls, core, walletPreferencesApi, dataViews] = await Promise.all([
   read("./global-search-runtime.js"),
   read("./styles-base.css"),
   read("./controls.css"),
   read("./modules/app-core.js"),
   read("./api/wallet-preferences.js"),
+  read("./api/_data-views.js"),
 ]);
 
 for (const required of [
@@ -57,6 +58,7 @@ invariant(
     && runtime.includes("let recentLoadedForSession = false;")
     && runtime.includes("let canonicalRecentItems = [];")
     && runtime.includes("let canonicalRecentResults = new Map();")
+    && runtime.includes("let canonicalRecentPayload = null;")
     && runtime.includes("async function hydrateSupabaseRecentResults()")
     && runtime.includes("if (recentLoadedForSession) return true;")
     && runtime.includes("if (recentLoadPromise) return recentLoadPromise;")
@@ -70,6 +72,22 @@ invariant(
 );
 
 invariant(
+  runtime.includes("function recentIdentifiers(items = canonicalRecentItems) {")
+    && runtime.includes('const parameters = new URLSearchParams({ mode: "search", type: "recent", v: VERSION });')
+    && runtime.includes('parameters.set("playerIds", identifiers.playerIds.join(","));')
+    && runtime.includes('parameters.set("walletAddresses", identifiers.walletAddresses.join(","));')
+    && runtime.includes('parameters.set("clubIds", identifiers.clubIds.join(","));')
+    && runtime.includes("canonicalRecentPayload = await fetchCanonicalRecentPayload(activeController.signal);")
+    && runtime.includes("function publishCanonicalRecentPayload() {")
+    && runtime.includes('applySearchPayload(canonicalRecentPayload, "all");')
+    && dataViews.includes('if (type === "recent") return recentSearchData(request);')
+    && dataViews.includes("const playerIds = integerIds(request.query?.playerIds, 50);")
+    && dataViews.includes("const walletAddresses = csvValues(request.query?.walletAddresses, 50)")
+    && dataViews.includes("const clubIds = csvValues(request.query?.clubIds, 50);"),
+  "Initial Global Search recent hydration must resolve every Supabase recent player, agent, and club by identifier instead of depending on whichever entities happen to be in the mutable live search indexes.",
+);
+
+invariant(
   runtime.includes("function captureCanonicalRecentResults() {")
     && runtime.includes("function renderCanonicalRecentResults() {")
     && runtime.includes("function promoteCanonicalRecentResult(result) {")
@@ -78,8 +96,9 @@ invariant(
     && runtime.includes("applyRecentItemsToCore();")
     && runtime.includes("results.replaceChildren(...ordered);")
     && runtime.includes("captureCanonicalRecentResults();\n    void searchDatabase(query);")
-    && runtime.includes("if (renderCanonicalRecentResults()) return true;"),
-  "Typed Global Search must preserve a separate canonical five-result payload so replacing typed indexes cannot collapse the next empty state to one card.",
+    && runtime.includes("if (renderCanonicalRecentResults()) return true;")
+    && runtime.includes("if (publishCanonicalRecentPayload()) return true;"),
+  "Typed Global Search must preserve a separate canonical five-result payload so replacing typed indexes cannot collapse the next empty state or initial render.",
 );
 
 invariant(
@@ -163,4 +182,4 @@ invariant(
   "Global Search behavior must not be implemented through runtime CSS or priority overrides.",
 );
 
-console.log("Global Search keeps a canonical Supabase-derived five-result payload independent of typed indexes, promotes clicks without collapsing history, and restores the five instantly when empty.");
+console.log("Global Search resolves the complete Supabase five by identifier, keeps that canonical result payload independent of typed indexes, promotes clicks without collapsing history, and restores the five instantly when empty.");
