@@ -21,6 +21,13 @@ export function normalizeTableControlCellAlignment(artifacts) {
     "flag and player ID use the shared row wrapper",
   );
 
+  normalizedTable = replaceRequired(
+    normalizedTable,
+    `      } else if (column === "age") {\n        const ageValue = document.createElement("span");\n        ageValue.className = "playerAgeValue";\n        ageValue.textContent = formatCellValue(row, column);\n        cell.appendChild(ageValue);\n        appendNameMarker(cell, retirementMarker(row), "retirementMarker");`,
+    `      } else if (column === "age") {\n        const ageContent = document.createElement("span");\n        ageContent.className = "tableControlCellContent";\n        const ageValue = document.createElement("span");\n        ageValue.className = "playerAgeValue";\n        ageValue.textContent = formatCellValue(row, column);\n        ageContent.appendChild(ageValue);\n        appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");\n        cell.appendChild(ageContent);`,
+    "age and retirement marker use the shared row wrapper",
+  );
+
   routeChunks.table = normalizedTable;
   return Object.freeze({
     ...artifacts,
