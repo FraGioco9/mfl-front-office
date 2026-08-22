@@ -1760,11 +1760,14 @@ function tableRenderTableOwner() {
         idContent.appendChild(createCopyPlayerIdButton(playerId, formatCellValue(row, column)));
         cell.appendChild(idContent);
       } else if (column === "age") {
+        const ageContent = document.createElement("span");
+        ageContent.className = "tableControlCellContent";
         const ageValue = document.createElement("span");
         ageValue.className = "playerAgeValue";
         ageValue.textContent = formatCellValue(row, column);
-        cell.appendChild(ageValue);
-        appendNameMarker(cell, retirementMarker(row), "retirementMarker");
+        ageContent.appendChild(ageValue);
+        appendNameMarker(ageContent, retirementMarker(row), "retirementMarker");
+        cell.appendChild(ageContent);
       } else if (column === joinedAgencyColumn) {
         cell.textContent = formatCellValue(row, column);
       } else if (column === "active_contract_club_division") {
